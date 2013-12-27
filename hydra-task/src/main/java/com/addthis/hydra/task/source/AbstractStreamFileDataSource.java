@@ -793,6 +793,11 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             PluginReader.registerPlugin("-stream-bundleizer.classmap", cmap, BundleizerFactory.class);
         }
 
+        @SuppressWarnings("unused")
+        public static void registerBundleizer(String name, Class<? extends BundleizerFactory> clazz) {
+            cmap.add(name, clazz);
+        }
+
         public abstract Bundleizer createBundleizer(InputStream input, BundleFactory factory);
     }
 
