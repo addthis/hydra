@@ -161,6 +161,8 @@ public class Main {
                 e.printStackTrace();
                 System.exit(1);
             }
+        } else {
+            usage();
         }
     }
 
