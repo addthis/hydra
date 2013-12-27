@@ -87,15 +87,8 @@ public class OpFold extends AbstractBufferOp implements BundleFormatted {
         // generate output format
         format = new ListBundleFormat();
         outputFields = new BundleField[keycols.length + ((copycols.length + 1) * foldvals.length)];
-        int colpos = 0;
-        int colname = 0;
-        for (int i = 0; i < keycols.length; i++) {
-            outputFields[colpos++] = format.getField(Integer.toString(colname++));
-        }
-        for (int i = 0; i < foldvals.length; i++) {
-            for (int j = 0; j < copycols.length + 1; j++) {
-                outputFields[colpos++] = format.getField(Integer.toString(colname++));
-            }
+        for (int i = 0; i < outputFields.length; i++) {
+            outputFields[i] = format.getField(Integer.toString(i));
         }
     }
 
