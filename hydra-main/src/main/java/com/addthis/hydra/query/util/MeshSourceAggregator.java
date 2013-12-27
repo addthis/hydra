@@ -189,7 +189,7 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
         totalTasks = sourcesByTaskID.size();
         if (initialize.compareAndSet(false, true)) {
             for (int i = 0; i < frameReaderThreads; i++) {
-                frameReaderPool.submit(new SourceReader());
+                frameReaderPool.submit(new SourceReader(meshQueryMaster));
             }
 
             if (enableStragglerCheck) {
@@ -540,7 +540,13 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
         }
     }
 
-    private class SourceReader implements Runnable {
+    private static class SourceReader implements Runnable {
+
+        private final MeshQueryMaster meshQueryMaster;
+
+        SourceReader (MeshQueryMaster meshQueryMaster) {
+            this.meshQueryMaster = meshQueryMaster;
+        }
 
         @SuppressWarnings("InfiniteLoopStatement")
         @Override
@@ -600,7 +606,7 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                     }
                 } catch (Exception e) {
                     // this is going to rethrow exception, so we need to replace this SourceReader in the pool
-                    frameReaderPool.submit(new SourceReader());
+                    frameReaderPool.submit(new SourceReader(meshQueryMaster));
                     handleQuerySourceError(querySource, e);
                 }
             }
@@ -628,32 +634,6 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
             } catch (Exception e)  {
                 log.warn("", e);
                 throw new RuntimeException(e);
-            }
-        }
-
-        private void resubmitQueryIfPossible(QuerySource querySource, Exception e) {
-            if (!querySource.obsolete) {
-                // only throw consumer exception if this source had already started
-                // consuming data or if there are no other sources available to try
-                synchronized (sourcesByTaskID) {
-                    int taskId = querySource.getTaskId();
-                    Set<QueryData> queryDataSet = sourcesByTaskID.get(taskId);
-                    Query query = querySource.query;
-                    if ((querySource.foundBundle || queryDataSet.size() == 0) && !queryResponders.contains(querySource.getTaskId())) {
-                        log.warn("QueryError: " + e.getMessage() + " --- " + query.uuid() + ":" + taskId + " consumptionStarted:" + querySource.foundBundle + " queryDataSet.size=" + queryDataSet.size());
-                        querySource.consumer.sourceError(new DataChannelError(e));
-                    } else {
-                        Iterator<QueryData> queryDataIterator = queryDataSet.iterator();
-                        if (queryDataIterator.hasNext()) {
-                            log.warn("QueryWarning: " + e.getMessage() + " --- " + query.uuid() + ":" + taskId + " submitting query to alternate host");
-                            QueryData queryData = queryDataIterator.next();
-                            queryDataIterator.remove();
-                            requestQueryData(queryData, query);
-                        } else {
-                            querySource.consumer.sourceError(new DataChannelError(e));
-                        }
-                    }
-                }
             }
         }
 
