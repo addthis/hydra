@@ -14,6 +14,7 @@
 package com.addthis.hydra.data.query.op;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.addthis.basis.util.Strings;
@@ -61,21 +62,27 @@ import com.addthis.hydra.data.query.AbstractBufferOp;
  */
 public class OpFold extends AbstractBufferOp implements BundleFormatted {
 
+    private final BundleField outputFields[];
+    private final ListBundleFormat format;
+    private final String keycols[];
+    private final String foldcol;
+    private final String foldvals[];
+    private final String copycols[];
+    private final String inputFields[];
+    private Bundle folded;
+    private String lastkey;
+
     public OpFold(String args) {
         String seg[] = Strings.splitArray(args, ":");
         keycols = Strings.splitArray(seg[0], ",");
         foldcol = seg[1];
         foldvals = Strings.splitArray(seg[2], ",");
         copycols = Strings.splitArray(seg[3], ",");
-        List<String> cols = new ArrayList<String>(keycols.length + copycols.length + 1);
+        List<String> cols = new ArrayList<>(keycols.length + copycols.length + 1);
         // capture input fields
-        for (String col : keycols) {
-            cols.add(col);
-        }
+        Collections.addAll(cols, keycols);
         cols.add(foldcol);
-        for (String col : copycols) {
-            cols.add(col);
-        }
+        Collections.addAll(cols, copycols);
         inputFields = cols.toArray(new String[cols.size()]);
         // generate output format
         format = new ListBundleFormat();
@@ -91,17 +98,6 @@ public class OpFold extends AbstractBufferOp implements BundleFormatted {
             }
         }
     }
-
-    private final BundleField outputFields[];
-    private final ListBundleFormat format;
-    private final String keycols[];
-    private final String foldcol;
-    private final String foldvals[];
-    private final String copycols[];
-    private final String inputFields[];
-
-    private Bundle folded;
-    private String lastkey;
 
     @Override
     public BundleFormat getFormat() {
