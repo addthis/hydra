@@ -67,6 +67,12 @@ public abstract class BundleFilter implements Codec.Codable {
         }
     }
 
+    @SuppressWarnings("unused")
+    public static void registerFilter(String name, Class<? extends BundleFilter> clazz)
+    {
+        cmap.add(name, clazz);
+    }
+
     /** register types */
     static {
         PluginReader.registerPlugin("-bundlefilters.classmap", cmap, BundleFilter.class);

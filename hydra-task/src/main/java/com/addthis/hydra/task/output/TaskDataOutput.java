@@ -54,6 +54,11 @@ public abstract class TaskDataOutput implements DataChannelOutput {
         }
     }
 
+    @SuppressWarnings("unused")
+    public static final void registerDataOutput(String type, Class<? extends TaskDataOutput> clazz) {
+        cmap.add(type, clazz);
+    }
+
     static {
         PluginReader.registerPlugin("-output-sinks.classmap", cmap, TaskDataOutput.class);
     }

@@ -57,6 +57,12 @@ public abstract class TaskDataSource implements Codec.Codable, DataChannelSource
         }
     }
 
+    @SuppressWarnings("unused")
+    public final static void registerDataSource(String type, Class<? extends TaskDataSource> clazz)
+    {
+        cmap.add(type, clazz);
+    }
+
     static {
         PluginReader.registerPlugin("-input-sources.classmap", cmap, TaskDataSource.class);
     }

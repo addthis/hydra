@@ -62,6 +62,12 @@ public abstract class ValueFilter implements Codec.Codable {
         }
     }
 
+    @SuppressWarnings("unused")
+    public static void registerFilter(String name, Class<? extends ValueFilter> clazz)
+    {
+        cmap.add(name, clazz);
+    }
+
     /** register types */
     static {
         PluginReader.registerPlugin("-valuefilters.classmap", cmap, ValueFilter.class);
