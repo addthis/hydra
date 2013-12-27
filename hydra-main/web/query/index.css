@@ -1,0 +1,252 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+body,div,table { padding:0px; margin:0px; border:0px; font-family:helvetica,arial,sans-serif; font-size:small }
+#mode button { border:1px solid gray; background-color:#fff }
+.cachetable table { border:1px solid gray; background-color:#fff }
+.cachetable table tr { border:1px solid #ccc; background-color:#ddd }
+.cachetable table td { border:1px solid #ddd; background-color:#eee }
+.cachetable table td a { text-align:center }
+.padme { padding:5px }
+#b_rescan { right:5px; position:absolute }
+#conf { font-family:courier,fixed; font-size:small }
+#banner { padding:5px; background:#eee; border-bottom:1px solid black; text-align:center }
+#mode { padding:5px; background:#ddd; border-bottom:1px solid black; text-align:center }
+#setup { display:none } 
+#cache { display:none } 
+#runningqueries { display:none } 
+#table_query { border:1px solid blue }
+#table_query th { background:#ddd; padding-left:2px; padding-right:2px }
+#table_query td { background:#eee }
+#table_setup { border:1px solid blue }
+#table_setup th { background:#ddd; padding-left:2px; padding-right:2px }
+#table_setup td { background:#eee }
+#table_nav { border:1px solid green }
+#table_nav th { background:#ddd; padding-left:2px; padding-right:2px }
+#table_nav td { background:#eee }
+#table_queries { border:0px solid purple; width:100% }
+#table_queries th { background:#ddd; padding-left:2px; padding-right:2px }
+#table_queries td { background:#eee }
+#table_results { border:1px solid black; margin-top:5px }
+#table_results th { background:#ddd; padding-left:2px; padding-right:2px }
+#table_results td { background:#eee }
+
+a:link, a:visited, a:active { text-decoration:none }
+a:hover { color:#fff; background-color:#55f; text-decoration:none }
+
+input { width:100% }
+td { vertical-align:top }
+
+.num { text-align:right; font-family:courier,fixed }
+
+#bro_left {
+	float:left;
+	width:50%;
+}
+
+#bro_left_inner { padding-right:5px }
+
+#bro_right {
+	float:right;
+	width:50%;
+}
+
+#nodeinfo {
+	display:none;
+	font-family:"courier";
+	font-size:small;
+	white-space:pre;
+	background-color:#ddd;
+	height:100px;
+	overflow:auto;
+}
+
+#nodelist {
+	overflow:auto;
+}
+
+#queryinfo {
+	overflow:auto;
+}
+
+#saved {
+	overflow:auto;
+	border:1px solid gray;
+	height:110px;
+}
+
+#treenav {
+	text-align:center;
+	border:1px dashed gray;
+}
+
+.buttonbar {
+	text-align:center;
+	margin-top:3px;
+	margin-bottom:3px;
+}
+
+.graph_options {
+	text-align:center;
+}
+
+.hd1 {
+	background-color:#eee;
+}
+
+.tab {
+	display:none;
+}
+
+.tab label {
+	font-size:large;
+	font-weight:bold;
+	color:#734;
+}
+
+.pe_cell {
+	border:1px solid gray;
+}
+
+.pe_op {
+	background-color:#bbf;
+	font-weight:bold;
+}
+
+.pe_term {
+	background-color:#ddf;
+	color:#449;
+	font-weight:bold;
+}
+
+.pe_disabled {
+	font-weight:bold;
+	background-color:#f00;
+}
+
+.pe_name {
+	background-color:#696;
+	color:#fff;
+}
+
+.pe_const {
+	font-weight:bold;
+	background-color:#696;
+	color:#fff;
+}
+
+.pe_call {
+	background-color:#eef;
+}
+
+.pe_event {
+	background-color:#fef;
+}
+
+.pe_feature {
+	background-color:#8f8;
+	font-weight:bold;
+}
+
+.pe_list {
+	background-color:#fee;
+	border:1px solid #faa;
+}
+
+.pe_each {
+	background-color:#efe;
+	border:1px solid #afa;
+}
+
+.pe_value {
+	background-color:#ffe;
+	border:1px solid #ffa;
+}
+
+.pe_row_even {
+	background-color:#eee;
+}
+
+.pe_row_odd {
+	background-color:#e1e1e1;
+}
+
+/*#browse{
+	padding-top: 5px;
+	padding-left: 5px;
+	padding-right: 5px;
+	padding-bottom:0px;
+}*/
+
+#runningqueries{
+	padding-top:5px;
+	padding-left: 5px;
+	padding-right: 5px;
+}
+#completedqueries{
+	padding-top:5px;
+	padding-left: 5px;
+	padding-right: 5px;
+}
+
+.left {
+	float:left;
+	/*width:50%;*/
+}
+
+.left_inner { padding-right:5px }
+
+.right {
+	float:left;
+	/*width:50%;*/
+}
+
+.right_inner { padding-right:5px }
+
+div.status{
+	position: relative;
+	padding: 5px;
+	background: #F3F3F3;
+	border-bottom: 1px solid black;
+/*	text-align: center;*/
+	margin-bottom: 10px;
+}
+.status span {
+	border: 1px solid #CCC;
+	padding: 2px;
+	background-color: #F4F4F4;
+}
+.status span span {
+	border: 0px;
+	font-weight: bold;
+}
+.status span label {
+	border-left: 1px solid #BBB;
+	border-top: 1px solid #BBB;
+	border-right: 1px solid #DDD;
+	border-bottom: 1px solid #DDD;
+	padding-left: 3px;
+	padding-right: 3px;
+	background: white;
+}
+.close_hosts{
+	float:right;
+}
+#completed{
+	height: 60%;
+	overflow:scroll;
+}
+#queries{
+	height:60%;
+	overflow: scroll;
+}

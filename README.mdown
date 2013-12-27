@@ -1,0 +1,128 @@
+## hydra
+
+Hydra is a distributed data processing and storage system originally
+developed at [AddThis](http://www.addthis.com). It ingests streams of
+data (think log files) and builds trees that are aggregates,
+summaries, or transformations of the data. These trees can be used by
+humans to explore (tiny queries), as part of a machine learning
+pipeline (big queries), or to support live consoles on websites (lots
+of queries).
+
+You can run hydra from the command line to slice and dice that Apache
+access log you have sitting around (or that gargantuan csv file). Or
+if terabytes per day is your cup of tea run a Hydra Cluster that
+supports your job with resource sharing, job management, distributed
+backups, data partitioning, and efficient bulk file transfer.
+
+## Building
+
+Assuming you have [Apache Maven](http://maven.apache.org/) installed
+and configured:
+
+    mvn package
+
+Should compile and build jars.  All hydra dependencies should be
+available on maven central but hydra itself is not yet published.
+
+[Berkeley DB Java Edition](http://www.oracle.com/technetwork/database/berkeleydb/overview/index-093405.html)
+is used for several core features.  The sleepycat license has strong
+copyleft properties that do not match the rest of the project.  It is
+set as a non-transitive dependency to avoid inadvertently pulling it
+into downstream projects.  In the future hydra should have pluggable
+storage with multiple implementations.
+
+The `hydra-uber` module builds an `exec` jar containing hydra and all
+of it's dependencies.  To include BDB JE when building with `mvn
+package` use `-P bdbje`.  The main class of the `exec` jar launches
+the various components of a hydra cluster by name.
+
+## System dependencies
+
+JDK 7 is required.  Hydra has been developed on Linux (Centos 6) and
+should work on any modern Linux distro.  Other unix-like systems
+should work with minor changes but have not been tested.  Mac OSX
+should work for building and running local-stack (see below).
+
+Hydra uses [rabbitmq](http://www.rabbitmq.com/) for low volume
+command and control message exchange.  On a modern Linux systems
+`apt-get install rabbitmq-server` and running with the default
+settings is adequate in most cases.
+
+To run efficiently Hydra needs a mechanism to take copy on write
+backups of the output of jobs.  The is currently accomplished by
+adding the [fl-cow](http://xmailserver.org/flcow.html) library to
+`LD_PRELOAD`.  Experimenting with other approaches such as ZFS or `cp
+--reflink` are under consideration.
+
+Many components assume that there is a local user called `hydra` and
+that all minion nodes can ssh as that user to each other.  This is
+used most prominently for `rsync` based replicas.
+
+
+## Components
+
+While hydra can be used for ad-hoc analysis of csv and other local
+files, it's most commonly used in a distributed cluster.  In that case
+the following components are involved:
+
+ * [ZooKeeper](http://zookeeper.apache.org/)
+ * Spawn: Job control and execution
+ * Minion: Task runner
+ * QueryMaster: Handler for queries
+ * QueryWorker: Handle scatter-gather requests from QueryMaster
+ * Meshy: File server
+ 
+A typical configuration is to have a cluster head with Spawn &
+QueryMaster backed by a homogeneous clusters of nodes running Minion,
+QueryWorker, and Meshy.
+
+## Local Stack
+
+For local development all of the above components can run together in
+a single stack run out of `hydra-local`.  There is a `local-stack.sh`
+script to assist with this.  To run the local stack:
+
+ * You must be able to build hydra
+ * Have rabbitmq installed
+ * Allow your current user to ssh to itself
+
+The first time the script is run a `hydra-local` directory will be created.
+
+ * `./hydra-uber/bin/local-stack.sh start` - start ZooKeeper
+ * `./hydra-uber/bin/local-stack.sh start` - start spawn, querymaster etc.
+ * `./hydra-uber/bin/local-stack.sh seed` - add some sample data
+ 
+You can then navigate to http://localhost:5052/ and you should see
+the spawn web interface.
+  
+When done `./hydra-uber/bin/local-stack.sh stop` will stop everything
+except ZooKeeper, and running `stop` a second time will bring that
+process down as well.
+
+There are sample job configurations located in `hydra-uber/local/sample/`
+
+## Administrative
+
+### Discussion
+
+Mailing list: http://groups.google.com/group/hydra-oss
+
+[Freenode](http://freenode.net/) channel: `#hydra`
+
+### Versioning
+
+It's x.y.z where:
+
+ * x: Something Big Happened
+ * y: next release
+ * z: strive for bug fix only
+
+### License
+
+hydra is released under the Apache License Version 2.0.  See
+[Apache](http://www.apache.org/licenses/LICENSE-2.0) or the LICENSE
+file in this distribution for details.
+
+
+
+

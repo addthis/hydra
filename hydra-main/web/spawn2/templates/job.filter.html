@@ -1,0 +1,41 @@
+<!--
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<ul class="nav nav-pills filter">
+    <li>
+        <a data-index='5' data-value="IDLE" href="#">Idle</a>
+    </li>
+    <li>
+        <a data-index='5' data-value="RUNNING" href="#">Running</a>
+    </li>
+    <li>
+        <a data-index='5' data-value="ERROR" href="#">Error</a>
+    </li>
+    <li>
+        <a id="myJobs" data-index='4' data-value="<%=username%>" href="#">My Jobs</a>
+    </li>
+    <!--
+    <li class="disable">
+        <div class="btn-mini btn-group" style=" margin-left: 5px; color: black; display: inline;">
+            <button class="btn btn-default btn-mini dropdown-toggle" data-toggle="dropdown" style="margin-left:0px;height:25px;width:41px;margin-top:0px;padding-top:0px;padding-left:5px;">
+                <img alt="" style="width:16px;height:16px;" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACIAAAAbCAYAAAAZMl2nAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA/FpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNS1jMDE0IDc5LjE1MTQ4MSwgMjAxMy8wMy8xMy0xMjowOToxNSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ1dWlkOjY1RTYzOTA2ODZDRjExREJBNkUyRDg4N0NFQUNCNDA3IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjMyRjgwRTM2REI3MzExRTI4NzQwRDYwMzM5MTI3NkRGIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjMyRjgwRTM1REI3MzExRTI4NzQwRDYwMzM5MTI3NkRGIiB4bXA6Q3JlYXRvclRvb2w9IkFkb2JlIFBob3Rvc2hvcCBDQyAoTWFjaW50b3NoKSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjM4ZWRmZThjLWZhZTMtNDQyMi1iOThkLTg1NjQyMmU4ZWQ5MiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDowMjgwMTE3NDA3MjA2ODExODA4Mzg2RTU3M0Y3MUMzNiIvPiA8ZGM6dGl0bGU+IDxyZGY6QWx0PiA8cmRmOmxpIHhtbDpsYW5nPSJ4LWRlZmF1bHQiPmdseXBoaWNvbnM8L3JkZjpsaT4gPC9yZGY6QWx0PiA8L2RjOnRpdGxlPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PlwucM8AAAGaSURBVHjaxFcLbcQwDG0OQY5BIARCIGQMOgYHoRAKIRAOQsagY9Ah2Bh0qeRKrhen+Z1mybpeZCeu/fycDtu2DTkaZAm6gfpcv1wVcEhShBAy/HzjteAnho5yixxqgyqybCJ2hvzXu291JCT9I0r/FFTCGi7LofuaBZsZrY81pcFB2MhhtWpLA8Gl+elY8rW1NM8O2ZibSgOB6A6ByJpAaNdoJnFfQd+gZe9B32EtJqapa2CDlekOGSE4ydj7/YWKSwOOqVSbhPOY8NvB/8xmVnBKZUxcsG6TP8us/yW3BOiiVE7HwcX+n0VgDaKg3lGwMviQDPWvB/W38MiDAd6CQQsdtjC2YwLcnrtCUEPVk9Agaw74Cc8yC2e5w54GMncIZEL7uQx7R6ev7jh9VUGGFaV407EbbWRkfMB4uMPzeayQ0uBUOnijB9NNK3SaJlPbIWCmsHMeCxFkT5TWmUsTtTH4CtAcSIIzToFk+lkyDCWop7e54ZWfEyVgLR3VsoQxq9r3FYoITV0RWtYHVi8JQ9JDp/6hil8BBgCHEXK+CycmnwAAAABJRU5ErkJggg==" />
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu4" style="right:0;left:auto;top:20px;">
+                <li role="presentation" class="dropdown-header">Display Density</li>
+                <li role="presentation" ><a id="compactTable" class="disabled" href="#jobs/compact">Compact</a></li>
+                <li role="presentation" ><a id="comfortableTable" class="disabled" href="#jobs/comfortable">Comfortable</a></li>
+            </ul>
+        </div>
+    </li>-->
+</ul>

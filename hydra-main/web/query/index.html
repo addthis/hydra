@@ -1,0 +1,124 @@
+<!--
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<html>
+<head>
+    <title>Distributed Data Browser</title>
+    <link rel="shortcut icon" href="/query/favicon.ico" />
+    <link rel="stylesheet" type="text/css" href="index.css"/>
+    <link rel="stylesheet" type="text/css" href="prettify.css"/>
+    <script type="text/javascript" src="prototype.js"></script>
+    <script type="text/javascript" src="prettify.js"></script>
+    <script type="text/javascript" src="query.js"></script>
+    <script type="text/javascript" src="json2.js"></script>
+    <script type="text/javascript" src="utf8.js"></script>
+    <script type="text/javascript" src="date.js"></script>
+    <script language="javascript" type="text/javascript" src="flot/jquery.js"></script>
+    <script language="javascript" type="text/javascript" src="flot/jquery.flot.js"></script>
+    <script language="javascript" type="text/javascript" src="flot/jquery.flot.pie.js"></script>
+    <script type="text/javascript">
+        var _$ = jQuery.noConflict();
+    </script>
+
+
+</head>
+<body onload="QM.init()">
+    <div id="banner">Distributed Data Browser</div>
+    <div id="mode">
+        <button id='b_completedqueries' onclick="QM.showTab('completedqueries');">Finished Queries</button>
+        <button id='b_runningqueries' onclick="QM.showTab('runningqueries');">Live Queries</button>
+        <button id='b_browse' onclick="QM.showTab('browse');">Browse Data</button>
+        <button id='b_setup' onclick="QM.showTab('setup');">Settings</button>
+        <button id='b_rescan' onclick="QM.monitorsRescan();">Rescan Jobs</button>
+    </div>
+    <form name="foo" method="get">
+    <div id="setup" class="padme">
+        <table id="table_setup" width=100%>
+            <tr><th width=5% nowrap>query append</th><td><input id="qother" type="text" onkeyup="return QM.submitQuery(this.value,event)"/></td></tr>
+            <tr><th width=5% nowrap>to object</th><td><input id="q2o" type="text" onkeyup="return QM.queryCodec(this.value,event,'encode')"/></td></tr>
+            <tr><th width=5% nowrap>to query</th><td><input id="o2q" type="text" onkeyup="return QM.queryCodec(this.value,event,'decode')"/></td></tr>
+        </table>
+    </div>
+    <div id="completedqueries" class="">
+        <div id="completed" class="cachetable"></div>
+        <div id="completedstatus" class="status" style="display:none;">
+            <span>
+                <span>uuid</span>
+                <label id="sel_compl_uuid"></label>                
+            </span>
+            <span>
+                <span>job</span>
+                <label id="sel_compl_job"></label>                
+            </span>
+
+            <a href="#" class="close_hosts" onclick="QM.closeCompletedHosts()">X</a>
+        </div>
+        <div id="completedhosts" class="cachetable" style="display:none;"></div>
+    </div>
+    <div id="runningqueries" class="">
+        <div id="queries" class="cachetable"></div>
+        <div id="runningstatus" class="status" style="display:none;">
+            <span>
+                <span>uuid</span>
+                <label id="sel_run_uuid"></label>                
+            </span>
+            <span>
+                <span>job</span>
+                <label id="sel_run_job"></label>                
+            </span>
+            <span>
+                <span>finished hosts</span>
+                <label id="sel_run_progress"></label>                
+            </span>
+
+            <a href="#" class="close_hosts" onclick="QM.closeRunningHosts()">X</a>
+        </div>
+        <div id="runninghosts" class="cachetable"></div>
+    </div>
+    <div id="browse" class="padme">
+        <div id="bro_left">
+            <div id="bro_left_inner">
+                <div id="treenav"></div>
+                <div class="buttonbar">
+                    <button id="qtranspose" onclick="QM.navToQuery();return false;">convert to query</button>
+                    <button id="qtranspose" onclick="QM.navToQuery(true,true);return false;">get source</button>
+                </div>
+                <div id="nodelist"></div>
+            </div>
+        </div>
+        <div id="bro_right">
+            <table id="table_query" cellspacing=1 cellpadding=1 border=0 width=100%>
+                <tr><th width=5%>name</th><td><input id="qname" type="text" onkeypress="return QM.submitQuery(this.value,event)"/></td></tr>
+                <tr><th width=5%>query</th><td><input id="query" type="text" onkeypress="return QM.submitQuery(this.value,event)"/></td></tr>
+                <tr><th width=5%>ops</th><td><input id="qops" type="text" onkeypress="return QM.submitQuery(this.value,event)"/></td></tr>
+                <tr><th width=5%>rops</th><td><input id="qrops" type="text" onkeypress="return QM.submitQuery(this.value,event)"/></td></tr>
+            </table>
+            <div class="buttonbar">
+                <button onclick="return QM.queryCSV()">csv export</button>
+                <button onclick="return QM.querySave()">save query</button>
+                <button onclick="return QM.queryRaw()">raw query</button>
+            </div>
+            <div id="saved"></div>
+            <div id="graph_options">
+                <button onclick="return QM.toggleGraphOptions()">toggle graph options</button>
+                <div id="graph_type_buttons"></div>
+                <div id="graph_config"></div>
+                <div id="graph_debug"></div>
+                <div id="graph_display"></div>
+            </div>           
+            <div id="queryinfo" class='left left_inner' ></div>       
+        </div>
+    </div>
+    </form>
+</body>
+</html>

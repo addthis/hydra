@@ -1,0 +1,3 @@
+"chain", com.addthis.hydra.data.filter.closeablebundle.CloseableBundleFilterChain
+"delete", com.addthis.hydra.data.filter.closeablebundle.CloseableBundleFilterDelete
+"set", com.addthis.hydra.data.filter.closeablebundle.CloseableBundleFilterSet

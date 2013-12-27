@@ -1,0 +1,6 @@
+"sortDeDupe", com.addthis.hydra.task.map.SortedDeDupBuilder
+"rowSplitter", com.addthis.hydra.task.map.StreamRowSplitBuilder
+"each", com.addthis.hydra.task.map.EachStreamBuilder
+"closeableFilter", com.addthis.hydra.task.map.CloseableBundleFilterStreamBuilder
+"join", com.addthis.hydra.task.map.StreamJoin
+"chain", com.addthis.hydra.task.map.StreamChain

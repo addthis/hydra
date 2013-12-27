@@ -1,0 +1,17 @@
+"bits", com.addthis.hydra.data.tree.prop.DataBits$Config
+"bloom", com.addthis.hydra.data.tree.prop.DataBloom$Config
+"copy", com.addthis.hydra.data.tree.prop.DataCopy$Config
+"count", com.addthis.hydra.data.tree.prop.DataCounting$Config
+"count.min.sketch", com.addthis.hydra.data.tree.prop.DataCountMinSketch$Config
+"histo", com.addthis.hydra.data.tree.prop.DataHistogram$Config
+"distribution", com.addthis.hydra.data.tree.prop.DataPercentileDistribution$Config
+"key.top", com.addthis.hydra.data.tree.prop.DataKeyTop$Config
+"limit.hot", com.addthis.hydra.data.tree.prop.DataLimitHot$Config
+"limit.recent", com.addthis.hydra.data.tree.prop.DataLimitRecent$Config
+"limit.top", com.addthis.hydra.data.tree.prop.DataLimitTop$Config
+"map", com.addthis.hydra.data.tree.prop.DataMap$Config
+"seen", com.addthis.hydra.data.tree.prop.DataSeen$Config
+"sum", com.addthis.hydra.data.tree.prop.DataSum$Config
+"sumf", com.addthis.hydra.data.tree.prop.DataSumFloat$Config
+"time", com.addthis.hydra.data.tree.prop.DataTime$Config
+"top", com.addthis.hydra.data.tree.prop.DataTop$Config

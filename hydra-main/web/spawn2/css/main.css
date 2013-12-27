@@ -1,0 +1,105 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+@import 'vendor/jquery.dataTables.css';
+@import 'vendor/bootstrap.css';
+@import 'vendor/glyphicons.bootstrap.css';
+@import 'vendor/nv.d3.css';
+@import 'vendor/alertify.css';
+@import 'vendor/alertify.bootstrap.css';
+@import '../js/vendor/ace/ext/searchbox.css';
+@import '../js/vendor/ace/css/editor.css';
+@import '../js/vendor/ace/theme/textmate.css';
+@import 'hydra.css';
+
+div.task-divider{
+    padding-right: 15px;
+    padding-left: 15px;
+    background-color: #eeeeee;
+    border-radius: 4px;
+}
+div.job-detail-actions button{
+    width:60px;
+    vertical-align:top;
+}
+td.job-state div.label{
+    width:80px !important;
+}
+div.navbar-inverse div#infoMetricBox span.value{
+    color:white;
+}
+div.navbar-inverse div#infoMetricBox span.key{
+    color:#999999;
+}
+span#selectedCount{
+    font-size:11px;
+}
+.hist-actions button{
+    font-size:12px;
+    width:40px;
+}
+#quiescedLabel{
+    right: 180px;
+    position: absolute;
+    top: 26px;
+}
+div#infoMetricBox div{
+    display:inline;
+    font-size: 12px;
+}
+div#infoMetricBox span.key{
+    font-weight: bold;
+    margin-left:6px;
+}
+div#infoMetricBox span.value{
+}
+#taskTable_wrapper th{
+    margin:0 !important;
+    padding:0 !important;
+}
+div.navbar-inverse span#usernameBox{
+    color:#999999;
+}
+.task-action{
+    width:60px;
+}
+.log-action{
+    width: 50px;
+}
+pre.log-container{
+    position: absolute;
+    top: 28px;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    overflow: auto;
+    margin:0px;
+}
+td.job-id div.tooltip{
+    left:84px !important;
+}
+td.job-desc div.tooltip{
+    right:170px !important;
+}
+div#comfyJobTable_wrapper > div.dataTables_header {
+    width:100%;
+    min-width: 1060px;
+}
+div#comfyJobTable_wrapper > div.dataTables_scroll{
+    width:100%;
+    min-width: 1060px;
+}
+div#comfyJobTable_wrapper >> div.dataTables_footer{
+    width:100%;
+    min-width: 1060px;
+}

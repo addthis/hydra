@@ -1,0 +1,116 @@
+<!--
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<div id="topStatusBar" class="top-bar">
+    <ul class="breadcrumb pull-left" style="display: inline; background-color: transparent;margin:0px;padding-top:0px;padding-bottom:0px;padding-left:4px;">
+        <li>
+            <a href="#jobs">
+                All Jobs
+            </a>
+        </li>
+        <li class="active">
+            <%=(_.isUndefined(job.id)?'new':job.id)%>
+        </li>
+    </ul>
+    <%if(!_.isUndefined(job.id)){%>
+        <div id="stateTextBox" class="label <%=job.stateLabel%>" style="margin-right:10px;">
+            <%=job.stateText%>
+        </div>
+        <span style="margin-right:10px;">
+            <strong>nodes</strong>
+            <%=job.nodes%>
+        </span>
+        <span id="statusBox" style="margin-right:10px;">
+            <%=job.status%>
+        </span>
+    <%}%>
+    <div class="job-detail-actions pull-right">
+        <%if(!_.isUndefined(job.id)){%>
+            <button id="queryJobButton" class="btn btn-default btn-small btn-blue" style="display:<%=(job.qc_canQuery?'inline':'none')%>;">
+                Query
+            </button>
+            <button id="kickJobButton" class="btn btn-default btn-small btn-green">
+                Kick
+            </button>
+            <button id="stopJobButton" class="btn btn-default btn-small btn-red">
+                Stop
+            </button>
+            <button id="killJobButton" class="btn btn-default btn-small btn-red">
+                Kill
+            </button>
+            <button id="deleteJobButton" class="btn btn-default btn-small btn-red">
+                Delete
+            </button>
+            <div class="btn-group">
+                <button type="button" class="btn btn-default btn-small dropdown-toggle" data-toggle="dropdown">
+                   More
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a id="cloneJobButton" href="#">Clone</a></li>
+                    <li><a id="rebalanceJobButton" href="#">Rebalance</a></li>
+                    <li><a id="enableJobButton" href="#">Enable</a></li>
+                    <li><a id="disableJobButton" href="#">Disable</a></li>
+                    <li><a id="checkDirsJobButton" href="#">Check Dirs</a></li>
+                    <li><a id="fixDirsJobButton" href="#">Fix Dirs</a></li>
+                    <li><a id="revertJobButton" href="#">Revert</a></li>
+                </ul>
+            </div>
+        <%}%>
+        <button id="saveJobButton" class="btn btn-default btn-small" style="margin-left:8px;">
+            Save
+        </button>
+        <button id="commitJobButton" class="btn btn-default btn-small <%=(_.isUndefined(job.id)?'disabled':'')%>" style="margin-right:8px;">
+            Commit
+        </button>
+    </div>
+</div>
+<ul class="nav nav-tabs nav-justified" style="margin-left: 0px; margin-bottom: 0px;">
+    <li id="confTab">
+        <a href="#jobs/<%=(_.isUndefined(job.id)?(isClone?cloneId+'/conf/clone':'create/conf'):job.id+'/conf')%>">
+            Configuration
+        </a>
+    </li>
+    <li class="<%=(_.isUndefined(job.id)?'disabled':'')%>" id="tasksTab">
+        <a href="#jobs/<%=(_.isUndefined(job.id)?'create/tasks':job.id+'/tasks')%>">
+            Tasks
+        </a>
+    </li>
+    <li id="settingsTab">
+        <a href="#jobs/<%=(_.isUndefined(job.id)?(isClone?cloneId+'/settings/clone':'create/settings'):job.id+'/settings')%>">
+            Settings
+        </a>
+    </li>
+    <li id="alertsTab">
+        <a href="#jobs/<%=(_.isUndefined(job.id)?(isClone?cloneId+'/alerts/clone':'create/alerts'):job.id+'/alerts')%>">
+            Alerts
+        </a>
+    </li>
+    <li class="<%=(_.isUndefined(job.id)?'disabled':'')%>" id="depTab">
+        <a href="#jobs/<%=(_.isUndefined(job.id)?'create':job.id)%>/deps">
+            Dependencies
+        </a>
+    </li>
+    <li  id="expTab">
+        <a href="#jobs/<%=(_.isUndefined(job.id)?'create':job.id)%>/expanded">
+            Expanded Configuration
+        </a>
+    </li>
+    <li class="<%=(_.isUndefined(job.id)?'disabled':'')%>" id="historyTab">
+        <a href="#jobs/<%=(_.isUndefined(job.id)?'create':job.id)%>/history">
+            History
+        </a>
+    </li>
+</ul>
+<div id="detailContainer" class="main-container">
+</div>

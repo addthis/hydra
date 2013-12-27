@@ -1,0 +1,66 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+@import '../../spawn2/css/vendor/jquery.dataTables.css';
+@import '../../spawn2/css/vendor/bootstrap.css';
+@import '../../spawn2/css/vendor/glyphicons.bootstrap.css';
+@import '../../spawn2/css/vendor/nv.d3.css';
+@import '../../spawn2/css/vendor/alertify.css';
+@import '../../spawn2/css/vendor/alertify.bootstrap.css';
+@import '../../spawn2/js/vendor/ace/ext/searchbox.css';
+@import '../../spawn2/js/vendor/ace/css/editor.css';
+@import '../../spawn2/js/vendor/ace/theme/textmate.css';
+@import '../../spawn2/css/hydra.css';
+
+
+div#tinyQueryTable_wrapper div.selectable_action {
+    width: 100%;
+}
+div.detail-view div.top-actions ul.breadcrumb, div.dataTables_wrapper div.selectable_action ul.breadcrumb{
+    margin:0px;
+    padding:0px;
+    /*padding: 4px 7px;*/
+    /*font-size:12px;*/
+    height:25px;
+}
+div.dataTables_wrapper div.selectable_action ul.breadcrumb{
+    width: 100%;
+}
+button.btn-action{
+    width:60px;
+    vertical-align:top;
+}
+div.detail-view{
+}
+div.detail-view detail-body{
+    overflow-y: auto;
+    padding:4px;
+}
+div.detail-view div.top-actions{
+    width:100%;
+    height:25px;
+    background-color: #f5f5f5;
+    margin-top:2px;
+}
+div.detail-view div.top-actions button{
+    margin-left:10px;
+}
+table.table-form{
+    margin-bottom:0px;
+}
+div#queryHostTableDiv{
+    position: absolute;
+    bottom: 0px;
+    right: 0px;
+    top: 171px;
+}

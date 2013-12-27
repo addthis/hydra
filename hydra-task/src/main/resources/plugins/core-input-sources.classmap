@@ -1,0 +1,10 @@
+"channel", com.addthis.hydra.task.source.DataSourceChannel
+"empty", com.addthis.hydra.task.source.DataSourceEmpty
+"filter", com.addthis.hydra.task.source.DataSourceFiltered
+"hashed", com.addthis.hydra.task.source.DataSourceHashed
+"files", com.addthis.hydra.task.source.DataSourceStreamFiles
+"prefetch", com.addthis.hydra.task.source.DataSourcePrefetch
+"range", com.addthis.hydra.task.source.DataSourceRange
+"aggregate", com.addthis.hydra.task.source.AggregateTaskDataSource
+"mesh2", com.addthis.hydra.task.source.DataSourceMeshy2
+"sorted", com.addthis.hydra.task.source.SortedTaskDataSource

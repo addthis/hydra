@@ -1,0 +1,17 @@
+target/
+test.http.get/
+.classpath
+.project
+.settings/
+.idea/
+hydra-local/
+hydra-data/indexes/
+hydra-data/query.tmp
+hydra*.iml
+pom.xml.versionsBackup
+.#*
+docs/build/
+hydra.ipr
+hydra.iws
+hydra-uber/src/main/resources/hydra-git.properties
+*.pyc

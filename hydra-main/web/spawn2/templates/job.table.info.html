@@ -1,0 +1,55 @@
+<!--
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<div id="jobCount">
+    <span class="key">jobs:</span>
+    <span class="value"><%=(jobCount===0?"-":jobCount)%></span>
+</div>
+<div id="hostCount">
+    <span class="key">hosts:</span>
+    <span class="value"><%=(hostCount===0?"-":hostCount)%></span>
+</div>
+<div id="tasksCount">
+    <span class="key">tasks:</span>
+    <span class="value"><%=(tasksCount===0?"-":tasksCount)%></span>
+</div>
+<div id="queuedCount">
+    <span class="key">queued:</span>
+    <span class="value"><%=(queuedCount===0?"-":queuedCount)%></span>
+</div>
+<!--
+<div id="queuedErrorCount">
+    <span class="key">queued error:</span>
+    <span class="value"><%=(queuedErrorCount===0?"-":queuedErrorCount)%></span>
+</div>
+-->
+<div id="runningCount">
+    <span class="key">running:</span>
+    <span class="value"><%=(runningCount===0?"-":runningCount)%></span>
+</div>
+<div id="erroredCount">
+    <span class="key">errored:</span>
+    <span class="value"><%=(erroredCount===0?"-":erroredCount)%></span>
+</div>
+<div id="slots">
+    <span class="key">slots:</span>
+    <span class="value"><%=(availTaskSlots===0?"-":availTaskSlots)%></span>
+</div>
+<div id="disk">
+    <span class="key">disk:</span>
+    <span class="value"><%=(disk===0?"-":disk)%></span>
+</div>
+<!--<div id="availTaskSlots">
+    <span class="key">avail task slots:</span>
+    <span class="value"><%=(availTaskSlots===0?"-":availTaskSlots)%></span>
+</div>-->

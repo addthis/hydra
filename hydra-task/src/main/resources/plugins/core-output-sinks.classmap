@@ -1,0 +1,4 @@
+"chain", com.addthis.hydra.task.output.TaskDataOutputChain
+"file", com.addthis.hydra.task.output.DataOutputFile
+"filtered", com.addthis.hydra.task.output.FilteredDataOutput
+"tree", com.addthis.hydra.task.output.tree.TreeMapper

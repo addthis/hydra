@@ -1,0 +1,72 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.addthis.hydra.job.chores;
+
+import com.addthis.hydra.job.JobTask;
+
+/**
+ * A simple class for communicating where and how a JobTask should be moved.
+ */
+public class JobTaskMoveAssignment {
+
+    private final JobTask task;
+    private final String sourceUUID;
+    private final String targetUUID;
+    private final boolean promote;
+    private final boolean delete;
+    private final boolean fromReplica;
+
+    public JobTaskMoveAssignment(JobTask task, String sourceUUID, String targetUUID, boolean fromReplica, boolean promote, boolean delete) {
+        this.task = task;
+        this.sourceUUID = sourceUUID;
+        this.targetUUID = targetUUID;
+        this.fromReplica = fromReplica;
+        this.promote = promote;
+        this.delete = delete;
+    }
+
+    public JobTask getTask() {
+        return task;
+    }
+
+    public String getSourceUUID() {
+        return sourceUUID;
+    }
+
+    public String getTargetUUID() {
+        return targetUUID;
+    }
+
+    public boolean isFromReplica() {
+        return fromReplica;
+    }
+
+    public boolean promote() {
+        return promote;
+    }
+
+    public boolean delete() {
+        return delete;
+    }
+
+    @Override
+    public String toString() {
+        return "JobTaskMoveAssignment{" +
+               "task=" + task.getJobKey() +
+               ", sourceUUID='" + sourceUUID + '\'' +
+               ", targetUUID='" + targetUUID + '\'' +
+               ", fromReplica=" + fromReplica +
+               '}';
+    }
+}

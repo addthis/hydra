@@ -1,0 +1,88 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<!--
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.addthis.hydra</groupId>
+    <artifactId>hydra-parent</artifactId>
+    <version>4.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>hydra-store</artifactId>
+  <name>Hydra KV Store Module</name>
+  <description>log file processing library</description>
+
+
+  <dependencies>
+    <!-- hydra module deps -->
+    <dependency>
+      <groupId>com.addthis.hydra</groupId>
+      <artifactId>hydra-essentials</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <!-- addthis deps -->
+    <dependency>
+      <groupId>com.addthis</groupId>
+      <artifactId>codec</artifactId>
+      <version>${hydra.dep.codec.version}</version>
+    </dependency>
+    <!-- end addthis deps -->
+
+    <!-- 3rd party -->
+    <!-- begin compression libraries -->
+    <dependency>
+      <groupId>com.ning</groupId>
+      <artifactId>compress-lzf</artifactId>
+      <version>${hydra.dep.compress.compress-lzf.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.jcraft</groupId>
+      <artifactId>jzlib</artifactId>
+      <version>${hydra.dep.compress.jzlib.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <version>${hydra.dep.compress.snappy-java.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.jponge</groupId>
+      <artifactId>lzma-java</artifactId>
+      <version>${hydra.dep.compress.lzma-java.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+      <version>${hydra.dep.compress.lzma-java.version}</version>
+    </dependency>
+    <!-- end compression libraries -->
+
+    <!--
+        The sleepycat license has surprisingly strong copyleft
+        properties that do not match the licenses used for the
+        rest of hydra.  It is set as non-transitive to avoid
+        inadvertently pulling it into downstream projects.  In the
+        future hydra should have plugable storage with multiple
+        implementations.
+    -->
+    <dependency>
+      <groupId>com.sleepycat</groupId>
+      <artifactId>je</artifactId>
+      <version>${hydra.dep.sleepycat.je.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- end 3rd party -->
+  </dependencies>
+</project>

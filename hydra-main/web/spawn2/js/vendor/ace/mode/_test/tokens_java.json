@@ -1,0 +1,108 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+[[
+   "start",
+  ["keyword","public"],
+  ["text"," "],
+  ["keyword","class"],
+  ["text"," "],
+  ["identifier","InfiniteLoop"],
+  ["text"," "],
+  ["lparen","{"]
+],[
+   "start"
+],[
+   "comment",
+  ["text","    "],
+  ["comment","/*"]
+],[
+   "comment",
+  ["comment","     * This will cause the program to hang..."]
+],[
+   "comment",
+  ["comment","     *"]
+],[
+   "comment",
+  ["comment","     * Taken from:"]
+],[
+   "comment",
+  ["comment","     * http://www.exploringbinary.com/java-hangs-when-converting-2-2250738585072012e-308/"]
+],[
+   "start",
+  ["comment","     */"]
+],[
+   "start",
+  ["text","    "],
+  ["keyword","public"],
+  ["text"," "],
+  ["keyword","static"],
+  ["text"," "],
+  ["keyword","void"],
+  ["text"," "],
+  ["identifier","main"],
+  ["lparen","("],
+  ["support.function","String"],
+  ["lparen","["],
+  ["rparen","]"],
+  ["text"," "],
+  ["identifier","args"],
+  ["rparen",")"],
+  ["text"," "],
+  ["lparen","{"]
+],[
+   "start",
+  ["text","        "],
+  ["keyword","double"],
+  ["text"," "],
+  ["identifier","d"],
+  ["text"," "],
+  ["keyword.operator","="],
+  ["text"," "],
+  ["support.function","Double"],
+  ["text","."],
+  ["identifier","parseDouble"],
+  ["lparen","("],
+  ["string","\"2.2250738585072012e-308\""],
+  ["rparen",")"],
+  ["text",";"]
+],[
+   "start"
+],[
+   "start",
+  ["text","        "],
+  ["comment","// unreachable code"]
+],[
+   "start",
+  ["text","        "],
+  ["support.function","System"],
+  ["text","."],
+  ["identifier","out"],
+  ["text","."],
+  ["identifier","println"],
+  ["lparen","("],
+  ["string","\"Value: \""],
+  ["text"," "],
+  ["keyword.operator","+"],
+  ["text"," "],
+  ["identifier","d"],
+  ["rparen",")"],
+  ["text",";"]
+],[
+   "start",
+  ["text","    "],
+  ["rparen","}"]
+],[
+   "start",
+  ["rparen","}"]
+]]

@@ -1,0 +1,64 @@
+<!--
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<table class="table table-bordered auto-layout">
+    <thead>
+        <tr class=" ">
+            <th colspan="2">Git Properties</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr class=" ">
+            <td width="20%">Git Branch</td>
+            <td width="70%">
+                <input class="form-control" disabled style="margin:0px;font-weight:bold;" type="text" value="<%=branch%>">
+            </td>
+        </tr>
+        <tr class=" ">
+            <td width="20%">Hydra JAR Build Time</td>
+            <td width="70%">
+                <input class="form-control" disabled style="margin:0px;font-weight:bold;" type="text" value="<%=buildTime%>">
+            </td>
+        </tr>
+        <tr class=" ">
+            <td width="20%">User that built Hydra JAR</td>
+            <td width="70%">
+                <input class="form-control" disabled style="margin:0px;font-weight:bold;" type="text" value="<%=buildUserName%>">
+            </td>
+        </tr>
+        <tr class=" ">
+            <td width="20%">User that made last commit</td>
+            <td width="70%">
+                <input class="form-control" disabled style="margin:0px;font-weight:bold;" type="text" value="<%=commitUserName%>">
+            </td>
+        </tr>
+        <tr class=" ">
+            <td width="20%">Time of last commit</td>
+            <td width="70%">
+                <input class="form-control" disabled style="margin:0px;font-weight:bold;" type="text" value="<%=commitTime%>">
+            </td>
+        </tr>
+        <tr class=" ">
+            <td width="20%">Commit ID</td>
+            <td width="70%">
+                <input class="form-control" disabled style="margin:0px;font-weight:bold;" type="text" value="<%=commitId%>">
+            </td>
+        </tr>
+        <tr class=" ">
+            <td width="20%">Message for last commit</td>
+            <td width="70%">
+                <textarea  class="form-control" rows="10" disabled="disabled" class="input-xxlarge" style=""><%=commitMessageFull%></textarea>
+            </td>
+        </tr>
+    </tbody>
+</table>
