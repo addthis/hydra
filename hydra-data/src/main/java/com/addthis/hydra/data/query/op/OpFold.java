@@ -118,6 +118,9 @@ public class OpFold extends AbstractBufferOp implements BundleFormatted {
                 retval = createRows(folded);
             }
             folded = new ListBundle(format);
+            for (BundleField nullField : outputFields) {
+                folded.setValue(nullField, null);
+            }
             for (int i = 0; i < keycols.length; i++) {
                 folded.setValue(outputFields[i], inputBinder.getColumn(row, i));
             }
