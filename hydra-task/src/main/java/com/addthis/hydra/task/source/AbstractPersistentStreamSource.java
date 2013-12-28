@@ -308,7 +308,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
             } else if (dateIncrements == null) {
                 log.warn(
                         "Non-Standard dateFormat: " + dateFormat + " defaulting to daily time increments\n" +
-                        "This can be modified to hourly time increments by setting dateIncrments to 'HOURS'");
+                        "This can be modified to hourly time increments by setting dateIncrements to 'HOURS'");
                 mark = mark.plusDays(1);
             }
         }

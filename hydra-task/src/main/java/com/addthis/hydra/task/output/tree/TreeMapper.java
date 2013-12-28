@@ -27,6 +27,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.EnumSet;
@@ -124,6 +125,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
 
     private static final Logger log = LoggerFactory.getLogger(TreeMapper.class);
     private static final DecimalFormat percent = new DecimalFormat("00.0%");
+    private static final SimpleDateFormat date = new SimpleDateFormat("YYMMdd-HHmmss");
 
     private enum BENCH {
         TIME, UNITS, RULES, STREAM, LOCAL
@@ -654,7 +656,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
                 snap.treeCacheHitRate = tree.getCacheHitRate();
                 snap.treeDbCount = tree.getDBCount();
                 snap.freeMemory = Runtime.getRuntime().freeMemory() / 1024L / 1024L;
-                snap.averageTimestamp = new Date(avg_t).toGMTString();
+                snap.averageTimestamp = date.format(avg_t);
                 snap.runningTime = time;
                 mapstats.setSnapshot(snap);
 
@@ -673,6 +675,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
                 msg.append(pad(percent.format(snap.treeCacheHitRate), 6));
                 msg.append(pad(snap.treeDbCount, 6));
                 msg.append(pad(snap.freeMemory, 6));
+                msg.append(pad(snap.averageTimestamp, 14));
                 log.info(msg.toString());
             }
         }
