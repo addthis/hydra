@@ -42,7 +42,7 @@ import com.addthis.maljson.JSONObject;
 public class TaskRunner {
 
     private static final int defaultThreads = Parameter.intValue("task.threads",
-            Math.min(2, Runtime.getRuntime().availableProcessors()));
+            Math.max(1, Runtime.getRuntime().availableProcessors()-1));
 
     /**
      * @param args
