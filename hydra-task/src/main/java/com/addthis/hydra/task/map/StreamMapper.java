@@ -86,7 +86,7 @@ import org.slf4j.LoggerFactory;
  */
 public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRunTarget {
 
-    private final Logger log = LoggerFactory.getLogger(StreamMapper.class);
+    private static final Logger log = LoggerFactory.getLogger(StreamMapper.class);
     private final boolean emitTaskState = Parameter.boolValue("task.mapper.emitState", true);
 
     /**
@@ -243,7 +243,7 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
             builder.init();
         }
         this.config = config;
-        log.info("[init] " + config);
+        log.info("[init] {}", config);
     }
 
     @Override
@@ -290,8 +290,9 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
     /**
      * called directly or from builder
      */
+    @Override
     public void emit(Bundle bundle) {
-        log.debug("output: " + bundle);
+        log.debug("output: {}", bundle);
         getOutput().send(bundle);
         outputCountMetric.inc();
         totalEmit.incrementAndGet();
@@ -300,7 +301,7 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
     @Override
     public void process(Bundle bundle) {
         try {
-            log.debug("input: " + bundle);
+            log.debug("input: {}", bundle);
             inputCountMetric.inc();
             totalInputCountMetric.inc();
             processedMeterMetric.mark();
@@ -316,11 +317,11 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
                     }
                 } else {
                     bundleFilterTime.addAndGet(System.nanoTime() - markBefore);
-                    log.debug("filterOut dropped bundle : " + bundle);
+                    log.debug("filterOut dropped bundle : {}", bundle);
                 }
             } else {
                 bundleFilterTime.addAndGet(System.nanoTime() - markBefore);
-                log.debug("filterIn dropped bundle : " + bundle);
+                log.debug("filterIn dropped bundle : {}", bundle);
             }
             long time = JitterClock.globalTime();
             if (time - lastMark > 1000 && emitGate.compareAndSet(false, true)) {
@@ -329,10 +330,10 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
                 long out = outputCountMetric.count();
                 outputCountMetric.clear();
                 if (stats) {
-                    log.info("run=" + (System.currentTimeMillis() - startTime) +
-                             " in=" + in + " out=" + out + " skip=" + Math.max(in - out, 0) + " ms=" + (time - lastMark) +
-                             " rate=" + Math.round(processedMeterMetric.oneMinuteRate()) +
-                             " total=" + totalEmit + " filterTime=" + pad(bundleFilterTime.getAndSet(0), 6));
+                    log.info("run={} in={} out={} skip={} ms={} rate={} total={} filterTime={}",
+                            System.currentTimeMillis() - startTime, in, out, Math.max(in - out, 0),
+                            time - lastMark, Math.round(processedMeterMetric.oneMinuteRate()), totalEmit,
+                            pad(bundleFilterTime.getAndSet(0), 6));
                 }
                 lastMark = time;
                 emitGate.set(false);
@@ -341,11 +342,11 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
             getOutput().sourceError(ex);
             throw ex;
         } catch (RuntimeException ex) {
-            log.warn("runtime error :: " + BundleFilterDebugPrint.formatBundle(bundle));
+            log.warn("runtime error :: {}", BundleFilterDebugPrint.formatBundle(bundle));
             getOutput().sourceError(DataChannelError.promote(ex));
             throw ex;
         } catch (Exception ex) {
-            log.warn("handling error :: " + BundleFilterDebugPrint.formatBundle(bundle));
+            log.warn("handling error :: {}", BundleFilterDebugPrint.formatBundle(bundle));
             DataChannelError err = DataChannelError.promote(ex);
             getOutput().sourceError(err);
             throw err;
@@ -363,7 +364,7 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
                 exitState.setMeanRate(processedMeterMetric.meanRate());
                 Files.write(new CodecJSON().encode(exitState), new File("job.exit"));
             } catch (Exception ex) {
-                ex.printStackTrace();
+                log.error("", ex);
             }
         }
     }
@@ -373,8 +374,8 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
      */
     private static String pad(long v, int chars) {
         String sv = Long.toString(v);
-        String opt[] = new String[]{"K", "M", "B", "T"};
-        DecimalFormat dco[] = new DecimalFormat[]{new DecimalFormat("0.00"), new DecimalFormat("0.0"), new DecimalFormat("0")};
+        String opt[] = {"K", "M", "B", "T"};
+        DecimalFormat dco[] = {new DecimalFormat("0.00"), new DecimalFormat("0.0"), new DecimalFormat("0")};
         int indx = 0;
         double div = 1000d;
         outer:
