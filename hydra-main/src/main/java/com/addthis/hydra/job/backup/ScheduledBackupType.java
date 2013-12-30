@@ -43,7 +43,7 @@ public abstract class ScheduledBackupType {
         @Override
         public int compare(String o1, String o2) {
             // Sort backups going from most recent to earliest
-            return Long.compare(getBackupCreationDate(o2), getBackupCreationDate(o1));
+            return Long.compare(getBackupCreationTimeMillis(o2), getBackupCreationTimeMillis(o1));
         }
     };
 
@@ -83,7 +83,7 @@ public abstract class ScheduledBackupType {
      *
      * @param name A string representing a formatted date (e.g., 120415)
      * @return Date the corresponding date
-     * @throws ParseException if the input is not valid
+     * @throws IllegalArgumentException if the input is not valid
      */
     public abstract Date parseDateFromName(String name) throws IllegalArgumentException;
 
@@ -133,7 +133,7 @@ public abstract class ScheduledBackupType {
         }
         try {
             Date backupDate = parseDateFromName(name);
-            return backupDate.after(backupsValidAfterDate) && backupDate.before(new Date(JitterClock.globalTime()));
+            return backupDate.after(backupsValidAfterDate) && backupDate.before(new Date(JitterClock.globalTime() + 1));
         } catch (NumberFormatException nfe) {
             return false;
         } catch (IllegalArgumentException pe) {
@@ -262,7 +262,7 @@ public abstract class ScheduledBackupType {
         return protectedBackupTypes;
     }
 
-    private static long getBackupCreationDate(String name) {
+    protected static long getBackupCreationTimeMillis(String name) {
         String millis = name.substring(name.lastIndexOf("-") + 1);
         try {
             return Long.parseLong(millis, 16);

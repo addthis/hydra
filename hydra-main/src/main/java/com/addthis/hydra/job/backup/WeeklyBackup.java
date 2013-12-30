@@ -43,7 +43,11 @@ public class WeeklyBackup extends ScheduledBackupType {
 
     @Override
     public Date parseDateFromName(String name) throws IllegalArgumentException {
-        return dateTimeFormatter.parseDateTime(stripSuffixAndPrefix(name)).toDate();
+        String weekString = stripSuffixAndPrefix(name);
+        if (weekString.endsWith("53")) {
+            return new Date(ScheduledBackupType.getBackupCreationTimeMillis(name));
+        }
+        return dateTimeFormatter.parseDateTime(weekString).toDate();
     }
 
     @Override
