@@ -1673,7 +1673,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 }
             }
             int offset = (backups.size() - 1 - revision);
-            if (revision <= 0 || offset < 0 || offset >= backups.size()) {
+            if (revision < 0 || offset < 0 || offset >= backups.size()) {
                 log.warn("[revert] fail: can't find revision=" + revision + " with only " + backups.size() + " complete backups");
                 return null;
             }
