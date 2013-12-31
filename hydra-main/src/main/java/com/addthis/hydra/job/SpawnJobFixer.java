@@ -29,16 +29,16 @@ import org.slf4j.LoggerFactory;
 /**
  * A class in charge of performing common fixes when tasks go into error state.
  */
-public class SpawnTaskFixer {
+public class SpawnJobFixer {
 
-    private static Logger log = LoggerFactory.getLogger(SpawnTaskFixer.class);
+    private static Logger log = LoggerFactory.getLogger(SpawnJobFixer.class);
     private final Spawn spawn;
     private static final long recentlyFixedTaskTime = Parameter.longValue("spawn.task.fix.time", 60_000);
     private final Cache<JobKey, Boolean> recentlyFixedTaskCache = CacheBuilder.newBuilder().expireAfterWrite(recentlyFixedTaskTime, TimeUnit.MILLISECONDS).build();
 
     private final ImmutableSet<Integer> fixDirErrorCodes = ImmutableSet.copyOf(new Integer[]{JobTaskErrorCode.SWAP_FAILURE, JobTaskErrorCode.EXIT_DIR_ERROR, JobTaskErrorCode.HOST_FAILED});
 
-    public SpawnTaskFixer(Spawn spawn) {
+    public SpawnJobFixer(Spawn spawn) {
         this.spawn = spawn;
     }
 

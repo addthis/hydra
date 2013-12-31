@@ -270,7 +270,8 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         this.activeTaskKeys = new HashSet<>();
     }
 
-    private Minion(File rootDir, int port) throws Exception {
+    @VisibleForTesting
+    public Minion(File rootDir, int port) throws Exception {
         this.rootDir = rootDir;
         this.nextPort = minJobPort;
         this.startTime = System.currentTimeMillis();
@@ -2633,9 +2634,16 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 }
                 if (!task.jobDir.exists()) {
                     log.warn("[task.replicate] aborted because there is no directory for " + task.getJobKey() + " yet: " + task.jobDir);
-                } else if (!task.isRunning() && !task.isReplicating()) {
+                } else if (!task.isRunning() && !task.isReplicating() && !task.isBackingUp()) {
                     log.warn("[task.replicate] starting " + replicate.getJobKey());
                     removeJobFromQueue(replicate.getJobKey(), false);
+                    if (!task.isComplete()) {
+                        // Attempt to revert to the latest complete backup, if one can be found
+                        String latestCompleteBackup = task.getBackupByRevision(0, "gold");
+                        if (latestCompleteBackup != null) {
+                            task.promoteBackupToLive(new File(task.getJobDir(), latestCompleteBackup), task.getLiveDir());
+                        }
+                    }
                     try {
                         task.setReplicas(replicate.getReplicas());
                         task.execReplicate(replicate.getChoreWatcherKey(), true, true);

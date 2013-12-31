@@ -338,20 +338,19 @@ public final class Job implements IJob, Codable {
     public boolean setEnabled(boolean enabled) {
         if (enabled == disabled) {
             disabled = !enabled;
-
-            // determine new states
+            // Determine new states
             if (enabled && state == JobState.ERROR.getValue()) {
-                setState(JobState.IDLE);
                 for (JobTask task : getCopyOfTasks()) {
                     JobTaskState state = task.getState();
                     task.setErrorCode(0);
                     task.setPreFailErrorCode(0);
                     if (state == JobTaskState.ERROR || state == JobTaskState.DISK_FULL) {
                         setTaskState(task, JobTaskState.IDLE, true);
-                    } else if (state != JobTaskState.IDLE) {
-                        setState(JobState.RUNNING, true);
                     }
                 }
+            } else if (enabled && state == JobState.DEGRADED.getValue()) {
+                // Clear degraded state by recalculating
+                calculateJobState(true);
             }
             return true;
         }
@@ -580,53 +579,61 @@ public final class Job implements IJob, Codable {
         return getSubmitTime() > o.getSubmitTime() ? 1 : -1;
     }
 
-    public synchronized boolean setTaskState(JobTask task, JobTaskState state) {
-        return setTaskState(task, state, false);
+    public synchronized boolean setTaskState(JobTask task, JobTaskState newState) {
+        return setTaskState(task, newState, false);
     }
 
-    public synchronized boolean setTaskState(JobTask task, JobTaskState state, boolean force) {
+    /**
+     * Change a task's state, and update the job's state if appropriate
+     * @param task The task to modify
+     * @param newState The new state to set
+     * @param force Whether to force the state transition regardless of the expected transition map
+     * @return True on success
+     */
+    public synchronized boolean setTaskState(JobTask task, JobTaskState newState, boolean force) {
         JobTaskState prevState = task.getState();
-        boolean err = false, sched = false, run = false, reb = false, stopped = false;
 
-        if (!task.setState(state, force)) {
+        if (!task.setState(newState, force)) {
             return false;
         }
-
-        if (prevState.isActiveState() && !state.isActiveState()) {
+        if (prevState.isActiveState() && !newState.isActiveState()) {
             this.countActiveTasks--;
-        } else if (!prevState.isActiveState() && state.isActiveState()) {
+        } else if (!prevState.isActiveState() && newState.isActiveState()) {
             this.countActiveTasks++;
         }
+        if (newState == JobTaskState.ERROR || newState == JobTaskState.DISK_FULL) {
+            this.disabled = true;
+        }
+        calculateJobState(force);
+        return true;
+    }
 
-        // job state is dependent on task states, recalculate it
-        if (!sched) {
-            for (JobTask t : nodes) {
-                if (t.getWasStopped()) {
-                    stopped = true;
-                }
-                if (t.getState() == JobTaskState.REBALANCE) {
-                    reb = true;
-                } else if (t.isRunning() && this.state != JobState.REBALANCE.getValue()) {
-                    run = true;
-                } else if (t.getState() == JobTaskState.ALLOCATED || t.getState() == JobTaskState.QUEUED) {
-                    sched = true;
-                } else if (t.getState() == JobTaskState.ERROR || t.getState() == JobTaskState.DISK_FULL) {
-                    err = true;
-                    break;
-                }
+    /**
+     * Calculate the job state based on the state of its tasks
+     */
+    private boolean calculateJobState(boolean force) {
+        boolean err = false, sched = false, run = false, reb = false, stopped = false;
+        for (JobTask t : nodes) {
+            if (t.getWasStopped()) {
+                stopped = true;
+            }
+            if (t.getState() == JobTaskState.REBALANCE) {
+                reb = true;
+            } else if (t.isRunning() && this.state != JobState.REBALANCE.getValue()) {
+                run = true;
+            } else if (t.getState() == JobTaskState.ALLOCATED || t.getState() == JobTaskState.QUEUED) {
+                sched = true;
+            } else if (t.getState() == JobTaskState.ERROR || t.getState() == JobTaskState.DISK_FULL) {
+                err = true;
+                break;
             }
         }
         JobState oldJobState = getState();
-        JobState nextState = (err) ? JobState.ERROR : (reb) ? JobState.REBALANCE : (run) ? JobState.RUNNING :
-                                                                                   (sched) ? JobState.SCHEDULED : JobState.IDLE;
+        JobState nextState = (err) ? JobState.ERROR : (reb) ? JobState.REBALANCE : (run) ? JobState.RUNNING : (sched) ? JobState.SCHEDULED : JobState.IDLE;
         if (setState(nextState, force)) {
-            if (state == JobTaskState.ERROR || state == JobTaskState.DISK_FULL) {
-                this.disabled = true;
-            } else {
-                // If transitioning from error to non-error state, enable job as long as it has run recently.
-                if (oldJobState == JobState.ERROR && nextState != JobState.ERROR && getSubmitTime() != null && System.currentTimeMillis() - getSubmitTime() < AUTO_ENABLE_CUTOFF) {
-                    setEnabled(true);
-                }
+            // If transitioning from error to non-error state, enable job as long as it has run recently.
+            if (oldJobState == JobState.ERROR && nextState != JobState.ERROR && getSubmitTime() != null && System.currentTimeMillis() - getSubmitTime() < AUTO_ENABLE_CUTOFF) {
+                setEnabled(true);
             }
             wasStopped = stopped;
             return true;
@@ -634,6 +641,7 @@ public final class Job implements IJob, Codable {
             return false;
         }
     }
+
 
     public void errorTask(JobTask task, int errorCode) {
         setTaskState(task, JobTaskState.ERROR, true);

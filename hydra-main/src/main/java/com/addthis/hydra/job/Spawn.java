@@ -13,14 +13,6 @@
  */
 package com.addthis.hydra.job;
 
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_UP_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_COMMAND_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_MACRO_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -66,6 +58,8 @@ import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
+import com.addthis.bark.ZkClientFactory;
+import com.addthis.bark.ZkHelpers;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
@@ -106,14 +100,11 @@ import com.addthis.hydra.query.WebSocketManager;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.hydra.util.SettableGauge;
-import com.addthis.bark.ZkHelpers;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
-
-import com.addthis.bark.ZkClientFactory;
-import com.addthis.meshy.service.file.FileReference;
 import com.addthis.meshy.MeshyClient;
+import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -131,6 +122,14 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_UP_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_COMMAND_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_MACRO_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
 
 /**
  * manages minions running on remote notes. runs master http server to
@@ -217,6 +216,7 @@ public class Spawn implements Codec.Codable {
     private static final int SWAP_CHORE_TTL = Parameter.intValue("spawn.chore.ttl.swap", 10 * 60 * 1000);
     private static final int TASK_QUEUE_DRAIN_INTERVAL = Parameter.intValue("task.queue.drain.interval", 500);
     private static final boolean ENABLE_JOB_STORE = Parameter.boolValue("job.store.enable", true);
+    private static final boolean ENABLE_JOB_FIXDIRS_ONCOMPLETE = Parameter.boolValue("job.fixdirs.oncomplete", true);
 
 
     private final ConcurrentHashMap<String, HostState> monitored;
@@ -254,7 +254,7 @@ public class Spawn implements Codec.Codable {
     private final Lock jobLock = new ReentrantLock();
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     private final LinkedBlockingQueue<String> jobUpdateQueue = new LinkedBlockingQueue<>();
-    private final SpawnTaskFixer spawnTaskFixer = new SpawnTaskFixer(this);
+    private final SpawnJobFixer spawnJobFixer = new SpawnJobFixer(this);
     private JobAlertRunner jobAlertRunner;
     private JobStore jobStore;
     private SpawnDataStore spawnDataStore;
@@ -1278,7 +1278,7 @@ public class Spawn implements Codec.Codable {
      * For a particular task, ensure all live/replica copies exist where they should
      *
      * @param jobId           The job id to fix
-     * @param node            The task id to fix
+     * @param node            The task id to fix, or -1 to fix all
      * @param ignoreTaskState Whether to ignore the task's state (mostly when recovering from a host failure)
      * @return A string description
      */
@@ -2505,7 +2505,7 @@ public class Spawn implements Codec.Codable {
         log.warn("[task.end] " + task.getJobKey() + " exited abnormally with " + exitCode);
         task.incrementErrors();
         try {
-            spawnTaskFixer.fixTask(job, task, exitCode);
+            spawnJobFixer.fixTask(job, task, exitCode);
         } catch (Exception ex) {
             job.errorTask(task, exitCode);
         }
@@ -2568,6 +2568,10 @@ public class Spawn implements Codec.Codable {
                     }
                 } else {
                     doOnState(job, job.getOnCompleteURL(), "onComplete");
+                    if (ENABLE_JOB_FIXDIRS_ONCOMPLETE) {
+                        // Perform a fixDirs on completion, cleaning up missing replicas/orphans.
+                        fixTaskDir(job.getId(), -1, false);
+                    }
                 }
             } else {
                 doOnState(job, job.getOnErrorURL(), "onError");
