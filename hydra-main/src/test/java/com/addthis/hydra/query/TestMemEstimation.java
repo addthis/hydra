@@ -185,7 +185,7 @@ public class TestMemEstimation {
     }
 
     private void queryTreeScan() throws Exception {
-        query(new Query("nojob", "+/+", "merge=u"), tree);
+        query(new Query("nojob", new String[] { "+/+" }, new String[] { "merge=u" }), tree);
     }
 
     private void pause() throws InterruptedException, IOException {

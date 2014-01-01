@@ -542,7 +542,7 @@ public class QueryTracker {
     public static class QueryEntryInfo implements Codec.Codable {
 
         @Codec.Set(codable = true)
-        public String path;
+        public String paths[];
         @Codec.Set(codable = true)
         public String uuid;
         @Codec.Set(codable = true)
@@ -558,7 +558,7 @@ public class QueryTracker {
         @Codec.Set(codable = true)
         public String job;
         @Codec.Set(codable = true)
-        public String ops;
+        public String ops[];
         @Codec.Set(codable = true)
         public long startTime;
         @Codec.Set(codable = true)
@@ -615,9 +615,7 @@ public class QueryTracker {
             this.cacheTTL = query.getParameter("cachettl") == null ? DEFAULT_CACHE_TTL : Long.valueOf(query.getParameter("cachettl"));
             this.noCache = query.getParameter("nocache") == null ? false : Boolean.valueOf(query.getParameter("nocache"));
             this.queryDetails = query.getJob() + "--" +
-                                query.getPathString() + "--" +
-                                (query.getOps() == null ? "" : query.getOps()) + "--" +
-                                (query.getRemoteOps() == null ? "" : query.getRemoteOps());
+                                (query.getOps() == null ? "" : query.getOps());
 
             this.cacheKey = queryDetails.hashCode();
             final String timeoutInSeconds = query.getParameter("timeout");
@@ -630,7 +628,7 @@ public class QueryTracker {
 
         public QueryEntryInfo toStat() {
             QueryEntryInfo stat = new QueryEntryInfo();
-            stat.path = query.getShortPathString();
+            stat.paths = query.getPaths();
             stat.uuid = query.uuid();
             stat.ops = query.getOps();
             stat.job = query.getJob();
@@ -717,7 +715,7 @@ public class QueryTracker {
                 if (error != null) {
                     log(new StringMapHelper()
                             .put("type", "query.error")
-                            .put("query.path", query.getShortPathString())
+                            .put("query.path", query.getPaths()[0])
                             .put("query.ops", query.getOps())
                             .put("sources", query.getParameter("sources"))
                             .put("time", System.currentTimeMillis())
@@ -737,7 +735,7 @@ public class QueryTracker {
 
                 StringMapHelper queryLine = new StringMapHelper()
                         .put("type", "query.done")
-                        .put("query.path", query.getShortPathString())
+                        .put("query.path", query.getPaths()[0])
                         .put("query.ops", query.getOps())
                         .put("sources", query.getParameter("sources"))
                         .put("time", System.currentTimeMillis())

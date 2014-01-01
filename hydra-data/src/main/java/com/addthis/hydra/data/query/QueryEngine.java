@@ -162,6 +162,42 @@ public class QueryEngine {
      * Performs a query search, writes the results to a data channel. This function does not break the execution of the
      * query if the client channel gets closed.
      *
+     * @param query  A Query object that contains the path or paths of the root query.
+     * @param result A DataChannelOutput to which the result will be written. In practice, this will be the head of
+     *               a QueryOpProcessor that represents the first operator in a query, which in turn sends its output
+     *               to another QueryOpProcessor and the last will send its output to a DataChannelOutput sending bytes
+     *               back to meshy, usually defined at the MQSource side of code.
+     */
+    public void search(Query query, DataChannelOutput result) throws QueryException {
+        search(query, result, new QueryStatusObserver());
+    }
+
+    /**
+     * Performs a query search, writes the results to a data channel. This function does not break the execution of the
+     * query if the client channel gets closed.
+     *
+     * @param query    A Query object that contains the path or paths of the root query.
+     * @param result   A DataChannelOutput to which the result will be written. In practice, this will be the head of
+     *                 a QueryOpProcessor that represents the first operator in a query, which in turn sends its output
+     *                 to another QueryOpProcessor and the last will send its output to a DataChannelOutput sending bytes
+     *                 back to meshy, usually defined at the MQSource side of code.
+     * @param observer A wrapper for a boolean flag that gets set to true by MQSource in case the user
+     *                 cancels the query at the MQMaster side.
+     */
+    public void search(Query query, DataChannelOutput result, QueryStatusObserver observer) throws QueryException {
+        for (QueryElement[] path : query.getQueryPaths()) {
+            if (!(observer.queryCancelled || observer.queryCompleted)) {
+                search(path, result, observer);
+            }
+        }
+    }
+
+    /**
+     * Performs a query search, writes the results to a data channel, and stops processing if the source sets
+     * queryStatusObserver.queryCancelled to true.
+     *
+     * TODO Currently only exists to satisfy legacy PathOutput needs.  PathOutput needs updating/deprecating.
+     *
      * @param path   An array of QueryElement that contains a parsed query path.
      * @param result A DataChannelOutput to which the result will be written. In practice, this will be the head of
      *               a QueryOpProcessor that represents the first operator in a query, which in turn sends its output
@@ -177,17 +213,17 @@ public class QueryEngine {
      * Performs a query search, writes the results to a data channel, and stops processing if the source sets
      * queryStatusObserver.queryCancelled to true.
      *
-     * @param path                An array of QueryElement that contains a parsed query path.
-     * @param result              A DataChannelOutput to which the result will be written. In practice, this will be the head of
-     *                            a QueryOpProcessor that represents the first operator in a query, which in turn sends its output
-     *                            to another QueryOpProcessor and the last will send its output to a DataChannelOutput sending bytes
-     *                            back to meshy, usually defined at the MQSource side of code.
-     * @param queryStatusObserver A wrapper for a boolean flag that gets set to true by MQSource in case the user
-     *                            cancels the query at the MQMaster side.
+     * @param path     An array of QueryElement that contains a parsed query path.
+     * @param result   A DataChannelOutput to which the result will be written. In practice, this will be the head of
+     *                 a QueryOpProcessor that represents the first operator in a query, which in turn sends its output
+     *                 to another QueryOpProcessor and the last will send its output to a DataChannelOutput sending bytes
+     *                 back to meshy, usually defined at the MQSource side of code.
+     * @param observer A wrapper for a boolean flag that gets set to true by MQSource in case the user
+     *                 cancels the query at the MQMaster side.
      * @throws QueryException
-     * @see {@link Query#parsePath(String)}
+     * @see {@link Query#parseQueryPath(String)}
      */
-    public void search(QueryElement path[], DataChannelOutput result, QueryStatusObserver queryStatusObserver) throws QueryException {
+    private void search(QueryElement path[], DataChannelOutput result, QueryStatusObserver observer) throws QueryException {
         final long startTime = System.currentTimeMillis();
         init();
         Thread thread = Thread.currentThread();
@@ -199,7 +235,7 @@ public class QueryEngine {
         try {
             LinkedList<DataTreeNode> stack = new LinkedList<DataTreeNode>();
             stack.push(tree);
-            tableSearch(stack, new FieldValueList(new KVBundleFormat()), path, 0, result, 0, queryStatusObserver);
+            tableSearch(stack, new FieldValueList(new KVBundleFormat()), path, 0, result, 0, observer);
         } catch (QueryException ex) {
             if (log.isDebugEnabled()) {
                 log.debug("", ex);
@@ -225,7 +261,7 @@ public class QueryEngine {
      * @param stack
      * @param root
      * @param prefix
-     * @param path                a parsed query path, see {@link Query#parsePath(String)}
+     * @param path                a parsed query path, see {@link Query#parseQueryPath(String)}
      * @param pathIndex           an integer indicating the index in the path to execute. The tableSearch functions will recursively
      *                            call themselves increasing the path until all the query paths have been executed.
      * @param result              A DataChannelOutput to write the results to, most likely the first of a chain od QueryOpProcessor(s).
@@ -236,7 +272,7 @@ public class QueryEngine {
      *                            out by throwing QueryExceptions.
      * @throws QueryException
      */
-    public void tableSearch(LinkedList<DataTreeNode> stack, DataTreeNode root, FieldValueList prefix, QueryElement path[],
+    private void tableSearch(LinkedList<DataTreeNode> stack, DataTreeNode root, FieldValueList prefix, QueryElement path[],
             int pathIndex, DataChannelOutput result, int collect,
             QueryStatusObserver queryStatusObserver) throws QueryException {
         stack.push(root);
@@ -250,14 +286,14 @@ public class QueryEngine {
      *
      * @param stack
      * @param prefix
-     * @param path      a parsed query path, see {@link Query#parsePath(String)}
+     * @param path      a parsed query path, see {@link Query#parseQueryPath(String)}
      * @param pathIndex an integer indicating the index in the path to execute. The tableSearch functions will recursively
      *                  call themselves increasing the path until all the query paths have been executed.
      * @param sink      A DataChannelOutput to write the results to, most likely the first of a chain od QueryOpProcessor(s).
      * @param collect
      * @throws QueryException
      */
-    public void tableSearch(LinkedList<DataTreeNode> stack, FieldValueList prefix, QueryElement path[],
+    private void tableSearch(LinkedList<DataTreeNode> stack, FieldValueList prefix, QueryElement path[],
             int pathIndex, DataChannelOutput sink, int collect) throws QueryException {
         tableSearch(stack, prefix, path, pathIndex, sink, collect, new QueryStatusObserver());
     }
@@ -265,7 +301,7 @@ public class QueryEngine {
     /**
      * see above.
      */
-    public void tableSearch(LinkedList<DataTreeNode> stack, FieldValueList prefix, QueryElement path[],
+    private void tableSearch(LinkedList<DataTreeNode> stack, FieldValueList prefix, QueryElement path[],
             int pathIndex, DataChannelOutput sink, int collect,
             QueryStatusObserver queryStatusObserver) throws QueryException {
         if (queryStatusObserver != null && queryStatusObserver.queryCancelled) {

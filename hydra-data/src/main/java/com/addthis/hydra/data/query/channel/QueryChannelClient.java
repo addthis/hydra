@@ -28,6 +28,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import com.addthis.basis.util.JitterClock;
 
+import com.addthis.basis.util.Strings;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.bundle.core.Bundle;
@@ -315,7 +316,7 @@ public class QueryChannelClient implements QuerySource {
         }
         for (ResultDelivery delivery : resultDeliveryCollection) {
             try {
-                delivery.handle(new QueryChannelResponse().setError("Query " + delivery.query.getPathString() + "\n\tFailed on " + host + " due to " + (e == null ? "" : e.getMessage())));
+                delivery.handle(new QueryChannelResponse().setError("Query " + Strings.join(delivery.query.getPaths(), "|") + "\n\tFailed on " + host + " due to " + (e == null ? "" : e.getMessage())));
             } catch (Exception e1)  {
                 log.warn("", e1);
             }

@@ -19,6 +19,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.UUID;
@@ -38,6 +39,7 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.value.ValueObject;
+import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.source.ErrorHandlingQuerySource;
@@ -145,10 +147,11 @@ public class QueryServlet {
      * special handler for query
      */
     public static void handleQuery(QuerySource querySource, KVPairs kv, HttpServletRequest request, HttpServletResponse response) throws Exception {
+//System.out.println("handle == "+ kv);
+
         String job = kv.getValue("job");
         String path = kv.getValue("path", kv.getValue("q", ""));
-
-        Query query = new Query(job, path, kv.getValue("ops"));
+        Query query = new Query(job, new String[] { path }, new String[] { kv.getValue("ops"), kv.getValue("rops") });
         query.setTraced(kv.getIntValue("trace", 0) == 1);
         handleQuery(querySource, query, kv, request, response);
     }
@@ -156,7 +159,6 @@ public class QueryServlet {
     /** */
     public static void handleQuery(QuerySource querySource, Query query, KVPairs kv, HttpServletRequest request, HttpServletResponse response) throws Exception {
         query.setParameterIfNotYetSet("hosts", kv.getValue("hosts"));
-        query.setParameterIfNotYetSet("rops", kv.getValue("rops"));
         query.setParameterIfNotYetSet("gate", kv.getValue("gate"));
         query.setParameterIfNotYetSet("cache", kv.getValue("cache"));
         query.setParameterIfNotYetSet("nocache", kv.getValue("nocache"));
@@ -168,23 +170,24 @@ public class QueryServlet {
         query.setParameterIfNotYetSet("cachettl", kv.getValue("cachettl"));
         query.setParameterIfNotYetSet("dsortcompression", kv.getValue("dsortcompression"));
 
+//System.out.println("query == "+ CodecJSON.encodeString(query));
+
         String filename = kv.getValue("filename", "query");
         String format = kv.getValue("format", "json");
         String async = kv.getValue("async");
         String jsonp = kv.getValue("jsonp");
         String jargs = kv.getValue("jargs");
-        int timeout = kv.getIntValue("timeout", maxQueryTime);
-        timeout = Math.min(timeout, maxQueryTime);
-        query.setParameterIfNotYetSet("timeout", timeout);
 
+        int timeout = Math.min(kv.getIntValue("timeout", maxQueryTime), maxQueryTime);
+        query.setParameterIfNotYetSet("timeout", timeout);
         query.setParameter("sender", kv.getValue("sender"));
+
         if (log.isDebugEnabled()) {
             log.debug(new StringMapHelper()
                     .put("type", "query.starting")
-                    .put("query.path", query.getPathString())
+                    .put("query.path", query.getPaths()[0])
                     .put("query.hosts", query.getParameter("hosts"))
                     .put("query.ops", query.getOps())
-                    .put("query.rops", query.getParameter("rops"))
                     .put("trace", query.isTraced())
                     .put("cachettl", query.getCacheTTL())
                     .put("nocache", query.getParameter("nocache"))

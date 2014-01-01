@@ -65,7 +65,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /**
  * Where all the action happens for a mesh query worker. Its class name is passed as a system property to meshy as a local handler,
- * and is otherwise called from nowhere except to access some static variables. Despite the existance of a MeshQueryWorker class, this
+ * and is otherwise called from nowhere except to access some static variables. Despite the existence of a MeshQueryWorker class, this
  * is the most important class (followed closely by QueryEngine).
  * <p/>
  * Here we process queries, keep track of how many queries we are running, maintain a query engine cache, and queue up queries
@@ -336,36 +336,11 @@ public class MeshQuerySource implements LocalFileHandler {
          * Initialize query run -- parse options, create Query object
          */
         private void setup() throws Exception {
-            final String jobId = options.get("jobid");
-
-            String paths[] = options.get("queryElements").split(MeshQueryMaster.QUERY_PATH_SEPARATOR);
-            QueryElement[] queryElements = new QueryElement[paths.length];
-
-            // Create our query object
-            query = new Query(options.get("uuid"), jobId, queryElements, options.get("ops"));
-            query.setParameter("dsortcompression", "false");
-            String dSortCompression = options.get("dsortcompression");
-            if (dSortCompression != null && dSortCompression.equalsIgnoreCase("true")) {
-                query.setParameter("dsortcompression", "true");
-            }
-
-            if (options.get("traced") != null) {
-                query.setTraced(Boolean.valueOf(options.get("traced")));
-            }
-
+            query = CodecJSON.decodeString(new Query(), options.get("query"));
             // Log some information about how long gate acquisition took
             if (query.isTraced() || gateAcquisitionDuration > slowQueryThreshold) {
                 Query.emitTrace("[MeshQuerySource] query:" + query.uuid() + " gate acquisitionDuration=" + gateAcquisitionDuration + "ms, slow=" + (gateAcquisitionDuration > slowQueryThreshold));
             }
-
-            //Set up queryElement object passed to the new query object earlier
-            int i = 0;
-            for (String path : paths) {
-                QueryElement queryElement = new QueryElement();
-                CodecJSON.decodeString(queryElement, path);
-                queryElements[i++] = queryElement;
-            }
-
             // Parse the query and return a reference to the last QueryOpProcessor.
             queryOpProcessor = query.getProcessor(bridge, bridge.queryStatusObserver);
         }
@@ -406,7 +381,7 @@ public class MeshQuerySource implements LocalFileHandler {
          */
         private void search() {
             final long searchStartTime = System.currentTimeMillis();
-            finalEng.search(query.getPath(), queryOpProcessor, bridge.getQueryStatusObserver());
+            finalEng.search(query, queryOpProcessor, bridge.getQueryStatusObserver());
             queryOpProcessor.sendComplete();
             final long searchDuration = System.currentTimeMillis() - searchStartTime;
             if (log.isDebugEnabled() || query.isTraced()) {
@@ -419,10 +394,7 @@ public class MeshQuerySource implements LocalFileHandler {
         private void logError(Throwable ex) {
             log.warn("Canonical directory: " + goldDirString);
             log.warn("Engine: " + finalEng);
-            log.warn("Query info: uuid=" + options.get("uuid") +
-                     ", jobid=" + options.get("jobid") +
-                     ", elements=" + options.get("queryElements") +
-                     ", ops=" + options.get("ops"), ex);
+            log.warn("Query options: uuid=" + options, ex);
             // See if we can send the error to mqmaster as well
             if (queryOpProcessor == null) {
                 queryOpProcessor = Query.createProcessor(bridge, bridge.queryStatusObserver);

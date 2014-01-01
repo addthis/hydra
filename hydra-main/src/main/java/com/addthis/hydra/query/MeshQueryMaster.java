@@ -34,7 +34,6 @@ import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.data.query.QueryElement;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.data.query.source.ErrorHandlingQuerySource;
@@ -229,6 +228,9 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
     @Override
     public QueryHandle query(Query query, DataChannelOutput consumer) throws QueryException {
         try {
+            /* creates query for worker and updates local query ops */
+            Query remoteQuery = query.createPipelinedQuery();
+
             String job = query.getJob();
             if (enableZooKeeper && aliasBiMap == null) {
                 throw new QueryException("QueryMaster has not been initialized, try query again soon...");
@@ -289,30 +291,8 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
             }
 
             final Map<Integer, Set<QueryData>> sourceMap = new HashMap<>();
-            final QueryElement[] queryElements = query.getPath();
-            final String rops = query.removeParameter("rops");
-            query.setRemoteOps(rops);
             final HashMap<String, String> options = new HashMap<>();
-
-            StringBuilder sb = new StringBuilder();
-            for (QueryElement queryElement : queryElements) {
-                if (sb.length() > 0) {
-                    sb.append(QUERY_PATH_SEPARATOR);
-                }
-                sb.append(CodecJSON.encodeString(queryElement));
-
-            }
-
-            // Set a map of options that will be sent to mqworker. Note, not all of the params inside the query
-            // will be encoded to the worker, just what we have here.
-
-            options.put("queryElements", sb.toString());
-            options.put("ops", rops);
-            options.put("uuid", query.uuid());
-            options.put("traced", "" + query.isTraced());
-            options.put("jobid", job);
-            options.put("dsortcompression", query.getParameter("dsortcompression"));
-
+            options.put("query", CodecJSON.encodeString(remoteQuery));
             Set<QueryData> potentialQueryDataList = new HashSet<>();
             for (Map.Entry<Integer, Set<FileReferenceWrapper>> entry : fileReferenceMap.entrySet()) {
                 HashSet<QueryData> queryDataSet = new HashSet<>();
@@ -324,7 +304,6 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
                 sourceMap.put(entry.getKey(), queryDataSet);
             }
             MeshSourceAggregator aggregator = new MeshSourceAggregator(sourceMap, new ConcurrentHashMap<String, Boolean>(hostMap), this);
-
             QuerySource queryWrapper = tracker.createCacheWrapper(aggregator, potentialQueryDataList);
             QueryHandle handle = queryWrapper.query(query, consumer);
             if (enableZooKeeper) {

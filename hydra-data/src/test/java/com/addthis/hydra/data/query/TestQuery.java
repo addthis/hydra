@@ -21,7 +21,7 @@ public class TestQuery {
     @Test
     public void testCompact() {
         String path = "+:+hits,+nodes$+foo=123/+/++123/+%top=hit/a,b,c/|foo/|+bar/*/+%goo/(1-5)+";
-        Query q = new Query("job", path, null);
-        Assert.assertEquals(path, q.getPathString());
+        Query q = new Query("job", new String[] { path }, null);
+        Assert.assertEquals(path, q.getPathString(q.getQueryPaths().get(0)));
     }
 }
