@@ -17,10 +17,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
@@ -117,7 +114,7 @@ public class QueryChannelUtil {
     }
 
     /**
-     * @param args host=[host] port=[port] job=[job] path=[path] ops=[ops] rops=[rops] lops=[lops] data=[datadir] [iter] [quiet] [sep=separator] [out=file] [trace] [param=val]
+     * @param args host=[host] port=[port] job=[job] path=[path] ops=[ops] lops=[lops] data=[datadir] [iter] [quiet] [sep=separator] [out=file] [trace] [param=val]
      */
     public static void main(String args[]) throws Exception {
         runQuery(args);
@@ -187,10 +184,10 @@ public class QueryChannelUtil {
         boolean dsortcompression = false;
         long ttl = 0;
         int iter = 1;
-        String path = null;
+        ArrayList<String> paths = new ArrayList<String>(1);
+        ArrayList<String> ops = new ArrayList<String>(1);
+        ArrayList<String> lops = new ArrayList<String>(1);
         String job = null;
-        String lops = null;
-        String ops = null;
         String host = "localhost";
         String data = null;
         String out = null;
@@ -200,7 +197,7 @@ public class QueryChannelUtil {
             String arg = args[i];
             int eqpos = 0;
             if (arg.equals("help")) {
-                System.out.println("host=[host] port=[port] job=[job] path=[path] ops=[ops] rops=[rops] lops=[lops] data=[datadir] [iter=#] [quiet] [sep=separator] [out=file] [trace] [param=val]");
+                System.out.println("host=[host] port=[port] job=[job] path=[path] ops=[ops] lops=[lops] data=[datadir] [iter=#] [quiet] [sep=separator] [out=file] [trace] [param=val]");
                 return;
             }
             if (arg.startsWith("host=")) {
@@ -227,15 +224,15 @@ public class QueryChannelUtil {
             } else if (arg.startsWith("iter=")) {
                 iter = Integer.parseInt(arg.substring(5));
             } else if (arg.startsWith("lops=")) {
-                lops = arg.substring(5);
+                lops.add(arg.substring(5));
             } else if (arg.startsWith("ops=")) {
-                ops = arg.substring(4);
+                ops.add(arg.substring(4));
             } else if (arg.startsWith("job=")) {
                 job = arg.substring(4);
             } else if (arg.startsWith("path=")) {
-                path = arg.substring(5);
+                paths.add(arg.substring(5));
             } else if (arg.startsWith("fpath=")) {
-                path = Bytes.toString(Files.read(new File(arg.substring(6)))).trim();
+                paths.add(Bytes.toString(Files.read(new File(arg.substring(6)))).trim());
             } else if (arg.startsWith("ttl=")) {
                 ttl = Long.parseLong(arg.substring(4));
             } else if (arg.startsWith("data=")) {
@@ -248,7 +245,7 @@ public class QueryChannelUtil {
                 qparam.put(key, val);
             }
         }
-        Query query = new Query(job, path, ops);
+        Query query = new Query(job, paths.toArray(new String[paths.size()]), ops.toArray(new String[ops.size()]));
         query.setTraced(traced);
         query.setCacheTTL(ttl);
         if (dsortcompression) {
@@ -303,7 +300,7 @@ public class QueryChannelUtil {
             long start = System.currentTimeMillis();
             File tempDir = Files.createTempDir();
             BlockingNullConsumer consumer = new BlockingNullConsumer();
-            QueryOpProcessor proc = Query.createProcessor(consumer).parseOps(lops).setTempDir(tempDir);
+            QueryOpProcessor proc = Query.createProcessor(consumer).parseOps(lops.toArray(new String[lops.size()])).setTempDir(tempDir);
             proc.appendOp(new BundleOutputWrapper(new PrintOp(sep, out)));
             client.query(query, proc);
             consumer.waitComplete();

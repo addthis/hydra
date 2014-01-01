@@ -816,7 +816,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
                 Query.emitTrace("query begin " + query.uuid() + " " + query + " to " + consumer);
             }
             try {
-                queryEngine.search(query.getQueryPath(), consumer);
+                queryEngine.search(query, consumer);
                 consumer.sendComplete();
             } catch (QueryException e) {
                 consumer.sourceError(e);

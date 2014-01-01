@@ -272,7 +272,7 @@ public class QueryServer extends AbstractHandler {
         } else if (target.equals("/query/decode")) {
             String qo = "{path:" + kv.getValue("query", kv.getValue("path", "")) + "}";
             Query q = CodecJSON.decodeString(new Query(), qo);
-            response.getWriter().write(q.getPathString());
+            response.getWriter().write(q.getPaths()[0]);
         } else if (target.equals("/v2/queries/finished.list")) {
             JSONArray runningEntries = new JSONArray();
             for (QueryTracker.QueryEntryInfo entryInfo : tracker.getCompleted()) {

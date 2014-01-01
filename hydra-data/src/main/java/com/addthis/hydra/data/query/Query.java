@@ -83,14 +83,14 @@ public class Query implements Codec.Codable {
         return createProcessor(output, null, new QueryStatusObserver());
     }
 
-    public static QueryOpProcessor createProcessor(DataChannelOutput output, String ops) {
+    public static QueryOpProcessor createProcessor(DataChannelOutput output, String ops[]) {
         return new QueryOpProcessor(output).parseOps(ops).setRowTip(tipRow).setMemTip(tipMem);
     }
 
     /**
      * constructor with VM wide defaults applied
      */
-    public static QueryOpProcessor createProcessor(DataChannelOutput output, String ops, QueryStatusObserver queryStatusObserver) {
+    public static QueryOpProcessor createProcessor(DataChannelOutput output, String ops[], QueryStatusObserver queryStatusObserver) {
         return new QueryOpProcessor(output, queryStatusObserver).parseOps(ops).setRowTip(tipRow).setMemTip(tipMem);
     }
 
@@ -107,10 +107,9 @@ public class Query implements Codec.Codable {
     }
 
     @Codec.Set(codable = true)
-    private QueryElement[] path;
+    private String paths[];
     @Codec.Set(codable = true)
-    private String ops;
-    private String remoteOps;
+    private String ops[];
     @Codec.Set(codable = true)
     private String job;
     @Codec.Set(codable = true)
@@ -127,29 +126,21 @@ public class Query implements Codec.Codable {
     public Query() {
     }
 
-    public Query(String job, String path, String ops) {
-        this(job, parseQueryPath(path), ops);
-    }
-
-    public Query(String uuid, String job, String path, String ops) {
-        this(job, parseQueryPath(path), ops);
+    public Query(String uuid, String job, String paths[], String ops[]) {
+        this(job, paths, ops);
         if (uuid != null) {
             this.uuid = uuid;
         }
     }
 
-    public Query(String job, QueryElement path[], String ops) {
+    public Query(String job, String path, String ops[]) {
+        this(job, new String[] { path }, ops);
+    }
+
+    public Query(String job, String paths[], String ops[]) {
         setJob(job);
         setOps(ops);
-        setPath(path);
-    }
-
-
-    public Query(String uuid, String job, QueryElement[] queryElements, String ops) {
-        this(job, queryElements, ops);
-        if (uuid != null) {
-            this.uuid = uuid;
-        }
+        setPaths(paths);
     }
 
     public void useNextUUID() {
@@ -160,7 +151,7 @@ public class Query implements Codec.Codable {
         return queryStatusObserver;
     }
 
-    public String getPathString() {
+    public String getPathString(QueryElement path[]) {
         StringBuilder sb = new StringBuilder();
         int i = 0;
         for (QueryElement e : path) {
@@ -172,7 +163,7 @@ public class Query implements Codec.Codable {
         return sb.toString();
     }
 
-    public String getShortPathString() {
+    public String getShortPathString(QueryElement path[]) {
         StringBuilder sb = new StringBuilder();
         int i = 0;
         for (QueryElement e : path) {
@@ -220,7 +211,7 @@ public class Query implements Codec.Codable {
             }
             return queryString;
         } catch (Exception ex) {
-            return Strings.join(path, "/").concat(ops != null ? ops : "").concat(job != null ? job : "");
+            return Strings.join(paths, "|").concat(";").concat(ops != null ? Strings.join(ops,"|") : "").concat(";").concat(job != null ? job : "");
         }
     }
 
@@ -232,21 +223,8 @@ public class Query implements Codec.Codable {
         return this;
     }
 
-    /**
-     * takes compact query notation (+:+hits)
-     *
-     * @param path
-     */
-    public void parsePath(String path) {
-        setPath(parseQueryPath(path));
-    }
-
-    public void setPath(QueryElement[] path) {
-        this.path = path;
-    }
-
-    public QueryElement[] getPath() {
-        return path;
+    public String[] getPaths() {
+        return paths;
     }
 
     public boolean isTraced() {
@@ -271,7 +249,7 @@ public class Query implements Codec.Codable {
      * mostly to support async queries
      */
     public Query createClone() {
-        Query newwrapper = new Query(job, path, ops);
+        Query newwrapper = new Query(job, paths, ops);
         newwrapper.params.putAll(params);
         newwrapper.trace = trace;
         newwrapper.cachettl = cachettl;
@@ -279,8 +257,12 @@ public class Query implements Codec.Codable {
         return newwrapper;
     }
 
-    public QueryElement[] getQueryPath() {
-        return path;
+    public List<QueryElement[]> getQueryPaths() {
+        ArrayList<QueryElement[]> list = new ArrayList<QueryElement[]>(paths.length);
+        for (String path : paths) {
+            list.add(parseQueryPath(path));
+        }
+        return list;
     }
 
     public QueryOpProcessor getProcessor(DataChannelOutput output, QueryStatusObserver queryStatusObserver) {
@@ -295,26 +277,48 @@ public class Query implements Codec.Codable {
         return job;
     }
 
-    public Query setOps(String ops) {
+    public Query setOps(String ops[]) {
         this.ops = ops;
         return this;
     }
 
-    public Query setRemoteOps(String remoteOps) {
-        this.remoteOps = remoteOps;
-        return this;
-    }
-
-    public String getOps() {
+    public String[] getOps() {
         return ops;
     }
 
-    public String getRemoteOps() {
-        return remoteOps;
+    private Query cloneTo(Query q) {
+        q.paths = paths;
+        q.ops = ops;
+        q.job = job;
+        q.cachettl = cachettl;
+        q.trace = trace;
+        q.params = params;
+        q.uuid = uuid;
+        return q;
+    }
+
+    /**
+     * @return first a query suitable for the next query worker in the stack
+     */
+    public Query createPipelinedQuery() {
+        Query newQuery = cloneTo(new Query());
+        if (ops != null && ops.length > 0) {
+            String newops[] = new String[ops.length-1];
+            System.arraycopy(ops, 1, newops, 0, newops.length);
+            newQuery.ops = newops;
+            String pop = ops[0];
+            ops = new String[] { pop };
+        }
+        return newQuery;
     }
 
     public Query setJob(String job) {
         this.job = job;
+        return this;
+    }
+
+    public Query setPaths(String path[]) {
+        this.paths = path;
         return this;
     }
 
