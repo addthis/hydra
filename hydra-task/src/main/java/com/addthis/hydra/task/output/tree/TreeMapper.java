@@ -125,7 +125,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
 
     private static final Logger log = LoggerFactory.getLogger(TreeMapper.class);
     private static final DecimalFormat percent = new DecimalFormat("00.0%");
-    private static final SimpleDateFormat date = new SimpleDateFormat("YYMMdd-HHmmss");
+    private static final SimpleDateFormat date = new SimpleDateFormat("yyMMdd-HHmmss");
 
     private enum BENCH {
         TIME, UNITS, RULES, STREAM, LOCAL
