@@ -218,9 +218,23 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
     }
 
     public QueryOpProcessor parseOps(String ops) {
-        if (ops == null) {
+        if (ops == null || ops.length() == 0) {
             return this;
         }
+        return parseOps(new String[] { ops });
+    }
+
+    public QueryOpProcessor parseOps(String opslist[]) {
+        if (opslist == null || opslist.length == 0) {
+            return this;
+        }
+
+        /* remaining ops stack is processed in reverse order */
+        for (int i=opslist.length-1; i>=0; i--) {
+            String ops = opslist[i];
+            if (ops == null) {
+                continue;
+            }
 
         for (String s : Strings.split(ops, ";")) {
             KVPair kv = KVPair.parsePair(s);
@@ -361,6 +375,8 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
                     appendOp(new OpTranspose(this));
                     break;
             }
+        }
+
         }
 
         return this;

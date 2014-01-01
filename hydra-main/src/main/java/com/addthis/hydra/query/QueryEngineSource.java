@@ -74,7 +74,7 @@ public abstract class QueryEngineSource implements QuerySource {
                 engineGate.acquire(1);
                 engineGateHistogram.update(engineGate.availablePermits());
                 engine = getEngineLease();
-                engine.search(query.getPath(), consumer);
+                engine.search(query, consumer);
                 consumer.sendComplete();
             } catch (QueryException e) {
                 log.warn("query exception " + query.uuid() + " " + e + " " + consumer);

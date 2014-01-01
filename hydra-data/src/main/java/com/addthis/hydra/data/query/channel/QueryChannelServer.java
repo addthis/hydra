@@ -186,15 +186,15 @@ public class QueryChannelServer extends Thread {
             } catch (EOFException e) {
                 if (log.isWarnEnabled()) {
                     log.warn("[handler] EOF " + e, e);
-                    }
+                }
             } catch (SocketException e) {
                 if (log.isWarnEnabled()) {
                     // normal during query cancel
                     log.warn("[handler] Socket Exception " + e, e);
-                    }
+                }
             } catch (Exception e) {
                 log.warn("[handler] error " + e, e);
-                } finally {
+            } finally {
                 channel.flush();
             }
             return false;
