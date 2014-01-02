@@ -64,8 +64,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 public class MeshQueryMaster implements ErrorHandlingQuerySource {
 
-    public static final String QUERY_PATH_SEPARATOR = "PATH:SEPARATOR";
-
     private static final Logger log = LoggerFactory.getLogger(MeshQueryMaster.class);
     private static final String tempDir = Parameter.value("query.tmpdir", "query.tmpdir");
     private static final int failureExpireMinutes = Parameter.intValue("qmaster.failureExpireMinutes", 5);
@@ -145,7 +143,7 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
                         }
                     });
 
-    private final ConcurrentHashMap<String, Boolean> hostMap = new ConcurrentHashMap<String, Boolean>();
+    private final ConcurrentHashMap<String, Boolean> hostMap = new ConcurrentHashMap<>();
 
     public MeshQueryMaster(QueryTracker tracker) throws Exception {
         this.tracker = tracker;
@@ -303,7 +301,7 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
                 }
                 sourceMap.put(entry.getKey(), queryDataSet);
             }
-            MeshSourceAggregator aggregator = new MeshSourceAggregator(sourceMap, new ConcurrentHashMap<String, Boolean>(hostMap), this);
+            MeshSourceAggregator aggregator = new MeshSourceAggregator(sourceMap, new ConcurrentHashMap<>(hostMap), this);
             QuerySource queryWrapper = tracker.createCacheWrapper(aggregator, potentialQueryDataList);
             QueryHandle handle = queryWrapper.query(query, consumer);
             if (enableZooKeeper) {
@@ -346,9 +344,7 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
     }
 
     public synchronized void invalidateFileReferenceCache() {
-        if (cachey != null) {
-            cachey.invalidateFileReferenceCache();
-        }
+        cachey.invalidateFileReferenceCache();
     }
 
     public String getMeshHostJSON() {
