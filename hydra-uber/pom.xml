@@ -105,9 +105,9 @@
           <prefix>git</prefix>
           <dateFormat>yyyy.MM.dd '@' HH:mm:ss z</dateFormat>
           <verbose>false</verbose>
-          <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
+          <dotGitDirectory>${project.basedir}/../.git</dotGitDirectory>
           <generateGitPropertiesFile>true</generateGitPropertiesFile>
-          <generateGitPropertiesFilename>src/main/resources/hydra-git.properties</generateGitPropertiesFilename>
+          <generateGitPropertiesFilename>${project.basedir}/src/main/resources/hydra-git.properties</generateGitPropertiesFilename>
           <failOnNoGitDirectory>false</failOnNoGitDirectory>
           <gitDescribe>
             <skip>false</skip>
