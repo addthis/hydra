@@ -133,7 +133,7 @@ public abstract class ScheduledBackupType {
         }
         try {
             Date backupDate = parseDateFromName(name);
-            return backupDate.after(backupsValidAfterDate) && backupDate.before(new Date(JitterClock.globalTime() + 1));
+            return backupDate.after(backupsValidAfterDate);
         } catch (NumberFormatException nfe) {
             return false;
         } catch (IllegalArgumentException pe) {
