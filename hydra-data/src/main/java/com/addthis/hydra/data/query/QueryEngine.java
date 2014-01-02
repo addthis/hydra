@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.data.query;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -42,7 +43,7 @@ public class QueryEngine {
     private AtomicInteger used;
     private AtomicBoolean isOpen;
     private AtomicBoolean isClosed;
-    private HashSet<Thread> active;
+    private final HashSet<Thread> active;
     private boolean closeWhenIdle;
 
     public QueryEngine(DataTree tree) {
@@ -50,7 +51,7 @@ public class QueryEngine {
         this.used = new AtomicInteger(0);
         this.isOpen = new AtomicBoolean(false);
         this.isClosed = new AtomicBoolean(false);
-        this.active = new HashSet<Thread>();
+        this.active = new HashSet<>();
     }
 
     public int getLeasesCount() {
@@ -149,7 +150,6 @@ public class QueryEngine {
     }
 
     public void init() throws QueryException {
-        long startTime = System.currentTimeMillis();
         synchronized (this) {
             if (isClosed.get()) {
                 throw new QueryException("Query Engine Closed");
@@ -224,7 +224,6 @@ public class QueryEngine {
      * @see {@link Query#parseQueryPath(String)}
      */
     private void search(QueryElement path[], DataChannelOutput result, QueryStatusObserver observer) throws QueryException {
-        final long startTime = System.currentTimeMillis();
         init();
         Thread thread = Thread.currentThread();
         synchronized (active) {
@@ -233,7 +232,7 @@ public class QueryEngine {
             }
         }
         try {
-            LinkedList<DataTreeNode> stack = new LinkedList<DataTreeNode>();
+            LinkedList<DataTreeNode> stack = new LinkedList<>();
             stack.push(tree);
             tableSearch(stack, new FieldValueList(new KVBundleFormat()), path, 0, result, 0, observer);
         } catch (QueryException ex) {
@@ -311,7 +310,7 @@ public class QueryEngine {
 
         DataTreeNode root = stack != null ? stack.peek() : null;
         if (log.isDebugEnabled()) {
-            log.debug("root=" + root + " pre=" + prefix + " path=" + path + " idx=" + pathIndex + " res=" + sink + " coll=" + collect);
+            log.debug("root=" + root + " pre=" + prefix + " path=" + Arrays.toString(path) + " idx=" + pathIndex + " res=" + sink + " coll=" + collect);
         }
 
         if (Thread.currentThread().isInterrupted()) {
@@ -345,7 +344,7 @@ public class QueryEngine {
                         log.warn("Query closed due to thread interruption:\n", exception);
                         throw exception;
                     }
-                    if (queryStatusObserver.queryCancelled) {
+                    if (queryStatusObserver != null && queryStatusObserver.queryCancelled) {
                         if (iter instanceof ClosableIterator) {
                             ((ClosableIterator<DataTreeNode>) iter).close();
                         }
@@ -403,7 +402,7 @@ public class QueryEngine {
                     }
                     int count = next.update(prefix, tn);
                     if (count > 0) {
-                        if (queryStatusObserver != null && !queryStatusObserver.queryCompleted) {
+                        if (!queryStatusObserver.queryCompleted) {
                             tableSearch(stack, tn, prefix, path, pathIndex + 1, sink, collect + count, queryStatusObserver);
                         }
                         prefix.pop(count);
@@ -414,7 +413,7 @@ public class QueryEngine {
                         skip--;
                         continue;
                     }
-                    if (queryStatusObserver != null && !queryStatusObserver.queryCompleted) {
+                    if (!queryStatusObserver.queryCompleted) {
                         tableSearch(stack, tn, prefix, path, pathIndex + 1, sink, collect, queryStatusObserver);
                     }
                     limit--;
@@ -422,7 +421,7 @@ public class QueryEngine {
             }
         } finally {
             if (log.isDebugEnabled()) {
-                log.debug("CLOSING: root=" + root + " pre=" + prefix + " path=" + path + " idx=" + pathIndex + " res=" + sink + " coll=" + collect);
+                log.debug("CLOSING: root=" + root + " pre=" + prefix + " path=" + Arrays.toString(path) + " idx=" + pathIndex + " res=" + sink + " coll=" + collect);
             }
 
             if (iter instanceof ClosableIterator) {
