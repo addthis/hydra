@@ -447,7 +447,8 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         return -1;
     }
 
-    private void insertJobKickMessage(CommandTaskKick kick) {
+    @VisibleForTesting
+    public void insertJobKickMessage(CommandTaskKick kick) {
         minionStateLock.lock();
         try {
             for (int i = 0; i < jobQueue.size(); i++) {

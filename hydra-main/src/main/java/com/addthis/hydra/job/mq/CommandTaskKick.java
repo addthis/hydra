@@ -40,8 +40,6 @@ public class CommandTaskKick implements JobMessage {
     @Codec.Set(codable = true)
     private String killSignal;
     @Codec.Set(codable = true)
-    private HostCapacity capacity;
-    @Codec.Set(codable = true)
     private int hourlyBackups;
     @Codec.Set(codable = true)
     private int dailyBackups;
@@ -51,10 +49,6 @@ public class CommandTaskKick implements JobMessage {
     private int monthlyBackups;
     @Codec.Set(codable = true)
     private ReplicaTarget replicas[];
-    @Codec.Set(codable = true)
-    private boolean stomp;
-    @Codec.Set(codable = true)
-    private boolean force;
     @Codec.Set(codable = true)
     private int retries;
 
@@ -70,9 +64,9 @@ public class CommandTaskKick implements JobMessage {
     public CommandTaskKick() {
     }
 
-    public CommandTaskKick(String host, JobKey jobKey, int priority, int jobNodes, HostCapacity capacity, long runTime,
+    public CommandTaskKick(String host, JobKey jobKey, int priority, int jobNodes, long runTime,
             int runCount, String config, String command, String killSignal, int hourlyBackups,
-            int dailyBackups, int weeklyBackups, int monthlyBackups, ReplicaTarget replicas[], boolean stomp, boolean force) {
+            int dailyBackups, int weeklyBackups, int monthlyBackups, ReplicaTarget replicas[]) {
         this.hostUuid = host;
         this.jobKey = jobKey;
         this.priority = priority;
@@ -82,15 +76,12 @@ public class CommandTaskKick implements JobMessage {
         this.runCount = runCount;
         this.config = config;
         this.command = command;
-        this.capacity = capacity;
         this.killSignal = killSignal;
         this.hourlyBackups = hourlyBackups;
         this.dailyBackups = dailyBackups;
         this.weeklyBackups = weeklyBackups;
         this.monthlyBackups = monthlyBackups;
         this.replicas = replicas;
-        this.stomp = stomp;
-        this.force = force;
     }
 
     @Override
@@ -148,10 +139,6 @@ public class CommandTaskKick implements JobMessage {
         return command;
     }
 
-    public HostCapacity getCapacity() {
-        return capacity;
-    }
-
     public int getPriority() {
         return priority;
     }
@@ -170,10 +157,6 @@ public class CommandTaskKick implements JobMessage {
 
     public void setReplicas(ReplicaTarget[] replicas) {
         this.replicas = replicas;
-    }
-
-    public boolean getForce() {
-        return force;
     }
 
     public int getHourlyBackups() {

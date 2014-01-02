@@ -3192,7 +3192,6 @@ public class Spawn implements Codec.Codable {
                 new JobKey(job.getId(), task.getTaskID()),
                 job.getPriority(),
                 job.getCopyOfTasks().size(),
-                new HostCapacity(jobCmd.getReqMEM(), jobCmd.getReqCPU(), jobCmd.getReqIO()),
                 job.getMaxRunTime() != null ? job.getMaxRunTime() * 60000 : 0,
                 job.getRunCount(),
                 expandJob(job),
@@ -3202,9 +3201,8 @@ public class Spawn implements Codec.Codable {
                 job.getDailyBackups(),
                 job.getWeeklyBackups(),
                 job.getMonthlyBackups(),
-                getTaskReplicaTargets(task, task.getAllReplicas()),
-                job.getStomp(),
-                false);
+                getTaskReplicaTargets(task, task.getAllReplicas())
+                );
         kick.setRetries(job.getRetries());
         return kick;
     }
@@ -3287,7 +3285,6 @@ public class Spawn implements Codec.Codable {
                 new JobKey(job.getId(), task.getTaskID()),
                 job.getPriority(),
                 job.getCopyOfTasks().size(),
-                new HostCapacity(jobcmd.getReqMEM(), jobcmd.getReqCPU(), jobcmd.getReqIO()),
                 job.getMaxRunTime() != null ? job.getMaxRunTime() * 60000 : 0,
                 job.getRunCount(),
                 null,
@@ -3297,9 +3294,8 @@ public class Spawn implements Codec.Codable {
                 job.getDailyBackups(),
                 job.getWeeklyBackups(),
                 job.getMonthlyBackups(),
-                getTaskReplicaTargets(task, task.getAllReplicas()),
-                job.getStomp(),
-                false);
+                getTaskReplicaTargets(task, task.getAllReplicas())
+                );
         kick.setRetries(job.getRetries());
 
         // Creating a runnable to expand the job and send kick message outside of the main queue-iteration thread.
