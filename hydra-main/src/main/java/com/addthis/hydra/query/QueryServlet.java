@@ -147,8 +147,6 @@ public class QueryServlet {
      * special handler for query
      */
     public static void handleQuery(QuerySource querySource, KVPairs kv, HttpServletRequest request, HttpServletResponse response) throws Exception {
-//System.out.println("handle == "+ kv);
-
         String job = kv.getValue("job");
         String path = kv.getValue("path", kv.getValue("q", ""));
         Query query = new Query(job, new String[] { path }, new String[] { kv.getValue("ops"), kv.getValue("rops") });
@@ -169,8 +167,6 @@ public class QueryServlet {
         query.setParameterIfNotYetSet("allowPartial", kv.getValue("allowPartial"));
         query.setParameterIfNotYetSet("cachettl", kv.getValue("cachettl"));
         query.setParameterIfNotYetSet("dsortcompression", kv.getValue("dsortcompression"));
-
-//System.out.println("query == "+ CodecJSON.encodeString(query));
 
         String filename = kv.getValue("filename", "query");
         String format = kv.getValue("format", "json");

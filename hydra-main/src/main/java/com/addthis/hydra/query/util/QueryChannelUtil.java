@@ -61,7 +61,7 @@ public class QueryChannelUtil {
 
     private static final Logger log = LoggerFactory.getLogger(QueryChannelUtil.class);
 
-    private static final Map<QueryHost, QueryChannelClient> queryChannelClientMap = new HashMap<QueryHost, QueryChannelClient>();
+    private static final Map<QueryHost, QueryChannelClient> queryChannelClientMap = new HashMap<>();
     private static final Lock clientMapLock = new ReentrantLock();
 
     /**
@@ -177,25 +177,25 @@ public class QueryChannelUtil {
 
     /** */
     private static void runQuery(String args[]) throws Exception {
-        HashMap<String, String> qparam = new HashMap<String, String>();
+        HashMap<String, String> qparam = new HashMap<>();
         String sep = null;
         boolean quiet = false;
         boolean traced = false;
         boolean dsortcompression = false;
         long ttl = 0;
         int iter = 1;
-        ArrayList<String> paths = new ArrayList<String>(1);
-        ArrayList<String> ops = new ArrayList<String>(1);
-        ArrayList<String> lops = new ArrayList<String>(1);
+        ArrayList<String> paths = new ArrayList<>(1);
+        ArrayList<String> ops = new ArrayList<>(1);
+        ArrayList<String> lops = new ArrayList<>(1);
         String job = null;
         String host = "localhost";
         String data = null;
         String out = null;
-        List<QueryHost> hosts = new LinkedList<QueryHost>();
+        List<QueryHost> hosts = new LinkedList<>();
         int port = 2601;
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
-            int eqpos = 0;
+            int eqpos;
             if (arg.equals("help")) {
                 System.out.println("host=[host] port=[port] job=[job] path=[path] ops=[ops] lops=[lops] data=[datadir] [iter=#] [quiet] [sep=separator] [out=file] [trace] [param=val]");
                 return;
@@ -257,7 +257,7 @@ public class QueryChannelUtil {
         if (!quiet) {
             System.out.println(">>> query " + query);
         }
-        QuerySource client = null;
+        QuerySource client;
         if (data != null) {
             final File dir = new File(data);
             client = new QueryEngineSource() {
