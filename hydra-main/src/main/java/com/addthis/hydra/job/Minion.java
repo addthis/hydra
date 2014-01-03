@@ -2650,7 +2650,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                         task.execReplicate(replicate.getChoreWatcherKey(), true, true);
                     } catch (Exception e) {
                         log.warn("[task.replicate] received exception after replicate request for " + task.getJobKey() + ": " + e, e);
-                        }
+                    }
                 } else {
                     log.warn("[task.replicate] skip running " + replicate.getJobKey());
                 }

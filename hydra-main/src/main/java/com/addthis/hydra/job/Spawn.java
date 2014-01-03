@@ -2539,10 +2539,6 @@ public class Spawn implements Codec.Codable {
         }
     }
 
-    private static String makeFixChoreKey(JobKey jobKey) {
-        return "fixChore" + jobKey;
-    }
-
     private void safeStartJob(String uuid) {
         try {
             startJob(uuid, false);
@@ -2551,6 +2547,12 @@ public class Spawn implements Codec.Codable {
         }
     }
 
+    /**
+     * Perform cleanup tasks once per job completion. Triggered when the last running task transitions to an idle state.
+     * In particular: perform any onComplete/onError triggers, set the end time, and possibly do a fixdirs.
+     * @param job     The job that just finished
+     * @param errored Whether the job ended up in error state
+     */
     private void finishJob(Job job, boolean errored) {
         log.warn("[job.done] " + job.getId() + " :: errored=" + errored + ". callback=" + job.getOnCompleteURL());
         jobsCompletedPerHour.mark();
@@ -2568,7 +2570,7 @@ public class Spawn implements Codec.Codable {
                     }
                 } else {
                     doOnState(job, job.getOnCompleteURL(), "onComplete");
-                    if (ENABLE_JOB_FIXDIRS_ONCOMPLETE) {
+                    if (ENABLE_JOB_FIXDIRS_ONCOMPLETE && job.getRunCount() > 1) {
                         // Perform a fixDirs on completion, cleaning up missing replicas/orphans.
                         fixTaskDir(job.getId(), -1, false);
                     }
