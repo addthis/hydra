@@ -303,6 +303,10 @@ public class HostState implements HostMessage {
         return false;
     }
 
+    public boolean hasIncompleteReplica(JobKey jobKey) {
+        return (incompleteReplicas != null && Arrays.asList(incompleteReplicas).contains(jobKey));
+    }
+
     public List<JobKey> allJobKeys() {
         List<JobKey> rv = new ArrayList<>();
         for (JobKey[] jobKeys : Arrays.asList(stopped, queued, running, replicating, backingup, replicas)) {

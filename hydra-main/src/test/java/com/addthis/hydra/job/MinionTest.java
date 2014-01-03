@@ -13,12 +13,9 @@
  */
 package com.addthis.hydra.job;
 
-import java.io.File;
-
 import java.util.List;
 
 import com.addthis.basis.test.SlowTest;
-import com.addthis.basis.util.Files;
 
 import com.addthis.bark.ZkStartUtil;
 
@@ -39,22 +36,5 @@ public class MinionTest extends ZkStartUtil {
         List<String> upMinions = myZkClient.getChildren("/minion/up");
         assertEquals(ImmutableList.of(minion.getUUID()), upMinions);
         minion.closeZkClient();
-    }
-
-    @Test
-    public void testTaskKick() throws Exception {
-        File tempDir = Files.createTempDir();
-        try {
-            Minion minion = new Minion(tempDir, -1);
-
-
-            //minion.onMessage();
-
-            System.out.println(tempDir);
-            System.out.println("DONE . . . . .. . ");
-        }
-        finally {
-            Files.deleteDir(tempDir);
-        }
     }
 }

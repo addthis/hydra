@@ -1486,8 +1486,7 @@ public class Spawn implements Codec.Codable {
             }
             if (!expectedTaskHosts.contains(host.getHostUuid())) {
                 JobTaskDirectoryMatch.MatchType type = null;
-                boolean isReplica = false;
-                if (host.hasLive(task.getJobKey())) {
+                if (host.hasLive(task.getJobKey()) || host.hasIncompleteReplica(task.getJobKey())) {
                     type = JobTaskDirectoryMatch.MatchType.ORPHAN_LIVE;
                 }
                 if (type != null) {
@@ -2855,7 +2854,6 @@ public class Spawn implements Codec.Codable {
         }
         JSONObject ohost = CodecJSON.encodeJSON(state);
         ohost.put("spawnState", getSpawnStateString(state));
-        ohost.put("replicas", ohost.getJSONArray("replicas").length());
         ohost.put("stopped", ohost.getJSONArray("stopped").length());
         ohost.put("total", state.countTotalLive());
         double score = 0;

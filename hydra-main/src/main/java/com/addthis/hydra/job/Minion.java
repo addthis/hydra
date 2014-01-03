@@ -680,8 +680,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         LinkedList<JobKey> running = new LinkedList<>();
         LinkedList<JobKey> replicating = new LinkedList<>();
         LinkedList<JobKey> backingUp = new LinkedList<>();
-        LinkedList<JobKey> stopped = new LinkedList<>();
-        LinkedList<JobKey> replicas = new LinkedList<>();
+        LinkedList<JobKey> stoppedTasks = new LinkedList<>();
         LinkedList<JobKey> incompleteReplicas = new LinkedList<>();
         for (JobTask job : tasks.values()) {
             status.addJob(job.getJobKey().getJobUuid());
@@ -693,7 +692,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 backingUp.add(job.getJobKey());
             } else if (job.getLiveDir().exists()) {
                 if (job.isComplete()) {
-                    stopped.add(job.getJobKey());
+                    stoppedTasks.add(job.getJobKey());
                 } else {
                     incompleteReplicas.add(job.getJobKey());
                 }
@@ -702,8 +701,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         status.setRunning(running.toArray(new JobKey[running.size()]));
         status.setReplicating(replicating.toArray(new JobKey[replicating.size()]));
         status.setBackingUp(backingUp.toArray(new JobKey[backingUp.size()]));
-        status.setStopped(stopped.toArray(new JobKey[stopped.size()]));
-        status.setReplicas(replicas.toArray(new JobKey[replicas.size()]));
+        status.setStopped(stoppedTasks.toArray(new JobKey[stoppedTasks.size()]));
         status.setIncompleteReplicas(incompleteReplicas.toArray(new JobKey[incompleteReplicas.size()]));
         LinkedList<JobKey> queued = new LinkedList<JobKey>();
         minionStateLock.lock();
@@ -2474,13 +2472,12 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                     boolean terminated = task.isRunning() && task.stopWait(true);
                     task.setDeleted(true);
                     tasks.remove(task.getJobKey().toString());
-                    String taskDirPath = rootDir + "/" + task.getJobKey().getJobUuid() + "/" + task.getJobKey().getNodeNumber();
-                    File taskDirFile = new File(taskDirPath);
-                    if (taskDirFile.exists() && taskDirFile.isDirectory()) {
-                        minionTaskDeleter.submitPathToDelete(taskDirPath);
-                    }
                     log.warn("[task.delete] " + task.getJobKey() + " terminated=" + terminated);
                     writeState();
+                }
+                File taskDirFile = new File(rootDir + "/" + delete.getJobUuid() + (delete.getNodeID() != null ? "/" + delete.getNodeID() : ""));
+                if (taskDirFile.exists() && taskDirFile.isDirectory()) {
+                    minionTaskDeleter.submitPathToDelete(taskDirFile.getAbsolutePath());
                 }
             } finally {
                 minionStateLock.unlock();

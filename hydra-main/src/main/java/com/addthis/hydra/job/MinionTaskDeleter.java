@@ -93,7 +93,7 @@ public class MinionTaskDeleter implements Codec.Codable {
                             break;
                         } else {
                             log.warn("Exception during MinionTaskDeleter execution: " + e, e);
-                            }
+                        }
                     }
                 }
 
