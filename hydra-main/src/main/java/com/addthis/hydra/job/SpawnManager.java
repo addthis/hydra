@@ -660,7 +660,7 @@ public class SpawnManager {
                 int node = kv.getIntValue("node", -1);
                 IJob job = spawn.getJob(id);
                 if (job != null) {
-                    link.sendShortReply(200, "OK", spawn.fixTaskDir(id, node, false));
+                    link.sendShortReply(200, "OK", spawn.fixTaskDir(id, node, false, false));
                 } else {
                     link.sendShortReply(400, "No Job", "no such job");
                 }

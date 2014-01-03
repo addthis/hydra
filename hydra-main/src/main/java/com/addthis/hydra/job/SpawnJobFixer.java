@@ -49,7 +49,7 @@ public class SpawnJobFixer {
         }
         if (fixDirErrorCodes.contains(errorCode) && recentlyFixedTaskCache.getIfPresent(task.getJobKey()) == null) {
             log.warn("fixer attempting to fix dirs for task " + task.getJobKey());
-            spawn.fixTaskDir(job.getId(), task.getTaskID(), true);
+            spawn.fixTaskDir(job.getId(), task.getTaskID(), true, false);
             job.setTaskState(task, JobTaskState.IDLE, true);
             recentlyFixedTaskCache.put(task.getJobKey(), true);
             if (errorCode != JobTaskErrorCode.HOST_FAILED) {

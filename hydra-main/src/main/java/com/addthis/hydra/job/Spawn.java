@@ -1280,9 +1280,10 @@ public class Spawn implements Codec.Codable {
      * @param jobId           The job id to fix
      * @param node            The task id to fix, or -1 to fix all
      * @param ignoreTaskState Whether to ignore the task's state (mostly when recovering from a host failure)
+     * @param idleOnly        Whether to skip errored tasks and only fix idle ones
      * @return A string description
      */
-    public String fixTaskDir(String jobId, int node, boolean ignoreTaskState) {
+    public String fixTaskDir(String jobId, int node, boolean ignoreTaskState, boolean idleOnly) {
         jobLock.lock();
         try {
             Job job = getJob(jobId);
@@ -1292,15 +1293,18 @@ public class Spawn implements Codec.Codable {
             int numChanged = 0;
             List<JobTask> tasks = node < 0 ? job.getCopyOfTasks() : Arrays.asList(job.getTask(node));
             for (JobTask task : tasks) {
-                if (!ignoreTaskState && !(task.getState() == JobTaskState.IDLE || task.getState() == JobTaskState.ERROR)) {
-                    continue; // Skip non-idle tasks.
+                boolean shouldModifyTask = ignoreTaskState || (task.getState() == JobTaskState.IDLE || (!idleOnly && task.getState() == JobTaskState.ERROR));
+                if (log.isDebugEnabled()) {
+                    log.debug("[fixTaskDir] considering modifying task " + task.getJobKey() + " shouldModifyTask=" + shouldModifyTask);
                 }
-                try {
-                    numChanged += resolveJobTaskDirectoryMatches(job, task, matchTaskToDirectories(task, false)) ? 1 : 0;
-                } catch (Exception ex) {
-                    log.warn("fixTaskDir exception " + ex, ex);
-                    return "fixTaskDir exception (see log for more details): " + ex;
+                if (shouldModifyTask) {
+                    try {
+                        numChanged += resolveJobTaskDirectoryMatches(job, task, matchTaskToDirectories(task, false)) ? 1 : 0;
+                    } catch (Exception ex) {
+                        log.warn("fixTaskDir exception " + ex, ex);
+                        return "fixTaskDir exception (see log for more details): " + ex;
 
+                    }
                 }
             }
             return "Changed " + numChanged + " tasks";
@@ -2571,7 +2575,7 @@ public class Spawn implements Codec.Codable {
                     doOnState(job, job.getOnCompleteURL(), "onComplete");
                     if (ENABLE_JOB_FIXDIRS_ONCOMPLETE && job.getRunCount() > 1) {
                         // Perform a fixDirs on completion, cleaning up missing replicas/orphans.
-                        fixTaskDir(job.getId(), -1, false);
+                        fixTaskDir(job.getId(), -1, false, true);
                     }
                 }
             } else {
