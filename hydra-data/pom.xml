@@ -56,6 +56,11 @@
       <artifactId>muxy</artifactId>
       <version>${hydra.dep.muxy.version}</version>
     </dependency>
+    <dependency>
+      <groupId>com.clearspring.analytics</groupId>
+      <artifactId>stream</artifactId>
+      <version>${hydra.dep.streamlib.version}</version>
+    </dependency>
     <!-- end addthis deps -->
     <!-- 3rd party -->
     <dependency>
