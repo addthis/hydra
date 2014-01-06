@@ -48,6 +48,14 @@ public class JobAlert implements Codec.Codable {
         this.email = "";
     }
 
+    public JobAlert(int type, int timeout, String email, String[] jobIds) {
+        this.lastAlertTime = -1;
+        this.type = type;
+        this.timeout = timeout;
+        this.email = email;
+        this.jobIds = jobIds;
+    }
+
     public boolean isOnError() {
         return type == ON_ERROR;
     }

@@ -36,6 +36,7 @@ import com.addthis.hydra.job.JobTaskState;
 import com.addthis.hydra.job.Spawn;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.util.EmailUtil;
+import com.addthis.maljson.JSONObject;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -194,13 +195,6 @@ public class JobAlertRunner {
         return rv;
     }
 
-    /**
-     * Creates a summary message for the alert
-     *
-     * @param job
-     * @param msg
-     * @return
-     */
     private String summary(Job job, String msg) {
         long files = 0;
         double bytes = 0;
@@ -270,10 +264,11 @@ public class JobAlertRunner {
     }
 
     /**
-     * Emails a message, Only the body can contain newline characters.
-     *
-     * @param job
-     * @param message
+     * Send an email when an alert fires or clears.
+     * @param job The job that activated the event
+     * @param message The message to send
+     * @param jobAlert The alert to modify
+     * @param clear True if the event was a clear (rather than firing a new alert)
      */
     private void emailAlert(Job job, String message, JobAlert jobAlert, boolean clear) {
         log.info("Alerting " + jobAlert.getEmail() + " :: job : " + job.getId() + " : " + message);
@@ -315,15 +310,19 @@ public class JobAlertRunner {
     }
 
     public void putAlert(String id, JobAlert alert) {
+        JobAlert oldAlert = alertMap.contains(id) ? alertMap.get(id) : null; // ConcurrentHashMap throws NPE on failed 'get'
+        if (oldAlert != null) {
+            // Inherit old alertTime even if the alert has changed in other ways
+            alert.setLastAlertTime(oldAlert.getLastAlertTime());
+        }
         alertMap.put(id, alert);
-        storeAlerts();
+        storeAlert(id, alert);
     }
 
     public void removeAlert(String id) {
         if (id != null) {
             alertMap.remove(id);
             spawnDataStore.deleteChild(SPAWN_COMMON_ALERT_PATH, id);
-            storeAlerts();
         }
     }
 
@@ -335,28 +334,45 @@ public class JobAlertRunner {
                 if (job != null && (alerts = job.getAlerts()) != null) {
                     for (JobAlert alert : alerts) {
                         alert.setJobIds(new String[] {job.getId()});
-                        alertMap.put(UUID.randomUUID().toString(), alert);
+                        String newUUID = UUID.randomUUID().toString();
+                        alertMap.put(newUUID, alert);
+                        storeAlert(newUUID, alert);
                     }
                     job.setAlerts(null);
                 }
             }
-            storeAlerts();
         }  finally {
             spawn.releaseJobLock();
         }
 
     }
 
-    private void storeAlerts() {
+    private void storeAlert(String alertId, JobAlert alert) {
+        synchronized (alertMap) {
+            try {
+                spawnDataStore.putAsChild(SPAWN_COMMON_ALERT_PATH, alertId, new String(codec.encode(alert)));
+            } catch (Exception e) {
+                log.warn("Warning: failed to save alert id=" + alertId + " alert=" + alert);
+            }
+        }
+    }
+
+    /**
+     * Get a snapshot of the alert map, mainly for rendering in the UI.
+     * @return A JSONObject representation of all existing alerts
+     */
+    public JSONObject getAlertState() {
+        JSONObject rv = new JSONObject();
         synchronized (alertMap) {
             for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
                 try {
-                    spawnDataStore.putAsChild(SPAWN_COMMON_ALERT_PATH, entry.getKey(), new String(codec.encode(entry.getValue())));
+                    rv.put(entry.getKey(), entry.getValue().toJSON());
                 } catch (Exception e) {
-                    log.warn("Warning: failed to save alert id=" + entry.getKey() + " alert=" + entry.getValue());
+                    log.warn("Warning: failed to send alert id=" + entry.getKey() + " alert=" + entry.getValue());
                 }
             }
         }
+        return rv;
     }
 
 

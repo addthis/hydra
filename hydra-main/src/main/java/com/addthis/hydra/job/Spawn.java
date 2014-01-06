@@ -1864,17 +1864,16 @@ public class Spawn implements Codec.Codable {
         }
     }
 
-    public void updateJobAlerts(String jobId, List<JobAlert> alerts) {
-        jobLock.lock();
-        Job job = getJob(jobId);
-        job.setAlerts(alerts);
-        try {
-            updateJob(job);
-        } catch (Exception ex) {
-            log.warn("[alert.error] error while trying to update job alerts for job " + jobId);
-        } finally {
-            jobLock.unlock();
-        }
+    public void putAlert(String alertId, JobAlert alert) {
+        jobAlertRunner.putAlert(alertId, alert);
+    }
+
+    public void removeAlert(String alertId) {
+        jobAlertRunner.removeAlert(alertId);
+    }
+
+    public JSONObject fetchAlertState() {
+        return jobAlertRunner.getAlertState();
     }
 
     public boolean deleteJob(String jobUUID) throws Exception {
