@@ -3081,11 +3081,9 @@ public class Spawn implements Codec.Codable {
                                         kicked = true;
                                     }
                                 } catch (Exception ex) {
-                                    if (job != null) {
-                                        log.warn("[schedule] ex while rekicking, disabling " + job.getId());
-                                        job.setEnabled(false);
-                                        updateJob(job);
-                                    }
+                                    log.warn("[schedule] ex while rekicking, disabling " + job.getId());
+                                    job.setEnabled(false);
+                                    updateJob(job);
                                     throw new Exception(ex);
                                 }
                             }

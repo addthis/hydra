@@ -38,6 +38,8 @@ public class JobAlert implements Codec.Codable {
     private int timeout;
     @Codec.Set(codable = true)
     private String email;
+    @Codec.Set(codable = true)
+    private String[] jobIds;
 
     public JobAlert() {
         this.lastAlertTime = -1;
@@ -104,6 +106,14 @@ public class JobAlert implements Codec.Codable {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String[] getJobIds() {
+        return jobIds;
+    }
+
+    public void setJobIds(String[] jobIds) {
+        this.jobIds = jobIds;
     }
 
     public JSONObject toJSON() throws Exception {

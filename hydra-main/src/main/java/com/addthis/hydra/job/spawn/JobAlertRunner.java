@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.job.spawn;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -49,12 +50,11 @@ public class JobAlertRunner {
 
     private static final Logger log = LoggerFactory.getLogger(JobAlertRunner.class);
     private static String clusterName = Parameter.value("spawn.localhost", "unknown");
-    private final Timer alertTimer;
     private final Spawn spawn;
     private final SpawnDataStore spawnDataStore;
 
-    private static final long REPEAT = 5 * 60 * 1000;
-    private static final long DELAY = 5 * 60 * 1000;
+    private static final long REPEAT = Parameter.longValue("spawn.job.alert.repeat", 5 * 60 * 1000);
+    private static final long DELAY = Parameter.longValue("spawn.job.alert.delay", 5 * 60 * 1000);
 
     private static final long GIGA_BYTE = (long) Math.pow(1024, 3);
     private static final int MINUTE = 60 * 1000;
@@ -71,7 +71,7 @@ public class JobAlertRunner {
     public JobAlertRunner(Spawn spawn) {
         this.spawn = spawn;
         this.spawnDataStore = spawn.getSpawnDataStore();
-        alertTimer = new Timer("JobAlertTimer");
+        Timer alertTimer = new Timer("JobAlertTimer");
         this.alertsEnabled = spawn.areAlertsEnabled();
         alertTimer.schedule(new TimerTask() {
             @Override
@@ -98,84 +98,100 @@ public class JobAlertRunner {
     }
 
     /**
-     * Method that loads jobs from Spawn and scans the alerts for jobs that have alerts. It checks to see if the condition for the alert
-     * exists and it sends the email if does, if it doesn't then it clears the alert.
+     * Iterate over alert map, checking the status of each alert.
      */
     public void scanAlerts() {
-        // Only scan jobs for alerts if alerting is enabled.
         if (alertsEnabled) {
             log.info("Running alert scan ..........");
-            for (Job job : this.spawn.listJobs()) {
-                //boolean used to track whether the job needs to be updated
-                boolean alertsChanged = false;
-                List<JobAlert> alerts = job.getAlerts();
-                if (alerts != null) {
-                    for (JobAlert jobAlert : alerts) {
-                        long currentTime = JitterClock.globalTime();
-                        if (jobAlert.isOnError()) {
-                            if (job.getState().equals(JobState.ERROR)) {
-                                if (!jobAlert.hasAlerted()) {
-                                    emailAlert(job, "Task is in Error ", jobAlert, false);
-                                    alertsChanged = true;
-                                }
-                            } else {
-                                if (jobAlert.hasAlerted()) {
-                                    alertsChanged = true;
-                                    emailAlert(job, "{CLEAR} Task is in Error ", jobAlert, true);
-                                }
-                            }
-                        }
-                        int jobTimeout = jobAlert.getTimeout();
-                        String timeUnit = (jobTimeout == 1) ? " minute" : " minutes";
-                        if (jobAlert.isOnComplete()) {
-                            // job is idle and has completed within the last 60 minutes
-                            if (job.getState().equals(JobState.IDLE)) {
-                                if (!jobAlert.hasAlerted()) {
-                                    emailAlert(job, "Task has Completed ", jobAlert, false);
-                                    alertsChanged = true;
-                                }
-                            } else {
-                                if (jobAlert.hasAlerted()) {
-                                    alertsChanged = true;
-                                    emailAlert(job, "{CLEAR} Task has Completed ", jobAlert, true);
-                                }
-                            }
-                        } else if (jobAlert.isRuntimeExceeded()) {
-                            if (job.getState().equals(JobState.RUNNING) && (job.getSubmitTime() != null) &&
-                                ((currentTime - job.getSubmitTime()) > jobTimeout * MINUTE)) {
-                                if (!jobAlert.hasAlerted()) {
-                                    emailAlert(job, "Task runtime has exceed : " + jobTimeout + timeUnit, jobAlert, false);
-                                    alertsChanged = true;
-                                }
-                            } else {
-                                if (jobAlert.hasAlerted()) {
-                                    alertsChanged = true;
-                                    emailAlert(job, "{CLEAR} Task runtime has exceed : " + jobTimeout + timeUnit, jobAlert, true);
-                                }
-                            }
-                        } else if (jobAlert.isRekickTimeout()) {
-                            if (!job.getState().equals(JobState.RUNNING) && (job.getEndTime() != null) &&
-                                ((currentTime - job.getEndTime()) > jobTimeout * MINUTE)) {
-                                if (!jobAlert.hasAlerted()) {
-                                    emailAlert(job, "Task has not been re-kicked in : " + jobTimeout + timeUnit, jobAlert, false);
-                                    alertsChanged = true;
-                                }
-                            } else {
-                                if (jobAlert.hasAlerted()) {
-                                    alertsChanged = true;
-                                    emailAlert(job, "{CLEAR} Task has not been re-kicked in : " + jobTimeout + timeUnit, jobAlert, true);
-                                }
-                            }
-                        }
+            synchronized (alertMap) {
+                for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
+                    checkAlert(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+    }
+
+    /**
+     * Check whether a particular alert should fire or clear based on job states
+     * @param alertId The id of the alert being checked
+     * @param alert The actual alert object
+     */
+    private void checkAlert(String alertId, JobAlert alert) {
+        boolean alertsChanged = false;
+        long currentTime = JitterClock.globalTime();
+        int jobTimeout = alert.getTimeout();
+        String timeUnit = (jobTimeout == 1) ? " minute" : " minutes";
+        List<Job> alertJobs = getAlertJobs(alert);
+        for (Job job : alertJobs) {
+            if (alert.isOnError()) {
+                if (job.getState().equals(JobState.ERROR)) {
+                    if (!alert.hasAlerted()) {
+                        emailAlert(job, "Task is in Error ", alert, false);
+                        alertsChanged = true;
                     }
-                    //alert state for job has changed, so we need to ask spawn to update job
-                    if (alertsChanged) {
-                        this.spawn.updateJobAlerts(job.getId(), alerts);
+                } else {
+                    if (alert.hasAlerted()) {
+                        alertsChanged = true;
+                        emailAlert(job, "{CLEAR} Task is in Error ", alert, true);
+                    }
+                }
+            } else if (alert.isOnComplete()) {
+                // job is idle and has completed within the last 60 minutes
+                if (job.getState().equals(JobState.IDLE)) {
+                    if (!alert.hasAlerted()) {
+                        emailAlert(job, "Task has Completed ", alert, false);
+                        alertsChanged = true;
+                    }
+                } else {
+                    if (alert.hasAlerted()) {
+                        alertsChanged = true;
+                        emailAlert(job, "{CLEAR} Task has Completed ", alert, true);
+                    }
+                }
+            } else if (alert.isRuntimeExceeded()) {
+                if (job.getState().equals(JobState.RUNNING) && (job.getSubmitTime() != null) &&
+                    ((currentTime - job.getSubmitTime()) > jobTimeout * MINUTE)) {
+                    if (!alert.hasAlerted()) {
+                        emailAlert(job, "Task runtime has exceed : " + jobTimeout + timeUnit, alert, false);
+                        alertsChanged = true;
+                    }
+                } else {
+                    if (alert.hasAlerted()) {
+                        alertsChanged = true;
+                        emailAlert(job, "{CLEAR} Task runtime has exceed : " + jobTimeout + timeUnit, alert, true);
+                    }
+                }
+            } else if (alert.isRekickTimeout()) {
+                if (!job.getState().equals(JobState.RUNNING) && (job.getEndTime() != null) &&
+                    ((currentTime - job.getEndTime()) > jobTimeout * MINUTE)) {
+                    if (!alert.hasAlerted()) {
+                        emailAlert(job, "Task has not been re-kicked in : " + jobTimeout + timeUnit, alert, false);
+                        alertsChanged = true;
+                    }
+                } else {
+                    if (alert.hasAlerted()) {
+                        alertsChanged = true;
+                        emailAlert(job, "{CLEAR} Task has not been re-kicked in : " + jobTimeout + timeUnit, alert, true);
                     }
                 }
             }
         }
+        if (alertsChanged) {
+            putAlert(alertId, alert);
+        }
+    }
 
+    private List<Job> getAlertJobs(JobAlert alert) {
+        List<Job> rv = new ArrayList<>();
+        if (alert != null && alert.getJobIds() != null) {
+            for (String jobId : alert.getJobIds()) {
+                Job job = spawn.getJob(jobId);
+                if (job != null) {
+                    rv.add(job);
+                }
+            }
+        }
+        return rv;
     }
 
     /**
@@ -318,6 +334,7 @@ public class JobAlertRunner {
             for (Job job : spawn.listJobs()) {
                 if (job != null && (alerts = job.getAlerts()) != null) {
                     for (JobAlert alert : alerts) {
+                        alert.setJobIds(new String[] {job.getId()});
                         alertMap.put(UUID.randomUUID().toString(), alert);
                     }
                     job.setAlerts(null);

@@ -809,13 +809,17 @@ public final class Job implements IJob, Codable {
         return minionType;
     }
 
+    public Long getCanonicalTime() {
+        // Get an estimate for the last time this job was run. Use end-time if non-null; otherwise, startTime.
+        return (endTime == null && getState() == JobState.IDLE) ? startTime : endTime;
+    }
+
     public void setMinionType(String minionType) {
         this.minionType = minionType;
     }
 
     public boolean shouldAutoRekick(long clock) {
-        Long endTime = getEndTime();
-        Long canonicalTime = (endTime == null && getState() == JobState.IDLE) ? startTime : endTime;
+        Long canonicalTime = getCanonicalTime();
         return isEnabled() && canonicalTime != null && getRunCount() > 0 && getRekickTimeout() != null &&
                getRekickTimeout() > 0 && clock - canonicalTime >= (getRekickTimeout() * 60000L);
     }
