@@ -683,20 +683,25 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         LinkedList<JobKey> stoppedTasks = new LinkedList<>();
         LinkedList<JobKey> incompleteReplicas = new LinkedList<>();
         for (JobTask job : tasks.values()) {
-            status.addJob(job.getJobKey().getJobUuid());
-            if (job.isRunning()) {
-                running.add(job.getJobKey());
-            } else if (job.isReplicating() && job.isProcessRunning(job.replicatePid)) {
-                replicating.add(job.getJobKey());
-            } else if (job.isBackingUp()) {
-                backingUp.add(job.getJobKey());
-            } else if (job.getLiveDir().exists()) {
-                if (job.isComplete()) {
-                    stoppedTasks.add(job.getJobKey());
-                } else {
-                    incompleteReplicas.add(job.getJobKey());
+            try {
+                status.addJob(job.getJobKey().getJobUuid());
+                if (job.isRunning()) {
+                    running.add(job.getJobKey());
+                } else if (job.isReplicating() && job.isProcessRunning(job.replicatePid)) {
+                    replicating.add(job.getJobKey());
+                } else if (job.isBackingUp()) {
+                    backingUp.add(job.getJobKey());
+                } else if (job.getLiveDir().exists()) {
+                    if (job.isComplete()) {
+                        stoppedTasks.add(job.getJobKey());
+                    } else {
+                        incompleteReplicas.add(job.getJobKey());
+                    }
                 }
+            } catch (Exception ex) {
+                log.warn("Failed to detect status of job " + job + "; omitting from host state", ex);
             }
+
         }
         status.setRunning(running.toArray(new JobKey[running.size()]));
         status.setReplicating(replicating.toArray(new JobKey[replicating.size()]));
@@ -2295,6 +2300,15 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 jobStopped = new File(jobDir, "job.stopped");
             }
             return jobStopped.exists();
+        }
+
+        @Override
+        public String toString() {
+            return "JobTask{" +
+                   "id='" + id + '\'' +
+                   ", node=" + node +
+                   ", jobDir=" + jobDir +
+                   '}';
         }
     }
 

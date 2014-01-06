@@ -1293,13 +1293,15 @@ public class Spawn implements Codec.Codable {
             int numChanged = 0;
             List<JobTask> tasks = node < 0 ? job.getCopyOfTasks() : Arrays.asList(job.getTask(node));
             for (JobTask task : tasks) {
-                boolean shouldModifyTask = ignoreTaskState || (task.getState() == JobTaskState.IDLE || (!idleOnly && task.getState() == JobTaskState.ERROR));
+                boolean shouldModifyTask = !spawnJobFixer.haveRecentlyFixedTask(task.getJobKey()) &&
+                        (ignoreTaskState || (task.getState() == JobTaskState.IDLE || (!idleOnly && task.getState() == JobTaskState.ERROR)));
                 if (log.isDebugEnabled()) {
                     log.debug("[fixTaskDir] considering modifying task " + task.getJobKey() + " shouldModifyTask=" + shouldModifyTask);
                 }
                 if (shouldModifyTask) {
                     try {
                         numChanged += resolveJobTaskDirectoryMatches(job, task, matchTaskToDirectories(task, false)) ? 1 : 0;
+                        spawnJobFixer.markTaskRecentlyFixed(task.getJobKey());
                     } catch (Exception ex) {
                         log.warn("fixTaskDir exception " + ex, ex);
                         return "fixTaskDir exception (see log for more details): " + ex;
