@@ -15,8 +15,11 @@ package com.addthis.hydra.job.spawn;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -24,16 +27,21 @@ import java.text.SimpleDateFormat;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskState;
 import com.addthis.hydra.job.Spawn;
+import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.util.EmailUtil;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
+
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_LOADED_LEGACY;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
+
 /**
  * This class runs a timer that scans the jobs for any email alerts and sends them.
  */
@@ -43,6 +51,7 @@ public class JobAlertRunner {
     private static String clusterName = Parameter.value("spawn.localhost", "unknown");
     private final Timer alertTimer;
     private final Spawn spawn;
+    private final SpawnDataStore spawnDataStore;
 
     private static final long REPEAT = 5 * 60 * 1000;
     private static final long DELAY = 5 * 60 * 1000;
@@ -52,11 +61,16 @@ public class JobAlertRunner {
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd-HHmm");
     private final DecimalFormat decimalFormat = new DecimalFormat("#.###");
 
+    private final ConcurrentHashMap<String, JobAlert> alertMap;
+
+    private static final CodecJSON codec = new CodecJSON();
+
     private boolean alertsEnabled;
 
 
     public JobAlertRunner(Spawn spawn) {
         this.spawn = spawn;
+        this.spawnDataStore = spawn.getSpawnDataStore();
         alertTimer = new Timer("JobAlertTimer");
         this.alertsEnabled = spawn.areAlertsEnabled();
         alertTimer.schedule(new TimerTask() {
@@ -65,6 +79,8 @@ public class JobAlertRunner {
                 scanAlerts();
             }
         }, DELAY, REPEAT);
+        this.alertMap = new ConcurrentHashMap<>();
+        loadAlertMap();
     }
 
     /**
@@ -252,6 +268,78 @@ public class JobAlertRunner {
             jobAlert.alerted();
         }
         EmailUtil.email(jobAlert.getEmail(), subject, summary(job, message));
+    }
+
+    private void loadAlertMap() {
+        synchronized (alertMap) {
+            Map<String, String> alertsRaw = spawnDataStore.getAllChildren(SPAWN_COMMON_ALERT_PATH);
+            for (Map.Entry<String, String> entry : alertsRaw.entrySet()) {
+                loadAlert(entry.getKey(), entry.getValue());
+            }
+            if (spawnDataStore.get(SPAWN_COMMON_ALERT_LOADED_LEGACY) == null) {
+                // One time only, iterate through jobs looking for their alerts.
+                try {
+                    loadLegacyAlerts();
+                    spawnDataStore.put(SPAWN_COMMON_ALERT_LOADED_LEGACY, "1");
+                } catch (Exception ex) {
+                    log.warn("Warning: failed to fetch legacy alerts", ex);
+                }
+
+            }
+        }
+    }
+
+    private void loadAlert(String id, String raw) {
+        try {
+            JobAlert jobAlert = codec.decode(new JobAlert(), raw.getBytes());
+            alertMap.put(id, jobAlert);
+        } catch (Exception ex) {
+            log.warn("Failed to decode JobAlert id=" + id + " raw=" + raw);
+        }
+    }
+
+    public void putAlert(String id, JobAlert alert) {
+        alertMap.put(id, alert);
+        storeAlerts();
+    }
+
+    public void removeAlert(String id) {
+        if (id != null) {
+            alertMap.remove(id);
+            spawnDataStore.deleteChild(SPAWN_COMMON_ALERT_PATH, id);
+            storeAlerts();
+        }
+    }
+
+    private void loadLegacyAlerts() {
+        List<JobAlert> alerts;
+        spawn.acquireJobLock();
+        try {
+            for (Job job : spawn.listJobs()) {
+                if (job != null && (alerts = job.getAlerts()) != null) {
+                    for (JobAlert alert : alerts) {
+                        alertMap.put(UUID.randomUUID().toString(), alert);
+                    }
+                    job.setAlerts(null);
+                }
+            }
+            storeAlerts();
+        }  finally {
+            spawn.releaseJobLock();
+        }
+
+    }
+
+    private void storeAlerts() {
+        synchronized (alertMap) {
+            for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
+                try {
+                    spawnDataStore.putAsChild(SPAWN_COMMON_ALERT_PATH, entry.getKey(), new String(codec.encode(entry.getValue())));
+                } catch (Exception e) {
+                    log.warn("Warning: failed to save alert id=" + entry.getKey() + " alert=" + entry.getValue());
+                }
+            }
+        }
     }
 
 

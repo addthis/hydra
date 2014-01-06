@@ -422,11 +422,11 @@ public class Spawn implements Codec.Codable {
         return balancer;
     }
 
-    protected void acquireJobLock() {
+    public void acquireJobLock() {
         jobLock.lock();
     }
 
-    protected void releaseJobLock() {
+    public void releaseJobLock() {
         jobLock.unlock();
     }
 
