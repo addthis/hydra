@@ -31,6 +31,8 @@ public class JobAlert implements Codec.Codable {
     public static final int REKICK_TIMEOUT = 3;
 
     @Codec.Set(codable = true)
+    private String alertId;
+    @Codec.Set(codable = true)
     private long lastAlertTime;
     @Codec.Set(codable = true)
     private int type;
@@ -48,12 +50,21 @@ public class JobAlert implements Codec.Codable {
         this.email = "";
     }
 
-    public JobAlert(int type, int timeout, String email, String[] jobIds) {
+    public JobAlert(String alertId, int type, int timeout, String email, String[] jobIds) {
+        this.alertId = alertId;
         this.lastAlertTime = -1;
         this.type = type;
         this.timeout = timeout;
         this.email = email;
         this.jobIds = jobIds;
+    }
+
+    public String getAlertId() {
+        return alertId;
+    }
+
+    public void setAlertId(String alertId) {
+        this.alertId = alertId;
     }
 
     public boolean isOnError() {

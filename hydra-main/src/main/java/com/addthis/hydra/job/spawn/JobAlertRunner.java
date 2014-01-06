@@ -335,6 +335,7 @@ public class JobAlertRunner {
                     for (JobAlert alert : alerts) {
                         alert.setJobIds(new String[] {job.getId()});
                         String newUUID = UUID.randomUUID().toString();
+                        alert.setAlertId(newUUID);
                         alertMap.put(newUUID, alert);
                         storeAlert(newUUID, alert);
                     }

@@ -92,6 +92,7 @@ require([
     "modules/task.log",
     "modules/graph",
     "modules/git",
+    "modules/alerts",
     "modules/settings",
     "modules/datatable",
     "json!setupData",
@@ -115,6 +116,7 @@ function(
     TaskLog,
     Graph,
     Git,
+    Alerts,
     Settings,
     DataTable,
     setupData,
@@ -611,6 +613,13 @@ function(
         model.fetch();
         app.showView(view,"#git");
         app.makeHtmlTitle("Git");
+    });
+    app.router.on("route:showAlerts", function() {
+    	var model = new Alerts.Model();
+    	var view = new Alerts.View({model:model});
+    	model.fetch();
+    	app.showView(view,"#alerts");
+    	app.makeHtmlTitle("Alerts");    	
     });
     app.user.on("change:username",function(){
         $("#usernameBox").html(app.user.get("username"));

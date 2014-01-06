@@ -48,7 +48,7 @@ public class AlertResource {
             @QueryParam("email") String email,
             @QueryParam("jobIds") String jobIds) {
         if (alertId != null && jobIds != null) {
-            JobAlert jobAlert = new JobAlert(type, timeout, email, jobIds.split(","));
+            JobAlert jobAlert = new JobAlert(alertId, type, timeout, email, jobIds.split(","));
             spawn.putAlert(alertId, jobAlert);
             return Response.ok().build();
         }
