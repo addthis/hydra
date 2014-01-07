@@ -99,13 +99,13 @@ public class JobAlertRunner {
                         if (jobAlert.isOnError()) {
                             if (job.getState() == JobState.ERROR) {
                                 if (!jobAlert.hasAlerted()) {
-                                    emailAlert(job, "Task is in Error ", jobAlert, false);
+                                    emailAlert(job, "[TRIGGER] Task is in Error ", jobAlert, false);
                                     alertsChanged = true;
                                 }
                             } else {
                                 if (jobAlert.hasAlerted()) {
                                     alertsChanged = true;
-                                    emailAlert(job, "{CLEAR} Task is in Error ", jobAlert, true);
+                                    emailAlert(job, "[CLEAR] Task is in Error ", jobAlert, true);
                                 }
                             }
                         }
@@ -115,39 +115,39 @@ public class JobAlertRunner {
                             // job is idle and has completed within the last 60 minutes
                             if (job.getState() == JobState.IDLE) {
                                 if (!jobAlert.hasAlerted()) {
-                                    emailAlert(job, "Task has Completed ", jobAlert, false);
+                                    emailAlert(job, "[TRIGGER] Task has Completed ", jobAlert, false);
                                     alertsChanged = true;
                                 }
                             } else {
                                 if (jobAlert.hasAlerted()) {
                                     alertsChanged = true;
-                                    emailAlert(job, "{CLEAR} Task has Completed ", jobAlert, true);
+                                    emailAlert(job, "[CLEAR] Task has Completed ", jobAlert, true);
                                 }
                             }
                         } else if (jobAlert.isRuntimeExceeded()) {
                             if ((job.getState() == JobState.RUNNING) && (job.getSubmitTime() != null) &&
                                 ((currentTime - job.getSubmitTime()) > (jobTimeout * MINUTE))) {
                                 if (!jobAlert.hasAlerted()) {
-                                    emailAlert(job, "Task runtime has exceed : " + jobTimeout + timeUnit, jobAlert, false);
+                                    emailAlert(job, "[TRIGGER] Task runtime has exceed : " + jobTimeout + timeUnit, jobAlert, false);
                                     alertsChanged = true;
                                 }
                             } else {
                                 if (jobAlert.hasAlerted()) {
                                     alertsChanged = true;
-                                    emailAlert(job, "{CLEAR} Task runtime has exceed : " + jobTimeout + timeUnit, jobAlert, true);
+                                    emailAlert(job, "[CLEAR] Task runtime has exceed : " + jobTimeout + timeUnit, jobAlert, true);
                                 }
                             }
                         } else if (jobAlert.isRekickTimeout()) {
                             if ((job.getState() != JobState.RUNNING) && (job.getEndTime() != null) &&
                                 ((currentTime - job.getEndTime()) > (jobTimeout * MINUTE))) {
                                 if (!jobAlert.hasAlerted()) {
-                                    emailAlert(job, "Task has not been re-kicked in : " + jobTimeout + timeUnit, jobAlert, false);
+                                    emailAlert(job, "[TRIGGER] Task has not been re-kicked in : " + jobTimeout + timeUnit, jobAlert, false);
                                     alertsChanged = true;
                                 }
                             } else {
                                 if (jobAlert.hasAlerted()) {
                                     alertsChanged = true;
-                                    emailAlert(job, "{CLEAR} Task has not been re-kicked in : " + jobTimeout + timeUnit, jobAlert, true);
+                                    emailAlert(job, "[CLEAR] Task has not been re-kicked in : " + jobTimeout + timeUnit, jobAlert, true);
                                 }
                             }
                         }
