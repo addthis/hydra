@@ -110,10 +110,10 @@ public final class PathAlias extends PathKeyValue {
     }
 
     @Override
-    public DataTreeNode getOrCreateNode(TreeMapState state, String name) {
+    public DataTreeNode getOrCreateNode(final TreeMapState state, final String name) {
         String p[] = new String[path.length];
         for (int i = 0; i < p.length; i++) {
-            p[i] = ValueUtil.asNativeString(path[i].getPathValue(state));
+            p[i] = ValueUtil.asNativeString(path[i].getFilteredValue(state));
         }
         DataTreeNode alias = null;
         if (peer) {
@@ -126,6 +126,7 @@ public final class PathAlias extends PathKeyValue {
         if (alias != null) {
             final DataTreeNode finalAlias = alias;
             DataTreeNodeInitializer init = new DataTreeNodeInitializer() {
+                // TODO - defer walking path until we know we need to create a new node
                 @Override
                 public void onNewNode(DataTreeNode child) {
                     child.aliasTo(finalAlias);
