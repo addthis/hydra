@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
  */
 public class JobAlert implements Codec.Codable {
 
-    private static final Logger log = LoggerFactory.getLogger(JobAlertRunner.class);
+    private static final Logger log = LoggerFactory.getLogger(JobAlert.class);
 
     //Alert types
     public static final int ON_ERROR = 0;
