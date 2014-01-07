@@ -41,7 +41,6 @@ import com.addthis.bundle.core.kvp.KVBundleFormat;
 import com.addthis.bundle.io.DataChannelWriter;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.data.query.QueryElement;
 import com.addthis.hydra.data.query.QueryEngine;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.data.query.QueryStatusObserver;
@@ -61,8 +60,8 @@ import com.yammer.metrics.core.Meter;
 import com.yammer.metrics.core.Timer;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
+
 /**
  * Where all the action happens for a mesh query worker. Its class name is passed as a system property to meshy as a local handler,
  * and is otherwise called from nowhere except to access some static variables. Despite the existence of a MeshQueryWorker class, this
@@ -106,22 +105,18 @@ public class MeshQuerySource implements LocalFileHandler {
     private static final int outputBufferSize = Parameter.intValue("meshQuerySource.outputBufferSize", 64000);
     private static final int gateCounter = Parameter.intValue("meshQuerySource.gateCounter", 2); // max concurrent queries
     private static final int gateAcquireTimeLimit = Parameter.intValue("meshQuerySource.gateAcquireTimeLimit", 1000); // conservative
-
     private static final boolean busyResponseEnabled = Parameter.boolValue("meshQuerySource.busyResponseEnabled", false);
     //File that contains the next parent id to be assigned in the query tree, apparently.
-    private static final String queryReferenceFile = Parameter.value("meshQuerySource.queryReferenceFile", "nextID");
+    private static final String queryReferenceFileName = Parameter.value("meshQuerySource.queryReferenceFile", "nextID");
     private static final int slowQueryThreshold = Parameter.intValue("meshQuerySource.slowQueryThreshold", 5000);
     private static final int shutdownSleepPeriod = Parameter.intValue("meshQuerySource.shutdownSleepPeriod", 1000);
     private static final int environmentFailureCode = Parameter.intValue("meshQuerySource.envFailCode", 33);
-    private static final int oomFailureCode = Parameter.intValue("debug.oomExit", 42);
     //Temp directory to use for sorting and caching
     private static final String tmpDirPath = Parameter.value("query.tmpdir", "query.tmpdir");
-
     private static final ExecutorService querySearchPool = MoreExecutors
             .getExitingExecutorService(new ThreadPoolExecutor(querySearchThreads, querySearchThreads, 0L, TimeUnit.MILLISECONDS,
                     new LinkedBlockingQueue<Runnable>(),
                     new ThreadFactoryBuilder().setNameFormat("querySearch-%d").build()), 5, TimeUnit.SECONDS);
-
     // metrics
     private static final Meter forcedShutdownMeter = Metrics.newMeter(MeshQuerySource.class, "forcedShutdown", "shutdown", TimeUnit.MINUTES);
     //Query run times
@@ -132,23 +127,21 @@ public class MeshQuerySource implements LocalFileHandler {
     private static final Timer gateAcquireTimer = Metrics.newTimer(MeshQuerySource.class, "gateAcquireTimes", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
     //Queries we have recieved but not finished processing (includes those waiting to run aka our queue)
     private static final Counter queryCount = Metrics.newCounter(MeshQuerySource.class, "queryCount");
-
     private static final QueryEngineCache queryEngineCache = new QueryEngineCache();
-
     private final Semaphore queryGate = new Semaphore(gateCounter);
 
     public MeshQuerySource() {
-        log.info("[MeshQuerySource] started.  base directory=" + queryRoot);
-        log.info("Max concurrent queries (gateCounter):" + gateCounter);
+        log.info("[MeshQuerySource] started.  base directory={}", queryRoot);
+        log.info("Max concurrent queries (gateCounter):{}", gateCounter);
 
         // Initialize the tmp dir
         try {
             File tmpDir = new File(tmpDirPath).getCanonicalFile();
             Files.deleteDir(tmpDir);
             Files.initDirectory(tmpDir);
-            log.info("Using temporary directory:" + tmpDir.getPath());
+            log.info("Using temporary directory:{}", tmpDir.getPath());
         } catch (Exception e) {
-            log.warn("Error while cleaning or obtaining canonical path for tmpDir: " + tmpDirPath, e);
+            log.warn("Error while cleaning or obtaining canonical path for tmpDir: {}", tmpDirPath, e);
         }
     }
 
@@ -197,7 +190,7 @@ public class MeshQuerySource implements LocalFileHandler {
             try {
                 this.dir = dir.getCanonicalFile();
                 this.dirString = dir.toString();
-                queryReferenceFile = new File(dir, MeshQuerySource.queryReferenceFile);
+                queryReferenceFile = new File(dir, MeshQuerySource.queryReferenceFileName);
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
             }
@@ -265,17 +258,16 @@ public class MeshQuerySource implements LocalFileHandler {
 
         private final Map<String, String> options;
         private final String goldDirString;
-        private Query query;
-        private QueryOpProcessor queryOpProcessor = null;
-        private QueryEngine finalEng = null;
-        boolean acquired = false;
-        long gateAcquisitionDuration;
-
         /**
          * A reference to {@link DataChannelToInputStream}. Meshy has a reference to this object using
          * the {@link DataChannelOutput} interface and uses it to call {@link DataChannelToInputStream#nextBytes(long)}.
          */
         private final DataChannelToInputStream bridge;
+        boolean acquired = false;
+        long gateAcquisitionDuration;
+        private Query query;
+        private QueryOpProcessor queryOpProcessor = null;
+        private QueryEngine finalEng = null;
 
         public SearchRunner(final Map<String, String> options, final String dirString,
                 final DataChannelToInputStream bridge) throws Exception {
@@ -284,6 +276,133 @@ public class MeshQuerySource implements LocalFileHandler {
             this.goldDirString = dirString;
             this.bridge = bridge;
             this.options = options;
+        }
+
+        @Override
+        public void run() {
+            queryCount.inc();
+            try {
+                gating();
+                setup();
+                engine();
+                search();
+                //success
+            } catch (DataChannelError ex) //TODO -- Handle cancels better (less verbosely)
+            {
+                log.warn("DataChannelError while running search, query was likely canceled on the server side," +
+                         " {} or the query execution got a Thread.interrupt call", ex.getMessage());
+                logError(ex);
+                if (queryOpProcessor != null) {
+                    queryOpProcessor.sourceError(ex);
+                    queryOpProcessor.sendComplete();
+                }
+            } catch (EnvironmentFailureException ex) //BDB specific exception
+            {
+                log.warn("******** Received an environment failure exception{}", ex.getMessage());
+                logError(ex);
+                new ShutdownRunner(shutdownSleepPeriod, environmentFailureCode).start();
+                if (queryOpProcessor != null) {
+                    queryOpProcessor.sourceError(new DataChannelError(ex));
+                    queryOpProcessor.sendComplete();
+                }
+            } catch (Exception ex) {
+                log.warn("Generic Exception while running search. {}", ex.getMessage());
+                logError(ex);
+                if (ex.getMessage().contains("EnvironmentFailure")) {
+                    log.warn("Doing a system exit to restart the mesh query source (from generic exception)");
+                    new ShutdownRunner(shutdownSleepPeriod, environmentFailureCode).start();
+                }
+                if (queryOpProcessor != null) {
+                    queryOpProcessor.sourceError(new DataChannelError(ex));
+                    queryOpProcessor.sendComplete();
+                }
+            }
+
+            // Cleanup -- decrease query count, release our engine (if we had one), release our gate.
+            //
+            // Note that releasing our engine only decreases its open lease count.
+            finally {
+                queryCount.dec();
+                if (finalEng != null) {
+                    log.debug("Releasing engine: {}", finalEng);
+                    finalEng.release();
+                }
+
+                if (acquired) {
+                    log.debug("releasing query gate for: {}", goldDirString);
+                    queryGate.release();
+                }
+            }
+        }
+
+        private void logError(Throwable ex) {
+            log.warn("Canonical directory: {}", goldDirString);
+            log.warn("Engine: {}", finalEng);
+            log.warn("Query options: uuid={}", options, ex);
+            // See if we can send the error to mqmaster as well
+            if (queryOpProcessor == null) {
+                queryOpProcessor = Query.createProcessor(bridge, bridge.queryStatusObserver);
+            }
+        }
+
+        /**
+         * Part 4 - SEARCH
+         * Run the search -- most of this logic is in QueryEngine.search(). We only take care of logging times and
+         * passing the sendComplete message along.
+         */
+        private void search() {
+            final long searchStartTime = System.currentTimeMillis();
+            finalEng.search(query, queryOpProcessor, bridge.getQueryStatusObserver());
+            queryOpProcessor.sendComplete();
+            final long searchDuration = System.currentTimeMillis() - searchStartTime;
+            if (log.isDebugEnabled() || query.isTraced()) {
+                Query.emitTrace("[QueryReference] search complete " + query.uuid() + " in " + searchDuration + "ms directory: " +
+                                goldDirString + " slow=" + (searchDuration > slowQueryThreshold) + " rowsIn: " + queryOpProcessor.getInputRows());
+            }
+            queryTimes.update(searchDuration, TimeUnit.MILLISECONDS);
+        }
+
+        /**
+         * Part 3 - ENGINE CACHE
+         * Get a QueryEngine for our query -- check the cache for a suitable candidate, otherwise make one.
+         * Most of this logic is handled by the QueryEngineCache.get() function.
+         */
+        private void engine() throws Exception {
+            final long engineGetStartTime = System.currentTimeMillis();
+            // Use the canonical path stored in the canonicalDirString to create a QueryEngine. By that way
+            // if the alias changes new queries will use the latest available
+            // database and the old engines will be automatically closed after their TTL expires.
+            finalEng = queryEngineCache.getAndLease(goldDirString);
+            final long engineGetDuration = System.currentTimeMillis() - engineGetStartTime;
+            engineGetTimer.update(engineGetDuration, TimeUnit.MILLISECONDS);
+
+            if (finalEng == null) //Cache returned null -- this doesn't mean cache miss. It means something went fairly wrong
+            {
+                log.warn("[QueryReference] Unable to retrieve queryEngine for query: {}, key: {} after waiting: {}ms",
+                        query.uuid(), goldDirString, engineGetDuration);
+                throw new DataChannelError("Unable to retrieve queryEngine for query: " + query.uuid() +
+                                           ", key: " + goldDirString + " after waiting: " + engineGetDuration + "ms");
+            } //else we got an engine so we're good -- maybe this logic should be in the cache get
+
+            if (engineGetDuration > slowQueryThreshold || log.isDebugEnabled() || query.isTraced()) {
+                Query.emitTrace("[QueryReference] Retrieved queryEngine for query: " + query.uuid() + ", key:" +
+                                goldDirString + " after waiting: " + engineGetDuration + "ms.  slow=" +
+                                (engineGetDuration > slowQueryThreshold));
+            }
+        }
+
+        /**
+         * Part 2 - SETUP
+         * Initialize query run -- parse options, create Query object
+         */
+        private void setup() throws Exception {
+            query = CodecJSON.decodeString(new Query(), options.get("query"));
+            // Log some information about how long gate acquisition took
+            if (query.isTraced() || gateAcquisitionDuration > slowQueryThreshold) {
+                Query.emitTrace("[MeshQuerySource] query:" + query.uuid() + " gate acquisitionDuration=" + gateAcquisitionDuration + "ms, slow=" + (gateAcquisitionDuration > slowQueryThreshold));
+            }
+            // Parse the query and return a reference to the last QueryOpProcessor.
+            queryOpProcessor = query.getProcessor(bridge, bridge.queryStatusObserver);
         }
 
         /**
@@ -330,168 +449,33 @@ public class MeshQuerySource implements LocalFileHandler {
             gateAcquisitionDuration = System.currentTimeMillis() - queryStartTime;
             gateAcquireTimer.update(gateAcquisitionDuration, TimeUnit.MILLISECONDS);
         }
-
-        /**
-         * Part 2 - SETUP
-         * Initialize query run -- parse options, create Query object
-         */
-        private void setup() throws Exception {
-            query = CodecJSON.decodeString(new Query(), options.get("query"));
-            // Log some information about how long gate acquisition took
-            if (query.isTraced() || gateAcquisitionDuration > slowQueryThreshold) {
-                Query.emitTrace("[MeshQuerySource] query:" + query.uuid() + " gate acquisitionDuration=" + gateAcquisitionDuration + "ms, slow=" + (gateAcquisitionDuration > slowQueryThreshold));
-            }
-            // Parse the query and return a reference to the last QueryOpProcessor.
-            queryOpProcessor = query.getProcessor(bridge, bridge.queryStatusObserver);
-        }
-
-        /**
-         * Part 3 - ENGINE CACHE
-         * Get a QueryEngine for our query -- check the cache for a suitable candidate, otherwise make one.
-         * Most of this logic is handled by the QueryEngineCache.get() function.
-         */
-        private void engine() throws Exception {
-            final long engineGetStartTime = System.currentTimeMillis();
-            // Use the canonical path stored in the canonicalDirString to create a QueryEngine. By that way
-            // if the alias changes new queries will use the latest available
-            // database and the old engines will be automatically closed after their TTL expires.
-            finalEng = queryEngineCache.getAndLease(goldDirString);
-            final long engineGetDuration = System.currentTimeMillis() - engineGetStartTime;
-            engineGetTimer.update(engineGetDuration, TimeUnit.MILLISECONDS);
-
-            if (finalEng == null) //Cache returned null -- this doesn't mean cache miss. It means something went fairly wrong
-            {
-                log.warn("[QueryReference] Unable to retrieve queryEngine for query: " + query.uuid() +
-                         ", key: " + goldDirString + " after waiting: " + engineGetDuration + "ms");
-                throw new DataChannelError("Unable to retrieve queryEngine for query: " + query.uuid() +
-                                           ", key: " + goldDirString + " after waiting: " + engineGetDuration + "ms");
-            } //else we got an engine so we're good -- maybe this logic should be in the cache get
-
-            if (engineGetDuration > slowQueryThreshold || log.isDebugEnabled() || query.isTraced()) {
-                Query.emitTrace("[QueryReference] Retrieved queryEngine for query: " + query.uuid() + ", key:" +
-                                goldDirString + " after waiting: " + engineGetDuration + "ms.  slow=" +
-                                (engineGetDuration > slowQueryThreshold));
-            }
-        }
-
-        /**
-         * Part 4 - SEARCH
-         * Run the search -- most of this logic is in QueryEngine.search(). We only take care of logging times and
-         * passing the sendComplete message along.
-         */
-        private void search() {
-            final long searchStartTime = System.currentTimeMillis();
-            finalEng.search(query, queryOpProcessor, bridge.getQueryStatusObserver());
-            queryOpProcessor.sendComplete();
-            final long searchDuration = System.currentTimeMillis() - searchStartTime;
-            if (log.isDebugEnabled() || query.isTraced()) {
-                Query.emitTrace("[QueryReference] search complete " + query.uuid() + " in " + searchDuration + "ms directory: " +
-                                goldDirString + " slow=" + (searchDuration > slowQueryThreshold) + " rowsIn: " + queryOpProcessor.getInputRows());
-            }
-            queryTimes.update(searchDuration, TimeUnit.MILLISECONDS);
-        }
-
-        private void logError(Throwable ex) {
-            log.warn("Canonical directory: " + goldDirString);
-            log.warn("Engine: " + finalEng);
-            log.warn("Query options: uuid=" + options, ex);
-            // See if we can send the error to mqmaster as well
-            if (queryOpProcessor == null) {
-                queryOpProcessor = Query.createProcessor(bridge, bridge.queryStatusObserver);
-            }
-        }
-
-        @Override
-        public void run() {
-            queryCount.inc();
-            try {
-                gating();
-                setup();
-                engine();
-                search();
-                //success
-            } catch (DataChannelError ex) //TODO -- Handle cancels better (less verbosely)
-            {
-                log.warn("DataChannelError while running search, query was likely canceled on the server side, " + ex.getMessage()
-                         + " or the query execution got a Thread.interrupt call");
-                logError(ex);
-                if (queryOpProcessor != null) {
-                    queryOpProcessor.sourceError(ex);
-                    queryOpProcessor.sendComplete();
-                }
-            } catch (EnvironmentFailureException ex) //BDB specific exception
-            {
-                log.warn("******** Received an environment failure exception" + ex.getMessage());
-                logError(ex);
-                new ShutdownRunner(shutdownSleepPeriod, environmentFailureCode).run();
-                if (queryOpProcessor != null) {
-                    queryOpProcessor.sourceError(new DataChannelError(ex));
-                    queryOpProcessor.sendComplete();
-                }
-            } catch (Exception ex) {
-                log.warn("Generic Exception while running search. " + ex.getMessage());
-                logError(ex);
-                if (ex.getMessage().contains("EnvironmentFailure")) {
-                    log.warn("Doing a system exit to restart the mesh query source (from generic exception)");
-                    new ShutdownRunner(shutdownSleepPeriod, environmentFailureCode).run();
-                }
-                if (queryOpProcessor != null) {
-                    queryOpProcessor.sourceError(new DataChannelError(ex));
-                    queryOpProcessor.sendComplete();
-                }
-            }
-
-            // Cleanup -- decrease query count, release our engine (if we had one), release our gate.
-            //
-            // Note that releasing our engine only decreases its open lease count.
-            finally {
-                queryCount.dec();
-                if (finalEng != null) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Releasing engine: " + finalEng.toString());
-                    }
-                    finalEng.release();
-                }
-
-                if (acquired) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("releasing query gate for: " + goldDirString);
-                    }
-                    queryGate.release();
-                }
-            }
-        }
     }
 
     /**
      * This class is the last point the bundles reach before getting converted into bytes and read by meshy to be
      * sent over the network to the client (MQMaster). The last class in the three step query process.
      */
-    private class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, BundleFormatted {
+    private static class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, BundleFormatted {
 
         private final KVBundleFormat format = new KVBundleFormat();
-        private final LinkedBlockingQueue<byte[]> queue = new LinkedBlockingQueue<byte[]>(outputQueueSize);
+        private final LinkedBlockingQueue<byte[]> queue = new LinkedBlockingQueue<>(outputQueueSize);
         private final DataChannelWriter writer;
         private final ByteArrayOutputStream out;
-        private int rows = 0;
-
-        /**
-         * A boolean flag that gets set to true once all the data have been sent to the stream, and not necessarily
-         * pulled or read from the stream.
-         */
-
-        private volatile boolean eof;
-
-        /**
-         * Stores true if close() has been called.
-         */
-        private volatile boolean closed = false;
-
         /**
          * A wrapper for a boolean flag that gets set if close is called. This observer object will be passed all
          * the way down to {@link QueryEngine#tableSearch(java.util.LinkedList, com.addthis.hydra.data.tree.DataTreeNode, com.addthis.hydra.data.query.FieldValueList, com.addthis.hydra.data.query.QueryElement[], int, com.addthis.bundle.channel.DataChannelOutput, int, com.addthis.hydra.data.query.QueryStatusObserver)}.
          */
         public QueryStatusObserver queryStatusObserver = new QueryStatusObserver();
+        private int rows = 0;
+        /**
+         * A boolean flag that gets set to true once all the data have been sent to the stream, and not necessarily
+         * pulled or read from the stream.
+         */
+        private volatile boolean eof;
+        /**
+         * Stores true if close() has been called.
+         */
+        private volatile boolean closed = false;
 
         /**
          * A non-public constructor. This class can only be instantiated from it outer class MeshQueryMaster. The objects
@@ -514,15 +498,13 @@ public class MeshQuerySource implements LocalFileHandler {
         @Override
         public byte[] nextBytes(long wait) {
             if (closed || isEOF()) {
-                if (log.isDebugEnabled()) {
-                    log.debug("EOF reached. rows=" + rows);
-                }
+                log.debug("EOF reached. rows={}", rows);
                 return null;
             }
             byte[] data;
             try {
                 data = queue.poll(wait, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignored) {
                 log.warn("Interrupted while waiting for data");
                 eof = true;
                 return null;
@@ -532,127 +514,6 @@ public class MeshQuerySource implements LocalFileHandler {
                 data = queue.poll();
             }
             return data;
-        }
-
-        /**
-         * Returns true if the eof flag is set and there is no data queued in the stream to be sent.
-         *
-         * @return true if EOF otherwise false.
-         */
-        @Override
-        public boolean isEOF() {
-            synchronized (out) {
-                return eof && queue.isEmpty() && out.size() == 0;
-            }
-        }
-
-        /**
-         * Tells this channel to close. It sets the closed flag and the queryStatusObserver to true.
-         */
-        @Override
-        public void close() {
-            closed = true;
-            queryStatusObserver.queryCancelled = true;
-        }
-
-        /**
-         * Takes in a bundle and writes it on the writer (mapped to out), which encodes the bundle to bytes.
-         *
-         * @param bundle
-         * @throws DataChannelError
-         */
-        @Override
-        public void send(Bundle bundle) throws DataChannelError {
-            checkClosed();
-            try {
-                synchronized (out) {
-                    out.write(FramedDataChannelReader.FRAME_MORE);
-                    writer.write(bundle);
-                    if (out.size() > outputBufferSize) {
-                        emitChunks();
-                    }
-                    rows++;
-                }
-            } catch (IOException ex) {
-                throw new DataChannelError(ex);
-            }
-        }
-
-        /**
-         * Takes in a list of bundles, loops on them and calls send for each one.
-         *
-         * @param bundles
-         */
-        @Override
-        public void send(List<Bundle> bundles) {
-            checkClosed(); // Just in case the list was empty, we check if the channel is closed here
-            for (Bundle bundle : bundles) {
-                send(bundle);
-            }
-        }
-
-        /**
-         * Is called when all the data has been sent. It sets the eof flag and writes an EOF marker on the output
-         * stream.
-         */
-        @Override
-        public void sendComplete() {
-            checkClosed();
-            synchronized (out) {
-                out.write(FramedDataChannelReader.FRAME_EOF);
-                emitChunks();
-                eof = true;
-            }
-        }
-
-        /**
-         * When called, this function will write a {@link FramedDataChannelReader#FRAME_BUSY} marker to the output channel.
-         */
-        public void sourceBusy() {
-            checkClosed();
-            try {
-                if (!writer.isClosed()) {
-                    synchronized (out) {
-                        out.write(FramedDataChannelReader.FRAME_BUSY);
-                    }
-                }
-            } catch (Exception ex) {
-                throw new DataChannelError(ex);
-            }
-        }
-
-        /**
-         * This function gets called when an error is encountered from the source.
-         *
-         * @param er error encountered from the source
-         */
-        @Override
-        public void sourceError(DataChannelError er) {
-            checkClosed();
-            try {
-                // if we know writer is closed, don't try to write to it.
-                if (!writer.isClosed()) {
-                    synchronized (out) {
-                        out.write(FramedDataChannelReader.FRAME_ERROR);
-                        Bytes.writeString(er.getClass().getCanonicalName(), out);
-                        Bytes.writeString(er.getMessage(), out);
-                        emitChunks();
-                        eof = true;
-                    }
-                }
-            } catch (Exception ex) {
-                throw new DataChannelError(ex);
-            }
-        }
-
-        @Override
-        public Bundle createBundle() {
-            return new KVBundle(format);
-        }
-
-        @Override
-        public BundleFormat getFormat() {
-            return format;
         }
 
         private void emitChunks() {
@@ -668,7 +529,7 @@ public class MeshQuerySource implements LocalFileHandler {
                         {
                             if (queue.offer(chunk, 1000L, TimeUnit.MILLISECONDS)) {
                                 if (i > 10) {
-                                    log.warn("Managed to add to output queue on the " + i + " attempt");
+                                    log.warn("Managed to add to output queue on the {} attempt", i);
                                 }
                                 return;
                             }
@@ -696,6 +557,127 @@ public class MeshQuerySource implements LocalFileHandler {
         }
 
         /**
+         * Returns true if the eof flag is set and there is no data queued in the stream to be sent.
+         *
+         * @return true if EOF otherwise false.
+         */
+        @Override
+        public boolean isEOF() {
+            synchronized (out) {
+                return eof && queue.isEmpty() && out.size() == 0;
+            }
+        }
+
+        /**
+         * Tells this channel to close. It sets the closed flag and the queryStatusObserver to true.
+         */
+        @Override
+        public void close() {
+            closed = true;
+            queryStatusObserver.queryCancelled = true;
+        }
+
+        /**
+         * Takes in a list of bundles, loops on them and calls send for each one.
+         *
+         * @param bundles
+         */
+        @Override
+        public void send(List<Bundle> bundles) {
+            checkClosed(); // Just in case the list was empty, we check if the channel is closed here
+            for (Bundle bundle : bundles) {
+                send(bundle);
+            }
+        }
+
+        /**
+         * Takes in a bundle and writes it on the writer (mapped to out), which encodes the bundle to bytes.
+         *
+         * @param bundle
+         * @throws DataChannelError
+         */
+        @Override
+        public void send(Bundle bundle) throws DataChannelError {
+            checkClosed();
+            try {
+                synchronized (out) {
+                    out.write(FramedDataChannelReader.FRAME_MORE);
+                    writer.write(bundle);
+                    if (out.size() > outputBufferSize) {
+                        emitChunks();
+                    }
+                    rows++;
+                }
+            } catch (IOException ex) {
+                throw new DataChannelError(ex);
+            }
+        }
+
+        /**
+         * Is called when all the data has been sent. It sets the eof flag and writes an EOF marker on the output
+         * stream.
+         */
+        @Override
+        public void sendComplete() {
+            checkClosed();
+            synchronized (out) {
+                out.write(FramedDataChannelReader.FRAME_EOF);
+                emitChunks();
+                eof = true;
+            }
+        }
+
+        /**
+         * This function gets called when an error is encountered from the source.
+         *
+         * @param er error encountered from the source
+         */
+        @Override
+        public void sourceError(DataChannelError er) {
+            checkClosed();
+            try {
+                // if we know writer is closed, don't try to write to it.
+                if (!writer.isClosed()) {
+                    synchronized (out) {
+                        out.write(FramedDataChannelReader.FRAME_ERROR);
+                        Bytes.writeString(er.getClass().getCanonicalName(), out);
+                        Bytes.writeString(er.getMessage(), out);
+                        emitChunks();
+                        eof = true;
+                    }
+                }
+            } catch (Exception ex) {
+                throw new DataChannelError(ex);
+            }
+        }
+
+        /**
+         * When called, this function will write a {@link FramedDataChannelReader#FRAME_BUSY} marker to the output channel.
+         */
+        public void sourceBusy() {
+            checkClosed();
+            try {
+                if (!writer.isClosed()) {
+                    synchronized (out) {
+                        out.write(FramedDataChannelReader.FRAME_BUSY);
+                    }
+                }
+            } catch (Exception ex) {
+                throw new DataChannelError(ex);
+            }
+        }
+
+        @Override
+        public Bundle createBundle() {
+            return new KVBundle(format);
+        }
+
+        @Override
+        public BundleFormat getFormat() {
+            return format;
+        }
+
+        /**
          * @return a reference to the {@link #queryStatusObserver}.
          */
         public QueryStatusObserver getQueryStatusObserver() {
@@ -707,9 +689,9 @@ public class MeshQuerySource implements LocalFileHandler {
     /**
      * A thread that shuts down the JVM. Usually called in response to some kind of unrecoverable error.
      * <p/>
-     * I suppose the sleep call is a magic number to handle something shutdown hooks do not.
+     * The sleep call is to attempt to give the query worker some time to report an error to the master.
      */
-    private class ShutdownRunner extends Thread {
+    private static class ShutdownRunner extends Thread {
 
         private final int sleep;
         private final int shutdownCode;
@@ -723,8 +705,8 @@ public class MeshQuerySource implements LocalFileHandler {
         public void run() {
             try {
                 forcedShutdownMeter.mark();
-                Thread.currentThread().sleep(sleep);
-            } catch (InterruptedException e) {
+                sleep(sleep);
+            } catch (InterruptedException ignored) {
             }
             System.exit(shutdownCode);
         }
