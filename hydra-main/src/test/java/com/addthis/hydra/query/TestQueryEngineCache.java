@@ -29,7 +29,7 @@ public class TestQueryEngineCache {
 
     @Test
     public void test() throws Exception {
-        QETestCache cache = new QETestCache();
+        QueryEngineTestCache cache = new QueryEngineTestCache();
         for (int i = 0; i < 5; i++) {
             (new DummySearcher(cache)).start();
         }
@@ -42,9 +42,9 @@ public class TestQueryEngineCache {
 
     class DummySearcher extends Thread {
 
-        QETestCache cache;
+        QueryEngineTestCache cache;
 
-        public DummySearcher(QETestCache cache) {
+        public DummySearcher(QueryEngineTestCache cache) {
             this.cache = cache;
             setDaemon(true);
         }
@@ -65,14 +65,14 @@ public class TestQueryEngineCache {
         }
     }
 
-    class QETestCache extends QueryEngineCache {
+    class QueryEngineTestCache extends QueryEngineCache {
 
         static final int engineCacheSize = 25;
         static final int refreshInterval = 1;
         static final int failInterval = 120;
         public AtomicInteger oe = new AtomicInteger(0);
 
-        public QETestCache() {
+        public QueryEngineTestCache() {
             super(engineCacheSize, refreshInterval, failInterval);
         }
 
