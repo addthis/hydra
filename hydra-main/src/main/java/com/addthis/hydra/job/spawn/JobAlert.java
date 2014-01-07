@@ -177,6 +177,7 @@ public class JobAlert implements Codec.Codable {
                 if (alertActiveForJob(job)) {
                     activeNow = true;
                     activeJobs.put(job.getId(), job.getDescription());
+                    // Don't break the loop to ensure that all triggering jobs will be added to activeJobs
                 }
             }
         }
@@ -197,7 +198,7 @@ public class JobAlert implements Codec.Codable {
     }
 
     public String getCurrentStateMessage() {
-        String base = hasAlerted() ? "" : "{CLEAR} ";
+        String base = hasAlerted() ? "[TRIGGER] " : "[CLEAR] ";
         if (alertMessageMap.containsKey(type)) {
             return base + alertMessageMap.get(type);
         }

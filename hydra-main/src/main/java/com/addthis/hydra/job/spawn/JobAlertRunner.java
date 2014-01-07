@@ -56,9 +56,8 @@ public class JobAlertRunner {
     private static final long DELAY = Parameter.longValue("spawn.job.alert.delay", 5 * 60 * 1000);
 
     private static final long GIGA_BYTE = (long) Math.pow(1024, 3);
-    private static final int MINUTE = 60 * 1000;
-    private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd-HHmm");
-    private final DecimalFormat decimalFormat = new DecimalFormat("#.###");
+    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd-HHmm");
+    private static final DecimalFormat decimalFormat = new DecimalFormat("#.###");
 
     private final ConcurrentHashMap<String, JobAlert> alertMap;
 
@@ -134,7 +133,7 @@ public class JobAlertRunner {
         return rv;
     }
 
-    private String summary(Job job) {
+    private static String summary(Job job) {
         long files = 0;
         double bytes = 0;
         int running = 0;
@@ -187,13 +186,13 @@ public class JobAlertRunner {
 
     }
 
-    private String format(double bytes) {
+    private static String format(double bytes) {
         double gb = bytes / GIGA_BYTE;
 
         return decimalFormat.format(gb);
     }
 
-    private String format(Long time) {
+    private static String format(Long time) {
         if (time != null) {
             return dateFormat.format(new Date(time));
         } else {
