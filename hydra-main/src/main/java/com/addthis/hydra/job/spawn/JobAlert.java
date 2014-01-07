@@ -13,16 +13,29 @@
  */
 package com.addthis.hydra.job.spawn;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.addthis.basis.util.JitterClock;
 
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
+import com.addthis.hydra.job.Job;
+import com.addthis.hydra.job.JobState;
 import com.addthis.maljson.JSONObject;
+
+import com.google.common.collect.ImmutableMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Bean to hold a job specific alert
  */
 public class JobAlert implements Codec.Codable {
+
+    private static final Logger log = LoggerFactory.getLogger(JobAlertRunner.class);
 
     //Alert types
     public static final int ON_ERROR = 0;
@@ -43,11 +56,22 @@ public class JobAlert implements Codec.Codable {
     @Codec.Set(codable = true)
     private String[] jobIds;
 
+    private static final int MINUTE = 60 * 1000;
+
+    /* Map storing {job id : job description} for all alerted jobs the last time this alert was checked */
+    private final HashMap<String, String> activeJobs;
+
+    private static final Map<Integer, String> alertMessageMap = ImmutableMap.of(ON_ERROR, "Task is in Error ",
+            ON_COMPLETE, "Task has Completed ",
+            RUNTIME_EXCEEDED, "Task runtime exceeded ",
+            REKICK_TIMEOUT, "Task rekick exceeded ");
+
     public JobAlert() {
         this.lastAlertTime = -1;
         this.type = 0;
         this.timeout = 0;
         this.email = "";
+        activeJobs = new HashMap<>();
     }
 
     public JobAlert(String alertId, int type, int timeout, String email, String[] jobIds) {
@@ -57,6 +81,7 @@ public class JobAlert implements Codec.Codable {
         this.timeout = timeout;
         this.email = email;
         this.jobIds = jobIds;
+        activeJobs = new HashMap<>();
     }
 
     public String getAlertId() {
@@ -137,6 +162,66 @@ public class JobAlert implements Codec.Codable {
 
     public JSONObject toJSON() throws Exception {
         return CodecJSON.encodeJSON(this);
+    }
+
+    /**
+     * Check this alert's jobs to see if any are active.
+     * @param jobs A list of jobs to check
+     * @return True if the alert has changed state from fired to cleared or vice versa
+     */
+    public boolean checkAlertForJobs(List<Job> jobs) {
+        boolean activeNow = false;
+        synchronized (activeJobs) {
+            activeJobs.clear();
+            for (Job job : jobs) {
+                if (alertActiveForJob(job)) {
+                    activeNow = true;
+                    activeJobs.put(job.getId(), job.getDescription());
+                }
+            }
+        }
+        if (activeNow && !hasAlerted()) {
+            alerted();
+            return true;
+        } else if (!activeNow && hasAlerted()) {
+            clear();
+            return true;
+        }
+        return false;
+    }
+
+    public Map<String, String> getActiveJobs() {
+        synchronized (activeJobs) {
+            return ImmutableMap.copyOf(activeJobs);
+        }
+    }
+
+    public String getCurrentStateMessage() {
+        String base = hasAlerted() ? "" : "{CLEAR} ";
+        if (alertMessageMap.containsKey(type)) {
+            return base + alertMessageMap.get(type);
+        }
+        return base + " unknown alert";
+    }
+
+    private boolean alertActiveForJob(Job job) {
+        long currentTime = System.currentTimeMillis();
+        switch (type) {
+            case ON_ERROR:
+                return job.getState().equals(JobState.ERROR);
+            case ON_COMPLETE:
+                // job is idle and has completed within the last 60 minutes
+                return job.getState().equals(JobState.IDLE);
+            case RUNTIME_EXCEEDED:
+                return (job.getState().equals(JobState.RUNNING) && (job.getSubmitTime() != null) &&
+                    ((currentTime - job.getSubmitTime()) > timeout * MINUTE));
+            case REKICK_TIMEOUT:
+                return (!job.getState().equals(JobState.RUNNING) && (job.getEndTime() != null) &&
+                    ((currentTime - job.getEndTime()) > timeout * MINUTE));
+            default:
+                log.warn("Warning: alert " + alertId + " has unexpected type " + type);
+                return false;
+        }
     }
 
     @Override
