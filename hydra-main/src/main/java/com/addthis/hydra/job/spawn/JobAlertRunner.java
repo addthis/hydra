@@ -32,26 +32,23 @@ import com.addthis.hydra.job.Spawn;
 import com.addthis.hydra.util.EmailUtil;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
+
 /**
  * This class runs a timer that scans the jobs for any email alerts and sends them.
  */
 public class JobAlertRunner {
 
     private static final Logger log = LoggerFactory.getLogger(JobAlertRunner.class);
+    private static final long REPEAT = 5 * 60 * 1000;
+    private static final long DELAY = 5 * 60 * 1000;
+    private static final long GIGA_BYTE = (long) Math.pow(1024, 3);
+    private static final int MINUTE = 60 * 1000;
     private static String clusterName = Parameter.value("spawn.localhost", "unknown");
     private final Timer alertTimer;
     private final Spawn spawn;
-
-    private static final long REPEAT = 5 * 60 * 1000;
-    private static final long DELAY = 5 * 60 * 1000;
-
-    private static final long GIGA_BYTE = (long) Math.pow(1024, 3);
-    private static final int MINUTE = 60 * 1000;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd-HHmm");
     private final DecimalFormat decimalFormat = new DecimalFormat("#.###");
-
     private boolean alertsEnabled;
 
 
@@ -65,20 +62,6 @@ public class JobAlertRunner {
                 scanAlerts();
             }
         }, DELAY, REPEAT);
-    }
-
-    /**
-     * Method that disables alert scanning
-     */
-    public void disableAlerts() {
-        this.alertsEnabled = false;
-    }
-
-    /**
-     * Method that enables alert scanning
-     */
-    public void enableAlerts() {
-        this.alertsEnabled = true;
     }
 
     /**
@@ -163,6 +146,23 @@ public class JobAlertRunner {
     }
 
     /**
+     * Emails a message, Only the body can contain newline characters.
+     *
+     * @param job
+     * @param message
+     */
+    private void emailAlert(Job job, String message, JobAlert jobAlert, boolean clear) {
+        log.info("Alerting " + jobAlert.getEmail() + " :: job : " + job.getId() + " : " + message);
+        String subject = message + " - " + clusterName + " - " + job.getDescription();
+        if (clear) {
+            jobAlert.clear();
+        } else {
+            jobAlert.alerted();
+        }
+        EmailUtil.email(jobAlert.getEmail(), subject, summary(job, message));
+    }
+
+    /**
      * Creates a summary message for the alert
      *
      * @param job
@@ -223,12 +223,6 @@ public class JobAlertRunner {
 
     }
 
-    private String format(double bytes) {
-        double gb = bytes / GIGA_BYTE;
-
-        return decimalFormat.format(gb);
-    }
-
     private String format(Long time) {
         if (time != null) {
             return dateFormat.format(new Date(time));
@@ -237,21 +231,24 @@ public class JobAlertRunner {
         }
     }
 
+    private String format(double bytes) {
+        double gb = bytes / GIGA_BYTE;
+
+        return decimalFormat.format(gb);
+    }
+
     /**
-     * Emails a message, Only the body can contain newline characters.
-     *
-     * @param job
-     * @param message
+     * Method that disables alert scanning
      */
-    private void emailAlert(Job job, String message, JobAlert jobAlert, boolean clear) {
-        log.info("Alerting " + jobAlert.getEmail() + " :: job : " + job.getId() + " : " + message);
-        String subject = message + " - " + clusterName + " - " + job.getDescription();
-        if (clear) {
-            jobAlert.clear();
-        } else {
-            jobAlert.alerted();
-        }
-        EmailUtil.email(jobAlert.getEmail(), subject, summary(job, message));
+    public void disableAlerts() {
+        this.alertsEnabled = false;
+    }
+
+    /**
+     * Method that enables alert scanning
+     */
+    public void enableAlerts() {
+        this.alertsEnabled = true;
     }
 
 
