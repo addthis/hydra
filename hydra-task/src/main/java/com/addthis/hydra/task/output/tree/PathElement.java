@@ -30,7 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /*
  * TODO clean up preCheck in element, event*
- * TODO add alias nodes/map that use 'hard' links across the tree for cross-indexes
+ * TODO add alias nodes/map that use 'hard' links across the tree for cross-indexes (doesn't PathAlias do this?)
  * TODO extend feature support (on/off) to data elements on nodes
  */
 

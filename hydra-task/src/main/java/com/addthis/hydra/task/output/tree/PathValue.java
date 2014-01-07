@@ -133,12 +133,6 @@ public class PathValue extends PathElement {
     @Override
     public final TreeNodeList getNextNodeList(final TreeMapState state) {
         ValueObject value = getFilteredValue(state);
-        /*
-        ValueObject value = getPathValue(state);
-        if (vfilter != null) {
-            value = vfilter.filter(value);
-        }
-        */
         if (setField != null) {
             state.getBundle().setValue(setField, value);
         }
