@@ -24,7 +24,6 @@ import java.text.SimpleDateFormat;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
@@ -41,22 +40,21 @@ import org.slf4j.LoggerFactory;
 public class JobAlertRunner {
 
     private static final Logger log = LoggerFactory.getLogger(JobAlertRunner.class);
-    private static final String CLUSTER_NAME = Parameter.value("spawn.localhost", "unknown");
     private static final long REPEAT = 5 * 60 * 1000;
     private static final long DELAY = 5 * 60 * 1000;
     private static final long GIGA_BYTE = (long) Math.pow(1024, 3);
     private static final int MINUTE = 60 * 1000;
-    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd-HHmm");
-    private static final DecimalFormat decimalFormat = new DecimalFormat("#.###");
-
+    private static String clusterName = Parameter.value("spawn.localhost", "unknown");
+    private final Timer alertTimer;
     private final Spawn spawn;
-
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd-HHmm");
+    private final DecimalFormat decimalFormat = new DecimalFormat("#.###");
     private boolean alertsEnabled;
 
 
     public JobAlertRunner(Spawn spawn) {
         this.spawn = spawn;
-        Timer alertTimer = new Timer("JobAlertTimer");
+        alertTimer = new Timer("JobAlertTimer");
         this.alertsEnabled = spawn.areAlertsEnabled();
         alertTimer.schedule(new TimerTask() {
             @Override
@@ -65,21 +63,6 @@ public class JobAlertRunner {
             }
         }, DELAY, REPEAT);
     }
-
-    /**
-     * Method that disables alert scanning
-     */
-    public void disableAlerts() {
-        this.alertsEnabled = false;
-    }
-
-    /**
-     * Method that enables alert scanning
-     */
-    public void enableAlerts() {
-        this.alertsEnabled = true;
-    }
-
 
     /**
      * Method that loads jobs from Spawn and scans the alerts for jobs that have alerts. It checks to see if the condition for the alert
@@ -91,13 +74,13 @@ public class JobAlertRunner {
             log.info("Running alert scan ..........");
             for (Job job : this.spawn.listJobs()) {
                 //boolean used to track whether the job needs to be updated
+                boolean alertsChanged = false;
                 List<JobAlert> alerts = job.getAlerts();
                 if (alerts != null) {
-                    boolean alertsChanged = false;
                     for (JobAlert jobAlert : alerts) {
                         long currentTime = JitterClock.globalTime();
                         if (jobAlert.isOnError()) {
-                            if (job.getState() == JobState.ERROR) {
+                            if (job.getState().equals(JobState.ERROR)) {
                                 if (!jobAlert.hasAlerted()) {
                                     emailAlert(job, "Task is in Error ", jobAlert, false);
                                     alertsChanged = true;
@@ -113,7 +96,7 @@ public class JobAlertRunner {
                         String timeUnit = (jobTimeout == 1) ? " minute" : " minutes";
                         if (jobAlert.isOnComplete()) {
                             // job is idle and has completed within the last 60 minutes
-                            if (job.getState() == JobState.IDLE) {
+                            if (job.getState().equals(JobState.IDLE)) {
                                 if (!jobAlert.hasAlerted()) {
                                     emailAlert(job, "Task has Completed ", jobAlert, false);
                                     alertsChanged = true;
@@ -125,8 +108,8 @@ public class JobAlertRunner {
                                 }
                             }
                         } else if (jobAlert.isRuntimeExceeded()) {
-                            if ((job.getState() == JobState.RUNNING) && (job.getSubmitTime() != null) &&
-                                ((currentTime - job.getSubmitTime()) > (jobTimeout * MINUTE))) {
+                            if (job.getState().equals(JobState.RUNNING) && (job.getSubmitTime() != null) &&
+                                ((currentTime - job.getSubmitTime()) > jobTimeout * MINUTE)) {
                                 if (!jobAlert.hasAlerted()) {
                                     emailAlert(job, "Task runtime has exceed : " + jobTimeout + timeUnit, jobAlert, false);
                                     alertsChanged = true;
@@ -138,8 +121,8 @@ public class JobAlertRunner {
                                 }
                             }
                         } else if (jobAlert.isRekickTimeout()) {
-                            if ((job.getState() != JobState.RUNNING) && (job.getEndTime() != null) &&
-                                ((currentTime - job.getEndTime()) > (jobTimeout * MINUTE))) {
+                            if (!job.getState().equals(JobState.RUNNING) && (job.getEndTime() != null) &&
+                                ((currentTime - job.getEndTime()) > jobTimeout * MINUTE)) {
                                 if (!jobAlert.hasAlerted()) {
                                     emailAlert(job, "Task has not been re-kicked in : " + jobTimeout + timeUnit, jobAlert, false);
                                     alertsChanged = true;
@@ -168,9 +151,9 @@ public class JobAlertRunner {
      * @param job
      * @param message
      */
-    private static void emailAlert(IJob job, String message, JobAlert jobAlert, boolean clear) {
-        log.info("Alerting {} :: job : {} : {}", jobAlert.getEmail(), job.getId(), message);
-        String subject = message + " - " + CLUSTER_NAME + " - " + job.getDescription();
+    private void emailAlert(Job job, String message, JobAlert jobAlert, boolean clear) {
+        log.info("Alerting " + jobAlert.getEmail() + " :: job : " + job.getId() + " : " + message);
+        String subject = message + " - " + clusterName + " - " + job.getDescription();
         if (clear) {
             jobAlert.clear();
         } else {
@@ -186,7 +169,7 @@ public class JobAlertRunner {
      * @param msg
      * @return
      */
-    private static String summary(IJob job, String msg) {
+    private String summary(Job job, String msg) {
         long files = 0;
         double bytes = 0;
         int running = 0;
@@ -202,7 +185,7 @@ public class JobAlertRunner {
                 files += task.getFileCount();
                 bytes += task.getByteCount();
 
-                if (task.getState() != JobTaskState.IDLE) {
+                if (!task.getState().equals(JobTaskState.IDLE)) {
                     running++;
                 }
                 switch (task.getState()) {
@@ -213,43 +196,60 @@ public class JobAlertRunner {
                         done++;
                         errored++;
                         break;
-                    default:
-                        // ignored
                 }
             }
         }
 
-        StringBuilder sb = new StringBuilder(300);
-        sb.append("Cluster : ").append(CLUSTER_NAME).append("\n");
-        sb.append("Job : ").append(job.getId()).append("\n");
-        sb.append("Link : http://").append(CLUSTER_NAME).append(":5052/spawn2/index.html#jobs/").append(job.getId()).append("/tasks\n");
-        sb.append("Alert : ").append(msg).append("\n");
-        sb.append("Description : ").append(job.getDescription()).append("\n");
+        StringBuffer sb = new StringBuffer();
+        sb.append("Cluster : " + clusterName + "\n");
+        sb.append("Job : " + job.getId() + "\n");
+        sb.append("Link : http://" + clusterName + ":5052/spawn2/index.html#jobs/" + job.getId() + "/tasks\n");
+        sb.append("Alert : " + msg + "\n");
+        sb.append("Description : " + job.getDescription() + "\n");
         sb.append("------------------------------ \n");
         sb.append("Task Summary \n");
         sb.append("------------------------------ \n");
-        sb.append("Job State : ").append(job.getState()).append("\n");
-        sb.append("Start Time : ").append(format(job.getStartTime())).append("\n");
-        sb.append("End Time : ").append(format(job.getEndTime())).append("\n");
-        sb.append("Num Nodes : ").append(numNodes).append("\n");
-        sb.append("Running Nodes : ").append(running).append("\n");
-        sb.append("Errored Nodes : ").append(errored).append("\n");
-        sb.append("Done Nodes : ").append(done).append("\n");
-        sb.append("Task files : ").append(files).append("\n");
-        sb.append("Task Bytes : ").append(format(bytes)).append(" GB\n");
+        sb.append("Job State : " + job.getState() + "\n");
+        sb.append("Start Time : " + format(job.getStartTime()) + "\n");
+        sb.append("End Time : " + format(job.getEndTime()) + "\n");
+        sb.append("Num Nodes : " + numNodes + "\n");
+        sb.append("Running Nodes : " + running + "\n");
+        sb.append("Errored Nodes : " + errored + "\n");
+        sb.append("Done Nodes : " + done + "\n");
+        sb.append("Task files : " + files + "\n");
+        sb.append("Task Bytes : " + format(bytes) + " GB\n");
         sb.append("------------------------------ \n");
         return sb.toString();
+
     }
 
-    private static String format(Long time) {
-        if (time == null) {
+    private String format(Long time) {
+        if (time != null) {
+            return dateFormat.format(new Date(time));
+        } else {
             return "-";
         }
-        return dateFormat.format(new Date(time));
     }
 
-    private static String format(double bytes) {
+    private String format(double bytes) {
         double gb = bytes / GIGA_BYTE;
+
         return decimalFormat.format(gb);
     }
+
+    /**
+     * Method that disables alert scanning
+     */
+    public void disableAlerts() {
+        this.alertsEnabled = false;
+    }
+
+    /**
+     * Method that enables alert scanning
+     */
+    public void enableAlerts() {
+        this.alertsEnabled = true;
+    }
+
+
 }
