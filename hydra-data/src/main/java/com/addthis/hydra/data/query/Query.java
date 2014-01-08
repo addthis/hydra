@@ -245,18 +245,6 @@ public class Query implements Codec.Codable {
         return this;
     }
 
-    /**
-     * mostly to support async queries
-     */
-    public Query createClone() {
-        Query newwrapper = new Query(job, paths, ops);
-        newwrapper.params.putAll(params);
-        newwrapper.trace = trace;
-        newwrapper.cachettl = cachettl;
-        newwrapper.uuid = uuid;
-        return newwrapper;
-    }
-
     public List<QueryElement[]> getQueryPaths() {
         ArrayList<QueryElement[]> list = new ArrayList<QueryElement[]>(paths.length);
         for (String path : paths) {

@@ -19,7 +19,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.UUID;
@@ -39,7 +38,6 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.source.ErrorHandlingQuerySource;
@@ -58,7 +56,6 @@ import org.apache.commons.lang3.CharEncoding;
 
 import org.eclipse.jetty.server.Request;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class QueryServlet {
 
@@ -206,12 +203,11 @@ public class QueryServlet {
         QueryHandle queryHandle = null;
         try {
             response.setCharacterEncoding(CharEncoding.UTF_8);
-            ServletConsumer consumer = null;
             String asyncUuid = null;
             if (async != null) {
                 if (async.equals("new")) {
                     asyncUuid = genAsyncUuid(query);
-                    asyncCache.put(asyncUuid, query.createClone());
+                    asyncCache.put(asyncUuid, query);
                     if (query.isTraced()) {
                         Query.emitTrace("async create " + asyncUuid + " from " + query);
                     }
@@ -233,14 +229,21 @@ public class QueryServlet {
                     return;
                 }
             }
-            if (format.equals("async")) {
-                consumer = new OutputAsync(response, asyncUuid);
-            } else if (format.equals("json")) {
-                consumer = new OutputJson(response, jsonp, jargs);
-            } else if (format.equals("html")) {
-                consumer = new OutputHTML(response);
-            } else {
-                consumer = OutputDelimited.create(response, filename, format);
+            ServletConsumer consumer = null;
+            switch (format) {
+                case "async":
+                    response.getWriter().write("{\"id\":\"" + asyncUuid + "\"}");
+                    ((Request) request).setHandled(true);
+                    return;
+                case "json":
+                    consumer = new OutputJson(response, jsonp, jargs);
+                    break;
+                case "html":
+                    consumer = new OutputHTML(response);
+                    break;
+                default:
+                    consumer = OutputDelimited.create(response, filename, format);
+                    break;
             }
             if (consumer != null) {
                 queryHandle = querySource.query(query, consumer);
@@ -354,30 +357,6 @@ public class QueryServlet {
         }
     }
 
-    /**
-     * for async response
-     */
-    private static class OutputAsync extends ServletConsumer {
-
-        OutputAsync(HttpServletResponse response, String asyncid) throws IOException, InterruptedException {
-            super(response);
-            response.getWriter().write("{\"id\":\"" + asyncid + "\"}");
-            setDone();
-        }
-
-        @Override
-        public void send(Bundle row) {
-        }
-
-        @Override
-        public void send(List<Bundle> bundles) {
-        }
-
-        @Override
-        public void sendComplete() {
-        }
-    }
-
     /** */
     private static class OutputJson extends ServletConsumer {
 
@@ -470,14 +449,18 @@ public class QueryServlet {
 
         public static OutputDelimited create(HttpServletResponse response, String filename, String format) throws IOException, InterruptedException {
             String delimiter;
-            if (format.equals("tsv")) {
-                delimiter = "\t";
-            } else if (format.equals("csv")) {
-                delimiter = ",";
-            } else if (format.equals("psv")) {
-                delimiter = "|";
-            } else {
-                return null;
+            switch (format) {
+                case "tsv":
+                    delimiter = "\t";
+                    break;
+                case "csv":
+                    delimiter = ",";
+                    break;
+                case "psv":
+                    delimiter = "|";
+                    break;
+                default:
+                    return null;
             }
             if (!filename.toLowerCase().endsWith("." + format)) {
                 filename = filename.concat("." + format);
