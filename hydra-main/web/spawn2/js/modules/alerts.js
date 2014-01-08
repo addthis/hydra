@@ -88,7 +88,7 @@ function(
         		var columns = [{
             		"sTitle":"",
             		"sClass":"alert-cb",
-            		"sWidth":"3%",
+            		"sWidth":"5%",
             		"mData": "alertId",
             		"bSearchable":false,
             		"bSortable":false,
@@ -103,7 +103,7 @@ function(
         		{
         			"sTitle":"Alert ID",
             		"mData": "alertId",
-            		"sWidth": "25%",
+            		"sWidth": "20%",
             		"bVisible":true,
             		"bSearchable":true,
             		"mRender":function(val,type,data){

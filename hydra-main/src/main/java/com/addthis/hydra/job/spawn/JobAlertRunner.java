@@ -300,15 +300,30 @@ public class JobAlertRunner {
      * Get a snapshot of the alert map, mainly for rendering in the UI.
      * @return A JSONObject representation of all existing alerts
      */
-    public JSONArray getAlertState() {
+    public JSONArray getAlertStateArray() {
         JSONArray rv = new JSONArray();
         synchronized (alertMap) {
             for (JobAlert jobAlert : alertMap.values()) {
                 try {
                     rv.put(jobAlert.toJSON());
                 } catch (Exception e) {
-                    log.warn("Warning: failed to send alert " + jobAlert);
+                    log.warn("Warning: failed to send alert in array: " + jobAlert);
                 }
+            }
+        }
+        return rv;
+    }
+
+    public JSONObject getAlertStateMap() {
+        JSONObject rv = new JSONObject();
+        synchronized (alertMap) {
+            for (JobAlert jobAlert : alertMap.values()) {
+                try {
+                    rv.put(jobAlert.getAlertId(), jobAlert.toJSON());
+                } catch (Exception e) {
+                    log.warn("Warning: failed to send alert in map: " + jobAlert);
+                }
+
             }
         }
         return rv;

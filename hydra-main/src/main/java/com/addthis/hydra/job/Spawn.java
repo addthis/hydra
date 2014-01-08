@@ -1872,8 +1872,12 @@ public class Spawn implements Codec.Codable {
         jobAlertRunner.removeAlert(alertId);
     }
 
-    public JSONArray fetchAllAlerts() {
-        return jobAlertRunner.getAlertState();
+    public JSONArray fetchAllAlertsArray() {
+        return jobAlertRunner.getAlertStateArray();
+    }
+
+    public JSONObject fetchAllAlertsMap() {
+        return jobAlertRunner.getAlertStateMap();
     }
 
     public JSONObject getAlert(String alertId) {

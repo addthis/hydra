@@ -79,7 +79,7 @@ public class AlertResource {
     @Path("/list")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAlertState() {
-         return Response.ok(spawn.fetchAllAlerts().toString()).build();
+         return Response.ok(spawn.fetchAllAlertsArray().toString()).build();
     }
 
     @GET

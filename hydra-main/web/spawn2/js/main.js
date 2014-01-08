@@ -144,7 +144,7 @@ function(
         Alias.Collection.prototype.parse(_.values(setupData.aliases))
     );
     app.alertCollection=new Alert.Collection().reset(
-    	//Alert.Collection.prototype.parse(_.value(setupData.alerts))
+    	Alert.Collection.prototype.parse(_.values(setupData.alerts))
     );
     app.jobInfoMetricModel = new Jobs.InfoMetricModel({});
     app.router.on("route:showIndex",function(){
