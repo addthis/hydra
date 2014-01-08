@@ -198,7 +198,7 @@ function(
             initialize:function(){
             },
             render:function(){
-                var html = this.template({
+                var html = this.template({                	
                     alias:this.model.toJSON()
                 });
                 this.$el.html(html);

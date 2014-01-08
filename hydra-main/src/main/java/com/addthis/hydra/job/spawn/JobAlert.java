@@ -38,10 +38,10 @@ public class JobAlert implements Codec.Codable {
     private static final Logger log = LoggerFactory.getLogger(JobAlert.class);
 
     //Alert types
-    public static final int ON_ERROR = 0;
-    public static final int ON_COMPLETE = 1;
-    public static final int RUNTIME_EXCEEDED = 2;
-    public static final int REKICK_TIMEOUT = 3;
+    private static final int ON_ERROR = 0;
+    private static final int ON_COMPLETE = 1;
+    private static final int RUNTIME_EXCEEDED = 2;
+    private static final int REKICK_TIMEOUT = 3;
 
     @Codec.Set(codable = true)
     private String alertId;
@@ -90,22 +90,6 @@ public class JobAlert implements Codec.Codable {
 
     public void setAlertId(String alertId) {
         this.alertId = alertId;
-    }
-
-    public boolean isOnError() {
-        return type == ON_ERROR;
-    }
-
-    public boolean isOnComplete() {
-        return type == ON_COMPLETE;
-    }
-
-    public boolean isRuntimeExceeded() {
-        return type == RUNTIME_EXCEEDED;
-    }
-
-    public boolean isRekickTimeout() {
-        return type == REKICK_TIMEOUT;
     }
 
     public boolean hasAlerted() {

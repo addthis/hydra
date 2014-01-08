@@ -19,7 +19,7 @@
             </a>
         </li>
         <li class="active">
-            Name here?
+            <%=alert.alertId ? alert.alertId : "New Alert"%>
         </li>
     </ul>
     <div class="job-detail-actions pull-right">
@@ -34,14 +34,26 @@
 <div id="detailContainer" class="main-container">
     <div class="form" role="form">
         <div class="form-group">
-            <label class="sr-only" for="name" style="margin-bottom:0px;">Name</label>
-            <input value="<%=alias.name%>" type="text" class="form-control" id="name" name="name" placeholder="Enter name">
+            <label class="sr-only" for="name" style="margin-bottom:0px;">type</label>
+            <input value="<%=alert.type%>" type="text" class="form-control" id="type" name="type" placeholder="">
         </div>
     </div>
     <div class="form" role="form">
         <div class="form-group">
-            <label class="sr-only" for="name" style="margin-bottom:0px;">Job IDs</label>
-            <textarea class='form-control' id="jobInput" name="jobs" rows="12"><%=alias.jobs.join(',')%></textarea>
+            <label class="sr-only" for="name" style="margin-bottom:0px;">timeout</label>
+            <input value="<%=alert.timeout%>" type="text" class="form-control" id="timeout" name="timeout" placeholder="">
         </div>
     </div>
+    <div class="form" role="form">
+        <div class="form-group">
+            <label class="sr-only" for="name" style="margin-bottom:0px;">email</label>
+            <input value="<%=alert.email%>" type="text" class="form-control" id="email" name="email" placeholder="">
+        </div>
+    </div>
+    <div class="form" role="form">
+        <div class="form-group">
+            <label class="sr-only" for="name" style="margin-bottom:0px;">jobIds</label>
+            <input value="<%=alert.jobIds%>" type="text" class="form-control" id="jobIds" name="jobIds" placeholder="">
+        </div>
+    </div>     
 </div>

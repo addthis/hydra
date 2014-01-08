@@ -55,7 +55,7 @@ public class AlertResource {
         if (jobIds != null) {
             JobAlert jobAlert = new JobAlert(alertId, type, timeout, email, jobIds.split(","));
             spawn.putAlert(alertId, jobAlert);
-            return Response.ok().build();
+            return Response.ok("{\"alertId\":\"" + alertId +"\"}").build();
         }
         else {
             log.warn("Received save alert request without job id; returning error");

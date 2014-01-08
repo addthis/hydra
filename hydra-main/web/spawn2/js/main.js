@@ -85,6 +85,7 @@ require([
     "modules/jobs",
     "modules/macro",
     "modules/alias",
+    "modules/alerts",
     "modules/command",
     "modules/host",
     "modules/layout.views",
@@ -109,6 +110,7 @@ function(
     Jobs,
     Macro,
     Alias,
+    Alert,
     Command,
     Host,
     Layout,
@@ -140,6 +142,9 @@ function(
     );
     app.aliasCollection=new Alias.Collection().reset(
         Alias.Collection.prototype.parse(_.values(setupData.aliases))
+    );
+    app.alertCollection=new Alert.Collection().reset(
+    	//Alert.Collection.prototype.parse(_.value(setupData.alerts))
     );
     app.jobInfoMetricModel = new Jobs.InfoMetricModel({});
     app.router.on("route:showIndex",function(){
@@ -614,13 +619,28 @@ function(
         app.showView(view,"#git");
         app.makeHtmlTitle("Git");
     });
-    app.router.on("route:showAlerts", function() {
-    	var model = new Alerts.Model();
-    	var view = new Alerts.View({model:model});
-    	model.fetch();
-    	app.showView(view,"#alerts");
-    	app.makeHtmlTitle("Alerts");    	
+    app.router.on("route:showAlertsTable",function(){
+        app.alertCollection.fetch();
+        var table = new Alerts.TableView({
+            id:"alertTable",
+            collection:app.alertCollection
+        });
+        app.showView(table,"#alert");
+        app.makeHtmlTitle("Alerts");
     });
+    app.router.on("route:showAlertsDetail",function(alertId){
+        var alert;
+        if(_.isEqual(alertId,"create")){
+            alert = new Alert.Model({});
+        }else{
+            alert = app.alertCollection.get(alertId);
+        }
+        var view = new Alerts.DetailView({
+            model:alert
+        });
+        app.showView(view,"#alert");
+        app.makeHtmlTitle("Alert::"+name);
+    });    
     app.user.on("change:username",function(){
         $("#usernameBox").html(app.user.get("username"));
         $.ajaxSetup({
