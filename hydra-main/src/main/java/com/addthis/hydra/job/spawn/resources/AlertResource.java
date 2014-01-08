@@ -13,13 +13,17 @@
  */
 package com.addthis.hydra.job.spawn.resources;
 
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import java.util.UUID;
+
+import com.addthis.basis.kv.KVPairs;
 
 import com.addthis.hydra.job.Spawn;
 import com.addthis.hydra.job.spawn.JobAlert;
@@ -38,39 +42,52 @@ public class AlertResource {
         this.spawn = spawn;
     }
 
-    @GET
+    @POST
     @Path("/save")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response putAlert(
-            @QueryParam("alertId") String alertId,
-            @QueryParam("type") int type,
-            @QueryParam("timeout") @DefaultValue("0") int timeout,
-            @QueryParam("email") String email,
-            @QueryParam("jobIds") String jobIds) {
-        if (alertId != null && jobIds != null) {
+    public Response putAlert(@QueryParam("pairs") KVPairs kv) {
+
+        String alertId = kv.getValue("alertId", UUID.randomUUID().toString());
+        String jobIds = kv.getValue("jobIds");
+        int type = kv.getIntValue("type", -1);
+        int timeout = kv.getIntValue("timeout", 0);
+        String email = kv.getValue("email", "");
+        if (jobIds != null) {
             JobAlert jobAlert = new JobAlert(alertId, type, timeout, email, jobIds.split(","));
             spawn.putAlert(alertId, jobAlert);
             return Response.ok().build();
         }
         else {
-            log.warn("Received save alert request without id; returning error");
+            log.warn("Received save alert request without job id; returning error");
             return Response.serverError().build();
         }
     }
 
-    @GET
+    @POST
     @Path("/delete")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response deleteAlert(@QueryParam("alertId") String alertId) {
-        spawn.removeAlert(alertId);
-        return Response.ok().build();
+    public Response deleteAlert(@QueryParam("pairs") KVPairs kv) {
+        if (kv.hasKey("alertId")) {
+            spawn.removeAlert(kv.getValue("alertId"));
+            return Response.ok().build();
+        }
+        return Response.serverError().build();
+
     }
 
     @GET
-    @Path("/fetch")
+    @Path("/list")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAlertState() {
-         return Response.ok(spawn.fetchAlertState().toString()).build();
+         return Response.ok(spawn.fetchAllAlerts().toString()).build();
+    }
+
+    @GET
+    @Path("/get")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getAlert(@QueryParam("alertId") String alertId) {
+        return Response.ok(spawn.getAlert(alertId)).build();
+
     }
 
 }

@@ -1872,8 +1872,12 @@ public class Spawn implements Codec.Codable {
         jobAlertRunner.removeAlert(alertId);
     }
 
-    public JSONObject fetchAlertState() {
+    public JSONArray fetchAllAlerts() {
         return jobAlertRunner.getAlertState();
+    }
+
+    public JSONObject getAlert(String alertId) {
+        return jobAlertRunner.getAlert(alertId);
     }
 
     public boolean deleteJob(String jobUUID) throws Exception {

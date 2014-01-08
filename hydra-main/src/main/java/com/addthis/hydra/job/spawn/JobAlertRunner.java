@@ -34,6 +34,7 @@ import com.addthis.hydra.job.JobTaskState;
 import com.addthis.hydra.job.Spawn;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.util.EmailUtil;
+import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
 import org.slf4j.Logger;
@@ -299,18 +300,28 @@ public class JobAlertRunner {
      * Get a snapshot of the alert map, mainly for rendering in the UI.
      * @return A JSONObject representation of all existing alerts
      */
-    public JSONObject getAlertState() {
-        JSONObject rv = new JSONObject();
+    public JSONArray getAlertState() {
+        JSONArray rv = new JSONArray();
         synchronized (alertMap) {
-            for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
+            for (JobAlert jobAlert : alertMap.values()) {
                 try {
-                    rv.put(entry.getKey(), entry.getValue().toJSON());
+                    rv.put(jobAlert.toJSON());
                 } catch (Exception e) {
-                    log.warn("Warning: failed to send alert id=" + entry.getKey() + " alert=" + entry.getValue());
+                    log.warn("Warning: failed to send alert " + jobAlert);
                 }
             }
         }
         return rv;
+    }
+
+    public JSONObject getAlert(String alertId) {
+        try {
+            return alertMap.contains(alertId) ? alertMap.get(alertId).toJSON() : null;
+        } catch (Exception e) {
+            log.warn("Failed to fetch alert " + alertId, e);
+            return null;
+        }
+
     }
 
 
