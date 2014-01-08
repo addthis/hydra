@@ -336,8 +336,6 @@ public class JobAlertRunner {
             log.warn("Failed to fetch alert " + alertId, e);
             return null;
         }
-
     }
-
 
 }

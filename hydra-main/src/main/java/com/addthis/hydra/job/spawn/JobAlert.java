@@ -14,8 +14,10 @@
 package com.addthis.hydra.job.spawn;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.addthis.basis.util.JitterClock;
 
@@ -56,9 +58,13 @@ public class JobAlert implements Codec.Codable {
     @Codec.Set(codable = true)
     private String[] jobIds;
 
+    /* For alerts tracking multiple jobs, this variable marks if the set of active jobs has changed since the last alert check */
+    private boolean hasChanged = false;
+
     private static final int MINUTE = 60 * 1000;
 
     /* Map storing {job id : job description} for all alerted jobs the last time this alert was checked */
+    @Codec.Set(codable = true)
     private final HashMap<String, String> activeJobs;
 
     private static final Map<Integer, String> alertMessageMap = ImmutableMap.of(ON_ERROR, "Task is in Error ",
@@ -155,7 +161,10 @@ public class JobAlert implements Codec.Codable {
      */
     public boolean checkAlertForJobs(List<Job> jobs) {
         boolean activeNow = false;
+        Set<String> activeJobBefore;
+        Set<String> activeJobAfter;
         synchronized (activeJobs) {
+            activeJobBefore = new HashSet<>(activeJobs.keySet());
             activeJobs.clear();
             for (Job job : jobs) {
                 if (alertActiveForJob(job)) {
@@ -164,12 +173,16 @@ public class JobAlert implements Codec.Codable {
                     // Don't break the loop to ensure that all triggering jobs will be added to activeJobs
                 }
             }
+            activeJobAfter = new HashSet<>(activeJobs.keySet());
         }
         if (activeNow && !hasAlerted()) {
             alerted();
             return true;
         } else if (!activeNow && hasAlerted()) {
             clear();
+            return true;
+        } else if (!activeJobBefore.equals(activeJobAfter)) {
+            hasChanged = true;
             return true;
         }
         return false;
@@ -182,7 +195,8 @@ public class JobAlert implements Codec.Codable {
     }
 
     public String getCurrentStateMessage() {
-        String base = hasAlerted() ? "[TRIGGER] " : "[CLEAR] ";
+        String base = hasAlerted() ? (hasChanged ? "[CHANGE]" : "[TRIGGER] ") : "[CLEAR] ";
+        hasChanged = false;
         if (alertMessageMap.containsKey(type)) {
             return base + alertMessageMap.get(type);
         }
@@ -195,7 +209,6 @@ public class JobAlert implements Codec.Codable {
             case ON_ERROR:
                 return job.getState().equals(JobState.ERROR);
             case ON_COMPLETE:
-                // job is idle and has completed within the last 60 minutes
                 return job.getState().equals(JobState.IDLE);
             case RUNTIME_EXCEEDED:
                 return (job.getState().equals(JobState.RUNNING) && (job.getSubmitTime() != null) &&
