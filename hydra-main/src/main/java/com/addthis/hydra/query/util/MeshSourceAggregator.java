@@ -45,6 +45,7 @@ import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.io.DataChannelCodec;
+import com.addthis.hydra.data.query.FramedDataChannelReader;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.source.QueryConsumer;

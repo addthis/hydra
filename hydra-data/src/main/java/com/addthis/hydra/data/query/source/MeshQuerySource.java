@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.query;
+package com.addthis.hydra.data.query.source;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -39,11 +39,12 @@ import com.addthis.bundle.core.kvp.KVBundle;
 import com.addthis.bundle.core.kvp.KVBundleFormat;
 import com.addthis.bundle.io.DataChannelWriter;
 import com.addthis.codec.CodecJSON;
+import com.addthis.hydra.data.query.FramedDataChannelReader;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryEngine;
+import com.addthis.hydra.data.query.QueryEngineCache;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.data.query.QueryStatusObserver;
-import com.addthis.hydra.query.util.FramedDataChannelReader;
 import com.addthis.meshy.LocalFileHandler;
 import com.addthis.meshy.VirtualFileFilter;
 import com.addthis.meshy.VirtualFileInput;
@@ -52,7 +53,6 @@ import com.addthis.meshy.VirtualFileReference;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-import com.sleepycat.je.EnvironmentFailureException;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Meter;
@@ -87,7 +87,7 @@ import org.slf4j.LoggerFactory;
  * EXAMPLE IMPLEMENTATION
  * <p/>
  * server start:
- * java -Dmesh.local.handlers=com.addthis.hydra.query.MeshQuerySource -jar hydra-config/target/hydra-config-3.9.0-SNAPSHOT-exec.jar mesh server 5000 hydra-local/
+ * java -Dmesh.local.handlers=com.addthis.hydra.data.query.source.MeshQuerySource -jar hydra-config/target/hydra-config-3.9.0-SNAPSHOT-exec.jar mesh server 5000 hydra-local/
  * <p/>
  * client query:
  * java -cp hydra-config/target/hydra-config-3.9.0-SNAPSHOT-exec.jar com.addthis.hydra.query.util.MeshQueryClient localhost 5000 'mini2n/f00f6eb5-805f-41b2-a407-575c618d6726/0/replica/data/query' '+:+hits,+nodes' ''
@@ -105,8 +105,6 @@ public class MeshQuerySource implements LocalFileHandler {
     //File that contains the next parent id to be assigned in the query tree, apparently.
     private static final String queryReferenceFileName = Parameter.value("meshQuerySource.queryReferenceFile", "nextID");
     private static final int slowQueryThreshold = Parameter.intValue("meshQuerySource.slowQueryThreshold", 5000);
-    private static final int shutdownSleepPeriod = Parameter.intValue("meshQuerySource.shutdownSleepPeriod", 1000);
-    private static final int environmentFailureCode = Parameter.intValue("meshQuerySource.envFailCode", 33);
     //Temp directory to use for sorting and caching
     private static final String tmpDirPath = Parameter.value("query.tmpdir", "query.tmpdir");
     private static final ExecutorService querySearchPool = MoreExecutors
@@ -298,22 +296,9 @@ public class MeshQuerySource implements LocalFileHandler {
                     queryOpProcessor.sourceError(ex);
                     queryOpProcessor.sendComplete();
                 }
-            } catch (EnvironmentFailureException ex) //BDB specific exception
-            {
-                log.warn("******** Received an environment failure exception{}", ex.getMessage());
-                logError(ex);
-                new ShutdownRunner(shutdownSleepPeriod, environmentFailureCode).start();
-                if (queryOpProcessor != null) {
-                    queryOpProcessor.sourceError(new DataChannelError(ex));
-                    queryOpProcessor.sendComplete();
-                }
             } catch (Exception ex) {
                 log.warn("Generic Exception while running search. {}", ex.getMessage());
                 logError(ex);
-                if (ex.getMessage().contains("EnvironmentFailure")) {
-                    log.warn("Doing a system exit to restart the mesh query source (from generic exception)");
-                    new ShutdownRunner(shutdownSleepPeriod, environmentFailureCode).start();
-                }
                 if (queryOpProcessor != null) {
                     queryOpProcessor.sourceError(new DataChannelError(ex));
                     queryOpProcessor.sendComplete();
@@ -618,31 +603,5 @@ public class MeshQuerySource implements LocalFileHandler {
             return queryStatusObserver;
         }
 
-    }
-
-    /**
-     * A thread that shuts down the JVM. Usually called in response to some kind of unrecoverable error.
-     * <p/>
-     * The sleep call is to attempt to give the query worker some time to report an error to the master.
-     */
-    private static class ShutdownRunner extends Thread {
-
-        private final int sleep;
-        private final int shutdownCode;
-
-        private ShutdownRunner(int sleep, int shutdownCode) {
-            this.sleep = sleep;
-            this.shutdownCode = shutdownCode;
-        }
-
-        @Override
-        public void run() {
-            try {
-                forcedShutdownMeter.mark();
-                sleep(sleep);
-            } catch (InterruptedException ignored) {
-            }
-            System.exit(shutdownCode);
-        }
     }
 }

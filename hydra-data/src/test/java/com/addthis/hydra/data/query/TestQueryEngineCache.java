@@ -11,13 +11,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.query;
+package com.addthis.hydra.data.query;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.addthis.basis.test.SlowTest;
 
 import com.addthis.hydra.data.query.QueryEngine;
+import com.addthis.hydra.data.query.QueryEngineCache;
 import com.addthis.hydra.data.query.QueryEngineDirectory;
 
 import org.junit.Assert;

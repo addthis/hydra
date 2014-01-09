@@ -25,6 +25,7 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.io.DataChannelReader;
+import com.addthis.hydra.data.query.FramedDataChannelReader;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
 
