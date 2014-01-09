@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -103,9 +102,6 @@ public class MeshQuerySource implements LocalFileHandler {
     private static final int querySearchThreads = Parameter.intValue("meshQuerySource.searchThreads", 3);
     private static final int outputQueueSize = Parameter.intValue("meshQuerySource.outputQueueSize", 1000);
     private static final int outputBufferSize = Parameter.intValue("meshQuerySource.outputBufferSize", 64000);
-    private static final int gateCounter = Parameter.intValue("meshQuerySource.gateCounter", 2); // max concurrent queries
-    private static final int gateAcquireTimeLimit = Parameter.intValue("meshQuerySource.gateAcquireTimeLimit", 1000); // conservative
-    private static final boolean busyResponseEnabled = Parameter.boolValue("meshQuerySource.busyResponseEnabled", false);
     //File that contains the next parent id to be assigned in the query tree, apparently.
     private static final String queryReferenceFileName = Parameter.value("meshQuerySource.queryReferenceFile", "nextID");
     private static final int slowQueryThreshold = Parameter.intValue("meshQuerySource.slowQueryThreshold", 5000);
@@ -124,15 +120,14 @@ public class MeshQuerySource implements LocalFileHandler {
     //Time to get an engine from the engine cache -- hits should be tiny, misses should be quite different
     private static final Timer engineGetTimer = Metrics.newTimer(MeshQuerySource.class, "engineGetTimes", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
     //Time it takes for a query to be instantiated and given a gate.
-    private static final Timer gateAcquireTimer = Metrics.newTimer(MeshQuerySource.class, "gateAcquireTimes", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
+    private static final Timer queueTimes = Metrics.newTimer(MeshQuerySource.class, "queueTimes", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
     //Queries we have recieved but not finished processing (includes those waiting to run aka our queue)
     private static final Counter queryCount = Metrics.newCounter(MeshQuerySource.class, "queryCount");
     private static final QueryEngineCache queryEngineCache = new QueryEngineCache();
-    private final Semaphore queryGate = new Semaphore(gateCounter);
 
     public MeshQuerySource() {
         log.info("[MeshQuerySource] started.  base directory={}", queryRoot);
-        log.info("Max concurrent queries (gateCounter):{}", gateCounter);
+        log.info("Max concurrent queries (thread count):{}", querySearchThreads);
 
         // Initialize the tmp dir
         try {
@@ -180,7 +175,7 @@ public class MeshQuerySource implements LocalFileHandler {
      * class is named 'MeshQuerySource', this makes sense. As the primary class and entry point for mq worker function, it might be
      * worth this explanation to prevent any confusion.
      */
-    private final class QueryReference implements VirtualFileReference {
+    private static final class QueryReference implements VirtualFileReference {
 
         final File dir;
         final String dirString;
@@ -241,6 +236,14 @@ public class MeshQuerySource implements LocalFileHandler {
                     log.warn("Invalid request to getInput.  Options cannot be null");
                     return null;
                 }
+                final String flag = options.get("flag");
+                if (flag != null) {
+                    if (flag.equals("die")) {
+                        System.exit(1);
+                    } else if (flag.equals("DIE")) {
+                        Runtime.getRuntime().halt(1);
+                    }
+                }
                 querySearchPool.submit(new SearchRunner(options, dirString, bridge));
                 return bridge;
             } catch (Exception ex) {
@@ -254,7 +257,7 @@ public class MeshQuerySource implements LocalFileHandler {
      * <p/>
      * Flow is : constructor -> run
      */
-    private class SearchRunner implements Runnable {
+    private static class SearchRunner implements Runnable {
 
         private final Map<String, String> options;
         private final String goldDirString;
@@ -263,8 +266,7 @@ public class MeshQuerySource implements LocalFileHandler {
          * the {@link DataChannelOutput} interface and uses it to call {@link DataChannelToInputStream#nextBytes(long)}.
          */
         private final DataChannelToInputStream bridge;
-        boolean acquired = false;
-        long gateAcquisitionDuration;
+        private final long creationTime;
         private Query query;
         private QueryOpProcessor queryOpProcessor = null;
         private QueryEngine finalEng = null;
@@ -276,13 +278,13 @@ public class MeshQuerySource implements LocalFileHandler {
             this.goldDirString = dirString;
             this.bridge = bridge;
             this.options = options;
+            this.creationTime = System.currentTimeMillis();
         }
 
         @Override
         public void run() {
             queryCount.inc();
             try {
-                gating();
                 setup();
                 engine();
                 search();
@@ -318,7 +320,7 @@ public class MeshQuerySource implements LocalFileHandler {
                 }
             }
 
-            // Cleanup -- decrease query count, release our engine (if we had one), release our gate.
+            // Cleanup -- decrease query count, release our engine (if we had one)
             //
             // Note that releasing our engine only decreases its open lease count.
             finally {
@@ -326,11 +328,6 @@ public class MeshQuerySource implements LocalFileHandler {
                 if (finalEng != null) {
                     log.debug("Releasing engine: {}", finalEng);
                     finalEng.release();
-                }
-
-                if (acquired) {
-                    log.debug("releasing query gate for: {}", goldDirString);
-                    queryGate.release();
                 }
             }
         }
@@ -396,58 +393,11 @@ public class MeshQuerySource implements LocalFileHandler {
          * Initialize query run -- parse options, create Query object
          */
         private void setup() throws Exception {
+            long startTime = System.currentTimeMillis();
+            queueTimes.update(creationTime - startTime, TimeUnit.MILLISECONDS);
             query = CodecJSON.decodeString(new Query(), options.get("query"));
-            // Log some information about how long gate acquisition took
-            if (query.isTraced() || gateAcquisitionDuration > slowQueryThreshold) {
-                Query.emitTrace("[MeshQuerySource] query:" + query.uuid() + " gate acquisitionDuration=" + gateAcquisitionDuration + "ms, slow=" + (gateAcquisitionDuration > slowQueryThreshold));
-            }
             // Parse the query and return a reference to the last QueryOpProcessor.
             queryOpProcessor = query.getProcessor(bridge, bridge.queryStatusObserver);
-        }
-
-        /**
-         * Part 1 - GATING
-         * Try to assign this new query to one our query slots. If busy signal is enabled, periodically let mqmaster know
-         * we are alive but still too busy to run this query.
-         * <p/>
-         * Note that fairness is not guaranteed (and can't be when the busy signal is enabled) -- therefore when at capacity,
-         * a given query may theoretically block indefinitely. Fortunately we are not usually at capacity, but heads up!
-         */
-        private void gating() throws InterruptedException {
-            final long queryStartTime = System.currentTimeMillis();
-
-            final String flag = options.get("flag");
-            if (flag != null) {
-                if (flag.equals("die")) {
-                    System.exit(1);
-                } else if (flag.equals("DIE")) {
-                    Runtime.getRuntime().halt(1);
-                }
-            }
-
-            if (log.isDebugEnabled()) {
-                log.debug("[MeshQuerySource] getting query gate for job: " + options.get("jobid") +
-                          " query:" + options.get("uuid") + " queue length: " + queryGate.getQueueLength() +
-                          " remaining leases:" + queryGate.availablePermits() + " max:" + gateCounter +
-                          " queryCount:" + queryCount.count());
-            }
-
-            while (!acquired) {
-                if (busyResponseEnabled) {
-                    if (queryGate.tryAcquire(gateAcquireTimeLimit, TimeUnit.MILLISECONDS)) {
-                        acquired = true;
-                    } else {
-                        bridge.sourceBusy();
-                    }
-                } else //doesn't really need to be in this while loop
-                {
-                    queryGate.acquire();
-                    acquired = true;
-                }
-            }
-
-            gateAcquisitionDuration = System.currentTimeMillis() - queryStartTime;
-            gateAcquireTimer.update(gateAcquisitionDuration, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -644,22 +594,6 @@ public class MeshQuerySource implements LocalFileHandler {
                         Bytes.writeString(er.getMessage(), out);
                         emitChunks();
                         eof = true;
-                    }
-                }
-            } catch (Exception ex) {
-                throw new DataChannelError(ex);
-            }
-        }
-
-        /**
-         * When called, this function will write a {@link FramedDataChannelReader#FRAME_BUSY} marker to the output channel.
-         */
-        public void sourceBusy() {
-            checkClosed();
-            try {
-                if (!writer.isClosed()) {
-                    synchronized (out) {
-                        out.write(FramedDataChannelReader.FRAME_BUSY);
                     }
                 }
             } catch (Exception ex) {
