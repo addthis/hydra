@@ -39,7 +39,6 @@ import com.addthis.hydra.data.query.channel.QueryChannelServer;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.query.util.HostEntryInfo;
-import com.addthis.hydra.query.util.MeshSourceAggregator;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
@@ -221,8 +220,6 @@ public class QueryServer extends AbstractHandler {
             response.sendRedirect("/query/index.html");
         } else if (target.startsWith("/metrics")) {
             metricsHandler.handle(target, baseRequest, request, response);
-        } else if (target.startsWith("/slownessmetrics")) {
-            response.getWriter().write(MeshSourceAggregator.getSlownessMetrics());
         } else if (target.equals("/q/")) {
             response.sendRedirect("/query/call?" + kv.toString());
         } else if (target.equals("/query/call") || target.equals("/query/call/")) {
