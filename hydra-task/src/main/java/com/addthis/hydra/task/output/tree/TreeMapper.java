@@ -146,10 +146,10 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
     private boolean enableHttp = Parameter.boolValue("mapper.http", true);
 
     /**
-     * Default is either "mapper.query" configuration value or true.
+     * Default is either "mapper.query" configuration value or false.
      */
     @Codec.Set(codable = true)
-    private boolean enableQuery = Parameter.boolValue("mapper.query", true);
+    private boolean enableQuery = Parameter.boolValue("mapper.query", false);
 
 
     /**
