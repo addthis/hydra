@@ -34,26 +34,32 @@
 <div id="detailContainer" class="main-container">
     <div class="form" role="form">
         <div class="form-group">
-            <label class="sr-only" for="name" style="margin-bottom:0px;">Type</label>
-            <input value="<%=alert.type%>" type="text" class="form-control" id="type" name="type" placeholder="">
+            <label class="sr-only" for="type" style="margin-bottom:0px;">Type</label>
+            <select id="alertType" class="form-control">
+                <%_.each(alertTypes,function(val, key){%>
+                    <option value="<%=key%>"><%=val%></option>
+                <%})%>
+            </select>
         </div>
     </div>
     <div class="form" role="form">
         <div class="form-group">
-            <label class="sr-only" for="name" style="margin-bottom:0px;">Timeout (minutes)</label>
+            <label class="sr-only" for="timeout" style="margin-bottom:0px;">Timeout (minutes)</label>
             <input value="<%=alert.timeout%>" type="text" class="form-control" id="timeout" name="timeout" placeholder="">
         </div>
     </div>
     <div class="form" role="form">
         <div class="form-group">
-            <label class="sr-only" for="name" style="margin-bottom:0px;">Emails (comma-separated)</label>
+            <label class="sr-only" for="email" style="margin-bottom:0px;">Emails (comma-separated)</label>
             <input value="<%=alert.email%>" type="text" class="form-control" id="email" name="email" placeholder="">
         </div>
     </div>
     <div class="form" role="form">
         <div class="form-group">
-            <label class="sr-only" for="name" style="margin-bottom:0px;">Job Ids or Aliases (comma-separated)</label>
+            <label class="sr-only" for="jobIds" style="margin-bottom:0px;">Job Ids or Aliases (comma-separated)</label>
             <input value="<%=alert.jobIds%>" type="text" class="form-control" id="jobIds" name="jobIds" placeholder="">
         </div>
     </div>     
+</div>
+<div id="alertDetailContainer" class="main-container">
 </div>

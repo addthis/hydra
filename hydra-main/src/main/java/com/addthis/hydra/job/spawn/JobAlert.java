@@ -108,6 +108,9 @@ public class JobAlert implements Codec.Codable {
     }
 
     public void clear() {
+        synchronized (activeJobs) {
+            activeJobs.clear();
+        }
         this.lastAlertTime = -1;
     }
 

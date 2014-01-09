@@ -14,14 +14,16 @@
 define([
 		"app",
 		"modules/datatable",
+	    "modules/util",		
        	"text!../../templates/alerts.filter.html",
        	"text!../../templates/alerts.selectable.html",
-       	"text!../../templates/alerts.detail.html",
+       	"text!../../templates/alerts.detail.html",       	
        	"backbone"
 ],
 function(
 		 app,
 		 DataTable,
+		 util,		 
 		 alertFilterTemplate, 
 		 alertSelectableTemplate,
 		 alertDetailTemplate,
@@ -38,7 +40,7 @@ function(
         	save:function(){
         		var postData = {
         			lastAlertTime:this.get("lastAlertTime"),
-        			type:this.get("type"),
+        			type:$("#alertType").val(),
         			timeout:this.get("timeout"),
         			email:this.get("email"),
         			jobIds:this.get("jobIds")
@@ -123,7 +125,9 @@ function(
             		"sWidth": "15%",
             		"bVisible":true,
             		"bSearchable":true,
-            		// Should have an mRender to a human-readable type
+            		"mRender": function(val,type,data) {
+            			return util.alertTypes[val] ? util.alertTypes[val] : "Unknown Alert Type";            			
+            		}
         		},
         		{
         			"sTitle":"Timeout",
@@ -182,9 +186,11 @@ function(
         	initialize:function(){},
         	render:function(){
          		var html = this.template({
-            		alert:this.model.toJSON()
+            		alert:this.model.toJSON(),
+            		alertTypes:util.alertTypes
          		});
         		this.$el.html(html);
+        		$("#alertType").val(this.model.get("type"));
          		return this;
         	},
         	handleDeleteButtonClick:function(event){
