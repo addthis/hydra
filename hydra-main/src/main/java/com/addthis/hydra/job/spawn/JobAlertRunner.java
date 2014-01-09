@@ -49,7 +49,7 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_
 public class JobAlertRunner {
 
     private static final Logger log = LoggerFactory.getLogger(JobAlertRunner.class);
-    private static String clusterName = Parameter.value("spawn.localhost", "unknown");
+    private static String clusterHead = Parameter.value("spawn.localhost", "unknown");
     private final Spawn spawn;
     private final SpawnDataStore spawnDataStore;
 
@@ -97,11 +97,11 @@ public class JobAlertRunner {
     }
 
     /**
-     * Iterate over alert map, checking the status of each alert.
+     * Iterate over alert map, checking the status of each alert and sending emails as needed.
      */
     public void scanAlerts() {
         if (alertsEnabled) {
-            log.info("Running alert scan ..........");
+            log.info("Running alert scan...");
             synchronized (alertMap) {
                 for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
                     checkAlert(entry.getValue());
@@ -124,10 +124,18 @@ public class JobAlertRunner {
     private List<Job> getAlertJobs(JobAlert alert) {
         List<Job> rv = new ArrayList<>();
         if (alert != null && alert.getJobIds() != null) {
-            for (String jobId : alert.getJobIds()) {
-                Job job = spawn.getJob(jobId);
+            Map<String, List<String>> aliases = spawn.getAliases();
+            for (String lookupId : alert.getJobIds()) {
+                Job job = spawn.getJob(lookupId);
                 if (job != null) {
                     rv.add(job);
+                } else if (aliases.containsKey(lookupId)) {
+                    for (String jobId : aliases.get(lookupId)) {
+                        job = spawn.getJob(jobId);
+                        if (job != null) {
+                            rv.add(job);
+                        }
+                    }
                 }
             }
         }
@@ -166,9 +174,9 @@ public class JobAlertRunner {
         }
 
         StringBuffer sb = new StringBuffer();
-        sb.append("Cluster : " + clusterName + "\n");
+        sb.append("Cluster : " + clusterHead + "\n");
         sb.append("Job : " + job.getId() + "\n");
-        sb.append("Link : http://" + clusterName + ":5052/spawn2/index.html#jobs/" + job.getId() + "/tasks\n");
+        sb.append("Link : http://" + clusterHead + ":5052/spawn2/index.html#jobs/" + job.getId() + "/tasks\n");
         sb.append("Description : " + job.getDescription() + "\n");
         sb.append("------------------------------ \n");
         sb.append("Task Summary \n");
@@ -209,7 +217,7 @@ public class JobAlertRunner {
         String message = jobAlert.getCurrentStateMessage();
         Map<String, String> activeJobs = jobAlert.getActiveJobs();
         log.info("Alerting " + jobAlert.getEmail() + " :: jobs : " + activeJobs.keySet() + " : " + message);
-        String subject = message + " - " + clusterName + " - " + activeJobs.toString();
+        String subject = message + " - " + clusterHead + " - " + activeJobs.toString();
         StringBuilder sb = new StringBuilder();
         sb.append("Alert: " + jobAlert.getCurrentStateMessage() + " \n");
         for (String jobId : activeJobs.keySet()) {
@@ -223,7 +231,9 @@ public class JobAlertRunner {
         synchronized (alertMap) {
             Map<String, String> alertsRaw = spawnDataStore.getAllChildren(SPAWN_COMMON_ALERT_PATH);
             for (Map.Entry<String, String> entry : alertsRaw.entrySet()) {
-                loadAlert(entry.getKey(), entry.getValue());
+                if (!entry.getKey().equals(SPAWN_COMMON_ALERT_LOADED_LEGACY)) {
+                    loadAlert(entry.getKey(), entry.getValue());
+                }
             }
             if (spawnDataStore.get(SPAWN_COMMON_ALERT_LOADED_LEGACY) == null) {
                 // One time only, iterate through jobs looking for their alerts.
@@ -241,43 +251,54 @@ public class JobAlertRunner {
     private void loadAlert(String id, String raw) {
         try {
             JobAlert jobAlert = codec.decode(new JobAlert(), raw.getBytes());
-            alertMap.put(id, jobAlert);
+            synchronized (alertMap) {
+                alertMap.put(id, jobAlert);
+            }
         } catch (Exception ex) {
             log.warn("Failed to decode JobAlert id=" + id + " raw=" + raw);
         }
     }
 
     public void putAlert(String id, JobAlert alert) {
-        JobAlert oldAlert = alertMap.contains(id) ? alertMap.get(id) : null; // ConcurrentHashMap throws NPE on failed 'get'
-        if (oldAlert != null) {
-            // Inherit old alertTime even if the alert has changed in other ways
-            alert.setLastAlertTime(oldAlert.getLastAlertTime());
+        synchronized (alertMap) {
+            JobAlert oldAlert = alertMap.contains(id) ? alertMap.get(id) : null; // ConcurrentHashMap throws NPE on failed 'get'
+            if (oldAlert != null) {
+                // Inherit old alertTime even if the alert has changed in other ways
+                alert.setLastAlertTime(oldAlert.getLastAlertTime());
+            }
+            alertMap.put(id, alert);
         }
-        alertMap.put(id, alert);
         storeAlert(id, alert);
     }
 
     public void removeAlert(String id) {
         if (id != null) {
-            alertMap.remove(id);
-            spawnDataStore.deleteChild(SPAWN_COMMON_ALERT_PATH, id);
+            synchronized (alertMap) {
+                alertMap.remove(id);
+                spawnDataStore.deleteChild(SPAWN_COMMON_ALERT_PATH, id);
+            }
         }
     }
 
+    /**
+     * A method called one time to retrieve any job alerts that were saved within Job objects
+     */
     private void loadLegacyAlerts() {
         List<JobAlert> alerts;
         spawn.acquireJobLock();
         try {
-            for (Job job : spawn.listJobs()) {
-                if (job != null && (alerts = job.getAlerts()) != null) {
-                    for (JobAlert alert : alerts) {
-                        alert.setJobIds(new String[] {job.getId()});
-                        String newUUID = UUID.randomUUID().toString();
-                        alert.setAlertId(newUUID);
-                        alertMap.put(newUUID, alert);
-                        storeAlert(newUUID, alert);
+            synchronized (alertMap) {
+                for (Job job : spawn.listJobs()) {
+                    if (job != null && (alerts = job.getAlerts()) != null) {
+                        for (JobAlert alert : alerts) {
+                            alert.setJobIds(new String[] {job.getId()});
+                            String newUUID = UUID.randomUUID().toString();
+                            alert.setAlertId(newUUID);
+                            alertMap.put(newUUID, alert);
+                            storeAlert(newUUID, alert);
+                        }
+                        job.setAlerts(null);
                     }
-                    job.setAlerts(null);
                 }
             }
         }  finally {
@@ -297,7 +318,7 @@ public class JobAlertRunner {
     }
 
     /**
-     * Get a snapshot of the alert map, mainly for rendering in the UI.
+     * Get a snapshot of the alert map as an array, mainly for rendering in the UI.
      * @return A JSONObject representation of all existing alerts
      */
     public JSONArray getAlertStateArray() {
@@ -330,11 +351,13 @@ public class JobAlertRunner {
     }
 
     public JSONObject getAlert(String alertId) {
-        try {
-            return alertMap.contains(alertId) ? alertMap.get(alertId).toJSON() : null;
-        } catch (Exception e) {
-            log.warn("Failed to fetch alert " + alertId, e);
-            return null;
+        synchronized (alertMap) {
+            try {
+                return alertMap.contains(alertId) ? alertMap.get(alertId).toJSON() : null;
+            } catch (Exception e) {
+                log.warn("Failed to fetch alert " + alertId, e);
+                return null;
+            }
         }
     }
 

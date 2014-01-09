@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.addthis.basis.util.JitterClock;
+import com.addthis.basis.util.Strings;
 
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
@@ -151,7 +152,11 @@ public class JobAlert implements Codec.Codable {
     }
 
     public JSONObject toJSON() throws Exception {
-        return CodecJSON.encodeJSON(this);
+        JSONObject rv = CodecJSON.encodeJSON(this);
+        if (jobIds != null) {
+            rv.put("jobIds", Strings.join(jobIds, ","));
+        }
+        return rv;
     }
 
     /**
