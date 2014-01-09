@@ -993,16 +993,17 @@ public class ExternalPagedStore<K extends Comparable<K>, V> extends CachedPagedS
 
     @Override
     public void close() {
-        close(false);
+        close(false, false);
     }
 
     /**
      * Close the page store.
      *
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
-     */
+     * @param testIntegrity if true then test the integrity of the pageDB. This is a slow operation.
+     **/
     @Override
-    public void close(boolean cleanLog) {
+    public void close(boolean cleanLog, boolean testIntegrity) {
         super.close();
         pages.close(cleanLog);
         stopMemWathcher();

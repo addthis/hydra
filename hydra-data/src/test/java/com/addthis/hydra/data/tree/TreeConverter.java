@@ -44,7 +44,7 @@ public class TreeConverter {
             throw ex;
         } finally {
             readTree.close();
-            writeTree.close(true);
+            writeTree.close(true, false);
         }
         System.out.println("nodeCount=" + nodeCount + " hasNodes=" + hasNodes + " maxLeafs=" +
                            maxLeafs + " maxDepth=" + maxDepth + " openTime=" + openTime + " testTime=" + testTime);

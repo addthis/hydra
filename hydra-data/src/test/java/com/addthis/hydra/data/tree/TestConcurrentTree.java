@@ -60,14 +60,14 @@ public class TestConcurrentTree {
 
         final CyclicBarrier barrier;
         final List<Integer> values;
-        final int[] threadId;
+        final List<Integer> threadId;
         final int myId;
         final ConcurrentTree cache;
         final ConcurrentTreeNode parent;
         int counter;
 
         public InsertionThread(CyclicBarrier barrier, List<Integer> values,
-                int[] threadId, int id, ConcurrentTree cache,
+                List<Integer> threadId, int id, ConcurrentTree cache,
                 ConcurrentTreeNode parent) {
             super("InsertionThread" + id);
             this.barrier = barrier;
@@ -83,8 +83,9 @@ public class TestConcurrentTree {
         public void run() {
             try {
                 barrier.await();
-                for (int i = 0; i < threadId.length; i++) {
-                    if (threadId[i] == myId) {
+                int len = threadId.size();
+                for (int i = 0; i < len; i++) {
+                    if (threadId.get(i) == myId) {
                         Integer val = values.get(i);
                         ConcurrentTreeNode node = cache.getOrCreateNode(parent,
                                 Integer.toString(val), null);
@@ -104,14 +105,14 @@ public class TestConcurrentTree {
 
         final CyclicBarrier barrier;
         final List<Integer> values;
-        final int[] threadId;
+        final List<Integer> threadId;
         final int myId;
         final ConcurrentTree cache;
         final ConcurrentTreeNode parent;
         int counter;
 
         public DeletionThread(CyclicBarrier barrier, List<Integer> values,
-                int[] threadId, int id, ConcurrentTree cache,
+                List<Integer> threadId, int id, ConcurrentTree cache,
                 ConcurrentTreeNode parent) {
             super("DeletionThread" + id);
             this.barrier = barrier;
@@ -127,8 +128,9 @@ public class TestConcurrentTree {
         public void run() {
             try {
                 barrier.await();
-                for (int i = 0; i < threadId.length; i++) {
-                    if (threadId[i] == myId) {
+                int len = threadId.size();
+                for (int i = 0; i < len; i++) {
+                    if (threadId.get(i) == myId) {
                         Integer val = values.get(i);
                         cache.deleteNode(parent, Integer.toString(val));
                         counter++;
@@ -138,6 +140,14 @@ public class TestConcurrentTree {
                 e.printStackTrace();
                 fail();
             }
+        }
+    }
+
+    @Test
+    @Category(SlowTest.class)
+    public void testGetOrCreateOneThreadIterations() throws Exception {
+        for(int i = 0; i < 100; i++) {
+            testGetOrCreateOneThread();
         }
     }
 
@@ -160,7 +170,7 @@ public class TestConcurrentTree {
                 assertEquals(Integer.toString(i), node.getName());
                 node.release();
             }
-            tree.close();
+            tree.close(false, true);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
@@ -192,7 +202,7 @@ public class TestConcurrentTree {
             assertEquals(2, tree.getCache().size());
             assertEquals(0, root.getNodeCount());
 
-            tree.close();
+            tree.close(false, true);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
@@ -231,7 +241,7 @@ public class TestConcurrentTree {
             assertEquals(2, tree.getCache().size());
             assertEquals(0, root.getNodeCount());
 
-            tree.close();
+            tree.close(false, true);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
@@ -256,14 +266,14 @@ public class TestConcurrentTree {
         try {
             ArrayList<Integer> values = new ArrayList<>(numElements);
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
-            int[] threadId = new int[numElements];
+            ArrayList<Integer> threadId = new ArrayList<>(numElements);
             InsertionThread[] threads = new InsertionThread[numThreads];
             ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).kvStoreType(1).build();
             ConcurrentTreeNode root = tree.getRootNode();
 
             for (int i = 0; i < numElements; i++) {
                 values.add(i);
-                threadId[i] = i % numThreads;
+                threadId.add(i % numThreads);
             }
 
             for (int i = 0; i < numThreads; i++) {
@@ -291,8 +301,7 @@ public class TestConcurrentTree {
                 assertEquals(Integer.toString(i), node.getName());
                 node.release();
             }
-
-            tree.close();
+            tree.close(false, true);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
@@ -320,7 +329,7 @@ public class TestConcurrentTree {
                 ConcurrentTreeNode node = tree.getNode(root, Integer.toString(i), true);
                 assertNull(node);
             }
-            tree.close();
+            tree.close(false, true);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
@@ -347,20 +356,19 @@ public class TestConcurrentTree {
         }
     }
 
-
     private void testDeleteMultiThread(int numElements, int numThreads) throws Exception {
         File dir = makeTemporaryDirectory();
         try {
             ArrayList<Integer> values = new ArrayList<>(numElements);
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
-            int[] threadId = new int[numElements];
+            ArrayList<Integer> threadId = new ArrayList<>(numElements);
             DeletionThread[] threads = new DeletionThread[numThreads];
             ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).kvStoreType(1).build();
             ConcurrentTreeNode root = tree.getRootNode();
 
             for (int i = 0; i < numElements; i++) {
                 values.add(i);
-                threadId[i] = i % numThreads;
+                threadId.add(i % numThreads);
                 ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
                 assertNotNull(node);
                 assertEquals(Integer.toString(i), node.getName());
@@ -389,8 +397,7 @@ public class TestConcurrentTree {
                 ConcurrentTreeNode node = tree.getNode(root, Integer.toString(i), true);
                 assertNull(node);
             }
-
-            tree.close();
+            tree.close(false, true);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);

@@ -22,6 +22,7 @@ import com.addthis.basis.util.ClosableIterator;
 
 import com.addthis.codec.Codec;
 import com.addthis.hydra.store.db.IPageDB.Key;
+import com.addthis.hydra.store.kv.PagedKeyValueStore;
 import com.addthis.hydra.store.util.Raw;
 
 
@@ -56,12 +57,15 @@ public interface IPageDB<K extends Key, V extends Codec.Codable> {
 
     public void close();
 
+    public PagedKeyValueStore<DBKey, V> getEps();
+
     /**
      * Close the source.
      *
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
+     * @param testIntegrity if true then test the integrity of the pageDB. This is a slow operation.
      */
-    public void close(boolean cleanLog);
+    public void close(boolean cleanLog, boolean testIntegrity);
 
     public void setCacheSize(final int cachesize);
 

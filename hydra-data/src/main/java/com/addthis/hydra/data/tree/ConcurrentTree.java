@@ -45,6 +45,7 @@ import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB;
 import com.addthis.hydra.store.db.IPageDB.Range;
 import com.addthis.hydra.store.db.PageDB;
+import com.addthis.hydra.store.kv.PagedKeyValueStore;
 import com.addthis.hydra.store.skiplist.SkipListCache;
 import com.addthis.hydra.store.util.MeterFileLogger;
 import com.addthis.hydra.store.util.MeterFileLogger.MeterDataSource;
@@ -132,6 +133,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         protected int kvStoreType = defaultKeyValueStoreType;
         protected int cleanQSize = TreeCommonParameters.cleanQMax;
         protected int maxCache = TreeCommonParameters.maxCacheSize;
+        protected int maxPageSize = TreeCommonParameters.maxPageSize;
 
         public Builder(File root, boolean readonly) {
             this.root = root;
@@ -158,16 +160,21 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             return this;
         }
 
+        public Builder maxPageSize(int val) {
+            maxPageSize = val;
+            return this;
+        }
+
         public ConcurrentTree build() throws Exception {
             return new ConcurrentTree(root, readonly,
-                    numDeletionThreads, kvStoreType, cleanQSize, maxCache);
+                    numDeletionThreads, kvStoreType, cleanQSize, maxCache, maxPageSize);
         }
 
     }
 
     private ConcurrentTree(File root, boolean readonly,
             int numDeletionThreads, int kvStoreType,
-            int cleanQSize, int maxCacheSize) throws Exception {
+            int cleanQSize, int maxCacheSize, int maxPageSize) throws Exception {
         //Only attempt mkdirs if we are not readonly. Theoretically should not be needed, but guarding here
         // prevent logic leak created by transient file detection issues. Regardless, while in readonly, we should
         // certainly not be attempting to create directories.
@@ -190,7 +197,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         } else {
             logger = null;
         }
-        source = new PageDB.Builder<>(root, ConcurrentTreeNode.class, TreeCommonParameters.maxPageSize, maxCacheSize)
+        source = new PageDB.Builder<>(root, ConcurrentTreeNode.class, maxPageSize, maxCacheSize)
                 .readonly(readonly).kvStoreType(kvStoreType).build();
         source.setCacheMem(TreeCommonParameters.maxCacheMem);
         source.setPageMem(TreeCommonParameters.maxPageMem);
@@ -217,19 +224,20 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 throw new RuntimeException("missing root in readonly tree");
             }
             treeTrashNode = null;
+            deletionThreadPool = null;
         } else {
             treeRootNode = (ConcurrentTreeNode) dummyRoot.getOrCreateEditableNode("root");
             treeTrashNode = (ConcurrentTreeNode) dummyRoot.getOrCreateEditableNode("trash");
             treeTrashNode.requireNodeDB();
-        }
-        deletionThreadPool = Executors.newScheduledThreadPool(numDeletionThreads,
-                new NamedThreadFactory(scope + "-deletion-", true));
+            deletionThreadPool = Executors.newScheduledThreadPool(numDeletionThreads,
+                    new NamedThreadFactory(scope + "-deletion-", true));
 
-        for (int i = 0; i < numDeletionThreads; i++) {
-            deletionThreadPool.scheduleAtFixedRate(new BackgroundDeletionTask(),
-                    i,
-                    deletionThreadSleepMillis,
-                    TimeUnit.MILLISECONDS);
+            for (int i = 0; i < numDeletionThreads; i++) {
+                deletionThreadPool.scheduleAtFixedRate(new BackgroundDeletionTask(),
+                        i,
+                        deletionThreadSleepMillis,
+                        TimeUnit.MILLISECONDS);
+            }
         }
 
         long openTime = System.currentTimeMillis() - start;
@@ -241,7 +249,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     public ConcurrentTree(File root, boolean readonly) throws Exception {
         this(root, readonly, defaultNumDeletionThreads,
-                defaultKeyValueStoreType, TreeCommonParameters.cleanQMax, TreeCommonParameters.maxCacheSize);
+                defaultKeyValueStoreType, TreeCommonParameters.cleanQMax,
+                TreeCommonParameters.maxCacheSize, TreeCommonParameters.maxPageSize);
     }
 
     private class CacheMediator implements EvictionMediator<CacheKey, ConcurrentTreeNode> {
@@ -477,6 +486,9 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     }
 
     private void shutdownDeletionThreadPool() {
+        if (deletionThreadPool == null)
+            return;
+
         deletionThreadPool.shutdown();
 
         try {
@@ -527,7 +539,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
      */
     @Override
-    public void close(boolean cleanLog) {
+    public void close(boolean cleanLog, boolean testIntegrity) {
         if (!closed.compareAndSet(false, true)) {
             log.trace("already closed");
             return;
@@ -560,7 +572,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         }
         if (source != null) {
             try {
-                source.close(cleanLog);
+                source.close(cleanLog, testIntegrity);
             } catch (Exception ex) {
                 log.warn("", ex);
             }
@@ -573,7 +585,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     @Override
     public void close() {
-        close(false);
+        close(false, false);
     }
 
     @Override
@@ -873,6 +885,16 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             } catch (Exception ex) {
                 logException("Uncaught exception in concurrent tree background deletion thread", ex);
             }
+        }
+    }
+
+    /**
+     * For testing purposes only.
+     */
+    void testIntegrity() {
+        PagedKeyValueStore store = source.getEps();
+        if (store instanceof SkipListCache) {
+            ((SkipListCache) store).testIntegrity();
         }
     }
 }
