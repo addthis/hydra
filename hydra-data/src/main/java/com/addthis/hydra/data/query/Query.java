@@ -52,7 +52,7 @@ public class Query implements Codec.Codable {
     private static final int MAX_PRINT_LENGTH = 3000;
 
     @Codec.Set(codable = false)
-    public QueryStatusObserver queryStatusObserver = null;
+    public volatile QueryStatusObserver queryStatusObserver = null;
 
     //Set the rolling log for trace events
     public static void setTraceLog(RollingLog tLog) {

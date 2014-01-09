@@ -193,6 +193,7 @@ public class QueryTracker {
         QueryOpProcessor queryOpProcessor = null;
         if (consumer instanceof QueryOpProcessor) {
             queryOpProcessor = (QueryOpProcessor) consumer;
+            query.queryStatusObserver = queryOpProcessor.getQueryStatusObserver();
         }
         QueryEntry entry = new QueryEntry(query, queryOpProcessor);
 
