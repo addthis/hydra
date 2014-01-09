@@ -343,24 +343,19 @@ public class MeshQuerySource implements LocalFileHandler {
         }
 
         /**
-         * Part 4 - SEARCH
-         * Run the search -- most of this logic is in QueryEngine.search(). We only take care of logging times and
-         * passing the sendComplete message along.
+         * Part 1 - SETUP
+         * Initialize query run -- parse options, create Query object
          */
-        private void search() {
-            final long searchStartTime = System.currentTimeMillis();
-            finalEng.search(query, queryOpProcessor, bridge.getQueryStatusObserver());
-            queryOpProcessor.sendComplete();
-            final long searchDuration = System.currentTimeMillis() - searchStartTime;
-            if (log.isDebugEnabled() || query.isTraced()) {
-                Query.emitTrace("[QueryReference] search complete " + query.uuid() + " in " + searchDuration + "ms directory: " +
-                                goldDirString + " slow=" + (searchDuration > slowQueryThreshold) + " rowsIn: " + queryOpProcessor.getInputRows());
-            }
-            queryTimes.update(searchDuration, TimeUnit.MILLISECONDS);
+        private void setup() throws Exception {
+            long startTime = System.currentTimeMillis();
+            queueTimes.update(creationTime - startTime, TimeUnit.MILLISECONDS);
+            query = CodecJSON.decodeString(new Query(), options.get("query"));
+            // Parse the query and return a reference to the last QueryOpProcessor.
+            queryOpProcessor = query.getProcessor(bridge, bridge.queryStatusObserver);
         }
 
         /**
-         * Part 3 - ENGINE CACHE
+         * Part 2 - ENGINE CACHE
          * Get a QueryEngine for our query -- check the cache for a suitable candidate, otherwise make one.
          * Most of this logic is handled by the QueryEngineCache.get() function.
          */
@@ -389,15 +384,20 @@ public class MeshQuerySource implements LocalFileHandler {
         }
 
         /**
-         * Part 2 - SETUP
-         * Initialize query run -- parse options, create Query object
+         * Part 3 - SEARCH
+         * Run the search -- most of this logic is in QueryEngine.search(). We only take care of logging times and
+         * passing the sendComplete message along.
          */
-        private void setup() throws Exception {
-            long startTime = System.currentTimeMillis();
-            queueTimes.update(creationTime - startTime, TimeUnit.MILLISECONDS);
-            query = CodecJSON.decodeString(new Query(), options.get("query"));
-            // Parse the query and return a reference to the last QueryOpProcessor.
-            queryOpProcessor = query.getProcessor(bridge, bridge.queryStatusObserver);
+        private void search() {
+            final long searchStartTime = System.currentTimeMillis();
+            finalEng.search(query, queryOpProcessor, bridge.getQueryStatusObserver());
+            queryOpProcessor.sendComplete();
+            final long searchDuration = System.currentTimeMillis() - searchStartTime;
+            if (log.isDebugEnabled() || query.isTraced()) {
+                Query.emitTrace("[QueryReference] search complete " + query.uuid() + " in " + searchDuration + "ms directory: " +
+                                goldDirString + " slow=" + (searchDuration > slowQueryThreshold) + " rowsIn: " + queryOpProcessor.getInputRows());
+            }
+            queryTimes.update(searchDuration, TimeUnit.MILLISECONDS);
         }
     }
 
