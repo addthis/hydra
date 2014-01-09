@@ -134,7 +134,7 @@ public class Query implements Codec.Codable {
     }
 
     public Query(String job, String path, String ops[]) {
-        this(job, new String[] { path }, ops);
+        this(job, new String[]{path}, ops);
     }
 
     public Query(String job, String paths[], String ops[]) {

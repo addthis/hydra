@@ -33,12 +33,13 @@ import java.util.concurrent.TimeUnit;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.bundle.channel.DataChannelOutput;
+import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.data.query.source.ErrorHandlingQuerySource;
 import com.addthis.hydra.data.query.source.QueryHandle;
-import com.addthis.hydra.data.query.source.QuerySource;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobConfigManager;
@@ -49,9 +50,6 @@ import com.addthis.hydra.query.util.QueryData;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
-
-import com.addthis.codec.CodecJSON;
-import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.meshy.ChannelState;
 import com.addthis.meshy.MeshyServer;
 
@@ -60,7 +58,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class MeshQueryMaster implements ErrorHandlingQuerySource {
 
@@ -302,8 +299,7 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
                 sourceMap.put(entry.getKey(), queryDataSet);
             }
             MeshSourceAggregator aggregator = new MeshSourceAggregator(sourceMap, new ConcurrentHashMap<>(hostMap), this);
-            QuerySource queryWrapper = tracker.createCacheWrapper(aggregator, potentialQueryDataList);
-            QueryHandle handle = queryWrapper.query(query, consumer);
+            QueryHandle handle = tracker.runAndTrackQuery(aggregator, potentialQueryDataList, query, consumer);
             if (enableZooKeeper) {
                 jobFailureDetector.indicateSuccess(query.getParameter("job", query.getJob()));
             }

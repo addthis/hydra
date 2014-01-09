@@ -32,8 +32,8 @@ import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.RollingLog;
-import com.addthis.basis.util.Strings;
 
+import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.channel.QueryChannelServer;
 import com.addthis.hydra.job.IJob;
@@ -44,7 +44,6 @@ import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
-import com.addthis.codec.CodecJSON;
 import com.google.common.base.Optional;
 
 import com.fasterxml.jackson.core.JsonFactory;
@@ -65,7 +64,6 @@ import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ThreadPool;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class QueryServer extends AbstractHandler {
 
@@ -137,7 +135,7 @@ public class QueryServer extends AbstractHandler {
 
         RollingLog eventLog = new RollingLog(new File(logDir, "events-query"), "query", eventLogCompress, logMaxSize, logMaxAge);
 
-        tracker = new QueryTracker(eventLog).setCacheEnabled(Parameter.boolValue("query.cache.enable", true));
+        tracker = new QueryTracker(eventLog);
         this.meshQueryMaster = new MeshQueryMaster(tracker);
 
         queryServer = new QueryChannelServer(queryPort, meshQueryMaster);
@@ -227,15 +225,6 @@ public class QueryServer extends AbstractHandler {
             response.getWriter().write(MeshSourceAggregator.getSlownessMetrics());
         } else if (target.equals("/q/")) {
             response.sendRedirect("/query/call?" + kv.toString());
-        } else if (target.equals("/set")) {
-            if (kv.getValue("help") != null) {
-                response.getWriter().write("log.vm, tracker.enable\n\n");
-            } else {
-                tracker.setCacheEnabled(kv.getIntValue("cache.enable", tracker.isCacheEnabled() ? 1 : 0) == 1);
-            }
-            response.getWriter().write(Strings.join(new Object[]{
-                    "['tracker.cache.enable':" + tracker.isCacheEnabled() + "]",
-            }, ", "));
         } else if (target.equals("/query/call") || target.equals("/query/call/")) {
             rawQueryCalls.inc();
             QueryServlet.handleQuery(meshQueryMaster, kv, request, response);
@@ -299,12 +288,6 @@ public class QueryServer extends AbstractHandler {
                 JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
                 entryJSON.put("hostEntries", entryInfo.hostInfoSet.size());
                 entryJSON.put("state", 0);
-                queries.put(entryJSON);
-            }
-            for (QueryTracker.QueryEntryInfo entryInfo : tracker.getWaiting()) {
-                JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
-                entryJSON.put("hostEntries", entryInfo.hostInfoSet.size());
-                entryJSON.put("state", 1);
                 queries.put(entryJSON);
             }
             for (QueryTracker.QueryEntryInfo entryInfo : tracker.getQueued()) {
