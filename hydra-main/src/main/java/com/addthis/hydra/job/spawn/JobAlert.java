@@ -14,10 +14,8 @@
 package com.addthis.hydra.job.spawn;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Strings;
@@ -68,6 +66,9 @@ public class JobAlert implements Codec.Codable {
     @Codec.Set(codable = true)
     private final HashMap<String, String> activeJobs;
 
+    /* Map temporarily storing prior active jobs that have since cleared */
+    private final HashMap<String, String> priorActiveJobs;
+
     private static final Map<Integer, String> alertMessageMap = ImmutableMap.of(ON_ERROR, "Task is in Error ",
             ON_COMPLETE, "Task has Completed ",
             RUNTIME_EXCEEDED, "Task runtime exceeded ",
@@ -79,6 +80,7 @@ public class JobAlert implements Codec.Codable {
         this.timeout = 0;
         this.email = "";
         activeJobs = new HashMap<>();
+        priorActiveJobs = new HashMap<>();
     }
 
     public JobAlert(String alertId, int type, int timeout, String email, String[] jobIds) {
@@ -89,6 +91,7 @@ public class JobAlert implements Codec.Codable {
         this.email = email;
         this.jobIds = jobIds;
         activeJobs = new HashMap<>();
+        priorActiveJobs = new HashMap<>();
     }
 
     public String getAlertId() {
@@ -169,10 +172,10 @@ public class JobAlert implements Codec.Codable {
      */
     public boolean checkAlertForJobs(List<Job> jobs) {
         boolean activeNow = false;
-        Set<String> activeJobBefore;
-        Set<String> activeJobAfter;
+        HashMap<String, String> activeJobBefore;
+        HashMap<String, String> activeJobAfter;
         synchronized (activeJobs) {
-            activeJobBefore = new HashSet<>(activeJobs.keySet());
+            activeJobBefore = new HashMap<>(activeJobs);
             activeJobs.clear();
             for (Job job : jobs) {
                 if (alertActiveForJob(job)) {
@@ -181,12 +184,14 @@ public class JobAlert implements Codec.Codable {
                     // Don't break the loop to ensure that all triggering jobs will be added to activeJobs
                 }
             }
-            activeJobAfter = new HashSet<>(activeJobs.keySet());
+            activeJobAfter = new HashMap<>(activeJobs);
         }
         if (activeNow && !hasAlerted()) {
             alerted();
             return true;
         } else if (!activeNow && hasAlerted()) {
+            priorActiveJobs.clear();
+            priorActiveJobs.putAll(activeJobBefore);
             clear();
             return true;
         } else if (!activeJobBefore.equals(activeJobAfter)) {
@@ -202,13 +207,16 @@ public class JobAlert implements Codec.Codable {
         }
     }
 
-    public String getCurrentStateMessage() {
-        String base = hasAlerted() ? (hasChanged ? "[CHANGE]" : "[TRIGGER] ") : "[CLEAR] ";
+    public String getAlertStatus() {
         hasChanged = false;
-        if (alertMessageMap.containsKey(type)) {
-            return base + alertMessageMap.get(type);
-        }
-        return base + " unknown alert";
+        StringBuilder sb = new StringBuilder();
+        sb.append( hasAlerted() ? (hasChanged ? "[CHANGE] " : "[TRIGGER] ") : "[CLEAR] " );
+        sb.append( alertMessageMap.containsKey(type) ? alertMessageMap.get(type) : "unknown alert" );
+        sb.append(" - ");
+        sb.append(JobAlertRunner.getClusterHead());
+        sb.append(" - ");
+        sb.append(hasAlerted() ? getActiveJobs().toString() : priorActiveJobs.toString());
+        return sb.toString();
     }
 
     private boolean alertActiveForJob(Job job) {

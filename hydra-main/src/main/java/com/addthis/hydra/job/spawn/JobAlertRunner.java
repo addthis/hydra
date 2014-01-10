@@ -53,8 +53,8 @@ public class JobAlertRunner {
     private final Spawn spawn;
     private final SpawnDataStore spawnDataStore;
 
-    private static final long REPEAT = Parameter.longValue("spawn.job.alert.repeat", 5 * 60 * 1000);
-    private static final long DELAY = Parameter.longValue("spawn.job.alert.delay", 5 * 60 * 1000);
+    private static final long REPEAT = Parameter.longValue("spawn.job.alert.repeat", 60 * 1000);
+    private static final long DELAY = Parameter.longValue("spawn.job.alert.delay", 60 * 1000);
 
     private static final long GIGA_BYTE = (long) Math.pow(1024, 3);
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd-HHmm");
@@ -214,16 +214,15 @@ public class JobAlertRunner {
      * @param jobAlert The alert to modify
      */
     private void emailAlert(JobAlert jobAlert) {
-        String message = jobAlert.getCurrentStateMessage();
+        String status = jobAlert.getAlertStatus();
         Map<String, String> activeJobs = jobAlert.getActiveJobs();
-        log.info("Alerting " + jobAlert.getEmail() + " :: jobs : " + activeJobs.keySet() + " : " + message);
-        String subject = message + " - " + clusterHead + " - " + activeJobs.toString();
+        log.info("Alerting " + jobAlert.getEmail() + " :: jobs : " + activeJobs.keySet() + " : " + status);
         StringBuilder sb = new StringBuilder();
-        sb.append("Alert: " + jobAlert.getCurrentStateMessage() + " \n");
+        sb.append("Alert: " + jobAlert.getAlertStatus() + " \n");
         for (String jobId : activeJobs.keySet()) {
              sb.append(summary(spawn.getJob(jobId)) + "\n");
         }
-        EmailUtil.email(jobAlert.getEmail(), subject, sb.toString());
+        EmailUtil.email(jobAlert.getEmail(), status, sb.toString());
         putAlert(jobAlert.getAlertId(), jobAlert);
     }
 
@@ -359,6 +358,10 @@ public class JobAlertRunner {
                 return null;
             }
         }
+    }
+
+    public static String getClusterHead() {
+        return clusterHead;
     }
 
 }
