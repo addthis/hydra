@@ -27,9 +27,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,6 +42,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 
 import com.addthis.basis.jmx.MBeanRemotingSupport;
 import com.addthis.basis.util.Bench;
@@ -65,6 +64,8 @@ import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryEngine;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.channel.QueryChannelServer;
+import com.addthis.hydra.data.query.source.LiveMeshyServer;
+import com.addthis.hydra.data.query.source.LiveQueryReference;
 import com.addthis.hydra.data.query.source.QueryHandle;
 import com.addthis.hydra.data.query.source.QuerySource;
 import com.addthis.hydra.data.tree.ConcurrentTree;
@@ -72,11 +73,11 @@ import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.Tree;
 import com.addthis.hydra.data.tree.TreeCommonParameters;
 import com.addthis.hydra.data.util.TimeField;
-import com.addthis.hydra.mq.MessageProducer;
-import com.addthis.hydra.mq.RabbitMessageProducer;
 import com.addthis.hydra.task.output.DataOutputTypeList;
 import com.addthis.hydra.task.output.tree.TreeMapperStats.Snapshot;
 import com.addthis.hydra.task.run.TaskRunConfig;
+import com.addthis.meshy.MeshyServer;
+import com.addthis.meshy.VirtualFileSystem;
 
 import org.apache.commons.lang3.CharEncoding;
 
@@ -84,7 +85,6 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * This output <span class="hydra-summary">transforms bundle streams into trees for statistical analysis and data queries</span>
@@ -235,10 +235,11 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
     private PathOutput outputs[];
 
     /**
-     * Default is either "mapper.live" configuration value or false.
+     * Default is either "mapper.live" configuration value or -1.
+     * Any number > -1 is taken to be the mesh port number and enables live queries.
      */
     @Codec.Set(codable = true)
-    private boolean live = Parameter.boolValue("mapper.live", false);
+    private int live = Parameter.intValue("mapper.live", -1);
 
     @Codec.Set(codable = true)
     private Integer nodeCache;
@@ -277,10 +278,10 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
 
     private ObjectName jmxname;
     private MBeanRemotingSupport jmxremote;
-    private MessageProducer queryProducer;
 
     private QueryChannelServer queryServer;
     private QueryEngine queryEngine;
+    private MeshyServer liveQueryServer;
     private TreeMapperStats mapstats;
     private TaskRunConfig config;
 
@@ -466,9 +467,9 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
             }
         }
 
-        if (config.jobId != null && live) {
-            connectToMQ();
-            setRedirect(true);
+        if (config.jobId != null && live > -1) {
+            QueryEngine liveQueryEngine = new QueryEngine(tree);
+            connectToMesh(treePath.toFile(), runConfig.jobId, liveQueryEngine);
         }
 
         startTime = System.currentTimeMillis();
@@ -479,38 +480,14 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
         }
     }
 
-    private void connectToMQ() throws Exception {
-        queryProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerHost, Integer.valueOf(batchBrokerPort));
+    private void connectToMesh(File root, String jobId, QueryEngine engine) throws IOException {
+        LiveQueryReference queryReference = new LiveQueryReference(root, jobId, engine);
+        liveQueryServer = new LiveMeshyServer(live, queryReference);
     }
 
     /** */
     public BundleField bindField(String key) {
         return getFormat().getField(key);
-    }
-
-    /**
-     * hydra/minion/client helper constructs appropriate message to query worker for port redirects
-     */
-    public void setPortRedirect(String host, String jobid, int node, int port) throws Exception {
-        HashMap<String, String> msg = new HashMap<>();
-        msg.put("type", "path.redirect");
-        msg.put("host", host);
-        msg.put("id", jobid);
-        msg.put("node", Integer.toString(node));
-        msg.put("port", Integer.toString(port));
-        queryProducer.sendMessage(msg, host);
-        queryProducer.sendMessage(msg, "query.master");
-    }
-
-    private void setRedirect(boolean start) {
-        try {
-            if (queryProducer != null) {
-                log.info((start ? "en" : "dis") + "abling query redirect via mq for " + config.jobId + "/" + config.node + " on host " + localhost + ":" + queryServer.getPort());
-                setPortRedirect(localhost, config.jobId, config.node, start ? queryServer.getPort() : 0);
-            }
-        } catch (Exception ex)  {
-            log.warn("", ex);
-        }
     }
 
     @Override
@@ -906,8 +883,10 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
                     output.exec(tree);
                 }
             }
-            // turn of local query redirect
-            setRedirect(false);
+            // turn off live queries
+            if (liveQueryServer != null) {
+                liveQueryServer.close();
+            }
             // disable web interface
             jetty.stop();
             if (queryServer != null) {
@@ -926,9 +905,6 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
                     jmxremote.stop();
                     jmxremote = null;
                 }
-            }
-            if (queryProducer != null) {
-                queryProducer.close();
             }
         } catch (Exception ex) {
             throw new RuntimeException(ex);
