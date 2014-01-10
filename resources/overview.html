@@ -1,0 +1,61 @@
+<html>
+    <head>
+       <title>Hydra User Reference</title>
+    </head>
+    <body>
+    The Hydra user reference is divided into categories where each category corresponds to one of the
+    components a Hydra job. Each category has is a summary page that provides a description
+    of the category and a list of each item in the category. The list of
+    items includes a brief description for each item.
+    <p>The approximate status of the documentation writing for each category is:
+    <table width="50%">
+        <tr>
+            <th style="text-align:left">Category</th>
+            <th style="text-align:left">Description</th>
+        </tr>
+        <tr><td>&nbsp;</td></tr>
+        <tr>
+            <td><a href="com/addthis/hydra/task/run/TaskRunnable.html">Hydra Jobs</a></td>
+            <td>top-level specification of the Hydra jobs</td>
+        </tr>
+        <tr>
+            <td><a href="com/addthis/hydra/task/source/TaskDataSource.html">Input Sources</a></td>
+            <td>input to a job</td>
+        </tr>
+        <tr>
+            <td><a href="com/addthis/hydra/data/filter/bundle/BundleFilter.html">Bundle Filters</a></td>
+            <td>transformations that accept a bundle as input</td>
+        </tr>
+        <tr>
+            <td><a href="com/addthis/hydra/data/filter/value/ValueFilter.html">Value Filters</a></td>
+            <td>transformation that accept a value as input</td>
+        </tr>
+        <tr>
+            <td><a href="com/addthis/hydra/task/output/TaskDataOutput.html">Output Sinks</a></td>
+            <td>output from a job</td>
+        </tr>
+        <tr>
+            <td><a href="com/addthis/hydra/task/output/tree/PathElement.html">Path Elements</a></td>
+            <td>describe the nodes in tree output</td>
+        </tr>
+        <tr>
+            <td><a href="com/addthis/hydra/data/tree/TreeDataParameters.html">Data Attachments</a></td>
+            <td>additional information that is attached to tree nodes</td>
+        </tr>
+        <tr>
+            <td><a href="com/addthis/hydra/data/query/QueryOp.html">Query Operations</a></td>
+            <td>query operations that are performed on tree output</td>
+        </tr>
+    </table>
+    <p>Most Hydra jobs are specified using one of the forms listed in the "Hydra Jobs" category.
+    This would be a good place to start if you have just started reading this reference guide.
+    The most common types of Hydra jobs, split jobs and map jobs, are both specified using the
+    <code>'type : "<a href="com/addthis/hydra/task/map/StreamMapper.html">map</a>"'</code> specification.
+
+    <p>Each documentation page should include a summary of the item, one or more examples illustrating
+    how to use that item in a job specification, and a description for each field of the item.
+    If you have any questions, comments, additions, or suggestions for the documentation
+    please submit it on IRC on #hydra at freenode.net or <a href="http://github.com/addthis/hydra/issues">github</a>.</p>
+    </body>
+</head>
+</html>
