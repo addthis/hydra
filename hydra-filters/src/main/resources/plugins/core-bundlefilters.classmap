@@ -19,6 +19,7 @@
 "random-field", com.addthis.hydra.data.filter.bundle.BundleFilterRandomField
 "recent1", com.addthis.hydra.data.filter.bundle.BundleFilterRecent1
 "recent2", com.addthis.hydra.data.filter.bundle.BundleFilterRecent2
+"sleep", com.addthis.hydra.data.filter.bundle.BundleFilterSleep
 "template", com.addthis.hydra.data.filter.bundle.BundleFilterTemplate
 "test", com.addthis.hydra.data.filter.bundle.BundleFilterTest
 "time", com.addthis.hydra.data.filter.bundle.BundleFilterTime
