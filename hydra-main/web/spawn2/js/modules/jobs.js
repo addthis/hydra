@@ -763,7 +763,8 @@ function(
                 'handleKillButtonClick',
                 'handleEnableButtonClick',
                 'handleDisableButtonClick',
-                'handleDeleteButtonClick'
+                'handleDeleteButtonClick',
+                'handleCreateAlertButtonClick'
             );
             this.hasRendered=false;
             this.listenTo(app.user,"change:username",this.handleUsernameChange);
@@ -778,6 +779,7 @@ function(
                 this.views.selectable.find("#enableButton").on("click",this.handleEnableButtonClick);
                 this.views.selectable.find("#disableButton").on("click",this.handleDisableButtonClick);
                 this.views.selectable.find("#deleteButton").on("click",this.handleDeleteButtonClick);
+                this.views.selectable.find("#createAlertButton").on("click", this.handleCreateAlertButtonClick);
                 this.hasRendered=true;
             }
             //Jobs filter
@@ -823,6 +825,10 @@ function(
             var ids = this.getSelectedIds();
             this.collection.deleteSelected(ids);
         },
+        handleCreateAlertButtonClick:function(event){
+            var ids = this.getSelectedIds();
+            app.router.navigate("alerts/create/" + ids.join(), {trigger:true});
+        },        
         remove:function(){
             this.$el.detach();
         },

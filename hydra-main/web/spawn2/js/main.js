@@ -628,10 +628,10 @@ function(
         app.showView(table,"#alert");
         app.makeHtmlTitle("Alerts");
     });
-    app.router.on("route:showAlertsDetail",function(alertId){
+    app.router.on("route:showAlertsDetail",function(alertId, jobIds){
         var alert;
         if(_.isEqual(alertId,"create")){
-            alert = new Alert.Model({});
+            alert = new Alert.Model({jobIds: jobIds});
         }else{
             alert = app.alertCollection.get(alertId);
         }

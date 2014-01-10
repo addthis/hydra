@@ -105,7 +105,7 @@ function(
         		{
         			"sTitle":"Alert ID",
             		"mData": "alertId",
-            		"sWidth": "20%",
+            		"sWidth": "18%",
             		"bVisible":true,
             		"bSearchable":true,
             		"mRender":function(val,type,data){
@@ -115,14 +115,14 @@ function(
         		{
         			"sTitle":"Job IDs",
             		"mData": "jobIds",
-            		"sWidth": "25%",
+            		"sWidth": "22%",
             		"bVisible":true,
             		"bSearchable":true,            
         		},
         		{
         			"sTitle":"Type",
             		"mData": "type",
-            		"sWidth": "15%",
+            		"sWidth": "12%",
             		"bVisible":true,
             		"bSearchable":true,
             		"mRender": function(val,type,data) {
@@ -139,10 +139,20 @@ function(
         		{
         			"sTitle":"Emails",
             		"mData": "email",
-            		"sWidth": "25%",
+            		"sWidth": "20%",
             		"bVisible":true,
             		"bSearchable":true,
-        		},         
+        		},
+        		{
+        			"sTitle":"Status",
+            		"mData": "lastAlertTime",
+            		"sWidth": "23%",
+            		"bVisible":true,
+            		"bSearchable":true,
+            		"mRender": function(val, type, data) {
+            			return val < 0 ? "Clear" : "Triggered at " + util.convertToDateTimeText(val);
+            		}
+        		},         		
 				];
     			DataTable.View.prototype.initialize.apply(this,[{
     				columns:columns,

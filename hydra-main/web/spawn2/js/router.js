@@ -53,6 +53,7 @@ define([
                 "rebalanceParams":"showRebalanceParams",
                 "alerts":"showAlertsTable",
                 "alerts/:alertId":"showAlertsDetail",
+                "alerts/:alertId/:jobIds":"showAlertsDetail",                
             }
         });
         return Router;
