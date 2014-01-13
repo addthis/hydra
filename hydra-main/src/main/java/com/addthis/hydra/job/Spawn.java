@@ -3070,7 +3070,7 @@ public class Spawn implements Codec.Codable {
                                 log.warn("ERROR: missing job for id " + jobid);
                                 continue;
                             }
-                            if (job.getState() == JobState.IDLE && job.getEndTime() == null) {
+                            if (job.getState() == JobState.IDLE && job.getStartTime() == null && job.getEndTime() == null) {
                                 job.setEndTime(clock);
                             }
                             // check for recurring jobs (that aren't already running)
