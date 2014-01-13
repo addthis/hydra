@@ -15,6 +15,8 @@ package com.addthis.hydra.data.filter.bundle;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.addthis.basis.util.Strings;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundlePrinter;
 import com.addthis.codec.Codec;
@@ -91,8 +93,11 @@ public class BundleFilterDebugPrint extends BundleFilter {
     public boolean filterExec(Bundle bundle) {
         if (bundleCounter.getAndIncrement() < maxBundles) {
             String bundleString = formatBundle(bundle);
-            log.warn(prefix + " : " + bundleString);
-
+            if (Strings.isEmpty(prefix)) {
+                log.warn(bundleString);
+            } else {
+                log.warn(prefix + " : " + bundleString);
+            }
             if (enableCacheOutput) {
                 cacheOutput = bundleString;
             }

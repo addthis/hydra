@@ -531,7 +531,7 @@ public final class Tree implements DataTree, MeterDataSource {
     }
 
     public void close() {
-        close(false);
+        close(false, false);
     }
 
 
@@ -539,8 +539,9 @@ public final class Tree implements DataTree, MeterDataSource {
      * Close the tree.
      *
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
+     * @param testIntegrity if true then test the integrity of the pageDB. This is a slow operation.
      */
-    public void close(boolean cleanLog) {
+    public void close(boolean cleanLog, boolean testIntegrity) {
         if (!closed.compareAndSet(false, true)) {
             log.trace("already closed");
             return;
@@ -572,7 +573,7 @@ public final class Tree implements DataTree, MeterDataSource {
         }
         if (source != null) {
             try {
-                source.close(cleanLog);
+                source.close(cleanLog, testIntegrity);
             } catch (Exception ex)  {
                 log.warn("", ex);
             }

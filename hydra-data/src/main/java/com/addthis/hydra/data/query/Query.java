@@ -52,7 +52,7 @@ public class Query implements Codec.Codable {
     private static final int MAX_PRINT_LENGTH = 3000;
 
     @Codec.Set(codable = false)
-    public QueryStatusObserver queryStatusObserver = null;
+    public volatile QueryStatusObserver queryStatusObserver = null;
 
     //Set the rolling log for trace events
     public static void setTraceLog(RollingLog tLog) {
@@ -134,7 +134,7 @@ public class Query implements Codec.Codable {
     }
 
     public Query(String job, String path, String ops[]) {
-        this(job, new String[] { path }, ops);
+        this(job, new String[]{path}, ops);
     }
 
     public Query(String job, String paths[], String ops[]) {
@@ -243,18 +243,6 @@ public class Query implements Codec.Codable {
     public Query setCacheTTL(long ttlms) {
         cachettl = ttlms;
         return this;
-    }
-
-    /**
-     * mostly to support async queries
-     */
-    public Query createClone() {
-        Query newwrapper = new Query(job, paths, ops);
-        newwrapper.params.putAll(params);
-        newwrapper.trace = trace;
-        newwrapper.cachettl = cachettl;
-        newwrapper.uuid = uuid;
-        return newwrapper;
     }
 
     public List<QueryElement[]> getQueryPaths() {

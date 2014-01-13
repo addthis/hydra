@@ -96,6 +96,7 @@ public class PathPrune extends PathElement {
         ClosableIterator<DataTreeNode> keyNodeItr = root.getIterator();
         int deleted = 0;
         int kept = 0;
+        int total = 0;
         while (keyNodeItr.hasNext()) {
             DataTreeNode treeNode = keyNodeItr.next();
             Map<String, TreeNodeData> dataMap = treeNode.getDataMap();
@@ -107,6 +108,10 @@ public class PathPrune extends PathElement {
                     deleted++;
                 } else {
                     kept++;
+                }
+                total++;
+                if (total % 100000 == 0) {
+                    logger.info("Iterating through children of {}, deleted: {} kept: {}", new Object[]{root.getName(), deleted, kept});
                 }
             }
         }

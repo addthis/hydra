@@ -818,7 +818,7 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
         sibling.estimates = target.estimates;
         sibling.estimateTotal = target.estimateTotal;
 
-        target.nextFirstKey = sibling.firstKey;
+        target.nextFirstKey = sibMinKey;
         target.size = newSize;
 
         int prevMem = target.getMemoryEstimate();
@@ -2005,7 +2005,7 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
      */
     @Override
     public void close() {
-        doClose(false, false);
+        doClose(false, false, false);
     }
 
     /**
@@ -2014,8 +2014,8 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
      */
     @Override
-    public void close(boolean cleanLog) {
-        doClose(cleanLog, false);
+    public void close(boolean cleanLog, boolean testIntegrity) {
+        doClose(cleanLog, false, testIntegrity);
     }
 
 
@@ -2027,10 +2027,10 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
      * then perhaps a new method should be introduced instead.
      */
     void waitForShutdown() {
-        doClose(false, true);
+        doClose(false, true, false);
     }
 
-    private void doClose(boolean cleanLog, boolean wait) {
+    private void doClose(boolean cleanLog, boolean wait, boolean testIntegrity) {
         if (!shutdownGuard.getAndSet(true)) {
             if (wait) {
                 waitForPageEviction();
@@ -2039,6 +2039,9 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
             shutdownEvictionThreads.set(true);
             waitForEvictionThreads();
             pushAllPagesToDisk();
+            if (testIntegrity) {
+                testIntegrity();
+            }
             closeExternalStore(cleanLog);
             log.info("pages: encoded=" + numPagesEncoded.get() +
                      " decoded=" + numPagesDecoded.get() +
@@ -2131,7 +2134,7 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
      * Close the external store.
      *
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
-     */
+     **/
     private void closeExternalStore(boolean cleanLog) {
         externalStore.close(cleanLog);
     }
@@ -2199,6 +2202,44 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
     @Override
     public void setMemEstimateInterval(int interval) {
         this.estimateInterval = interval;
+    }
+
+    public void testIntegrity() {
+        int counter = 0;
+        byte[] encodedKey = externalStore.firstKey();
+        byte[] encodedPage = externalStore.get(encodedKey);
+        K key = keyCoder.keyDecode(encodedKey);
+        do {
+            Page<K, V> newPage = Page.generateEmptyPage(this, key);
+            byte[] encodedNextKey = externalStore.higherKey(encodedKey);
+            if (encodedNextKey != null) {
+                newPage.decode(encodedPage);
+                K nextKey = keyCoder.keyDecode(encodedNextKey);
+                if (newPage.nextFirstKey == null) {
+                    log.warn("On page " + counter + " the firstKey is " +
+                             newPage.firstKey + " the length is " + newPage.size +
+                             " the nextFirstKey is null" +
+                             " and the next page is associated with key " + nextKey);
+                    assert(false);
+                } else if (!newPage.nextFirstKey.equals(nextKey)) {
+                    int compareTo = compareKeys(newPage.nextFirstKey, nextKey);
+                    char direction = compareTo > 0 ? '>' : '<';
+                    log.warn("On page " + counter + " the firstKey is " +
+                             newPage.firstKey + " the length is " + newPage.size +
+                             " the nextFirstKey is " + newPage.nextFirstKey +
+                    " which is " + direction + " the next page is associated with key " + nextKey);
+                    assert(false);
+                }
+                key = nextKey;
+                encodedPage = externalStore.get(encodedNextKey);
+            }
+            encodedKey = encodedNextKey;
+            counter++;
+            if (counter % 10000 == 0) {
+                log.info("Scanned " + counter + " pages.");
+            }
+        } while (encodedKey != null);
+        log.info("Scanned " + counter + " pages.");
     }
 
 }

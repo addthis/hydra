@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.query;
+package com.addthis.hydra.data.query;
 
 import java.io.File;
 
@@ -25,8 +25,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.data.query.QueryEngine;
-import com.addthis.hydra.data.query.QueryEngineDirectory;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.ReadTree;
 
@@ -46,7 +44,6 @@ import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * This class implements an LRU cache to keep our QueryEngines. It is instantiated only from MeshQuerySource.

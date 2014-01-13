@@ -45,13 +45,11 @@ import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.io.DataChannelCodec;
+import com.addthis.hydra.data.query.FramedDataChannelReader;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.source.QueryConsumer;
 import com.addthis.hydra.data.query.source.QueryHandle;
-import com.addthis.hydra.query.HostMetadataTracker;
-import com.addthis.hydra.query.HostMetricTurnaroundTime;
-import com.addthis.hydra.query.HostSlownessTracker;
 import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.meshy.service.file.FileReference;
 import com.addthis.meshy.service.stream.SourceInputStream;
@@ -64,7 +62,6 @@ import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class MeshSourceAggregator implements com.addthis.hydra.data.query.source.QuerySource {
 
@@ -94,10 +91,11 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
     private static final int stragglerCheckPeriod = Parameter.intValue("meshSourceAggregator.stragglerCheckPeriodMillis", 1000);
     // Every 100 ms, check for stragglers
     private static final double stragglerCheckHostPercentage = Double.parseDouble(Parameter.value("meshSourceAggregator.stragglerCheckHostPercentage", ".2"));
+    // alternate straggler method
+    private static final boolean useStdDevStragglers = Parameter.boolValue("meshSourceAggregator.useStdDevStraggles", false);
     // A task could be a straggler if it's in the last 10% of tasks to return
     private static final double stragglerCheckMeanRuntimeFactor = Double.parseDouble(Parameter.value("meshSourceAggregator.stragglerCheckMeanRuntimeFactor", "1.3"));
     // A task actually is a straggler if its runtime is more than 1.5 times the mean runtime of tasks for this query
-    private final Lock runtimeLock = new ReentrantLock();
     private static final boolean prioritiseReadOnlyWorkers = Parameter.boolValue("meshSourceAggregator.prioritiseReadOnlyWorkers", false);
     private static final int pollWaitTime = Parameter.intValue("meshSourceAggregator.pollWaitTime", 50);
 
@@ -105,6 +103,9 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
      * Identifies the number of standard deviations required to run stragglers when hosts are slow
      */
     private static final double MULTIPLE_STD_DEVS = Double.parseDouble(Parameter.value("meshSourceAggregator.multipleStdDevs", "2"));
+
+    private static final AtomicBoolean initialize = new AtomicBoolean(false);
+    private static final AtomicBoolean exiting = new AtomicBoolean(false);
 
     /* metrics */
     private static Counter totalQueries = Metrics.newCounter(MeshSourceAggregator.class, "totalQueries");
@@ -115,64 +116,9 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
     private final ConcurrentHashMap<Integer, String> queryResponders = new ConcurrentHashMap<Integer, String>();
     private final int totalTasks;
     private final long startTime;
-    private final MeshQueryMaster meshQueryMaster;
+    private final Lock runtimeLock = new ReentrantLock();
     private AggregateHandle handle;
-    private static final AtomicBoolean initialize = new AtomicBoolean(false);
-    private static final AtomicBoolean exiting = new AtomicBoolean(false);
     private static StragglerCheckThread stragglerCheckThread;
-
-    public interface SettingsMBean {
-
-        public boolean getUseStdDevStragglers();
-
-        public void setUseStdDevStragglers(boolean useStdDeviationForStragglers);
-
-        public boolean getUseSlowHost();
-
-        public void setUseSlowHost(boolean useSlowHostDetection);
-    }
-
-    public static class Settings implements SettingsMBean {
-
-        boolean useStdDevStragglers = false;
-        boolean useSlowHost = false;
-
-        public Settings() {
-            setUseSlowHost(Parameter.boolValue("meshSourceAggregator.useSlowHostDetection", false));
-            setUseStdDevStragglers(Parameter.boolValue("meshSourceAggregator.useStdDeviationForStragglers", false));
-            MBeanRegistrar registrar = new MBeanRegistrar();
-            registrar.registerMBean(this, "com.addthis.hydra.query.MeshQueryMaster:type=AggregatorSettings");
-        }
-
-        public boolean getUseStdDevStragglers() {
-            return useStdDevStragglers;
-        }
-
-        public void setUseStdDevStragglers(boolean useStdDevStragglers) {
-            this.useStdDevStragglers = useStdDevStragglers;
-        }
-
-        public boolean getUseSlowHost() {
-            return useSlowHost;
-        }
-
-        public void setUseSlowHost(boolean useSlowHost) {
-            this.useSlowHost = useSlowHost;
-        }
-    }
-
-    static Settings settingsBean = new Settings();
-
-    /**
-     * Host metadata tracker
-     */
-    private static final HostMetadataTracker HOST_METADATA_TRACKER = new HostMetadataTracker();
-
-    /**
-     * Slowness tracker using turnaround time
-     */
-    private static final HostSlownessTracker HOST_SLOWNESS_TURNAROUND_TIME =
-            new HostSlownessTracker(new HostMetricTurnaroundTime(HOST_METADATA_TRACKER, MULTIPLE_STD_DEVS));
 
     static {
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -183,7 +129,6 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
     }
 
     public MeshSourceAggregator(Map<Integer, Set<QueryData>> sourcesByTaskID, Map<String, Boolean> hostMap, MeshQueryMaster meshQueryMaster) {
-        this.meshQueryMaster = meshQueryMaster;
         this.sourcesByTaskID = sourcesByTaskID;
         this.hostMap = hostMap;
         totalTasks = sourcesByTaskID.size();
@@ -197,10 +142,6 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
             }
         }
         this.startTime = JitterClock.globalTime();
-    }
-
-    public static String getSlownessMetrics() {
-        return HOST_SLOWNESS_TURNAROUND_TIME.getJsonMetrics();
     }
 
     @Override
@@ -221,12 +162,7 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                             requestQueryData(queryData, query);
                         }
                     } else {
-                        QueryData chosenQueryData;
-                        if (settingsBean.getUseSlowHost()) {
-                            chosenQueryData = allocateQueryTaskUsingHostMetrics(entry.getValue(), hostMap);
-                        } else {
-                            chosenQueryData = allocateQueryTaskLegacy(taskPerHostCount, entry.getValue(), hostMap);
-                        }
+                        QueryData chosenQueryData = allocateQueryTaskLegacy(taskPerHostCount, entry.getValue(), hostMap);
                         entry.getValue().remove(chosenQueryData);
                         requestQueryData(chosenQueryData, query);
                     }
@@ -244,7 +180,6 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
     private String requestQueryData(QueryData queryData, Query query) {
         QuerySource reader = new QuerySource(queryData, handle, query);
         readerQueue.add(reader);
-        HOST_METADATA_TRACKER.addHostToQuery(query.uuid(), queryData.hostEntryInfo.getHostName());
         if (log.isTraceEnabled()) {
             log.trace("Setting start time. QueryID:" + query.uuid() + " host:" + queryData.hostEntryInfo.getHostName());
         }
@@ -313,17 +248,6 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
             log.warn("[aggregate.handle] cancel called.  canceled:" + canceled.get() + " erred:" + errored.get());
             // only cancel one time here
             if (canceled.compareAndSet(false, true)) {
-                // Cancelling the whole query
-                if (!done.get())   // Avoid updating the metrics twice
-                {
-                    try //important not to let any error stop us from closing connections
-                    {
-                        HOST_SLOWNESS_TURNAROUND_TIME.commitQueryHostMetrics(query.uuid());
-                        HOST_METADATA_TRACKER.deleteQueryMetrics(query.uuid());
-                    } catch (Exception e) {
-                        log.warn("Exception while doing host slowness calculations.", e);
-                        }
-                }
 
                 if (log.isTraceEnabled()) {
                     log.trace("CANCEL called: Deleting metrics for query: " + query.uuid());
@@ -421,16 +345,6 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
 
         private void done() {
             if (done.compareAndSet(false, true)) {
-                // The big query is done....
-                if (!canceled.get()) // Avoid upating the slowness metrics twice
-                {
-                    try {
-                        HOST_SLOWNESS_TURNAROUND_TIME.commitQueryHostMetrics(query.uuid());
-                        HOST_METADATA_TRACKER.deleteQueryMetrics(query.uuid());
-                    } catch (Exception e) {
-                        log.warn("Exception while doing host data during done.", e);
-                        }
-                }
 
                 if (log.isTraceEnabled()) {
                     log.trace("Committing metrics for query: " + query.uuid() + " and deleting its metrics");
@@ -569,15 +483,6 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                                     QueryData queryData = querySource.queryData;
                                     queryData.hostEntryInfo.setLines(querySource.lines);
                                     queryData.hostEntryInfo.setFinished();
-
-                                    // Record the time and lines for this host, if the query is not done
-                                    if (!querySource.consumer.done.get()) {
-                                        HOST_METADATA_TRACKER.addHostDeltaTime(querySource.query.uuid(),
-                                                queryData.hostEntryInfo.getHostName(),
-                                                queryData.hostEntryInfo.getEndtime() - queryData.hostEntryInfo.getStarttime());
-                                        HOST_METADATA_TRACKER.addHostLines(querySource.query.uuid(),
-                                                queryData.hostEntryInfo.getHostName(), querySource.lines);
-                                    }
 
                                     // Mark this task as complete (and query if all done)
                                     querySource.consumer.markTaskCompleted(queryData.taskId, querySource);
@@ -787,37 +692,6 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
      * 1 and 2 both have data for task a but host 1 already has a query task assigned
      * to it for a different task then we will pick host 2.
      *
-     * @param queryDataSet  - the available queryData objects for the task being assigned
-     * @param readOnlyHosts - the map of host ids to a boolean describing whether the host is read only.
-     */
-    public static QueryData allocateQueryTaskUsingHostMetrics(Set<QueryData> queryDataSet, Map<String, Boolean> readOnlyHosts) {
-        HashSet<String> hosts = new HashSet<String>();
-        for (QueryData qd : queryDataSet) {
-            hosts.add(qd.hostEntryInfo.getHostName());
-        }
-
-        // Pick a host to send the query to according to the turnaround time metric
-        String hostname = HOST_SLOWNESS_TURNAROUND_TIME.pickAHost(hosts);
-
-        for (QueryData qd : queryDataSet) {
-            if (hostname.equals(qd.hostEntryInfo.getHostName())) {
-                return qd;
-            }
-        }
-
-        // We should never reach here...
-        log.warn("ERROR: Pick a host: could not pick a valid host: " + hostname +
-                 " returning host: " + (queryDataSet.iterator().next()).hostEntryInfo.getHostName() + " which belongs to queryDataSet[0]");
-
-        return queryDataSet.iterator().next();
-    }
-
-    /**
-     * Allocate the query task to the best available host.  Currently we only try
-     * to evenly distribute the queries amongst available hosts.  For example if hosts
-     * 1 and 2 both have data for task a but host 1 already has a query task assigned
-     * to it for a different task then we will pick host 2.
-     *
      * @param queryPerHostCountMap - map of number of queries assigned to each host
      * @param queryDataSet         - the available queryData objects for the task being assigned
      * @param hostMap              - the map of host ids to a boolean describing whether the host is read only.
@@ -921,7 +795,7 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
             while (!exiting.get()) {
                 for (QueryWatcher queryWatcher : activeQueryMap.values()) {
                     boolean isStraggler;
-                    if (settingsBean.getUseStdDevStragglers()) {
+                    if (useStdDevStragglers) {
                         isStraggler = checkForStragglers(queryWatcher);
                     } else {
                         isStraggler = checkForStragglersLegacy(queryWatcher);
@@ -979,7 +853,6 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                                     QueryData queryData = iterator.next();
                                     totalStragglerCheckerRequests.inc();
                                     iterator.remove();
-                                    HOST_METADATA_TRACKER.setHostAsRusher(query.uuid(), queryData.hostEntryInfo.getHostName());
                                     String id = queryWatcher.meshSourceAggregator.requestQueryData(queryData, query);
                                     if (log.isDebugEnabled() || query.isTraced()) {
                                         log.warn("Straggler detected for " + query.uuid() + " node " + node + " sending duplicate query to host: " + queryData.hostEntryInfo.getHostName() + " sourceId: " + id);

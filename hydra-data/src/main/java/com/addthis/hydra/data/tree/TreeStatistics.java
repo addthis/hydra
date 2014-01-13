@@ -87,7 +87,7 @@ public class TreeStatistics {
         this.readTree = readTree;
         this.writeTree = writeTree;
         this.terminating = terminating;
-        this.readEPS = readTree.getEps();
+        this.readEPS = readTree.getReadEps();
         this.sampleRate = sampleRate;
         this.children = children;
         scheduler.scheduleAtFixedRate(new ReporterRunnable(), 0, LOG_REPORT_RATE, TimeUnit.SECONDS);

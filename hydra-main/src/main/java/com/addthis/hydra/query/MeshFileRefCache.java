@@ -174,7 +174,7 @@ public class MeshFileRefCache implements ChannelCloseListener {
 
         if (log.isTraceEnabled()) {
             final StringBuilder sb = new StringBuilder();
-            TreeMap<Integer, Set<FileReferenceWrapper>> sortedMap = new TreeMap<Integer, Set<FileReferenceWrapper>>(fileRefDataSet);
+            TreeMap<Integer, Set<FileReferenceWrapper>> sortedMap = new TreeMap<>(fileRefDataSet);
             for (Map.Entry<Integer, Set<FileReferenceWrapper>> mapEntry : sortedMap.entrySet()) {
                 if (sb.length() > 0) {
                     sb.append("\n");
@@ -206,11 +206,11 @@ public class MeshFileRefCache implements ChannelCloseListener {
      * @param fileRefDataSet - the original unfiltered file reference set
      * @return - filtered file reference map containing only valid file references
      */
-    protected Map<Integer, Set<FileReferenceWrapper>> filterFileReferences(Map<Integer, Set<FileReferenceWrapper>> fileRefDataSet) {
+    protected static Map<Integer, Set<FileReferenceWrapper>> filterFileReferences(Map<Integer, Set<FileReferenceWrapper>> fileRefDataSet) {
         if (fileRefDataSet == null || fileRefDataSet.isEmpty()) {
             return null;
         }
-        Map<Integer, Set<FileReferenceWrapper>> filteredFileReferenceSet = new HashMap<Integer, Set<FileReferenceWrapper>>(fileRefDataSet.size());
+        Map<Integer, Set<FileReferenceWrapper>> filteredFileReferenceSet = new HashMap<>(fileRefDataSet.size());
         for (Map.Entry<Integer, Set<FileReferenceWrapper>> entry : fileRefDataSet.entrySet()) {
             int key = entry.getKey();
             final Set<FileReferenceWrapper> fileReferenceWrappers = entry.getValue();
@@ -232,7 +232,7 @@ public class MeshFileRefCache implements ChannelCloseListener {
             };
 
             Collection<FileReferenceWrapper> filteredFileReferenceWrappers = Collections2.filter(fileReferenceWrappers, isMostRecent);
-            filteredFileReferenceSet.put(key, new HashSet<FileReferenceWrapper>(filteredFileReferenceWrappers));
+            filteredFileReferenceSet.put(key, new HashSet<>(filteredFileReferenceWrappers));
 
         }
         return filteredFileReferenceSet;
@@ -242,7 +242,7 @@ public class MeshFileRefCache implements ChannelCloseListener {
     private Map<Integer, Set<FileReferenceWrapper>> getFileReferences(String job) throws IOException {
         final String prefix = "*/" + job + "/*/gold/data/query";
         final Semaphore gate = new Semaphore(1);
-        final ConcurrentHashMap<Integer, Set<FileReferenceWrapper>> fileRefMap = new ConcurrentHashMap<Integer, Set<FileReferenceWrapper>>();
+        final ConcurrentHashMap<Integer, Set<FileReferenceWrapper>> fileRefMap = new ConcurrentHashMap<>();
         try {
             gate.acquire();
             new FileSource(meshy, MeshyConstants.LINK_NAMED, new String[]{prefix}) {

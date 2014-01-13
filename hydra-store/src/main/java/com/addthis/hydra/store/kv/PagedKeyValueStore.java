@@ -39,6 +39,7 @@ public interface PagedKeyValueStore<K, V> extends KeyValueStore<K, V> {
      * Close the store.
      *
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
-     */
-    public void close(boolean cleanLog);
+     * @param testIntegrity if true then test the integrity of the pageDB. This is a slow operation.
+     **/
+    public void close(boolean cleanLog, boolean testIntegrity);
 }

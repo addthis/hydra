@@ -23,8 +23,9 @@ public interface DataTree extends DataTreeNode {
      * Close the tree.
      *
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
+     * @param testIntegrity if true then test the integrity of the pageDB. This is a slow operation.
      */
-    public void close(boolean cleanLog);
+    public void close(boolean cleanLog, boolean testIntegrity);
 
     public void sync() throws IOException;
 
