@@ -17,9 +17,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 
+import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
+import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.ReadTreeNode;
@@ -32,9 +34,10 @@ import com.addthis.hydra.data.util.KeyTopper;
  * TODO complete
  */
 public class DataLimitHot extends TreeNodeData<DataLimitHot.Config> {
-
     /**
      * This data attachment <span class="hydra-summary">limits child nodes to hot values</span>.
+     * "Hotness" is determined either by a node's <b>count</b> or, if supplied, by a value
+     * derived from the field named by <b>weight</b>.
      *
      * @user-reference
      * @hydra-name limit.hot
@@ -46,6 +49,18 @@ public class DataLimitHot extends TreeNodeData<DataLimitHot.Config> {
          */
         @Codec.Set(codable = true)
         private int size;
+
+        /**
+         * Field used to weight "hot" keys.
+         */
+        @Codec.Set(codable = true)
+        private String weight;
+
+        /**
+         * Value filter for providing a key weight.
+         */
+        @Codec.Set(codable = true)
+        private ValueFilter weightFilter;
 
         @Override
         public DataLimitHot newInstance() {
@@ -65,8 +80,17 @@ public class DataLimitHot extends TreeNodeData<DataLimitHot.Config> {
     @Codec.Set(codable = true)
     private KeyTopper top;
 
+    private BundleField weightAccess;
+    private ValueFilter weightFilter;
+
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode tn, Config conf) {
+        if (conf.weight != null && weightAccess == null) {
+            weightAccess = state.getBundle().getFormat().getField(conf.weight);
+        }
+        if (conf.weightFilter != null && weightFilter == null) {
+            weightFilter = conf.weightFilter;
+        }
         return false;
     }
 
@@ -97,8 +121,21 @@ public class DataLimitHot extends TreeNodeData<DataLimitHot.Config> {
         try {
             String key = childNode.getName();
             String dropped;
+            long weight = childNode.getCounter();
+            if (weightAccess != null) {
+                ValueObject val = state.getBundle().getValue(weightAccess);
+                if (val != null) {
+                    weight = val.asLong().getLong().longValue();
+                }
+            }
+            if (weightFilter != null) {
+                Double weightValue = weightFilter.filter(ValueFactory.create(key)).asDouble().getDouble();
+                if (weightValue != null) {
+                    weight *= weightValue;
+                }
+            }
             synchronized (top) {
-                dropped = top.update(key, childNode.getCounter(), size);
+                dropped = top.update(key, weight, size);
             }
             if (dropped != null) {
                 deferredOps.add(new DataLimitHotDeferredOperation(parentNode, dropped));
