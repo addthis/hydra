@@ -906,6 +906,11 @@ public final class Tree implements DataTree, MeterDataSource {
     }
 
     @Override
+    public ClosableIterator<DataTreeNode> getIterator(String from, String to) {
+        return getRootNode().getIterator(from, to);
+    }
+
+    @Override
     public Iterator<DataTreeNode> iterator() {
         return getRootNode().iterator();
     }
