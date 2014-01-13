@@ -748,6 +748,9 @@ public final class Job implements IJob, Codable {
         }
         task.setErrorCode(0);
         setTaskState(task, JobTaskState.IDLE);
+        if (getState() == JobState.IDLE) {
+            setEndTime(JitterClock.globalTime());
+        }
         if (countErrorTasks() == 0 && oldErrorCode == JobTaskErrorCode.EXIT_REPLICATE_FAILURE || oldErrorCode == JobTaskErrorCode.EXIT_BACKUP_FAILURE) {
             // If the job is disabled because this task failed to replicate, enable it.
             log.warn("Enabling job " + getId() + " because the last replicate/backup error was resolved");
