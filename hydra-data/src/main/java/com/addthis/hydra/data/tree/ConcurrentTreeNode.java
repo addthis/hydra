@@ -338,7 +338,10 @@ public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Cod
      * returns an iterator of read-only nodes
      */
     public ClosableIterator<DataTreeNode> getNodeIterator(String from, String to) {
-        return nodedb == null || isDeleted() ? new Iter(null, false) : new Iter(tree.fetchNodeRange(nodedb, from, to), true);
+        if (nodedb == null || isDeleted()) {
+            return new Iter(null, false);
+        }
+        return new Iter(tree.fetchNodeRange(nodedb, from, to), true);
     }
 
     public ConcurrentTreeNode getNode(String name) {
@@ -357,8 +360,8 @@ public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Cod
         return tree.getOrCreateNode(this, name, creator);
     }
 
-    public boolean deleteNode(String node) {
-        return tree.deleteNode(this, node);
+    public boolean deleteNode(String name) {
+        return tree.deleteNode(this, name);
     }
 
     /**
@@ -434,10 +437,11 @@ public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Cod
      */
     public void updateParentData(DataTreeNodeUpdater state, DataTreeNode child, boolean isnew) {
         requireEditable();
-        List<TreeNodeDataDeferredOperation> deferredOps = new ArrayList<>();
+        List<TreeNodeDataDeferredOperation> deferredOps = null;
         lock.writeLock().lock();
         try {
             if (child != null && data != null) {
+                deferredOps = new ArrayList<>(1);
                 for (TreeNodeData<?> tnd : data.values()) {
                     if (isnew && tnd.updateParentNewChild(state, this, child, deferredOps)) {
                         changed.set(true);
@@ -450,8 +454,10 @@ public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Cod
         } finally {
             lock.writeLock().unlock();
         }
-        for (TreeNodeDataDeferredOperation currentOp : deferredOps) {
-            currentOp.run();
+        if (deferredOps != null) {
+            for (TreeNodeDataDeferredOperation currentOp : deferredOps) {
+                currentOp.run();
+            }
         }
     }
 
@@ -609,6 +615,11 @@ public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Cod
     @Override
     public ClosableIterator<DataTreeNode> getIterator(String begin) {
         return getNodeIterator(begin);
+    }
+
+    @Override
+    public ClosableIterator<DataTreeNode> getIterator(String from, String to) {
+        return getNodeIterator(from, to);
     }
 
     @Override
