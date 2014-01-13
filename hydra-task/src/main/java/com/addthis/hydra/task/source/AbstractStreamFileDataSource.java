@@ -254,7 +254,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
     private BlockingQueue<Bundle> queue;
     private PageDB<SimpleMark> markDB;
-    private BundleField injectSourceField;
     private File markDirFile;
     private int magicMarksNumber = 42;
     private boolean useSimpleMarks = false;
@@ -339,9 +338,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
-        }
-        if (injectSourceName != null) {
-            injectSourceField = bundleFormat.getField(injectSourceName);
         }
         if (shardTotal == null || shardTotal == 0) {
             shardTotal = config.nodeCount;
@@ -583,8 +579,8 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                     close();
                 } else {
                     mark.setIndex(mark.getIndex() + 1);
-                    if (injectSourceField != null) {
-                        next.setValue(injectSourceField, sourceName);
+                    if (injectSourceName != null) {
+                        next.setValue(next.getFormat().getField(injectSourceName), sourceName);
                     }
                 }
             } catch (Exception ex) {
