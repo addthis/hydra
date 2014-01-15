@@ -22,6 +22,7 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.filter.value.ValueFilter;
@@ -201,6 +202,19 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
                             }
                         }
                         top.increment(obj.toString(), weightValue, size);
+                    }
+                } else if (val.getObjectType() == ValueObject.TYPE.MAP) {
+                    for (ValueMapEntry entry : val.asMap()) {
+                        int localWeight = weightValue;
+                        String key = entry.getKey();
+                        ValueObject weight = entry.getValue().asDouble();
+                        if (weight != null) {
+                            ValueObject weightDouble = conf.weightFilter.filter(weight);
+                            if (weightDouble != null) {
+                                localWeight *= weightDouble.asDouble().getDouble();
+                            }
+                        }
+                        top.increment(key, localWeight, size);
                     }
                 } else {
                     if (conf.weightFilter != null) {

@@ -75,7 +75,10 @@ public class PathValue extends PathElement {
     protected boolean create = true;
 
     @Codec.Set(codable = true)
-    protected boolean once = false;
+    protected boolean once;
+
+    @Codec.Set(codable = true)
+    protected boolean mapAsCount;
 
     @Codec.Set(codable = true)
     protected boolean delete;
@@ -175,15 +178,21 @@ public class PathValue extends PathElement {
                 }
             }
         } else if (name.getObjectType() == ValueObject.TYPE.MAP) {
-            // TODO: TYPE.MAP has seen only minimal use.  These null
-            // checks may be masking a problem.
             for (ValueMapEntry e : name.asMap()) {
-                PathValue v = new PathValue(e.getKey(), count);
-                if (v != null) {
-                    TreeNodeList tnl = v.processNode(state);
+                String key = e.getKey();
+                ValueObject obj = e.getValue();
+                if (mapAsCount) {
+                    PathValue mapValue = new PathValue(key);
+                    int oldCountValue = state.getCountValue();
+                    state.setCountValue(obj.asLong().getLong().intValue());
+                    list = mapValue.processNode(state);
+                    state.setCountValue(oldCountValue);
+                } else {
+                    PathValue mapValue = new PathValue(key, count);
+                    TreeNodeList tnl = mapValue.processNode(state);
                     if (tnl != null) {
                         state.push(tnl);
-                        list.addAll(processNodeUpdates(state, e.getValue()));
+                        list.addAll(processNodeUpdates(state, obj));
                         state.pop();
                     }
                 }
