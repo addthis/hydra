@@ -67,6 +67,8 @@ public class QueryElementNode implements Codec.Codable {
     @Codec.Set(codable = true)
     public Boolean range;
     @Codec.Set(codable = true)
+    public Boolean rangeStrict;
+    @Codec.Set(codable = true)
     public Boolean not;
     @Codec.Set(codable = true)
     public String path[];
@@ -120,6 +122,10 @@ public class QueryElementNode implements Codec.Codable {
                     component = component.substring(1);
                     range = true;
                 }
+                if (component.startsWith("@")) {
+                    component = component.substring(1);
+                    rangeStrict = true;
+                }
                 mode = MODE.MATCH;
                 int close;
                 if (component.startsWith("{") && (close = component.indexOf("}")) > 0) {
@@ -154,7 +160,7 @@ public class QueryElementNode implements Codec.Codable {
             }
             component = Bytes.urldecode(component);
             if (component.length() > 0) {
-                if (mode == MODE.MATCH) {
+                if (mode != MODE.TRAP) {
                     matchList.add(component);
                 } else {
                     trapList.add(component);
@@ -188,6 +194,9 @@ public class QueryElementNode implements Codec.Codable {
         }
         if (show() && range()) {
             sb.append("+");
+        }
+        if (show() && rangeStrict()) {
+            sb.append("@");
         }
         if (match != null && match.length > 0) {
             int i = 0;
@@ -236,6 +245,10 @@ public class QueryElementNode implements Codec.Codable {
 
     public boolean range() {
         return range != null && range;
+    }
+
+    public boolean rangeStrict() {
+        return rangeStrict != null && rangeStrict;
     }
 
     public boolean not() {
@@ -312,13 +325,13 @@ public class QueryElementNode implements Codec.Codable {
                         return parent.getIterator(match[0]);
                     } else {
                         ArrayList<Iterator<DataTreeNode>> metaIterator = new ArrayList<>();
-
                         for (String name : match) {
                             metaIterator.add(parent.getIterator(name));
                         }
-
                         return Iterators.concat(metaIterator.iterator());
                     }
+                } else if (rangeStrict()) {
+                    return parent.getIterator(match.length > 0 ? match[0] : null, match.length > 1 ? match[1] : null);
                 } else {
                     for (String name : match) {
                         DataTreeNode find = parent.getNode(name);

@@ -27,7 +27,7 @@ import com.addthis.hydra.store.util.Raw;
 
 public final class DBKey implements IPageDB.Key, Comparable<DBKey> {
 
-    private static final Raw empty = Raw.get(new byte[0]);
+    private static final Raw EMPTY = Raw.get(new byte[0]);
 
     private final int id;
     private final Raw key;
@@ -51,7 +51,7 @@ public final class DBKey implements IPageDB.Key, Comparable<DBKey> {
 
     public DBKey(int id, Raw key) {
         if (key == null) {
-            key = empty;
+            key = EMPTY;
         }
         this.id = id;
         this.key = key;
