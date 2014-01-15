@@ -108,18 +108,21 @@ public interface DataTreeNode extends Iterable<DataTreeNode> {
     public ClosableIterator<DataTreeNode> getIterator();
 
     /**
+     * @param from optional beginning point (null = first)
+     * @param to optional end point (null = last)
+     * @return an in iterator starting at first node with a name &gt;= begin and &lt; to
      * @return an in iterator starting at first node with a matching <i>prefix</i>
      * and exclude all nodes that do not begin with <i>prefix</i>.  for example a
      * prefix of "abc" would <b>not</b> match names beginning with "abd".  for that
      * use case, use getIterator(from, to) where "to" could be null or a lexicographic
-     * value > "abd".
+     * value &gt; "abd".
      */
     public ClosableIterator<DataTreeNode> getIterator(String prefix);
 
     /**
      * @param from optional beginning point (null = first)
      * @param to optional end point (null = last)
-     * @return an in iterator starting at first node with a name >= begin and < to
+     * @return an in iterator starting at first node with a name &gt;= begin and &lt; to
      */
     public ClosableIterator<DataTreeNode> getIterator(String from, String to);
 
