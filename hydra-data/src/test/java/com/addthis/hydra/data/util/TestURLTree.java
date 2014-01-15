@@ -33,12 +33,11 @@ public class TestURLTree {
         urlTree.addURLPath("www.foo.com/1/2/3/4", 1);
         urlTree.addURLPath("www.foo.com/1/2/3", 1);
         urlTree.addURLPath("www.foo.com/1/2/3/5", 1);
-        urlTree.addURLPath("www.foo.com/1/2/3/5", 1);
+        urlTree.addURLPath("www.foo.com/1/2/3/5/", 1);
         urlTree.addURLPath("www.foo.com", 1);
 
         List<URLTree.TreeObject.TreeValue> branches = urlTree.getBranches("/");
-
-        assertEquals(4, branches.size());
-        assertEquals("[www.foo.com/1/2/3/:1.0, www.foo.com/1/2/3/5:2.0, www.foo.com/1/2/3/4:1.0, www.foo.com/1/2/4:1.0]", branches.toString());
+        assertEquals(3, branches.size());
+        assertEquals("[www.foo.com/1/2/3/5/:2.0, www.foo.com/1/2/3/4:1.0, www.foo.com/1/2/4:1.0]", branches.toString());
     }
 }

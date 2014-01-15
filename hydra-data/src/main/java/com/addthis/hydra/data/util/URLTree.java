@@ -32,11 +32,11 @@ public class URLTree {
     }
 
     public void addURLPath(String path, double value) {
-        root.addBranch(Arrays.asList(path.split(PATH_SEPARATOR, -1)), value);
+        root.addBranch(Arrays.asList(path.split(PATH_SEPARATOR)), value, path.endsWith(PATH_SEPARATOR));
     }
 
     public void add(List<String> data, double value) {
-        root.addBranch(data, value);
+        root.addBranch(data, value, false);
     }
 
     public List<TreeObject.TreeValue> getBranches(String sep) {
@@ -51,6 +51,7 @@ public class URLTree {
 
         private TreeValue treeValue;
         private Map<String, TreeObject> leaves;
+        private boolean hasTrailingSep;
 
         public TreeObject(String data) {
             treeValue = new TreeValue(data, 0d);
@@ -65,7 +66,15 @@ public class URLTree {
             return leaves.size();
         }
 
-        public void addBranch(List<String> data, double value) {
+        public boolean hasTrailingSlash() {
+            return hasTrailingSep;
+        }
+
+        public void setHasTrailingSep(boolean hasTrailingSep) {
+            this.hasTrailingSep = hasTrailingSep;
+        }
+
+        public void addBranch(List<String> data, double value, boolean hashTrailingSep) {
             if (data != null) {
                 String key = data.get(0);
                 TreeObject leaf = leaves.get(key);
@@ -76,10 +85,12 @@ public class URLTree {
                 }
 
                 if (data.size() > 1) {
-                    leaf.addBranch(data.subList(1, data.size()), value);
+                    List<String> subList = data.subList(1, data.size());
+                    leaf.addBranch(subList, value, hashTrailingSep);
                 } else {
                     // only the end leaf will contain the value
                     leaf.getTreeValue().updateValue(value);
+                    leaf.setHasTrailingSep(hashTrailingSep);
                 }
 
             }
@@ -99,7 +110,7 @@ public class URLTree {
                     }
                 }
             } else {
-                branches.add(treeValue);
+                branches.add(hasTrailingSep ? new TreeValue(treeValue.getData() + (hasTrailingSep ? sep : ""), treeValue.getValue()) : treeValue);
             }
 
             return branches;
