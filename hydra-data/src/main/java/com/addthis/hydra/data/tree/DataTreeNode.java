@@ -103,14 +103,19 @@ public interface DataTreeNode extends Iterable<DataTreeNode> {
     public boolean deleteNode(String node);
 
     /**
-     * @return an interator starting at first node with a name >= begin
-     */
-    public ClosableIterator<DataTreeNode> getIterator(String begin);
-
-    /**
      * @return iterator of all nodes
      */
     public ClosableIterator<DataTreeNode> getIterator();
+
+    /**
+     * @return an in iterator starting at first node with a name >= from
+     */
+    public ClosableIterator<DataTreeNode> getIterator(String from);
+
+    /**
+     * @return an in iterator starting at first node with a name >= begin and < to
+     */
+    public ClosableIterator<DataTreeNode> getIterator(String from, String to);
 
     /**
      * TODO for immediate compatibility -- rethink this
