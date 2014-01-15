@@ -618,6 +618,11 @@ public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Cod
     }
 
     @Override
+    public ClosableIterator<DataTreeNode> getIterator(String begin, String end) {
+        return getNodeIterator(begin, end);
+    }
+
+    @Override
     public DataTreeNode getOrCreateNode(String name, DataTreeNodeInitializer init) {
         return getOrCreateEditableNode(name, init);
     }

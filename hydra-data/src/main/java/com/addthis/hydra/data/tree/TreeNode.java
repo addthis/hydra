@@ -519,6 +519,11 @@ public class TreeNode implements DataTreeNode, Codec.SuperCodable, Codec.Concurr
     }
 
     @Override
+    public ClosableIterator<DataTreeNode> getIterator(String begin, String end) {
+        return getNodeIterator(begin, end);
+    }
+
+    @Override
     public DataTreeNode getOrCreateNode(String name, DataTreeNodeInitializer init) {
         return getOrCreateEditableNode(name, init);
     }
