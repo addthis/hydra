@@ -326,6 +326,12 @@ public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Cod
      */
     public ClosableIterator<DataTreeNode> getNodeIterator(String prefix) {
         if (!isDeleted() && prefix != null && prefix.length() > 0) {
+            /**
+             * the reason this behaves as a prefix as opposed to a "from" is the way
+             * the "to" endpoint is calculated.  the last byte of the prefix is incremented
+             * by a value of one and used as "to".  this is the effect of excluding all
+             * other potential matches with a lexicographic value greater than prefix.
+             */
             StringBuilder sb = new StringBuilder(prefix.substring(0, prefix.length() - 1));
             sb.append((char) (prefix.charAt(prefix.length() - 1) + 1));
             return getNodeIterator(prefix, sb.toString());
