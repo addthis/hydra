@@ -69,8 +69,8 @@ import com.addthis.hydra.data.query.op.OpTitle;
 import com.addthis.hydra.data.query.op.OpTranspose;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
+
 /**
  * <pre>
  * ops=OP[;OP1;OP2;...]
@@ -79,10 +79,10 @@ import org.slf4j.LoggerFactory;
  * NAME := avg|count|diff|... (see operator name constants below)
  * ARGS := operator specific argument string (see specific Op<NAME> class for argument string format)
  * </pre>
- *
- *         <p/>
- *         TODO memory limits need to be re-implemented
- *         TODO see Query for other TODOs that need implementation / support here
+ * <p/>
+ * <p/>
+ * TODO memory limits need to be re-implemented
+ * TODO see Query for other TODOs that need implementation / support here
  */
 public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, QueryMemTracker, Closeable {
 
@@ -221,7 +221,7 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
         if (ops == null || ops.length() == 0) {
             return this;
         }
-        return parseOps(new String[] { ops });
+        return parseOps(new String[]{ops});
     }
 
     public QueryOpProcessor parseOps(String opslist[]) {
@@ -230,152 +230,152 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
         }
 
         /* remaining ops stack is processed in reverse order */
-        for (int i=opslist.length-1; i>=0; i--) {
+        for (int i = opslist.length - 1; i >= 0; i--) {
             String ops = opslist[i];
             if (ops == null) {
                 continue;
             }
 
-        for (String s : Strings.split(ops, ";")) {
-            KVPair kv = KVPair.parsePair(s);
-            String args = kv.getValue();
-            OPS op = opmap.get(kv.getKey());
-            if (op == null) {
-                throw new RuntimeException("unknown op : " + kv);
-            }
-            switch (op) {
-                case AVG:
-                    appendOp(new OpRoll.AvgOpRoll(args));
-                    break;
-                case CHANGEPOINTS:
-                    appendOp(new OpChangePoints(this, args));
-                    break;
-                case COMPARE:
-                    appendOp(new OpCompare(args));
-                    break;
-                case CONTAINS:
-                    appendOp(new OpContains(args));
-                    break;
-                case DATEF:
-                    appendOp(new OpDateFormat(args));
-                    break;
-                case DELTA:
-                    appendOp(new OpRoll.DeltaOpRoll(args));
-                    break;
-                case DEPIVOT:
-                    appendOp(new OpDePivot(this, args));
-                    break;
-                case DIFF:
-                    appendOp(new OpDiff(this, args));
-                    break;
-                case DISORDER:
-                    appendOp(new OpDisorder(this, args));
-                    break;
-                case DSORT:
-                    appendOp(new OpDiskSort(args, query, queryStatusObserver));
-                    break;
-                case FILL:
-                    appendOp(new OpFill(args));
-                    break;
-                case FOLD:
-                    appendOp(new OpFold(args));
-                    break;
-                case FREQUENCYTABLE:
-                    appendOp(new OpFrequencyTable(this, args));
-                    break;
-                case GATHER:
-                    appendOp(new OpGather(args, memTip, rowTip, tempDir.getPath(), queryStatusObserver));
-                    break; // TODO move OpTop code into OpGather and delete OpTop
-                case HISTOGRAM:
-                    appendOp(new OpHistogram(args));
-                    break;
-                case DISTRIBUTION:
-                    appendOp(new OpPercentileDistribution(this, args));
-                    break;
-                case LIMIT:
-                    appendOp(new OpLimit(args, queryStatusObserver));
-                    break;
-                case MAP:
-                    appendOp(new OpMap(args));
-                    break;
-                case RMAP:
-                    appendOp(new OpRMap(args));
-                    break;
-                case MAX:
-                    appendOp(new OpRoll.MaxOpRoll(args));
-                    break;
-                case MEDIAN:
-                    appendOp(new OpMedian(this));
-                    break;
-                case MERGE:
-                    appendOp(new OpMerge(args, queryStatusObserver));
-                    break;
-                case MIN:
-                    appendOp(new OpRoll.MinOpRoll(args));
-                    break;
-                case NODUP:
-                    appendOp(new OpNoDup());
-                    break;
-                case NUMBER:
-                    appendOp(new OpNumber(args));
-                    break;
-                case ORDER:
-                    appendOp(new OpOrder(args));
-                    break;
-                case ORDERMAP:
-                    appendOp(new OpOrderMap(args));
-                    break;
-                case PAD:
-                    appendOp(new OpFill(args, true));
-                    break;
-                case PERCENTRANK:
-                    appendOp(new OpPercentileRank(this, args));
-                    break;
-                case PIVOT:
-                    appendOp(new OpPivot(this, args));
-                    break;
-                case RANGE:
-                    appendOp(new OpRange(this, args));
-                    break;
-                case REVERSE:
-                    appendOp(new OpReverse(this));
-                    break;
-                case RMSING:
-                    appendOp(new OpRemoveSingletons(this, args));
-                    break;
-                case RND_FAIL:
-                    appendOp(new OpRandomFail(args));
-                    break;
-                case SEEN:
-                    appendOp(new OpSeen(this, args));
-                    break;
-                case SKIP:
-                    appendOp(new OpSkip(args));
-                    break;
-                case SLEEP:
-                    appendOp(new OpSleep(args));
-                    break;
-                case SORT:
+            for (String s : Strings.split(ops, ";")) {
+                KVPair kv = KVPair.parsePair(s);
+                String args = kv.getValue();
+                OPS op = opmap.get(kv.getKey());
+                if (op == null) {
+                    throw new RuntimeException("unknown op : " + kv);
+                }
+                switch (op) {
+                    case AVG:
+                        appendOp(new OpRoll.AvgOpRoll(args));
+                        break;
+                    case CHANGEPOINTS:
+                        appendOp(new OpChangePoints(this, args));
+                        break;
+                    case COMPARE:
+                        appendOp(new OpCompare(args));
+                        break;
+                    case CONTAINS:
+                        appendOp(new OpContains(args));
+                        break;
+                    case DATEF:
+                        appendOp(new OpDateFormat(args));
+                        break;
+                    case DELTA:
+                        appendOp(new OpRoll.DeltaOpRoll(args));
+                        break;
+                    case DEPIVOT:
+                        appendOp(new OpDePivot(this, args));
+                        break;
+                    case DIFF:
+                        appendOp(new OpDiff(this, args));
+                        break;
+                    case DISORDER:
+                        appendOp(new OpDisorder(this, args));
+                        break;
+                    case DSORT:
+                        appendOp(new OpDiskSort(args, query, queryStatusObserver));
+                        break;
+                    case FILL:
+                        appendOp(new OpFill(args));
+                        break;
+                    case FOLD:
+                        appendOp(new OpFold(args));
+                        break;
+                    case FREQUENCYTABLE:
+                        appendOp(new OpFrequencyTable(this, args));
+                        break;
+                    case GATHER:
+                        appendOp(new OpGather(args, memTip, rowTip, tempDir.getPath(), queryStatusObserver));
+                        break; // TODO move OpTop code into OpGather and delete OpTop
+                    case HISTOGRAM:
+                        appendOp(new OpHistogram(args));
+                        break;
+                    case DISTRIBUTION:
+                        appendOp(new OpPercentileDistribution(this, args));
+                        break;
+                    case LIMIT:
+                        appendOp(new OpLimit(args, queryStatusObserver));
+                        break;
+                    case MAP:
+                        appendOp(new OpMap(args));
+                        break;
+                    case RMAP:
+                        appendOp(new OpRMap(args));
+                        break;
+                    case MAX:
+                        appendOp(new OpRoll.MaxOpRoll(args));
+                        break;
+                    case MEDIAN:
+                        appendOp(new OpMedian(this));
+                        break;
+                    case MERGE:
+                        appendOp(new OpMerge(args, queryStatusObserver));
+                        break;
+                    case MIN:
+                        appendOp(new OpRoll.MinOpRoll(args));
+                        break;
+                    case NODUP:
+                        appendOp(new OpNoDup());
+                        break;
+                    case NUMBER:
+                        appendOp(new OpNumber(args));
+                        break;
+                    case ORDER:
+                        appendOp(new OpOrder(args));
+                        break;
+                    case ORDERMAP:
+                        appendOp(new OpOrderMap(args));
+                        break;
+                    case PAD:
+                        appendOp(new OpFill(args, true));
+                        break;
+                    case PERCENTRANK:
+                        appendOp(new OpPercentileRank(this, args));
+                        break;
+                    case PIVOT:
+                        appendOp(new OpPivot(this, args));
+                        break;
+                    case RANGE:
+                        appendOp(new OpRange(this, args));
+                        break;
+                    case REVERSE:
+                        appendOp(new OpReverse(this));
+                        break;
+                    case RMSING:
+                        appendOp(new OpRemoveSingletons(this, args));
+                        break;
+                    case RND_FAIL:
+                        appendOp(new OpRandomFail(args));
+                        break;
+                    case SEEN:
+                        appendOp(new OpSeen(this, args));
+                        break;
+                    case SKIP:
+                        appendOp(new OpSkip(args));
+                        break;
+                    case SLEEP:
+                        appendOp(new OpSleep(args));
+                        break;
+                    case SORT:
 //                  appendOp(new OpSort(this, args));
-                    appendOp(new OpDiskSort(args, query, queryStatusObserver));
-                    break;
-                case STRING:
-                    appendOp(new OpString(args));
-                    break;
-                case SUM:
-                    appendOp(new OpRoll.SumOpRoll(args));
-                    break;
-                case TITLE:
-                    appendOp(new OpTitle(args));
-                    break;
-                case TOP:
-                    appendOp(new OpGather(args, memTip, rowTip, tempDir.getPath(), queryStatusObserver));
-                    break;
-                case TRANSPOSE:
-                    appendOp(new OpTranspose(this));
-                    break;
+                        appendOp(new OpDiskSort(args, query, queryStatusObserver));
+                        break;
+                    case STRING:
+                        appendOp(new OpString(args));
+                        break;
+                    case SUM:
+                        appendOp(new OpRoll.SumOpRoll(args));
+                        break;
+                    case TITLE:
+                        appendOp(new OpTitle(args));
+                        break;
+                    case TOP:
+                        appendOp(new OpGather(args, memTip, rowTip, tempDir.getPath(), queryStatusObserver));
+                        break;
+                    case TRANSPOSE:
+                        appendOp(new OpTranspose(this));
+                        break;
+                }
             }
-        }
 
         }
 
