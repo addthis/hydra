@@ -263,7 +263,7 @@ public final class ReadTree implements DataTree {
 
     @SuppressWarnings("unchecked")
     protected Range<DBKey, ReadTreeNode> fetchNodeRange(int db, String from, String to) {
-        return source.range(new DBKey(db, Raw.get(from)), new DBKey(db, Raw.get(to)));
+        return source.range(new DBKey(db, Raw.get(from)), to == null ? new DBKey(db+1, (Raw)null) : new DBKey(db, Raw.get(to)));
     }
 
     public ReadTreeNode getRootNode() {
