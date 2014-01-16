@@ -75,7 +75,10 @@ public class PathValue extends PathElement {
     protected boolean create = true;
 
     @Codec.Set(codable = true)
-    protected boolean once = false;
+    protected boolean once;
+
+    @Codec.Set(codable = true)
+    protected String mapTo;
 
     @Codec.Set(codable = true)
     protected boolean delete;
@@ -88,6 +91,7 @@ public class PathValue extends PathElement {
 
     private ValueString valueString;
     private BundleField setField;
+    private BundleField mapField;
 
     public final ValueObject value() {
         if (valueString == null) {
@@ -116,6 +120,9 @@ public class PathValue extends PathElement {
         super.resolve(mapper);
         if (set != null) {
             setField = mapper.bindField(set);
+        }
+        if (mapTo != null) {
+            mapField = mapper.bindField(mapTo);
         }
         if (each != null) {
             each.resolve(mapper);
@@ -175,12 +182,14 @@ public class PathValue extends PathElement {
                 }
             }
         } else if (name.getObjectType() == ValueObject.TYPE.MAP) {
-            // TODO: TYPE.MAP has seen only minimal use.  These null
-            // checks may be masking a problem.
             for (ValueMapEntry e : name.asMap()) {
-                PathValue v = new PathValue(e.getKey(), count);
-                if (v != null) {
-                    TreeNodeList tnl = v.processNode(state);
+                String key = e.getKey();
+                if (mapTo != null) {
+                    state.getBundle().setValue(mapField, e.getValue());
+                    pushed += processNodeByValue(list, state, ValueFactory.create(key));
+                } else {
+                    PathValue mapValue = new PathValue(key, count);
+                    TreeNodeList tnl = mapValue.processNode(state);
                     if (tnl != null) {
                         state.push(tnl);
                         list.addAll(processNodeUpdates(state, e.getValue()));

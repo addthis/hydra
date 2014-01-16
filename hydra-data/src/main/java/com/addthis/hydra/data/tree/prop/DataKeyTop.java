@@ -21,7 +21,9 @@ import java.util.Map.Entry;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.filter.value.ValueFilter;
@@ -177,40 +179,64 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
                 }
             }
             int weightValue = 1;
+            /* retrieve optional weight value from bundle */
             if (weightAccess != null) {
-                ValueObject inc = state.getBundle().getValue(weightAccess);
-                if (inc != null) {
-                    weightValue = inc.asLong().getLong().intValue();
+                ValueObject bundleWeight = state.getBundle().getValue(weightAccess);
+                if (bundleWeight != null) {
+                    weightValue = bundleWeight.asLong().getLong().intValue();
                 }
             }
             if (conf.splitRegex != null) {
-                // System.out.println("SPLITTING:" + val + ":" +
-                // conf.splitRegex);
+                /* apply regex to turn a string into an array */
                 String split[] = val.toString().split(conf.splitRegex);
-                // System.out.println(Arrays.toString(split));
+                ValueArray arr = ValueFactory.createArray(split.length);
                 for (int i = 0; i < split.length; i++) {
-                    top.increment(split[i], weightValue, size);
+                    arr.append(ValueFactory.create(split[i]));
                 }
-            } else {
-                if (val.getObjectType() == ValueObject.TYPE.ARRAY) {
-                    for (ValueObject obj : val.asArray()) {
-                        if (conf.weightFilter != null) {
-                            Double weight = conf.weightFilter.filter(obj).asDouble().getDouble();
-                            if (weight != null) {
-                                weightValue *= weight;
-                            }
-                        }
-                        top.increment(obj.toString(), weightValue, size);
-                    }
-                } else {
+            }
+            if (val.getObjectType() == ValueObject.TYPE.ARRAY) {
+                /**
+                 * iterate over each value in the array and apply the
+                 * optional weight filter.
+                 */
+                for (ValueObject obj : val.asArray()) {
                     if (conf.weightFilter != null) {
-                        Double weight = conf.weightFilter.filter(val).asDouble().getDouble();
+                        Double weight = conf.weightFilter.filter(obj).asDouble().getDouble();
                         if (weight != null) {
                             weightValue *= weight;
                         }
                     }
-                    top.increment(val.toString(), weightValue, size);
+                    top.increment(obj.toString(), weightValue, size);
                 }
+            } else if (val.getObjectType() == ValueObject.TYPE.MAP) {
+                /**
+                 * iterate over key/value pairs in a map. attempt to use the
+                 * value as a weighted number, but drop back to default weight
+                 * value if it's not a number. apply the optional weight filter.
+                 */
+                for (ValueMapEntry entry : val.asMap()) {
+                    int localWeight = weightValue;
+                    String key = entry.getKey();
+                    ValueObject weight = entry.getValue().asDouble();
+                    if (weight != null) {
+                        if (conf.weightFilter != null) {
+                            weight = conf.weightFilter.filter(weight);
+                        }
+                        if (weight != null) {
+                            localWeight *= weight.asDouble().getDouble();
+                        }
+                    }
+                    top.increment(key, localWeight, size);
+                }
+            } else {
+                /* apply optional weight filter */
+                if (conf.weightFilter != null) {
+                    Double weight = conf.weightFilter.filter(val).asDouble().getDouble();
+                    if (weight != null) {
+                        weightValue *= weight;
+                    }
+                }
+                top.increment(val.toString(), weightValue, size);
             }
             return true;
         } else {
