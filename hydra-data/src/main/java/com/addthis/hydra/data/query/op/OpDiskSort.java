@@ -44,7 +44,6 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractRowOp;
-import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.muxy.MuxFile;
 import com.addthis.muxy.MuxFileDirectory;
@@ -85,17 +84,16 @@ import org.xerial.snappy.SnappyOutputStream;
  */
 public class OpDiskSort extends AbstractRowOp implements BundleFactory {
 
-    private final Logger log = LoggerFactory.getLogger(OpDiskSort.class);
-    private final int CHUNK_ROWS = Parameter.intValue("op.disksort.chunk.rows", 5000);
-    private final int CHUNK_MERGES = Parameter.intValue("op.disksort.chunk.merges", 1000);
+    private static final Logger log = LoggerFactory.getLogger(OpDiskSort.class);
+    private static final int CHUNK_ROWS = Parameter.intValue("op.disksort.chunk.rows", 5000);
+    private static final int CHUNK_MERGES = Parameter.intValue("op.disksort.chunk.merges", 1000);
     private static final int GZTYPE = Parameter.intValue("op.disksort.gz.type", 0);
-    private int GZTypeOverride = 0;
-    private String TMP_SORT_DIR = Parameter.value("query.tmpdir", "query.tmpdir");
 
+    private Path tempDir;
+    private int GZTypeOverride = 0;
     private String[] cols;
     private char[] type;
     private char[] dir;
-    private Path tempDir;
     private MuxFileDirectory mfm;
     private final Bundle buffer[] = new Bundle[CHUNK_ROWS + 1];
     private int bufferIndex = 0;
@@ -106,26 +104,14 @@ public class OpDiskSort extends AbstractRowOp implements BundleFactory {
 
     private final QueryStatusObserver queryStatusObserver;
 
-    public OpDiskSort(String args, Query query, QueryStatusObserver queryStatusObserver) {
+    public OpDiskSort(String args, String tempDirString, QueryStatusObserver queryStatusObserver) {
         this.queryStatusObserver = queryStatusObserver;
-        init(args, query);
+        init(args, tempDirString);
     }
 
-    void init(String args) {
-        init(args, null);
-    }
-
-    void init(String args, Query query) {
-        if (query != null) {
-            // Check on the disk compression
-            String dsortCompression = query.getParameter("dsortcompression");
-            if (dsortCompression != null && dsortCompression.equalsIgnoreCase("true")) {
-                GZTypeOverride = 1;
-            }
-        }
-
+    private void init(String args, String tempDirString) {
         try {
-            tempDir = Paths.get(TMP_SORT_DIR, UUID.randomUUID() + "");
+            tempDir = Paths.get(tempDirString, UUID.randomUUID() + "");
             Files.createDirectories(tempDir);
             mfm = new MuxFileDirectory(tempDir, null);
             mfm.setDeleteFreed(true);
@@ -153,12 +139,6 @@ public class OpDiskSort extends AbstractRowOp implements BundleFactory {
 
         comparator = new BundleComparator();
         comparatorSS = new BundleComparator();
-    }
-
-    public OpDiskSort(String args, String tmpDir, Query query) {
-        queryStatusObserver = new QueryStatusObserver();
-        this.TMP_SORT_DIR = tmpDir;
-        init(args, query);
     }
 
     @Override
@@ -323,7 +303,7 @@ public class OpDiskSort extends AbstractRowOp implements BundleFactory {
      * @param s2
      * @return
      */
-    private int longCompare(ValueObject s1, ValueObject s2) {
+    private static int longCompare(ValueObject s1, ValueObject s2) {
         if (s1 == s2) {
             return 0;
         }
@@ -341,7 +321,7 @@ public class OpDiskSort extends AbstractRowOp implements BundleFactory {
      * @param s2
      * @return
      */
-    private int doubleCompare(ValueObject s1, ValueObject s2) {
+    private static int doubleCompare(ValueObject s1, ValueObject s2) {
         if (s1 == s2) {
             return 0;
         }
@@ -359,7 +339,7 @@ public class OpDiskSort extends AbstractRowOp implements BundleFactory {
      * @param s2
      * @return
      */
-    private int stringCompare(ValueObject s1, ValueObject s2) {
+    private static int stringCompare(ValueObject s1, ValueObject s2) {
         if (s1 == OpPivot.MIN || s2 == OpPivot.MAX) {
             return -1;
         }

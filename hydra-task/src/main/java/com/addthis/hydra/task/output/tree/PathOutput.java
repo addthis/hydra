@@ -102,7 +102,8 @@ public class PathOutput extends PathElement {
                 engine = new QueryEngine(tree);
             }
         }
-        QueryOpProcessor rp = new QueryOpProcessor(output).parseOps(opsString).setMemTip(maxmem);
+        QueryOpProcessor rp = new QueryOpProcessor.Builder(output, opsString)
+                .memTip(maxmem).build();
         if (ops != null) {
             for (QueryOp op : ops) {
                 rp.appendOp(op);

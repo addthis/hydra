@@ -165,11 +165,10 @@ public class TestMemEstimation {
         System.out.println("built tree in " + time + " ms");
     }
 
-    private void query(Query query, DataTree tree) throws Exception {
+    private static void query(Query query, DataTree tree) throws Exception {
         long mark = System.currentTimeMillis();
         BlockingBufferedConsumer consumer = new BlockingBufferedConsumer();
-        QueryOpProcessor proc = new QueryOpProcessor(consumer);
-        proc.parseOps(query.getOps());
+        QueryOpProcessor proc = new QueryOpProcessor(consumer, query.getOps());
         QueryEngineSource client = new QueryEngineSourceSingle(tree);
         client.query(query, proc);
         DataTable table = consumer.getTable();

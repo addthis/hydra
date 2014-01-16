@@ -18,7 +18,6 @@ import java.io.File;
 import java.io.IOException;
 
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -87,12 +86,15 @@ import org.slf4j.LoggerFactory;
 public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, QueryMemTracker, Closeable {
 
     private static final Logger log = LoggerFactory.getLogger(QueryOpProcessor.class);
-    private static final Map<String, OPS> opmap = new HashMap<String, OPS>();
+    private static final long OP_TIPMEM = Parameter.longValue("query.tipmem", 0);
+    private static final int OP_TIPROW = Parameter.intValue("query.tiprow", 0);
+    private static final int OP_MAXROWS = Parameter.intValue("query.max.rows", 0);
+    private static final int OP_MAXCELLS = Parameter.intValue("query.max.cells", 0);
+    private static final String TMP_SORT_DIR_STRING = Parameter.value("query.tmpdir", "query.tmpdir");
     /* this forces the jvm to compile/eval OPS which is required for the switch */
     private static final OPS NullOpType = OPS.NULL;
 
-    private static final int maxRows = Parameter.intValue("query.max.rows", 0);
-    private static final int maxCells = Parameter.intValue("query.max.cells", 0);
+    private static final Map<String, OPS> opmap = new HashMap<>();
 
     private enum OPS {
         AVG("avg"),
@@ -158,75 +160,51 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
     private QueryOp lastOp;
     private long rowsin;
     private long cellsin;
+    private final long memTip;
+    private final int rowTip;
+    private final File tempDir;
+    private final QueryStatusObserver queryStatusObserver;
+    private final ResultChannelOutput output;
+    private final QueryMemTracker memTracker;
 
-    private long memTip = Query.tipMem;
-    private int rowTip = Query.tipRow;
-    private File tempDir = new File("query.tmp");
-    private ResultChannelOutput output;
-    private QueryMemTracker memTracker;
-    private LinkedList<ResultTableTuned> toBeFreed = new LinkedList<ResultTableTuned>();
-
-    private QueryStatusObserver queryStatusObserver = null;
-    private Query query = null;
-
-    public QueryOpProcessor(DataChannelOutput output, QueryStatusObserver queryStatusObserver) {
-        this.queryStatusObserver = queryStatusObserver;
-        this.output = new ResultChannelOutput(output);
-        firstOp = this.output;
+    private QueryOpProcessor(Builder builder) {
+        this(builder.output, builder.queryStatusObserver, builder.tempDir,
+                builder.memTip, builder.rowTip, builder.memTracker, builder.ops);
+        parseOps(builder.ops);
     }
 
-    public QueryOpProcessor(DataChannelOutput output) {
-        this.queryStatusObserver = new QueryStatusObserver();
+    public QueryOpProcessor(DataChannelOutput output, String[] ops) {
+        this(output, ops, new QueryStatusObserver());
+    }
+
+    public QueryOpProcessor(DataChannelOutput output, String[] ops, QueryStatusObserver queryStatusObserver) {
+        this(output, queryStatusObserver, new File(TMP_SORT_DIR_STRING),
+                OP_TIPMEM, OP_TIPROW, null, ops);
+    }
+
+    public QueryOpProcessor(DataChannelOutput output, QueryStatusObserver queryStatusObserver,
+            File tempDir, long memTip, int rowTip, QueryMemTracker memTracker, String[] ops) {
+        this.queryStatusObserver = queryStatusObserver;
+        this.tempDir = tempDir;
+        this.memTip = memTip;
+        this.rowTip = rowTip;
         this.output = new ResultChannelOutput(output);
+        this.memTracker = memTracker;
         firstOp = this.output;
+        parseOps(ops);
     }
 
     public QueryStatusObserver getQueryStatusObserver() {
         return this.queryStatusObserver;
     }
 
-    public QueryOpProcessor setQuery(Query query) {
-        this.query = query;
-        return this;
-    }
-
     public String printOps() {
         return firstOp.toString();
     }
 
-    public void setMemoryManager(QueryMemManager memManager) {
-        if (memTracker != null) {
-            memTracker.untrackAllBundles();
-        }
-        memTracker = memManager.allocateTracker();
-    }
-
-    public QueryOpProcessor setTempDir(File tempDir) {
-        this.tempDir = tempDir;
-
-        return this;
-    }
-
-    public QueryOpProcessor setMemTip(long bytemax) {
-        this.memTip = bytemax;
-        return this;
-    }
-
-    public QueryOpProcessor setRowTip(int tip) {
-        rowTip = tip;
-        return this;
-    }
-
-    public QueryOpProcessor parseOps(String ops) {
-        if (ops == null || ops.length() == 0) {
-            return this;
-        }
-        return parseOps(new String[]{ops});
-    }
-
-    public QueryOpProcessor parseOps(String opslist[]) {
+    private void parseOps(String... opslist) {
         if (opslist == null || opslist.length == 0) {
-            return this;
+            return;
         }
 
         /* remaining ops stack is processed in reverse order */
@@ -272,7 +250,7 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
                         appendOp(new OpDisorder(this, args));
                         break;
                     case DSORT:
-                        appendOp(new OpDiskSort(args, query, queryStatusObserver));
+                        appendOp(new OpDiskSort(args, TMP_SORT_DIR_STRING, queryStatusObserver));
                         break;
                     case FILL:
                         appendOp(new OpFill(args));
@@ -356,8 +334,8 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
                         appendOp(new OpSleep(args));
                         break;
                     case SORT:
-//                  appendOp(new OpSort(this, args));
-                        appendOp(new OpDiskSort(args, query, queryStatusObserver));
+                        // TODO: fix SORT or simplify this aliasing
+                        appendOp(new OpDiskSort(args, TMP_SORT_DIR_STRING, queryStatusObserver));
                         break;
                     case STRING:
                         appendOp(new OpString(args));
@@ -378,8 +356,6 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
             }
 
         }
-
-        return this;
     }
 
     @Override
@@ -416,11 +392,11 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
                 firstOp.send(row);
             }
         }
-        if (maxRows > 0 && rowsin > maxRows) {
-            throw new QueryException("query exceeded max input rows: " + maxRows);
+        if (OP_MAXROWS > 0 && rowsin > OP_MAXROWS) {
+            throw new QueryException("query exceeded max input rows: " + OP_MAXROWS);
         }
-        if (maxCells > 0 && cellsin > maxCells) {
-            throw new QueryException("query exceeded max input cells: " + maxCells);
+        if (OP_MAXCELLS > 0 && cellsin > OP_MAXCELLS) {
+            throw new QueryException("query exceeded max input cells: " + OP_MAXCELLS);
         }
     }
 
@@ -457,7 +433,6 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
     public DataTable createTable(int sizeHint) {
         try {
             ResultTableTuned result = new ResultTableTuned(tempDir, rowTip, memTip, this, sizeHint);
-            toBeFreed.add(result);
             return result;
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -526,6 +501,56 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
     public void untrackAllBundles() {
         if (memTracker != null) {
             memTracker.untrackAllBundles();
+        }
+    }
+
+    public static final class Builder {
+
+        private final DataChannelOutput output;
+        private final String[] ops;
+
+        private long memTip = OP_TIPMEM;
+        private int rowTip = OP_TIPROW;
+        private File tempDir = new File(TMP_SORT_DIR_STRING);
+        private QueryMemTracker memTracker = null;
+
+        private QueryStatusObserver queryStatusObserver = null;
+
+        public Builder(DataChannelOutput output, String... ops) {
+            this.output = output;
+            this.ops = ops;
+        }
+
+        public Builder memTracker(QueryMemTracker memTracker) {
+            this.memTracker = memTracker;
+            return this;
+        }
+
+        public Builder memTip(long memTip) {
+            this.memTip = memTip;
+            return this;
+        }
+
+        public Builder rowTip(int rowTip) {
+            this.rowTip = rowTip;
+            return this;
+        }
+
+        public Builder tempDir(File tempDir) {
+            this.tempDir = tempDir;
+            return this;
+        }
+
+        public Builder queryStatusObserver(QueryStatusObserver queryStatusObserver) {
+            this.queryStatusObserver = queryStatusObserver;
+            return this;
+        }
+
+        public QueryOpProcessor build() {
+            if (this.queryStatusObserver == null) {
+                queryStatusObserver(new QueryStatusObserver());
+            }
+            return new QueryOpProcessor(this);
         }
     }
 }

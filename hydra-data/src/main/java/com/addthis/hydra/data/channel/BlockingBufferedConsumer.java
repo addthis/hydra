@@ -15,7 +15,6 @@ package com.addthis.hydra.data.channel;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.table.DataTable;
-import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 
 
@@ -27,11 +26,11 @@ public class BlockingBufferedConsumer extends BlockingNullConsumer {
     private final DataTable table;
 
     public BlockingBufferedConsumer() throws InterruptedException {
-        table = Query.createProcessor(this).createTable(0);
+        this((String[]) null);
     }
 
     public BlockingBufferedConsumer(String ops[]) throws InterruptedException {
-        table = Query.createProcessor(this, ops).createTable(0);
+        table = new QueryOpProcessor(this, ops).createTable(0);
     }
 
     public BlockingBufferedConsumer(QueryOpProcessor proc) throws InterruptedException {

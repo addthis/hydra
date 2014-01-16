@@ -37,7 +37,8 @@ public abstract class TestOp {
 
     public static void doOpTest(DataTable in, String ops, DataTable out, int formatSize, int tipRow, int tipMem) throws Exception {
         BlockingBufferedConsumer buffer = new BlockingBufferedConsumer();
-        QueryOpProcessor qp = new QueryOpProcessor(buffer).setMemTip(tipMem).setRowTip(tipRow).parseOps(ops);
+        QueryOpProcessor qp = new QueryOpProcessor.Builder(buffer, ops)
+                .memTip(tipMem).rowTip(tipRow).build();
         for (Bundle row : in) {
             if (debug) {
                 System.out.println("send " + row);
