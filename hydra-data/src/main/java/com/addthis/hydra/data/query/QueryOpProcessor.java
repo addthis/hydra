@@ -91,10 +91,11 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
     private static final int OP_MAXROWS = Parameter.intValue("query.max.rows", 0);
     private static final int OP_MAXCELLS = Parameter.intValue("query.max.cells", 0);
     private static final String TMP_SORT_DIR_STRING = Parameter.value("query.tmpdir", "query.tmpdir");
-    /* this forces the jvm to compile/eval OPS which is required for the switch */
-    private static final OPS NullOpType = OPS.NULL;
 
     private static final Map<String, OPS> opmap = new HashMap<>();
+
+    /* this forces the jvm to compile/eval OPS which is required for the switch */
+    private static final OPS NullOpType = OPS.NULL;
 
     private enum OPS {
         AVG("avg"),
@@ -170,7 +171,6 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
     private QueryOpProcessor(Builder builder) {
         this(builder.output, builder.queryStatusObserver, builder.tempDir,
                 builder.memTip, builder.rowTip, builder.memTracker, builder.ops);
-        parseOps(builder.ops);
     }
 
     public QueryOpProcessor(DataChannelOutput output, String[] ops) {
