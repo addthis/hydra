@@ -107,7 +107,7 @@ function(
                     self.isQuiesced= !self.isQuiesced;
                     self.checkQuiesced();
                 }).fail(function(){
-                    Alertify.dialog.alert("You do not have sufficient privileges to quisce cluster");
+                    Alertify.dialog.alert("You do not have sufficient privileges to quiesce cluster");
                 });
             });
         },

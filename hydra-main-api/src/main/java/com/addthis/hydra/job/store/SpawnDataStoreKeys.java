@@ -28,6 +28,6 @@ public class SpawnDataStoreKeys {
     public static final String SPAWN_COMMON_ALERT_PATH = "/spawn/common/alerts";
 
     /* Marker to make sure we import legacy alerts from Jobs exactly once */
-    public static final String SPAWN_COMMON_ALERT_LOADED_LEGACY = "/spawn/common/alerts/loaded_legacy";
+    public static final String SPAWN_COMMON_ALERT_LOADED_LEGACY = "/spawn/common/alerts/_loaded_legacy";
 
 }

@@ -52,6 +52,7 @@ define([
                 "git":"showGitProperties",
                 "rebalanceParams":"showRebalanceParams",
                 "alerts":"showAlertsTable",
+                "alertsFiltered/:jobIdFilter":"showAlertsTableFiltered",
                 "alerts/:alertId":"showAlertsDetail",
                 "alerts/:alertId/:jobIds":"showAlertsDetail",                
             }

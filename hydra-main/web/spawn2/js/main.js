@@ -627,6 +627,15 @@ function(
         app.showView(table,"#alerts");
         app.makeHtmlTitle("Alerts");
     });
+    app.router.on("route:showAlertsTableFiltered",function(jobIdFilter) {
+    	app.router.navigate("#alerts", {trigger: true});    	    	
+		// Modify the table filter and apply it to the alert list.
+		var inp = $("#alertTable_filter").find("input");
+		inp.val(jobIdFilter);
+		var event = $.Event("keypress");
+		event.which = 13;
+		inp.trigger(event);    	
+    });
     app.router.on("route:showAlertsDetail",function(alertId, jobIds){
         var alert;
         if(_.isEqual(alertId,"create")){
@@ -637,7 +646,7 @@ function(
         var view = new Alerts.DetailView({
             model:alert
         });
-        app.showView(view,"#alert");
+        app.showView(view,"#alerts");
         app.makeHtmlTitle("Alert::"+name);
     });    
     app.user.on("change:username",function(){
