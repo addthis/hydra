@@ -16,10 +16,14 @@ package com.addthis.hydra.job;
 
 import java.util.Arrays;
 
+import com.addthis.basis.util.Strings;
+
 import com.addthis.hydra.job.spawn.JobAlert;
+import com.addthis.maljson.JSONObject;
 
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class JobAlertTest {
@@ -56,6 +60,17 @@ public class JobAlertTest {
         idleJob.setEndTime(now - 300 * 60 * 1000);
         assertTrue("Rekick alert should fire after long time period", rekickAlert.checkAlertForJobs(Arrays.asList(idleJob)));
 
+    }
+
+
+    @Test
+    public void jsonTest() throws Exception {
+        JobAlert initialAlert = new JobAlert("sampleid", 0, null, "someone@domain.com", new String[] {"j1", "j2"});
+        JSONObject json = initialAlert.toJSON();
+        assertEquals(initialAlert.getAlertId(), json.getString("alertId"));
+        assertEquals(initialAlert.getType(), json.getInt("type"));
+        assertEquals(initialAlert.getEmail(), json.getString("email"));
+        assertEquals(Strings.join(initialAlert.getJobIds(), ","), json.getString("jobIds"));
     }
 
     private Job createJobWithState(JobState jobState) throws Exception {

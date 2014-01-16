@@ -31,8 +31,8 @@ function(
 		 ){
     	var Model = Backbone.Model.extend({
     		idAttribute:"alertId",
-        	url:function(){return "/alert/get?alertId=" + this.alertId;},
-        	defaults:{ 
+        	url:function(){return "/alert/get?alertId=" + this.get("alertId");},
+        	defaults:{
         		jobIds:"",
         		type:-1,
         		timeout:-1,
@@ -220,11 +220,11 @@ function(
             	var self=this,isNew=this.model.isNew();
             	this.model.save().done(function(data){
              		Alertify.log.success("Alert saved successfully.");
-             		if (self.model.get("alertId") == "(no id)") {
+             		if (!self.model.get("alertId")) {
              			self.model.set("alertId", data.alertId);
              			self.model.fetch({
              				success: function(model) {
-             					app.alertsCollection.add(model);
+             					app.alertCollection.add(model);
              					app.alert=undefined;
              					var location = window.location.hash;
              					location=location.replace("create",data.alertId);

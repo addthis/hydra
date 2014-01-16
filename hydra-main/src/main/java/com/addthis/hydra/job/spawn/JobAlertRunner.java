@@ -349,10 +349,10 @@ public class JobAlertRunner {
         return rv;
     }
 
-    public JSONObject getAlert(String alertId) {
+    public String getAlert(String alertId) {
         synchronized (alertMap) {
             try {
-                return alertMap.contains(alertId) ? alertMap.get(alertId).toJSON() : null;
+                return alertMap.containsKey(alertId) ? alertMap.get(alertId).toJSON().toString() : null;
             } catch (Exception e) {
                 log.warn("Failed to fetch alert " + alertId, e);
                 return null;

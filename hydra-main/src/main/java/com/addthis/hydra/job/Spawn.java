@@ -1880,7 +1880,7 @@ public class Spawn implements Codec.Codable {
         return jobAlertRunner.getAlertStateMap();
     }
 
-    public JSONObject getAlert(String alertId) {
+    public String getAlert(String alertId) {
         return jobAlertRunner.getAlert(alertId);
     }
 

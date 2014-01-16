@@ -51,7 +51,7 @@ public class JobAlert implements Codec.Codable {
     @Codec.Set(codable = true)
     private int type;
     @Codec.Set(codable = true)
-    private int timeout;
+    private Integer timeout;
     @Codec.Set(codable = true)
     private String email;
     @Codec.Set(codable = true)
@@ -83,7 +83,7 @@ public class JobAlert implements Codec.Codable {
         priorActiveJobs = new HashMap<>();
     }
 
-    public JobAlert(String alertId, int type, int timeout, String email, String[] jobIds) {
+    public JobAlert(String alertId, int type, Integer timeout, String email, String[] jobIds) {
         this.alertId = alertId;
         this.lastAlertTime = -1;
         this.type = type;

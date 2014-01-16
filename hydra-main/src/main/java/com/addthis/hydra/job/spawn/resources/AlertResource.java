@@ -86,7 +86,13 @@ public class AlertResource {
     @Path("/get")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAlert(@QueryParam("alertId") String alertId) {
-        return Response.ok(spawn.getAlert(alertId)).build();
+        try {
+            return Response.ok(spawn.getAlert(alertId)).build();
+        }
+        catch (Exception ex) {
+            log.error("Failed to send alert config for " + alertId , ex);
+            return Response.serverError().build();
+        }
 
     }
 
