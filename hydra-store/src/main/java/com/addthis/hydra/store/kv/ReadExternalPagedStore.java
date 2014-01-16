@@ -713,4 +713,44 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         return metrics;
     }
 
+    public void testIntegrity() {
+        int counter = 0;
+        try {
+            byte[] encodedKey = pages.firstKey();
+            K key = keyCoder.keyDecode(encodedKey);
+            do {
+                KeyValuePage<K, V> newPage = loadingPageCache.get(key);
+                byte[] encodedNextKey = pages.higherKey(encodedKey);
+                if (encodedNextKey != null) {
+                    K nextKey = keyCoder.keyDecode(encodedNextKey);
+                    K nextFirstKey = newPage.getNextFirstKey();
+                    if (nextFirstKey == null) {
+                        log.warn("On page " + counter + " the firstKey is " +
+                             newPage.getFirstKey() +
+                             " the nextFirstKey is null" +
+                             " and the next page is associated with key " + nextKey);
+                        assert(false);
+                    } else if (!nextFirstKey.equals(nextKey)) {
+                        int compareTo = compareKeys(nextFirstKey, nextKey);
+                        char direction = compareTo > 0 ? '>' : '<';
+                        log.warn("On page " + counter + " the firstKey is " +
+                             newPage.getFirstKey() +
+                             " the nextFirstKey is " + nextFirstKey +
+                             " which is " + direction + " the next page is associated with key " + nextKey);
+                        assert(false);
+                    }
+                    key = nextKey;
+                }
+                encodedKey = encodedNextKey;
+                counter++;
+                if (counter % 10000 == 0) {
+                    log.info("Scanned " + counter + " pages.");
+                }
+            } while (encodedKey != null);
+        } catch (ExecutionException ex) {
+            log.error(ex.toString());
+        }
+        log.info("Scanned " + counter + " pages.");
+    }
+
 }

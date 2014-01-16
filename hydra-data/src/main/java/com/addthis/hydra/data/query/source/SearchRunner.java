@@ -84,18 +84,10 @@ class SearchRunner implements Runnable {
         {
             log.warn("DataChannelError while running search, query was likely canceled on the server side," +
                      " {} or the query execution got a Thread.interrupt call", ex.getMessage());
-            logError(ex);
-            if (queryOpProcessor != null) {
-                queryOpProcessor.sourceError(ex);
-                queryOpProcessor.sendComplete();
-            }
+            reportError(ex);
         } catch (Exception ex) {
             log.warn("Generic Exception while running search. {}", ex.getMessage());
-            logError(ex);
-            if (queryOpProcessor != null) {
-                queryOpProcessor.sourceError(new DataChannelError(ex));
-                queryOpProcessor.sendComplete();
-            }
+            reportError(ex);
         }
 
         // Cleanup -- decrease query count, release our engine (if we had one)
@@ -110,13 +102,21 @@ class SearchRunner implements Runnable {
         }
     }
 
-    protected void logError(Throwable ex) {
+    protected void reportError(Throwable ex) {
         log.warn("Canonical directory: {}", goldDirString);
         log.warn("Engine: {}", finalEng);
         log.warn("Query options: uuid={}", options, ex);
+
+        if (!(ex instanceof DataChannelError)) {
+            ex = new DataChannelError(ex);
+        }
+        DataChannelError error = (DataChannelError) ex;
         // See if we can send the error to mqmaster as well
-        if (queryOpProcessor == null) {
-            queryOpProcessor = Query.createProcessor(bridge, bridge.queryStatusObserver);
+        if (queryOpProcessor != null) {
+            queryOpProcessor.sourceError(error);
+            queryOpProcessor.sendComplete();
+        } else {
+            bridge.sourceError(error);
         }
     }
 

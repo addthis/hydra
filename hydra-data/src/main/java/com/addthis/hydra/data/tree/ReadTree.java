@@ -494,4 +494,12 @@ public final class ReadTree implements DataTree {
         return source.getReadEps();
     }
 
+    /**
+     * For testing purposes only.
+     */
+    void testIntegrity() {
+        ReadExternalPagedStore store = source.getReadEps();
+        store.testIntegrity();
+    }
+
 }

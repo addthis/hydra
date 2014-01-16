@@ -71,7 +71,7 @@ public class QueryChannelUtil {
         try {
             QueryChannelClient client = getQueryChannelClient(host);
             BlockingBufferedConsumer consumer = new BlockingBufferedConsumer();
-            QueryOpProcessor proc = Query.createProcessor(consumer);
+            QueryOpProcessor proc = new QueryOpProcessor(consumer, null);
             client.query(query, proc);
             return consumer.getTable();
         } catch (Exception e) {
@@ -247,7 +247,6 @@ public class QueryChannelUtil {
         }
         Query query = new Query(job, paths.toArray(new String[paths.size()]), ops.toArray(new String[ops.size()]));
         query.setTraced(traced);
-        query.setCacheTTL(ttl);
         if (dsortcompression) {
             query.setParameter("dsortcompression", "true");
         }
@@ -300,7 +299,8 @@ public class QueryChannelUtil {
             long start = System.currentTimeMillis();
             File tempDir = Files.createTempDir();
             BlockingNullConsumer consumer = new BlockingNullConsumer();
-            QueryOpProcessor proc = Query.createProcessor(consumer).parseOps(lops.toArray(new String[lops.size()])).setTempDir(tempDir);
+            QueryOpProcessor proc = new QueryOpProcessor.Builder(consumer, lops.toArray(new String[lops.size()]))
+                    .tempDir(tempDir).build();
             proc.appendOp(new BundleOutputWrapper(new PrintOp(sep, out)));
             client.query(query, proc);
             consumer.waitComplete();

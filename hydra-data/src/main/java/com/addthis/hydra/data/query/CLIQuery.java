@@ -61,9 +61,8 @@ public class CLIQuery {
         String outsep = args.length > 2 ? args[2] : ",";
         String group[] = new String[]{"\"", "'", "()", "[]", "{}"};
         File tempDir = Files.createTempDir();
-        QueryOpProcessor rp = new QueryOpProcessor(new CMDLineDataChannelOutput(outsep));
-        rp.parseOps(args[0]);
-        rp.setTempDir(tempDir);
+        QueryOpProcessor rp = new QueryOpProcessor.Builder(new CMDLineDataChannelOutput(outsep), args[0])
+                .tempDir(tempDir).build();
         if (args.length > 3) {
             group = new String[args.length - 3];
             System.arraycopy(args, 3, group, 0, group.length);
