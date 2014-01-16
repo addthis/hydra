@@ -896,6 +896,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     /**
      * For testing purposes only.
      */
+    @SuppressWarnings("unused")
     void testIntegrity() {
         PagedKeyValueStore store = source.getEps();
         if (store instanceof SkipListCache) {
