@@ -78,7 +78,7 @@ public class PathValue extends PathElement {
     protected boolean once;
 
     @Codec.Set(codable = true)
-    protected boolean mapAsCount;
+    protected String mapTo;
 
     @Codec.Set(codable = true)
     protected boolean delete;
@@ -91,6 +91,7 @@ public class PathValue extends PathElement {
 
     private ValueString valueString;
     private BundleField setField;
+    private BundleField mapField;
 
     public final ValueObject value() {
         if (valueString == null) {
@@ -119,6 +120,9 @@ public class PathValue extends PathElement {
         super.resolve(mapper);
         if (set != null) {
             setField = mapper.bindField(set);
+        }
+        if (mapTo != null) {
+            mapField = mapper.bindField(mapTo);
         }
         if (each != null) {
             each.resolve(mapper);
@@ -180,19 +184,15 @@ public class PathValue extends PathElement {
         } else if (name.getObjectType() == ValueObject.TYPE.MAP) {
             for (ValueMapEntry e : name.asMap()) {
                 String key = e.getKey();
-                ValueObject obj = e.getValue();
-                if (mapAsCount) {
-                    PathValue mapValue = new PathValue(key);
-                    int oldCountValue = state.getCountValue();
-                    state.setCountValue(obj.asLong().getLong().intValue());
-                    list = mapValue.processNode(state);
-                    state.setCountValue(oldCountValue);
+                if (mapTo != null) {
+                    state.getBundle().setValue(mapField, e.getValue());
+                    pushed += processNodeByValue(list, state, ValueFactory.create(key));
                 } else {
                     PathValue mapValue = new PathValue(key, count);
                     TreeNodeList tnl = mapValue.processNode(state);
                     if (tnl != null) {
                         state.push(tnl);
-                        list.addAll(processNodeUpdates(state, obj));
+                        list.addAll(processNodeUpdates(state, e.getValue()));
                         state.pop();
                     }
                 }
