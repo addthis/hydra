@@ -247,7 +247,6 @@ public class QueryChannelUtil {
         }
         Query query = new Query(job, paths.toArray(new String[paths.size()]), ops.toArray(new String[ops.size()]));
         query.setTraced(traced);
-        query.setCacheTTL(ttl);
         if (dsortcompression) {
             query.setParameter("dsortcompression", "true");
         }

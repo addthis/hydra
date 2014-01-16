@@ -33,18 +33,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Currently only used in the sauron package, but will become more important
- * here.
+ * Object representation of a tree query.
  */
 public class Query implements Codec.Codable {
 
     private static final Logger log = LoggerFactory.getLogger(Query.class);
     private static final int MAX_PRINT_LENGTH = 3000;
     private static final String idPrefix = CUID.createCUID();
+
     private static final AtomicLong queryID = new AtomicLong(0);
+
     protected static RollingLog traceLog;
-    @Codec.Set(codable = false)
-    public volatile QueryStatusObserver queryStatusObserver = null;
+
     @Codec.Set(codable = true)
     private String paths[];
     @Codec.Set(codable = true)
@@ -52,14 +52,16 @@ public class Query implements Codec.Codable {
     @Codec.Set(codable = true)
     private String job;
     @Codec.Set(codable = true)
-    private long cachettl;
-    @Codec.Set(codable = true)
     private boolean trace;
     @Codec.Set(codable = true)
     private HashMap<String, String> params = new HashMap<>();
     @Codec.Set(codable = true)
     private volatile String uuid = nextUUID();
-    private List<QueryOp> appendops = new ArrayList<>(1);
+
+    @Codec.Set(codable = false)
+    public volatile QueryStatusObserver queryStatusObserver = null;
+
+    private final List<QueryOp> appendops = new ArrayList<>(1);
 
     public Query() {
     }
@@ -197,15 +199,6 @@ public class Query implements Codec.Codable {
         return this;
     }
 
-    public long getCacheTTL() {
-        return cachettl;
-    }
-
-    public Query setCacheTTL(long ttlms) {
-        cachettl = ttlms;
-        return this;
-    }
-
     public List<QueryElement[]> getQueryPaths() {
         ArrayList<QueryElement[]> list = new ArrayList<QueryElement[]>(paths.length);
         for (String path : paths) {
@@ -271,7 +264,6 @@ public class Query implements Codec.Codable {
         q.paths = paths;
         q.ops = ops;
         q.job = job;
-        q.cachettl = cachettl;
         q.trace = trace;
         q.params = params;
         q.uuid = uuid;
