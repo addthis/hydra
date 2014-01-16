@@ -234,12 +234,14 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
     @Codec.Set(codable = true)
     private PathOutput outputs[];
 
-    /**
-     * Default is either "mapper.live" configuration value or -1.
-     * Any number > -1 is taken to be the mesh port number and enables live queries.
-     */
     @Codec.Set(codable = true)
-    private int live = Parameter.intValue("mapper.live", -1);
+    private boolean live = Parameter.boolValue("mapper.live", false);
+
+    @Codec.Set(codable = true)
+    private String liveHost = Parameter.value("mapper.live.host", "localhost");
+
+    @Codec.Set(codable = true)
+    private int livePort = Parameter.intValue("mapper.live.port", -1);
 
     @Codec.Set(codable = true)
     private Integer nodeCache;
@@ -467,7 +469,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
             }
         }
 
-        if (config.jobId != null && live > -1) {
+        if (config.jobId != null && live && livePort > -1) {
             QueryEngine liveQueryEngine = new QueryEngine(tree);
             connectToMesh(treePath.toFile(), runConfig.jobId, liveQueryEngine);
         }
@@ -482,7 +484,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
 
     private void connectToMesh(File root, String jobId, QueryEngine engine) throws IOException {
         LiveQueryReference queryReference = new LiveQueryReference(root, jobId, engine);
-        liveQueryServer = new LiveMeshyServer(live, queryReference);
+        liveQueryServer = new LiveMeshyServer(livePort, queryReference);
     }
 
     /** */
