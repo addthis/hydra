@@ -620,12 +620,11 @@ function(
         app.makeHtmlTitle("Git");
     });
     app.router.on("route:showAlertsTable",function(){
-        app.alertCollection.fetch();
         var table = new Alerts.TableView({
             id:"alertTable",
             collection:app.alertCollection
         });
-        app.showView(table,"#alert");
+        app.showView(table,"#alerts");
         app.makeHtmlTitle("Alerts");
     });
     app.router.on("route:showAlertsDetail",function(alertId, jobIds){

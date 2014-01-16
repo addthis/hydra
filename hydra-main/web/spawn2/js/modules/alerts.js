@@ -65,12 +65,10 @@ function(
         		});
         	},
         	parse:function(data) {
-        		// May need to join/split jobIds on comma?
         		return data;
         	}
     	});
     	var Collection = Backbone.Collection.extend({
-    		url:"/alert/list",
         	parse:function(collection){
             	var array = new Array(collection.length);
             	_.each(collection,function(model,idx){
@@ -135,6 +133,9 @@ function(
             		"sWidth": "10%",
             		"bVisible":true,
             		"bSearchable":true,
+            		"mRender": function(val,type,data) {
+            			return isNaN(val) || val < 0 ? "" : val;
+            		}
         		},
         		{
         			"sTitle":"Emails",
@@ -167,7 +168,7 @@ function(
 			render:function(){
             	DataTable.View.prototype.render.apply(this,[]);
             	this.views.selectable.find("#deleteAlertButton").on("click",this.handleDeleteButtonClick);
-            		return this;
+            	return this;
         	},
         	handleDeleteButtonClick:function(event){
             	var ids=this.getSelectedIds();
@@ -182,7 +183,8 @@ function(
                 	}
             	});
             	Alertify.log.success(ids.length+" alerts deleted.");
-        	}        
+            	app.router.navigate("#alerts",{trigger:true});
+        	},
     	});
     	var DetailView = Backbone.View.extend({
     		className:'detail-view',
@@ -201,6 +203,8 @@ function(
          		});
         		this.$el.html(html);
         		$("#alertType").val(this.model.get("type"));
+        		$("#alertType").on("change",this.updateFormOptions);
+        		this.updateFormOptions();
          		return this;
         	},
         	handleDeleteButtonClick:function(event){
@@ -254,7 +258,12 @@ function(
                		}
         		});
         		this.model.set(name,jobs);
-        	}
+        	},
+        	updateFormOptions:function() {
+        		var type = parseInt($("#alertType").val());
+        		// Alert type 0 and 1 do not use the timeout field
+        		$("#alertTimeout").toggle(type >= 2);
+        	}        	
     	});    
     	return {
     		Model:Model,
