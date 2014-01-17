@@ -47,68 +47,9 @@ import com.addthis.hydra.data.tree.DataTreeUtil;
  * @user-reference
  * @hydra-name alias
  */
-public final class PathAlias2 extends PathKeyValue {
-
-    /**
-     * Path traversal to the target node. This field is required.
-     */
-    @Codec.Set(codable = true, required = true)
-    private PathValue path[];
-
-    /**
-     * When traversing the tree in search of the target node,
-     * if this parameter is a positive integer then begin
-     * the traversal this many levels higher than the
-     * current location. If {@linkplain #peer} is true
-     * then this parameter is ignored. Default is zero.
-     */
-    @Codec.Set(codable = true)
-    private int relativeUp;
-
-    /**
-     * When traversing the tree in search of the target node,
-     * if this flag is true then begin the traversal at
-     * current location. Default is false.
-     */
-    @Codec.Set(codable = true)
-    private boolean peer;
-
-    /**
-     * Default is false.
-     */
-    @Codec.Set(codable = true)
-    private int debug;
-
-    /**
-     * Default is null.
-     */
-    @Codec.Set(codable = true)
-    private String debugKey;
-
-    private int match;
-    private int miss;
-
-    public PathAlias2() {
-    }
-
-    public PathAlias2(PathValue path[]) {
-        this.path = path;
-    }
-
-    @Override
-    public void resolve(TreeMapper mapper) {
-        super.resolve(mapper);
-        for (PathValue pv : path) {
-            pv.resolve(mapper);
-        }
-    }
-
+public final class PathAlias2 extends PathAlias {
     @Override
     public DataTreeNode getOrCreateNode(final TreeMapState state, final String name) {
-        DataTreeNode node = state.getLeasedNode(name);
-        if (node != null) {
-            return node;
-        }
         if (create) {
             return state.getOrCreateNode(name, new DataTreeNodeInitializer() {
                 @Override
@@ -138,52 +79,7 @@ public final class PathAlias2 extends PathKeyValue {
                 }
             });
         } else {
-            String p[] = new String[path.length];
-            for (int i = 0; i < p.length; i++) {
-                p[i] = ValueUtil.asNativeString(path[i].getPathValue(state));
-            }
-            DataTreeNode alias = null;
-            if (peer) {
-                alias = DataTreeUtil.pathLocateFrom(state.current(), p);
-            } else if (relativeUp > 0) {
-                alias = DataTreeUtil.pathLocateFrom(state.peek(relativeUp), p);
-            } else {
-                alias = DataTreeUtil.pathLocateFrom(state.current().getTreeRoot(), p);
-            }
-            if (alias != null) {
-                final DataTreeNode finalAlias = alias;
-                DataTreeNodeInitializer init = new DataTreeNodeInitializer() {
-                    @Override
-                    public void onNewNode(DataTreeNode child) {
-                        child.aliasTo(finalAlias);
-                    }
-                };
-                if (debug > 0) {
-                    debug(true);
-                }
-                return state.getOrCreateNode(name, init);
-            } else {
-                if (debug > 0) {
-                    debug(false);
-                }
-                if (log.isDebugEnabled() || debug == 1) {
-                    log.warn("alias fail, missing " + Strings.join(p, " / "));
-                }
-                return null;
-            }
-        }
-    }
-
-    private synchronized void debug(boolean hit) {
-        if (hit) {
-            match++;
-        } else {
-            miss++;
-        }
-        if (match + miss >= debug) {
-            log.warn("query[" + debugKey + "]: match=" + match + " miss=" + miss);
-            match = 0;
-            miss = 0;
+            return super.getOrCreateNode(state, name);
         }
     }
 }
