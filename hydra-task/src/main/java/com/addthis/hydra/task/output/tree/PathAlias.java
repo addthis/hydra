@@ -80,6 +80,14 @@ public final class PathAlias extends PathKeyValue {
     private boolean peer;
 
     /**
+     * When true, alias acts like a hard file link. Otherwise the
+     * behavior is more similar to a soft file link. Hard links do
+     * not have re-validate on each use. Default is false.
+     */
+    @Codec.Set(codable = true)
+    private boolean hard;
+
+    /**
      * Default is false.
      */
     @Codec.Set(codable = true)
@@ -111,9 +119,11 @@ public final class PathAlias extends PathKeyValue {
 
     @Override
     public DataTreeNode getOrCreateNode(final TreeMapState state, final String name) {
-        DataTreeNode node = state.getLeasedNode(name);
-        if (node != null) {
-            return node;
+        if (hard) {
+            DataTreeNode node = state.getLeasedNode(name);
+            if (node != null) {
+                return node;
+            }
         }
         String p[] = new String[path.length];
         for (int i = 0; i < p.length; i++) {
