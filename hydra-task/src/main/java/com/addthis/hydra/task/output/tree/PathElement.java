@@ -80,6 +80,7 @@ public abstract class PathElement implements Codec.Codable, TreeDataParent {
     /** setup default serialization types */
     static {
         registerClass("alias", PathAlias.class);
+        registerClass("alias2", PathAlias2.class);
         registerClass("branch", PathBranch.class);
         registerClass("call", PathCall.class);
         registerClass("const", PathValue.class);
