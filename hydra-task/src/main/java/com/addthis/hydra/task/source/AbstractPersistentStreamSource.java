@@ -409,4 +409,24 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         }
         return name.substring(pathOff);
     }
+
+    public String[] getFiles() {
+        return files;
+    }
+
+    public void setFiles(String[] files) {
+        this.files = files;
+    }
+
+    public void setSortTokenOffset(int sortTokenOffset) {
+        this.sortTokenOffset = sortTokenOffset;
+    }
+
+    public void setStartDate(String startDate) {
+        this.startDate = startDate;
+    }
+
+    public void setEndDate(String endDate) {
+        this.endDate = endDate;
+    }
 }

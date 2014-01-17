@@ -24,6 +24,8 @@ import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
+import com.addthis.hydra.task.stream.StreamFile;
+import com.addthis.hydra.task.stream.StreamSourceMeshy;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.collect.ImmutableMap;
@@ -43,6 +45,8 @@ public class JobAlert implements Codec.Codable {
     private static final int ON_COMPLETE = 1;
     private static final int RUNTIME_EXCEEDED = 2;
     private static final int REKICK_TIMEOUT = 3;
+    private static final int SPLIT_CANARY = 4;
+    private static final int MAP_CANARY = 5;
 
     @Codec.Set(codable = true)
     private String alertId;
@@ -56,6 +60,12 @@ public class JobAlert implements Codec.Codable {
     private String email;
     @Codec.Set(codable = true)
     private String[] jobIds;
+    @Codec.Set(codable = true)
+    private String canaryConfig;
+    @Codec.Set(codable = true)
+    private String[] canaryCheckDates;
+    @Codec.Set(codable = true)
+    private Integer canaryConfigThreshold;
 
     /* For alerts tracking multiple jobs, this variable marks if the set of active jobs has changed since the last alert check */
     private boolean hasChanged = false;
@@ -157,6 +167,30 @@ public class JobAlert implements Codec.Codable {
         this.jobIds = jobIds;
     }
 
+    public String getCanaryConfig() {
+        return canaryConfig;
+    }
+
+    public void setCanaryConfig(String canaryConfig) {
+        this.canaryConfig = canaryConfig;
+    }
+
+    public String[] getCanaryCheckDates() {
+        return canaryCheckDates;
+    }
+
+    public void setCanaryCheckDates(String[] canaryCheckDates) {
+        this.canaryCheckDates = canaryCheckDates;
+    }
+
+    public Integer getCanaryConfigThreshold() {
+        return canaryConfigThreshold;
+    }
+
+    public void setCanaryConfigThreshold(Integer canaryConfigThreshold) {
+        this.canaryConfigThreshold = canaryConfigThreshold;
+    }
+
     public JSONObject toJSON() throws Exception {
         JSONObject rv = CodecJSON.encodeJSON(this);
         if (jobIds != null) {
@@ -232,10 +266,36 @@ public class JobAlert implements Codec.Codable {
             case REKICK_TIMEOUT:
                 return (!job.getState().equals(JobState.RUNNING) && (job.getEndTime() != null) &&
                     ((currentTime - job.getEndTime()) > timeout * MINUTE));
+            case SPLIT_CANARY:
+                return checkSplitCanary(job);
             default:
                 log.warn("Warning: alert " + alertId + " has unexpected type " + type);
                 return false;
         }
+    }
+
+    private boolean checkSplitCanary(Job job) {
+        if (canaryConfig == null || canaryConfigThreshold == null || canaryCheckDates == null || type != SPLIT_CANARY) {
+            return false;
+        }
+        for (String checkDate : canaryCheckDates) {
+            long totalBytes = getTotalBytesFromMesh(job.getId(), checkDate, canaryConfig);
+            if (totalBytes < canaryConfigThreshold) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static long getTotalBytesFromMesh(String jobId, String checkDate, String dirPath) {
+        String meshLookupString = "/job*/" + jobId + "/*/gold" + dirPath;
+        StreamSourceMeshy mesh = new StreamSourceMeshy(new String[] {meshLookupString}, 1, checkDate, checkDate);
+        StreamFile streamFile;
+        long totalBytes = 0;
+        while ((streamFile = mesh.nextSource()) != null) {
+            totalBytes += streamFile.length();
+        }
+        return totalBytes;
     }
 
     @Override

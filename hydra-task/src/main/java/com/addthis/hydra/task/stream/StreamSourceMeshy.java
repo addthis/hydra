@@ -196,6 +196,20 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
 
     private volatile int peerCount = -1;
 
+    public StreamSourceMeshy(String[] files, int sortTokenOffset, String startDate, String endDate) {
+        super();
+        super.setFiles(files);
+        super.setSortTokenOffset(sortTokenOffset);
+        super.setStartDate(startDate);
+        super.setEndDate(endDate);
+
+        try {
+            super.init(null, new Integer[]{0});
+        } catch (Exception e) {
+            log.warn("Failed to initiate StreamSourceMeshy", e);
+        }
+
+    }
 
     @Override
     protected boolean doInit() throws IOException {
