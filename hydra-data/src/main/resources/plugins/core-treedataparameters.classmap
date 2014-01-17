@@ -3,8 +3,10 @@
 "copy", com.addthis.hydra.data.tree.prop.DataCopy$Config
 "count", com.addthis.hydra.data.tree.prop.DataCounting$Config
 "count.min.sketch", com.addthis.hydra.data.tree.prop.DataCountMinSketch$Config
-"histo", com.addthis.hydra.data.tree.prop.DataHistogram$Config
 "distribution", com.addthis.hydra.data.tree.prop.DataPercentileDistribution$Config
+"histo", com.addthis.hydra.data.tree.prop.DataHistogram$Config
+"key.sieve", com.addthis.hydra.data.tree.prop.DataKeySieve$Config
+"key.sieve2", com.addthis.hydra.data.tree.prop.DataKeySieve2$Config
 "key.top", com.addthis.hydra.data.tree.prop.DataKeyTop$Config
 "limit.hot", com.addthis.hydra.data.tree.prop.DataLimitHot$Config
 "limit.recent", com.addthis.hydra.data.tree.prop.DataLimitRecent$Config

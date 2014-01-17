@@ -3,12 +3,14 @@
 "co", com.addthis.hydra.data.tree.prop.DataCounting
 "cp", com.addthis.hydra.data.tree.prop.DataCopy
 "hi", com.addthis.hydra.data.tree.prop.DataHistogram
-"pd", com.addthis.hydra.data.tree.prop.DataPercentileDistribution
+"ks", com.addthis.hydra.data.tree.prop.DataKeySieve
+"kS", com.addthis.hydra.data.tree.prop.DataKeySieve2
 "kt", com.addthis.hydra.data.tree.prop.DataKeyTop
 "lr", com.addthis.hydra.data.tree.prop.DataLimitRecent
 "lt", com.addthis.hydra.data.tree.prop.DataLimitTop
 "kv", com.addthis.hydra.data.tree.prop.DataMap
-"sf", com.addthis.hydra.data.tree.prop.DataSumFloat
+"pd", com.addthis.hydra.data.tree.prop.DataPercentileDistribution
 "sm", com.addthis.hydra.data.tree.prop.DataSum
+"sf", com.addthis.hydra.data.tree.prop.DataSumFloat
 "tm", com.addthis.hydra.data.tree.prop.DataTime
 "tp", com.addthis.hydra.data.tree.prop.DataTop
