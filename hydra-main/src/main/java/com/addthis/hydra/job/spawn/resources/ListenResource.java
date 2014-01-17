@@ -140,6 +140,7 @@ public class ListenResource {
             JSONObject commandlist = new JSONObject();
             JSONObject hostlist = new JSONObject();
             JSONObject aliases = new JSONObject();
+            JSONObject alerts = new JSONObject();
             for (String key : spawn.listMacros()) {
                 JobMacro macro = spawn.getMacro(key);
                 macrolist.put(key, macro.toJSON().put("macro", "").put("name", key));
@@ -163,6 +164,7 @@ public class ListenResource {
             setup.put("commands", commandlist);
             setup.put("hosts", hostlist);
             setup.put("aliases", aliases);
+            setup.put("alerts", spawn.fetchAllAlertsMap());
             setup.put("quiesced", (spawn.getSettings().getQuiesced() ? "1" : "0"));
             int numQueued = spawn.getTaskQueuedCount();
             setup.put("spawnqueuesize", numQueued);

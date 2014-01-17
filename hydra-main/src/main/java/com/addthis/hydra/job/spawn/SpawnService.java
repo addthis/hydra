@@ -22,6 +22,7 @@ import com.addthis.hydra.job.spawn.jersey.KVPairsProvider;
 import com.addthis.hydra.job.spawn.jersey.OptionalQueryParamInjectableProvider;
 import com.addthis.hydra.job.spawn.jersey.SpawnAuthProvider;
 import com.addthis.hydra.job.spawn.jersey.User;
+import com.addthis.hydra.job.spawn.resources.AlertResource;
 import com.addthis.hydra.job.spawn.resources.AliasResource;
 import com.addthis.hydra.job.spawn.resources.CommandResource;
 import com.addthis.hydra.job.spawn.resources.HostResource;
@@ -74,6 +75,7 @@ public class SpawnService {
         TaskResource taskResource = new TaskResource(spawn);
         AliasResource aliasResource = new AliasResource(spawn);
         HostResource hostResource = new HostResource(spawn);
+        AlertResource alertResource = new AlertResource(spawn);
 
         //authenticator
         Authenticator authenticator = new DefaultAuthenticator();
@@ -86,6 +88,7 @@ public class SpawnService {
         config.addResource(taskResource);
         config.addResource(aliasResource);
         config.addResource(hostResource);
+        config.addResource(alertResource);
 
         //register providers
         config.addProvider(OptionalQueryParamInjectableProvider.class);

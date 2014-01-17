@@ -20,6 +20,8 @@ import java.io.InputStream;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -51,6 +53,7 @@ import com.addthis.hydra.task.stream.StreamSourceFiltered;
 import com.addthis.hydra.task.stream.StreamSourceHashed;
 
 import com.google.common.base.Objects;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
@@ -88,7 +91,7 @@ import org.slf4j.LoggerFactory;
  * have already been completely consumed.  The data is maintained in a KV data
  * store using the source file name as the key.
  */
-public abstract class AbstractStreamFileDataSource extends TaskDataSource implements BundleFactory, Runnable {
+public abstract class AbstractStreamFileDataSource extends TaskDataSource implements BundleFactory {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractStreamFileDataSource.class);
 
@@ -219,6 +222,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
     private final ListBundleFormat bundleFormat = new ListBundleFormat();
     private final Bundle termBundle = new ListBundle(bundleFormat);
+    private final SourceWorker sourceWorker = new SourceWorker();
+    private final ExecutorService workerThreadPool =
+            Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("streamSourceWorker-%d").build());
 
     /* metrics */
     private Histogram queueSizeHisto = Metrics.newHistogram(getClass(), "queueSizeHisto");
@@ -232,7 +238,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     private final Counter opening = Metrics.newCounter(getClass(), "opening");
 
     // Concurrency provisions
-    private final AtomicInteger generateThreadIDs = new AtomicInteger(0);
     private CountDownLatch runningThreadCountDownLatch = null;
     private final Counter globalBundleSkip = Metrics.newCounter(getClass(), "globalBundleSkip");
     private final AtomicInteger consecutiveFileSkip = new AtomicInteger();
@@ -277,7 +282,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     }
 
     public void setSource(StreamFileSource source) {
-        this.source = source;
+        AbstractStreamFileDataSource.this.source = source;
     }
 
     protected abstract PersistentStreamFileSource getSource();
@@ -382,7 +387,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         runningThreadCountDownLatch = new CountDownLatch(workers);
         int workerId = workers;
         while (workerId-- > 0) {
-            new Thread(this, "DataSourceMeshyWorker-" + workerId).start();
+            workerThreadPool.execute(sourceWorker);
         }
     }
 
@@ -434,42 +439,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
              * method.
              */
             shutdownBody();
-        }
-    }
-
-    @Override
-    public void run() {
-        int threadID = generateThreadIDs.incrementAndGet();
-        log.debug("worker {} starting", threadID);
-        try {
-            // preopen a number of sources
-            int preOpenSize = Math.max(1, preOpen / workers);
-            for (int i = 0; i < preOpenSize; i++) {
-                Wrap preOpenedWrap = nextWrappedSource();
-                log.debug("pre-open {}", preOpenedWrap);
-                if (preOpenedWrap == null) {
-                    break;
-                }
-                preOpened.put(preOpenedWrap);
-            }
-
-            //fill already has a while loop that checks done
-            fill(threadID);
-        } catch (Exception e) {
-            log.warn("Exception while running data source meshy worker thread.", e);
-        } finally {
-            log.debug("worker {} exiting done={}", threadID, done);
-            runningThreadCountDownLatch.countDown();
-
-            /**
-             * This expression can evaluate to true more than once.
-             * It is OK because the shutdown() method has a guard
-             * to ensure it is invoked at most once.
-             */
-            if (runningThreadCountDownLatch.getCount() == 0) {
-                log.info("No more workers are running. One or more threads will attempt to call shutdown.");
-                shutdown();
-            }
         }
     }
 
@@ -801,4 +770,44 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         public abstract Bundleizer createBundleizer(InputStream input, BundleFactory factory);
     }
 
+    private class SourceWorker implements Runnable {
+
+        private final AtomicInteger generateThreadIDs = new AtomicInteger(0);
+
+        @Override
+        public void run() {
+            int threadID = generateThreadIDs.incrementAndGet();
+            log.debug("worker {} starting", threadID);
+            try {
+                // preopen a number of sources
+                int preOpenSize = Math.max(1, preOpen / workers);
+                for (int i = 0; i < preOpenSize; i++) {
+                    Wrap preOpenedWrap = nextWrappedSource();
+                    log.debug("pre-open {}", preOpenedWrap);
+                    if (preOpenedWrap == null) {
+                        break;
+                    }
+                    preOpened.put(preOpenedWrap);
+                }
+
+                //fill already has a while loop that checks done
+                fill(threadID);
+            } catch (Exception e) {
+                log.warn("Exception while running data source meshy worker thread.", e);
+            } finally {
+                log.debug("worker {} exiting done={}", threadID, done);
+                runningThreadCountDownLatch.countDown();
+
+                /**
+                 * This expression can evaluate to true more than once.
+                 * It is OK because the shutdown() method has a guard
+                 * to ensure it is invoked at most once.
+                 */
+                if (runningThreadCountDownLatch.getCount() == 0) {
+                    log.info("No more workers are running. One or more threads will attempt to call shutdown.");
+                    shutdown();
+                }
+            }
+        }
+    }
 }

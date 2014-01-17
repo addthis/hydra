@@ -11,8 +11,15 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<div class="span12" style="padding:0px;margin:0px;">
-    <button id="addAlertButton" class="btn btn-default btn-small">Add Alert</button> <br>
-    <button id="viewAlertsButton" class="btn btn-default btn-small">View Alerts Using This Job...</button>
-    
+<a href="#alerts/create" class='btn btn-default btn-small' style="margin:0px 4px;">
+    Create
+</a>
+<button class='btn btn-default checkbox-button' style="margin:0px 4px;">
+    <span class="checkbox"></span>
+    <span id="selectedCount"></span>
+</button>
+<div class='btn-group'>
+    <button id="deleteAlertButton" class='btn btn-default btn-red btn-hide-zero'>
+        Delete
+    </button>
 </div>

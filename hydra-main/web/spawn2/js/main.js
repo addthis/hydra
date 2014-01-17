@@ -85,6 +85,7 @@ require([
     "modules/jobs",
     "modules/macro",
     "modules/alias",
+    "modules/alerts",
     "modules/command",
     "modules/host",
     "modules/layout.views",
@@ -92,6 +93,7 @@ require([
     "modules/task.log",
     "modules/graph",
     "modules/git",
+    "modules/alerts",
     "modules/settings",
     "modules/datatable",
     "json!setupData",
@@ -108,6 +110,7 @@ function(
     Jobs,
     Macro,
     Alias,
+    Alert,
     Command,
     Host,
     Layout,
@@ -115,6 +118,7 @@ function(
     TaskLog,
     Graph,
     Git,
+    Alerts,
     Settings,
     DataTable,
     setupData,
@@ -138,6 +142,9 @@ function(
     );
     app.aliasCollection=new Alias.Collection().reset(
         Alias.Collection.prototype.parse(_.values(setupData.aliases))
+    );
+    app.alertCollection=new Alert.Collection().reset(
+    	Alert.Collection.prototype.parse(_.values(setupData.alerts))
     );
     app.jobInfoMetricModel = new Jobs.InfoMetricModel({});
     app.router.on("route:showIndex",function(){
@@ -612,6 +619,36 @@ function(
         app.showView(view,"#git");
         app.makeHtmlTitle("Git");
     });
+    app.router.on("route:showAlertsTable",function(){
+        var table = new Alerts.TableView({
+            id:"alertTable",
+            collection:app.alertCollection
+        });
+        app.showView(table,"#alerts");
+        app.makeHtmlTitle("Alerts");
+    });
+    app.router.on("route:showAlertsTableFiltered",function(jobIdFilter) {
+    	app.router.navigate("#alerts", {trigger: true});    	    	
+		// Modify the table filter and apply it to the alert list.
+		var inp = $("#alertTable_filter").find("input");
+		inp.val(jobIdFilter);
+		var event = $.Event("keypress");
+		event.which = 13;
+		inp.trigger(event);    	
+    });
+    app.router.on("route:showAlertsDetail",function(alertId, jobIds){
+        var alert;
+        if(_.isEqual(alertId,"create")){
+            alert = new Alert.Model({jobIds: jobIds});
+        }else{
+            alert = app.alertCollection.get(alertId);
+        }
+        var view = new Alerts.DetailView({
+            model:alert
+        });
+        app.showView(view,"#alerts");
+        app.makeHtmlTitle("Alert::"+name);
+    });    
     app.user.on("change:username",function(){
         $("#usernameBox").html(app.user.get("username"));
         $.ajaxSetup({

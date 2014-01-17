@@ -123,7 +123,9 @@ define([],function(){
                     return "";
                 }
             }
-        }
+        },
+    	alertTypes: {0: "On Job Error", 1: "On Job Completion", 2: "Runtime Exceeded", 3: "Rekick Timeout"},
+
     };
     return util;
 });

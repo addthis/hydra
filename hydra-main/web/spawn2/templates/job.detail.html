@@ -91,7 +91,7 @@
             Settings
         </a>
     </li>
-    <li id="alertsTab">
+    <li id="alertsTab" class="<%=(_.isUndefined(job.id)?'disabled':'')%>">
         <a href="#jobs/<%=(_.isUndefined(job.id)?(isClone?cloneId+'/alerts/clone':'create/alerts'):job.id+'/alerts')%>">
             Alerts
         </a>

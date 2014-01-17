@@ -50,7 +50,11 @@ define([
                 "commands":"showCommandTable",
                 "commands/:name":"showCommandDetail",
                 "git":"showGitProperties",
-                "rebalanceParams":"showRebalanceParams"
+                "rebalanceParams":"showRebalanceParams",
+                "alerts":"showAlertsTable",
+                "alertsFiltered/:jobIdFilter":"showAlertsTableFiltered",
+                "alerts/:alertId":"showAlertsDetail",
+                "alerts/:alertId/:jobIds":"showAlertsDetail",                
             }
         });
         return Router;

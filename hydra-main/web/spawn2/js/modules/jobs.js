@@ -763,7 +763,8 @@ function(
                 'handleKillButtonClick',
                 'handleEnableButtonClick',
                 'handleDisableButtonClick',
-                'handleDeleteButtonClick'
+                'handleDeleteButtonClick',
+                'handleCreateAlertButtonClick'
             );
             this.hasRendered=false;
             this.listenTo(app.user,"change:username",this.handleUsernameChange);
@@ -778,6 +779,7 @@ function(
                 this.views.selectable.find("#enableButton").on("click",this.handleEnableButtonClick);
                 this.views.selectable.find("#disableButton").on("click",this.handleDisableButtonClick);
                 this.views.selectable.find("#deleteButton").on("click",this.handleDeleteButtonClick);
+                this.views.selectable.find("#createAlertButton").on("click", this.handleCreateAlertButtonClick);
                 this.hasRendered=true;
             }
             //Jobs filter
@@ -823,6 +825,10 @@ function(
             var ids = this.getSelectedIds();
             this.collection.deleteSelected(ids);
         },
+        handleCreateAlertButtonClick:function(event){
+            var ids = this.getSelectedIds();
+            app.router.navigate("alerts/create/" + ids.join(), {trigger:true});
+        },        
         remove:function(){
             this.$el.detach();
         },
@@ -1560,14 +1566,6 @@ function(
                 formData[name]=param.value;
             });
             formData.config = this.configModel.get("config");
-            var alerts = {};
-            _.each(this.model.get("alerts"),function(alert){
-                if(!_.isEmpty(alert.email) && ( (alert.type>1 && alert.timeout>0) || alert.type<=1 )){
-                    alerts[alert.type+alert.email+alert.timeout]=alert;
-                }
-            });
-            this.model.set("alerts", _.values(alerts));
-            formData.alerts=JSON.stringify(this.model.get("alerts"));
             this.model.save(formData).done(function(resp){
                 Alertify.log.info(resp.id+"col. saved successfully.",2000)
                 self.model.trigger("save.done");
@@ -1746,7 +1744,8 @@ function(
     var AlertDetailView = DetailView.extend({
         template: _.template(jobAlertsTemplate),
         events: _.extend(DetailView.prototype.events,{
-            "click #addAlertButton":"handleAddButtonClick",
+            "click #addAlertButton":"handleAddAlertButtonClick",
+            "click #viewAlertsButton":"handleViewAlertsButtonClick",
             "keyup input[name='email']":"handleEmailKeyUp",
             "change select[name='type']":"handleSelectChange",
             "keyup input[name='timeout']":"handleTimeoutKeyUp",
@@ -1768,17 +1767,11 @@ function(
             this.$el.find("ul.nav.nav-tabs li#alertsTab").addClass("active");
             return this;
         },
-        handleAddButtonClick:function(event){
-            var alertData = {
-                type:0,
-                email:"",
-                lastAlertTime:"",
-                timeout:""
-            };
-            var alerts = this.model.get("alerts");
-            alerts.push(alertData);
-            this.model.set("alerts",alerts);
-            this.model.trigger("alerts.add");
+        handleAddAlertButtonClick:function(event){
+            app.router.navigate("#alerts/create/" + this.model.id, {trigger: true});
+        },
+        handleViewAlertsButtonClick:function(event){
+        	console.log("#alerts_" + this.model.id);
         },
         handleEmailKeyUp:function(event){
             var input = $(event.currentTarget);
