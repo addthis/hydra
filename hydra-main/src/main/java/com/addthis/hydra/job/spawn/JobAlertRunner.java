@@ -13,51 +13,64 @@
  */
 package com.addthis.hydra.job.spawn;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 
-import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.Job;
-import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskState;
 import com.addthis.hydra.job.Spawn;
+import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.util.EmailUtil;
+import com.addthis.maljson.JSONArray;
+import com.addthis.maljson.JSONObject;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
+
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_LOADED_LEGACY;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
+
 /**
  * This class runs a timer that scans the jobs for any email alerts and sends them.
  */
 public class JobAlertRunner {
 
     private static final Logger log = LoggerFactory.getLogger(JobAlertRunner.class);
-    private static String clusterName = Parameter.value("spawn.localhost", "unknown");
-    private final Timer alertTimer;
+    private static String clusterHead = Parameter.value("spawn.localhost", "unknown");
     private final Spawn spawn;
+    private final SpawnDataStore spawnDataStore;
 
-    private static final long REPEAT = 5 * 60 * 1000;
-    private static final long DELAY = 5 * 60 * 1000;
+    private static final long REPEAT = Parameter.longValue("spawn.job.alert.repeat", 60 * 1000);
+    private static final long DELAY = Parameter.longValue("spawn.job.alert.delay", 60 * 1000);
 
     private static final long GIGA_BYTE = (long) Math.pow(1024, 3);
-    private static final int MINUTE = 60 * 1000;
-    private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd-HHmm");
-    private final DecimalFormat decimalFormat = new DecimalFormat("#.###");
+    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd-HHmm");
+    private static final DecimalFormat decimalFormat = new DecimalFormat("#.###");
+
+    private final ConcurrentHashMap<String, JobAlert> alertMap;
+
+    private static final CodecJSON codec = new CodecJSON();
 
     private boolean alertsEnabled;
 
 
     public JobAlertRunner(Spawn spawn) {
         this.spawn = spawn;
-        alertTimer = new Timer("JobAlertTimer");
+        this.spawnDataStore = spawn.getSpawnDataStore();
+        Timer alertTimer = new Timer("JobAlertTimer");
         this.alertsEnabled = spawn.areAlertsEnabled();
         alertTimer.schedule(new TimerTask() {
             @Override
@@ -65,6 +78,8 @@ public class JobAlertRunner {
                 scanAlerts();
             }
         }, DELAY, REPEAT);
+        this.alertMap = new ConcurrentHashMap<>();
+        loadAlertMap();
     }
 
     /**
@@ -82,94 +97,52 @@ public class JobAlertRunner {
     }
 
     /**
-     * Method that loads jobs from Spawn and scans the alerts for jobs that have alerts. It checks to see if the condition for the alert
-     * exists and it sends the email if does, if it doesn't then it clears the alert.
+     * Iterate over alert map, checking the status of each alert and sending emails as needed.
      */
     public void scanAlerts() {
-        // Only scan jobs for alerts if alerting is enabled.
         if (alertsEnabled) {
-            log.info("Running alert scan ..........");
-            for (Job job : this.spawn.listJobs()) {
-                //boolean used to track whether the job needs to be updated
-                boolean alertsChanged = false;
-                List<JobAlert> alerts = job.getAlerts();
-                if (alerts != null) {
-                    for (JobAlert jobAlert : alerts) {
-                        long currentTime = JitterClock.globalTime();
-                        if (jobAlert.isOnError()) {
-                            if (job.getState().equals(JobState.ERROR)) {
-                                if (!jobAlert.hasAlerted()) {
-                                    emailAlert(job, "Task is in Error ", jobAlert, false);
-                                    alertsChanged = true;
-                                }
-                            } else {
-                                if (jobAlert.hasAlerted()) {
-                                    alertsChanged = true;
-                                    emailAlert(job, "{CLEAR} Task is in Error ", jobAlert, true);
-                                }
-                            }
+            log.info("Running alert scan...");
+            synchronized (alertMap) {
+                for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
+                    checkAlert(entry.getValue());
+                }
+            }
+        }
+    }
+
+    /**
+     * Check whether a particular alert should fire or clear based on job states
+     * @param alert The actual alert object
+     */
+    private void checkAlert(JobAlert alert) {
+        boolean alertHasChanged = alert.checkAlertForJobs(getAlertJobs(alert));
+        if (alertHasChanged) {
+            emailAlert(alert);
+        }
+    }
+
+    private List<Job> getAlertJobs(JobAlert alert) {
+        List<Job> rv = new ArrayList<>();
+        if (alert != null && alert.getJobIds() != null) {
+            Map<String, List<String>> aliases = spawn.getAliases();
+            for (String lookupId : alert.getJobIds()) {
+                Job job = spawn.getJob(lookupId);
+                if (job != null) {
+                    rv.add(job);
+                } else if (aliases.containsKey(lookupId)) {
+                    for (String jobId : aliases.get(lookupId)) {
+                        job = spawn.getJob(jobId);
+                        if (job != null) {
+                            rv.add(job);
                         }
-                        int jobTimeout = jobAlert.getTimeout();
-                        String timeUnit = (jobTimeout == 1) ? " minute" : " minutes";
-                        if (jobAlert.isOnComplete()) {
-                            // job is idle and has completed within the last 60 minutes
-                            if (job.getState().equals(JobState.IDLE)) {
-                                if (!jobAlert.hasAlerted()) {
-                                    emailAlert(job, "Task has Completed ", jobAlert, false);
-                                    alertsChanged = true;
-                                }
-                            } else {
-                                if (jobAlert.hasAlerted()) {
-                                    alertsChanged = true;
-                                    emailAlert(job, "{CLEAR} Task has Completed ", jobAlert, true);
-                                }
-                            }
-                        } else if (jobAlert.isRuntimeExceeded()) {
-                            if (job.getState().equals(JobState.RUNNING) && (job.getSubmitTime() != null) &&
-                                ((currentTime - job.getSubmitTime()) > jobTimeout * MINUTE)) {
-                                if (!jobAlert.hasAlerted()) {
-                                    emailAlert(job, "Task runtime has exceed : " + jobTimeout + timeUnit, jobAlert, false);
-                                    alertsChanged = true;
-                                }
-                            } else {
-                                if (jobAlert.hasAlerted()) {
-                                    alertsChanged = true;
-                                    emailAlert(job, "{CLEAR} Task runtime has exceed : " + jobTimeout + timeUnit, jobAlert, true);
-                                }
-                            }
-                        } else if (jobAlert.isRekickTimeout()) {
-                            if (!job.getState().equals(JobState.RUNNING) && (job.getEndTime() != null) &&
-                                ((currentTime - job.getEndTime()) > jobTimeout * MINUTE)) {
-                                if (!jobAlert.hasAlerted()) {
-                                    emailAlert(job, "Task has not been re-kicked in : " + jobTimeout + timeUnit, jobAlert, false);
-                                    alertsChanged = true;
-                                }
-                            } else {
-                                if (jobAlert.hasAlerted()) {
-                                    alertsChanged = true;
-                                    emailAlert(job, "{CLEAR} Task has not been re-kicked in : " + jobTimeout + timeUnit, jobAlert, true);
-                                }
-                            }
-                        }
-                    }
-                    //alert state for job has changed, so we need to ask spawn to update job
-                    if (alertsChanged) {
-                        this.spawn.updateJobAlerts(job.getId(), alerts);
                     }
                 }
             }
         }
-
+        return rv;
     }
 
-    /**
-     * Creates a summary message for the alert
-     *
-     * @param job
-     * @param msg
-     * @return
-     */
-    private String summary(Job job, String msg) {
+    private static String summary(Job job) {
         long files = 0;
         double bytes = 0;
         int running = 0;
@@ -201,10 +174,9 @@ public class JobAlertRunner {
         }
 
         StringBuffer sb = new StringBuffer();
-        sb.append("Cluster : " + clusterName + "\n");
+        sb.append("Cluster : " + clusterHead + "\n");
         sb.append("Job : " + job.getId() + "\n");
-        sb.append("Link : http://" + clusterName + ":5052/spawn2/index.html#jobs/" + job.getId() + "/tasks\n");
-        sb.append("Alert : " + msg + "\n");
+        sb.append("Link : http://" + clusterHead + ":5052/spawn2/index.html#jobs/" + job.getId() + "/tasks\n");
         sb.append("Description : " + job.getDescription() + "\n");
         sb.append("------------------------------ \n");
         sb.append("Task Summary \n");
@@ -223,13 +195,13 @@ public class JobAlertRunner {
 
     }
 
-    private String format(double bytes) {
+    private static String format(double bytes) {
         double gb = bytes / GIGA_BYTE;
 
         return decimalFormat.format(gb);
     }
 
-    private String format(Long time) {
+    private static String format(Long time) {
         if (time != null) {
             return dateFormat.format(new Date(time));
         } else {
@@ -238,21 +210,159 @@ public class JobAlertRunner {
     }
 
     /**
-     * Emails a message, Only the body can contain newline characters.
-     *
-     * @param job
-     * @param message
+     * Send an email when an alert fires or clears.
+     * @param jobAlert The alert to modify
      */
-    private void emailAlert(Job job, String message, JobAlert jobAlert, boolean clear) {
-        log.info("Alerting " + jobAlert.getEmail() + " :: job : " + job.getId() + " : " + message);
-        String subject = message + " - " + clusterName + " - " + job.getDescription();
-        if (clear) {
-            jobAlert.clear();
-        } else {
-            jobAlert.alerted();
+    private void emailAlert(JobAlert jobAlert) {
+        String status = jobAlert.getAlertStatus();
+        Map<String, String> activeJobs = jobAlert.getActiveJobs();
+        log.info("Alerting " + jobAlert.getEmail() + " :: jobs : " + activeJobs.keySet() + " : " + status);
+        StringBuilder sb = new StringBuilder();
+        sb.append("Alert: " + jobAlert.getAlertStatus() + " \n");
+        for (String jobId : activeJobs.keySet()) {
+             sb.append(summary(spawn.getJob(jobId)) + "\n");
         }
-        EmailUtil.email(jobAlert.getEmail(), subject, summary(job, message));
+        EmailUtil.email(jobAlert.getEmail(), status, sb.toString());
+        putAlert(jobAlert.getAlertId(), jobAlert);
     }
 
+    private void loadAlertMap() {
+        synchronized (alertMap) {
+            Map<String, String> alertsRaw = spawnDataStore.getAllChildren(SPAWN_COMMON_ALERT_PATH);
+            for (Map.Entry<String, String> entry : alertsRaw.entrySet()) {
+                // Underscores are used to mark meta-information (for now, whether we have loaded legacy alerts.)
+                if (!entry.getKey().startsWith("_")) {
+                    loadAlert(entry.getKey(), entry.getValue());
+                }
+            }
+            if (spawnDataStore.get(SPAWN_COMMON_ALERT_LOADED_LEGACY) == null) {
+                // One time only, iterate through jobs looking for their alerts.
+                try {
+                    loadLegacyAlerts();
+                    spawnDataStore.put(SPAWN_COMMON_ALERT_LOADED_LEGACY, "1");
+                } catch (Exception ex) {
+                    log.warn("Warning: failed to fetch legacy alerts", ex);
+                }
+
+            }
+        }
+    }
+
+    private void loadAlert(String id, String raw) {
+        try {
+            JobAlert jobAlert = codec.decode(new JobAlert(), raw.getBytes());
+            synchronized (alertMap) {
+                alertMap.put(id, jobAlert);
+            }
+        } catch (Exception ex) {
+            log.warn("Failed to decode JobAlert id=" + id + " raw=" + raw);
+        }
+    }
+
+    public void putAlert(String id, JobAlert alert) {
+        synchronized (alertMap) {
+            JobAlert oldAlert = alertMap.contains(id) ? alertMap.get(id) : null; // ConcurrentHashMap throws NPE on failed 'get'
+            if (oldAlert != null) {
+                // Inherit old alertTime even if the alert has changed in other ways
+                alert.setLastAlertTime(oldAlert.getLastAlertTime());
+            }
+            alertMap.put(id, alert);
+        }
+        storeAlert(id, alert);
+    }
+
+    public void removeAlert(String id) {
+        if (id != null) {
+            synchronized (alertMap) {
+                alertMap.remove(id);
+                spawnDataStore.deleteChild(SPAWN_COMMON_ALERT_PATH, id);
+            }
+        }
+    }
+
+    /**
+     * A method called one time to retrieve any job alerts that were saved within Job objects
+     */
+    private void loadLegacyAlerts() {
+        List<JobAlert> alerts;
+        spawn.acquireJobLock();
+        try {
+            synchronized (alertMap) {
+                for (Job job : spawn.listJobs()) {
+                    if (job != null && (alerts = job.getAlerts()) != null) {
+                        for (JobAlert alert : alerts) {
+                            alert.setJobIds(new String[] {job.getId()});
+                            String newUUID = UUID.randomUUID().toString();
+                            alert.setAlertId(newUUID);
+                            alertMap.put(newUUID, alert);
+                            storeAlert(newUUID, alert);
+                        }
+                        job.setAlerts(null);
+                    }
+                }
+            }
+        }  finally {
+            spawn.releaseJobLock();
+        }
+
+    }
+
+    private void storeAlert(String alertId, JobAlert alert) {
+        synchronized (alertMap) {
+            try {
+                spawnDataStore.putAsChild(SPAWN_COMMON_ALERT_PATH, alertId, new String(codec.encode(alert)));
+            } catch (Exception e) {
+                log.warn("Warning: failed to save alert id=" + alertId + " alert=" + alert);
+            }
+        }
+    }
+
+    /**
+     * Get a snapshot of the alert map as an array, mainly for rendering in the UI.
+     * @return A JSONObject representation of all existing alerts
+     */
+    public JSONArray getAlertStateArray() {
+        JSONArray rv = new JSONArray();
+        synchronized (alertMap) {
+            for (JobAlert jobAlert : alertMap.values()) {
+                try {
+                    rv.put(jobAlert.toJSON());
+                } catch (Exception e) {
+                    log.warn("Warning: failed to send alert in array: " + jobAlert);
+                }
+            }
+        }
+        return rv;
+    }
+
+    public JSONObject getAlertStateMap() {
+        JSONObject rv = new JSONObject();
+        synchronized (alertMap) {
+            for (JobAlert jobAlert : alertMap.values()) {
+                try {
+                    rv.put(jobAlert.getAlertId(), jobAlert.toJSON());
+                } catch (Exception e) {
+                    log.warn("Warning: failed to send alert in map: " + jobAlert);
+                }
+
+            }
+        }
+        return rv;
+    }
+
+    public String getAlert(String alertId) {
+        synchronized (alertMap) {
+            try {
+                return alertMap.containsKey(alertId) ? alertMap.get(alertId).toJSON().toString() : null;
+            } catch (Exception e) {
+                log.warn("Failed to fetch alert " + alertId, e);
+                return null;
+            }
+        }
+    }
+
+    public static String getClusterHead() {
+        return clusterHead;
+    }
 
 }

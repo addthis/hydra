@@ -422,11 +422,11 @@ public class Spawn implements Codec.Codable {
         return balancer;
     }
 
-    protected void acquireJobLock() {
+    public void acquireJobLock() {
         jobLock.lock();
     }
 
-    protected void releaseJobLock() {
+    public void releaseJobLock() {
         jobLock.unlock();
     }
 
@@ -1864,17 +1864,24 @@ public class Spawn implements Codec.Codable {
         }
     }
 
-    public void updateJobAlerts(String jobId, List<JobAlert> alerts) {
-        jobLock.lock();
-        Job job = getJob(jobId);
-        job.setAlerts(alerts);
-        try {
-            updateJob(job);
-        } catch (Exception ex) {
-            log.warn("[alert.error] error while trying to update job alerts for job " + jobId);
-        } finally {
-            jobLock.unlock();
-        }
+    public void putAlert(String alertId, JobAlert alert) {
+        jobAlertRunner.putAlert(alertId, alert);
+    }
+
+    public void removeAlert(String alertId) {
+        jobAlertRunner.removeAlert(alertId);
+    }
+
+    public JSONArray fetchAllAlertsArray() {
+        return jobAlertRunner.getAlertStateArray();
+    }
+
+    public JSONObject fetchAllAlertsMap() {
+        return jobAlertRunner.getAlertStateMap();
+    }
+
+    public String getAlert(String alertId) {
+        return jobAlertRunner.getAlert(alertId);
     }
 
     public boolean deleteJob(String jobUUID) throws Exception {
@@ -3081,11 +3088,9 @@ public class Spawn implements Codec.Codable {
                                         kicked = true;
                                     }
                                 } catch (Exception ex) {
-                                    if (job != null) {
-                                        log.warn("[schedule] ex while rekicking, disabling " + job.getId());
-                                        job.setEnabled(false);
-                                        updateJob(job);
-                                    }
+                                    log.warn("[schedule] ex while rekicking, disabling " + job.getId());
+                                    job.setEnabled(false);
+                                    updateJob(job);
                                     throw new Exception(ex);
                                 }
                             }
@@ -3656,7 +3661,7 @@ public class Spawn implements Codec.Codable {
         } catch (Exception ex) {
             log.warn("Unable to read alerts status due to : " + ex.getMessage());
         }
-        return alertsEnabled == null || alertsEnabled.equals("true");
+        return alertsEnabled == null || alertsEnabled.equals("") || alertsEnabled.equals("true");
     }
 
     public void disableAlerts() throws Exception {
