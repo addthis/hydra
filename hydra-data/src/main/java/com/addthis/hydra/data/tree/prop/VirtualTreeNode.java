@@ -49,7 +49,7 @@ class VirtualTreeNode extends TreeNode {
         ITER iter = new ITER();
         while (true) {
             VirtualTreeNode peek = iter.peek();
-            if (peek == null || (peek.name.startsWith(prefix))) {
+            if ((peek == null) || peek.name.startsWith(prefix)) {
                 break;
             }
             iter.next();
