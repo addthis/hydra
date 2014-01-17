@@ -101,12 +101,22 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     private Range<DBKey, ConcurrentTreeNode> trashIterator;
 
     @SuppressWarnings("unused")
-    final Gauge<Integer> treeTrashNodeSize = Metrics.newGauge(SkipListCache.class,
-            "treeTrashNodeSize", scope,
+    final Gauge<Integer> treeTrashNodeCount = Metrics.newGauge(SkipListCache.class,
+            "treeTrashNodeCount", scope,
             new Gauge<Integer>() {
                 @Override
                 public Integer value() {
                     return treeTrashNode == null ? -1 : treeTrashNode.getNodeCount();
+                }
+            });
+
+    @SuppressWarnings("unused")
+    final Gauge<Long> treeTrashHitsCount = Metrics.newGauge(SkipListCache.class,
+            "treeTrashHitsCount", scope,
+            new Gauge<Long>() {
+                @Override
+                public Long value() {
+                    return treeTrashNode == null ? -1 : treeTrashNode.getCounter();
                 }
             });
 
@@ -412,7 +422,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         if (log.isTraceEnabled()) log.trace("[node.delete] " + parent + " --> " + child);
         Integer nodedb = parent.nodeDB();
         if (nodedb == null) {
-            if (log.isDebugEnabled()) log.debug("parent has no children on delete : " + parent + " --> " + child);
+            if (log.isDebugEnabled())
+                log.debug("parent has no children on delete : " + parent + " --> " + child);
             return false;
         }
         CacheKey key = new CacheKey(nodedb, child);
@@ -463,7 +474,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     @SuppressWarnings("unchecked")
     protected Range<DBKey, ConcurrentTreeNode> fetchNodeRange(int db, String from, String to) {
-        return source.range(new DBKey(db, Raw.get(from)), to == null ? new DBKey(db+1, (Raw)null) : new DBKey(db, Raw.get(to)));
+        return source.range(new DBKey(db, Raw.get(from)),
+                to == null ? new DBKey(db+1, (Raw)null) : new DBKey(db, Raw.get(to)));
     }
 
     public ConcurrentTreeNode getRootNode() {
@@ -865,6 +877,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             Map.Entry<DBKey, ConcurrentTreeNode> entry = range.next();
             ConcurrentTreeNode node = entry.getValue();
             deleteSubTree(node);
+            treeTrashNode.incrementCounter();
         }
 
         range.close();
@@ -883,7 +896,10 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                     if (entry != null) {
                         ConcurrentTreeNode node = entry.getValue();
                         deleteSubTree(node);
-                        source.remove(entry.getKey());
+                        ConcurrentTreeNode prev = source.remove(entry.getKey());
+                        if (prev != null) {
+                            treeTrashNode.incrementCounter();
+                        }
                     }
                 }
                 while (entry != null && !closed.get());
@@ -891,6 +907,13 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 logException("Uncaught exception in concurrent tree background deletion thread", ex);
             }
         }
+    }
+
+    /**
+     * For testing purposes only.
+     */
+    ConcurrentTreeNode getTreeTrashNode() {
+        return treeTrashNode;
     }
 
     /**

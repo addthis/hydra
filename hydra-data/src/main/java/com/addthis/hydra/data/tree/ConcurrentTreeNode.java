@@ -44,8 +44,9 @@ import com.addthis.hydra.store.db.IPageDB.Range;
  * -2            : The node has been deleted.
  * -3            : The node has been evicted.
  *
- * Only an idle node may be evicted. Any node that is not currently
- * being evicted (lease == -1) may be deleted.
+ * Only an idle node may be evicted. Any node that has 0 or more leases
+ * can be deleted (yes it is counterintuitive but for legacy purposes
+ * deleting nodes is a higher priority operation that modifying nodes).
  *
  */
 public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Codec.ConcurrentCodable, DataTreeNodeInitializer {
@@ -152,6 +153,15 @@ public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Cod
     public int getLeaseCount() {
         return leases.get();
     }
+
+    /**
+     * The synchronized methods protecting the {@code nodes} field
+     * is a code smell. This should probably be protected by the
+     * encoding reader/writer {@code lock} field. There is an invariant
+     * for the page storage system that the encoding (write) locks of two nodes
+     * cannot be held simultaneously and switching to the encoding lock
+     * for these methods may violate the invariant.
+     */
 
     protected synchronized int incrementNodeCount() {
         return nodes++;
@@ -627,24 +637,33 @@ public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Cod
         return getOrCreateEditableNode(name, init);
     }
 
+    /**
+     * The synchronized methods protecting the {@code counter} field
+     * is a code smell. This should probably be protected by the
+     * encoding reader/writer {@code lock} field. There is an invariant
+     * for the page storage system that the encoding (write) locks of two nodes
+     * cannot be held simultaneously and switching to the encoding lock
+     * for these methods may violate the invariant.
+     */
+
     @Override
-    public long getCounter() {
+    public synchronized long getCounter() {
         return hits;
     }
 
     @Override
-    public void incrementCounter() {
+    public synchronized void incrementCounter() {
         hits++;
     }
 
     @Override
-    public long incrementCounter(long val) {
+    public synchronized long incrementCounter(long val) {
         hits += val;
         return hits;
     }
 
     @Override
-    public void setCounter(long val) {
+    public synchronized void setCounter(long val) {
         hits = val;
     }
 }
