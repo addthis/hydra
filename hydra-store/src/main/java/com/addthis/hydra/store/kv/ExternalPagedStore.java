@@ -81,6 +81,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V> extends CachedPagedS
     private static final int estimateRollFactor = Parameter.intValue("eps.mem.estimate.roll.factor", 100);
     private static final int estimateMissingFactor = Parameter.intValue("eps.mem.estimate.missing.factor", 8);
     private static final boolean trackEncodingByteUsage = Parameter.boolValue("eps.cache.track.encoding", false);
+    private static final boolean fixNextFirstKey = Parameter.boolValue("eps.repair.nextfirstkey", false);
 
     /**
      * used a an absolute delta from maxPages when using that upper bound, otherwise it's treated
@@ -949,11 +950,27 @@ public class ExternalPagedStore<K extends Comparable<K>, V> extends CachedPagedS
                         if (prevPage == null) {
                             throw new RuntimeException("missing page for " + prevKey);
                         }
-                        if (!prevPage.getNextFirstKey().equals(page.getFirstKey())) {
-                            throw new RuntimeException("previous page next pointer invalid " + page.getNextFirstKey() + " != " + page.getFirstKey());
+                        K prevNextFirstKey = prevPage.getNextFirstKey();
+                        K currentFirstKey = page.getFirstKey();
+                        if (!prevNextFirstKey.equals(currentFirstKey)) {
+                            String msg = "previous page next pointer invalid " + prevNextFirstKey + " != " + currentFirstKey;
+                            if (fixNextFirstKey) {
+                                log.warn(msg);
+                                byte[] higherKeyEncoded = pages.higherKey(keyCoder.keyEncode(currentFirstKey));
+                                if (higherKeyEncoded == null) {
+                                    throw new RuntimeException("New next first key is null value.");
+                                }
+                                K higherKey = keyCoder.keyDecode(higherKeyEncoded);
+                                log.warn("previous page " + prevKey + " setting nextFirstKey to " + higherKey);
+                                tp = (TreePage) prevPage;
+                                tp.setNextFirstKey(higherKey);
+                            } else {
+                                throw new RuntimeException(msg);
+                            }
+                        } else {
+                            tp = (TreePage) prevPage;
+                            tp.setNextFirstKey(page.getNextFirstKey());
                         }
-                        tp = (TreePage) prevPage;
-                        tp.setNextFirstKey(page.getNextFirstKey());
                     }
                 } else {
                     pages.put(keyCoder.keyEncode(page.getFirstKey()), pageEncode((TreePage) page));
