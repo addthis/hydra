@@ -3661,7 +3661,7 @@ public class Spawn implements Codec.Codable {
         } catch (Exception ex) {
             log.warn("Unable to read alerts status due to : " + ex.getMessage());
         }
-        return alertsEnabled == null || alertsEnabled.equals("true");
+        return alertsEnabled == null || alertsEnabled.equals("") || alertsEnabled.equals("true");
     }
 
     public void disableAlerts() throws Exception {

@@ -134,7 +134,7 @@ function(
             		"bVisible":true,
             		"bSearchable":true,
             		"mRender": function(val,type,data) {
-            			return isNaN(val) || val < 0 ? "" : val;
+            			return isNaN(val) || val <= 0 ? "" : val;
             		}
         		},
         		{
@@ -151,7 +151,7 @@ function(
             		"bVisible":true,
             		"bSearchable":true,
             		"mRender": function(val, type, data) {
-            			return val < 0 ? "Clear" : "Triggered at " + util.convertToDateTimeText(val);
+            			return isNaN(val) || val <= 0 ? "Clear" : "Triggered at " + util.convertToDateTimeText(val);
             		}
         		},         		
 				];

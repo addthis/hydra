@@ -230,7 +230,8 @@ public class JobAlertRunner {
         synchronized (alertMap) {
             Map<String, String> alertsRaw = spawnDataStore.getAllChildren(SPAWN_COMMON_ALERT_PATH);
             for (Map.Entry<String, String> entry : alertsRaw.entrySet()) {
-                if (!entry.getKey().equals(SPAWN_COMMON_ALERT_LOADED_LEGACY)) {
+                // Underscores are used to mark meta-information (for now, whether we have loaded legacy alerts.)
+                if (!entry.getKey().startsWith("_")) {
                     loadAlert(entry.getKey(), entry.getValue());
                 }
             }
