@@ -584,7 +584,10 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         }
         if (source != null) {
             try {
-                source.close(cleanLog, testIntegrity);
+                int status = source.close(cleanLog, testIntegrity);
+                if (status != 0) {
+                    Runtime.getRuntime().halt(status);
+                }
             } catch (Exception ex) {
                 log.warn("", ex);
             }

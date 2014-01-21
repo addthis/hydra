@@ -1018,9 +1018,10 @@ public class ExternalPagedStore<K extends Comparable<K>, V> extends CachedPagedS
      *
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
      * @param testIntegrity if true then test the integrity of the pageDB. This is a slow operation.
+     * @return status code. A status code of 0 indicates success.
      **/
     @Override
-    public void close(boolean cleanLog, boolean testIntegrity) {
+    public int close(boolean cleanLog, boolean testIntegrity) {
         super.close();
         pages.close(cleanLog);
         stopMemWathcher();
@@ -1035,6 +1036,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V> extends CachedPagedS
             log.info(MetricsUtil.histogramToString("encodePageSize (final)", encodePageSize));
             log.info(MetricsUtil.histogramToString("numberKeysPerPage", numberKeysPerPage));
         }
+        return 0;
     }
 
     /** */

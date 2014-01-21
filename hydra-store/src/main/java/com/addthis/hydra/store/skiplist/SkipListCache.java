@@ -1948,10 +1948,11 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
      * Close the cache.
      *
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
+     * @return status code. A status code of 0 indicates success.
      */
     @Override
-    public void close(boolean cleanLog, boolean testIntegrity) {
-        doClose(cleanLog, false, testIntegrity);
+    public int close(boolean cleanLog, boolean testIntegrity) {
+        return doClose(cleanLog, false, testIntegrity);
     }
 
 
@@ -1966,7 +1967,8 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
         doClose(false, true, false);
     }
 
-    private void doClose(boolean cleanLog, boolean wait, boolean testIntegrity) {
+    private int doClose(boolean cleanLog, boolean wait, boolean testIntegrity) {
+        int status = 0;
         if (!shutdownGuard.getAndSet(true)) {
             if (wait) {
                 waitForPageEviction();
@@ -1976,7 +1978,8 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
             waitForEvictionThreads();
             pushAllPagesToDisk();
             if (testIntegrity) {
-                testIntegrity();
+                int failedPages = testIntegrity();
+                status = (failedPages > 0) ? 1 : 0;
             }
             closeExternalStore(cleanLog);
             log.info("pages: encoded=" + numPagesEncoded.get() +
@@ -1993,6 +1996,7 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
                         metrics.numberKeysPerPage));
             }
         }
+        return status;
     }
 
     /**
@@ -2140,8 +2144,9 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
         this.estimateInterval = interval;
     }
 
-    public void testIntegrity() {
+    public int testIntegrity() {
         int counter = 0;
+        int failedPages = 0;
         byte[] encodedKey = externalStore.firstKey();
         byte[] encodedPage = externalStore.get(encodedKey);
         K key = keyCoder.keyDecode(encodedKey);
@@ -2156,6 +2161,7 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
                              newPage.firstKey + " the length is " + newPage.size +
                              " the nextFirstKey is null" +
                              " and the next page is associated with key " + nextKey);
+                    failedPages++;
                     assert(false);
                 } else if (!newPage.nextFirstKey.equals(nextKey)) {
                     int compareTo = compareKeys(newPage.nextFirstKey, nextKey);
@@ -2164,6 +2170,7 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
                              newPage.firstKey + " the length is " + newPage.size +
                              " the nextFirstKey is " + newPage.nextFirstKey +
                     " which is " + direction + " the next page is associated with key " + nextKey);
+                    failedPages++;
                     assert(false);
                 }
                 key = nextKey;
@@ -2175,7 +2182,8 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
                 log.info("Scanned " + counter + " pages.");
             }
         } while (encodedKey != null);
-        log.info("Scanned " + counter + " pages.");
+        log.info("Scanned " + counter + " pages. Detected " + failedPages + " failed pages.");
+        return failedPages;
     }
 
 }

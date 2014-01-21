@@ -102,10 +102,12 @@ public class ReadPageDB<V extends IReadWeighable & Codec.Codable> implements IPa
      *
      * @param cleanLog unused in the ReadPageDB implementation.
      * @param testIntegrity unused in the ReadPageDB implementation.
+     * @return status code. A status code of 0 indicates success.
      */
     @Override
-    public void close(boolean cleanLog, boolean testIntegrity) {
+    public int close(boolean cleanLog, boolean testIntegrity) {
         close();
+        return 0;
     }
 
     @Override

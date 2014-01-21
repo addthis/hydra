@@ -201,9 +201,10 @@ public class PageDB<V extends Codec.Codable> implements IPageDB<DBKey, V> {
      *
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
      * @param testIntegrity if true then test the integrity of the pageDB. This is a slow operation.
+     * @return status code. A status code of 0 indicates success.
      */
     @Override
-    public void close(boolean cleanLog, boolean testIntegrity) {
+    public int close(boolean cleanLog, boolean testIntegrity) {
         try {
             synchronized (openRanges) {
                 if (openRanges.size() > 0) {
@@ -214,7 +215,8 @@ public class PageDB<V extends Codec.Codable> implements IPageDB<DBKey, V> {
                 }
             }
         } finally {
-            eps.close(cleanLog, testIntegrity);
+            int status = eps.close(cleanLog, testIntegrity);
+            return status;
         }
     }
 
