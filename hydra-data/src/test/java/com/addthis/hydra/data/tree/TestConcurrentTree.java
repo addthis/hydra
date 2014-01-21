@@ -19,13 +19,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CyclicBarrier;
 
 import com.addthis.basis.test.SlowTest;
+import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Files;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -33,6 +37,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 public class TestConcurrentTree {
+
+    private static final Logger log = LoggerFactory.getLogger(TestConcurrentTree.class);
 
     static final int fastNumElements = 10000;
     static final int fastNumThreads = 8;
@@ -373,6 +379,61 @@ public class TestConcurrentTree {
             testDeleteMultiThread(fastNumElements, fastNumThreads, fastNumThreads);
             testDeleteMultiThread(fastNumElements, fastNumThreads, 0);
         }
+    }
+
+    @Test
+    @Category(SlowTest.class)
+    public void testIterateAndDeleteSlow() throws Exception {
+        for(int i = 0; i < 100; i++) {
+            testIterateAndDelete(fastNumThreads, fastNumElements);
+        }
+    }
+
+    @Test
+    public void testIterateAndDeleteFast() throws Exception {
+        testIterateAndDelete(fastNumThreads, fastNumElements);
+    }
+
+    public void testIterateAndDelete(int numThreads, int numElements) throws Exception {
+        File dir = makeTemporaryDirectory();
+        try {
+            ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).numDeletionThreads(numThreads).
+                    maxPageSize(5).maxCacheSize(500).kvStoreType(1).build();
+            ConcurrentTreeNode root = tree.getRootNode();
+
+            for (int i = 0; i < numElements; i++) {
+                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+                assertNotNull(node);
+                assertEquals(Integer.toString(i), node.getName());
+                node.release();
+            }
+
+            Random rng = new Random();
+
+            ClosableIterator<DataTreeNode> iterator = tree.getIterator();
+            try {
+                int counter = 0;
+                while(iterator.hasNext()) {
+                    DataTreeNode node = iterator.next();
+                    if (rng.nextFloat() < 0.8) {
+                        String name = node.getName();
+                        tree.deleteNode(root, name);
+                        counter++;
+                    }
+                }
+                log.info("Deleted " + (((float) counter) / numElements * 100.0) + " % of nodes");
+            } finally {
+                iterator.close();
+            }
+
+            tree.close(false, true);
+
+        } finally {
+            if (dir != null) {
+                Files.deleteDir(dir);
+            }
+        }
+
     }
 
     private void testDeleteMultiThread(int numElements, int numThreads, int numDeletionThreads) throws Exception {

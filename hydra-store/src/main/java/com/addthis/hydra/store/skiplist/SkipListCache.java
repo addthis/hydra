@@ -137,15 +137,6 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
 
     final SkipListCacheMetrics metrics = new SkipListCacheMetrics(this);
 
-    /**
-     * This variable keeps track of the largest key in the external storage.
-     * It is used to detect inconsistencies in the data structure where a
-     * page has been incorrectly labeled as the largest page. These inconsistencies
-     * cannot arise during normal operation of the cache but in theory they
-     * can occur during an abnormal program termination.
-     */
-    private K maxFirstKey;
-
     private final ScheduledExecutorService evictionThreadPool, purgeThreadPool;
 
     private final Comparator comparator;
@@ -202,6 +193,7 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
             return this;
         }
 
+        @SuppressWarnings("unused")
         public Builder<K, V> maxPages(int val) {
             maxPages = val;
             return this;
@@ -653,8 +645,7 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
      * field.
      */
     private void updateNextFirstKey(Page<K, V> prevPage, K newNextFirstKey,
-            K targetKey, byte[] encodedTargetKey,
-            boolean updateMaxFirstKey) {
+            K targetKey, byte[] encodedTargetKey) {
         assert (prevPage.isWriteLockedByCurrentThread());
 
         Map.Entry<byte[], byte[]> entry = externalStore.floorEntry(encodedTargetKey);
@@ -676,12 +667,6 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
             diskPage.nextFirstKey = newNextFirstKey;
             externalStore.put(entry.getKey(), diskPage.encode());
         }
-        if (updateMaxFirstKey) {
-            assert (newNextFirstKey == null);
-            maxFirstKey = floorKey;
-        } else {
-            assert (newNextFirstKey != null);
-        }
     }
 
     private void deletePage(final K targetKey) {
@@ -689,60 +674,62 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
 
         final byte[] encodedTargetKey = keyCoder.keyEncode(targetKey);
 
-        Page<K, V> prevPage = null, currentPage = null;
+        while (true) {
 
-        try {
+            Page<K, V> prevPage = null, currentPage = null;
 
-            // We must acquire the locks on the pages from lowest to highest.
-            // This is inefficient but it avoids deadlock.
-            Map.Entry<K, Page<K, V>> prevEntry, currentEntry;
+            try {
 
-            findPages:
-            while (true) {
-                do {
-                    prevPage = writeUnlockAndNull(prevPage);
-                    prevEntry = cache.lowerEntry(targetKey);
-                    prevPage = prevEntry.getValue();
-                    prevPage.writeLock();
-                }
-                while (prevPage.inTransientState());
+                byte[] prevKeyEncoded = externalStore.lowerKey(encodedTargetKey);
 
-                while (true) {
-                    currentPage = writeUnlockAndNull(currentPage);
-                    currentEntry = cache.higherEntry(prevEntry.getKey());
-                    if (currentEntry != null) {
-                        currentPage = currentEntry.getValue();
-                        currentPage.writeLock();
-                        if (currentPage.inTransientState()) {
-                            continue;
-                        }
-                        int compareKeys = compareKeys(targetKey, currentPage.firstKey);
-                        if (compareKeys < 0) {
-                            currentPage = writeUnlockAndNull(currentPage);
-                            continue findPages;
-                        } else if (compareKeys == 0 && currentPage.size == 0) {
-                            assert (currentPage.keys != null);
-
-                            externalStore.delete(encodedTargetKey);
-                            Page<K, V> prev = cache.remove(targetKey);
-                            assert (prev != null);
-                            currentPage.state = ExternalMode.DELETED;
-                            numPagesInMemory.getAndDecrement();
-                            numPagesDeleted.getAndIncrement();
-                            boolean updateMaxFirstKey = maxFirstKey.equals(currentPage.firstKey);
-                            updateNextFirstKey(prevPage, currentPage.nextFirstKey,
-                                    targetKey, encodedTargetKey, updateMaxFirstKey);
-                            return;
-                        }
-                    }
+                if (prevKeyEncoded == null) {
                     return;
                 }
-            }
-        } finally {
-            writeUnlockAndNull(currentPage);
-            writeUnlockAndNull(prevPage);
-        }
 
+                K prevKey = keyCoder.keyDecode(prevKeyEncoded);
+                prevPage = locatePage(prevKey, LockMode.WRITEMODE);
+
+                if (!prevPage.firstKey.equals(prevKey)) {
+                    continue;
+                }
+
+                Map.Entry<K, Page<K, V>> currentEntry = cache.higherEntry(prevKey);
+
+                if (currentEntry == null) {
+                    return;
+                }
+
+                currentPage = currentEntry.getValue();
+                currentPage.writeLock();
+                if (currentPage.inTransientState()) {
+                    continue;
+                }
+                int compareKeys = compareKeys(targetKey, currentPage.firstKey);
+                if (compareKeys < 0) {
+                    continue;
+                } else if (compareKeys == 0 && currentPage.size == 0) {
+                    byte[] verifyPrevKeyEncoded = externalStore.lowerKey(encodedTargetKey);
+                    // Test whether the lower key moved while we
+                    // were acquiring locks on prevPage and currentPage.
+                    if (verifyPrevKeyEncoded == null ||
+                        !prevKey.equals(keyCoder.keyDecode(verifyPrevKeyEncoded))) {
+                        continue;
+                    }
+                    externalStore.delete(encodedTargetKey);
+                    Page<K, V> prev = cache.remove(targetKey);
+                    assert (prev != null);
+                    currentPage.state = ExternalMode.DELETED;
+                    numPagesInMemory.getAndDecrement();
+                    numPagesDeleted.getAndIncrement();
+                    prevPage.nextFirstKey = currentPage.nextFirstKey;
+                    prevPage.state = ExternalMode.DISK_MEMORY_DIRTY;
+                }
+                return;
+            } finally {
+                writeUnlockAndNull(currentPage);
+                writeUnlockAndNull(prevPage);
+            }
+        }
     }
 
     private void splitPage(Page<K, V> target) {
@@ -835,10 +822,6 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
                 sibling.firstKey, sibling.nextFirstKey).encode(false);
 
         externalStore.put(encodeKey, placeHolder);
-
-        if (maxFirstKey.equals(target.firstKey)) {
-            maxFirstKey = sibMinKey;
-        }
 
         evictionQueue.offer(sibling);
         numPagesSplit.getAndIncrement();
@@ -967,7 +950,6 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
         cacheSize.getAndIncrement();
         numPagesInMemory.getAndIncrement();
         evictionQueue.offer(leftSentinel);
-        maxFirstKey = keyCoder.keyDecode(externalStore.lastKey());
     }
 
     @SuppressWarnings("unchecked")
@@ -1400,26 +1382,6 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
         }
     }
 
-    private void fixNextFirstKey(Page<K, V> current) {
-        assert (current.isWriteLockedByCurrentThread());
-        assert (!current.inTransientState());
-
-        byte[] higherKeyEncoded = externalStore.higherKey(keyCoder.keyEncode(current.firstKey));
-
-        K higherKey = (higherKeyEncoded == null) ? null : keyCoder.keyDecode(higherKeyEncoded);
-
-        if (current.keys == null) {
-            pullPageFromDisk(current, LockMode.WRITEMODE);
-        }
-
-        current.nextFirstKey = higherKey;
-
-        if (current.state == ExternalMode.DISK_MEMORY_IDENTICAL) {
-            current.state = ExternalMode.DISK_MEMORY_DIRTY;
-        }
-
-    }
-
     /**
      * This method locates a page either in cache or in the external storage.
      * If the page is on disk then it is loaded into memory. The target page
@@ -1441,8 +1403,6 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
         Comparable<? super K> ckey = comparable(key);
 
         Page<K, V> current = null;
-        K prevFirstKey = null;
-        K prevNextFirstKey = null;
 
         do {
             unlockAndNull(current, currentMode);
@@ -1462,26 +1422,8 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
             assert (!current.inTransientState());
 
             K currentFirstKey = current.firstKey;
-            K currentNextFirstKey = current.nextFirstKey;
 
             assert (ckey.compareTo(currentFirstKey) >= 0);
-
-            // Test current.nextFirstKey integrity
-            if (prevFirstKey != null &&
-                prevNextFirstKey != null &&
-                prevFirstKey.equals(currentFirstKey) &&
-                prevNextFirstKey.equals(currentNextFirstKey)) {
-                fixNextFirstKey(current);
-            } else if (currentFirstKey.equals(maxFirstKey) ^ (currentNextFirstKey == null)) {
-                if (currentMode == LockMode.READMODE) {
-                    currentMode = LockMode.WRITEMODE;
-                    current.readUnlock();
-                    current.writeLock();
-                }
-                if (!current.inTransientState()) {
-                    fixNextFirstKey(current);
-                }
-            }
 
             if (current.keys == null) {
                 pullPageFromDisk(current, currentMode);
@@ -1504,12 +1446,6 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
                     }
                     return current;
                 }
-
-                prevFirstKey = current.firstKey;
-                prevNextFirstKey = current.nextFirstKey;
-            } else {
-                prevFirstKey = null;
-                prevNextFirstKey = null;
             }
 
             /**
