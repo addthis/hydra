@@ -62,7 +62,6 @@ public class JobAlertTest {
 
     }
 
-
     @Test
     public void jsonTest() throws Exception {
         JobAlert initialAlert = new JobAlert("sampleid", 0, null, "someone@domain.com", new String[] {"j1", "j2"});

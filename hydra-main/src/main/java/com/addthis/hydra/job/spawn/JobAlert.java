@@ -24,8 +24,6 @@ import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
-import com.addthis.hydra.task.stream.StreamFile;
-import com.addthis.hydra.task.stream.StreamSourceMeshy;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.collect.ImmutableMap;
@@ -268,18 +266,33 @@ public class JobAlert implements Codec.Codable {
                     ((currentTime - job.getEndTime()) > timeout * MINUTE));
             case SPLIT_CANARY:
                 return checkSplitCanary(job);
+            case MAP_CANARY:
+                return checkMapCanary(job);
             default:
                 log.warn("Warning: alert " + alertId + " has unexpected type " + type);
                 return false;
         }
     }
 
+    private boolean checkMapCanary(Job job) {
+        if (!isCanaryConfigValid()) {
+            return false;
+        }
+        try {
+            long queryVal = JobAlertUtil.getQueryCount(job.getId(), canaryConfig);
+            return queryVal < canaryConfigThreshold;
+        } catch (Exception ex) {
+            log.warn("Exception during canary check: ", ex);
+            return false;
+        }
+    }
+
     private boolean checkSplitCanary(Job job) {
-        if (canaryConfig == null || canaryConfigThreshold == null || canaryCheckDates == null || type != SPLIT_CANARY) {
+        if (!isCanaryConfigValid()) {
             return false;
         }
         for (String checkDate : canaryCheckDates) {
-            long totalBytes = getTotalBytesFromMesh(job.getId(), checkDate, canaryConfig);
+            long totalBytes = JobAlertUtil.getTotalBytesFromMesh(job.getId(), checkDate, canaryConfig);
             if (totalBytes < canaryConfigThreshold) {
                 return true;
             }
@@ -287,15 +300,8 @@ public class JobAlert implements Codec.Codable {
         return false;
     }
 
-    private static long getTotalBytesFromMesh(String jobId, String checkDate, String dirPath) {
-        String meshLookupString = "/job*/" + jobId + "/*/gold" + dirPath;
-        StreamSourceMeshy mesh = new StreamSourceMeshy(new String[] {meshLookupString}, 1, checkDate, checkDate);
-        StreamFile streamFile;
-        long totalBytes = 0;
-        while ((streamFile = mesh.nextSource()) != null) {
-            totalBytes += streamFile.length();
-        }
-        return totalBytes;
+    private boolean isCanaryConfigValid() {
+        return canaryConfig == null || canaryConfigThreshold == null || canaryCheckDates == null || canaryConfigThreshold < 0;
     }
 
     @Override
