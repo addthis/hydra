@@ -464,7 +464,7 @@ public class ByteStoreBDB implements ByteStore {
      */
     @Override
     public void close(boolean cleanLog) {
-        log.warn("Closing db & env for: " + dir.getAbsolutePath());
+        log.info("Closing db & env for: " + dir.getAbsolutePath());
         if (openIterators.size() > 0) {
             log.warn("closing " + openIterators.size() + " iterators on close");
             for (Object e : openIterators.toArray(new Object[openIterators.size()])) {
