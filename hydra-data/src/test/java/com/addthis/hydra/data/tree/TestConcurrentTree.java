@@ -159,6 +159,7 @@ public class TestConcurrentTree {
 
     @Test
     public void testGetOrCreateOneThread() throws Exception {
+        log.info("testGetOrCreateOneThread");
         File dir = makeTemporaryDirectory();
         try {
             ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).kvStoreType(1).build();
@@ -186,6 +187,7 @@ public class TestConcurrentTree {
 
     @Test
     public void testRecursiveDeleteOneThread() throws Exception {
+        log.info("testRecursiveDeleteOneThread");
         File dir = makeTemporaryDirectory();
         try {
             ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).kvStoreType(1).build();
@@ -219,6 +221,7 @@ public class TestConcurrentTree {
 
     @Test
     public void testRecursiveDeleteMultiThreads() throws Exception {
+        log.info("testRecursiveDeleteMultiThreads");
         File dir = makeTemporaryDirectory();
         try {
             ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).
@@ -269,6 +272,7 @@ public class TestConcurrentTree {
     }
 
     private void testGetOrCreateMultiThread(int numElements, int numThreads) throws Exception {
+        log.info("testGetOrCreateMultiThread");
         File dir = makeTemporaryDirectory();
         try {
             ArrayList<Integer> values = new ArrayList<>(numElements);
@@ -318,11 +322,13 @@ public class TestConcurrentTree {
 
     @Test
     public void testDeleteOneThreadForeground() throws Exception {
+        log.info("testDeleteOneThreadForeground");
         testDeleteOneThread(0);
     }
 
     @Test
     public void testDeleteOneThreadBackground() throws Exception {
+        log.info("testDeleteOneThreadBackground");
         testDeleteOneThread(fastNumThreads);
     }
 
@@ -391,10 +397,11 @@ public class TestConcurrentTree {
 
     @Test
     public void testIterateAndDeleteFast() throws Exception {
-        testIterateAndDelete(fastNumThreads, fastNumElements);
+        testIterateAndDelete(fastNumThreads, 1000);
     }
 
-    public void testIterateAndDelete(int numThreads, int numElements) throws Exception {
+    private void testIterateAndDelete(int numThreads, int numElements) throws Exception {
+        log.info("testIterateAndDelete {} {}", numThreads, numElements);
         File dir = makeTemporaryDirectory();
         try {
             ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).numDeletionThreads(numThreads).
@@ -405,6 +412,8 @@ public class TestConcurrentTree {
                 ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
                 assertNotNull(node);
                 assertEquals(Integer.toString(i), node.getName());
+                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+                child.release();
                 node.release();
             }
 
@@ -437,6 +446,7 @@ public class TestConcurrentTree {
     }
 
     private void testDeleteMultiThread(int numElements, int numThreads, int numDeletionThreads) throws Exception {
+        log.info("testDeleteMultiThread {} {} {}", numElements, numThreads, numDeletionThreads);
         File dir = makeTemporaryDirectory();
         try {
             ArrayList<Integer> values = new ArrayList<>(numElements);

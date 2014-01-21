@@ -705,7 +705,7 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
                     continue;
                 }
                 int compareKeys = compareKeys(targetKey, currentPage.firstKey);
-                if (compareKeys < 0) {
+                if (compareKeys > 0) {
                     continue;
                 } else if (compareKeys == 0 && currentPage.size == 0) {
                     byte[] verifyPrevKeyEncoded = externalStore.lowerKey(encodedTargetKey);
