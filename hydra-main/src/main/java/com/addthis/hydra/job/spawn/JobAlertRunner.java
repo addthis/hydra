@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 
+import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.CodecJSON;
@@ -53,8 +54,12 @@ public class JobAlertRunner {
     private final Spawn spawn;
     private final SpawnDataStore spawnDataStore;
 
-    private static final long REPEAT = Parameter.longValue("spawn.job.alert.repeat", 60 * 1000);
-    private static final long DELAY = Parameter.longValue("spawn.job.alert.delay", 60 * 1000);
+    private static final long ALERT_REPEAT_MILLIS = Parameter.longValue("spawn.job.alert.repeat", 60 * 1000);
+    private static final long CANARY_REPEAT_MILLIS = Parameter.longValue("spawn.job.alert.canary.repeat", 10 * 60 * 1000);
+    private static final long ALERT_DELAY_MILLIS = Parameter.longValue("spawn.job.alert.delay", 60 * 1000);
+
+    private long lastCanaryCheck = 0l;
+
 
     private static final long GIGA_BYTE = (long) Math.pow(1024, 3);
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd-HHmm");
@@ -77,7 +82,7 @@ public class JobAlertRunner {
             public void run() {
                 scanAlerts();
             }
-        }, DELAY, REPEAT);
+        }, ALERT_DELAY_MILLIS, ALERT_REPEAT_MILLIS);
         this.alertMap = new ConcurrentHashMap<>();
         loadAlertMap();
     }
@@ -102,9 +107,11 @@ public class JobAlertRunner {
     public void scanAlerts() {
         if (alertsEnabled) {
             log.info("Running alert scan...");
+            long now = JitterClock.globalTime();
+            boolean shouldCheckCanaryAlerts = (now - lastCanaryCheck) > CANARY_REPEAT_MILLIS;
             synchronized (alertMap) {
                 for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
-                    checkAlert(entry.getValue());
+                    checkAlert(entry.getValue(), shouldCheckCanaryAlerts);
                 }
             }
         }
@@ -113,11 +120,14 @@ public class JobAlertRunner {
     /**
      * Check whether a particular alert should fire or clear based on job states
      * @param alert The actual alert object
+     * @param shouldCheckCanaryAlerts
      */
-    private void checkAlert(JobAlert alert) {
-        boolean alertHasChanged = alert.checkAlertForJobs(getAlertJobs(alert));
-        if (alertHasChanged) {
-            emailAlert(alert);
+    private void checkAlert(JobAlert alert, boolean shouldCheckCanaryAlerts) {
+        if (!alert.isCanaryAlert() || shouldCheckCanaryAlerts) {
+            boolean alertHasChanged = alert.checkAlertForJobs(getAlertJobs(alert));
+            if (alertHasChanged) {
+                emailAlert(alert);
+            }
         }
     }
 
