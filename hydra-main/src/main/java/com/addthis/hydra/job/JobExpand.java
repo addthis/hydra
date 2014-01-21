@@ -72,7 +72,7 @@ public class JobExpand {
     private static Map<String, JobConfigExpander> expanders = new HashMap<>();
 
     static {
-        List<String[]> expanders = PluginReader.readProperties("jobexpand.list");
+        List<String[]> expanders = PluginReader.readProperties("-jobexpand.classmap");
         for(String[] expander : expanders) {
             if (expander.length >= 2) {
                 try {
