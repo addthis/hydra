@@ -16,9 +16,8 @@ public class JobAlertUtil {
     private final static Logger log =LoggerFactory.getLogger(JobAlertUtil.class);
     private final static String queryURLBase = "http://" + Parameter.value("spawn.queryhost") + ":2222/query/call";
     private final static String defaultOps = "gather=s";
-    private final static long alertQueryTimeout = Parameter.longValue("alert.query.timeout", 20000l);
+    private final static int alertQueryTimeout = Parameter.intValue("alert.query.timeout", 20_000);
     private final static int alertQueryRetries = Parameter.intValue("alert.query.retries", 4);
-
 
     /**
      * Count the total byte sizes of files along a certain path via mesh
@@ -47,7 +46,7 @@ public class JobAlertUtil {
      */
     public static long getQueryCount(String jobId, String checkPath) {
 
-        HashSet<String> result = JSONFetcher.staticLoadSet(getQueryURL(jobId, checkPath, defaultOps, defaultOps));
+        HashSet<String> result = JSONFetcher.staticLoadSet(getQueryURL(jobId, checkPath, defaultOps, defaultOps), alertQueryTimeout, alertQueryRetries, null);
         if (result == null || result.isEmpty()) {
             log.warn("Found no data for job " + jobId + " checkPath=" + checkPath + "; returning zero");
             return 0;
@@ -64,6 +63,6 @@ public class JobAlertUtil {
 
     private static String expandDateMacro(String path) {
         // Needs to do {{now-1}} => 140103 (or whatever)
-        return path;
+        return Strings.urlDecode(path);
     }
 }

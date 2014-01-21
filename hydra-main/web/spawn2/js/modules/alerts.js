@@ -36,6 +36,9 @@ function(
         		jobIds:"",
         		type:-1,
         		timeout:-1,
+        		canaryPath: "",
+        		canaryCheckDates: "",
+        		canaryConfigThreshold: 0,
         		email:""},
         	save:function(){
         		var postData = {
@@ -43,7 +46,10 @@ function(
         			type:$("#alertType").val(),
         			timeout:this.get("timeout"),
         			email:this.get("email"),
-        			jobIds:this.get("jobIds")
+        			jobIds:this.get("jobIds"),
+        			canaryPath:this.get("canaryPath"),
+        			canaryCheckDates:this.get("canaryCheckDates"),
+        			canaryConfigThreshold:this.get("canaryConfigThreshold"),
         		};
         		if (!this.isNew()) {
         			postData.alertId= this.get("alertId");
@@ -261,8 +267,10 @@ function(
         	},
         	updateFormOptions:function() {
         		var type = parseInt($("#alertType").val());
-        		// Alert type 0 and 1 do not use the timeout field
-        		$("#alertTimeout").toggle(type >= 2);
+        		// Timeouts are only used for rekick/runtime alerts
+        		$("#alertTimeout").toggle(type == 2 || type == 3);
+        		// Only show canary config for canary alerts (4 and 5)
+        		$("#alertCanaryConfig").toggle(type == 4 || type == 5);
         	}        	
     	});    
     	return {

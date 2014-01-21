@@ -59,7 +59,22 @@
             <label class="sr-only" for="jobIds" style="margin-bottom:0px;">Job Ids or Aliases (comma-separated)</label>
             <input value="<%=alert.jobIds%>" type="text" class="form-control" id="jobIds" name="jobIds" placeholder="">
         </div>
-    </div>     
+    </div> 
+    <div id="alertCanaryConfig" class="form" roles="form">
+        <div class="form-group">
+            <label class="sr-only" for="canaryPath" style="margin-bottom:0px;">Path</label>
+            <input value="<%=alert.canaryPath%>" type="text" class="form-control" id="canaryPath" name="canaryPath" placeholder="">
+        </div>
+        <div class="form-group">
+            <label class="sr-only" for="canaryCheckDates" style="margin-bottom:0px;">Dates to check</label>
+            <input value="<%=alert.canaryCheckDates%>" type="text" class="form-control" id="canaryCheckDates" name="canaryCheckDates" placeholder="">
+        </div>
+        <div class="form-group">
+            <label class="sr-only" for="canaryConfigThreshold" style="margin-bottom:0px;">Threshold (alert if below this value)</label>
+            <input value="<%=alert.canaryConfigThreshold%>" type="text" class="form-control" id="canaryConfigThreshold" name="canaryConfigThreshold" placeholder="">
+        </div>
+    </div>
+    
 </div>
 <div id="alertDetailContainer" class="main-container">
 </div>

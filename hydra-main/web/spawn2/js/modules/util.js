@@ -124,7 +124,7 @@ define([],function(){
                 }
             }
         },
-    	alertTypes: {0: "On Job Error", 1: "On Job Completion", 2: "Runtime Exceeded", 3: "Rekick Timeout"},
+    	alertTypes: {0: "On Job Error", 1: "On Job Completion", 2: "Runtime Exceeded", 3: "Rekick Timeout", 4: "Split Canary", 5: "Map Canary"},
 
     };
     return util;

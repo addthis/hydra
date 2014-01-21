@@ -59,7 +59,7 @@ public class JobAlert implements Codec.Codable {
     @Codec.Set(codable = true)
     private String[] jobIds;
     @Codec.Set(codable = true)
-    private String canaryConfig;
+    private String canaryPath;
     @Codec.Set(codable = true)
     private String[] canaryCheckDates;
     @Codec.Set(codable = true)
@@ -165,12 +165,12 @@ public class JobAlert implements Codec.Codable {
         this.jobIds = jobIds;
     }
 
-    public String getCanaryConfig() {
-        return canaryConfig;
+    public String getCanaryPath() {
+        return canaryPath;
     }
 
-    public void setCanaryConfig(String canaryConfig) {
-        this.canaryConfig = canaryConfig;
+    public void setCanaryPath(String canaryPath) {
+        this.canaryPath = canaryPath;
     }
 
     public String[] getCanaryCheckDates() {
@@ -279,7 +279,7 @@ public class JobAlert implements Codec.Codable {
             return false;
         }
         try {
-            long queryVal = JobAlertUtil.getQueryCount(job.getId(), canaryConfig);
+            long queryVal = JobAlertUtil.getQueryCount(job.getId(), canaryPath);
             return queryVal < canaryConfigThreshold;
         } catch (Exception ex) {
             log.warn("Exception during canary check: ", ex);
@@ -292,7 +292,7 @@ public class JobAlert implements Codec.Codable {
             return false;
         }
         for (String checkDate : canaryCheckDates) {
-            long totalBytes = JobAlertUtil.getTotalBytesFromMesh(job.getId(), checkDate, canaryConfig);
+            long totalBytes = JobAlertUtil.getTotalBytesFromMesh(job.getId(), checkDate, canaryPath);
             if (totalBytes < canaryConfigThreshold) {
                 return true;
             }
@@ -301,7 +301,7 @@ public class JobAlert implements Codec.Codable {
     }
 
     private boolean isCanaryConfigValid() {
-        return canaryConfig == null || canaryConfigThreshold == null || canaryCheckDates == null || canaryConfigThreshold < 0;
+        return canaryPath == null || canaryConfigThreshold == null || canaryCheckDates == null || canaryConfigThreshold < 0;
     }
 
     @Override
@@ -311,5 +311,9 @@ public class JobAlert implements Codec.Codable {
         } catch (Exception e) {
             return super.toString();
         }
+    }
+
+    public boolean isCanaryAlert() {
+        return type != SPLIT_CANARY && type != MAP_CANARY;
     }
 }
