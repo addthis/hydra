@@ -34,8 +34,10 @@ import com.addthis.hydra.data.query.AbstractTableOp;
  * <p/>
  * <p>The syntax is sort=[cols]:[type]:[direction]. [cols] is one or more columns
  * separated by commas. Type is a sequence of either "n" for numeric or "s" for string.
- * Direction is a sequence of either "a" for ascending or "d" for descending. The lengths
- * of [type] and [direction] must be equal to the number of column specified.
+ * Direction is a sequence of either "a" for ascending or "d" for descending.
+ * The columns are delimited by commas and the types and directions have
+ * no delimiter. The lengths
+ * of [type] and [direction] must be equal to the number of columns specified.
  * <p/>
  * <p>Example:</p>
  * <pre>
