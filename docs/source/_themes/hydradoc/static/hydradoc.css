@@ -1,0 +1,324 @@
+/*
+ * hydradoc.css
+
+ // based on tature theme
+ * ~~~~~~~~~~~~
+ *
+ * Sphinx stylesheet -- nature theme.
+ *
+ * :copyright: Copyright 2007-2011 by the Sphinx team, see AUTHORS.
+ * :license: BSD, see LICENSE for details.
+ *
+ */
+ 
+@import url("basic.css");
+
+/* -- font import ----------------------------------------------------------- */
+
+@font-face {
+  font-family: myHelveticaLight;
+  src: local("Helvetica Neue Light"),
+       local("HelveticaNeue-Light");
+}
+@font-face {
+    font-family: "Open Sans";
+    font-style: italic;
+    font-weight: 400;
+    src: local("Open Sans Italic"), local("OpenSans-Italic"), url("http://themes.googleusercontent.com/static/fonts/opensans/v6/xjAJXh38I15wypJXxuGMBobN6UDyHWBl620a-IRfuBk.woff") format("woff");
+}
+@font-face {
+    font-family: "Open Sans";
+    font-style: normal;
+    font-weight: 700;
+    src: local("Open Sans Bold"), local("OpenSans-Bold"), url("http://themes.googleusercontent.com/static/fonts/opensans/v6/k3k702ZOKiLJc3WVjuplzHhCUOGz7vYGh680lGh-uXM.woff") format("woff");
+}
+@font-face {
+    font-family: "Open Sans";
+    font-style: normal;
+    font-weight: 600;
+    src: local("Open Sans Semibold"), local("OpenSans-Semibold"), url("http://themes.googleusercontent.com/static/fonts/opensans/v6/MTP_ySUJH_bn48VBG8sNSnhCUOGz7vYGh680lGh-uXM.woff") format("woff");
+}
+@font-face {
+    font-family: "Open Sans";
+    font-style: normal;
+    font-weight: 400;
+    src: local("Open Sans"), local("OpenSans"), url("http://themes.googleusercontent.com/static/fonts/opensans/v6/cJZKeOuBrn4kERxqtaUH3T8E0i7KZn-EPnyo3HZu7kw.woff") format("woff");
+}
+@font-face {
+    font-family: "Open Sans";
+    font-style: normal;
+    font-weight: 300;
+    src: local("Open Sans Light"), local("OpenSans-Light"), url("http://themes.googleusercontent.com/static/fonts/opensans/v6/DXI1ORHCpsQm3Vp6mXoaTXhCUOGz7vYGh680lGh-uXM.woff") format("woff");
+}
+@font-face {
+    font-family: "Open Sans";
+    font-style: italic;
+    font-weight: 300;
+    src: local("Open Sans Light Italic"), local("OpenSansLight-Italic"), url("http://themes.googleusercontent.com/static/fonts/opensans/v6/PRmiXeptR36kaC0GEAetxh_xHqYgAV9Bl_ZQbYUxnQU.woff") format("woff");
+}
+@font-face {
+    font-family: "Open Sans";
+    font-style: normal;
+    font-weight: 800;
+    src: local("Open Sans Extrabold"), local("OpenSans-Extrabold"), url("http://themes.googleusercontent.com/static/fonts/opensans/v6/EInbV5DfGHOiMmvb1Xr-hnhCUOGz7vYGh680lGh-uXM.woff") format("woff");
+}
+ 
+/* -- page layout ----------------------------------------------------------- */
+ 
+body {
+    background: #fff;
+	margin: 0;
+    padding: 0;
+	font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica,"open sans",arial,sans-serif; 
+    font-style: normal; 
+	font-weight: 400;
+	font-size: 110%;
+	line-height: 1.6em;
+	color: #666;    
+}
+
+
+div.documentwrapper {
+    float: left;
+    width: 100%;
+}
+
+div.bodywrapper {
+    margin: 0 30px 0 250px;
+}
+
+hr {
+    border: 1px solid #B1B4B6;
+}
+ 
+div.document {
+    background-color: #fff;
+	padding-top: 75px;
+}
+ 
+div.body {
+    background-color: #ffffff;
+    color: #3E4349;
+    padding: 0 30px 30px;
+    font-size: 0.9em;
+}
+ 
+div.footer {
+    border-top: 1px solid #eee;
+	margin-top: 50px;
+	padding: 20px 0;
+    text-align: center;
+    font-size: 75%;
+}
+ 
+div.footer a {
+    color: #444;
+    text-decoration: underline;
+}
+ 
+div.related {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 2;
+    background-color: #f1f1f1;
+	border-bottom: 1px solid #ccc;
+	height: 50px;
+    line-height: 50px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+		-moz-box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+		-webkit-box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+    text-shadow: 0px 1px 0 #eee;
+    font-size: 0.9em;
+    color: #333;
+} 
+div.related a {
+    color: #333;
+}
+div.related ul {
+	padding: 0 30px;
+}
+
+ 
+div.sphinxsidebar {
+	padding-left: 10px;
+    font-size: 0.75em;
+    line-height: 1.5em;
+}
+
+div.sphinxsidebarwrapper{
+    padding: 6px 0;
+}
+ 
+div.sphinxsidebar h3,
+div.sphinxsidebar h4 {
+    margin: 0;
+    padding: 5px 10px;
+    text-shadow: 1px 1px 0 white;
+	font-family: Arial, sans-serif;
+	font-size: 1.2em;
+    font-weight: bold;
+    color: #000;
+	cursor: default;
+}
+div.sphinxsidebar h3 a,
+div.sphinxsidebar h4 a {
+	color: #000;
+	cursor: pointer;
+}
+
+div.sphinxsidebar h4{
+    font-size: 1.1em;
+}
+ 
+div.sphinxsidebar p {
+    color: #888;
+    padding: 5px 20px;
+}
+ 
+div.sphinxsidebar p.topless {
+}
+ 
+div.sphinxsidebar ul {
+    margin: 10px 16px;
+    padding: 0;
+    color: #000;
+}
+div.sphinxsidebar ul ul {
+	margin-left: 0;
+}
+div.sphinxsidebar ul li li {
+	list-style: none;
+	background: url(bg-li-plus.gif) no-repeat 0 6px;
+	padding-left: 12px;
+}
+ 
+div.sphinxsidebar input {
+    border: 1px solid #ccc;
+    font-family: sans-serif;
+    font-size: 1em;
+}
+
+div.sphinxsidebar input[type=text]{
+    margin-left: 20px;
+}
+ 
+/* -- body styles ----------------------------------------------------------- */
+ 
+a {
+	text-decoration: none;
+	color: #0098F8; 
+}
+a:hover {
+	text-decoration: underline;
+	color: #104c97;
+}
+ 
+div.body h1,
+div.body h2,
+div.body h3,
+div.body h4,
+div.body h5,
+div.body h6 {
+    font-family: Arial, sans-serif;
+    font-weight: normal;
+    color: #212224;
+    margin: 30px 0px 10px 0px;
+    padding: 0 0 10px;
+    text-shadow: 0px 1px 0 white
+}
+ 
+div.body h1 { border-top: 20px solid white; margin-top: 0; font-size: 200%; }
+div.body h2 { font-size: 150%; color: #FE6D4C; }
+div.body h3 { font-size: 120%; }
+div.body h4 { font-size: 110%; }
+div.body h5 { font-size: 100%; }
+div.body h6 { font-size: 100%; }
+ 
+a.headerlink {
+    color: #c60f0f;
+    font-size: 0.8em;
+    padding: 0 4px 0 4px;
+    text-decoration: none;
+}
+ 
+a.headerlink:hover {
+    background-color: #c60f0f;
+    color: white;
+}
+ 
+div.body p, div.body dd, div.body li {
+    line-height: 1.5em;
+}
+ 
+div.admonition p.admonition-title + p {
+    display: inline;
+}
+
+div.highlight{
+    background-color: white;
+}
+
+div.note {
+    background-color: #eee;
+    border: 1px solid #ccc;
+}
+ 
+div.seealso {
+    background-color: #ffc;
+    border: 1px solid #ff6;
+}
+ 
+div.topic {
+    background-color: #eee;
+}
+ 
+div.warning {
+    background-color: #ffe4e4;
+    border: 1px solid #f66;
+}
+ 
+p.admonition-title {
+    display: inline;
+}
+ 
+p.admonition-title:after {
+    content: ":";
+}
+ 
+pre {
+	background: #f8f8f8;
+	border: 1px solid #e1e1e1;
+		border-radius: 4px;
+		-moz-border-radius: 4px;
+		-webkit-border-radius: 4px;
+    padding: 10px;
+    margin: 1.5em 0 1.5em 0;
+    line-height: 1.2em;
+	font-family: "Panic Sans",Menlo,Monaco,Consolas,Andale Mono,Courier New,monospace !important;
+    font-size: 1.1em;
+    color: #222;
+}
+ 
+tt {
+    background-color: #ecf0f3;
+    color: #222;
+    /* padding: 1px 2px; */
+    font-size: 1.1em;
+    font-family: monospace;
+}
+
+.viewcode-back {
+    font-family: Arial, sans-serif;
+}
+
+div.viewcode-block:target {
+    background-color: #f4debf;
+    border-top: 1px solid #ac9;
+    border-bottom: 1px solid #ac9;
+}
+
+blockquote ul  {
+	margin-left: -40px;
+}
