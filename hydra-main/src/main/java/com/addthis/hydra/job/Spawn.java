@@ -2341,7 +2341,7 @@ public class Spawn implements Codec.Codable {
                 StatusTaskBegin begin = (StatusTaskBegin) core;
                 tasksStartedPerHour.mark();
                 if (debug("-begin-")) {
-                    log.warn("[task.begin] :: " + begin.getJobKey());
+                    log.info("[task.begin] :: " + begin.getJobKey());
                 }
                 try {
                     job = getJob(begin.getJobUuid());
@@ -2372,13 +2372,13 @@ public class Spawn implements Codec.Codable {
                 break;
             case STATUS_TASK_CANT_BEGIN:
                 StatusTaskCantBegin cantBegin = (StatusTaskCantBegin) core;
-                log.warn("[task.cantbegin] received cantbegin from " + cantBegin.getHostUuid() + " for task " + cantBegin.getJobUuid() + "," + cantBegin.getNodeID());
+                log.info("[task.cantbegin] received cantbegin from " + cantBegin.getHostUuid() + " for task " + cantBegin.getJobUuid() + "," + cantBegin.getNodeID());
                 job = getJob(cantBegin.getJobUuid());
                 task = getTask(cantBegin.getJobUuid(), cantBegin.getNodeID());
                 if (job != null && task != null) {
                     try {
                         job.setTaskState(task, JobTaskState.IDLE);
-                        log.warn("[task.cantbegin] kicking " + task.getJobKey());
+                        log.info("[task.cantbegin] kicking " + task.getJobKey());
                         startTask(cantBegin.getJobUuid(), cantBegin.getNodeID(), true, true, true);
                     } catch (Exception ex) {
                         log.warn("[task.schedule] failed to reschedule task for " + task.getJobKey(), ex);
@@ -2392,7 +2392,7 @@ public class Spawn implements Codec.Codable {
                 job = getJob(port.getJobUuid());
                 task = getTask(port.getJobUuid(), port.getNodeID());
                 if (task != null) {
-                    log.warn("[task.port] " + job.getId() + "/" + task.getTaskID() + " @ " + port.getPort());
+                    log.info("[task.port] " + job.getId() + "/" + task.getTaskID() + " @ " + port.getPort());
                     task.setPort(port.getPort());
                     queueJobTaskUpdateEvent(job);
                 }
@@ -2402,7 +2402,7 @@ public class Spawn implements Codec.Codable {
                 job = getJob(backup.getJobUuid());
                 task = getTask(backup.getJobUuid(), backup.getNodeID());
                 if (task != null && task.getState() != JobTaskState.REBALANCE && task.getState() != JobTaskState.MIGRATING) {
-                    log.warn("[task.backup] " + job.getId() + "/" + task.getTaskID());
+                    log.info("[task.backup] " + job.getId() + "/" + task.getTaskID());
                     job.setTaskState(task, JobTaskState.BACKUP);
                     queueJobTaskUpdateEvent(job);
                 }
@@ -2412,7 +2412,7 @@ public class Spawn implements Codec.Codable {
                 job = getJob(replicate.getJobUuid());
                 task = getTask(replicate.getJobUuid(), replicate.getNodeID());
                 if (task != null) {
-                    log.warn("[task.replicate] " + job.getId() + "/" + task.getTaskID());
+                    log.info("[task.replicate] " + job.getId() + "/" + task.getTaskID());
                     JobTaskState taskState = task.getState();
                     if (taskState != JobTaskState.REBALANCE && taskState != JobTaskState.MIGRATING) {
                         job.setTaskState(task, JobTaskState.REPLICATE, true);
@@ -2425,7 +2425,7 @@ public class Spawn implements Codec.Codable {
                 job = getJob(revert.getJobUuid());
                 task = getTask(revert.getJobUuid(), revert.getNodeID());
                 if (task != null) {
-                    log.warn("[task.revert] " + job.getId() + "/" + task.getTaskID());
+                    log.info("[task.revert] " + job.getId() + "/" + task.getTaskID());
                     job.setTaskState(task, JobTaskState.REVERT, true);
                     queueJobTaskUpdateEvent(job);
                 }
@@ -2441,13 +2441,13 @@ public class Spawn implements Codec.Codable {
                             taskReplica.setLastUpdate(replica.getUpdateTime());
                         }
                     }
-                    log.warn("[task.replica] version updated for " + job.getId() + "/" + task.getTaskID() + " ver " + task.getRunCount() + "/" + replica.getVersion());
+                    log.info("[task.replica] version updated for " + job.getId() + "/" + task.getTaskID() + " ver " + task.getRunCount() + "/" + replica.getVersion());
                     queueJobTaskUpdateEvent(job);
                 }
                 break;
             case STATUS_TASK_END:
                 StatusTaskEnd update = (StatusTaskEnd) core;
-                log.warn("[task.end] :: " + update.getJobUuid() + "/" + update.getNodeID() + " exit=" + update.getExitCode());
+                log.info("[task.end] :: " + update.getJobUuid() + "/" + update.getNodeID() + " exit=" + update.getExitCode());
                 tasksCompletedPerHour.mark();
                 taskQueuesByPriority.markHostAvailable(update.getHostUuid());
                 try {
@@ -2566,7 +2566,7 @@ public class Spawn implements Codec.Codable {
      * @param errored Whether the job ended up in error state
      */
     private void finishJob(Job job, boolean errored) {
-        log.warn("[job.done] " + job.getId() + " :: errored=" + errored + ". callback=" + job.getOnCompleteURL());
+        log.info("[job.done] " + job.getId() + " :: errored=" + errored + ". callback=" + job.getOnCompleteURL());
         jobsCompletedPerHour.mark();
         job.setFinishTime(System.currentTimeMillis());
         spawnFormattedLogger.finishJob(job);
@@ -2611,7 +2611,7 @@ public class Spawn implements Codec.Codable {
      */
     private int exec(String cmd[]) throws InterruptedException, IOException {
         if (debug("-exec-")) {
-            log.warn("[exec.cmd] " + Strings.join(cmd, " "));
+            log.info("[exec.cmd] " + Strings.join(cmd, " "));
         }
         Process proc = Runtime.getRuntime().exec(cmd);
         InputStream in = proc.getInputStream();
@@ -2619,7 +2619,7 @@ public class Spawn implements Codec.Codable {
         if (debug("-exec-") && buf.length() > 0) {
             String lines[] = Strings.splitArray(buf, "\n");
             for (String line : lines) {
-                log.warn("[exec.out] " + line);
+                log.info("[exec.out] " + line);
             }
         }
         in = proc.getErrorStream();
@@ -2627,12 +2627,12 @@ public class Spawn implements Codec.Codable {
         if (debug("-exec-") && buf.length() > 0) {
             String lines[] = Strings.splitArray(buf, "\n");
             for (String line : lines) {
-                log.warn("[exec.err] " + line);
+                log.info("[exec.err] " + line);
             }
         }
         int exit = proc.waitFor();
         if (debug("-exec-")) {
-            log.warn("[exec.exit] " + exit);
+            log.info("[exec.exit] " + exit);
         }
         return exit;
     }
@@ -2762,7 +2762,7 @@ public class Spawn implements Codec.Codable {
             info.put("username", username);
             info.put("date", JitterClock.globalTime());
             info.put("quiesced", quiesce);
-            log.warn("User " + username + " has " + (quiesce ? "quiesced" : "unquiesed") + " the cluster.");
+            log.info("User " + username + " has " + (quiesce ? "quiesced" : "unquiesed") + " the cluster.");
             sendEventToClientListeners("cluster.quiesce", info);
         } catch (Exception e) {
             log.warn("", e);
@@ -3084,7 +3084,7 @@ public class Spawn implements Codec.Codable {
                             if (job.shouldAutoRekick(clock)) {
                                 try {
                                     if (scheduleJob(job, false)) {
-                                        log.warn("[schedule] rekicked " + job.getId());
+                                        log.info("[schedule] rekicked " + job.getId());
                                         kicked = true;
                                     }
                                 } catch (Exception ex) {
@@ -3186,7 +3186,7 @@ public class Spawn implements Codec.Codable {
         job.setEndTime(null);
         job.setHadMoreData(false);
         job.incrementRunCount();
-        log.warn("[job.schedule] assigning " + job.getId() + " with " + job.getCopyOfTasks().size() + " tasks");
+        log.info("[job.schedule] assigning " + job.getId() + " with " + job.getCopyOfTasks().size() + " tasks");
         jobsStartedPerHour.mark();
         for (JobTask task : job.getCopyOfTasks()) {
             if (task == null || task.getState() != JobTaskState.IDLE) {
@@ -3251,7 +3251,7 @@ public class Spawn implements Codec.Codable {
                 kick.setConfig(jobConfig);
                 spawnMQ.sendJobMessage(kick);
                 if (debug("-task-")) {
-                    log.warn("[task.schedule] assigned " + jobId + "[" + kick.getNodeID() + "/" + (kick.getJobNodes() - 1) + "] to " + kick.getHostUuid());
+                    log.info("[task.schedule] assigned " + jobId + "[" + kick.getNodeID() + "/" + (kick.getJobNodes() - 1) + "] to " + kick.getHostUuid());
                 }
             } catch (Exception e) {
                 log.warn("failed to kick job " + jobId + " task " + kick.getNodeID() + " on host " + kick.getHostUuid() + ":\n" + e);
@@ -3387,7 +3387,7 @@ public class Spawn implements Codec.Codable {
         if (liveHost.canMirrorTasks() && !liveHost.isReadOnly() && taskQueuesByPriority.shouldKickTaskOnHost(liveHost.getHostUuid())) {
             taskQueuesByPriority.markHostKick(liveHost.getHostUuid(), false);
             scheduleTask(job, task, config);
-            log.warn("[taskQueuesByPriority] sending " + task.getJobKey() + " to " + task.getHostUUID());
+            log.info("[taskQueuesByPriority] sending " + task.getJobKey() + " to " + task.getHostUUID());
             return true;
         } else if (allowSwap && !job.getDontAutoBalanceMe()) {
             attemptKickTaskUsingSwap(job, task, isNewTask, ignoreQuiesce, timeOnQueue);
@@ -3411,7 +3411,7 @@ public class Spawn implements Codec.Codable {
             HostState host = findHostWithAvailableSlot(task, listHostStatus(job.getMinionType()), false);
             if (host != null && swapTask(job.getId(), task.getTaskID(), host.getHostUuid(), true, ignoreQuiesce)) {
                 taskQueuesByPriority.markHostKick(host.getHostUuid(), false);
-                log.warn("[taskQueuesByPriority] swapping " + task.getJobKey() + " onto " + host.getHostUuid());
+                log.info("[taskQueuesByPriority] swapping " + task.getJobKey() + " onto " + host.getHostUuid());
                 return true;
             }
             return false;
@@ -3423,7 +3423,7 @@ public class Spawn implements Codec.Codable {
             HostState availReplica = findHostWithAvailableSlot(task, replicaHosts, false);
             if (availReplica != null && swapTask(job.getId(), task.getTaskID(), availReplica.getHostUuid(), true, ignoreQuiesce)) {
                 taskQueuesByPriority.markHostKick(availReplica.getHostUuid(), true);
-                log.warn("[taskQueuesByPriority] swapping " + task.getJobKey() + " onto " + availReplica.getHostUuid());
+                log.info("[taskQueuesByPriority] swapping " + task.getJobKey() + " onto " + availReplica.getHostUuid());
                 return true;
             }
         }
@@ -3506,7 +3506,7 @@ public class Spawn implements Codec.Codable {
                 job.setTaskState(task, JobTaskState.DISK_FULL);
                 queueJobTaskUpdateEvent(job);
             } else if (task.getState() == JobTaskState.QUEUED || job.setTaskState(task, JobTaskState.QUEUED)) {
-                log.warn("[taskQueuesByPriority] adding " + jobKey + " to queue with ignoreQuiesce=" + ignoreQuiesce);
+                log.info("[taskQueuesByPriority] adding " + jobKey + " to queue with ignoreQuiesce=" + ignoreQuiesce);
                 taskQueuesByPriority.addTaskToQueue(job.getPriority(), jobKey, ignoreQuiesce, toHead);
                 queueJobTaskUpdateEvent(job);
                 sendTaskQueueUpdateEvent();
@@ -3584,7 +3584,7 @@ public class Spawn implements Codec.Codable {
                     kicked = kickOnExistingHosts(job, task, null, now - key.getCreationTime(), true, key.getIgnoreQuiesce());
                 }
                 if (kicked) {
-                    log.warn("[task.queue] removing kicked task " + task.getJobKey());
+                    log.info("[task.queue] removing kicked task " + task.getJobKey());
                     iter.remove();
                 }
             } catch (Exception ex) {
