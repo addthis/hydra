@@ -17,18 +17,7 @@ import java.io.IOException;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
-import com.addthis.bundle.value.ValueArray;
-import com.addthis.bundle.value.ValueBytes;
-import com.addthis.bundle.value.ValueCustom;
-import com.addthis.bundle.value.ValueDouble;
-import com.addthis.bundle.value.ValueFactory;
-import com.addthis.bundle.value.ValueLong;
-import com.addthis.bundle.value.ValueMap;
-import com.addthis.bundle.value.ValueNumber;
-import com.addthis.bundle.value.ValueObject;
-import com.addthis.bundle.value.ValueSimple;
-import com.addthis.bundle.value.ValueString;
-import com.addthis.bundle.value.ValueTranslationException;
+import com.addthis.bundle.value.*;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
@@ -252,11 +241,37 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements C
         if (keyAccess == null) {
             keyAccess = p.getFormat().getField(conf.key);
         }
-        ValueObject o = p.getValue(keyAccess);
-        if (o != null) {
-            ic.offer(o.toString());
-        }
+        updateCounter(p.getValue(keyAccess));
         return true;
+    }
+
+    private void updateCounter(ValueObject value) {
+        if (value == null) {
+            return;
+        }
+        switch (value.getObjectType()) {
+            case INT:
+            case FLOAT:
+            case STRING:
+                ic.offer(value.toString());
+                break;
+            case BYTES:
+                break;
+            case ARRAY:
+                ValueArray arr = value.asArray();
+                for (ValueObject o : arr) {
+                    updateCounter(o);
+                }
+                break;
+            case MAP:
+                ValueMap map = value.asMap();
+                for (ValueMapEntry o : map) {
+                    updateCounter(ValueFactory.create(o.getKey()));
+                }
+                break;
+            case CUSTOM:
+                break;
+        }
     }
 
     @Override
