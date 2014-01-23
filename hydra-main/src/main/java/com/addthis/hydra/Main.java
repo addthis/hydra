@@ -19,8 +19,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import java.net.InetAddress;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.net.UnknownHostException;
 
 import java.util.concurrent.TimeUnit;
@@ -57,7 +55,6 @@ public class Main {
     private static final boolean GANGLIA_SHORT_NAMES = Parameter.boolValue("ganglia.useShortNames", false);
 
     public static void main(String args[]) {
-        initLog4j();
         if (args.length > 0) {
             if (GANGLIA_ENABLE) {
                 if (!Strings.isEmpty(METRICS_REPORTER_CONFIG_FILE)) {
@@ -188,68 +185,6 @@ public class Main {
         System.out.println(
                 "usage: run [ spawn | minion | qmaster | qworker | qutil | streamer | task | fmux | cliquery | printbundles | mesh | mss | zk | dbspace ] <args>"
         );
-    }
-
-
-    protected static boolean isClassAvailable(String className) {
-        try {
-            Class.forName(className);
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-    }
-
-    // Addapted from CassandraDaemon:initLog4j
-    public static void initLog4j()
-    {
-        if (!isClassAvailable("org.apache.log4j.PropertyConfigurator")) {
-            System.err.println("org.apache.log4j.PropertyConfigurator not found, can not enable log4j logging");
-            return;
-        }
-
-        if (System.getProperty("log4j.defaultInitOverride","false").equalsIgnoreCase("true"))  {
-            String config = System.getProperty("log4j.configuration", "log4j.properties");
-            if (config.startsWith("/")) {
-                config = "file://" + config;
-            }
-            URL configLocation = null;
-            try {
-                // try loading from a physical location first.
-                configLocation = new URL(config);
-            } catch (MalformedURLException ex) {
-                // then try loading from the classpath.
-                configLocation = Main.class.getClassLoader().getResource(config);
-            }
-
-            if (configLocation == null) {
-                throw new RuntimeException("Couldn't figure out log4j configuration: "+config);
-            }
-
-            // Now convert URL to a filename
-            String configFileName = null;
-            try {
-                // first try URL.getFile() which works for opaque URLs (file:foo) and paths without spaces
-                configFileName = configLocation.getFile();
-                File configFile = new File(configFileName);
-                // then try alternative approach which works for all hierarchical URLs with or without spaces
-                if (!configFile.exists()) {
-                    configFileName = new File(configLocation.toURI()).getPath();
-                }
-            } catch (Exception e) {
-                throw new RuntimeException("Couldn't convert log4j configuration location to a valid file", e);
-            }
-
-            try {
-                Class.forName("org.apache.log4j.PropertyConfigurator").getMethod("configureAndWatch", String.class, Long.TYPE).invoke(null, configFileName, 10000);
-            } catch(Exception e) {
-                throw new RuntimeException("Failed to enable log4j", e);
-            }
-            log.info("log4j initialized");
-        }
-        else {
-            System.err.println("Explicitly asked for log4j initialization, but had log4j.defaultInitOverride!=true. Default log4j properties may or may not be used");
-        }
     }
 
 }

@@ -83,10 +83,10 @@ EOF
     done
 )
 
-export LOG4J_CFG=$(pwd)/etc/log4j.properties
-export HYDRA_CONF=$(pwd)/../hydra-uber
-export HYDRA_EXEC=${HYDRA_CONF}/target/hydra-uber-*exec*jar
-export LOG4J_PROPERTIES="-Dlog4j.defaultInitOverride=true -Dlog4j.configuration=${LOG4J_CFG}"
+export LOG4J_CFG=etc/log4j.properties
+export HYDRA_EXEC=`echo ../hydra-uber/target/hydra-uber-*exec*jar`
+export HYDRA_CLASS=${HYDRA_EXEC}:.
+export LOG4J_PROPERTIES="-Dlog4j.configuration=etc/log4j.properties"
 export MQ_MASTER_OPT="${LOG4J_PROPERTIES} -Deps.mem.debug=10000 -Dbatch.brokerHost=localhost -Dbatch.brokerPort=5672 -Dcs.je.cacheSize=256M -Dcs.je.cacheShared=1 -Dcs.je.deferredWrite=1 -Dzk.servers=localhost:2181 -Dstreamserver.read.timeout=60000 -Djava.net.preferIPv4Stack=true -Dganglia.enable=false -Dqmaster.mesh.peers=localhost -Dmeshy.senders=1 -Dmeshy.stream.prefetch=false -Dqmaster.mesh.peer.port=5101"
 export MQ_WORKER_OPT="${LOG4J_PROPERTIES} -Dmesh.local.handlers=com.addthis.hydra.data.query.source.MeshQuerySource -Dmeshy.stream.prefetch=true -Dmeshy.senders=1"
 export MINION_OPT="${LOG4J_PROPERTIES} -Xmx512M -Dminion.mem=512 -Dminion.localhost=localhost -Dminion.group=local -Dminion.web.port=0 -Dspawn.localhost=localhost -Dhttp.post.max=327680 -Dminion.sparse.updates=1 -Dreplicate.cmd.delay.seconds=1 -Dbackup.cmd.delay.seconds=0"
@@ -118,7 +118,7 @@ function startBrokers() {
     fi
     if [ ! -f pid/pid.zookeeper ]; then
         echo "starting zookeeper"
-        ${JAVA_CMD} -cp ${HYDRA_EXEC} org.apache.zookeeper.server.quorum.QuorumPeerMain ./etc/zookeeper.properties > log/zookeeper.log 2>&1 &
+        ${JAVA_CMD} -cp ${HYDRA_CLASS} org.apache.zookeeper.server.quorum.QuorumPeerMain ./etc/zookeeper.properties > log/zookeeper.log 2>&1 &
         echo "$!" > pid/pid.zookeeper
         quit=1
     fi
@@ -134,31 +134,31 @@ function startBrokers() {
 function startOthers() {
     if [ ! -f pid/pid.mqworker ]; then
         echo "starting mesh query worker"
-        ${JAVA_CMD} ${MQ_WORKER_OPT} -jar ${HYDRA_EXEC} mqworker server 5101 ${HYDRA_LOCAL_DIR} localhost:5100 > log/mqworker.log 2>&1 &
+        ${JAVA_CMD} ${MQ_WORKER_OPT} -cp ${HYDRA_CLASS} com.addthis.hydra.Main mqworker server 5101 ${HYDRA_LOCAL_DIR} localhost:5100 > log/mqworker.log 2>&1 &
         echo "$!" > pid/pid.mqworker
     fi
     if [ ! -f pid/pid.mqmaster ]; then
         echo "starting mesh query master"
-        ${JAVA_CMD} ${MQ_MASTER_OPT} -jar ${HYDRA_EXEC} mqmaster etc web jar > log/mqmaster.log 2>&1 &
+        ${JAVA_CMD} ${MQ_MASTER_OPT} -cp ${HYDRA_CLASS} com.addthis.hydra.Main mqmaster etc web jar > log/mqmaster.log 2>&1 &
         echo "$!" > pid/pid.mqmaster
     fi
     for minion in $minions; do
         if [ ! -f pid/pid.${minion} ]; then
             echo "starting ${minion}"
             jvmname="-Dvisualvm.display.name=${minion}"
-            echo "${JAVA_CMD} ${MINION_OPT} ${jvmname} -jar ${HYDRA_EXEC} minion ${minion}" > log/${minion}.cmd
-            ${JAVA_CMD} ${MINION_OPT} ${jvmname} -jar ${HYDRA_EXEC} minion ${minion} > log/${minion}.log 2>&1 &
+            echo "${JAVA_CMD} ${MINION_OPT} ${jvmname} -cp ${HYDRA_CLASS} com.addthis.hydra.Main minion ${minion}" > log/${minion}.cmd
+            ${JAVA_CMD} ${MINION_OPT} ${jvmname} -cp ${HYDRA_CLASS} com.addthis.hydra.Main minion ${minion} > log/${minion}.log 2>&1 &
             echo "$!" > pid/pid.${minion}
         fi
     done
     if [ ! -f pid/pid.spawn ]; then
         echo "starting spawn"
-        ${JAVA_CMD} ${SPAWN_OUT} -jar ${HYDRA_EXEC} spawn > log/spawn.log 2>&1 &
+        ${JAVA_CMD} ${SPAWN_OUT} -cp ${HYDRA_CLASS} com.addthis.hydra.Main spawn > log/spawn.log 2>&1 &
         echo "$!" > pid/pid.spawn
     fi
     if [ ! -f pid/pid.meshy ]; then
         echo "starting meshy"
-        ${JAVA_CMD} ${MESHY_OPT} -jar ${HYDRA_EXEC} mesh server 5000 streams > log/meshy.log 2>&1 &
+        ${JAVA_CMD} ${MESHY_OPT} -cp ${HYDRA_CLASS} com.addthis.hydra.Main mesh server 5000 streams > log/meshy.log 2>&1 &
         echo "$!" > pid/pid.meshy
     fi
     echo "--------------------------------------------------"
