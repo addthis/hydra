@@ -9,8 +9,7 @@ import com.addthis.basis.util.Strings;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
-import com.addthis.bundle.value.ValueFactory;
-import com.addthis.bundle.value.ValueObject;
+import com.addthis.bundle.value.*;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
@@ -150,19 +149,48 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
 
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, Config conf) {
-        Bundle p = state.getBundle();
+        Bundle bundle = state.getBundle();
         if (keyAccess == null) {
-            keyAccess = p.getFormat().getField(conf.key);
+            keyAccess = bundle.getFormat().getField(conf.key);
         }
-        String val = ValueUtil.asNativeString(p.getValue(keyAccess));
-        if (val != null && current.updateSeen(val)) {
-            p.setValue(keyAccess, null);
-            if (current.isSaturated(saturation)) {
-                addLayer();
-            }
-            return true;
+        return updateCounter(bundle, bundle.getValue(keyAccess), false);
+    }
+
+    private boolean updateCounter(Bundle bundle, ValueObject value, boolean mod) {
+        if (value == null) {
+            return mod;
         }
-        return false;
+        switch (value.getObjectType()) {
+            case INT:
+            case FLOAT:
+            case STRING:
+                String val = ValueUtil.asNativeString(value);
+                if (val != null && current.updateSeen(val)) {
+                    bundle.setValue(keyAccess, null);
+                    if (current.isSaturated(saturation)) {
+                        addLayer();
+                    }
+                    mod = true;
+                }
+                break;
+            case BYTES:
+                break;
+            case ARRAY:
+                ValueArray arr = value.asArray();
+                for (ValueObject o : arr) {
+                    mod = updateCounter(bundle, o, mod);
+                }
+                break;
+            case MAP:
+                ValueMap map = value.asMap();
+                for (ValueMapEntry o : map) {
+                    mod = updateCounter(bundle, ValueFactory.create(o.getKey()), mod);
+                }
+                break;
+            case CUSTOM:
+                break;
+        }
+        return mod;
     }
 
     @Override
