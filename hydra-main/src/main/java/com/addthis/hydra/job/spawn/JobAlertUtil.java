@@ -5,19 +5,23 @@ import java.util.HashSet;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
+import com.addthis.hydra.data.util.DateUtil;
 import com.addthis.hydra.data.util.JSONFetcher;
 import com.addthis.hydra.task.stream.StreamFile;
 import com.addthis.hydra.task.stream.StreamSourceMeshy;
 
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.DateTimeFormatterBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class JobAlertUtil {
-    private final static Logger log =LoggerFactory.getLogger(JobAlertUtil.class);
+    private final static Logger log = LoggerFactory.getLogger(JobAlertUtil.class);
     private final static String queryURLBase = "http://" + Parameter.value("spawn.queryhost") + ":2222/query/call";
     private final static String defaultOps = "gather=s";
     private final static int alertQueryTimeout = Parameter.intValue("alert.query.timeout", 20_000);
     private final static int alertQueryRetries = Parameter.intValue("alert.query.retries", 4);
+    private final static DateTimeFormatter ymdFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000).appendMonthOfYear(2).appendDayOfMonth(2).toFormatter();
 
     /**
      * Count the total byte sizes of files along a certain path via mesh
@@ -53,7 +57,8 @@ public class JobAlertUtil {
         } else if (result.size() > 1) {
             log.warn("Found multiple results for job " + jobId + "checkPath=" + checkPath + "; using first row");
         }
-        return Long.parseLong(result.iterator().next());
+        String raw = result.iterator().next();
+        return Long.parseLong(raw.replaceAll("[\\[\\]]", "")); // Trim [] characters and parse as long
 
     }
 
@@ -62,7 +67,11 @@ public class JobAlertUtil {
     }
 
     private static String expandDateMacro(String path) {
-        // Needs to do {{now-1}} => 140103 (or whatever)
-        return Strings.urlDecode(path);
+        for (String entry : path.split("[/:]")) {
+            if (entry.startsWith(DateUtil.NOW_PREFIX) && entry.endsWith(DateUtil.NOW_POSTFIX)) {
+                path = path.replace(entry, DateUtil.getDateTime(ymdFormatter, entry).toString(ymdFormatter));
+            }
+        }
+        return Strings.urlEncode(path);
     }
 }

@@ -19,6 +19,7 @@ import java.util.Arrays;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.hydra.job.spawn.JobAlert;
+import com.addthis.hydra.job.spawn.JobAlertUtil;
 import com.addthis.maljson.JSONObject;
 
 import org.junit.Test;
@@ -72,29 +73,13 @@ public class JobAlertTest {
         assertEquals(Strings.join(initialAlert.getJobIds(), ","), json.getString("jobIds"));
     }
 
-    /*
+
     @Test
-    public void meshTest() throws Exception {
-        String jobId = "05a7bab7-d38d-4cd1-94e6-c1d24c977a2b";
+    public void queryTest() throws Exception {
+        System.setProperty("spawn.queryhost", "adq01");
+        System.out.println(JobAlertUtil.getQueryCount("pkaren", "day/{{now-1}}:+count"));
 
-        String jobSpecificLookup = "/split/{Y}{M}{D}/*.txt";
-
-        String meshLookupString2 = "/job*" + "/" + jobId + "/*" + "/gold" + jobSpecificLookup;
-
-        String startDate = "{{now-1}}", endDate = "{{now-1}}";
-
-        StreamSourceMeshy mesh = new StreamSourceMeshy(new String[] {meshLookupString2}, 1, startDate, endDate);
-        StreamFile streamFile;
-        long totalBytes = 0;
-        while ((streamFile = mesh.nextSource()) != null) {
-            totalBytes += streamFile.length();
-        }
-
-        System.out.println("TOTAL = " + totalBytes);
-
-        System.out.println("DONE...");
     }
-    */
 
     private Job createJobWithState(JobState jobState) throws Exception {
         Job job = new Job();
