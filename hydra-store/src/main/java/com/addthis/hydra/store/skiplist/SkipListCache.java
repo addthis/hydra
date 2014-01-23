@@ -1982,6 +1982,7 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
                 status = (failedPages > 0) ? 1 : 0;
             }
             closeExternalStore(cleanLog);
+            assert(status == 0);
             log.info("pages: encoded=" + numPagesEncoded.get() +
                      " decoded=" + numPagesDecoded.get() +
                      " split=" + numPagesSplit.get());
@@ -2162,7 +2163,6 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
                              " the nextFirstKey is null" +
                              " and the next page is associated with key " + nextKey);
                     failedPages++;
-                    assert(false);
                 } else if (!newPage.nextFirstKey.equals(nextKey)) {
                     int compareTo = compareKeys(newPage.nextFirstKey, nextKey);
                     char direction = compareTo > 0 ? '>' : '<';
@@ -2171,7 +2171,6 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
                              " the nextFirstKey is " + newPage.nextFirstKey +
                     " which is " + direction + " the next page is associated with key " + nextKey);
                     failedPages++;
-                    assert(false);
                 }
                 key = nextKey;
                 encodedPage = externalStore.get(encodedNextKey);
