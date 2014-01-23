@@ -19,13 +19,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CyclicBarrier;
 
 import com.addthis.basis.test.SlowTest;
+import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Files;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -33,6 +37,10 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 public class TestConcurrentTree {
+
+    private static final Logger log = LoggerFactory.getLogger(TestConcurrentTree.class);
+
+    private static final boolean testIntegrity = false;
 
     static final int fastNumElements = 10000;
     static final int fastNumThreads = 8;
@@ -153,6 +161,7 @@ public class TestConcurrentTree {
 
     @Test
     public void testGetOrCreateOneThread() throws Exception {
+        log.info("testGetOrCreateOneThread");
         File dir = makeTemporaryDirectory();
         try {
             ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).kvStoreType(1).build();
@@ -170,7 +179,7 @@ public class TestConcurrentTree {
                 assertEquals(Integer.toString(i), node.getName());
                 node.release();
             }
-            tree.close(false, true);
+            tree.close(false, testIntegrity);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
@@ -180,6 +189,7 @@ public class TestConcurrentTree {
 
     @Test
     public void testRecursiveDeleteOneThread() throws Exception {
+        log.info("testRecursiveDeleteOneThread");
         File dir = makeTemporaryDirectory();
         try {
             ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).kvStoreType(1).build();
@@ -203,7 +213,7 @@ public class TestConcurrentTree {
             assertEquals(0, root.getNodeCount());
             assertEquals(1, tree.getTreeTrashNode().getNodeCount());
             assertEquals(1, tree.getTreeTrashNode().getCounter());
-            tree.close(false, true);
+            tree.close(false, testIntegrity);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
@@ -213,6 +223,7 @@ public class TestConcurrentTree {
 
     @Test
     public void testRecursiveDeleteMultiThreads() throws Exception {
+        log.info("testRecursiveDeleteMultiThreads");
         File dir = makeTemporaryDirectory();
         try {
             ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).
@@ -242,7 +253,7 @@ public class TestConcurrentTree {
             assertEquals(2, tree.getCache().size());
             assertEquals(0, root.getNodeCount());
 
-            tree.close(false, true);
+            tree.close(false, testIntegrity);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
@@ -263,6 +274,7 @@ public class TestConcurrentTree {
     }
 
     private void testGetOrCreateMultiThread(int numElements, int numThreads) throws Exception {
+        log.info("testGetOrCreateMultiThread");
         File dir = makeTemporaryDirectory();
         try {
             ArrayList<Integer> values = new ArrayList<>(numElements);
@@ -302,7 +314,7 @@ public class TestConcurrentTree {
                 assertEquals(Integer.toString(i), node.getName());
                 node.release();
             }
-            tree.close(false, true);
+            tree.close(false, testIntegrity);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
@@ -312,11 +324,13 @@ public class TestConcurrentTree {
 
     @Test
     public void testDeleteOneThreadForeground() throws Exception {
+        log.info("testDeleteOneThreadForeground");
         testDeleteOneThread(0);
     }
 
     @Test
     public void testDeleteOneThreadBackground() throws Exception {
+        log.info("testDeleteOneThreadBackground");
         testDeleteOneThread(fastNumThreads);
     }
 
@@ -345,7 +359,7 @@ public class TestConcurrentTree {
             tree.waitOnDeletions();
             assertEquals(1000, tree.getTreeTrashNode().getCounter());
             assertEquals(1000, tree.getTreeTrashNode().getNodeCount());
-            tree.close(false, true);
+            tree.close(false, testIntegrity);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
@@ -375,7 +389,66 @@ public class TestConcurrentTree {
         }
     }
 
+    @Test
+    @Category(SlowTest.class)
+    public void testIterateAndDeleteSlow() throws Exception {
+        for(int i = 0; i < 100; i++) {
+            testIterateAndDelete(fastNumThreads, 1000);
+        }
+    }
+
+    @Test
+    public void testIterateAndDeleteFast() throws Exception {
+        testIterateAndDelete(fastNumThreads, 1000);
+    }
+
+    private void testIterateAndDelete(int numThreads, int numElements) throws Exception {
+        log.info("testIterateAndDelete {} {}", numThreads, numElements);
+        File dir = makeTemporaryDirectory();
+        try {
+            ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).numDeletionThreads(numThreads).
+                    maxPageSize(5).maxCacheSize(500).kvStoreType(1).build();
+            ConcurrentTreeNode root = tree.getRootNode();
+
+            for (int i = 0; i < numElements; i++) {
+                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+                assertNotNull(node);
+                assertEquals(Integer.toString(i), node.getName());
+                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+                child.release();
+                node.release();
+            }
+
+            Random rng = new Random();
+
+            ClosableIterator<DataTreeNode> iterator = tree.getIterator();
+            try {
+                int counter = 0;
+                while(iterator.hasNext()) {
+                    DataTreeNode node = iterator.next();
+                    if (rng.nextFloat() < 0.8) {
+                        String name = node.getName();
+                        tree.deleteNode(root, name);
+                        counter++;
+                    }
+                }
+                log.info("Deleted " + (((float) counter) / numElements * 100.0) + " % of nodes");
+            } finally {
+                iterator.close();
+            }
+
+            tree.close(false, testIntegrity);
+
+        } finally {
+            if (dir != null) {
+                Files.deleteDir(dir);
+            }
+        }
+
+    }
+
     private void testDeleteMultiThread(int numElements, int numThreads, int numDeletionThreads) throws Exception {
+        log.info("testDeleteMultiThread {} {} {}", numElements, numThreads, numDeletionThreads);
         File dir = makeTemporaryDirectory();
         try {
             ArrayList<Integer> values = new ArrayList<>(numElements);
@@ -422,7 +495,7 @@ public class TestConcurrentTree {
             tree.waitOnDeletions();
             assertEquals(numElements, tree.getTreeTrashNode().getCounter());
             assertEquals(numElements, tree.getTreeTrashNode().getNodeCount());
-            tree.close(false, true);
+            tree.close(false, testIntegrity);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);

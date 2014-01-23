@@ -173,7 +173,6 @@ public class SourceTracker {
             && !isNew(stateful)
             && !(ex instanceof RuntimeException)
             && !(ex instanceof InterruptedIOException)
-            && !(ex instanceof SocketTimeoutException)
             && !(exToString.contains(StreamService.ERROR_EXCEED_OPEN)) // guard against overloaded mesh
             && !(exToString.contains(StreamService.ERROR_CHANNEL_LOST)) // guard against downed mesh
             && !(exToString.contains("java.util.concurrent.RejectedExecutionException"))

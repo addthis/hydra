@@ -31,6 +31,9 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.codec.Codec;
 
+import com.google.common.base.Joiner;
+import com.google.common.net.InternetDomainName;
+
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary"> dissects an url and updates
  * the bundle with the component pieces</span>.
@@ -147,19 +150,33 @@ public final class BundleFilterURL extends BundleFilter {
     private String setHostNormal;
 
     /**
-     * Name of the field to populate with the path defined by this URL. If null the path will not be set.
+     * Name of the field to populate with the top
+     * private domain as defined by Google
+     * Guava's
+     * <a href="http://docs.guava-libraries.googlecode.com/git-history/release/javadoc/com/google/common/net/InternetDomainName.html">InternetDomainName</a> .
+     * This field should be used in combination with
+     * {@link #fixProto fixProto} set to true.
+     */
+    @Codec.Set(codable = true)
+    private String setTopPrivateDomain;
+
+    /**
+     * Name of the field to populate with the path
+     * defined by this URL. If null the path will not be set.
      */
     @Codec.Set(codable = true)
     private String setPath;
 
     /**
-     * Name of the field to populate with the parameters defined by this URL. If null the parameters will not be set.
+     * Name of the field to populate with the parameters
+     * defined by this URL. If null the parameters will not be set.
      */
     @Codec.Set(codable = true)
     private String setParams;
 
     /**
-     * Name of the field to populate with the anchor defined by this URL.  If null the anchor will not be set.
+     * Name of the field to populate with the anchor
+     * defined by this URL.  If null the anchor will not be set.
      */
     @Codec.Set(codable = true)
     private String setAnchor;
@@ -199,13 +216,17 @@ public final class BundleFilterURL extends BundleFilter {
         return this;
     }
 
+    private static final Joiner DOT_JOINER = Joiner.on('.');
+
     @Override
     public void initialize() {
         if (setHostNormal != null) {
             hostNormalPattern = Pattern.compile("^www*\\d*\\.(.*)");
         }
 
-        fields = new String[]{field, setHost, setPath, setParams, setAnchor, setHostNormal};
+        fields = new String[]{field, setHost, setPath,
+                              setParams, setAnchor, setHostNormal,
+                              setTopPrivateDomain};
     }
 
     @Override
@@ -283,6 +304,16 @@ public final class BundleFilterURL extends BundleFilter {
                         returnhost = m.group(1);
                     }
                     bundle.setValue(bound[5], ValueFactory.create(returnhost));
+                }
+                if (setTopPrivateDomain != null) {
+                    String topDomain = returnhost;
+                    if (InternetDomainName.isValid(returnhost)) {
+                        InternetDomainName domainName = InternetDomainName.from(returnhost);
+                        if (domainName.isTopPrivateDomain() || domainName.isUnderPublicSuffix()) {
+                            topDomain = DOT_JOINER.join(domainName.topPrivateDomain().parts());
+                        }
+                    }
+                    bundle.setValue(bound[6], ValueFactory.create(topDomain));
                 }
             } catch (MalformedURLException e) {
                 if (pv.indexOf("%3") > 0 && pv.indexOf("%2") > 0) {

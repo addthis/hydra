@@ -784,63 +784,6 @@ public class TestSkipListCache {
     }
 
     @Test
-    public void testFixNextFirstKey() {
-        File directory = null;
-
-        try {
-            directory = makeTemporaryDirectory();
-            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
-            SkipListCache<Integer, Integer> cache =
-                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 8, Integer.MAX_VALUE).build();
-
-            Page<Integer, Integer> page = cache.cache.get(cache.keyCoder.negInfinity());
-
-            assertEquals(null, page.nextFirstKey);
-
-            page.nextFirstKey = 10;
-
-            assertEquals(null, cache.get(10));
-
-            assertEquals(null, page.nextFirstKey);
-
-            for (int i = 0; i < 16; i++) {
-                cache.put(i, i);
-            }
-
-            Integer nextFirstKey = page.nextFirstKey;
-
-            assertTrue(nextFirstKey != null);
-            assertTrue(nextFirstKey > 3);
-
-            page.writeLock();
-            page.nextFirstKey = 1;
-            page.writeUnlock();
-
-            assertEquals(new Integer(3), cache.get(3));
-
-            assertEquals(nextFirstKey, page.nextFirstKey);
-
-            page.writeLock();
-            page.nextFirstKey = null;
-            page.writeUnlock();
-
-            assertEquals(new Integer(3), cache.get(3));
-
-            assertEquals(nextFirstKey, page.nextFirstKey);
-
-            cache.close();
-
-        } catch (IOException ex) {
-            fail();
-        } finally {
-            if (directory != null) {
-                Files.deleteDir(directory);
-            }
-        }
-
-    }
-
-    @Test
     public void testExternalStorePersistance() {
         doTestExternalStorePersistance(fastNumElements);
         doTestExternalStorePersistance(4);

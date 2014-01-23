@@ -17,12 +17,10 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +31,6 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.basis.io.IOWrap;
 import com.addthis.basis.util.Bytes;
@@ -48,6 +45,8 @@ import com.addthis.meshy.service.file.FileReference;
 import com.addthis.meshy.service.file.FileSource;
 import com.addthis.meshy.service.stream.StreamSource;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 
 import com.ning.compress.lzf.LZFInputStream;
@@ -125,6 +124,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
     private static final String DEFAULT_MESH_HOST = Parameter.value("source.mesh.host", "localhost");
     private static final int DEFAULT_MESH_PORT = Parameter.intValue("source.mesh.port", 5000);
     private static final int DEFAULT_MESH_CACHE_UNITS = Parameter.intValue("source.mesh.cache_units", 1024 * 1024);
+    private static final Splitter HOST_METADATA_SPLITTER = Splitter.on(',').omitEmptyStrings();
 
     private static final int DEFAULT_MESH_TIMEOUT = Parameter.intValue("source.mesh.find.timeout", 2000);
     private static final boolean DEFAULT_MESH_SHORT_CIRCUIT = Parameter.boolValue("source.mesh.find.short.circuit", true);
@@ -194,7 +194,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
     private DateTime firstDate;
     private DateTime lastDate;
 
-    private volatile long peerCount = -1;
+    private volatile int peerCount = -1;
 
 
     @Override
@@ -213,7 +213,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
         if (log.isTraceEnabled()) {
             log.trace("find using mesh=" + meshLink + " patterns=" + patterns);
         }
-        final AtomicLong respondingPeerCount = new AtomicLong();
+        final AtomicInteger respondingPeerCount = new AtomicInteger();
         final Semaphore gate = new Semaphore(1);
         final ConcurrentHashMap<String, Histogram> responseTimeMap = new ConcurrentHashMap<>();
 
@@ -224,12 +224,11 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
             throw new IOException("interrupted while waiting for gate");
         }
         final long startTime = System.currentTimeMillis();
-        final AtomicInteger fileId = new AtomicInteger();
         final AtomicBoolean shortCircuited = new AtomicBoolean(false);
         peerCount = -1;
         FileSource source = new FileSource(meshLink, patterns, "localF") {
             Set<String> unfinishedHosts;
-            boolean localfind = false;
+            boolean localMeshFindComplete = false;
 
             @Override
             public void receiveReference(FileReference ref) {
@@ -237,28 +236,31 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
                 if (name.charAt(0) != '/') {
                     switch (name) {
                         case "peers":
-                            unfinishedHosts = new HashSet<>(Arrays.asList(ref.getHostUUID().split(",")));
+                            unfinishedHosts =
+                                    Sets.newHashSet(HOST_METADATA_SPLITTER.split(ref.getHostUUID()));
                             unfinishedHosts.add(meshHost);
-                            peerCount = ref.size + 1;
+                            peerCount = (int) ref.size + 1;
                             log.debug(toLogString("init"));
                             return;
                         case "response":
                             unfinishedHosts.remove(ref.getHostUUID());
                             //Information is allowed to be forwarded out of order so take maximum
-                            long newCount = peerCount - (localfind ? ref.size : ref.size + 1);
-                            long oldCount = respondingPeerCount.get();
+                            int newCount = peerCount - (int) ref.size;
+                            if (!localMeshFindComplete) {
+                                newCount += 1;
+                            }
+                            int oldCount = respondingPeerCount.get();
                             respondingPeerCount.set(Math.max(newCount, oldCount));
                             log.debug(toLogString("response"));
                             return;
                         case "localfind":
-                            localfind = true;
+                            localMeshFindComplete = true;
                             unfinishedHosts.remove(meshHost);
                             respondingPeerCount.incrementAndGet();
                             log.debug(toLogString("localfind"));
                             return;
                         default:
-                            log.debug("Found a file ref without a prepended /. Assuming its a real fileref for now : " +
-                                     ref.name);
+                            log.debug("Found a file ref without a prepended /. Assuming its a real fileref for now : {}", ref.name);
                     }
                 }
                 String hostId = ref.getHostUUID().substring(0, ref.getHostUUID().indexOf("-"));
@@ -280,7 +282,8 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
                 }
             }
 
-            // called when all mesh nodes have completed. eg. when the above method has been called peerCount times
+            // called when all mesh nodes have completed. In this case we have only one mesh node who should only
+            //   trigger this event when all the remote mesh nodes have completed
             @Override
             public void receiveComplete() throws Exception {
                 log.debug(toLogString("all-complete"));

@@ -12,7 +12,7 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-JAR=`ls -1 -t $DIR/../target/*-exec.jar`
+JAR=`ls -1 -t $DIR/../target/*-exec.jar | head -n 1`
 echo "[INFO] Executing plugin architecture test using -cp argument."
 java -cp $JAR com.addthis.hydra.common.plugins.TestPlugins
 STATUS_CP=$?

@@ -131,6 +131,10 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
         TIME, UNITS, RULES, STREAM, LOCAL
     }
 
+    private static enum ValidateMode {
+        ALL, POST, NONE
+    }
+
     /**
      * Set to 0 to use the original tree implementation.
      * Set to 1 to use the ConcurrentTree + skiplist implementation.
@@ -217,6 +221,20 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
      */
     @Codec.Set(codable = true)
     private TreeMapperPathReference post;
+
+    /**
+     * Optional specify whether to perform
+     * validation on the tree pages stored
+     * in persistent storage. This is a slow operation.
+     * "NONE" never validates.
+     * "POST" validates only if "post" is fired.
+     * "ALL" always validates. Default is "NONE".
+     * If the tree pages are not valid then the task will error.
+     * In the event of invalid tree pages the correct action
+     * is to revert the task.
+     */
+    @Codec.Set(codable = true)
+    private ValidateMode validateTree = ValidateMode.NONE;
 
     /**
      * Optional sample rate for applying
@@ -852,8 +870,8 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
     @Override
     public void sendComplete() {
         try {
+            boolean doPost = false;
             if (post != null) {
-                boolean doPost;
                 int sample = 0;
                 if (postRate > 1) {
                     File sampleFile = new File("post.sample");
@@ -897,9 +915,21 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
                 // stop channel server
                 queryServer.close();
             }
+            boolean doValidate;
+            switch (validateTree) {
+                case ALL:
+                    doValidate = true;
+                    break;
+                case POST:
+                    doValidate = doPost;
+                    break;
+                case NONE:
+                default:
+                    doValidate = false;
+            }
             // close storage
             log.info("[close] closing tree storage");
-            tree.close();
+            tree.close(false, doValidate);
             if (jmxname != null) {
                 log.info("[close] unregistering JMX");
                 ManagementFactory.getPlatformMBeanServer().unregisterMBean(jmxname);

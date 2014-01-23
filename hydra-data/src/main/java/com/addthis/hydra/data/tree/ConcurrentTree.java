@@ -584,7 +584,10 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         }
         if (source != null) {
             try {
-                source.close(cleanLog, testIntegrity);
+                int status = source.close(cleanLog, testIntegrity);
+                if (status != 0) {
+                    Runtime.getRuntime().halt(status);
+                }
             } catch (Exception ex) {
                 log.warn("", ex);
             }
@@ -835,12 +838,9 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         synchronized (treeTrashNode) {
             if (trashIterator == null) {
                 return recreateTrashIterator();
-            }
-
-            if (trashIterator.hasNext()) {
-                return (trashIterator.next());
+            }else if (trashIterator.hasNext()) {
+                return trashIterator.next();
             } else {
-                trashIterator.close();
                 return recreateTrashIterator();
             }
         }
@@ -848,10 +848,15 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     @GuardedBy("treeTrashNode")
     private Map.Entry<DBKey, ConcurrentTreeNode> recreateTrashIterator() {
+        if (trashIterator != null) {
+            trashIterator.close();
+        }
         trashIterator = fetchNodeRange(treeTrashNode.nodeDB());
         if (trashIterator.hasNext()) {
             return trashIterator.next();
         } else {
+            trashIterator.close();
+            trashIterator = null;
             return null;
         }
     }

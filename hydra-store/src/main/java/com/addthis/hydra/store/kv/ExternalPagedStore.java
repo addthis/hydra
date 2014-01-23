@@ -1018,23 +1018,25 @@ public class ExternalPagedStore<K extends Comparable<K>, V> extends CachedPagedS
      *
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
      * @param testIntegrity if true then test the integrity of the pageDB. This is a slow operation.
+     * @return status code. A status code of 0 indicates success.
      **/
     @Override
-    public void close(boolean cleanLog, boolean testIntegrity) {
+    public int close(boolean cleanLog, boolean testIntegrity) {
         super.close();
         pages.close(cleanLog);
         stopMemWathcher();
-        log.warn("pages: encoded=" + numPagesEncoded.get() +
+        log.info("pages: encoded=" + numPagesEncoded.get() +
                  " decoded=" + numPagesDecoded.get() +
                  " split=" + numPagesSplit.get());
         if (trackEncodingByteUsage) {
-            log.warn(MetricsUtil.histogramToString("encodeFirstKeySize", encodeFirstKeySize));
-            log.warn(MetricsUtil.histogramToString("encodeNextFirstKeySize", encodeNextFirstKeySize));
-            log.warn(MetricsUtil.histogramToString("encodeKeySize", encodeKeySize));
-            log.warn(MetricsUtil.histogramToString("encodeValueSize", encodeValueSize));
-            log.warn(MetricsUtil.histogramToString("encodePageSize (final)", encodePageSize));
-            log.warn(MetricsUtil.histogramToString("numberKeysPerPage", numberKeysPerPage));
+            log.info(MetricsUtil.histogramToString("encodeFirstKeySize", encodeFirstKeySize));
+            log.info(MetricsUtil.histogramToString("encodeNextFirstKeySize", encodeNextFirstKeySize));
+            log.info(MetricsUtil.histogramToString("encodeKeySize", encodeKeySize));
+            log.info(MetricsUtil.histogramToString("encodeValueSize", encodeValueSize));
+            log.info(MetricsUtil.histogramToString("encodePageSize (final)", encodePageSize));
+            log.info(MetricsUtil.histogramToString("numberKeysPerPage", numberKeysPerPage));
         }
+        return 0;
     }
 
     /** */
@@ -1178,7 +1180,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V> extends CachedPagedS
         if (pagein + pageout == 0 && (requests == 0 || getCachedEntryCount() <= 2)) {
             return;
         }
-        log.warn(
+        log.info(
                 "mem=[err=" + csm.format(sumpage - getMemoryEstimate()) + " est=" + csm.format(getMemoryEstimate()) + " sum=" + csm.format(sumpage) + " max=" + csm.format(max) + " min=" + csm.format(min) + " avg=" + csm.format(keys > 0 ? sumpage / keys : 0) + "]" +
                 " memX=" + csm.format(maxTotalMem) +
                 " pMemX=" + csm.format(maxPageMem) +
