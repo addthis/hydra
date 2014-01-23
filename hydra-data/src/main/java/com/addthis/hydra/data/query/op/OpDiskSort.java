@@ -37,7 +37,6 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFactory;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.list.ListBundle;
-import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.io.DataChannelReader;
 import com.addthis.bundle.io.DataChannelWriter;
 import com.addthis.bundle.util.BundleColumnBinder;
@@ -82,7 +81,7 @@ import org.xerial.snappy.SnappyOutputStream;
  * @user-reference
  * @hydra-name dsort
  */
-public class OpDiskSort extends AbstractRowOp implements BundleFactory {
+public class OpDiskSort extends AbstractRowOp {
 
     private static final Logger log = LoggerFactory.getLogger(OpDiskSort.class);
     private static final int CHUNK_ROWS = Parameter.intValue("op.disksort.chunk.rows", 5000);
@@ -90,19 +89,18 @@ public class OpDiskSort extends AbstractRowOp implements BundleFactory {
     private static final int GZTYPE = Parameter.intValue("op.disksort.gz.type", 0);
 
     private Path tempDir;
-    private int GZTypeOverride = 0;
     private String[] cols;
     private char[] type;
     private char[] dir;
     private MuxFileDirectory mfm;
     private final Bundle buffer[] = new Bundle[CHUNK_ROWS + 1];
     private int bufferIndex = 0;
-    private final ListBundleFormat format = new ListBundleFormat();
     private BundleComparator comparator;
     private BundleComparator comparatorSS;
     private int chunk = 0;
 
     private final QueryStatusObserver queryStatusObserver;
+    private final BundleFactory factory = new ListBundle();
 
     public OpDiskSort(String args, String tempDirString, QueryStatusObserver queryStatusObserver) {
         this.queryStatusObserver = queryStatusObserver;
@@ -358,20 +356,10 @@ public class OpDiskSort extends AbstractRowOp implements BundleFactory {
         return s1.toString().compareTo(s2.toString());
     }
 
-    @Override
-    public Bundle createBundle() {
-        return new ListBundle(format);
-    }
+    // TODO: We really need a canonical library place for this kind of logic
+    private static OutputStream wrapOutputStream(OutputStream outputStream) throws IOException {
 
-    private OutputStream wrapOutputStream(OutputStream outputStream) throws IOException {
-        int compressionType = GZTypeOverride;
-
-        // If the user did not choose to compress, then use the system default
-        if (compressionType == 0) {
-            compressionType = GZTYPE;
-        }
-
-        switch (compressionType) {
+        switch (GZTYPE) {
             case 0:
                 // no compression
                 return outputStream;
@@ -382,19 +370,13 @@ public class OpDiskSort extends AbstractRowOp implements BundleFactory {
                 // Snappy
                 return new SnappyOutputStream(outputStream);
             default:
-                throw new RuntimeException("Unknown compression type: " + compressionType);
+                throw new RuntimeException("Unknown compression type: " + GZTYPE);
         }
     }
 
-    private InputStream wrapInputStream(InputStream inputStream) throws IOException {
-        int compressionType = GZTypeOverride;
+    private static InputStream wrapInputStream(InputStream inputStream) throws IOException {
 
-        // If the user did not choose to compress, then use the system default
-        if (compressionType == 0) {
-            compressionType = GZTYPE;
-        }
-
-        switch (compressionType) {
+        switch (GZTYPE) {
             case 0:
                 // no compression
                 return inputStream;
@@ -405,11 +387,10 @@ public class OpDiskSort extends AbstractRowOp implements BundleFactory {
                 // Snappy
                 return new SnappyInputStream(inputStream);
             default:
-                throw new RuntimeException("Unknown compression type: " + compressionType);
+                throw new RuntimeException("Unknown compression type: " + GZTYPE);
         }
     }
 
-    /** */
     private class BundleComparator implements Comparator<Bundle> {
 
         private BundleField columns[];
@@ -452,7 +433,6 @@ public class OpDiskSort extends AbstractRowOp implements BundleFactory {
         }
     }
 
-    /** */
     private class SortedSource {
 
         private final TreeSet<SourceBundle> sorted = new TreeSet<SourceBundle>(new SourceBundleComparator());
@@ -464,7 +444,7 @@ public class OpDiskSort extends AbstractRowOp implements BundleFactory {
                 try {
                     // TODO figure out how to delete these files after consuming them to keep the index small in mem
                     MuxFile meta = mfm.openFile("l" + level + "-c" + (chunk++), false);
-                    DataChannelReader reader = new DataChannelReader(OpDiskSort.this, wrapInputStream(meta.read(0)));
+                    DataChannelReader reader = new DataChannelReader(factory, wrapInputStream(meta.read(0)));
                     Bundle next = reader.read();
                     if (next != null) {
                         if (log.isDebugEnabled()) {
@@ -519,7 +499,6 @@ public class OpDiskSort extends AbstractRowOp implements BundleFactory {
             return null;
         }
 
-        /** */
         private class SourceBundle {
 
             public final Bundle bundle;
@@ -533,7 +512,6 @@ public class OpDiskSort extends AbstractRowOp implements BundleFactory {
             }
         }
 
-        /** */
         private class SourceBundleComparator implements Comparator<SourceBundle> {
 
             @Override
