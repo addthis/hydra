@@ -24,6 +24,7 @@ import com.addthis.bundle.value.ValueDouble;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueMap;
+import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueSimple;
@@ -252,11 +253,35 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements C
         if (keyAccess == null) {
             keyAccess = p.getFormat().getField(conf.key);
         }
-        ValueObject o = p.getValue(keyAccess);
-        if (o != null) {
-            ic.offer(o.toString());
-        }
+        updateCounter(p.getValue(keyAccess));
         return true;
+    }
+
+    private void updateCounter(ValueObject value) {
+        if (value == null) {
+            return;
+        }
+        switch (value.getObjectType()) {
+            case INT:
+            case FLOAT:
+            case STRING:
+            case BYTES:
+            case CUSTOM:
+                ic.offer(value.toString());
+                break;
+            case ARRAY:
+                ValueArray arr = value.asArray();
+                for (ValueObject o : arr) {
+                    updateCounter(o);
+                }
+                break;
+            case MAP:
+                ValueMap map = value.asMap();
+                for (ValueMapEntry o : map) {
+                    updateCounter(ValueFactory.create(o.getKey()));
+                }
+                break;
+        }
     }
 
     @Override

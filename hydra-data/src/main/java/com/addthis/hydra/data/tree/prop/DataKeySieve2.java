@@ -9,7 +9,10 @@ import com.addthis.basis.util.Strings;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueMap;
+import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.tree.DataTreeNode;
@@ -150,19 +153,51 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
 
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, Config conf) {
-        Bundle p = state.getBundle();
+        Bundle bundle = state.getBundle();
         if (keyAccess == null) {
-            keyAccess = p.getFormat().getField(conf.key);
+            keyAccess = bundle.getFormat().getField(conf.key);
         }
-        String val = ValueUtil.asNativeString(p.getValue(keyAccess));
-        if (val != null && current.updateSeen(val)) {
-            p.setValue(keyAccess, null);
-            if (current.isSaturated(saturation)) {
-                addLayer();
-            }
-            return true;
+        return updateCounter(bundle, bundle.getValue(keyAccess));
+    }
+
+    private boolean updateCounter(Bundle bundle, ValueObject value) {
+        boolean mod = false;
+        if (value == null) {
+            return false;
         }
-        return false;
+        switch (value.getObjectType()) {
+            case INT:
+            case FLOAT:
+            case STRING:
+            case BYTES:
+            case CUSTOM:
+                String val = ValueUtil.asNativeString(value);
+                if (val != null && current.updateSeen(val)) {
+                    bundle.setValue(keyAccess, null);
+                    if (current.isSaturated(saturation)) {
+                        addLayer();
+                    }
+                    mod = true;
+                }
+                break;
+            case ARRAY:
+                ValueArray arr = value.asArray();
+                for (ValueObject o : arr) {
+                    // use "|" to prevent short circuiting
+                    mod = mod | updateCounter(bundle, o);
+                }
+                break;
+            case MAP:
+                ValueMap map = value.asMap();
+                for (ValueMapEntry o : map) {
+                    // use "|" to prevent short circuiting
+                    mod = mod | updateCounter(bundle, ValueFactory.create(o.getKey()));
+                }
+                break;
+            default:
+                throw new IllegalStateException("Unhandled object type " + value.getObjectType());
+        }
+        return mod;
     }
 
     @Override
