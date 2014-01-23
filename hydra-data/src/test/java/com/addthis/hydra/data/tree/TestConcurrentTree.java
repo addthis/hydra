@@ -40,7 +40,7 @@ public class TestConcurrentTree {
 
     private static final Logger log = LoggerFactory.getLogger(TestConcurrentTree.class);
 
-    private static final boolean testIntegrity = false;
+    private static final boolean testIntegrity = true;
 
     static final int fastNumElements = 10000;
     static final int fastNumThreads = 8;
