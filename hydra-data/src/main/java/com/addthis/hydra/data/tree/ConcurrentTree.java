@@ -703,8 +703,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     }
 
     @Override
-    public ClosableIterator<DataTreeNode> getIterator(String begin, String end) {
-        return getRootNode().getIterator(begin, end);
+    public ClosableIterator<DataTreeNode> getIterator(String from, String to) {
+        return getRootNode().getIterator(from, to);
     }
 
     @Override
