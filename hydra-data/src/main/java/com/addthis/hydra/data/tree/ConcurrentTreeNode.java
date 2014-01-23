@@ -49,7 +49,7 @@ import com.addthis.hydra.store.db.IPageDB.Range;
  * deleting nodes is a higher priority operation that modifying nodes).
  *
  */
-public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Codec.ConcurrentCodable, DataTreeNodeInitializer {
+public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Codec.ConcurrentCodable {
 
     public static final int ALIAS = 1 << 1;
 
@@ -366,7 +366,7 @@ public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Cod
     }
 
     public DataTreeNode getOrCreateEditableNode(String name) {
-        return getOrCreateEditableNode(name, this);
+        return getOrCreateEditableNode(name, null);
     }
 
     public DataTreeNode getOrCreateEditableNode(String name, DataTreeNodeInitializer creator) {
@@ -601,10 +601,6 @@ public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Cod
     @Override
     public void writeUnlock() {
         lock.writeLock().unlock();
-    }
-
-    @Override
-    public void onNewNode(DataTreeNode child) {
     }
 
     @Override

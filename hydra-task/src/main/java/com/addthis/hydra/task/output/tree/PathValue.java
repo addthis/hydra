@@ -75,6 +75,12 @@ public class PathValue extends PathElement {
     protected boolean create = true;
 
     @Codec.Set(codable = true)
+    protected boolean once;
+
+    @Codec.Set(codable = true)
+    protected String mapTo;
+
+    @Codec.Set(codable = true)
     protected boolean delete;
 
     @Codec.Set(codable = true)
@@ -85,6 +91,7 @@ public class PathValue extends PathElement {
 
     private ValueString valueString;
     private BundleField setField;
+    private BundleField mapField;
 
     public final ValueObject value() {
         if (valueString == null) {
@@ -100,11 +107,22 @@ public class PathValue extends PathElement {
         return value();
     }
 
+    public final ValueObject getFilteredValue(final TreeMapState state) {
+        ValueObject value = getPathValue(state);
+        if (vfilter != null) {
+            value = vfilter.filter(value);
+        }
+        return value;
+    }
+
     @Override
     public void resolve(final TreeMapper mapper) {
         super.resolve(mapper);
         if (set != null) {
             setField = mapper.bindField(set);
+        }
+        if (mapTo != null) {
+            mapField = mapper.bindField(mapTo);
         }
         if (each != null) {
             each.resolve(mapper);
@@ -120,11 +138,8 @@ public class PathValue extends PathElement {
      * prevent subclasses from overriding as this is not used from here on
      */
     @Override
-    public final TreeNodeList getNextNodeList(TreeMapState state) {
-        ValueObject value = getPathValue(state);
-        if (vfilter != null) {
-            value = vfilter.filter(value);
-        }
+    public final TreeNodeList getNextNodeList(final TreeMapState state) {
+        ValueObject value = getFilteredValue(state);
         if (setField != null) {
             state.getBundle().setValue(setField, value);
         }
@@ -167,12 +182,14 @@ public class PathValue extends PathElement {
                 }
             }
         } else if (name.getObjectType() == ValueObject.TYPE.MAP) {
-            // TODO: TYPE.MAP has seen only minimal use.  These null
-            // checks may be masking a problem.
             for (ValueMapEntry e : name.asMap()) {
-                PathValue v = new PathValue(e.getKey(), count);
-                if (v != null) {
-                    TreeNodeList tnl = v.processNode(state);
+                String key = e.getKey();
+                if (mapTo != null) {
+                    state.getBundle().setValue(mapField, e.getValue());
+                    pushed += processNodeByValue(list, state, ValueFactory.create(key));
+                } else {
+                    PathValue mapValue = new PathValue(key, count);
+                    TreeNodeList tnl = mapValue.processNode(state);
                     if (tnl != null) {
                         state.push(tnl);
                         list.addAll(processNodeUpdates(state, e.getValue()));
@@ -218,6 +235,10 @@ public class PathValue extends PathElement {
         boolean isnew = state.getAndClearLastWasNew();
         /** can be null if parent is deleted by another thread or if create == false */
         if (child == null) {
+            return 0;
+        }
+        /* bail if only new nodes are required */
+        if (once && !isnew) {
             return 0;
         }
         /** child node accounting and custom data updates */

@@ -34,7 +34,7 @@ import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB.Range;
 
 
-public class TreeNode implements DataTreeNode, Codec.SuperCodable, Codec.ConcurrentCodable, DataTreeNodeInitializer {
+public class TreeNode implements DataTreeNode, Codec.SuperCodable, Codec.ConcurrentCodable {
 
     public static final int DELETED = 1 << 0;
     public static final int ALIAS = 1 << 1;
@@ -257,7 +257,7 @@ public class TreeNode implements DataTreeNode, Codec.SuperCodable, Codec.Concurr
     }
 
     public DataTreeNode getOrCreateEditableNode(String name) {
-        return getOrCreateEditableNode(name, this);
+        return getOrCreateEditableNode(name, null);
     }
 
     public DataTreeNode getOrCreateEditableNode(String name, DataTreeNodeInitializer creator) {
@@ -492,10 +492,6 @@ public class TreeNode implements DataTreeNode, Codec.SuperCodable, Codec.Concurr
     @Override
     public void writeUnlock() {
         lock.writeLock().unlock();
-    }
-
-    @Override
-    public void onNewNode(DataTreeNode child) {
     }
 
     @Override
