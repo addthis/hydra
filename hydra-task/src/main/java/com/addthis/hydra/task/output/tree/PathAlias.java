@@ -110,40 +110,34 @@ public final class PathAlias extends PathKeyValue {
     }
 
     @Override
-    public DataTreeNode getOrCreateNode(TreeMapState state, String name) {
-        String p[] = new String[path.length];
-        for (int i = 0; i < p.length; i++) {
-            p[i] = ValueUtil.asNativeString(path[i].getPathValue(state));
-        }
-        DataTreeNode alias = null;
-        if (peer) {
-            alias = DataTreeUtil.pathLocateFrom(state.current(), p);
-        } else if (relativeUp > 0) {
-            alias = DataTreeUtil.pathLocateFrom(state.peek(relativeUp), p);
-        } else {
-            alias = DataTreeUtil.pathLocateFrom(state.current().getTreeRoot(), p);
-        }
-        if (alias != null) {
-            final DataTreeNode finalAlias = alias;
-            DataTreeNodeInitializer init = new DataTreeNodeInitializer() {
-                @Override
-                public void onNewNode(DataTreeNode child) {
-                    child.aliasTo(finalAlias);
+    public DataTreeNode getOrCreateNode(final TreeMapState state, final String name) {
+        return state.getOrCreateNode(name, new DataTreeNodeInitializer() {
+            @Override
+            public void onNewNode(final DataTreeNode child) {
+                String p[] = new String[path.length];
+                for (int i = 0; i < p.length; i++) {
+                    p[i] = ValueUtil.asNativeString(path[i].getFilteredValue(state));
                 }
-            };
-            if (debug > 0) {
-                debug(true);
+                DataTreeNode alias = null;
+                if (peer) {
+                    alias = DataTreeUtil.pathLocateFrom(state.current(), p);
+                } else if (relativeUp > 0) {
+                    alias = DataTreeUtil.pathLocateFrom(state.peek(relativeUp), p);
+                } else {
+                    alias = DataTreeUtil.pathLocateFrom(state.current().getTreeRoot(), p);
+                }
+                if (alias == null) {
+                    if (debug > 0) {
+                        debug(false);
+                    }
+                    if (log.isDebugEnabled() || debug == 1) {
+                        log.warn("alias fail, missing " + Strings.join(p, " / "));
+                    }
+                } else {
+                    child.aliasTo(alias);
+                }
             }
-            return state.getOrCreateNode(name, init);
-        } else {
-            if (debug > 0) {
-                debug(false);
-            }
-            if (log.isDebugEnabled() || debug == 1) {
-                log.warn("alias fail, missing " + Strings.join(p, " / "));
-            }
-            return null;
-        }
+        });
     }
 
     private synchronized void debug(boolean hit) {

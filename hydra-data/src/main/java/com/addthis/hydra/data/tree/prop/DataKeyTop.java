@@ -104,11 +104,23 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
     public static final class Config extends TreeDataParameters<DataKeyTop> {
 
         /**
-         * Bundle field name from which to draw values.
+         * Bundle field name from which to draw keys.
          * This field is required.
          */
         @Codec.Set(codable = true, required = true)
         private String key;
+
+        /**
+         * Bundle field name from which to draw weight (weight) values.
+         */
+        @Codec.Set(codable = true)
+        private String weight;
+
+        /**
+         * Value filter for providing a key weight.
+         */
+        @Codec.Set(codable = true)
+        private ValueFilter weightFilter;
 
         /**
          * Maximum capacity of the key topper.
@@ -136,7 +148,6 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
             DataKeyTop dataKeyTop = new DataKeyTop();
             dataKeyTop.size = size;
             dataKeyTop.top = new ConcurrentKeyTopper().init(size);
-            dataKeyTop.filter = filter;
             return dataKeyTop;
         }
     }
@@ -146,21 +157,30 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
     @Codec.Set(codable = true, required = true)
     private int size;
 
-    private ValueFilter filter;
     private BundleField keyAccess;
+    private BundleField weightAccess;
 
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, DataKeyTop.Config conf) {
         if (keyAccess == null) {
             keyAccess = state.getBundle().getFormat().getField(conf.key);
-            filter = conf.filter;
+            if (conf.weight != null) {
+                weightAccess = state.getBundle().getFormat().getField(conf.weight);
+            }
         }
         ValueObject val = state.getBundle().getValue(keyAccess);
         if (val != null) {
-            if (filter != null) {
-                val = filter.filter(val);
+            if (conf.filter != null) {
+                val = conf.filter.filter(val);
                 if (val == null) {
                     return false;
+                }
+            }
+            int weightValue = 1;
+            if (weightAccess != null) {
+                ValueObject inc = state.getBundle().getValue(weightAccess);
+                if (inc != null) {
+                    weightValue = inc.asLong().getLong().intValue();
                 }
             }
             if (conf.splitRegex != null) {
@@ -169,15 +189,27 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
                 String split[] = val.toString().split(conf.splitRegex);
                 // System.out.println(Arrays.toString(split));
                 for (int i = 0; i < split.length; i++) {
-                    top.increment(split[i], size);
+                    top.increment(split[i], weightValue, size);
                 }
             } else {
                 if (val.getObjectType() == ValueObject.TYPE.ARRAY) {
                     for (ValueObject obj : val.asArray()) {
-                        top.increment(obj.toString(), size);
+                        if (conf.weightFilter != null) {
+                            Double weight = conf.weightFilter.filter(obj).asDouble().getDouble();
+                            if (weight != null) {
+                                weightValue *= weight;
+                            }
+                        }
+                        top.increment(obj.toString(), weightValue, size);
                     }
                 } else {
-                    top.increment(val.toString(), size);
+                    if (conf.weightFilter != null) {
+                        Double weight = conf.weightFilter.filter(val).asDouble().getDouble();
+                        if (weight != null) {
+                            weightValue *= weight;
+                        }
+                    }
+                    top.increment(val.toString(), weightValue, size);
                 }
             }
             return true;
