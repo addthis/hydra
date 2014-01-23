@@ -19,7 +19,6 @@ import java.util.Arrays;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.hydra.job.spawn.JobAlert;
-import com.addthis.hydra.job.spawn.JobAlertUtil;
 import com.addthis.maljson.JSONObject;
 
 import org.junit.Test;
@@ -71,14 +70,6 @@ public class JobAlertTest {
         assertEquals(initialAlert.getType(), json.getInt("type"));
         assertEquals(initialAlert.getEmail(), json.getString("email"));
         assertEquals(Strings.join(initialAlert.getJobIds(), ","), json.getString("jobIds"));
-    }
-
-
-    @Test
-    public void queryTest() throws Exception {
-        System.setProperty("spawn.queryhost", "adq01");
-        System.out.println(JobAlertUtil.getQueryCount("pkaren", "day/{{now-1}}:+count"));
-
     }
 
     private Job createJobWithState(JobState jobState) throws Exception {

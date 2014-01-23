@@ -422,11 +422,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         this.sortTokenOffset = sortTokenOffset;
     }
 
-    public void setStartDate(String startDate) {
-        this.startDate = startDate;
-    }
-
-    public void setEndDate(String endDate) {
-        this.endDate = endDate;
+    public void setPathTokenOffset(int pathTokenOffset) {
+        this.pathTokenOffset = pathTokenOffset;
     }
 }

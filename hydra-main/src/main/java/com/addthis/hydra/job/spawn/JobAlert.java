@@ -61,8 +61,6 @@ public class JobAlert implements Codec.Codable {
     @Codec.Set(codable = true)
     private String canaryPath;
     @Codec.Set(codable = true)
-    private String[] canaryCheckDates;
-    @Codec.Set(codable = true)
     private Integer canaryConfigThreshold;
 
     /* For alerts tracking multiple jobs, this variable marks if the set of active jobs has changed since the last alert check */
@@ -76,6 +74,8 @@ public class JobAlert implements Codec.Codable {
 
     /* Map temporarily storing prior active jobs that have since cleared */
     private final HashMap<String, String> priorActiveJobs;
+
+    private Long lastActual = 0l;
 
     private static final Map<Integer, String> alertMessageMap = ImmutableMap.of(ON_ERROR, "Task is in Error ",
             ON_COMPLETE, "Task has Completed ",
@@ -173,14 +173,6 @@ public class JobAlert implements Codec.Codable {
         this.canaryPath = canaryPath;
     }
 
-    public String[] getCanaryCheckDates() {
-        return canaryCheckDates;
-    }
-
-    public void setCanaryCheckDates(String[] canaryCheckDates) {
-        this.canaryCheckDates = canaryCheckDates;
-    }
-
     public Integer getCanaryConfigThreshold() {
         return canaryConfigThreshold;
     }
@@ -248,6 +240,9 @@ public class JobAlert implements Codec.Codable {
         sb.append(JobAlertRunner.getClusterHead());
         sb.append(" - ");
         sb.append(hasAlerted() ? getActiveJobs().toString() : priorActiveJobs.toString());
+        if (isCanaryAlert()) {
+            sb.append(" - expected=" + canaryConfigThreshold + " actual=" + lastActual);
+        }
         return sb.toString();
     }
 
@@ -280,6 +275,7 @@ public class JobAlert implements Codec.Codable {
         }
         try {
             long queryVal = JobAlertUtil.getQueryCount(job.getId(), canaryPath);
+            lastActual = queryVal;
             return queryVal < canaryConfigThreshold;
         } catch (Exception ex) {
             log.warn("Exception during canary check: ", ex);
@@ -291,17 +287,15 @@ public class JobAlert implements Codec.Codable {
         if (!isCanaryConfigValid()) {
             return false;
         }
-        for (String checkDate : canaryCheckDates) {
-            long totalBytes = JobAlertUtil.getTotalBytesFromMesh(job.getId(), checkDate, canaryPath);
-            if (totalBytes < canaryConfigThreshold) {
-                return true;
-            }
-        }
-        return false;
+        // Strip off preceding slash, if it exists.
+        String finalPath = canaryPath.startsWith("/") ? canaryPath.substring(1) : canaryPath;
+        long totalBytes = JobAlertUtil.getTotalBytesFromMesh(job.getId(), finalPath);
+        lastActual = totalBytes;
+        return totalBytes < canaryConfigThreshold;
     }
 
     private boolean isCanaryConfigValid() {
-        return canaryPath == null || canaryConfigThreshold == null || canaryCheckDates == null || canaryConfigThreshold < 0;
+        return canaryPath == null || canaryConfigThreshold == null || canaryConfigThreshold < 0;
     }
 
     @Override
