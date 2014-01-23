@@ -19,6 +19,7 @@ import java.util.AbstractMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.basis.util.Bytes;
@@ -78,6 +79,7 @@ public class ConcurrentByteStoreBDB implements ByteStore {
         bdb_eco.setReadOnly(ro);
         bdb_eco.setAllowCreate(!ro);
         bdb_eco.setTransactional(false);
+        bdb_eco.setLockTimeout(2, TimeUnit.MINUTES);
 //          bdb_eco.setDurability(Durability.COMMIT_NO_SYNC);
         if (ro) {
             bdb_eco.setConfigParam(EnvironmentConfig.ENV_RUN_CLEANER, "false");    // Disable log cleaner thread
