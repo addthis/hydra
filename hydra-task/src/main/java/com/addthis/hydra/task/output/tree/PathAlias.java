@@ -53,13 +53,13 @@ import com.addthis.hydra.data.tree.DataTreeUtil;
  * @user-reference
  * @hydra-name alias
  */
-public final class PathAlias extends PathKeyValue {
+public class PathAlias extends PathKeyValue {
 
     /**
      * Path traversal to the target node. This field is required.
      */
     @Codec.Set(codable = true, required = true)
-    private PathValue path[];
+    protected PathValue path[];
 
     /**
      * When traversing the tree in search of the target node,
@@ -69,7 +69,7 @@ public final class PathAlias extends PathKeyValue {
      * then this parameter is ignored. Default is zero.
      */
     @Codec.Set(codable = true)
-    private int relativeUp;
+    protected int relativeUp;
 
     /**
      * When traversing the tree in search of the target node,
@@ -77,13 +77,21 @@ public final class PathAlias extends PathKeyValue {
      * current location. Default is false.
      */
     @Codec.Set(codable = true)
-    private boolean peer;
+    protected boolean peer;
+
+    /**
+     * When true, alias acts like a hard file link. Otherwise the
+     * behavior is more similar to a soft file link. Hard links do
+     * not have re-validate on each use. Default is false.
+     */
+    @Codec.Set(codable = true)
+    protected boolean hard;
 
     /**
      * Default is false.
      */
     @Codec.Set(codable = true)
-    private int debug;
+    protected int debug;
 
     /**
      * Default is null.
@@ -110,7 +118,13 @@ public final class PathAlias extends PathKeyValue {
     }
 
     @Override
-    public DataTreeNode getOrCreateNode(TreeMapState state, String name) {
+    public DataTreeNode getOrCreateNode(final TreeMapState state, final String name) {
+        if (hard) {
+            DataTreeNode node = state.getLeasedNode(name);
+            if (node != null) {
+                return node;
+            }
+        }
         String p[] = new String[path.length];
         for (int i = 0; i < p.length; i++) {
             p[i] = ValueUtil.asNativeString(path[i].getPathValue(state));
@@ -146,7 +160,7 @@ public final class PathAlias extends PathKeyValue {
         }
     }
 
-    private synchronized void debug(boolean hit) {
+    protected synchronized void debug(boolean hit) {
         if (hit) {
             match++;
         } else {
