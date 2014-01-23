@@ -21,7 +21,9 @@ import java.util.Map.Entry;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.filter.value.ValueFilter;
@@ -104,11 +106,23 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
     public static final class Config extends TreeDataParameters<DataKeyTop> {
 
         /**
-         * Bundle field name from which to draw values.
+         * Bundle field name from which to draw keys.
          * This field is required.
          */
         @Codec.Set(codable = true, required = true)
         private String key;
+
+        /**
+         * Bundle field name from which to draw weight (weight) values.
+         */
+        @Codec.Set(codable = true)
+        private String weight;
+
+        /**
+         * Value filter for providing a key weight.
+         */
+        @Codec.Set(codable = true)
+        private ValueFilter weightFilter;
 
         /**
          * Maximum capacity of the key topper.
@@ -136,7 +150,6 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
             DataKeyTop dataKeyTop = new DataKeyTop();
             dataKeyTop.size = size;
             dataKeyTop.top = new ConcurrentKeyTopper().init(size);
-            dataKeyTop.filter = filter;
             return dataKeyTop;
         }
     }
@@ -146,39 +159,84 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
     @Codec.Set(codable = true, required = true)
     private int size;
 
-    private ValueFilter filter;
     private BundleField keyAccess;
+    private BundleField weightAccess;
 
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, DataKeyTop.Config conf) {
         if (keyAccess == null) {
             keyAccess = state.getBundle().getFormat().getField(conf.key);
-            filter = conf.filter;
+            if (conf.weight != null) {
+                weightAccess = state.getBundle().getFormat().getField(conf.weight);
+            }
         }
         ValueObject val = state.getBundle().getValue(keyAccess);
         if (val != null) {
-            if (filter != null) {
-                val = filter.filter(val);
+            if (conf.filter != null) {
+                val = conf.filter.filter(val);
                 if (val == null) {
                     return false;
                 }
             }
+            int weightValue = 1;
+            /* retrieve optional weight value from bundle */
+            if (weightAccess != null) {
+                ValueObject bundleWeight = state.getBundle().getValue(weightAccess);
+                if (bundleWeight != null) {
+                    weightValue = bundleWeight.asLong().getLong().intValue();
+                }
+            }
             if (conf.splitRegex != null) {
-                // System.out.println("SPLITTING:" + val + ":" +
-                // conf.splitRegex);
+                /* apply regex to turn a string into an array */
                 String split[] = val.toString().split(conf.splitRegex);
-                // System.out.println(Arrays.toString(split));
+                ValueArray arr = ValueFactory.createArray(split.length);
                 for (int i = 0; i < split.length; i++) {
-                    top.increment(split[i], size);
+                    arr.append(ValueFactory.create(split[i]));
+                }
+            }
+            if (val.getObjectType() == ValueObject.TYPE.ARRAY) {
+                /**
+                 * iterate over each value in the array and apply the
+                 * optional weight filter.
+                 */
+                for (ValueObject obj : val.asArray()) {
+                    if (conf.weightFilter != null) {
+                        Double weight = conf.weightFilter.filter(obj).asDouble().getDouble();
+                        if (weight != null) {
+                            weightValue *= weight;
+                        }
+                    }
+                    top.increment(obj.toString(), weightValue, size);
+                }
+            } else if (val.getObjectType() == ValueObject.TYPE.MAP) {
+                /**
+                 * iterate over key/value pairs in a map. attempt to use the
+                 * value as a weighted number, but drop back to default weight
+                 * value if it's not a number. apply the optional weight filter.
+                 */
+                for (ValueMapEntry entry : val.asMap()) {
+                    int localWeight = weightValue;
+                    String key = entry.getKey();
+                    ValueObject weight = entry.getValue().asDouble();
+                    if (weight != null) {
+                        if (conf.weightFilter != null) {
+                            weight = conf.weightFilter.filter(weight);
+                        }
+                        if (weight != null) {
+                            localWeight *= weight.asDouble().getDouble();
+                        }
+                    }
+                    top.increment(key, localWeight, size);
                 }
             } else {
-                if (val.getObjectType() == ValueObject.TYPE.ARRAY) {
-                    for (ValueObject obj : val.asArray()) {
-                        top.increment(obj.toString(), size);
+                /* apply optional weight filter */
+                if (conf.weightFilter != null) {
+                    Double weight = conf.weightFilter.filter(val).asDouble().getDouble();
+                    if (weight != null) {
+                        weightValue *= weight;
                     }
-                } else {
-                    top.increment(val.toString(), size);
                 }
+                top.increment(val.toString(), weightValue, size);
             }
             return true;
         } else {

@@ -327,8 +327,8 @@ public class ReadTreeNode implements DataTreeNode, Codec.SuperCodable, Codec.Con
     }
 
     @Override
-    public ClosableIterator<DataTreeNode> getIterator(String begin, String end) {
-        return getNodeIterator(begin, end);
+    public ClosableIterator<DataTreeNode> getIterator(String from, String to) {
+        return getNodeIterator(from, to);
     }
 
     public ClosableIterator<DataTreeNode> getIterator(int sampleRate) {
