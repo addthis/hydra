@@ -143,6 +143,7 @@ public class PathAlias extends PathKeyValue {
                 @Override
                 public void onNewNode(DataTreeNode child) {
                     child.aliasTo(finalAlias);
+                    state.onNewNode(child);
                 }
             };
             if (debug > 0) {

@@ -238,7 +238,7 @@ public class PathValue extends PathElement {
             return 0;
         }
         /* bail if only new nodes are required */
-        if (once && (!isnew || child.getCounter() >= 1)) {
+        if (once && !isnew) {
             return 0;
         }
         /** child node accounting and custom data updates */
