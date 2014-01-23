@@ -341,10 +341,11 @@ public class TreeNode implements DataTreeNode, Codec.SuperCodable, Codec.Concurr
      */
     public void updateParentData(DataTreeNodeUpdater state, DataTreeNode child, boolean isnew) {
         requireEditable();
-        List<TreeNodeDataDeferredOperation> deferredOps = new ArrayList<>();
+        List<TreeNodeDataDeferredOperation> deferredOps = null;
         lock.writeLock().lock();
         try {
             if (child != null && data != null) {
+                deferredOps = new ArrayList<>(1);
                 for (TreeNodeData<?> tnd : data.values()) {
                     if (isnew && tnd.updateParentNewChild(state, this, child, deferredOps)) {
                         changed.set(true);
@@ -357,8 +358,10 @@ public class TreeNode implements DataTreeNode, Codec.SuperCodable, Codec.Concurr
         } finally {
             lock.writeLock().unlock();
         }
-        for (TreeNodeDataDeferredOperation currentOp : deferredOps) {
-            currentOp.run();
+        if (deferredOps != null) {
+            for (TreeNodeDataDeferredOperation currentOp : deferredOps) {
+                currentOp.run();
+            }
         }
     }
 
@@ -500,13 +503,13 @@ public class TreeNode implements DataTreeNode, Codec.SuperCodable, Codec.Concurr
     }
 
     @Override
-    public ClosableIterator<DataTreeNode> getIterator() {
-        return getNodeIterator();
+    public Tree getTreeRoot() {
+        return tree;
     }
 
     @Override
-    public Tree getTreeRoot() {
-        return tree;
+    public ClosableIterator<DataTreeNode> getIterator() {
+        return getNodeIterator();
     }
 
     @Override
