@@ -32,7 +32,7 @@ import com.addthis.hydra.store.db.IReadWeighable;
  *         <p/>
  *         read only tree node that plays nice with ReadTree
  */
-public class ReadTreeNode implements DataTreeNode, Codec.SuperCodable, Codec.ConcurrentCodable, DataTreeNodeInitializer, IReadWeighable {
+public class ReadTreeNode implements DataTreeNode, Codec.SuperCodable, Codec.ConcurrentCodable, IReadWeighable {
 
     /**
      * required for Codable. must be followed by an init() call.
@@ -300,10 +300,6 @@ public class ReadTreeNode implements DataTreeNode, Codec.SuperCodable, Codec.Con
     @Override
     public void writeUnlock() {
         throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void onNewNode(DataTreeNode child) {
     }
 
     @Override

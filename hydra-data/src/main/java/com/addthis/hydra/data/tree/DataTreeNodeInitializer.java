@@ -15,5 +15,19 @@ package com.addthis.hydra.data.tree;
 
 public interface DataTreeNodeInitializer {
 
+    /**
+     * Should be called only when a new tree node is created. No other
+     * thread should be able to concurrently access the new node, and
+     * any changes should be safely published without any work on the
+     * part of implementations.
+     *
+     * Implementing classes should be aware of the imperfect contract
+     * involving TreeMapState and the isnew flag used in some tree
+     * processing logic so that they do not mistakenly prevent that
+     * contract from being fulfilled (although they may wish to do
+     * so intentionally, but may want to note as much).
+     *
+     * @param child newly created tree node
+     */
     public void onNewNode(DataTreeNode child);
 }
