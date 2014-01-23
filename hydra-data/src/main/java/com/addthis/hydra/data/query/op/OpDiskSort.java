@@ -88,19 +88,19 @@ public class OpDiskSort extends AbstractRowOp {
     private static final int CHUNK_MERGES = Parameter.intValue("op.disksort.chunk.merges", 1000);
     private static final int GZTYPE = Parameter.intValue("op.disksort.gz.type", 0);
 
+    private final Bundle buffer[] = new Bundle[CHUNK_ROWS + 1];
+    private final BundleFactory factory = new ListBundle();
+    private final QueryStatusObserver queryStatusObserver;
+
     private Path tempDir;
     private String[] cols;
     private char[] type;
     private char[] dir;
     private MuxFileDirectory mfm;
-    private final Bundle buffer[] = new Bundle[CHUNK_ROWS + 1];
     private int bufferIndex = 0;
     private BundleComparator comparator;
     private BundleComparator comparatorSS;
     private int chunk = 0;
-
-    private final QueryStatusObserver queryStatusObserver;
-    private final BundleFactory factory = new ListBundle();
 
     public OpDiskSort(String args, String tempDirString, QueryStatusObserver queryStatusObserver) {
         this.queryStatusObserver = queryStatusObserver;
@@ -109,13 +109,11 @@ public class OpDiskSort extends AbstractRowOp {
 
     private void init(String args, String tempDirString) {
         try {
-            tempDir = Paths.get(tempDirString, UUID.randomUUID() + "");
+            tempDir = Paths.get(tempDirString, String.valueOf(UUID.randomUUID()));
             Files.createDirectories(tempDir);
             mfm = new MuxFileDirectory(tempDir, null);
             mfm.setDeleteFreed(true);
-            if (log.isDebugEnabled()) {
-                log.debug("tempDir=" + tempDir + " mfm=" + mfm);
-            }
+            log.debug("tempDir={} mfm={}", tempDir, mfm);
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
@@ -147,6 +145,15 @@ public class OpDiskSort extends AbstractRowOp {
         }
     }
 
+    private void cleanup() {
+        if (Files.exists(tempDir)) {
+            boolean success = com.addthis.basis.util.Files.deleteDir(tempDir.toFile());
+            if (!success) {
+                log.warn("ERROR while deleting {} for disk sort", tempDir);
+            }
+        }
+    }
+
     @Override
     public Bundle rowOp(Bundle row) {
         if (bufferIndex > CHUNK_ROWS) {
@@ -156,12 +163,42 @@ public class OpDiskSort extends AbstractRowOp {
         return null;
     }
 
-    private void cleanup() {
-        if (Files.exists(tempDir)) {
-            boolean success = com.addthis.basis.util.Files.deleteDir(tempDir.toFile());
-            if (!success) {
-                log.warn("ERROR while deleting " + tempDir + " for disk sort");
+    private void dumpBufferToMFM() {
+        if (bufferIndex > 0) {
+            log.debug("dumpBufferToMFM buffer={} chunk={}", bufferIndex, chunk);
+            try {
+                Arrays.sort(buffer, 0, bufferIndex, comparator);
+                MuxFile meta = mfm.openFile("l0-c" + (chunk++), true);
+                OutputStream out = wrapOutputStream(meta.append());
+                DataChannelWriter writer = new DataChannelWriter(out);
+                for (int i = 0; i < bufferIndex; i++) {
+                    writer.write(buffer[i]);
+                }
+                writer.close();
+                out.close();
+                meta.sync();
+                bufferIndex = 0;
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
             }
+        }
+    }
+
+    // TODO: We really need a canonical library place for this kind of logic
+    private static OutputStream wrapOutputStream(OutputStream outputStream) throws IOException {
+
+        switch (GZTYPE) {
+            case 0:
+                // no compression
+                return outputStream;
+            case 1:
+                // LZF
+                return new LZFOutputStream(outputStream);
+            case 2:
+                // Snappy
+                return new SnappyOutputStream(outputStream);
+            default:
+                throw new RuntimeException("Unknown compression type: " + GZTYPE);
         }
     }
 
@@ -215,9 +252,7 @@ public class OpDiskSort extends AbstractRowOp {
                 break;
             }
         }
-        if (log.isDebugEnabled()) {
-            log.debug("finish read from level=" + level + " chunk=0 bundles=" + bundles);
-        }
+        log.debug("finish read from level={} chunk=0 bundles={}", level, bundles);
 
         // Only sendComplete in case of successful completion. In case of errors, we will not reach
         // this point to give a chance for MQSource to send the exception
@@ -238,22 +273,16 @@ public class OpDiskSort extends AbstractRowOp {
         while (true) {
             SortedSource sortedSource = new SortedSource(level, chunk, CHUNK_MERGES);
             int readers = sortedSource.getReaderCount();
-            if (log.isDebugEnabled()) {
-                log.debug("SourceSource(" + level + "," + chunk + "," + CHUNK_MERGES + ") = " + readers);
-            }
+            log.debug("SourceSource({},{},{}) = {}", level, chunk, CHUNK_MERGES, readers);
             if (readers == 0) {
-                if (log.isDebugEnabled()) {
-                    log.debug("mergeLevel(" + level + ")=" + merges + " chunkIn=" + chunk + " bundles=" + bundles);
-                }
+                log.debug("mergeLevel({})={} chunkIn={} bundles={}", level, merges, chunk, bundles);
                 return merges;
             }
             chunk += readers;
             merges++;
             try {
                 MuxFile meta = mfm.openFile("l" + levelOut + "-c" + (chunkOut++), true);
-                if (log.isDebugEnabled()) {
-                    log.debug(" output to level=" + levelOut + " chunk=" + (chunkOut - 1));
-                }
+                log.debug(" output to level={} chunk={}", levelOut, chunkOut - 1);
                 OutputStream out = wrapOutputStream(meta.append());
                 DataChannelWriter writer = new DataChannelWriter(out);
                 Bundle next = null;
@@ -264,32 +293,7 @@ public class OpDiskSort extends AbstractRowOp {
                 writer.close();
                 out.close();
                 meta.sync();
-                if (log.isDebugEnabled()) {
-                    log.debug(" output bundles=" + bundles);
-                }
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
-        }
-    }
-
-    private void dumpBufferToMFM() {
-        if (bufferIndex > 0) {
-            if (log.isDebugEnabled()) {
-                log.debug("dumpBufferToMFM buffer=" + bufferIndex + " chunk=" + chunk);
-            }
-            try {
-                Arrays.sort(buffer, 0, bufferIndex, comparator);
-                MuxFile meta = mfm.openFile("l0-c" + (chunk++), true);
-                OutputStream out = wrapOutputStream(meta.append());
-                DataChannelWriter writer = new DataChannelWriter(out);
-                for (int i = 0; i < bufferIndex; i++) {
-                    writer.write(buffer[i]);
-                }
-                writer.close();
-                out.close();
-                meta.sync();
-                bufferIndex = 0;
+                log.debug(" output bundles={}", bundles);
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
             }
@@ -356,24 +360,6 @@ public class OpDiskSort extends AbstractRowOp {
         return s1.toString().compareTo(s2.toString());
     }
 
-    // TODO: We really need a canonical library place for this kind of logic
-    private static OutputStream wrapOutputStream(OutputStream outputStream) throws IOException {
-
-        switch (GZTYPE) {
-            case 0:
-                // no compression
-                return outputStream;
-            case 1:
-                // LZF
-                return new LZFOutputStream(outputStream);
-            case 2:
-                // Snappy
-                return new SnappyOutputStream(outputStream);
-            default:
-                throw new RuntimeException("Unknown compression type: " + GZTYPE);
-        }
-    }
-
     private static InputStream wrapInputStream(InputStream inputStream) throws IOException {
 
         switch (GZTYPE) {
@@ -395,6 +381,7 @@ public class OpDiskSort extends AbstractRowOp {
 
         private BundleField columns[];
 
+        @Override
         public int compare(Bundle o1, Bundle o2) {
             if (columns == null) {
                 columns = new BundleColumnBinder(o1, cols).getFields();
@@ -425,9 +412,8 @@ public class OpDiskSort extends AbstractRowOp {
                 } else {
                     break;
                 }
-                if (log.isDebugEnabled()) {
-                    log.debug("compare i=" + i + " col=" + col + " o1=" + o1 + " o2=" + o2 + " type=" + type[i] + " delta=" + delta + " o1v=" + o1.getValue(col) + " o2v=" + o2.getValue(col));
-                }
+                log.debug("compare i={} col={} o1={} o2={} type={} delta={} o1v={} o2v={}",
+                        i, col, o1, o2, type[i], delta, o1.getValue(col), o2.getValue(col));
             }
             return delta;
         }
@@ -435,8 +421,8 @@ public class OpDiskSort extends AbstractRowOp {
 
     private class SortedSource {
 
-        private final TreeSet<SourceBundle> sorted = new TreeSet<SourceBundle>(new SourceBundleComparator());
-        private final LinkedList<DataChannelReader> readers = new LinkedList<DataChannelReader>();
+        private final TreeSet<SourceBundle> sorted = new TreeSet<>(new SourceBundleComparator());
+        private final LinkedList<DataChannelReader> readers = new LinkedList<>();
         private long bundleCounter = 0L;
 
         SortedSource(final int level, int chunk, int count) {
@@ -447,22 +433,17 @@ public class OpDiskSort extends AbstractRowOp {
                     DataChannelReader reader = new DataChannelReader(factory, wrapInputStream(meta.read(0)));
                     Bundle next = reader.read();
                     if (next != null) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("source source open level=" + level + " chunk=" + (chunk - 1) + " next=" + next + " meta=" + meta);
-                        }
+                        log.debug("source source open level={} chunk={} next={} meta={}",
+                                level, chunk - 1, next, meta);
                         readers.add(reader);
                         sorted.add(new SourceBundle(next, reader, bundleCounter++));
                     }
                 } catch (IOException e) {
-                    if (log.isDebugEnabled()) {
-                        e.printStackTrace();
-                    }
+                    log.debug("swallowing mystery io exception", e);
                     break;
                 }
             }
-            if (log.isDebugEnabled()) {
-                log.debug("SortedSource seeded with " + sorted.size() + " entries");
-            }
+            log.debug("SortedSource seeded with {} entries", sorted.size());
         }
 
         public int getReaderCount() {
@@ -473,7 +454,7 @@ public class OpDiskSort extends AbstractRowOp {
          * each call to next re-populates the tree from the same source
          */
         public Bundle next() {
-            if (sorted.size() > 0) {
+            if (!sorted.isEmpty()) {
                 Iterator<SourceBundle> iter = sorted.iterator();
                 SourceBundle nextOrdered = iter.next();
                 iter.remove();
@@ -482,17 +463,15 @@ public class OpDiskSort extends AbstractRowOp {
                     if (nextFromSource != null) {
                         sorted.add(new SourceBundle(nextFromSource, nextOrdered.reader, bundleCounter++));
                     }
-                } catch (EOFException ex) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("closing source on EOF size=" + sorted.size());
-                    }
+                } catch (EOFException ignored) {
+                    log.debug("closing source on EOF size={}", sorted.size());
                     try {
                         nextOrdered.reader.close();
                     } catch (Exception ex2) {
                         // ignore
                     }
                 } catch (Exception ex) {
-                    ex.printStackTrace();
+                    log.warn("swallowing mystery exception", ex);
                 }
                 return nextOrdered.bundle;
             }
