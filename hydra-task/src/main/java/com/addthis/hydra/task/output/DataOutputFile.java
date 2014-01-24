@@ -39,7 +39,6 @@ import com.addthis.hydra.task.map.DataPurgeConfig;
 import com.addthis.hydra.task.map.DataPurgeService;
 import com.addthis.hydra.task.map.DataPurgeServiceImpl;
 import com.addthis.hydra.task.run.TaskRunConfig;
-import com.addthis.hydra.task.stream.StreamFileUtils;
 
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -193,7 +192,7 @@ public class DataOutputFile extends DataOutputTypeList {
                     path[i] = Integer.toString(tok.startsWith("nodes") ? config.nodeCount : config.node);
                     int cp = tok.indexOf(":");
                     if (cp > 0) {
-                        path[i] = StreamFileUtils.padleft(path[i], Integer.parseInt(tok.substring(cp + 1)));
+                        path[i] = padleft(path[i], Integer.parseInt(tok.substring(cp + 1)));
                     }
                 }
             }
@@ -328,4 +327,14 @@ public class DataOutputFile extends DataOutputTypeList {
         }
     }
 
+    public static String padleft(String str, int len) {
+        final String pad = "0000000000";
+        if (str.length() < len) {
+            return pad.substring(pad.length() - len + str.length()).concat(str);
+        } else if (str.length() > len) {
+            return str.substring(0, len);
+        } else {
+            return str;
+        }
+    }
 }

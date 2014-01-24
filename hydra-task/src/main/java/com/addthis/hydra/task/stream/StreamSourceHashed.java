@@ -47,7 +47,7 @@ public class StreamSourceHashed implements StreamFileSource {
                 if (path.charAt(0) == '/') {
                     path = path.substring(1);
                 }
-                path = StreamFileUtils.replaceGoldWithLiveDotDotGold(path);
+                path = replaceGoldWithLiveDotDotGold(path);
             }
             int hash = Math.abs(PluggableHashFunction.hash(path) % mod);
             for (Integer i : shards) {
@@ -59,5 +59,13 @@ public class StreamSourceHashed implements StreamFileSource {
             continue;
         }
         return null;
+    }
+
+    public static String replaceGoldWithLiveDotDotGold(String input) {
+        // Function name of the year!
+        if (input != null && input.contains("/gold/")) {
+            input = input.replace("/gold/", "/live/../gold/");
+        }
+        return input;
     }
 }
