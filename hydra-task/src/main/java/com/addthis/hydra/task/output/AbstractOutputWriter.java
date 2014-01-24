@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
  * <p/>
  * The default behavior is the first strategy. The second strategy is desirable
  * when you want to ensure that bundles are emitted to the destination sink
- * in the other in which the bundles are produced. The second strategy is enabled
+ * in the order in which the bundles are produced. The second strategy is enabled
  * by setting {@link #waitForDiskFlushThread} to true.
  */
 public abstract class AbstractOutputWriter implements Codec.SuperCodable {
