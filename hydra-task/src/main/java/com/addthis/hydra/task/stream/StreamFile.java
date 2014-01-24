@@ -19,8 +19,6 @@ import java.io.InputStream;
 
 public interface StreamFile {
 
-    public enum PROTOCOL {STREAM, HTTP, MUX, MESHY};
-
     public InputStream getInputStream() throws IOException;
 
     public long lastModified();
