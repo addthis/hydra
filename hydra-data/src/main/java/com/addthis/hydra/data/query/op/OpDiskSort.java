@@ -215,15 +215,15 @@ public class OpDiskSort extends AbstractRowOp {
                     break;
                 }
             }
-            getNext().sendComplete();
             cleanup();
+            super.sendComplete();
             return;
         }
         if (!queryStatusObserver.queryCompleted) {
             dumpBufferToMFM();
         } else {
-            getNext().sendComplete();
             cleanup();
+            super.sendComplete();
             return;
         }
         int level = 0;
@@ -236,8 +236,8 @@ public class OpDiskSort extends AbstractRowOp {
             }
         }
         if (queryStatusObserver.queryCompleted) {
-            getNext().sendComplete();
             cleanup();
+            super.sendComplete();
             return;
         }
         /** stream results from last round of merging */
@@ -253,12 +253,8 @@ public class OpDiskSort extends AbstractRowOp {
             }
         }
         log.debug("finish read from level={} chunk=0 bundles={}", level, bundles);
-
-        // Only sendComplete in case of successful completion. In case of errors, we will not reach
-        // this point to give a chance for MQSource to send the exception
-        if (getNext() != null) {
-            getNext().sendComplete();
-        }
+        cleanup();
+        super.sendComplete();
     }
 
     /**
@@ -283,18 +279,18 @@ public class OpDiskSort extends AbstractRowOp {
             try {
                 MuxFile meta = mfm.openFile("l" + levelOut + "-c" + (chunkOut++), true);
                 log.debug(" output to level={} chunk={}", levelOut, chunkOut - 1);
-                OutputStream out = wrapOutputStream(meta.append());
-                DataChannelWriter writer = new DataChannelWriter(out);
-                Bundle next = null;
-                while ((next = sortedSource.next()) != null) {
-                    writer.write(next);
-                    bundles++;
+                try (OutputStream out = wrapOutputStream(meta.append());
+                     DataChannelWriter writer = new DataChannelWriter(out);) {
+                    Bundle next = null;
+                    while ((next = sortedSource.next()) != null) {
+                        writer.write(next);
+                        bundles++;
+                    }
                 }
-                writer.close();
-                out.close();
                 meta.sync();
                 log.debug(" output bundles={}", bundles);
             } catch (Exception ex) {
+                sortedSource.tryClean();
                 throw new RuntimeException(ex);
             }
         }
@@ -431,12 +427,18 @@ public class OpDiskSort extends AbstractRowOp {
                     // TODO figure out how to delete these files after consuming them to keep the index small in mem
                     MuxFile meta = mfm.openFile("l" + level + "-c" + (chunk++), false);
                     DataChannelReader reader = new DataChannelReader(factory, wrapInputStream(meta.read(0)));
-                    Bundle next = reader.read();
+                    Bundle next = null;
+                    try {
+                        next = reader.read();
+                    } catch (Exception ignored) {
+                    }
                     if (next != null) {
                         log.debug("source source open level={} chunk={} next={} meta={}",
                                 level, chunk - 1, next, meta);
                         readers.add(reader);
                         sorted.add(new SourceBundle(next, reader, bundleCounter++));
+                    } else {
+                        reader.close();
                     }
                 } catch (IOException e) {
                     log.debug("swallowing mystery io exception", e);
@@ -444,6 +446,16 @@ public class OpDiskSort extends AbstractRowOp {
                 }
             }
             log.debug("SortedSource seeded with {} entries", sorted.size());
+        }
+
+        public void tryClean() {
+            try {
+                for (DataChannelReader reader : readers) {
+                    reader.close();
+                }
+            } catch (Exception ex) {
+                log.warn("exception while trying to close disk sort readers", ex);
+            }
         }
 
         public int getReaderCount() {
