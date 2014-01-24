@@ -26,7 +26,6 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.Bundles;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.io.DataChannelReader;
-import com.addthis.hydra.task.stream.StreamFileUtils;
 import com.addthis.meshy.Meshy;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
@@ -43,21 +42,17 @@ public class BundleStreamPeeker {
         Meshy meshy = null;
         String file = null;
         String mesh = null;
-        String stream = null;
         boolean asMap = false;
         int sample = 10;
 
-        for (int i = 0; i < args.length; i++) {
-            String arg = args[i];
+        for (String arg : args) {
             if (arg.startsWith("file=")) {
                 file = arg.substring(5);
             } else if (arg.startsWith("mesh=")) {
                 mesh = arg.substring(5);
-            } else if (arg.startsWith("stream=")) {
-                stream = arg.substring(6);
             } else if (arg.startsWith("sample=")) {
                 sample = Integer.parseInt(arg.substring(7));
-            } else if (arg.equals("asmap")) {
+            } else if ("asmap".equals(arg)) {
                 asMap = true;
             } else {
                 file = arg;
@@ -87,9 +82,6 @@ public class BundleStreamPeeker {
                     throw new RuntimeException("no mesh files matched: " + file);
                 }
                 input = new StreamSource(meshy, ref.getHostUUID(), ref.name, 0).getInputStream();
-            } else if (stream != null) {
-                String hostPort[] = Strings.splitArray(mesh, ":");
-                input = StreamFileUtils.openStream(hostPort[0], Integer.parseInt(hostPort[1]), file, 0);
             } else {
                 input = new FileInputStream(new File(file));
             }
@@ -101,10 +93,10 @@ public class BundleStreamPeeker {
             while (sample-- > 0) {
                 try {
                     Bundle bundle = reader.read();
-                    if (!asMap) {
-                        System.out.println(bundle.toString());
-                    } else {
+                    if (asMap) {
                         System.out.println(Bundles.getAsStringMapSlowly(bundle));
+                    } else {
+                        System.out.println(bundle.toString());
                     }
                 } catch (EOFException eof) {
                     break;
