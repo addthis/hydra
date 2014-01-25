@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.task.source;
+package com.addthis.hydra.task.stream;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -30,7 +30,7 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
-import com.addthis.hydra.task.stream.PersistentStreamFileSource;
+import com.addthis.hydra.data.filter.value.StringFilter;
 import com.addthis.maljson.JSONObject;
 
 import org.joda.time.DateTime;
@@ -58,6 +58,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
 
     public static final long ONE_HOUR_IN_MILLIS = 60 * 60 * 1000;
     public static final long ONE_DAY_IN_MILLIS = 24 * ONE_HOUR_IN_MILLIS;
+    private static final List<String> TIME_CONSTANTS = new ArrayList<>(Arrays.asList("YY", "Y", "M", "D", "H"));
 
     private static final String NOW_PREFIX = "{{now";
     private static final String NOW_POSTFIX = "}}";
@@ -146,8 +147,10 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
     protected boolean moreData;
     private File stateDir;
     protected File autoResumeFile;
+    protected StringFilter pathOffSetFilter;
+    protected StringFilter sortOffSetFilter;
+
     private final AtomicBoolean running = new AtomicBoolean(true);
-    private static final List<String> TIME_CONSTANTS = new ArrayList<>(Arrays.asList("YY", "Y", "M", "D", "H"));
 
     /**
      * perform any initialization steps specific to the implementing class
@@ -206,6 +209,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         if (log.isTraceEnabled()) {
             log.trace("shards :: " + Strings.join(shards, " :: "));
         }
+        createOffsetFilters();
         /* expand files list */
         HashSet<String> matches = new HashSet<>();
         if (log.isTraceEnabled()) {
@@ -276,6 +280,11 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         return doInit();
     }
 
+    private void createOffsetFilters() {
+        sortOffSetFilter = new StringFilterPathOffset(sortToken, sortTokenOffset, sortOffset);
+        pathOffSetFilter = new StringFilterPathOffset(sortToken, pathTokenOffset, pathOffset);
+    }
+
 
     public void setStartTime(long time) {
         startDate = formatter.print(time);
@@ -286,7 +295,6 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         running.set(false);
         doShutdown();
     }
-
 
     /**
      * @return a list of dates given the start/end range from the config
@@ -327,8 +335,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         return time;
     }
 
-    /** */
-    private int findDaysOffset(String time) {
+    private static int findDaysOffset(String time) {
         int startIndex = time.indexOf(NOW_PREFIX) + 6;
         int endIndex = time.indexOf(NOW_POSTFIX);
         if (startIndex < 0 || endIndex <= startIndex) {
@@ -341,21 +348,17 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         return offset;
     }
 
-    /** */
-    private String replaceDateElements(DateTime time, String template) {
+    private static String replaceDateElements(DateTime time, String template) {
         template = template.replace("{YY}", time.year().getAsString());
         template = template.replace("{Y}", getTwoDigit(time.year().get()));
         template = template.replace("{M}", getTwoDigit(time.monthOfYear().get()));
         template = template.replace("{D}", getTwoDigit(time.dayOfMonth().get()));
         template = template.replace("{H}", getTwoDigit(time.hourOfDay().get()));
-        if (log.isDebugEnabled()) {
-            log.debug("template=" + template);
-        }
+        log.debug("template={}", template);
         return template;
     }
 
-    /** */
-    private String getTwoDigit(int value) {
+    private static String getTwoDigit(int value) {
         if (value < 10) {
             return "0".concat(Integer.toString(value));
         }
@@ -372,41 +375,5 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
             fileList[i] = replaceDateElements(timeToLoad, files[i]);
         }
         return fileList;
-    }
-
-    /**
-     * return substring getSortOffset into file name
-     */
-    public String getSortOffset(String name) {
-        int sortOff = sortOffset;
-        if (sortToken != null && sortTokenOffset > 0) {
-            int pos = 0;
-            int off = sortTokenOffset;
-            while (off-- > 0 && (pos = name.indexOf(sortToken, pos)) >= 0) {
-                pos++;
-            }
-            if (pos > 0) {
-                sortOff += pos;
-            }
-        }
-        return name.substring(sortOff);
-    }
-
-    /**
-     * return substring getSortOffset into file name
-     */
-    public String getPathOffset(String name) {
-        int pathOff = pathOffset;
-        if (sortToken != null && pathTokenOffset > 0) {
-            int pos = 0;
-            int off = pathTokenOffset;
-            while (off-- > 0 && (pos = name.indexOf(sortToken, pos)) >= 0) {
-                pos++;
-            }
-            if (pos > 0) {
-                pathOff += pos;
-            }
-        }
-        return name.substring(pathOff);
     }
 }

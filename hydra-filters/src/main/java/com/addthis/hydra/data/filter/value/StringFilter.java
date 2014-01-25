@@ -17,10 +17,17 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 
+import com.google.common.base.Function;
 
-public abstract class StringFilter extends ValueFilter {
+
+public abstract class StringFilter extends ValueFilter implements Function<String, String> {
 
     public abstract String filter(String value);
+
+    @Override
+    public String apply(String input) {
+        return filter(input);
+    }
 
     @Override
     public ValueObject filterValue(ValueObject value) {

@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.task.stream;
+package com.addthis.hydra.task.stream.mesh;
 
 import java.io.InputStream;
 
