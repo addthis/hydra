@@ -98,7 +98,7 @@ public class StreamSourceMeshSearch implements StreamSourceGrouped {
     /**
      * query the mesh for a list of matching files
      */
-    public List<MeshyStreamFile> findMeshFiles(String[] patterns) throws IOException {
+    public List<MeshyStreamFile> findMeshFiles(String... patterns) throws IOException {
         log.trace("find using mesh={} patterns={}", meshLink, patterns);
         final AtomicInteger respondingPeerCount = new AtomicInteger();
         final Semaphore gate = new Semaphore(0);
