@@ -68,12 +68,12 @@ public class ValueFilterStringSlice extends StringFilter {
     public ValueFilterStringSlice() {
     }
 
-    protected ValueFilterStringSlice(String sep, int fromIndex) {
+    public ValueFilterStringSlice(String sep, int fromIndex) {
         this.sep = sep;
         this.fromIndex = fromIndex;
     }
 
-    protected ValueFilterStringSlice(String sep, String joinStr, int fromIndex, int toIndex) {
+    public ValueFilterStringSlice(String sep, String joinStr, int fromIndex, int toIndex) {
         this.sep = sep;
         this.joinStr = joinStr;
         this.fromIndex = fromIndex;

@@ -11,21 +11,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.task.stream;
+package com.addthis.hydra.task.stream.mesh;
 
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
-import com.addthis.hydra.task.stream.StreamSourceMeshy.MeshyStreamFile;
+import com.addthis.hydra.task.stream.StringFilterPathOffset;
 import com.addthis.meshy.service.file.FileReference;
 
 import org.apache.commons.lang3.RandomStringUtils;
 
-import org.joda.time.DateTime;
 import org.junit.Test;
 
 import static org.junit.Assert.fail;
@@ -34,12 +32,10 @@ public class TestStreamSourceMeshy {
 
     @Test
     public void testStreamSourcesSort() {
-        final StreamSourceMeshy source = new StreamSourceMeshy();
         final int numElements = 100000;
 
         FileReference[] fileRefs = new FileReference[numElements];
         List<MeshyStreamFile> streamFiles = new ArrayList<>(numElements);
-        DateTime date = DateTime.now();
 
         try {
             for (int i = 0; i < numElements; i++) {
@@ -48,7 +44,7 @@ public class TestStreamSourceMeshy {
                 f.setAccessible(true);
                 String uuid = RandomStringUtils.randomAlphabetic(20);
                 f.set(fileRefs[i], uuid);
-                streamFiles.add(source.new MeshyStreamFile(date, fileRefs[i]));
+                streamFiles.add(new MeshyStreamFile(fileRefs[i], null, null));
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -57,12 +53,7 @@ public class TestStreamSourceMeshy {
 
         Collections.shuffle(streamFiles);
 
-        Collections.sort(streamFiles, new Comparator<MeshyStreamFile>() {
-            @Override
-            public int compare(MeshyStreamFile streamFile1, MeshyStreamFile streamFile2) {
-                return source.compareStreamFiles(streamFile1, streamFile2);
-            }
-        });
+        Collections.sort(streamFiles, new MeshyStreamFileComparator(new StringFilterPathOffset("",0)));
 
     }
 

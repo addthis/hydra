@@ -15,7 +15,7 @@ package com.addthis.hydra.task.source;
 
 import com.addthis.codec.Codec;
 import com.addthis.hydra.task.stream.PersistentStreamFileSource;
-import com.addthis.hydra.task.stream.StreamSourceMeshy;
+import com.addthis.hydra.task.stream.mesh.StreamSourceMeshPipe;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +50,7 @@ public class DataSourceMeshy2 extends AbstractStreamFileDataSource {
      * Mesh configuration parameters.
      */
     @Codec.Set(codable = true, required = true)
-    private StreamSourceMeshy mesh;
+    private StreamSourceMeshPipe mesh;
 
     @Override
     public boolean hadMoreData() {
