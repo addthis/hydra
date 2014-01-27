@@ -53,16 +53,12 @@ public class JobAlertRunner {
     private final Spawn spawn;
     private final SpawnDataStore spawnDataStore;
 
-    private static final long ALERT_REPEAT_MILLIS = Parameter.longValue("spawn.job.alert.repeat", 60 * 1000);
-    private static final long CANARY_REPEAT_MILLIS = Parameter.longValue("spawn.job.alert.canary.repeat", 10 * 60 * 1000);
+    private static final long ALERT_REPEAT_MILLIS = Parameter.longValue("spawn.job.alert.repeat", 5 * 60 * 1000);
     private static final long ALERT_DELAY_MILLIS = Parameter.longValue("spawn.job.alert.delay", 60 * 1000);
 
     private static final String meshHost = SpawnMesh.getMeshHost();
     private static final int meshPort = SpawnMesh.getMeshPort();
     private MeshyClient meshyClient;
-
-    private long lastCanaryCheck = 0l;
-
 
     private static final long GIGA_BYTE = (long) Math.pow(1024, 3);
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd-HHmm");
@@ -115,15 +111,9 @@ public class JobAlertRunner {
      */
     public void scanAlerts() {
         if (alertsEnabled) {
-            log.info("Running alert scan...");
-            long now = JitterClock.globalTime();
-            boolean shouldCheckCanaryAlerts = (now - lastCanaryCheck) > CANARY_REPEAT_MILLIS;
             synchronized (alertMap) {
                 for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
-                    checkAlert(entry.getValue(), shouldCheckCanaryAlerts);
-                }
-                if (shouldCheckCanaryAlerts) {
-                    lastCanaryCheck = now;
+                    checkAlert(entry.getValue());
                 }
             }
         }
@@ -132,14 +122,11 @@ public class JobAlertRunner {
     /**
      * Check whether a particular alert should fire or clear based on job states
      * @param alert The actual alert object
-     * @param shouldCheckCanaryAlerts Whether canary alerts should be checked at this time
      */
-    private void checkAlert(JobAlert alert, boolean shouldCheckCanaryAlerts) {
-        if (!alert.isCanaryAlert() || shouldCheckCanaryAlerts) {
-            boolean alertHasChanged = alert.checkAlertForJobs(getAlertJobs(alert), meshyClient);
-            if (alertHasChanged) {
-                emailAlert(alert);
-            }
+    private void checkAlert(JobAlert alert) {
+        boolean alertHasChanged = alert.checkAlertForJobs(getAlertJobs(alert), meshyClient);
+        if (alertHasChanged) {
+            emailAlert(alert);
         }
     }
 
@@ -283,10 +270,11 @@ public class JobAlertRunner {
 
     public void putAlert(String id, JobAlert alert) {
         synchronized (alertMap) {
-            JobAlert oldAlert = alertMap.contains(id) ? alertMap.get(id) : null; // ConcurrentHashMap throws NPE on failed 'get'
+            JobAlert oldAlert = alertMap.containsKey(id) ? alertMap.get(id) : null; // ConcurrentHashMap throws NPE on failed 'get'
             if (oldAlert != null) {
                 // Inherit old alertTime even if the alert has changed in other ways
                 alert.setLastAlertTime(oldAlert.getLastAlertTime());
+                alert.setActiveJobs(oldAlert.getActiveJobs());
             }
             alertMap.put(id, alert);
         }

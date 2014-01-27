@@ -52,8 +52,14 @@ public class AlertResource {
         int type = kv.getIntValue("type", -1);
         int timeout = kv.getIntValue("timeout", 0);
         String email = kv.getValue("email", "");
+        String canaryPath = kv.getValue("canaryPath");
+        int canaryConfigThreshold = kv.getIntValue("canaryConfigThreshold", 0);
         if (jobIds != null) {
             JobAlert jobAlert = new JobAlert(alertId, type, timeout, email, jobIds.split(","));
+            if (canaryPath != null) {
+                jobAlert.setCanaryPath(canaryPath);
+                jobAlert.setCanaryConfigThreshold(canaryConfigThreshold);
+            }
             spawn.putAlert(alertId, jobAlert);
             return Response.ok("{\"alertId\":\"" + alertId +"\"}").build();
         }

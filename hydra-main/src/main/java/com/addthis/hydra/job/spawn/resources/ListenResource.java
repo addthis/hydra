@@ -140,7 +140,6 @@ public class ListenResource {
             JSONObject commandlist = new JSONObject();
             JSONObject hostlist = new JSONObject();
             JSONObject aliases = new JSONObject();
-            JSONObject alerts = new JSONObject();
             for (String key : spawn.listMacros()) {
                 JobMacro macro = spawn.getMacro(key);
                 macrolist.put(key, macro.toJSON().put("macro", "").put("name", key));

@@ -38,7 +38,7 @@ function(
         		timeout:-1,
         		canaryPath: "",
         		canaryCheckDates: "",
-        		canaryConfigThreshold: 0,
+        		canaryConfigThreshold: "",
         		email:""},
         	save:function(){
         		var postData = {
@@ -282,24 +282,24 @@ function(
         	},
         	verifyConfig: function() {
         		var type = parseInt($("#alertType").val());
-        		var email = this.model.email;
-        		var jobIds = this.model.jobIds;
+        		var email = this.model.get("email");
+        		var jobIds = this.model.get("jobIds");
         		if (!email || !jobIds) {
         			Alertify.log.error("Please enter an email and at least one jobId for this alert.");
         			return false;
         		}
-        		if (email.match(/@/g) != 1) {
-        			Alertify.log.error("Alert email field appears invalid.");
+        		if (email.indexOf("@") == -1) {
+        			Alertify.log.error("Alert email field appears invalid -- please include an '@' character.");
         			return false;
         		}
         		if (type == 4 || type == 5) {        		
-        			var canaryPath = this.model.canaryPath;
-        			var canaryConfigThreshold = this.model.canaryConfigThreshold;
+        			var canaryPath = this.model.get("canaryPath");
+        			var canaryConfigThreshold = this.model.get("canaryConfigThreshold");
         			if (!canaryPath || !canaryConfigThreshold) {
         				Alertify.log.error("Please fill out all canary configuration fields.");
         				return false;
         			}
-        			if (type == 5 && canaryPath.match(/+/g) != 1) {
+        			if (type == 5 && (canaryPath.match(/\+/g)||[]).length != 1) {
  						Alertify.log.error("Please include exactly one '+' corresponding to a numeric field (generally, +count) in your canary path field.");
  						return false;
         			}

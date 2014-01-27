@@ -78,10 +78,13 @@ public class JobAlert implements Codec.Codable {
 
     private Long lastActual = 0l;
 
-    private static final Map<Integer, String> alertMessageMap = ImmutableMap.of(ON_ERROR, "Task is in Error ",
-            ON_COMPLETE, "Task has Completed ",
-            RUNTIME_EXCEEDED, "Task runtime exceeded ",
-            REKICK_TIMEOUT, "Task rekick exceeded ");
+    private static final ImmutableMap<Integer, String> alertMessageMap = new ImmutableMap.Builder<Integer,String>().put(ON_ERROR, "Task is in Error ")
+            .put(ON_COMPLETE, "Task has Completed ")
+            .put(RUNTIME_EXCEEDED, "Task runtime exceeded ")
+            .put(REKICK_TIMEOUT, "Task rekick exceeded ")
+            .put(SPLIT_CANARY, "Split canary ")
+            .put(MAP_CANARY, "Map canary")
+            .build();
 
     public JobAlert() {
         this.lastAlertTime = -1;
@@ -124,6 +127,13 @@ public class JobAlert implements Codec.Codable {
             activeJobs.clear();
         }
         this.lastAlertTime = -1;
+    }
+
+    public void setActiveJobs(Map<String, String> activeJobsNew) {
+        synchronized (activeJobs) {
+            activeJobs.clear();
+            activeJobs.putAll(activeJobsNew);
+        }
     }
 
     public long getLastAlertTime() {
@@ -296,7 +306,11 @@ public class JobAlert implements Codec.Codable {
     }
 
     private boolean isCanaryConfigValid() {
-        return canaryPath == null || canaryConfigThreshold == null || canaryConfigThreshold < 0;
+        boolean valid = !(canaryPath == null || canaryConfigThreshold == null || canaryConfigThreshold < 0);
+        if (!valid) {
+            log.warn("Warning: invalid config for alert {}: canaryPath={} canaryConfigThreshold={}", alertId, canaryPath, canaryConfigThreshold);
+        }
+        return valid;
     }
 
     @Override
@@ -309,6 +323,6 @@ public class JobAlert implements Codec.Codable {
     }
 
     public boolean isCanaryAlert() {
-        return type != SPLIT_CANARY && type != MAP_CANARY;
+        return type == SPLIT_CANARY || type == MAP_CANARY;
     }
 }
