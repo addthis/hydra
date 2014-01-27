@@ -28,7 +28,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.fail;
 
-public class TestStreamSourceMeshy {
+public class MeshyStreamFileComparatorTest {
 
     @Test
     public void testStreamSourcesSort() {
@@ -52,9 +52,6 @@ public class TestStreamSourceMeshy {
         }
 
         Collections.shuffle(streamFiles);
-
         Collections.sort(streamFiles, new MeshyStreamFileComparator(new StringFilterPathOffset("",0)));
-
     }
-
 }

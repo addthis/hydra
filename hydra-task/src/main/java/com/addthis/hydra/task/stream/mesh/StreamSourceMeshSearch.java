@@ -109,8 +109,9 @@ public class StreamSourceMeshSearch implements StreamSourceGrouped {
         final AtomicBoolean shortCircuited = new AtomicBoolean(false);
         peerCount = -1;
         FileSource source = new FileSource(meshLink, patterns, "localF") {
-            Set<String> unfinishedHosts;
-            boolean localMeshFindComplete = false;
+            // both must be initialized in 'peers' to make sense elsewhere; TODO: add explicit state
+            boolean localMeshFindRunning;
+            Set<String> unfinishedHosts; // purely cosmetic
 
             @Override
             public void receiveReference(FileReference ref) {
@@ -118,31 +119,36 @@ public class StreamSourceMeshSearch implements StreamSourceGrouped {
                 if (name.charAt(0) != '/') {
                     switch (name) {
                         case "peers":
+                            // the host uuid is a list of remote peers who were sent requests
                             unfinishedHosts =
                                     Sets.newHashSet(HOST_METADATA_SPLITTER.split(ref.getHostUUID()));
                             unfinishedHosts.add(meshHost);
+                            // include the local mesh node
                             peerCount = (int) ref.size + 1;
-                            log.debug(toLogString("init"));
+                            localMeshFindRunning = true;
+                            StreamSourceMeshSearch.log.debug(toLogString("init"));
                             return;
                         case "response":
                             unfinishedHosts.remove(ref.getHostUUID());
-                            //Information is allowed to be forwarded out of order so take maximum
-                            int newCount = peerCount - (int) ref.size;
-                            if (!localMeshFindComplete) {
-                                newCount += 1;
+                            // ref.size is the number of outstanding remote requests
+                            int outstandingRequests = (int) ref.size;
+                            // adjust for a possibly outstanding local request
+                            if (localMeshFindRunning) {
+                                outstandingRequests += 1;
                             }
-                            int oldCount = respondingPeerCount.get();
-                            respondingPeerCount.set(Math.max(newCount, oldCount));
-                            log.debug(toLogString("response"));
+                            int newCompleteResponsesCount = peerCount - outstandingRequests;
+                            // information is allowed to be forwarded out of order so take maximum
+                            respondingPeerCount.set(Math.max(newCompleteResponsesCount, respondingPeerCount.get()));
+                            StreamSourceMeshSearch.log.debug(toLogString("response"));
                             return;
                         case "localfind":
-                            localMeshFindComplete = true;
+                            localMeshFindRunning = false;
                             unfinishedHosts.remove(meshHost);
                             respondingPeerCount.incrementAndGet();
-                            log.debug(toLogString("localfind"));
+                            StreamSourceMeshSearch.log.debug(toLogString("localfind"));
                             return;
                         default:
-                            log.debug("Found a file ref without a prepended /. Assuming its a real fileref for now : {}", ref.name);
+                            StreamSourceMeshSearch.log.warn("Found a file ref without a prepended /. Assuming its a real fileref for now : {}", ref.name);
                     }
                 }
                 String hostId = ref.getHostUUID().substring(0, ref.getHostUUID().indexOf("-"));
@@ -168,7 +174,7 @@ public class StreamSourceMeshSearch implements StreamSourceGrouped {
             //   trigger this event when all the remote mesh nodes have completed
             @Override
             public void receiveComplete() throws Exception {
-                log.debug(toLogString("all-complete"));
+                StreamSourceMeshSearch.log.debug(toLogString("all-complete"));
                 gate.release();
             }
 
