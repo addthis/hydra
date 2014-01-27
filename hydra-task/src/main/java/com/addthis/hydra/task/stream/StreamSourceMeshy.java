@@ -293,7 +293,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
             //   trigger this event when all the remote mesh nodes have completed
             @Override
             public void receiveComplete() throws Exception {
-                log.debug(toLogString("all-complete"));
+                StreamSourceMeshy.log.debug(toLogString("all-complete"));
                 gate.release();
             }
 
