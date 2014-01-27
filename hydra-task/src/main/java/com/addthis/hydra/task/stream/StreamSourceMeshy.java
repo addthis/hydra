@@ -245,7 +245,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
                             // include the local mesh node
                             peerCount = (int) ref.size + 1;
                             localMeshFindRunning = true;
-                            log.debug(toLogString("init"));
+                            StreamSourceMeshy.log.debug(toLogString("init"));
                             return;
                         case "response":
                             unfinishedHosts.remove(ref.getHostUUID());
@@ -258,16 +258,16 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
                             int newCompleteResponsesCount = peerCount - outstandingRequests;
                             // information is allowed to be forwarded out of order so take maximum
                             respondingPeerCount.set(Math.max(newCompleteResponsesCount, respondingPeerCount.get()));
-                            log.debug(toLogString("response"));
+                            StreamSourceMeshy.log.debug(toLogString("response"));
                             return;
                         case "localfind":
                             localMeshFindRunning = false;
                             unfinishedHosts.remove(meshHost);
                             respondingPeerCount.incrementAndGet();
-                            log.debug(toLogString("localfind"));
+                            StreamSourceMeshy.log.debug(toLogString("localfind"));
                             return;
                         default:
-                            log.debug("Found a file ref without a prepended /. Assuming its a real fileref for now : {}", ref.name);
+                            StreamSourceMeshy.log.warn("Found a file ref without a prepended /. Assuming its a real fileref for now : {}", ref.name);
                     }
                 }
                 String hostId = ref.getHostUUID().substring(0, ref.getHostUUID().indexOf("-"));
