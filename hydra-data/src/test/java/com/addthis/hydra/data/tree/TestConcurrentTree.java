@@ -26,6 +26,8 @@ import com.addthis.basis.test.SlowTest;
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Files;
 
+import com.addthis.hydra.store.db.CloseOperation;
+
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
@@ -40,7 +42,7 @@ public class TestConcurrentTree {
 
     private static final Logger log = LoggerFactory.getLogger(TestConcurrentTree.class);
 
-    private static final boolean testIntegrity = true;
+    private static final CloseOperation close = CloseOperation.TEST;
 
     static final int fastNumElements = 10000;
     static final int fastNumThreads = 8;
@@ -179,7 +181,7 @@ public class TestConcurrentTree {
                 assertEquals(Integer.toString(i), node.getName());
                 node.release();
             }
-            tree.close(false, testIntegrity);
+            tree.close(false, close);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
@@ -213,7 +215,7 @@ public class TestConcurrentTree {
             assertEquals(0, root.getNodeCount());
             assertEquals(1, tree.getTreeTrashNode().getNodeCount());
             assertEquals(1, tree.getTreeTrashNode().getCounter());
-            tree.close(false, testIntegrity);
+            tree.close(false, close);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
@@ -253,7 +255,7 @@ public class TestConcurrentTree {
             assertEquals(2, tree.getCache().size());
             assertEquals(0, root.getNodeCount());
 
-            tree.close(false, testIntegrity);
+            tree.close(false, close);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
@@ -314,7 +316,7 @@ public class TestConcurrentTree {
                 assertEquals(Integer.toString(i), node.getName());
                 node.release();
             }
-            tree.close(false, testIntegrity);
+            tree.close(false, close);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
@@ -359,7 +361,7 @@ public class TestConcurrentTree {
             tree.waitOnDeletions();
             assertEquals(1000, tree.getTreeTrashNode().getCounter());
             assertEquals(1000, tree.getTreeTrashNode().getNodeCount());
-            tree.close(false, testIntegrity);
+            tree.close(false, close);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
@@ -437,7 +439,7 @@ public class TestConcurrentTree {
                 iterator.close();
             }
 
-            tree.close(false, testIntegrity);
+            tree.close(false, close);
 
         } finally {
             if (dir != null) {
@@ -495,7 +497,7 @@ public class TestConcurrentTree {
             tree.waitOnDeletions();
             assertEquals(numElements, tree.getTreeTrashNode().getCounter());
             assertEquals(numElements, tree.getTreeTrashNode().getNodeCount());
-            tree.close(false, testIntegrity);
+            tree.close(false, close);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);

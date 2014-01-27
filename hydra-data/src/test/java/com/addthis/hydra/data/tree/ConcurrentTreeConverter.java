@@ -20,6 +20,8 @@ import java.util.Map;
 
 import com.addthis.basis.util.ClosableIterator;
 
+import com.addthis.hydra.store.db.CloseOperation;
+
 public class ConcurrentTreeConverter {
 
     public static void main(String args[]) throws Exception {
@@ -44,7 +46,7 @@ public class ConcurrentTreeConverter {
             throw ex;
         } finally {
             readTree.close();
-            writeTree.close(true, false);
+            writeTree.close(true, CloseOperation.NONE);
         }
         System.out.println("nodeCount=" + nodeCount + " hasNodes=" + hasNodes + " maxLeafs=" +
                            maxLeafs + " maxDepth=" + maxDepth + " openTime=" + openTime + " testTime=" + testTime);

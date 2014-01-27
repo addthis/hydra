@@ -41,6 +41,7 @@ import com.addthis.basis.util.Meter;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
+import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB;
 import com.addthis.hydra.store.db.IPageDB.Range;
@@ -549,9 +550,10 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
      * Close the tree.
      *
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
+     * @param operation optionally test or repair the berkeleyDB.
      */
     @Override
-    public void close(boolean cleanLog, boolean testIntegrity) {
+    public void close(boolean cleanLog, CloseOperation operation) {
         if (!closed.compareAndSet(false, true)) {
             log.trace("already closed");
             return;
@@ -584,7 +586,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         }
         if (source != null) {
             try {
-                int status = source.close(cleanLog, testIntegrity);
+                int status = source.close(cleanLog, operation);
                 if (status != 0) {
                     Runtime.getRuntime().halt(status);
                 }
@@ -600,7 +602,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     @Override
     public void close() {
-        close(false, false);
+        close(false, CloseOperation.NONE);
     }
 
     @Override
@@ -928,7 +930,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     void testIntegrity() {
         PagedKeyValueStore store = source.getEps();
         if (store instanceof SkipListCache) {
-            ((SkipListCache) store).testIntegrity();
+            ((SkipListCache) store).testIntegrity(false);
         }
     }
 }

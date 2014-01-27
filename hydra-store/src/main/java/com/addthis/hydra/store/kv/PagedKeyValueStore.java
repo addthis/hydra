@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.store.kv;
 
+import com.addthis.hydra.store.db.CloseOperation;
+
 /**
  * A KV store of KV stores where the contained KV stores are called pages.
  * Pages are ordered using the same mechanism as keys.  Keys can appear
@@ -39,8 +41,8 @@ public interface PagedKeyValueStore<K, V> extends KeyValueStore<K, V> {
      * Close the store.
      *
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
-     * @param testIntegrity if true then test the integrity of the pageDB. This is a slow operation.
+     * @param operation optionally test or repair the berkeleyDB.
      * @return status code. A status code of 0 indicates success.
      **/
-    public int close(boolean cleanLog, boolean testIntegrity);
+    public int close(boolean cleanLog, CloseOperation operation);
 }

@@ -73,6 +73,7 @@ import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.Tree;
 import com.addthis.hydra.data.tree.TreeCommonParameters;
 import com.addthis.hydra.data.util.TimeField;
+import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.task.output.DataOutputTypeList;
 import com.addthis.hydra.task.output.tree.TreeMapperStats.Snapshot;
 import com.addthis.hydra.task.run.TaskRunConfig;
@@ -235,6 +236,15 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
      */
     @Codec.Set(codable = true)
     private ValidateMode validateTree = ValidateMode.NONE;
+
+    /**
+     * If tree validation has been validated (see {@link #validateTree validateTree}
+     * then this parameter determines whether
+     * repairs will be made when an error is detected.
+     * Default is false.
+     */
+    @Codec.Set(codable = true)
+    private boolean repairTree = false;
 
     /**
      * Optional sample rate for applying
@@ -929,7 +939,11 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
             }
             // close storage
             log.info("[close] closing tree storage");
-            tree.close(false, doValidate);
+            CloseOperation closeOperation = CloseOperation.NONE;
+            if (doValidate) {
+                closeOperation = repairTree ? CloseOperation.REPAIR : CloseOperation.TEST;
+            }
+            tree.close(false, closeOperation);
             if (jmxname != null) {
                 log.info("[close] unregistering JMX");
                 ManagementFactory.getPlatformMBeanServer().unregisterMBean(jmxname);

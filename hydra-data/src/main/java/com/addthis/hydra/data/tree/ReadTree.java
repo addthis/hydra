@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB.Range;
 import com.addthis.hydra.store.db.ReadPageDB;
@@ -279,10 +280,10 @@ public final class ReadTree implements DataTree {
      * Close the source.
      *
      * @param cleanLog unused in the ReadTree implementation.
-     * @param testIntegrity unused in the ReadTree implementation.
-     */
+     * @param operation unused in the ReadTree implementation.
+     **/
     @Override
-    public void close(boolean cleanLog, boolean testIntegrity) {
+    public void close(boolean cleanLog, CloseOperation operation) {
         close();
     }
 

@@ -39,6 +39,7 @@ import com.addthis.basis.util.IteratorClone;
 import com.addthis.basis.util.MemoryCounter;
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.store.kv.metrics.ExternalPagedStoreMetrics;
 import com.addthis.hydra.store.util.MetricsUtil;
 
@@ -1010,18 +1011,17 @@ public class ExternalPagedStore<K extends Comparable<K>, V> extends CachedPagedS
 
     @Override
     public void close() {
-        close(false, false);
+        close(false, CloseOperation.NONE);
     }
 
     /**
      * Close the page store.
      *
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
-     * @param testIntegrity if true then test the integrity of the pageDB. This is a slow operation.
+     * @param operation optionally test or repair the berkeleyDB.
      * @return status code. A status code of 0 indicates success.
      **/
-    @Override
-    public int close(boolean cleanLog, boolean testIntegrity) {
+    public int close(boolean cleanLog, CloseOperation operation) {
         super.close();
         pages.close(cleanLog);
         stopMemWathcher();

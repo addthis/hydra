@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.addthis.basis.util.MemoryCounter;
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.store.kv.ExternalPagedStore.ByteStore;
 import com.addthis.hydra.store.kv.KeyCoder;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
@@ -1038,6 +1039,34 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
         doRemove(start, end, inclusive);
     }
 
+    private V putIntoPage(Page<K, V> page, K key, V value) {
+        V prev;
+        int offset = binarySearch(page.keys, key, comparator);
+
+        // An existing (key, value) pair is found.
+        if (offset >= 0) {
+            page.fetchValue(offset);
+
+            prev = page.values.set(offset, value);
+            page.rawValues.set(offset, null);
+
+            updateMemoryCounters(page, key, value, prev);
+        } else { // An existing (key, value) pair is not found.
+            int position = ~offset;
+
+            page.keys.add(position, key);
+            page.values.add(position, value);
+            page.rawValues.add(position, null);
+
+            prev = null;
+
+            // updateMemoryCounters must be invoked before incrementing size.
+            updateMemoryCounters(page, key, value, null);
+            page.size++;
+        }
+        return prev;
+    }
+
     V doPut(K key, V value) {
         V prev;
 
@@ -1056,29 +1085,7 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
         Page<K, V> page = locatePage(key, LockMode.WRITEMODE);
 
         try {
-            int offset = binarySearch(page.keys, key, comparator);
-
-            // An existing (key, value) pair is found.
-            if (offset >= 0) {
-                page.fetchValue(offset);
-
-                prev = page.values.set(offset, value);
-                page.rawValues.set(offset, null);
-
-                updateMemoryCounters(page, key, value, prev);
-            } else { // An existing (key, value) pair is not found.
-                int position = ~offset;
-
-                page.keys.add(position, key);
-                page.values.add(position, value);
-                page.rawValues.add(position, null);
-
-                prev = null;
-
-                // updateMemoryCounters must be invoked before incrementing size.
-                updateMemoryCounters(page, key, value, null);
-                page.size++;
-            }
+            prev = putIntoPage(page, key, value);
 
             int prevMem = page.getMemoryEstimate();
             page.updateMemoryEstimate();
@@ -1941,18 +1948,19 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
      */
     @Override
     public void close() {
-        doClose(false, false, false);
+        doClose(false, false, CloseOperation.NONE);
     }
 
     /**
      * Close the cache.
      *
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
+     * @param operation optionally test or repair the berkeleyDB.
      * @return status code. A status code of 0 indicates success.
      */
     @Override
-    public int close(boolean cleanLog, boolean testIntegrity) {
-        return doClose(cleanLog, false, testIntegrity);
+    public int close(boolean cleanLog, CloseOperation operation) {
+        return doClose(cleanLog, false, operation);
     }
 
 
@@ -1964,10 +1972,10 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
      * then perhaps a new method should be introduced instead.
      */
     void waitForShutdown() {
-        doClose(false, true, false);
+        doClose(false, true, CloseOperation.NONE);
     }
 
-    private int doClose(boolean cleanLog, boolean wait, boolean testIntegrity) {
+    private int doClose(boolean cleanLog, boolean wait, CloseOperation operation) {
         int status = 0;
         if (!shutdownGuard.getAndSet(true)) {
             if (wait) {
@@ -1977,8 +1985,8 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
             shutdownEvictionThreads.set(true);
             waitForEvictionThreads();
             pushAllPagesToDisk();
-            if (testIntegrity) {
-                int failedPages = testIntegrity();
+            if (operation != null && operation.testIntegrity()) {
+                int failedPages = testIntegrity(operation.repairIntegrity());
                 status = (failedPages > 0) ? 1 : 0;
             }
             closeExternalStore(cleanLog);
@@ -2145,43 +2153,112 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
         this.estimateInterval = interval;
     }
 
-    public int testIntegrity() {
+    /**
+     * Emit a log message that a page has been detected with a null nextFirstKey
+     * and the page is not the largest page in the database.
+     *
+     * @param repair   if true then repair the page
+     * @param counter  page number.
+     * @param page     contents of the page.
+     * @param key      key associated with the page.
+     * @param nextKey  key associated with the next page.
+     */
+    private void missingNextFirstKey(final boolean repair, final int counter, Page<K,V> page,
+            final K key, final K nextKey) {
+        log.warn("On page {} the firstKey is {} " +
+                 " the length is {} " +
+                 " the nextFirstKey is null and the next page" +
+                 " is associated with key {}.",
+                counter, page.firstKey, page.size, nextKey);
+        if (repair) {
+            log.info("Repairing nextFirstKey on page {}.", counter);
+            page.nextFirstKey = nextKey;
+            byte[] pageEncoded = page.encode();
+            externalStore.put(keyCoder.keyEncode(key), pageEncoded);
+        }
+    }
+
+    /**
+     * Emit a log message that a page has been detected with an incorrect nextFirstKey
+     * and the page is not the largest page in the database.
+     *
+     * @param repair   if true then repair the page and possibly move entries to the next page
+     * @param counter  page number.
+     * @param page     contents of the page.
+     * @param key      key associated with the page.
+     * @param nextKey  key associated with the next page.
+     */
+    private void invalidNextFirstKey(final boolean repair, final int counter, Page<K,V> page,
+            final K key, final K nextKey) {
+        int compareTo = compareKeys(page.nextFirstKey, nextKey);
+        char direction = compareTo > 0 ? '>' : '<';
+        log.warn("On page " + counter + " the firstKey is " +
+                 page.firstKey + " the length is " + page.size +
+                 " the nextFirstKey is " + page.nextFirstKey +
+                 " which is " + direction + " the next page is associated with key " + nextKey);
+        if (repair) {
+            log.info("Repairing nextFirstKey on page {}.", counter);
+            boolean pageTransfer = false;
+            page.nextFirstKey = nextKey;
+            Page<K,V> nextPage = Page.generateEmptyPage(this, nextKey);
+            byte[] encodedNextPage = externalStore.get(keyCoder.keyEncode(nextKey));
+            nextPage.decode(encodedNextPage);
+
+            for(int i = 0; i < page.size; i++) {
+                K testKey = page.keys.get(i);
+                if (compareKeys(testKey, nextKey) >= 0) {
+                    log.info("Moving key {} on page {}.", i, counter);
+                    page.fetchValue(i);
+                    V value = page.values.get(i);
+                    putIntoPage(nextPage, testKey, value);
+                    page.keys.remove(i);
+                    page.rawValues.remove(i);
+                    page.values.remove(i);
+                    page.size--;
+                    i--;
+                    pageTransfer = true;
+                }
+            }
+
+            byte[] pageEncoded = page.encode();
+            externalStore.put(keyCoder.keyEncode(key), pageEncoded);
+            if (pageTransfer) {
+                encodedNextPage = nextPage.encode();
+                externalStore.put(keyCoder.keyEncode(nextKey), encodedNextPage);
+            }
+        }
+
+    }
+
+    public int testIntegrity(boolean repair) {
         int counter = 0;
         int failedPages = 0;
         byte[] encodedKey = externalStore.firstKey();
         byte[] encodedPage = externalStore.get(encodedKey);
         K key = keyCoder.keyDecode(encodedKey);
-        do {
-            Page<K, V> newPage = Page.generateEmptyPage(this, key);
+        while(encodedKey != null) {
+            counter++;
+            Page<K, V> page = Page.generateEmptyPage(this, key);
             byte[] encodedNextKey = externalStore.higherKey(encodedKey);
             if (encodedNextKey != null) {
-                newPage.decode(encodedPage);
+                page.decode(encodedPage);
                 K nextKey = keyCoder.keyDecode(encodedNextKey);
-                if (newPage.nextFirstKey == null) {
-                    log.warn("On page " + counter + " the firstKey is " +
-                             newPage.firstKey + " the length is " + newPage.size +
-                             " the nextFirstKey is null" +
-                             " and the next page is associated with key " + nextKey);
+                if (page.nextFirstKey == null) {
+                    missingNextFirstKey(repair, counter, page, key, nextKey);
                     failedPages++;
-                } else if (!newPage.nextFirstKey.equals(nextKey)) {
-                    int compareTo = compareKeys(newPage.nextFirstKey, nextKey);
-                    char direction = compareTo > 0 ? '>' : '<';
-                    log.warn("On page " + counter + " the firstKey is " +
-                             newPage.firstKey + " the length is " + newPage.size +
-                             " the nextFirstKey is " + newPage.nextFirstKey +
-                    " which is " + direction + " the next page is associated with key " + nextKey);
+                } else if (!page.nextFirstKey.equals(nextKey)) {
+                    invalidNextFirstKey(repair, counter, page, key, nextKey);
                     failedPages++;
                 }
                 key = nextKey;
                 encodedPage = externalStore.get(encodedNextKey);
             }
             encodedKey = encodedNextKey;
-            counter++;
             if (counter % 10000 == 0) {
-                log.info("Scanned " + counter + " pages.");
+                log.info("Scanned " + counter + " pages. Detected " + failedPages + " failed pages.");
             }
-        } while (encodedKey != null);
-        log.info("Scanned " + counter + " pages. Detected " + failedPages + " failed pages.");
+        }
+        log.info("Scan complete. Scanned " + counter + " pages. Detected " + failedPages + " failed pages.");
         return failedPages;
     }
 
