@@ -37,28 +37,28 @@ public class JobAlertTest {
         Job runningJob = createJobWithState(JobState.RUNNING);
 
         JobAlert errorAlert = new JobAlert("errorAlert", 0, -1, null, null);
-        assertTrue("Error alert should trigger with at least one error job", errorAlert.checkAlertForJobs(Arrays.asList(idleJob, errorJob)));
+        assertTrue("Error alert should trigger with at least one error job", errorAlert.checkAlertForJobs(Arrays.asList(idleJob, errorJob), null));
         errorAlert.clear();
-        assertTrue("Error alert should not trigger with only idle job", !errorAlert.checkAlertForJobs(Arrays.asList(idleJob)));
+        assertTrue("Error alert should not trigger with only idle job", !errorAlert.checkAlertForJobs(Arrays.asList(idleJob), null));
 
         JobAlert completeAlert = new JobAlert("completeAlert", 1, -1, null, null);
-        assertTrue("Complete alert should not trigger with running job", !completeAlert.checkAlertForJobs(Arrays.asList(runningJob)));
+        assertTrue("Complete alert should not trigger with running job", !completeAlert.checkAlertForJobs(Arrays.asList(runningJob), null));
         runningJob.setState(JobState.IDLE);
-        assertTrue("Complete alert should trigger on job completion", completeAlert.checkAlertForJobs(Arrays.asList(runningJob)));
+        assertTrue("Complete alert should trigger on job completion", completeAlert.checkAlertForJobs(Arrays.asList(runningJob), null));
         runningJob.setState(JobState.RUNNING);
 
         JobAlert runtimeAlert = new JobAlert("runtimeAlert", 2, 60, null, null);
-        assertTrue("Runtime alert should not trigger with idle job", !runtimeAlert.checkAlertForJobs(Arrays.asList(idleJob)));
+        assertTrue("Runtime alert should not trigger with idle job", !runtimeAlert.checkAlertForJobs(Arrays.asList(idleJob), null));
         runningJob.setSubmitTime(now - 1000);
-        assertTrue("Runtime alert should not trigger with recently-submitted job", !runtimeAlert.checkAlertForJobs(Arrays.asList(runningJob)));
+        assertTrue("Runtime alert should not trigger with recently-submitted job", !runtimeAlert.checkAlertForJobs(Arrays.asList(runningJob), null));
         runningJob.setSubmitTime(now - 180 * 60 * 1000);
-        assertTrue("Runtime alert should trigger with long-running job", runtimeAlert.checkAlertForJobs(Arrays.asList(runningJob)));
+        assertTrue("Runtime alert should trigger with long-running job", runtimeAlert.checkAlertForJobs(Arrays.asList(runningJob), null));
 
         JobAlert rekickAlert = new JobAlert("rekickAlert", 3, 60, null, null);
         idleJob.setEndTime(now - 10 * 60 * 1000);
-        assertTrue("Rekick alert should not fire after short time period", !rekickAlert.checkAlertForJobs(Arrays.asList(idleJob)));
+        assertTrue("Rekick alert should not fire after short time period", !rekickAlert.checkAlertForJobs(Arrays.asList(idleJob), null));
         idleJob.setEndTime(now - 300 * 60 * 1000);
-        assertTrue("Rekick alert should fire after long time period", rekickAlert.checkAlertForJobs(Arrays.asList(idleJob)));
+        assertTrue("Rekick alert should fire after long time period", rekickAlert.checkAlertForJobs(Arrays.asList(idleJob), null));
 
     }
 

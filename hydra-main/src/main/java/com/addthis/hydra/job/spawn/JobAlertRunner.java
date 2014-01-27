@@ -44,7 +44,7 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
 
 /**
- * This class runs a timer that scans the jobs for any email alerts and sends them.
+ * This class runs over the set of job alerts, sending trigger/clear emails as appropriate
  */
 public class JobAlertRunner {
 
@@ -242,7 +242,7 @@ public class JobAlertRunner {
         StringBuilder sb = new StringBuilder();
         sb.append("Alert: " + jobAlert.getAlertStatus() + " \n");
         for (String jobId : activeJobs.keySet()) {
-             sb.append(summary(spawn.getJob(jobId)) + "\n");
+            sb.append(summary(spawn.getJob(jobId)) + "\n");
         }
         EmailUtil.email(jobAlert.getEmail(), status, sb.toString());
         putAlert(jobAlert.getAlertId(), jobAlert);

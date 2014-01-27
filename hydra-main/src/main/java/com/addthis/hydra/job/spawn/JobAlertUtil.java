@@ -11,6 +11,7 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.hydra.data.util.DateUtil;
 import com.addthis.hydra.data.util.JSONFetcher;
+import com.addthis.hydra.task.stream.StreamFileUtil;
 import com.addthis.hydra.task.stream.StreamSourceMeshy;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
@@ -28,14 +29,9 @@ public class JobAlertUtil {
     private static final int alertQueryRetries = Parameter.intValue("alert.query.retries", 4);
     private static final DateTimeFormatter ymdFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000).appendMonthOfYear(2).appendDayOfMonth(2).toFormatter();
     private static final int pathTokenOffset = Parameter.intValue("source.mesh.path.token.offset", 2);
+    private static final int pathOff = Parameter.intValue("source.mesh.path.offset", 0);
+    private static final String sortToken = Parameter.value("source.mesh.path.token", "/");
     private static final Pattern QUERY_TRIM_PATTERN = Pattern.compile("[\\[\\]]");
-
-    /* Blank StreamSourceMeshy for performing the canonical FileReference key generation */
-    private static final StreamSourceMeshy streamSourceMeshy = new StreamSourceMeshy();
-
-    static {
-        streamSourceMeshy.setPathTokenOffset(pathTokenOffset);
-    }
 
     /**
      * Count the total byte sizes of files along a certain path via mesh
@@ -52,7 +48,7 @@ public class JobAlertUtil {
                 long totalBytes = 0;
                 for (FileReference fileRef : fileRefs) {
                     // Use StreamSourceMeshy to generate a canonical path key. In particular, strip off any multi-minion prefixes if appropriate.
-                    String meshFileKey = streamSourceMeshy.getPathOffset(fileRef.name);
+                    String meshFileKey = StreamFileUtil.getCanonicalFileReferenceCacheKey(fileRef.name, pathOff, sortToken, pathTokenOffset);
                     if (!fileRefKeysUsed.contains(meshFileKey)) {
                         totalBytes += fileRef.size;
                         fileRefKeysUsed.add(meshFileKey);

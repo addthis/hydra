@@ -31,6 +31,7 @@ import com.addthis.basis.util.Strings;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.task.stream.PersistentStreamFileSource;
+import com.addthis.hydra.task.stream.StreamFileUtil;
 import com.addthis.maljson.JSONObject;
 
 import org.joda.time.DateTime;
@@ -396,18 +397,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
      * return substring getSortOffset into file name
      */
     public String getPathOffset(String name) {
-        int pathOff = pathOffset;
-        if (sortToken != null && pathTokenOffset > 0) {
-            int pos = 0;
-            int off = pathTokenOffset;
-            while (off-- > 0 && (pos = name.indexOf(sortToken, pos)) >= 0) {
-                pos++;
-            }
-            if (pos > 0) {
-                pathOff += pos;
-            }
-        }
-        return name.substring(pathOff);
+        return StreamFileUtil.getCanonicalFileReferenceCacheKey(name, pathOffset, sortToken, pathTokenOffset);
     }
 
     public String[] getFiles() {
