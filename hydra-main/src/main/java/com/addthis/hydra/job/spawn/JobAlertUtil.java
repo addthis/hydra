@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.regex.Pattern;
 
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
@@ -20,27 +21,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class JobAlertUtil {
-    private final static Logger log = LoggerFactory.getLogger(JobAlertUtil.class);
-    private final static String queryURLBase = "http://" + Parameter.value("spawn.queryhost") + ":2222/query/call";
-    private final static String defaultOps = "gather=s";
-    private final static int alertQueryTimeout = Parameter.intValue("alert.query.timeout", 20_000);
-    private final static int alertQueryRetries = Parameter.intValue("alert.query.retries", 4);
-    private final static DateTimeFormatter ymdFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000).appendMonthOfYear(2).appendDayOfMonth(2).toFormatter();
-    private final static String meshHost = Parameter.value("mesh.host", "localhost");
-    private final static int meshPort = Parameter.intValue("mesh.port", 5000);
-    private final static int pathTokenOffset = Parameter.intValue("source.mesh.path.token.offset", 2);
+    private static final Logger log = LoggerFactory.getLogger(JobAlertUtil.class);
+    private static final String queryURLBase = "http://" + Parameter.value("spawn.queryhost") + ":2222/query/call";
+    private static final String defaultOps = "gather=s";
+    private static final int alertQueryTimeout = Parameter.intValue("alert.query.timeout", 20_000);
+    private static final int alertQueryRetries = Parameter.intValue("alert.query.retries", 4);
+    private static final DateTimeFormatter ymdFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000).appendMonthOfYear(2).appendDayOfMonth(2).toFormatter();
+    private static final int pathTokenOffset = Parameter.intValue("source.mesh.path.token.offset", 2);
+    private static final Pattern QUERY_TRIM_PATTERN = Pattern.compile("[\\[\\]]");
 
     /* Blank StreamSourceMeshy for performing the canonical FileReference key generation */
     private static final StreamSourceMeshy streamSourceMeshy = new StreamSourceMeshy();
 
-    private static MeshyClient meshyClient;
     static {
         streamSourceMeshy.setPathTokenOffset(pathTokenOffset);
-        try {
-            meshyClient = new MeshyClient(meshHost, meshPort);
-        } catch (IOException e) {
-            log.warn("Failed to initialize job alert meshy", e);
-        }
     }
 
     /**
@@ -49,7 +43,7 @@ public class JobAlertUtil {
      * @param dirPath The path to check within the jobId, e.g. split/{{now-1}}/importantfiles/*.gz
      * @return A long representing the total size in bytes of files along the specified path
      */
-    public static long getTotalBytesFromMesh(String jobId, String dirPath) {
+    public static long getTotalBytesFromMesh(MeshyClient meshyClient, String jobId, String dirPath) {
         String meshLookupString = "/job*/" + jobId + "/*/gold/" + expandDateMacro(dirPath);
         if (meshyClient != null) {
             try {
@@ -70,7 +64,7 @@ public class JobAlertUtil {
             }
         }
         else {
-            log.warn("Received mesh lookup request jobId=" + jobId + " dirPath=" + dirPath + " while meshy client was not instantiated; returning zero");
+            log.warn("Received mesh lookup request job={} dirPath={} while meshy client was not instantiated; returning zero", jobId, dirPath);
         }
         return 0;
     }
@@ -85,13 +79,13 @@ public class JobAlertUtil {
 
         HashSet<String> result = JSONFetcher.staticLoadSet(getQueryURL(jobId, checkPath, defaultOps, defaultOps), alertQueryTimeout, alertQueryRetries, null);
         if (result == null || result.isEmpty()) {
-            log.warn("Found no data for job " + jobId + " checkPath=" + checkPath + "; returning zero");
+            log.warn("Found no data for job={} checkPath={}; returning zero", jobId, checkPath);
             return 0;
         } else if (result.size() > 1) {
-            log.warn("Found multiple results for job " + jobId + "checkPath=" + checkPath + "; using first row");
+            log.warn("Found multiple results for job={} checkPath={}; using first row", jobId, checkPath);
         }
         String raw = result.iterator().next();
-        return Long.parseLong(raw.replaceAll("[\\[\\]]", "")); // Trim [] characters and parse as long
+        return Long.parseLong(QUERY_TRIM_PATTERN.matcher(raw).replaceAll("")); // Trim [] characters and parse as long
 
     }
 

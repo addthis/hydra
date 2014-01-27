@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.job.spawn;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -29,15 +30,13 @@ import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.CodecJSON;
-import com.addthis.hydra.job.Job;
-import com.addthis.hydra.job.JobTask;
-import com.addthis.hydra.job.JobTaskState;
-import com.addthis.hydra.job.Spawn;
+import com.addthis.hydra.job.*;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.util.EmailUtil;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
+import com.addthis.meshy.MeshyClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,13 +49,17 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_
 public class JobAlertRunner {
 
     private static final Logger log = LoggerFactory.getLogger(JobAlertRunner.class);
-    private static String clusterHead = Parameter.value("spawn.localhost", "unknown");
+    private static String clusterHead = Spawn.getHttpHost();
     private final Spawn spawn;
     private final SpawnDataStore spawnDataStore;
 
     private static final long ALERT_REPEAT_MILLIS = Parameter.longValue("spawn.job.alert.repeat", 60 * 1000);
     private static final long CANARY_REPEAT_MILLIS = Parameter.longValue("spawn.job.alert.canary.repeat", 10 * 60 * 1000);
     private static final long ALERT_DELAY_MILLIS = Parameter.longValue("spawn.job.alert.delay", 60 * 1000);
+
+    private static final String meshHost = SpawnMesh.getMeshHost();
+    private static final int meshPort = SpawnMesh.getMeshPort();
+    private MeshyClient meshyClient;
 
     private long lastCanaryCheck = 0l;
 
@@ -75,6 +78,12 @@ public class JobAlertRunner {
     public JobAlertRunner(Spawn spawn) {
         this.spawn = spawn;
         this.spawnDataStore = spawn.getSpawnDataStore();
+        try {
+            meshyClient = new MeshyClient(meshHost, meshPort);
+        } catch (IOException e) {
+            log.warn("Warning: failed to instantiate job alert mesh client", e);
+            meshyClient = null;
+        }
         Timer alertTimer = new Timer("JobAlertTimer");
         this.alertsEnabled = spawn.areAlertsEnabled();
         alertTimer.schedule(new TimerTask() {
@@ -113,6 +122,9 @@ public class JobAlertRunner {
                 for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
                     checkAlert(entry.getValue(), shouldCheckCanaryAlerts);
                 }
+                if (shouldCheckCanaryAlerts) {
+                    lastCanaryCheck = now;
+                }
             }
         }
     }
@@ -120,11 +132,11 @@ public class JobAlertRunner {
     /**
      * Check whether a particular alert should fire or clear based on job states
      * @param alert The actual alert object
-     * @param shouldCheckCanaryAlerts
+     * @param shouldCheckCanaryAlerts Whether canary alerts should be checked at this time
      */
     private void checkAlert(JobAlert alert, boolean shouldCheckCanaryAlerts) {
         if (!alert.isCanaryAlert() || shouldCheckCanaryAlerts) {
-            boolean alertHasChanged = alert.checkAlertForJobs(getAlertJobs(alert));
+            boolean alertHasChanged = alert.checkAlertForJobs(getAlertJobs(alert), meshyClient);
             if (alertHasChanged) {
                 emailAlert(alert);
             }

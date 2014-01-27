@@ -160,4 +160,11 @@ public class SpawnMesh implements MessageListener {
         }
     }
 
+    public static String getMeshHost() {
+        return meshHost;
+    }
+
+    public static int getMeshPort() {
+        return meshPort;
+    }
 }

@@ -26,6 +26,7 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
 import com.addthis.maljson.JSONObject;
 
+import com.addthis.meshy.MeshyClient;
 import com.google.common.collect.ImmutableMap;
 
 import org.slf4j.Logger;
@@ -194,7 +195,7 @@ public class JobAlert implements Codec.Codable {
      * @param jobs A list of jobs to check
      * @return True if the alert has changed state from fired to cleared or vice versa
      */
-    public boolean checkAlertForJobs(List<Job> jobs) {
+    public boolean checkAlertForJobs(List<Job> jobs, MeshyClient meshyClient) {
         boolean activeNow = false;
         HashMap<String, String> activeJobBefore;
         HashMap<String, String> activeJobAfter;
@@ -202,7 +203,7 @@ public class JobAlert implements Codec.Codable {
             activeJobBefore = new HashMap<>(activeJobs);
             activeJobs.clear();
             for (Job job : jobs) {
-                if (alertActiveForJob(job)) {
+                if (alertActiveForJob(meshyClient, job)) {
                     activeNow = true;
                     activeJobs.put(job.getId(), job.getDescription());
                     // Don't break the loop to ensure that all triggering jobs will be added to activeJobs
@@ -246,7 +247,7 @@ public class JobAlert implements Codec.Codable {
         return sb.toString();
     }
 
-    private boolean alertActiveForJob(Job job) {
+    private boolean alertActiveForJob(MeshyClient meshClient, Job job) {
         long currentTime = System.currentTimeMillis();
         switch (type) {
             case ON_ERROR:
@@ -260,7 +261,7 @@ public class JobAlert implements Codec.Codable {
                 return (!job.getState().equals(JobState.RUNNING) && (job.getEndTime() != null) &&
                     ((currentTime - job.getEndTime()) > timeout * MINUTE));
             case SPLIT_CANARY:
-                return checkSplitCanary(job);
+                return checkSplitCanary(meshClient, job);
             case MAP_CANARY:
                 return checkMapCanary(job);
             default:
@@ -283,13 +284,13 @@ public class JobAlert implements Codec.Codable {
         }
     }
 
-    private boolean checkSplitCanary(Job job) {
+    private boolean checkSplitCanary(MeshyClient meshClient, Job job) {
         if (!isCanaryConfigValid()) {
             return false;
         }
         // Strip off preceding slash, if it exists.
         String finalPath = canaryPath.startsWith("/") ? canaryPath.substring(1) : canaryPath;
-        long totalBytes = JobAlertUtil.getTotalBytesFromMesh(job.getId(), finalPath);
+        long totalBytes = JobAlertUtil.getTotalBytesFromMesh(meshClient, job.getId(), finalPath);
         lastActual = totalBytes;
         return totalBytes < canaryConfigThreshold;
     }

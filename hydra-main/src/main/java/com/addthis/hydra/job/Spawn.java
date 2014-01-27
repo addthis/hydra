@@ -422,6 +422,10 @@ public class Spawn implements Codec.Codable {
         return balancer;
     }
 
+    public static String getHttpHost() {
+        return httpHost;
+    }
+
     public void acquireJobLock() {
         jobLock.lock();
     }
