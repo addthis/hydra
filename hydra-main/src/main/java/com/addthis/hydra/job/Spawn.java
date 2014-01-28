@@ -39,6 +39,7 @@ import java.util.TimerTask;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -108,7 +109,9 @@ import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -130,6 +133,7 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_COMMAND_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_MACRO_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
+import jsr166e.ConcurrentHashMapV8;
 
 /**
  * manages minions running on remote notes. runs master http server to
@@ -780,6 +784,10 @@ public class Spawn implements Codec.Codable {
         } finally {
             jobLock.unlock();
         }
+    }
+
+    public Collection<Job> listJobsConcurrentImmutable() {
+        return Collections.unmodifiableCollection(spawnState.jobs.values());
     }
 
     public JSONArray getTaskQueueAsJSONArray() {
@@ -3825,9 +3833,9 @@ public class Spawn implements Codec.Codable {
     @VisibleForTesting
     protected static class SpawnState implements Codec.Codable {
 
-        final ConcurrentHashMap<String, JobMacro> macros = new ConcurrentHashMap<>();
-        final ConcurrentHashMap<String, JobCommand> commands = new ConcurrentHashMap<>();
-        final ConcurrentHashMap<String, Job> jobs = new ConcurrentHashMap<>();
+        final ConcurrentMap<String, JobMacro> macros = new ConcurrentHashMapV8<>();
+        final ConcurrentMap<String, JobCommand> commands = new ConcurrentHashMapV8<>();
+        final ConcurrentMap<String, Job> jobs = new ConcurrentHashMapV8<>();
         final DirectedGraph<String> jobDependencies = new DirectedGraph();
         SpawnBalancerConfig balancerConfig = new SpawnBalancerConfig();
     }

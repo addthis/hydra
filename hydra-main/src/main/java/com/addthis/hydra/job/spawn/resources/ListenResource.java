@@ -131,7 +131,7 @@ public class ListenResource {
         try {
             JSONObject setup = new JSONObject();
             JSONArray jobs = new JSONArray();
-            for (IJob job : spawn.listJobs()) {
+            for (IJob job : spawn.listJobsConcurrentImmutable()) {
                 JSONObject jobUpdateEvent = spawn.getJobUpdateEvent(job);
                 jobs.put(jobUpdateEvent);
             }
