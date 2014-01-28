@@ -110,6 +110,19 @@ public class PluginReader {
     }
 
     /**
+     * A workaround the plugin framework does not work in junit
+     * but we do not use the plugin framework in junit tests.
+     */
+    private static void ignoreJunitEnvironment(ClassNotFoundException e, String suffix, String key) {
+        boolean junitRunning = false;
+        assert (junitRunning = true);
+        if (!junitRunning) {
+            log.warn("registerPlugin failure. File suffix is \"{}\", key is \"{}\", exception is {}.",
+                    suffix, key, e.toString());
+        }
+    }
+
+    /**
      * Reads all the the properties that match the specified suffix
      * and load them into the class map.
      *
@@ -131,19 +144,40 @@ public class PluginReader {
                                  " is not a subtype of " + parentClass.getCanonicalName());
                     }
                 } catch (ClassNotFoundException e) {
-                    /**
-                     * A workaround the plugin framework does not work in junit
-                     * but we do not use the plugin framework in junit tests.
-                     */
-                    boolean junitRunning = false;
-                    assert (junitRunning = true);
-                    if (!junitRunning) {
-                        log.warn("registerPlugin failure. File suffix is \"{}\", key is \"{}\", exception is {}.", suffix, filter[0], e.toString());
-                    }
+                    ignoreJunitEnvironment(e, suffix, filter[0]);
                 }
             }
         }
     }
+
+    /**
+     * Reads all the the properties that match the specified suffix
+     * and load them into the map.
+     *
+     * @param suffix
+     * @param map
+     * @param parentClass
+     */
+    public static void registerPlugin(String suffix, Map<String, Class> map, Class parentClass) {
+        List<String[]> filters = PluginReader.readProperties(suffix);
+        for (String[] filter : filters) {
+            if (filter.length >= 2) {
+                try {
+                    Class clazz = Class.forName(filter[1]);
+                    if (parentClass.isAssignableFrom(clazz)) {
+                        map.put(filter[0], clazz);
+                    } else {
+                        log.warn("For key \"" + filter[0] +
+                                 "\" the corresponding class " + filter[1] +
+                                 " is not a subtype of " + parentClass.getCanonicalName());
+                    }
+                } catch (ClassNotFoundException e) {
+                    ignoreJunitEnvironment(e, suffix, filter[0]);
+                }
+            }
+        }
+    }
+
 
 
 }
