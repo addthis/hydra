@@ -2528,6 +2528,9 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             }
             for (JobTask task : match) {
                 boolean terminated = false;
+                if (!task.getConfigDir().exists()) {
+                    Files.initDirectory(task.getConfigDir());
+                }
                 if (task.isRunning() || task.isReplicating() || task.isBackingUp()) {
                     if (!stop.force() && (task.isReplicating() || task.isBackingUp())) {
                         log.warn("[task.stop] " + task.getName() + " wasn't terminated because task was replicating/backing up and the stop wasn't a kill");
@@ -2542,7 +2545,6 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                     task.sendEndStatus(0);
                 } else if (stop.force()) {
                     log.warn("[task.stop] " + task.getName() + " force stop unmatched");
-                    Files.initDirectory(task.getConfigDir());
                     task.createDoneFileIfNoProcessRunning(task.jobPid, task.jobDone);
                     task.createDoneFileIfNoProcessRunning(task.replicatePid, task.replicateDone);
                     task.createDoneFileIfNoProcessRunning(task.backupPid, task.backupDone);
