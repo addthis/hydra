@@ -55,16 +55,9 @@ public class JavaSimpleCompiler {
         BufferedWriter out = new BufferedWriter(new FileWriter(sourceFile));
         out.write(body);
         out.close();
-        /**
-         *  Set compiler's classpath to a copy of the runtime jar.
-         *  The indexed jar has undergone the command "jar i [jarfile]".
-         *  Attempts to execute directly from the indexed jar have failed,
-         *  therefore a copy of the executable jar is used.
-         */
         List<String> optionList = new ArrayList<>();
         String classpath = System.getProperty("java.class.path");
-        classpath = classpath.replaceAll(Pattern.quote("-exec.jar"), "-index.jar");
-        log.debug("Classpath is " + classpath);
+        log.info("Classpath is " + classpath);
         optionList.addAll(Arrays.asList("-cp", classpath));
         JavaCompiler javaCompiler = ToolProvider.getSystemJavaCompiler();
         Iterable<? extends JavaFileObject> compilationUnits =
