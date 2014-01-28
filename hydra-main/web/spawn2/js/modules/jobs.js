@@ -1771,7 +1771,7 @@ function(
             app.router.navigate("#alerts/create/" + this.model.id, {trigger: true});
         },
         handleViewAlertsButtonClick:function(event){
-        	console.log("#alerts_" + this.model.id);
+        	app.router.navigate("#alertsFiltered/" + this.model.id, {trigger: true});
         },
         handleEmailKeyUp:function(event){
             var input = $(event.currentTarget);
