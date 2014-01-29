@@ -80,10 +80,10 @@ public class OutputWriter extends AbstractOutputWriter {
 
     /**
      * Maximum number of files that can be open
-     * at any time. Default is 32.
+     * at any time. Default is 320.
      */
     @Codec.Set(codable = true)
-    private int maxOpen = 32;
+    private int maxOpen = 320;
 
     @Codec.Set(codable = true)
     private String outputList;

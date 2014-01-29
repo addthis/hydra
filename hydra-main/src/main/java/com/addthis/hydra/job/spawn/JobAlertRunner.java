@@ -37,6 +37,9 @@ import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
 import com.addthis.meshy.MeshyClient;
+
+import com.google.common.collect.ImmutableMap;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,11 +114,15 @@ public class JobAlertRunner {
      */
     public void scanAlerts() {
         if (alertsEnabled) {
-            synchronized (alertMap) {
-                for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
-                    checkAlert(entry.getValue());
-                }
+            for (Map.Entry<String, JobAlert> entry : getAlertMapCopy().entrySet()) {
+                checkAlert(entry.getValue());
             }
+        }
+    }
+
+    private Map<String, JobAlert> getAlertMapCopy() {
+        synchronized (alertMap) {
+            return ImmutableMap.copyOf(alertMap);
         }
     }
 
@@ -333,13 +340,11 @@ public class JobAlertRunner {
      */
     public JSONArray getAlertStateArray() {
         JSONArray rv = new JSONArray();
-        synchronized (alertMap) {
-            for (JobAlert jobAlert : alertMap.values()) {
-                try {
-                    rv.put(jobAlert.toJSON());
-                } catch (Exception e) {
-                    log.warn("Warning: failed to send alert in array: " + jobAlert);
-                }
+        for (JobAlert jobAlert : getAlertMapCopy().values()) {
+            try {
+                rv.put(jobAlert.toJSON());
+            } catch (Exception e) {
+                log.warn("Warning: failed to send alert in array: " + jobAlert);
             }
         }
         return rv;
@@ -347,14 +352,11 @@ public class JobAlertRunner {
 
     public JSONObject getAlertStateMap() {
         JSONObject rv = new JSONObject();
-        synchronized (alertMap) {
-            for (JobAlert jobAlert : alertMap.values()) {
-                try {
-                    rv.put(jobAlert.getAlertId(), jobAlert.toJSON());
-                } catch (Exception e) {
-                    log.warn("Warning: failed to send alert in map: " + jobAlert);
-                }
-
+        for (JobAlert jobAlert : getAlertMapCopy().values()) {
+            try {
+                rv.put(jobAlert.getAlertId(), jobAlert.toJSON());
+            } catch (Exception e) {
+                log.warn("Warning: failed to send alert in map: " + jobAlert);
             }
         }
         return rv;

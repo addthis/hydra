@@ -385,7 +385,7 @@ public class TestConcurrentTree {
     @Test
     @Category(SlowTest.class)
     public void testDeleteSlow2() throws Exception {
-        for(int i = 0 ; i < 1000; i++) {
+        for(int i = 0 ; i < 100; i++) {
             testDeleteMultiThread(fastNumElements, fastNumThreads, fastNumThreads);
             testDeleteMultiThread(fastNumElements, fastNumThreads, 0);
         }
