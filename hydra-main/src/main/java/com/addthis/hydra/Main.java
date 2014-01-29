@@ -23,11 +23,16 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
+import com.addthis.codec.Codec;
+import com.addthis.hydra.common.plugins.PluginReader;
+import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.query.CLIQuery;
 import com.addthis.hydra.job.Minion;
 import com.addthis.hydra.job.Spawn;
@@ -56,6 +61,19 @@ public class Main {
     private static final String METRICS_REPORTER_CONFIG_FILE = Parameter.value("metrics.reporter.config", "");
     private static final boolean GANGLIA_SHORT_NAMES = Parameter.boolValue("ganglia.useShortNames", false);
 
+    public static final Map<String, Class> cmap = new HashMap<>();
+
+    @SuppressWarnings("unused")
+    public static void registerFilter(String name, Class clazz) {
+        cmap.put(name, clazz);
+    }
+
+    /** register types */
+    static {
+        PluginReader.registerPlugin("-executables.classmap", cmap, Object.class);
+    }
+
+
     public static void main(String args[]) {
         initLog4j();
         if (args.length > 0) {
@@ -80,41 +98,12 @@ public class Main {
             }
             try {
                 switch(args[0]) {
-                    case "spawn":
-                        Spawn.main(cutargs(args));
-                        break;
-                    case "minion":
-                        Minion.main(cutargs(args));
-                        break;
-                    case "mqmaster":
-                        QueryServer.main(cutargs(args));
-                        break;
-                    case "mqworker":
-                        MeshQueryWorker.main(cutargs(args));
-                        break;
-                    case "qutil":
-                        QueryChannelUtil.main(cutargs(args));
-                        break;
-                    case "streamer":
-                        try {
-                            Class clazz = Class.forName("com.addthis.hydra.task.stream.StreamServer");
-                            Method method = clazz.getMethod("main");
-                             method.invoke(null, cutargs(args));
-                        } catch (ClassNotFoundException ignored) {
-
-                        } catch (NoSuchMethodException|IllegalAccessException|InvocationTargetException ex) {
-                            log.warn(ex.toString());
-                        }
-                        break;
-                    case "task":
-                        TaskRunner.main(cutargs(args));
-                        break;
-                    case "fmux":
-                        com.addthis.muxy.Main.main(cutargs(args));
-                        break;
-                    case "cliquery":
-                        CLIQuery.main(cutargs(args));
-                        break;
+                    /**
+                     * For backwards compatibility the targets "validate", "zk",
+                     * "dbspace", "mss", and "json" do not follow the standard format.
+                     *
+                     * Use the "-executables.classmap" plugin for new targets.
+                     */
                     case "validate":
                         try {
                             TaskRunner.loadConfig(new File(args[1]));
@@ -123,19 +112,14 @@ public class Main {
                             ex.printStackTrace();
                         }
                         break;
-                    case "printbundles":
-                        BundleStreamPeeker.main(cutargs(args));
-                        break;
-                    case "zk":
+                    case "zk": {
                         Class zk = Class.forName("org.apache.zookeeper.ZooKeeperMain");
                         Method m = zk.getDeclaredMethod("main", String[].class);
                         m.invoke(null, new Object[]{cutargs(args)});
                         break;
+                    }
                     case "dbspace":
                         com.sleepycat.je.util.DbSpace.main(cutargs(args));
-                        break;
-                    case "mesh":
-                        com.addthis.meshy.Main.main(cutargs(args));
                         break;
                     case "mss":
                         String mssRoot = Parameter.value("mss.root", "streams");
@@ -150,11 +134,14 @@ public class Main {
                         JSONObject j = new JSONObject(args[1]);
                         System.out.println(j.toString());
                         break;
-                    case "testPlugins":
-                        com.addthis.hydra.common.plugins.TestPlugins.main(cutargs(args));
-                        break;
                     default:
-                        usage();
+                        Class clazz = cmap.get(args[0]);
+                        if (clazz != null) {
+                            Method m = clazz.getDeclaredMethod("main", String[].class);
+                            m.invoke(null, (Object) cutargs(args));
+                        } else {
+                            usage();
+                        }
                 }
             } catch (Exception e) {
                 System.err.println("Error starting process.");

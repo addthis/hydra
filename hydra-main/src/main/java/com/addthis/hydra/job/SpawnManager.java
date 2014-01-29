@@ -171,7 +171,7 @@ public class SpawnManager {
                         hostlist.put(spawn.getHostStateUpdateEvent(host));
                     }
                     HashSet<String> ids = csvListToSet(link.getRequestValues().getValue("id"));
-                    for (IJob job : spawn.listJobs()) {
+                    for (IJob job : spawn.listJobsConcurrentImmutable()) {
                         if (ids == null || ids.contains(job.getId())) {
                             JSONObject jobUpdateEvent = spawn.getJobUpdateEvent(job);
                             joblist.put(jobUpdateEvent);
@@ -585,7 +585,7 @@ public class SpawnManager {
                 HashSet<String> ids = csvListToSet(kv.getValue("id"));
                 String owner = kv.getValue("owner");
                 JSONArray a = new JSONArray();
-                for (IJob job : spawn.listJobs()) {
+                for (IJob job : spawn.listJobsConcurrentImmutable()) {
                     if ((owner == null && ids == null) || (ids != null && ids.contains(job.getId())) || Strings.isEqual(owner, job.getOwner())) {
                         a.put(job.toJSON().put("config", ""));
                     }

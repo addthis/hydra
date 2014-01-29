@@ -1,0 +1,11 @@
+"spawn", com.addthis.hydra.job.Spawn
+"minion", com.addthis.hydra.job.Minion
+"mqmaster", com.addthis.hydra.query.QueryServer
+"mqworker", com.addthis.hydra.query.MeshQueryWorker
+"qutil", com.addthis.hydra.query.util.QueryChannelUtil
+"task", com.addthis.hydra.task.run.TaskRunner
+"fmux", com.addthis.muxy.Main
+"cliquery", com.addthis.hydra.data.query.CLIQuery
+"printbundles", com.addthis.hydra.task.util.BundleStreamPeeker
+"mesh", com.addthis.meshy.Main
+"testPlugins", com.addthis.hydra.common.plugins.TestPlugins
