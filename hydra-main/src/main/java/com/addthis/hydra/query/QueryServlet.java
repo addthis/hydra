@@ -21,7 +21,6 @@ import java.io.PrintWriter;
 
 import java.util.Enumeration;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -29,7 +28,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.CUID;
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.channel.DataChannelOutput;
@@ -51,7 +49,6 @@ import com.google.common.cache.CacheBuilder;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Timer;
 
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.CharEncoding;
 
 import org.eclipse.jetty.server.Request;
@@ -62,7 +59,6 @@ public class QueryServlet {
     private static final Logger log = LoggerFactory.getLogger(QueryServlet.class);
 
     private static final int maxQueryTime = Parameter.intValue("qmaster.maxQueryTime", 24 * 60 * 60); // one day
-    private static String asyncType = Parameter.value("qmaster.async.type", "cuid");
 
 
     // You have 5 minutes to claim your async result, if we ever need to
@@ -277,11 +273,6 @@ public class QueryServlet {
     }
 
     private static String genAsyncUuid(Query query) {
-        if (asyncType.equals("uuid")) {
-            return UUID.randomUUID().toString();
-        } else if (asyncType.equals("shaorig") && !Strings.isEmpty(query.getParameter("originalrequest"))) {
-            return DigestUtils.shaHex(query.getParameter("originalrequest"));
-        }
         return CUID.createCUID();
     }
 
