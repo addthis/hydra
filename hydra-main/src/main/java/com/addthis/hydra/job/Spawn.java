@@ -3362,7 +3362,7 @@ public class Spawn implements Codec.Codable {
 
     private boolean shouldBlockTaskKick(HostState host) {
         return host == null || !host.canMirrorTasks() || host.isReadOnly() ||
-               hostFailWorker.getFailureState(host.getHostUuid()) != HostFailWorker.FailState.ALIVE;
+               hostFailWorker.getFailureState(host.getHostUuid()) == HostFailWorker.FailState.FAILING_FS_DEAD;
     }
 
     /**
