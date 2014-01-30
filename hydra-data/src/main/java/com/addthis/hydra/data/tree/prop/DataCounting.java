@@ -66,7 +66,7 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements C
      * <pre>
      * {type : "const", value : "shard-counter"},
      * {type : "value", key : "DATE_YMD", data : {
-     *   ips : {type : "count", ver : "hllp", rsd : 0.01, key : "IP"},
+     *   ips : {type : "count", ver : "hllp", key : "IP"},
      * }},</pre>
      *
      * <p><b>Query Path Directives</b>
@@ -145,14 +145,14 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements C
 
         /**
          * Used in hyperloglog plus.  The precision is the number of bits used when the cardinality
-         * is calculated using the normal mode.
+         * is calculated using the normal mode. The default is 14.
          */
         @Codec.Set(codable = true)
         private int p = 14;
 
         /**
          * Used in hyperloglog plus.  The sparse precision is the number of bits used when the cardinality
-         * is calculated using the sparse mode.
+         * is calculated using the sparse mode. The default is 25.
          */
         @Codec.Set(codable = true)
         private int sp = 25;
