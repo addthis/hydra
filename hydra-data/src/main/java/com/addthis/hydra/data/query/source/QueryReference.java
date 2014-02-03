@@ -110,7 +110,7 @@ class QueryReference implements VirtualFileReference {
                     Runtime.getRuntime().halt(1);
                 }
             }
-            SearchRunner.querySearchPool.submit(new SearchRunner(options, dirString, bridge));
+            SearchRunner.querySearchPool.execute(new SearchRunner(options, dirString, bridge));
             return bridge;
         } catch (Exception ex) {
             throw new RuntimeException(ex);

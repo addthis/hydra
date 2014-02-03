@@ -73,7 +73,7 @@ public class LiveQueryReference extends QueryReference {
                 MeshQuerySource.log.warn("Invalid request to getInput.  Options cannot be null");
                 return null;
             }
-            SearchRunner.querySearchPool.submit(new LiveSearchRunner(options, dirString, bridge, queryEngine));
+            SearchRunner.querySearchPool.execute(new LiveSearchRunner(options, dirString, bridge, queryEngine));
             return bridge;
         } catch (Exception ex) {
             throw new RuntimeException(ex);
