@@ -54,9 +54,9 @@ public class TestBundleFilterDebugPrint extends TestBundleFilter {
         KVBundleFormat bundleFormat = new KVBundleFormat();
         KVBundle bundle = new KVBundle(bundleFormat);
         ValueArray array = ValueFactory.createArray(3);
-        array.append(ValueFactory.create(1));
-        array.append(ValueFactory.create(1.0));
-        array.append(null);
+        array.add(ValueFactory.create(1));
+        array.add(ValueFactory.create(1.0));
+        array.add(null);
         bundle.setValue(bundleFormat.getField("array"), array);
 
         bf.filter(bundle);

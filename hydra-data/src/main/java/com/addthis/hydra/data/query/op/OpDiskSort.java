@@ -311,7 +311,8 @@ public class OpDiskSort extends AbstractRowOp {
         if (s2 == null) {
             return -1;
         }
-        return ValueUtil.asNumberOrParseLong(s1, 10).asLong().getLong().compareTo(ValueUtil.asNumberOrParseLong(s2, 10).asLong().getLong());
+        return Long.compare(ValueUtil.asNumberOrParseLong(s1, 10).asLong().getLong(),
+                ValueUtil.asNumberOrParseLong(s2, 10).asLong().getLong());
     }
 
     /**
@@ -329,7 +330,8 @@ public class OpDiskSort extends AbstractRowOp {
         if (s2 == null) {
             return -1;
         }
-        return ValueUtil.asNumberOrParseDouble(s1).asDouble().getDouble().compareTo(ValueUtil.asNumberOrParseDouble(s2).asDouble().getDouble());
+        return Double.compare(ValueUtil.asNumberOrParseDouble(s1).asDouble().getDouble(),
+                ValueUtil.asNumberOrParseDouble(s2).asDouble().getDouble());
     }
 
     /**

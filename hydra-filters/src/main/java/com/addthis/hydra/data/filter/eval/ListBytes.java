@@ -29,7 +29,7 @@ public class ListBytes extends AbstractList<byte[]> implements List<byte[]> {
             int size = array.size();
             this.data = ValueFactory.createArray(size);
             for (int i = 0; i < size; i++) {
-                this.data.append(array.get(i));
+                this.data.add(array.get(i));
             }
         } else {
             this.data = array;
@@ -42,7 +42,7 @@ public class ListBytes extends AbstractList<byte[]> implements List<byte[]> {
         } else {
             ValueArray output = ValueFactory.createArray(input.size());
             for (byte[] element : input) {
-                output.append(ValueFactory.create(element));
+                output.add(ValueFactory.create(element));
             }
             return output;
         }
@@ -60,7 +60,7 @@ public class ListBytes extends AbstractList<byte[]> implements List<byte[]> {
 
     @Override
     public boolean add(byte[] s) {
-        data.append(ValueFactory.create(s));
+        data.add(ValueFactory.create(s));
         return true;
     }
 
@@ -97,7 +97,7 @@ public class ListBytes extends AbstractList<byte[]> implements List<byte[]> {
 
     @Override
     public void add(int index, byte[] element) {
-        data.insert(index, ValueFactory.create(element));
+        data.add(index, ValueFactory.create(element));
     }
 
     @Override

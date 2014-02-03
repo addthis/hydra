@@ -59,7 +59,7 @@ public class TestValueFilterSplit {
     private ValueArray getValueArray(String... values) {
         ValueArray t1 = ValueFactory.createArray(2);
         for (String value : values) {
-            t1.append(ValueFactory.create(value));
+            t1.add(ValueFactory.create(value));
         }
         return t1;
     }

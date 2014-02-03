@@ -29,7 +29,7 @@ public class ListDouble extends AbstractList<Double> implements List<Double> {
             int size = array.size();
             this.data = ValueFactory.createArray(size);
             for (int i = 0; i < size; i++) {
-                this.data.append(data.get(i));
+                this.data.add(data.get(i));
             }
         } else {
             this.data = array;
@@ -42,7 +42,7 @@ public class ListDouble extends AbstractList<Double> implements List<Double> {
         } else {
             ValueArray output = ValueFactory.createArray(input.size());
             for (Double element : input) {
-                output.append(ValueFactory.create(element));
+                output.add(ValueFactory.create(element));
             }
             return output;
         }
@@ -59,7 +59,7 @@ public class ListDouble extends AbstractList<Double> implements List<Double> {
 
     @Override
     public boolean add(Double s) {
-        data.append(ValueFactory.create(s));
+        data.add(ValueFactory.create(s));
         return true;
     }
 
@@ -96,7 +96,7 @@ public class ListDouble extends AbstractList<Double> implements List<Double> {
 
     @Override
     public void add(int index, Double element) {
-        data.insert(index, ValueFactory.create(element));
+        data.add(index, ValueFactory.create(element));
     }
 
     @Override

@@ -34,7 +34,6 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
-import com.addthis.hydra.data.util.MutableString;
 import com.addthis.hydra.task.map.DataPurgeConfig;
 import com.addthis.hydra.task.map.DataPurgeService;
 import com.addthis.hydra.task.map.DataPurgeServiceImpl;
@@ -145,7 +144,7 @@ public class DataOutputFile extends DataOutputTypeList {
 
     private MBeanRemotingSupport jmxremote;
 
-    private MutableString[] fileToken;
+    private String[] fileToken;
     private TokenIndex[] varToken;
 
     @Override
@@ -182,7 +181,7 @@ public class DataOutputFile extends DataOutputTypeList {
             purgeData();
         }
         LinkedList<TokenIndex> vt = new LinkedList<TokenIndex>();
-        MutableString ft[] = new MutableString[path.length];
+        String ft[] = new String[path.length];
         for (int i = 0; i < ft.length; i++) {
             if (path[i].startsWith("[[") && path[i].endsWith("]]")) {
                 String tok = path[i].substring(2, path[i].length() - 2);
@@ -200,7 +199,7 @@ public class DataOutputFile extends DataOutputTypeList {
                 String tok = path[i].substring(2, path[i].length() - 2);
                 vt.add(new TokenIndex(getFormat().getField(tok), i));
             }
-            ft[i] = new MutableString(path[i]);
+            ft[i] = new String(path[i]);
             if (log.isDebugEnabled()) log.debug("[binding " + path[i]);
         }
         if (log.isDebugEnabled()) log.debug("[bind] var=" + vt);
@@ -216,7 +215,7 @@ public class DataOutputFile extends DataOutputTypeList {
             }
             String tok[] = new String[fileToken.length];
             for (int i = 0; i < tok.length; i++) {
-                tok[i] = fileToken[i].getString();
+                tok[i] = fileToken[i];
             }
             for (int i = 0; i < varToken.length; i++) {
                 TokenIndex t = varToken[i];

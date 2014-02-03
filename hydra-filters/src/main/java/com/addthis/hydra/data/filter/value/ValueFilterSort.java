@@ -22,6 +22,8 @@ import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 
+import com.google.common.primitives.Longs;
+
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">sorts an array</span>.
  * <p/>
@@ -41,9 +43,9 @@ public class ValueFilterSort extends ValueFilter {
                 case STRING:
                     return o1.asString().getString().compareTo(o2.asString().getString());
                 case INT:
-                    return o1.asLong().getLong().compareTo(o2.asLong().getLong()); // DefaultLong.TYPE = INT, go figure
+                    return Long.compare(o1.asLong().getLong(), o2.asLong().getLong()); // DefaultLong.TYPE = INT, go figure
                 case FLOAT:
-                    return o1.asDouble().getDouble().compareTo(o2.asDouble().getDouble()); // ... and DefaultDouble.TYPE = FLOAT
+                    return Double.compare(o1.asDouble().getDouble(), o2.asDouble().getDouble()); // ... and DefaultDouble.TYPE = FLOAT
                 default:
                     throw new RuntimeException("Sort error: unsupported object type " + o1.getObjectType());
             }
@@ -78,7 +80,7 @@ public class ValueFilterSort extends ValueFilter {
         Collections.sort(tmpObjs, valueObjectComparator);
         ValueArray rv = ValueFactory.createArray(array.size());
         for (ValueObject obj : tmpObjs) {
-            rv.append(obj);
+            rv.add(obj);
         }
         return rv;
     }

@@ -86,7 +86,7 @@ public class TestValueFilterCounter {
             assertTrue(false);
         }
         Long expected = 1000000l;
-        Long observed = counter.filterValue(null).asLong().getLong().longValue();
+        Long observed = counter.filterValue(null).asLong().getLong();
         assertEquals(expected, observed);
     }
 
@@ -110,7 +110,7 @@ public class TestValueFilterCounter {
             assertTrue(false);
         }
         Long expected = 4000000l;
-        Long observed = counter.filterValue(null).asLong().getLong().longValue();
+        Long observed = counter.filterValue(null).asLong().getLong();
         assertEquals(expected, observed);
     }
 }

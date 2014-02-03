@@ -165,7 +165,7 @@ public class BundleFilterAppend extends BundleFilter {
             for (String value : values) {
                 ValueString str = ValueFactory.create(value);
                 if (!unique || !contains(arr, str)) {
-                    arr.append(str);
+                    arr.add(str);
                 }
             }
         }
@@ -179,11 +179,11 @@ public class BundleFilterAppend extends BundleFilter {
                 if (fromVal.getObjectType() == ValueObject.TYPE.ARRAY) {
                     for (ValueObject element : fromVal.asArray()) {
                         if (!unique || !contains(arr, element)) {
-                            arr.append(element);
+                            arr.add(element);
                         }
                     }
                 } else if (!unique || !contains(arr, fromVal)) {
-                    arr.append(fromVal);
+                    arr.add(fromVal);
                 }
             }
         }

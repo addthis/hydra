@@ -37,7 +37,7 @@ public class TestValueFilterIndex {
     private ValueArray create(ValueObject value[]) {
         ValueArray a = ValueFactory.createArray(value.length);
         for (ValueObject v : value) {
-            a.append(v);
+            a.add(v);
         }
         return a;
     }

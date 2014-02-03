@@ -63,7 +63,7 @@ public class TestBundleFilterFirstValue extends TestBundleFilter {
         assertEquals("345", b1.get("out"));
 
         array = ValueFactory.createArray(1);
-        array.append(ValueFactory.create("foo"));
+        array.add(ValueFactory.create("foo"));
         b1.setValue(b1.getFormat().getField("b"), array);
         assertTrue(bff.filter(b1));
         // MapBundle converts all values to String, messing up the test
@@ -114,7 +114,7 @@ public class TestBundleFilterFirstValue extends TestBundleFilter {
         assertEquals("c", b1.get("whichField"));
 
         array = ValueFactory.createArray(1);
-        array.append(ValueFactory.create("foo"));
+        array.add(ValueFactory.create("foo"));
         b1.setValue(b1.getFormat().getField("b"), array);
         assertTrue(bff.filter(b1));
         // MapBundle converts all values to String, messing up the test

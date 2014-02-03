@@ -222,7 +222,7 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements Codec.S
         @Override
         public ValueArray asArray() throws ValueTranslationException {
             ValueArray arr = ValueFactory.createArray(1);
-            arr.append(this);
+            arr.add(this);
             return arr;
         }
 

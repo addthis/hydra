@@ -51,7 +51,7 @@ public class ValueFilterListApply extends ValueFilter {
                     if (out == null) {
                         out = ValueFactory.createArray(in.size());
                     }
-                    out.append(val);
+                    out.add(val);
                 }
             }
             return out;

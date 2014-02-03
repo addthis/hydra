@@ -33,7 +33,7 @@ public class TestValueFilterJoin {
         ValueArray strArray = ValueFactory.createValueArray(Arrays.asList("b", "c", "a"));
         ValueArray numArray = ValueFactory.createArray(3);
         for (int i = 0; i < 5; i++) {
-            numArray.append(ValueFactory.create(5 - i));
+            numArray.add(ValueFactory.create(5 - i));
         }
         assertEquals("should correctly join string array", "b,c,a", join.filter(strArray).toString());
         join.setSort(true);

@@ -98,7 +98,7 @@ public class ValueFilterRegex extends ValueFilter {
         while (matcher.find()) {
             int count = matcher.groupCount();
             for (int i = 1; i <= count; i++) {
-                arr.append(ValueFactory.create(matcher.group(i)));
+                arr.add(ValueFactory.create(matcher.group(i)));
             }
         }
         return arr;

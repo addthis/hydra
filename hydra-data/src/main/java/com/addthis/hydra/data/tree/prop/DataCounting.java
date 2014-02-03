@@ -481,7 +481,7 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements C
         @Override
         public void setValues(ValueMap map) {
             byte b[] = map.get("b").asBytes().getBytes();
-            switch (map.get("t").asLong().getLong().intValue()) {
+            switch ((int) map.get("t").asLong().getLong()) {
                 case VER_LINEAR:
                     lc = new LinearCounting(b);
                     break;

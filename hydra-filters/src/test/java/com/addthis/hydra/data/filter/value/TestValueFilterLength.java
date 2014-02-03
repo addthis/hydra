@@ -39,8 +39,8 @@ public class TestValueFilterLength {
         vfl.setOnce(true);
         assertEquals(ValueFactory.create(0), vfl.filter(array));
         // add elements, try again
-        array.append(ValueFactory.create("foo"));
-        array.append(ValueFactory.create(5));
+        array.add(ValueFactory.create("foo"));
+        array.add(ValueFactory.create(5));
         // there should be two elements
         assertEquals(ValueFactory.create(2), vfl.filter(array));
         // disable once so each value is passed through the filter

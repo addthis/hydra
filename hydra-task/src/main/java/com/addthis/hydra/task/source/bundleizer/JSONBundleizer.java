@@ -59,7 +59,7 @@ public class JSONBundleizer extends NewlineBundleizer {
                 JSONArray jarr = (JSONArray) raw;
                 ValueArray arr = ValueFactory.createArray(jarr.length());
                 for (int i = 0; i < jarr.length(); i++) {
-                    arr.insert(i, createPrimitiveBundle(jarr.opt(i).getClass(), jarr.opt(i)));
+                    arr.add(i, createPrimitiveBundle(jarr.opt(i).getClass(), jarr.opt(i)));
                 }
                 return arr;
             } else {

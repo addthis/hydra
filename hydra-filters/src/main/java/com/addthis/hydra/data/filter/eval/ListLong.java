@@ -29,7 +29,7 @@ public class ListLong extends AbstractList<Long> implements List<Long> {
             int size = array.size();
             this.data = ValueFactory.createArray(size);
             for (int i = 0; i < size; i++) {
-                this.data.append(array.get(i));
+                this.data.add(array.get(i));
             }
         } else {
             this.data = array;
@@ -42,7 +42,7 @@ public class ListLong extends AbstractList<Long> implements List<Long> {
         } else {
             ValueArray output = ValueFactory.createArray(input.size());
             for (Long element : input) {
-                output.append(ValueFactory.create(element));
+                output.add(ValueFactory.create(element));
             }
             return output;
         }
@@ -59,7 +59,7 @@ public class ListLong extends AbstractList<Long> implements List<Long> {
 
     @Override
     public boolean add(Long s) {
-        data.append(ValueFactory.create(s));
+        data.add(ValueFactory.create(s));
         return true;
     }
 
@@ -96,7 +96,7 @@ public class ListLong extends AbstractList<Long> implements List<Long> {
 
     @Override
     public void add(int index, Long element) {
-        data.insert(index, ValueFactory.create(element));
+        data.add(index, ValueFactory.create(element));
     }
 
     @Override

@@ -88,11 +88,11 @@ public class ValueFilterSlice extends ValueFilter {
             }
             if (i > 0) {
                 for (int x = f; x < t && x < arr.size(); x += i) {
-                    ret.append(arr.get(x));
+                    ret.add(arr.get(x));
                 }
             } else {
                 for (int x = f; x > t; x += i) {
-                    ret.append(arr.get(x));
+                    ret.add(arr.get(x));
                 }
             }
             return ret;

@@ -117,7 +117,7 @@ public class ValueFilterTimeRange extends ValueFilter {
     private ValueArray getTimeRange(long time, int range, TimeUnit timeUnit) {
         ValueArray arr = ValueFactory.createArray(range);
         for (int i = 0; i < range; i++) {
-            arr.append(ValueFactory.create(date.print(time + timeUnit.toMillis(i))));
+            arr.add(ValueFactory.create(date.print(time + timeUnit.toMillis(i))));
         }
         return arr;
     }

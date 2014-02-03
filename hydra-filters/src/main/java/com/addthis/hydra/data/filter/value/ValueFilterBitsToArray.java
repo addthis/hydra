@@ -81,7 +81,7 @@ public class ValueFilterBitsToArray extends ValueFilter {
             for (int i = 0; i < 64; i++) {
                 if (mask == 0 || (mask & bit) == bit) {
                     if ((bits & bit) == bit) {
-                        arr.append(ValueFactory.create(i));
+                        arr.add(ValueFactory.create(i));
                     }
                 }
                 bit <<= 1;

@@ -30,6 +30,8 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 
+import com.google.common.primitives.Doubles;
+
 public class BundleCalculator {
 
     private static enum Operation {
@@ -221,7 +223,7 @@ public class BundleCalculator {
                     stack.push(op.val.asNumber());
                     break;
                 case OP_COLVAL:
-                    stack.push(getSourceColumnBinder(line).getColumn(line, op.val.asLong().getLong().intValue()).asNumber());
+                    stack.push(getSourceColumnBinder(line).getColumn(line, (int) op.val.asLong().getLong()).asNumber());
                     break;
                 case OP_DUP:
                     stack.push(stack.peek());
@@ -263,7 +265,7 @@ public class BundleCalculator {
                 case OP_DEQ:
                     v1 = stack.pop();
                     v2 = stack.pop();
-                    if (!(v2.asDouble().getDouble().equals(v1.asDouble().getDouble()))) {
+                    if (v2.asDouble().getDouble() != v1.asDouble().getDouble()) {
                         return null;
                     }
                     break;
@@ -298,7 +300,7 @@ public class BundleCalculator {
                 case OP_EQ:
                     v1 = stack.pop();
                     v2 = stack.pop();
-                    if (!(v2.asLong().getLong().equals(v1.asLong().getLong()))) {
+                    if (v2.asLong().getLong() != v1.asLong().getLong()) {
                         return null;
                     }
                     break;
@@ -312,7 +314,7 @@ public class BundleCalculator {
                     getSourceColumnBinder(line).appendColumn(line, stack.pop());
                     break;
                 case OP_SET:
-                    int col = stack.pop().asLong().getLong().intValue();
+                    int col = (int) stack.pop().asLong().getLong();
                     ValueNumber val = stack.pop();
                     if (col < 0 || col > maxcol) {
                         getSourceColumnBinder(line).appendColumn(line, val);

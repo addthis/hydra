@@ -124,7 +124,7 @@ public abstract class ValueFilter implements Codec.Codable {
                 if (out == null) {
                     out = ValueFactory.createArray(in.size());
                 }
-                out.append(val);
+                out.add(val);
             }
         }
         return out;

@@ -164,7 +164,7 @@ public class SpawnFormattedLogger {
                 ValueArray taskMeanRates = ValueFactory.createArray(taskCount);
                 for (int i = 0; i < taskCount; i++) {
                     JobTask task = job.getTask(i);
-                    taskMeanRates.append(ValueFactory.create(task.getMeanRate()));
+                    taskMeanRates.add(ValueFactory.create(task.getMeanRate()));
                 }
                 bundle.setValue(format.getField("TASK_AVG_RATES"), taskMeanRates);
                 bundleLog.send(bundle);

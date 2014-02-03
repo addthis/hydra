@@ -152,7 +152,7 @@ public class ValueFilterSplit extends ValueFilter {
         } else {
             ValueArray arr = ValueFactory.createArray(token.length);
             for (String v : token) {
-                arr.append(filterValue(ValueFactory.create(v)));
+                arr.add(filterValue(ValueFactory.create(v)));
             }
             return arr;
         }

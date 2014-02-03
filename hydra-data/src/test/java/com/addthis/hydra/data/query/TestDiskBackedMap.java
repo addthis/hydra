@@ -113,16 +113,16 @@ public class TestDiskBackedMap {
         MergedRow row2 = diskBackedMap.get("row1");
 
         // Compare the values
-        assertTrue(row1.mergedRow[0].asDouble().getDouble().doubleValue() == row2.mergedRow[0].asDouble().getDouble().doubleValue());
+        assertTrue(row1.mergedRow[0].asDouble().getDouble() == row2.mergedRow[0].asDouble().getDouble());
         assertTrue(row1.mergedRow[1].asString().getString().equals(row2.mergedRow[1].asString().getString()));
-        assertTrue(row1.mergedRow[2].asLong().getLong().longValue() == row2.mergedRow[2].asLong().getLong().longValue());
+        assertTrue(row1.mergedRow[2].asLong().getLong() == row2.mergedRow[2].asLong().getLong());
         byte[] row2bytes = row1.mergedRow[3].asBytes().getBytes();
         assertTrue(row2bytes.length == 4);
         assertTrue(row2bytes[0] == 5);
         assertTrue(row2bytes[1] == 6);
         assertTrue(row2bytes[2] == 7);
         assertTrue(row2bytes[3] == 100);
-        assertTrue(row1.mergedRow[4].asLong().getLong().longValue() == row2.mergedRow[4].asLong().getLong().longValue());
+        assertTrue(row1.mergedRow[4].asLong().getLong() == row2.mergedRow[4].asLong().getLong());
 
         try {
             diskBackedMap.close();

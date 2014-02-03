@@ -190,8 +190,8 @@ public class OpString extends AbstractRowOp {
                     stack.push(ValueFactory.create(stack.pop().toString().concat(rval.toString())));
                     break;
                 case OP_RANGE:
-                    int last = stack.pop().asLong().getLong().intValue();
-                    int first = stack.pop().asLong().getLong().intValue();
+                    int last = (int) stack.pop().asLong().getLong();
+                    int first = (int) stack.pop().asLong().getLong();
                     String str = stack.pop().toString();
                     int len = str.length();
                     if (len == 0) {
@@ -213,20 +213,20 @@ public class OpString extends AbstractRowOp {
                     stack.push(ValueFactory.create(str.substring(first, last)));
                     break;
                 case OP_SPLIT:
-                    int pos = stack.pop().asLong().getLong().intValue();
+                    int pos = (int) stack.pop().asLong().getLong();
                     String sep = stack.pop().toString();
                     str = stack.pop().toString();
                     String seg[] = Strings.splitArray(str, sep);
                     stack.push(ValueFactory.create(seg[pos]));
                     break;
                 case OP_COLVAL:
-                    stack.push(getSourceColumnBinder(row).getColumn(row, op.val.asLong().getLong().intValue()));
+                    stack.push(getSourceColumnBinder(row).getColumn(row, (int) op.val.asLong().getLong()));
                     break;
                 case OP_CONST:
                     stack.push(op.val);
                     break;
                 case OP_SET:
-                    int col = stack.pop().asLong().getLong().intValue();
+                    int col = (int) stack.pop().asLong().getLong();
                     ValueObject val = stack.pop();
                     if (col < 0 || col > maxcol) {
                         getSourceColumnBinder(row).appendColumn(row, val);
