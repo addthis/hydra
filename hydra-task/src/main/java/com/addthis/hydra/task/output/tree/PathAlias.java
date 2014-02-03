@@ -127,7 +127,7 @@ public class PathAlias extends PathKeyValue {
         }
         String p[] = new String[path.length];
         for (int i = 0; i < p.length; i++) {
-            p[i] = ValueUtil.asNativeString(path[i].getPathValue(state));
+            p[i] = ValueUtil.asNativeString(path[i].getFilteredValue(state));
         }
         DataTreeNode alias = null;
         if (peer) {
