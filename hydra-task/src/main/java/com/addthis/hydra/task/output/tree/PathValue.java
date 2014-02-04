@@ -75,6 +75,9 @@ public class PathValue extends PathElement {
     protected boolean create = true;
 
     @Codec.Set(codable = true)
+    protected boolean once;
+
+    @Codec.Set(codable = true)
     protected boolean delete;
 
     @Codec.Set(codable = true)
@@ -219,6 +222,10 @@ public class PathValue extends PathElement {
         boolean isnew = state.getAndClearLastWasNew();
         /** can be null if parent is deleted by another thread or if create == false */
         if (child == null) {
+            return 0;
+        }
+        /* bail if only new nodes are required */
+        if (once && (!isnew || child.getCounter() >= 1)) {
             return 0;
         }
         /** child node accounting and custom data updates */
