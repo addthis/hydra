@@ -265,8 +265,8 @@ public class JobAlert implements Codec.Codable {
             case ON_COMPLETE:
                 return job.getState().equals(JobState.IDLE);
             case RUNTIME_EXCEEDED:
-                return (job.getState().equals(JobState.RUNNING) && (job.getSubmitTime() != null) &&
-                    ((currentTime - job.getSubmitTime()) > timeout * MINUTE));
+                return (job.getState().equals(JobState.RUNNING) && (job.getStartTime() != null) &&
+                    ((currentTime - job.getStartTime()) > timeout * MINUTE));
             case REKICK_TIMEOUT:
                 return (!job.getState().equals(JobState.RUNNING) && (job.getEndTime() != null) &&
                     ((currentTime - job.getEndTime()) > timeout * MINUTE));
