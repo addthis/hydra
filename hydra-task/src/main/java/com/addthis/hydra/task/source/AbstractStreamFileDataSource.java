@@ -21,8 +21,9 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -223,8 +224,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     private final ListBundleFormat bundleFormat = new ListBundleFormat();
     private final Bundle termBundle = new ListBundle(bundleFormat);
     private final SourceWorker sourceWorker = new SourceWorker();
-    private final ExecutorService workerThreadPool =
-            Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("streamSourceWorker-%d").build());
+    private final ExecutorService workerThreadPool = new ThreadPoolExecutor(
+            0, Integer.MAX_VALUE, 5L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),
+            new ThreadFactoryBuilder().setNameFormat("streamSourceWorker-%d").build());
 
     /* metrics */
     private Histogram queueSizeHisto = Metrics.newHistogram(getClass(), "queueSizeHisto");
