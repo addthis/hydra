@@ -398,6 +398,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         pushTermBundle();
         if (runningThreadCountDownLatch != null) {
             boolean success = false;
+            workerThreadPool.shutdown();
             log.info("Waiting up to {} seconds for outstanding threads to complete.",
                     DEFAULT_COUNTDOWN_LATCH_TIMEOUT);
             try {
