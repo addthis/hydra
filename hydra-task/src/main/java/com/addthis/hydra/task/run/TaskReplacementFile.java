@@ -36,7 +36,7 @@ public class TaskReplacementFile implements TaskRunner.TaskStringReplacement {
         if (atpos >= 0 && cpos > atpos) {
             String path = input.substring(atpos + 7, cpos);
             input = input.replace("@file(" + path + ")", Bytes.toString(Files.read(new File(path))));
-            log.warn("found " + path);
+            log.info("found " + path);
         }
         return input;
     }
