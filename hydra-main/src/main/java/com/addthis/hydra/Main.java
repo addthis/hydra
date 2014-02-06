@@ -61,16 +61,16 @@ public class Main {
     private static final String METRICS_REPORTER_CONFIG_FILE = Parameter.value("metrics.reporter.config", "");
     private static final boolean GANGLIA_SHORT_NAMES = Parameter.boolValue("ganglia.useShortNames", false);
 
-    public static final Map<String, Class> cmap = new HashMap<>();
+    public static final Map<String, String> cmap = new HashMap<>();
 
     @SuppressWarnings("unused")
-    public static void registerFilter(String name, Class clazz) {
+    public static void registerFilter(String name, String clazz) {
         cmap.put(name, clazz);
     }
 
     /** register types */
     static {
-        PluginReader.registerPlugin("-executables.classmap", cmap, Object.class);
+        PluginReader.registerLazyPlugin("-executables.classmap", cmap);
     }
 
 
@@ -135,10 +135,16 @@ public class Main {
                         System.out.println(j.toString());
                         break;
                     default:
-                        Class clazz = cmap.get(args[0]);
-                        if (clazz != null) {
-                            Method m = clazz.getDeclaredMethod("main", String[].class);
-                            m.invoke(null, (Object) cutargs(args));
+                        String className = cmap.get(args[0]);
+                        if (className != null) {
+                            Class clazz = PluginReader.loadClass(
+                                    "-executables.classmap", args[0], className, Object.class);
+                            if (clazz != null) {
+                                Method m = clazz.getDeclaredMethod("main", String[].class);
+                                m.invoke(null, (Object) cutargs(args));
+                            } else {
+                                usage();
+                            }
                         } else {
                             usage();
                         }
