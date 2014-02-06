@@ -39,12 +39,12 @@ public abstract class PreLoader {
             String val = (String)e.getValue();
             try {
                 // form --> hydra-preload-[groupkey]-[class]=[jarurl]
-                if (key.startsWith("hydra-preload-")) {
+                if (key.startsWith("hydra-preload")) {
                     String args[] = Strings.splitArray(key,"-");
-                    if (args.length < 3) {
+                    if (args.length < 2) {
                         continue;
                     }
-                    key = args[2];
+                    key = args.length > 2 ? args[2] : "default";
                     if (args.length > 3) {
                         execSet.put(key, args[3]);
                     }
@@ -56,16 +56,16 @@ public abstract class PreLoader {
                     urls.add(new URL(val));
                 }
                 // form --> hydra-preexec-[groupkey]=[classname]
-                if (key.startsWith("hydra-preexec-")) {
+                if (key.startsWith("hydra-preexec")) {
                     String args[] = Strings.splitArray(key,"-");
-                    if (args.length < 3) {
+                    if (args.length < 2) {
                         continue;
                     }
-                    key = args[2];
+                    key = args.length > 2 ? args[2] : "default";
                     execSet.put(key, val);
                 }
             } catch (Exception ex) {
-                log.debug("bad url", ex);
+                log.error("bad url", ex);
             }
         }
         for (Map.Entry<String, ArrayList<URL>> e : urlSet.entrySet()) {
@@ -73,10 +73,15 @@ public abstract class PreLoader {
             ArrayList<URL> urls = e.getValue();
             URL array[] = urls.toArray(new URL[urls.size()]);
             URLClassLoader cl = new URLClassLoader(array);
+            String execClass = execSet.get(key);
+            if (execClass == null) {
+                log.error("missing exec class for "+key);
+                continue;
+            }
             try {
-                ((PreLoader)(cl.loadClass(execSet.get(key)).newInstance())).exec();
+                ((PreLoader)(cl.loadClass(execClass).newInstance())).exec();
             } catch (Exception ex) {
-                log.debug("failed init", ex);
+                log.error("failed init", ex);
             }
         }
     }
