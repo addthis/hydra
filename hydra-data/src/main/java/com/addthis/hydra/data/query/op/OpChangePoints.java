@@ -57,10 +57,10 @@ public class OpChangePoints extends AbstractTableOp {
             minZScore = opt.length >= 5 ? Double.parseDouble(opt[4]) : 1.5;
             inactiveThreshold = opt.length >= 6 ? Integer.parseInt(opt[5]) : 1;
             windowSize = opt.length >= 7 ? Integer.parseInt(opt[6]) : 5;
-            log.warn("Initiated changepoints with parameters " +
+            log.info("Initiated changepoints with parameters " +
                      Strings.join(new Object[]{valColumn, minChange, minRatio, minZScore, inactiveThreshold}, ","));
         } catch (Exception ex)  {
-            log.warn("", ex);
+            log.error("", ex);
         }
     }
 

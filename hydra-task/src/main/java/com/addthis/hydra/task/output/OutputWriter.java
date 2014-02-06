@@ -205,12 +205,12 @@ public class OutputWriter extends AbstractOutputWriter {
                 close(outputWrapper);
                 closed++;
             } catch (Exception e) {
-                log.warn("Error closing output " + outputWrapper.toString(), e);
+                log.error("Error closing output " + outputWrapper.toString(), e);
                 } finally {
                 outputWrapper.unlock();
             }
         }
-        log.warn("closed " + closed + " open outputs");
+        log.info("closed " + closed + " open outputs");
 
     }
 
@@ -263,8 +263,8 @@ public class OutputWriter extends AbstractOutputWriter {
         try {
             Files.write(modifiedFileTracker, Bytes.toBytes(fileName + "\n"), true);
         } catch (IOException e) {
-            log.warn("IOException saving modified files", e);
-            }
+            log.error("IOException saving modified files", e);
+        }
     }
 
     private boolean close(OutputWrapper outputWrapper) {

@@ -176,7 +176,7 @@ public class PageDB<V extends Codec.Codable> implements IPageDB<DBKey, V> {
             }
             return map;
         } catch (Exception e) {
-            log.warn("failed to dump PageDB to Map, returning empty (expected for uninitialized db)", e);
+            log.error("failed to dump PageDB to Map, returning empty (expected for uninitialized db)", e);
             return new TreeMap<>();
         }
     }

@@ -53,12 +53,12 @@ public class SpawnFormattedLogger {
     private final DataOutputTypeList bundleLog;
 
     private SpawnFormattedLogger() {
-        log.warn("Creating the null-based spawn formatted logger - no output emitted.");
+        log.info("Creating the null-based spawn formatted logger - no output emitted.");
         bundleLog = null;
     }
 
     private SpawnFormattedLogger(File file) {
-        log.warn("Creating the file-based spawn formatted logger.");
+        log.info("Creating the file-based spawn formatted logger.");
         DataOutputTypeList newOutputSink = null;
         try {
             String absPath = file.getAbsolutePath();
@@ -69,7 +69,7 @@ public class SpawnFormattedLogger {
             newOutputSink = new DataOutputFile().setWriter(writer).setPath(LOG_PATH);
             newOutputSink.init(null);
         } catch (Exception ex)  {
-            log.warn("", ex);
+            log.error("", ex);
         } finally {
             bundleLog = newOutputSink;
         }
@@ -132,7 +132,7 @@ public class SpawnFormattedLogger {
                 }
                 bundleLog.send(bundle);
             } catch (Exception ex)  {
-                log.warn("", ex);
+                log.error("", ex);
             }
         }
     }
@@ -169,7 +169,7 @@ public class SpawnFormattedLogger {
                 bundle.setValue(format.getField("TASK_AVG_RATES"), taskMeanRates);
                 bundleLog.send(bundle);
             } catch (Exception ex)  {
-                log.warn("", ex);
+                log.error("", ex);
             }
         }
     }
