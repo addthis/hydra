@@ -13,10 +13,16 @@
  */
 package com.addthis.hydra.query;
 
+import com.addthis.hydra.util.PreLoader;
+
 /**
  * command-line/jar entry-point to start either query master or worker.
  */
 public class Main {
+
+    static {
+        PreLoader.find();
+    }
 
     public static void main(String args[]) throws Exception {
         if (args.length > 0) {
