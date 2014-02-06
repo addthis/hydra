@@ -348,6 +348,7 @@ public final class Job implements IJob, Codable {
                         setTaskState(task, JobTaskState.IDLE, true);
                     }
                 }
+                calculateJobState(true);
             } else if (enabled && state == JobState.DEGRADED.getValue()) {
                 // Clear degraded state by recalculating
                 calculateJobState(true);
