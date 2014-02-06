@@ -71,8 +71,8 @@ public class Main {
 
     /** register types */
     static {
-        PluginReader.registerPlugin("-executables.classmap", cmap, Object.class);
         PreLoader.find();
+        PluginReader.registerPlugin("-executables.classmap", cmap, Object.class);
     }
 
 
