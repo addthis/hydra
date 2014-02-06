@@ -24,13 +24,13 @@ import com.addthis.hydra.data.tree.TreeNode;
 /**
  * phantom node created for reporting
  */
-class VirtualTreeNode extends TreeNode {
+public final class VirtualTreeNode extends TreeNode {
 
-    VirtualTreeNode(final String name, final long hits) {
+    public VirtualTreeNode(final String name, final long hits) {
         this(name, hits, null);
     }
 
-    VirtualTreeNode(final String name, final long hits, final VirtualTreeNode children[]) {
+    public VirtualTreeNode(final String name, final long hits, final VirtualTreeNode children[]) {
         this.name = name;
         this.hits = hits;
         this.nodes = children != null ? children.length : 0;
@@ -84,7 +84,7 @@ class VirtualTreeNode extends TreeNode {
         return null;
     }
 
-    class ITER implements ClosableIterator<DataTreeNode> {
+    private class ITER implements ClosableIterator<DataTreeNode> {
 
         int pos;
         String end;

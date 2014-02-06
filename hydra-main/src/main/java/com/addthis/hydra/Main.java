@@ -41,6 +41,7 @@ import com.addthis.hydra.query.QueryServer;
 import com.addthis.hydra.query.util.QueryChannelUtil;
 import com.addthis.hydra.task.run.TaskRunner;
 import com.addthis.hydra.task.util.BundleStreamPeeker;
+import com.addthis.hydra.util.PreLoader;
 import com.addthis.maljson.JSONObject;
 import com.addthis.metrics.reporter.config.ReporterConfig;
 
@@ -70,6 +71,7 @@ public class Main {
 
     /** register types */
     static {
+        PreLoader.find();
         PluginReader.registerPlugin("-executables.classmap", cmap, Object.class);
     }
 
