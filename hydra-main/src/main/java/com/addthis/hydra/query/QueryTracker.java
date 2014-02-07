@@ -355,7 +355,10 @@ public class QueryTracker {
             }
 
             try {
-                queryMeter.update(runTime, TimeUnit.MILLISECONDS);
+                // If a query never started (generally due to an error with file references) don't record its runtime
+                if (startTime > 0) {
+                    queryMeter.update(runTime, TimeUnit.MILLISECONDS);
+                }
 
                 if (error != null) {
                     log(new StringMapHelper()
