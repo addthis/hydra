@@ -23,6 +23,7 @@ import com.addthis.hydra.data.query.QueryElement;
 import com.addthis.hydra.data.query.QueryEngine;
 import com.addthis.hydra.data.query.QueryOp;
 import com.addthis.hydra.data.query.QueryOpProcessor;
+import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.TreeNodeList;
 import com.addthis.hydra.task.output.ValuesOutput;
@@ -126,7 +127,7 @@ public class PathOutput extends PathElement {
     class OutputOp extends AbstractTableOp {
 
         public OutputOp(QueryOpProcessor processor) {
-            super(processor);
+            super(processor, processor.getQueryStatusObserver());
         }
 
         @Override

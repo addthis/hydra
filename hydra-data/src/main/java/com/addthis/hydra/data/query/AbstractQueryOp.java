@@ -59,9 +59,13 @@ public abstract class AbstractQueryOp implements QueryOp {
     }
 
     @Override
-    public void sendTable(DataTable table) {
+    public void sendTable(DataTable table, QueryStatusObserver queryStatusObserver) {
         for (Bundle row : table) {
-            send(row);
+            if (queryStatusObserver.queryCompleted || queryStatusObserver.queryCancelled) {
+                break;
+            } else {
+                send(row);
+            }
         }
         sendComplete();
     }

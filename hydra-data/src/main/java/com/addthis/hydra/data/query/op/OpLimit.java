@@ -68,10 +68,9 @@ public class OpLimit extends AbstractQueryOp {
 
     @Override
     public void send(Bundle row) throws DataChannelError {
-        if (queryStatusObserver.queryCompleted ) {
+        if (queryStatusObserver.queryCompleted) {
             // Someone is attempting to send data even after we marked the query completed to true flag. This means
             // they are doing work and sending us bundles. Throw an exception because that needs to be checked.
-            // TODO: death to queryStatusObserver, we need to be able to stop new bundles from coming without exceptions
             log.trace("Limit reached, sendComplete was called.");
             return;
         }
