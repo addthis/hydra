@@ -16,6 +16,7 @@ package com.addthis.hydra.data.query.op;
 import com.addthis.bundle.table.DataTable;
 import com.addthis.hydra.data.query.AbstractTableOp;
 import com.addthis.hydra.data.query.QueryOpProcessor;
+import com.addthis.hydra.data.query.QueryStatusObserver;
 
 
 /**
@@ -33,8 +34,8 @@ import com.addthis.hydra.data.query.QueryOpProcessor;
  */
 public class OpMedian extends AbstractTableOp {
 
-    public OpMedian(QueryOpProcessor processor) {
-        super(processor);
+    public OpMedian(QueryOpProcessor processor, QueryStatusObserver queryStatusObserver) {
+        super(processor, queryStatusObserver);
     }
 
     @Override

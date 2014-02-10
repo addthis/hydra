@@ -28,9 +28,11 @@ public abstract class AbstractTableOp extends AbstractQueryOp implements QueryTa
     protected DataTable table;
 
     private final DataTableFactory tableFactory;
+    private final QueryStatusObserver queryStatusObserver;
 
-    public AbstractTableOp(DataTableFactory tableFactory) {
+    public AbstractTableOp(DataTableFactory tableFactory, QueryStatusObserver queryStatusObserver) {
         this.tableFactory = tableFactory;
+        this.queryStatusObserver = queryStatusObserver;
     }
 
     public abstract DataTable tableOp(DataTable table);
@@ -66,7 +68,7 @@ public abstract class AbstractTableOp extends AbstractQueryOp implements QueryTa
     private void complete() {
         QueryOp next = getNext();
         if (next != null) {
-            next.sendTable(getTable());
+            next.sendTable(getTable(), queryStatusObserver);
         }
     }
 }

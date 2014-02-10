@@ -20,6 +20,7 @@ import com.addthis.bundle.table.DataTableFactory;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractTableOp;
+import com.addthis.hydra.data.query.QueryStatusObserver;
 
 
 /**
@@ -30,8 +31,8 @@ import com.addthis.hydra.data.query.AbstractTableOp;
  */
 public class OpTranspose extends AbstractTableOp {
 
-    public OpTranspose(DataTableFactory tableFactory) {
-        super(tableFactory);
+    public OpTranspose(DataTableFactory tableFactory, QueryStatusObserver queryStatusObserver) {
+        super(tableFactory, queryStatusObserver);
     }
 
     @Override
