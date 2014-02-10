@@ -254,7 +254,7 @@ public class Spawn implements Codec.Codable {
     private ChoreWatcher choreWatcher;
     private SpawnBalancer balancer;
     private SpawnQueuesByPriority taskQueuesByPriority = new SpawnQueuesByPriority();
-    private int lastQueueSize = 0;
+    private volatile int lastQueueSize = 0;
     private final Lock jobLock = new ReentrantLock();
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     private final LinkedBlockingQueue<String> jobUpdateQueue = new LinkedBlockingQueue<>();
@@ -824,11 +824,7 @@ public class Spawn implements Codec.Codable {
     }
 
     public int getTaskQueuedCount() {
-        return taskQueuesByPriority.getTaskQueuedCount();
-    }
-
-    public int getTaskQueuedCount(int priority) {
-        return taskQueuesByPriority.getTaskQueuedCount(priority);
+        return lastQueueSize;
     }
 
     public Job getJob(String jobUUID) {
