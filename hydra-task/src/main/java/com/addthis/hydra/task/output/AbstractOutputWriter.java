@@ -113,7 +113,7 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
                     new ScheduledThreadPoolExecutor(1,
                             new ThreadFactoryBuilder().setNameFormat("AbstractOutputWriterCleanUpThread-%d").build()));
     private QueueWriter queueWriter;
-    private volatile AtomicBoolean exiting = new AtomicBoolean(false);
+    private final AtomicBoolean exiting = new AtomicBoolean(false);
 
     public final void writeLine(String file, Bundle nextLine) {
         if (stopped.get()) {
@@ -231,7 +231,7 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
                         tupleProcessed = buffer.offer(tuple);
                     }
                 } catch (InterruptedException e) {
-                    log.warn("error writing to buffer: " + e, e);
+                    log.error("error writing to buffer: ", e);
                     tupleProcessed = true;
                 }
                 if (!tupleProcessed) {
@@ -239,7 +239,7 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
                         List<WriteTuple> outputList = drainOutputBundles(maxBundles);
                         dequeueWrite(outputList);
                     } catch (IOException e) {
-                        log.warn("error dequeuing write: " + e, e);
+                        log.error("error dequeuing write: ", e);
                         tupleProcessed = true;
                     }
                 }
@@ -269,8 +269,8 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
                     List<WriteTuple> outputList = drainOutputBundles(size());
                     dequeueWrite(outputList);
                 } catch (IOException e) {
-                    log.warn("error draining queue: " + e, e);
-                    }
+                    log.error("error draining queue: ", e);
+                }
             }
             while (iterate && size() > 0);
         }
@@ -320,8 +320,8 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
                     }
                     while (outstandingBundles > maxBundles);
                 } catch (Exception ex) {
-                    log.warn("output writer disk flush error : " + ex, ex);
-                    }
+                    log.error("output writer disk flush error : ", ex);
+                }
             }
         }
 
@@ -340,7 +340,7 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
                 log.warn("Waited 30 seconds for write maintenance termination but it did not finish");
             }
         } catch (InterruptedException ie) {
-            log.warn("Thread interrupted while wating for write maintenance termination");
+            log.warn("Thread interrupted while waiting for write maintenance termination");
         }
     }
 
@@ -351,7 +351,7 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
             try {
                 diskFlushThreadArray[i].join();
             } catch (InterruptedException ex) {
-                log.warn("shutdown disk flush threads error : " + ex, ex);
+                log.error("shutdown disk flush threads error : ", ex);
                 }
         }
     }

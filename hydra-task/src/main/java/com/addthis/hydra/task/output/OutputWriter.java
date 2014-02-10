@@ -206,7 +206,7 @@ public class OutputWriter extends AbstractOutputWriter {
                 closed++;
             } catch (Exception e) {
                 log.error("Error closing output " + outputWrapper.toString(), e);
-                } finally {
+            } finally {
                 outputWrapper.unlock();
             }
         }
