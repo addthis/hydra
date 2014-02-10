@@ -133,6 +133,8 @@ public final class Job implements IJob, Codable {
     @Codec.Set(codable = true)
     private boolean dontAutoBalanceMe;
     @Codec.Set(codable = true)
+    private boolean dontDeleteMe;
+    @Codec.Set(codable = true)
     private HashMap<String, String> properties;
     @Codec.Set(codable = true)
     private boolean hadMoreData;
@@ -168,7 +170,7 @@ public final class Job implements IJob, Codable {
         this.createTime = JitterClock.globalTime();
         this.endTime = createTime;
         this.dontAutoBalanceMe = false;
-
+        this.dontDeleteMe = false;
         this.config = "";
         this.queryConfig = new JobQueryConfig();
     }
@@ -216,6 +218,7 @@ public final class Job implements IJob, Codable {
         this.queryConfig = job.getQueryConfig();
         this.submitCommand = job.getSubmitCommand();
         this.dontAutoBalanceMe = job.getDontAutoBalanceMe();
+        this.dontDeleteMe = job.getDontDeleteMe();
         this.maxSimulRunning = job.getMaxSimulRunning();
         this.minionType = job.getMinionType();
         this.wasStopped = job.getWasStopped();
@@ -223,87 +226,107 @@ public final class Job implements IJob, Codable {
         setEnabled(job.isEnabled());
     }
 
+    @Override
     public String getId() {
         return id;
     }
 
+    @Override
     public String getOwner() {
         return owner;
     }
 
+    @Override
     public void setOwner(String owner) {
         this.owner = owner;
     }
 
+    @Override
     public String getCreator() {
         return creator;
     }
 
+    @Override
     public long getCreateTime() {
         return createTime;
     }
 
+    @Override
     public String getDescription() {
         return description;
     }
 
+    @Override
     public void setDescription(String description) {
         this.description = description;
     }
 
+    @Override
     public String getCommand() {
         return command;
     }
 
+    @Override
     public void setCommand(String command) {
         this.command = command;
     }
 
+    @Override
     public String getKillSignal() {
         return killSignal;
     }
 
+    @Override
     public void setKillSignal(String killSignal) {
         this.killSignal = killSignal;
     }
 
+    @Override
     public int getPriority() {
         return priority;
     }
 
+    @Override
     public void setPriority(int priority) {
         this.priority = priority;
     }
 
+    @Override
     public boolean getStomp() {
         return stomp;
     }
 
+    @Override
     public void setStomp(boolean stomp) {
         this.stomp = stomp;
     }
 
+    @Override
     public Long getSubmitTime() {
         return submitTime;
     }
 
+    @Override
     public void setSubmitTime(long submitTime) {
         this.submitTime = submitTime;
     }
 
+    @Override
     public Long getStartTime() {
         return startTime;
     }
 
+    @Override
     public void setStartTime(Long startTime) {
         this.startTime = startTime;
     }
 
-
+    @Override
     public Long getEndTime() {
         return endTime;
     }
 
+    @Override
     public void setEndTime(Long endTime) {
         this.endTime = endTime;
     }
@@ -315,26 +338,32 @@ public final class Job implements IJob, Codable {
         endTime = finishTime;
     }
 
+    @Override
     public Long getRekickTimeout() {
         return rekickTimeout;
     }
 
+    @Override
     public void setRekickTimeout(Long rekick) {
         rekickTimeout = rekick != null && rekick > 0 ? rekick : null;
     }
 
+    @Override
     public Long getMaxRunTime() {
         return maxRunTime;
     }
 
+    @Override
     public void setMaxRunTime(Long maxRunTime) {
         this.maxRunTime = maxRunTime;
     }
 
+    @Override
     public boolean isEnabled() {
         return !disabled;
     }
 
+    @Override
     public boolean setEnabled(boolean enabled) {
         if (enabled == disabled) {
             disabled = !enabled;
@@ -358,10 +387,12 @@ public final class Job implements IJob, Codable {
         return false;
     }
 
+    @Override
     public Collection<JobParameter> getParameters() {
         return parameters;
     }
 
+    @Override
     public void setParameters(Collection<JobParameter> parameters) {
         if (parameters != null) {
             this.parameters = new ArrayList<>(parameters.size());
@@ -371,42 +402,52 @@ public final class Job implements IJob, Codable {
         }
     }
 
+    @Override
     public String getConfig() {
         return config;
     }
 
+    @Override
     public void setConfig(String config) {
         this.config = config;
     }
 
+    @Override
     public String getOnCompleteURL() {
         return onComplete;
     }
 
+    @Override
     public void setOnCompleteURL(String url) {
         this.onComplete = url;
     }
 
+    @Override
     public String getOnErrorURL() {
         return onError;
     }
 
+    @Override
     public void setOnErrorURL(String url) {
         this.onError = url;
     }
 
+    @Override
     public int getBackups() {
         return backups;
     }
 
+    @Override
     public void setBackups(int backups) {
         this.backups = backups;
     }
 
+    @Override
     public int getReplicas() {
         return replicas;
     }
 
+    @Override
     public void setReplicas(int replicas) {
         this.replicas = replicas;
     }
@@ -421,18 +462,22 @@ public final class Job implements IJob, Codable {
         this.readOnlyReplicas = readOnlyReplicas;
     }
 
+    @Override
     public int getRunCount() {
         return runCount;
     }
 
+    @Override
     public int incrementRunCount() {
         return ++runCount;
     }
 
+    @Override
     public long getRunTime() {
         return runTime;
     }
 
+    @Override
     public JobState getState() {
         JobState jobState = JobState.makeState(state);
         return jobState == null ? JobState.UNKNOWN : jobState;
@@ -454,6 +499,7 @@ public final class Job implements IJob, Codable {
         return this.alerts;
     }
 
+    @Override
     public boolean setState(JobState state) {
         return setState(state, false);
     }
@@ -481,6 +527,7 @@ public final class Job implements IJob, Codable {
         return nodes.size();
     }
 
+    @Override
     public synchronized JobTask getTask(int id) {
         if (nodes == null) {
             return null;
@@ -494,6 +541,7 @@ public final class Job implements IJob, Codable {
         return null;
     }
 
+    @Override
     public synchronized List<JobTask> getCopyOfTasks() {
         if (nodes == null) {
             nodes = new ArrayList<>();
@@ -501,6 +549,7 @@ public final class Job implements IJob, Codable {
         return ImmutableList.copyOf(nodes);
     }
 
+    @Override
     public synchronized void addTask(JobTask task) {
         if (nodes == null) {
             nodes = new ArrayList<>();
@@ -520,6 +569,7 @@ public final class Job implements IJob, Codable {
         }
     }
 
+    @Override
     public synchronized void setTasks(List<JobTask> tasks) {
         this.nodes = Lists.newArrayList(tasks);
         recountActiveTasks();
@@ -529,34 +579,42 @@ public final class Job implements IJob, Codable {
         return countActiveTasks;
     }
 
+    @Override
     public JobQueryConfig getQueryConfig() {
         return queryConfig;
     }
 
+    @Override
     public void setQueryConfig(JobQueryConfig queryConfig) {
         this.queryConfig = queryConfig;
     }
 
+    @Override
     public JobCommand getSubmitCommand() {
         return submitCommand;
     }
 
+    @Override
     public void setSubmitCommand(JobCommand submitCommand) {
         this.submitCommand = submitCommand;
     }
 
+    @Override
     public boolean getStrictReplicas() {
         return strictReplicas;
     }
 
+    @Override
     public void setStrictReplicas(boolean strictReplicas) {
         this.strictReplicas = strictReplicas;
     }
 
+    @Override
     public HashMap<String, String> getProperties() {
         return properties;
     }
 
+    @Override
     public void setProperties(HashMap<String, String> properties) {
         this.properties = properties;
     }
@@ -643,7 +701,6 @@ public final class Job implements IJob, Codable {
         }
     }
 
-
     public void errorTask(JobTask task, int errorCode) {
         setTaskState(task, JobTaskState.ERROR, true);
         task.setErrorCode(errorCode);
@@ -665,50 +722,70 @@ public final class Job implements IJob, Codable {
         return true;
     }
 
+    @Override
     public int getReplicationFactor() {
         return replicationFactor;
     }
 
+    @Override
     public void setReplicationFactor(int replicationFactor) {
         this.replicationFactor = replicationFactor;
     }
 
+    @Override
     public boolean getDontAutoBalanceMe() {
         return dontAutoBalanceMe;
     }
 
+    @Override
+    public void setDontDeleteMe(boolean dontDeleteMe) { this.dontDeleteMe = dontDeleteMe; }
+
+    @Override
+    public boolean getDontDeleteMe() {
+        return dontDeleteMe;
+    }
+
+    @Override
     public void setDontAutoBalanceMe(boolean dontAutoBalanceMe) {
         this.dontAutoBalanceMe = dontAutoBalanceMe;
     }
 
+    @Override
     public int getHourlyBackups() {
         return hourlyBackups;
     }
 
+    @Override
     public int getDailyBackups() {
         return dailyBackups;
     }
 
+    @Override
     public int getWeeklyBackups() {
         return weeklyBackups;
     }
 
+    @Override
     public int getMonthlyBackups() {
         return monthlyBackups;
     }
 
+    @Override
     public void setHourlyBackups(int hourlyBackups) {
         this.hourlyBackups = hourlyBackups;
     }
 
+    @Override
     public void setDailyBackups(int dailyBackups) {
         this.dailyBackups = dailyBackups;
     }
 
+    @Override
     public void setWeeklyBackups(int weeklyBackups) {
         this.weeklyBackups = weeklyBackups;
     }
 
+    @Override
     public void setMonthlyBackups(int monthlyBackups) {
         this.monthlyBackups = monthlyBackups;
     }
@@ -729,10 +806,12 @@ public final class Job implements IJob, Codable {
         return wasStopped;
     }
 
+    @Override
     public boolean getWasStopped() {
         return wasStopped;
     }
 
+    @Override
     public void setWasStopped(boolean wasStopped) {
         this.wasStopped = wasStopped;
     }
@@ -759,18 +838,22 @@ public final class Job implements IJob, Codable {
         }
     }
 
+    @Override
     public int getMaxSimulRunning() {
         return maxSimulRunning;
     }
 
+    @Override
     public void setMaxSimulRunning(int maxSimulRunning) {
         this.maxSimulRunning = maxSimulRunning;
     }
 
+    @Override
     public int getRetries() {
         return retries;
     }
 
+    @Override
     public void setRetries(int retries) {
         this.retries = retries;
     }
@@ -803,6 +886,7 @@ public final class Job implements IJob, Codable {
         return rv / (tasks.size());
     }
 
+    @Override
     public String getMinionType() {
         if (minionType == null) {
             minionType = Minion.getDefaultMinionType();
@@ -815,6 +899,7 @@ public final class Job implements IJob, Codable {
         return (endTime == null && getState() == JobState.IDLE) ? startTime : endTime;
     }
 
+    @Override
     public void setMinionType(String minionType) {
         this.minionType = minionType;
     }

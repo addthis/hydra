@@ -745,6 +745,7 @@ function(
                 'creator',
                 'dailyBackups',
                 'description',
+                'dontDeleteMe',
                 'dontAutoBalanceMe',
                 'hourlyBackups',
                 'maxRunTime',

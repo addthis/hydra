@@ -94,8 +94,12 @@
         </td>
     </tr>
     <tr class="row">
+        <td width="30%">Do not delete</td>
+        <td width="70%"><input name="dontDeleteMe" class="trackable" type="checkbox" <%=(job.dontDeleteMe?"checked='true'":"")%>></td>
+    </tr>
+    <tr class="row">
         <td width="30%">Do not automatically balance data</td>
-        <td width="70%"><input id="input15" name="dontAutoBalanceMe" class="trackable" type="checkbox" <%=(job.dontAutoBalanceMe?"checked='true'":"")%>></td>
+        <td width="70%"><input name="dontAutoBalanceMe" class="trackable" type="checkbox" <%=(job.dontAutoBalanceMe?"checked='true'":"")%>></td>
     </tr>
     <tr class="row">
         <th colspan="2">Query Settings</th>
@@ -115,7 +119,7 @@
     <tr class="row">
         <td width="30%">Enable querying on this job</td>
         <td width="70%">
-            <input id="input15" name="qc_canQuery" type="checkbox" class="trackable" <%=(job.qc_canQuery?"checked='true'":"")%>>
+            <input name="qc_canQuery" type="checkbox" class="trackable" <%=(job.qc_canQuery?"checked='true'":"")%>>
         </td>
     </tr>
     <tr class="row">

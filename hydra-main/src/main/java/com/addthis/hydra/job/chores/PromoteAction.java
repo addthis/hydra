@@ -92,7 +92,7 @@ public class PromoteAction extends SpawnAction {
         if (!oldHostUUID.equals(sourceHostUUID)) {
             task.replaceReplica(sourceHostUUID, oldHostUUID);
         }
-        spawn.deleteJob(taskKey.getJobUuid(), sourceHostUUID, taskKey.getNodeNumber(), false);
+        spawn.deleteTask(taskKey.getJobUuid(), sourceHostUUID, taskKey.getNodeNumber(), false);
     }
 
     public JobKey getTaskKey() {

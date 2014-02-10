@@ -109,9 +109,7 @@ import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -1205,8 +1203,8 @@ public class Spawn implements Codec.Codable {
             }
             if (assignment.delete()) {
                 log.warn("[job.reallocate] deleting job off " + assignment.getSourceUUID());
-                deleteJob(assignment.getTask().getJobUUID(), assignment.getSourceUUID(), assignment.getTask().getTaskID(), false);
-                deleteJob(assignment.getTask().getJobUUID(), assignment.getSourceUUID(), assignment.getTask().getTaskID(), true);
+                deleteTask(assignment.getTask().getJobUUID(), assignment.getSourceUUID(), assignment.getTask().getTaskID(), false);
+                deleteTask(assignment.getTask().getJobUUID(), assignment.getSourceUUID(), assignment.getTask().getTaskID(), true);
             } else if (assignment.promote()) {
                 log.warn("[job.reallocate] promoting " + task.getJobKey() + " on " + sourceHostID);
                 task.setHostUUID(sourceHostID);
@@ -1892,25 +1890,32 @@ public class Spawn implements Codec.Codable {
         return jobAlertRunner.getAlert(alertId);
     }
 
-    public boolean deleteJob(String jobUUID) throws Exception {
+    public static enum DeleteStatus {
+        SUCCESS, JOB_MISSING, JOB_DO_NOT_DELETE
+    }
+
+    public DeleteStatus deleteJob(String jobUUID) throws Exception {
         jobLock.lock();
         try {
-            Job job = spawnState.jobs.remove(jobUUID);
-            if (job != null) {
-                spawnState.jobDependencies.removeNode(jobUUID);
-                log.warn("[job.delete] " + job.getId() + " >> " + job.getCopyOfTasks());
-                spawnMQ.sendControlMessage(new CommandTaskDelete(HostMessage.ALL_HOSTS, job.getId(), null, job.getRunCount(), true));
-                sendJobUpdateEvent("job.delete", job);
-                if (jobConfigManager != null) {
-                    jobConfigManager.deleteJob(job.getId());
-                }
-                if (jobStore != null) {
-                    jobStore.delete(jobUUID);
-                }
-                return true;
-            } else {
-                return false;
+            Job job = getJob(jobUUID);
+            if (job == null) {
+                return DeleteStatus.JOB_MISSING;
             }
+            if (job.getDontDeleteMe()) {
+                return DeleteStatus.JOB_DO_NOT_DELETE;
+            }
+            spawnState.jobs.remove(jobUUID);
+            spawnState.jobDependencies.removeNode(jobUUID);
+            log.warn("[job.delete] " + job.getId() + " >> " + job.getCopyOfTasks());
+            spawnMQ.sendControlMessage(new CommandTaskDelete(HostMessage.ALL_HOSTS, job.getId(), null, job.getRunCount(), true));
+            sendJobUpdateEvent("job.delete", job);
+            if (jobConfigManager != null) {
+                jobConfigManager.deleteJob(job.getId());
+            }
+            if (jobStore != null) {
+                jobStore.delete(jobUUID);
+            }
+            return DeleteStatus.SUCCESS;
         } finally {
             jobLock.unlock();
         }
@@ -1930,7 +1935,7 @@ public class Spawn implements Codec.Codable {
      * @param isReplica Whether the task to be deleted is a replica or a live
      * @return True if the task is successfully removed
      */
-    public boolean deleteJob(String jobUUID, String hostUuid, Integer node, boolean isReplica) {
+    public boolean deleteTask(String jobUUID, String hostUuid, Integer node, boolean isReplica) {
         jobLock.lock();
         try {
             Job job = getJob(jobUUID);
