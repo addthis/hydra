@@ -394,6 +394,7 @@ public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Cod
         if (nodedb != null) {
             return false;
         }
+        ((ConcurrentTreeNode) node).requireNodeDB();
         nodedb = ((ConcurrentTreeNode) node).nodedb;
         markAlias();
         return true;
