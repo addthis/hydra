@@ -17,6 +17,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.table.DataTable;
 import com.addthis.hydra.data.query.AbstractTableOp;
 import com.addthis.hydra.data.query.QueryOpProcessor;
+import com.addthis.hydra.data.query.QueryStatusObserver;
 
 
 /**
@@ -30,8 +31,8 @@ import com.addthis.hydra.data.query.QueryOpProcessor;
  */
 public class OpReverse extends AbstractTableOp {
 
-    public OpReverse(QueryOpProcessor processor) {
-        super(processor);
+    public OpReverse(QueryOpProcessor processor, QueryStatusObserver queryStatusObserver) {
+        super(processor, queryStatusObserver);
     }
 
     @Override

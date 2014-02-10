@@ -42,6 +42,7 @@ import com.addthis.bundle.value.ValueSimple;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.bundle.value.ValueTranslationException;
 import com.addthis.hydra.data.query.AbstractQueryOp;
+import com.addthis.hydra.data.query.QueryStatusObserver;
 
 
 /**
@@ -115,10 +116,12 @@ public class OpPivot extends AbstractQueryOp {
     private final String rowkeys[];
     private final String colkeys[];
     private final String cellkey;
+    private final QueryStatusObserver queryStatusObserver;
 
-    public OpPivot(DataTableFactory tableFactory, String args) {
+    public OpPivot(DataTableFactory tableFactory, String args, QueryStatusObserver queryStatusObserver) {
         this.tableFactory = tableFactory;
         this.output = tableFactory.createTable(0);
+        this.queryStatusObserver = queryStatusObserver;
         String parg[] = Strings.splitArray(args, ",");
         rowkeys = Strings.splitArray(parg[0], ":");
         colkeys = Strings.splitArray(parg[1], ":");
@@ -307,7 +310,7 @@ public class OpPivot extends AbstractQueryOp {
                     sortstr = sumCol.getName() + ":n:d";
                     break;
             }
-            OpSort sort = new OpSort(tableFactory, sortstr);
+            OpSort sort = new OpSort(tableFactory, sortstr, queryStatusObserver);
             sort.sendTable(output);
             output = sort.getTable();
         }
@@ -319,7 +322,7 @@ public class OpPivot extends AbstractQueryOp {
         if (colop != null) {
             output.append(footer);
         }
-        getNext().sendTable(output);
+        getNext().sendTable(output, queryStatusObserver);
     }
 
     /**

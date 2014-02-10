@@ -18,8 +18,8 @@ import com.addthis.bundle.table.DataTable;
 
 public class ResultAccumulator extends AbstractTableOp {
 
-    public ResultAccumulator(QueryOpProcessor processor) {
-        super(processor);
+    public ResultAccumulator(QueryOpProcessor processor, QueryStatusObserver queryStatusObserver) {
+        super(processor, queryStatusObserver);
     }
 
     @Override

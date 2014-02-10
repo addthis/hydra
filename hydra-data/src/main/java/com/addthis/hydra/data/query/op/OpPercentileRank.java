@@ -24,6 +24,7 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractTableOp;
+import com.addthis.hydra.data.query.QueryStatusObserver;
 
 
 /**
@@ -50,8 +51,8 @@ public class OpPercentileRank extends AbstractTableOp {
     private int inputCol;
     private int outputCol;
 
-    public OpPercentileRank(DataTableFactory tableFactory, String args) {
-        super(tableFactory);
+    public OpPercentileRank(DataTableFactory tableFactory, String args, QueryStatusObserver queryStatusObserver) {
+        super(tableFactory, queryStatusObserver);
         try {
             String opt[] = args.split(":");
             if (opt.length == 2) {

@@ -26,6 +26,7 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractTableOp;
+import com.addthis.hydra.data.query.QueryStatusObserver;
 
 
 /**
@@ -63,8 +64,8 @@ public class OpSort extends AbstractTableOp {
     private final char[] type;
     private final char[] dir;
 
-    public OpSort(DataTableFactory factory, String args) {
-        super(factory);
+    public OpSort(DataTableFactory factory, String args, QueryStatusObserver queryStatusObserver) {
+        super(factory, queryStatusObserver);
 
         StringTokenizer st = new StringTokenizer(args, ":");
         cols = Strings.splitArray(st.hasMoreElements() ? st.nextToken() : "0", ",");

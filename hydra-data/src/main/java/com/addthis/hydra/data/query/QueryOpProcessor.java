@@ -226,7 +226,7 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
                         appendOp(new OpRoll.AvgOpRoll(args));
                         break;
                     case CHANGEPOINTS:
-                        appendOp(new OpChangePoints(this, args));
+                        appendOp(new OpChangePoints(this, args, queryStatusObserver));
                         break;
                     case COMPARE:
                         appendOp(new OpCompare(args));
@@ -244,10 +244,10 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
                         appendOp(new OpDePivot(this, args));
                         break;
                     case DIFF:
-                        appendOp(new OpDiff(this, args));
+                        appendOp(new OpDiff(this, args, queryStatusObserver));
                         break;
                     case DISORDER:
-                        appendOp(new OpDisorder(this, args));
+                        appendOp(new OpDisorder(this, args, queryStatusObserver));
                         break;
                     case DSORT:
                         appendOp(new OpDiskSort(args, TMP_SORT_DIR_STRING, queryStatusObserver));
@@ -259,7 +259,7 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
                         appendOp(new OpFold(args));
                         break;
                     case FREQUENCYTABLE:
-                        appendOp(new OpFrequencyTable(this, args));
+                        appendOp(new OpFrequencyTable(this, args, queryStatusObserver));
                         break;
                     case GATHER:
                         appendOp(new OpGather(args, memTip, rowTip, tempDir.getPath(), queryStatusObserver));
@@ -268,7 +268,7 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
                         appendOp(new OpHistogram(args));
                         break;
                     case DISTRIBUTION:
-                        appendOp(new OpPercentileDistribution(this, args));
+                        appendOp(new OpPercentileDistribution(this, args, queryStatusObserver));
                         break;
                     case LIMIT:
                         appendOp(new OpLimit(args, queryStatusObserver));
@@ -283,7 +283,7 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
                         appendOp(new OpRoll.MaxOpRoll(args));
                         break;
                     case MEDIAN:
-                        appendOp(new OpMedian(this));
+                        appendOp(new OpMedian(this, queryStatusObserver));
                         break;
                     case MERGE:
                         appendOp(new OpMerge(args, queryStatusObserver));
@@ -307,25 +307,25 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
                         appendOp(new OpFill(args, true));
                         break;
                     case PERCENTRANK:
-                        appendOp(new OpPercentileRank(this, args));
+                        appendOp(new OpPercentileRank(this, args, queryStatusObserver));
                         break;
                     case PIVOT:
-                        appendOp(new OpPivot(this, args));
+                        appendOp(new OpPivot(this, args, queryStatusObserver));
                         break;
                     case RANGE:
-                        appendOp(new OpRange(this, args));
+                        appendOp(new OpRange(this, args, queryStatusObserver));
                         break;
                     case REVERSE:
-                        appendOp(new OpReverse(this));
+                        appendOp(new OpReverse(this, queryStatusObserver));
                         break;
                     case RMSING:
-                        appendOp(new OpRemoveSingletons(this, args));
+                        appendOp(new OpRemoveSingletons(this, args, queryStatusObserver));
                         break;
                     case RND_FAIL:
                         appendOp(new OpRandomFail(args));
                         break;
                     case SEEN:
-                        appendOp(new OpSeen(this, args));
+                        appendOp(new OpSeen(this, args, queryStatusObserver));
                         break;
                     case SKIP:
                         appendOp(new OpSkip(args));
@@ -350,7 +350,7 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
                         appendOp(new OpGather(args, memTip, rowTip, tempDir.getPath(), queryStatusObserver));
                         break;
                     case TRANSPOSE:
-                        appendOp(new OpTranspose(this));
+                        appendOp(new OpTranspose(this, queryStatusObserver));
                         break;
                 }
             }

@@ -22,6 +22,7 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.hydra.data.query.AbstractTableOp;
 import com.addthis.hydra.data.query.QueryOpProcessor;
+import com.addthis.hydra.data.query.QueryStatusObserver;
 
 
 /**
@@ -55,8 +56,8 @@ public class OpDiff extends AbstractTableOp {
 
     private ColumnType type[];
 
-    public OpDiff(DataTableFactory tableFactory, String args) {
-        super(tableFactory);
+    public OpDiff(DataTableFactory tableFactory, String args, QueryStatusObserver queryStatusObserver) {
+        super(tableFactory, queryStatusObserver);
         type = new ColumnType[args.length()];
         for (int i = 0; i < args.length(); i++) {
             switch (args.charAt(i)) {
@@ -80,8 +81,8 @@ public class OpDiff extends AbstractTableOp {
         }
     }
 
-    public OpDiff(QueryOpProcessor processor, ColumnType type[]) {
-        super(processor);
+    public OpDiff(QueryOpProcessor processor, ColumnType type[], QueryStatusObserver queryStatusObserver) {
+        super(processor, queryStatusObserver);
         this.type = type;
     }
 
