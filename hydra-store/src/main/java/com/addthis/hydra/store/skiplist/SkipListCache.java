@@ -2259,7 +2259,7 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
             }
         }
         log.info("Scan complete. Scanned " + counter + " pages. Detected " + failedPages + " failed pages.");
-        return failedPages;
+        return repair ? 0 : failedPages;
     }
 
 }
