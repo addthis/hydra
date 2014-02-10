@@ -265,7 +265,7 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
                         appendOp(new OpGather(args, memTip, rowTip, tempDir.getPath(), queryStatusObserver));
                         break; // TODO move OpTop code into OpGather and delete OpTop
                     case HISTOGRAM:
-                        appendOp(new OpHistogram(args));
+                        appendOp(new OpHistogram(args, queryStatusObserver));
                         break;
                     case DISTRIBUTION:
                         appendOp(new OpPercentileDistribution(this, args, queryStatusObserver));
