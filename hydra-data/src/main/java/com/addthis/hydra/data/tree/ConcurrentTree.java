@@ -923,14 +923,10 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         return treeTrashNode;
     }
 
-    /**
-     * For testing purposes only.
-     */
-    @SuppressWarnings("unused")
-    void testIntegrity() {
+    void repairIntegrity() {
         PagedKeyValueStore store = source.getEps();
         if (store instanceof SkipListCache) {
-            ((SkipListCache) store).testIntegrity(false);
+            ((SkipListCache) store).testIntegrity(true);
         }
     }
 }
