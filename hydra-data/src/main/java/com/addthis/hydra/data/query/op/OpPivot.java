@@ -103,7 +103,7 @@ public class OpPivot extends AbstractQueryOp {
     private BundleField cellField;
     private BundleField labelCol;
     private BundleField sumCol;
-    private PivotOp cellop;
+    private PivotOp cellop = PivotOp.SUM;
     private PivotOp rowop;
     private PivotOp colop;
     private SortOp sortop;
