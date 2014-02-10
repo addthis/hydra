@@ -216,7 +216,7 @@ public class SpawnJobDependenciesTest {
                 "&maxRunTime=&rekickTimeout=&priority=0&command=default-task" +
                 "&hourlyBackups=1&dailyBackups=1&weeklyBackups=1&monthlyBackups=1" +
                 "&minionType=default&replicas=1&readOnlyReplicas=0&dontAutoBalanceMe=true" +
-                "&maxSimulRunning=0&alerts=%5B%5D&spawn=0&manual=1&qc_canQuery=true" +
+                "&dontDeleteMe=false&maxSimulRunning=0&alerts=%5B%5D&spawn=0&manual=1&qc_canQuery=true" +
                 "&qc_consecutiveFailureThreshold=&qc_queryTraceLevel=",
                 "hydra");
     }

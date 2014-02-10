@@ -59,7 +59,7 @@ public class CleanupAction extends SpawnAction {
         }
         log.warn("[task.mover] sending delete message to target host");
         try {
-            spawn.deleteJob(task.getJobUUID(), targetHostUUID, task.getTaskID(), true);
+            spawn.deleteTask(task.getJobUUID(), targetHostUUID, task.getTaskID(), true);
             job.setTaskState(task, JobTaskState.IDLE);
         } catch (Exception ex)  {
             log.warn("", ex);
