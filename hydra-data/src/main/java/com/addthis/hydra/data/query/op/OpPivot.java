@@ -171,18 +171,20 @@ public class OpPivot extends AbstractQueryOp {
             //System.out.println("accum = " + accum + "  cell = " + cell);
             return accum != null ? accum : cell;
         }
-        switch (op) {
-            case SUM:
-                return accum.sum(cell);
-            case MIN:
-                return accum.min(cell);
-            case MAX:
-                return accum.max(cell);
-            case AVG:
-                if (accum.getClass() != PivotAvg.class) {
-                    accum = new PivotAvg(accum);
-                }
-                return accum.sum(cell);
+        if (op != null) {
+            switch (op) {
+                case SUM:
+                    return accum.sum(cell);
+                case MIN:
+                    return accum.min(cell);
+                case MAX:
+                    return accum.max(cell);
+                case AVG:
+                    if (accum.getClass() != PivotAvg.class) {
+                        accum = new PivotAvg(accum);
+                    }
+                    return accum.sum(cell);
+            }
         }
         return accum;
     }
