@@ -21,6 +21,7 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.hydra.data.query.AbstractRowOp;
+import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.data.util.KeyHistogram;
 
 
@@ -39,6 +40,7 @@ public class OpHistogram extends AbstractRowOp {
 
     private final int scale;
     private final int column;
+    private final QueryStatusObserver queryStatusObserver;
 
     /**
      * usage: column, scale
@@ -48,7 +50,8 @@ public class OpHistogram extends AbstractRowOp {
      *
      * @param args
      */
-    public OpHistogram(String args) {
+    public OpHistogram(String args, QueryStatusObserver queryStatusObserver) {
+        this.queryStatusObserver = queryStatusObserver;
         int v[] = csvToInts(args);
         if (v.length < 1) {
             throw new RuntimeException("missing required column");
@@ -77,10 +80,14 @@ public class OpHistogram extends AbstractRowOp {
     public void sendComplete() {
         Map<Long, Long> map = histo.getSortedHistogram();
         for (Entry<Long, Long> e : map.entrySet()) {
-            Bundle row = rowFactory.createBundle();
-            binder.appendColumn(row, ValueFactory.create(e.getKey()));
-            binder.appendColumn(row, ValueFactory.create(e.getValue()));
-            getNext().send(row);
+            if (queryStatusObserver.queryCompleted || queryStatusObserver.queryCancelled) {
+                break;
+            } else {
+                Bundle row = rowFactory.createBundle();
+                binder.appendColumn(row, ValueFactory.create(e.getKey()));
+                binder.appendColumn(row, ValueFactory.create(e.getValue()));
+                getNext().send(row);
+            }
         }
         super.sendComplete();
     }
