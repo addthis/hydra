@@ -137,7 +137,17 @@ public class QueryElementField implements Codec.Codable {
                             ret.add(null);
                         }
                     } else {
-                        ret.add(qv);
+                        if (qv == null) {
+                            ret.add(null);
+                            continue;
+                        }
+                        if (qv.getObjectType() == ValueObject.TYPE.ARRAY) {
+                            for (ValueObject o : qv.asArray()) {
+                                ret.add(o);
+                            }
+                        } else {
+                            ret.add(qv);
+                        }
                     }
                 }
                 return ret;
