@@ -59,6 +59,9 @@ import com.addthis.hydra.data.query.AbstractBufferOp;
  * where <b>dog/cat</b> are the values of the key column(s),
  * <b>red/green</b> are the values of the fold column and
  * <b>1,2,3,4</b> are the values of the folded column(s).
+ *
+ * @user-reference
+ * @hydra-name fold
  */
 public class OpFold extends AbstractBufferOp implements BundleFormatted {
 
