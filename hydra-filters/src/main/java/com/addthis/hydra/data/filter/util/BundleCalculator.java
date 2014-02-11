@@ -68,7 +68,8 @@ public class BundleCalculator {
         OP_MAX,
         OP_MINIF,
         OP_MAXIF,
-        OP_ABS
+        OP_ABS,
+        OP_COLNAMEVAL
     }
 
     private List<MathOp> ops;
@@ -151,6 +152,11 @@ public class BundleCalculator {
                     for (String col : cols) {
                         ops.add(new MathOp(Operation.OP_COLVAL, ValueFactory.create(col)));
                     }
+                } else if (o.startsWith("C")) {
+                    String cols[] = Strings.splitArray(o.substring(1), ":");
+                    for (String col : cols) {
+                        ops.add(new MathOp(Operation.OP_COLNAMEVAL, ValueFactory.create(col)));
+                    }
                 } else if (o.startsWith("n")) {
                     String nums[] = Strings.splitArray(o.substring(1), ":");
                     for (String num : nums) {
@@ -224,6 +230,9 @@ public class BundleCalculator {
                     break;
                 case OP_COLVAL:
                     stack.push(getSourceColumnBinder(line).getColumn(line, (int) op.val.asLong().getLong()).asNumber());
+                    break;
+                case OP_COLNAMEVAL:
+                    stack.push(line.getValue(line.getFormat().getField(op.val.toString())).asNumber());
                     break;
                 case OP_DUP:
                     stack.push(stack.peek());
