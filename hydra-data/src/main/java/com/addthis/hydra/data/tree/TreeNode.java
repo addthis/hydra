@@ -282,6 +282,7 @@ public class TreeNode implements DataTreeNode, Codec.SuperCodable, Codec.Concurr
         if (nodedb != null) {
             return false;
         }
+        ((TreeNode) node).requireNodeDB();
         nodedb = ((TreeNode) node).nodedb;
         markAlias();
         return true;
