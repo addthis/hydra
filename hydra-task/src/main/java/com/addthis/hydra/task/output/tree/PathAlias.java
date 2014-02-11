@@ -80,9 +80,15 @@ public class PathAlias extends PathKeyValue {
     protected boolean peer;
 
     /**
-     * When true, alias acts like a hard file link. Otherwise the
-     * behavior is more similar to a soft file link. Hard links do
-     * not have re-validate on each use. Default is false.
+     * When true the alias acts like a filesystem hard link.
+     * The target of the link is identified the first time
+     * the alias is accessed. On subsequent access the target node
+     * is retrieved immediately without traversing through the tree.
+     * When this parameter is false the alias will re-traverse through
+     * the tree to find the target of the link upon every access.
+     * If you know the target node will never be deleted then you
+     * should set this parameter to true for improved performance.
+     * Default is false.
      */
     @Codec.Set(codable = true)
     protected boolean hard;

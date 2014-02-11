@@ -170,6 +170,10 @@ public interface IJob extends Comparable<IJob> {
 
     public void setDontAutoBalanceMe(boolean dontAutoBalanceMe);
 
+    public boolean getDontDeleteMe();
+
+    public void setDontDeleteMe(boolean dontDeleteMe);
+
     public boolean getWasStopped();
 
     public void setWasStopped(boolean wasStopped);

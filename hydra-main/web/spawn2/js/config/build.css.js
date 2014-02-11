@@ -11,19 +11,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.query;
 
-
-import com.addthis.bundle.table.DataTable;
-
-public class ResultAccumulator extends AbstractTableOp {
-
-    public ResultAccumulator(QueryOpProcessor processor, QueryStatusObserver queryStatusObserver) {
-        super(processor, queryStatusObserver);
-    }
-
-    @Override
-    public DataTable tableOp(DataTable result) {
-        return result;
-    }
-}
+({
+    cssIn:"../../css/main.css"
+    ,out:"../../css/main.min.css"
+    ,optimizeCss:"true"
+})

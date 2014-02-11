@@ -104,6 +104,8 @@ public class ZnodeJob implements IJob {
         @Codec.Set(codable = true)
         private boolean dontAutoBalanceMe;
         @Codec.Set(codable = true)
+        private boolean dontDeleteMe;
+        @Codec.Set(codable = true)
         private boolean wasStopped;
         @Codec.Set(codable = true)
         private HashMap<String, String> properties;
@@ -156,7 +158,9 @@ public class ZnodeJob implements IJob {
                     .add("replicas", replicas)
                     .add("readOnlyReplicas", readOnlyReplicas)
                     .add("strictReplicas", strictReplicas)
+                    .add("dontDeleteMe", dontDeleteMe)
                     .add("dontAutoBalanceMe", dontAutoBalanceMe)
+                    .add("dontDeleteMe", dontDeleteMe)
                     .add("wasStopped", wasStopped)
                     .add("submitCommand", submitCommand)
                     .add("properties", properties)
@@ -190,7 +194,7 @@ public class ZnodeJob implements IJob {
         rznData.createTime = JitterClock.globalTime();
         rznData.endTime = rznData.createTime;
         rznData.dontAutoBalanceMe = false;
-
+        rznData.dontDeleteMe = false;
         config = "";
         tasks = new ArrayList<>();
         queryConfig = new JobQueryConfig();
@@ -240,6 +244,7 @@ public class ZnodeJob implements IJob {
         rznData.replicationFactor = job.getReplicationFactor();
         rznData.strictReplicas = job.getStrictReplicas();
         rznData.dontAutoBalanceMe = job.getDontAutoBalanceMe();
+        rznData.dontDeleteMe = job.getDontDeleteMe();
         rznData.wasStopped = job.getWasStopped();
         rznData.submitCommand = job.getSubmitCommand();
         rznData.properties = job.getProperties();
@@ -562,12 +567,24 @@ public class ZnodeJob implements IJob {
         rznData.replicationFactor = replicationFactor;
     }
 
+    @Override
     public boolean getDontAutoBalanceMe() {
         return rznData.dontAutoBalanceMe;
     }
 
+    @Override
     public void setDontAutoBalanceMe(boolean canAutoBalance) {
         rznData.dontAutoBalanceMe = canAutoBalance;
+    }
+
+    @Override
+    public boolean getDontDeleteMe() {
+        return rznData.dontDeleteMe;
+    }
+
+    @Override
+    public void setDontDeleteMe(boolean dontDeleteMe) {
+        rznData.dontDeleteMe = dontDeleteMe;
     }
 
     @Override

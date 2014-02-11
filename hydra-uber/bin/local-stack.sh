@@ -14,6 +14,33 @@
 
 # initialization
 
+function testForExecutable() {
+    options=$1
+    splitOptions=(${options//|/ })
+    success=0
+    for cmd in "${splitOptions[@]}"
+    do
+        if type "$cmd" &> /dev/null; then
+            success=1
+        fi
+    done
+    if [ "$success" = "0" ]; then
+        printOptions=${options//|/\" or \"}
+        echo
+        echo "ERROR: Cannot find command: \"$printOptions\""
+        if [ "${#splitOptions[@]}" -eq "1" ]; then
+            echo "Please install the command and try again."
+        else
+            echo "Please install one of the alternatives and try again."
+        fi
+        echo
+        exit 1
+    fi
+}
+
+testForExecutable "greadlink|readlink"
+testForExecutable "wget"
+
 dirname=$(basename `pwd`)
 if [ "${dirname}" != "hydra-local" ]; then
     mkdir -p hydra-local

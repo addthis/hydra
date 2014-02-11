@@ -249,11 +249,17 @@ public class JobsResource {
         } else {
             emitLogLineForAction(user.or(defaultUser), "job delete on " + id);
             try {
-                if (spawn.deleteJob(id)) {
-                    return Response.ok().build();
-                } else {
-                    log.warn("[job.delete] " + id + " missing job");
-                    return Response.status(Response.Status.NOT_FOUND).build();
+                Spawn.DeleteStatus status = spawn.deleteJob(id);
+                switch (status) {
+                    case SUCCESS:
+                        return Response.ok().build();
+                    case JOB_MISSING:
+                        log.warn("[job.delete] " + id + " missing job");
+                        return Response.status(Response.Status.NOT_FOUND).build();
+                    case JOB_DO_NOT_DELETE:
+                        return Response.status(Response.Status.NOT_MODIFIED).build();
+                    default:
+                        throw new IllegalStateException("Delete status " + status + " is not recognized");
                 }
             } catch (Exception ex) {
                 return buildServerError(ex);
@@ -535,6 +541,7 @@ public class JobsResource {
         job.setReadOnlyReplicas(kv.getIntValue("readOnlyReplicas", job.getReadOnlyReplicas()));
         job.setReplicationFactor(kv.getIntValue("replicationFactor", job.getReplicationFactor()));
         job.setStomp(kv.getIntValue("stomp", job.getStomp() ? 1 : 0) == 1);
+        job.setDontDeleteMe(kv.getIntValue("dontDeleteMe", job.getDontDeleteMe() ? 1 : 0) > 0);
         job.setDontAutoBalanceMe(kv.getIntValue("dontAutoBalanceMe", job.getDontAutoBalanceMe() ? 1 : 0) > 0);
         job.setMaxSimulRunning(kv.getIntValue("maxSimulRunning", job.getMaxSimulRunning()));
         job.setMinionType(kv.getValue("minionType", job.getMinionType()));
@@ -886,6 +893,8 @@ public class JobsResource {
         job.setStomp(kv.getIntValue("stomp", job.getStomp() ? 1 : 0) == 1);
         job.setRetries(kv.getIntValue("retries", job.getRetries()));
         //for deprecation purposes
+        boolean dontDelete = kv.getValue("dontDeleteMe", "false").equals("true") || kv.getValue("dontDeleteMe", "0").equals("1");
+        job.setDontDeleteMe(dontDelete);
         boolean dontAutoBalance = kv.getValue("dontAutoBalanceMe", "false").equals("true") || kv.getValue("dontAutoBalanceMe", "0").equals("1");
         job.setDontAutoBalanceMe(dontAutoBalance);
         if (kv.hasKey("maxRunTime")) {

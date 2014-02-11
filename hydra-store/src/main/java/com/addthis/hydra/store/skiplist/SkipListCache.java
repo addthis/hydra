@@ -2203,20 +2203,24 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
             Page<K,V> nextPage = Page.generateEmptyPage(this, nextKey);
             byte[] encodedNextPage = externalStore.get(keyCoder.keyEncode(nextKey));
             nextPage.decode(encodedNextPage);
-
-            for(int i = 0; i < page.size; i++) {
+            for(int i = 0, pos = 0; i < page.size; i++, pos++) {
                 K testKey = page.keys.get(i);
                 if (compareKeys(testKey, nextKey) >= 0) {
-                    log.info("Moving key {} on page {}.", i, counter);
-                    page.fetchValue(i);
-                    V value = page.values.get(i);
-                    putIntoPage(nextPage, testKey, value);
+                    if (binarySearch(nextPage.keys, testKey, comparator) >= 0) {
+                        log.info("Key {} was detected on next page. Deleting from page {}.",
+                                pos, counter);
+                    } else {
+                        log.info("Moving key {} on page {}.", pos, counter);
+                        page.fetchValue(i);
+                        V value = page.values.get(i);
+                        putIntoPage(nextPage, testKey, value);
+                        pageTransfer = true;
+                    }
                     page.keys.remove(i);
                     page.rawValues.remove(i);
                     page.values.remove(i);
                     page.size--;
                     i--;
-                    pageTransfer = true;
                 }
             }
 
@@ -2259,7 +2263,7 @@ public class SkipListCache<K, V> implements PagedKeyValueStore<K, V> {
             }
         }
         log.info("Scan complete. Scanned " + counter + " pages. Detected " + failedPages + " failed pages.");
-        return failedPages;
+        return repair ? 0 : failedPages;
     }
 
 }

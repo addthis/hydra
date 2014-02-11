@@ -56,8 +56,15 @@ adding the [fl-cow](http://xmailserver.org/flcow.html) library to
 
 Many components assume that there is a local user called `hydra` and
 that all minion nodes can ssh as that user to each other.  This is
-used most prominently for `rsync` based replicas.
+used most prominently for `rsync` based replicas. The user `hydra`
+is not necessary when running a local-stack environment (see below).
 
+### OS X
+
+On OS X several utilities are necessary to run the local-stack environment:
+
+    brew install coreutils
+    brew install wget
 
 ## Components
 

@@ -640,7 +640,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
                     long streamTotals = streamReadTotal.addAndGet(streamCounts) / (1024 * 1024);
                     long mark = JitterClock.globalTime();
                     long streamRate = (streamCounts * 1000L) / (mark - lastHeaderTime.getAndSet(mark));
-                    log.info("tread tmap  input proc  rules  nodes packets cache..hit% dbs   " + "mem   packetTime [" + streamCounts + "," + streamRate + "/s," + streamTotals + "MM]");
+                    log.info("tread tmap  input proc  rules  nodes bundles cache..hit% dbs   " + "mem   bundleTime [" + streamCounts + "," + streamRate + "/s," + streamTotals + "MM]");
                 }
                 long benchtime = bench.getEventCount(BENCH.TIME);
                 long benchlocal = bench.getEventCount(BENCH.UNITS);

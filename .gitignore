@@ -15,3 +15,5 @@ hydra.ipr
 hydra.iws
 hydra-uber/src/main/resources/hydra-git.properties
 *.pyc
+hydra-main/web/spawn2/css/main.min.css
+hydra-main/web/spawn2/js/main.min.js

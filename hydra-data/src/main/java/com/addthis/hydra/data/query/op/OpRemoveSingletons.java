@@ -26,6 +26,7 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractTableOp;
 
+import com.addthis.hydra.data.query.QueryStatusObserver;
 import org.slf4j.Logger;
 
 import org.slf4j.LoggerFactory;
@@ -46,8 +47,8 @@ public class OpRemoveSingletons extends AbstractTableOp {
     int keyColumn;
     int valColumn;
 
-    public OpRemoveSingletons(DataTableFactory factory, String args) {
-        super(factory);
+    public OpRemoveSingletons(DataTableFactory factory, String args, QueryStatusObserver queryStatusObserver) {
+        super(factory, queryStatusObserver);
         try {
             String[] opt = args.split(":");
             keyColumn = opt.length >= 1 ? Integer.parseInt(opt[0]) : 0;

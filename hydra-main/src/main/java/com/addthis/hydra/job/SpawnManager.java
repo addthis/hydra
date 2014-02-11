@@ -451,14 +451,22 @@ public class SpawnManager {
                     link.sendShortReply(500, "ERROR", "A non IDLE job cannot be deleted");
                 } else {
                     emitLogLineForAction(kv, "job delete on " + id);
-                    if (spawn.deleteJob(id)) {
-                        String callback = kv.getValue("id", "");
-                        String msg = "{id:'" + id + "',action:'deleted'}";
-                        link.setResponseContentType("application/json; charset=utf-8");
-                        link.sendShortReply(200, "OK", callback != null ? callback + "(" + msg + ");" : msg);
-                    } else {
-                        log.warn("[job.delete] " + id + " missing job");
-                        link.sendShortReply(404, "Invalid ID", "{error:'no such job'}");
+                    Spawn.DeleteStatus status = spawn.deleteJob(id);
+                    switch (status) {
+                        case SUCCESS:
+                            String callback = kv.getValue("id", "");
+                            String msg = "{id:'" + id + "',action:'deleted'}";
+                            link.setResponseContentType("application/json; charset=utf-8");
+                            link.sendShortReply(200, "OK", callback != null ? callback + "(" + msg + ");" : msg);
+                            break;
+                        case JOB_MISSING:
+                            log.warn("[job.delete] " + id + " missing job");
+                            link.sendShortReply(404, "Invalid ID", "{error:'no such job'}");
+                            break;
+                        case JOB_DO_NOT_DELETE:
+                            log.warn("[job.delete] " + id + " do not delete parameter");
+                            link.sendShortReply(304, "Invalid ID", "{error:'job has do not delete parameter enabled'}");
+                            break;
                     }
                 }
             }
@@ -478,7 +486,7 @@ public class SpawnManager {
                     link.sendShortReply(500, "ERROR", "A non IDLE job cannot be deleted");
                 } else {
                     emitLogLineForAction(kv, "job delete on " + id);
-                    if (spawn.deleteJob(id, host, node, isReplica)) {
+                    if (spawn.deleteTask(id, host, node, isReplica)) {
                         String callback = kv.getValue("id", "");
                         String msg = "{id:'" + id + "/" + node + "',action:'deleted'}";
                         link.setResponseContentType("application/json; charset=utf-8");
@@ -1009,7 +1017,7 @@ public class SpawnManager {
                     int node = Integer.parseInt(kv.getValue("node"));
                     String sourceHostUUID = kv.getValue("source");
                     boolean isReplica = kv.hasKey("rep") ? kv.getValue("rep").equals("1") : true;
-                    spawn.deleteJob(job, sourceHostUUID, node, isReplica);
+                    spawn.deleteTask(job, sourceHostUUID, node, isReplica);
                     link.sendShortReply(200, "ok", "deleted");
                 } catch (Exception e) {
                     link.sendShortReply(500, "Server Error", new JSONObject().put("error", e.getMessage()).toString());
@@ -1102,6 +1110,7 @@ public class SpawnManager {
         job.setReadOnlyReplicas(kv.getIntValue("readOnlyReplicas", job.getReadOnlyReplicas()));
         job.setReplicationFactor(kv.getIntValue("replicationFactor", job.getReplicationFactor()));
         job.setStomp(kv.getIntValue("stomp", job.getStomp() ? 1 : 0) == 1);
+        job.setDontDeleteMe(kv.getIntValue("dontDeleteMe", job.getDontDeleteMe() ? 1 : 0) > 0);
         job.setDontAutoBalanceMe(kv.getIntValue("dontAutoBalanceMe", job.getDontAutoBalanceMe() ? 1 : 0) > 0);
         job.setMaxSimulRunning(kv.getIntValue("maxSimulRunning", job.getMaxSimulRunning()));
         job.setMinionType(kv.getValue("minionType", job.getMinionType()));

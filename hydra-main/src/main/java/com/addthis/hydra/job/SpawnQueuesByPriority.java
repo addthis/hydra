@@ -116,19 +116,6 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
         }
     }
 
-    public int getTaskQueuedCount() {
-        queueLock.lock();
-        try {
-            int count = 0;
-            for (Map.Entry<Integer, LinkedList<SpawnQueueItem>> entry : this.entrySet()) {
-                count += entry.getValue().size();
-            }
-            return count;
-        } finally {
-            queueLock.unlock();
-        }
-    }
-
     public int getTaskQueuedCount(int priority) {
         queueLock.lock();
         try {

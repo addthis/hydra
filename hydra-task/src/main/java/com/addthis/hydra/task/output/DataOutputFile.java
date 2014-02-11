@@ -168,13 +168,13 @@ public class DataOutputFile extends DataOutputTypeList {
                     try {
                         jmxremote = new MBeanRemotingSupport(jmxport);
                         jmxremote.start();
-                        log.warn("[init.jmx] port=" + jmxport);
+                        log.info("[init.jmx] port=" + jmxport);
                     } catch (Exception e) {
-                        log.warn("[init.jmx] err=" + e);
+                        log.error("[init.jmx]", e);
                     }
                 }
             } catch (IOException e)  {
-                log.warn("", e);
+                log.error("", e);
             }
         }
         if (dataPurgeConfig != null) {
@@ -248,7 +248,7 @@ public class DataOutputFile extends DataOutputTypeList {
     @Override
     public void sourceError(DataChannelError er) {
         writer.closeOpenOutputs();
-        log.warn("[sourceError] " + er);
+        log.error("[sourceError] " + er);
     }
 
     @Override
@@ -259,10 +259,10 @@ public class DataOutputFile extends DataOutputTypeList {
                 jmxremote.stop();
                 jmxremote = null;
             } catch (IOException e)  {
-                log.warn("", e);
+                log.error("", e);
             }
         }
-        log.warn("[sendComplete]");
+        log.info("[sendComplete]");
     }
 
     public DataOutputFile setWriter(OutputWriter writer) {
@@ -296,7 +296,7 @@ public class DataOutputFile extends DataOutputTypeList {
 
     private void purgeData() {
         if ((dataPurgeConfig.getMaxAgeInDays() > 0 || dataPurgeConfig.getMaxAgeInHours() > 0) && dataPurgeConfig.getDatePathFormat() != null) {
-            log.warn("Starting DataPurge in separate thread...");
+            log.info("Starting DataPurge in separate thread...");
             /* run the data purge in a separate thread to allow splitting to run concurrently with the purging process */
             ExecutorService executorService = MoreExecutors.getExitingExecutorService(new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), new ThreadFactoryBuilder().setNameFormat("DataOutputFilePurger-%d").build()));
             executorService.execute(new DataPurgeRunner(new DataPurgeServiceImpl()));
@@ -319,9 +319,9 @@ public class DataOutputFile extends DataOutputTypeList {
         @Override
         public void run() {
             if (!dataPurgeService.purgeData(dataPurgeConfig, new DateTime())) {
-                log.warn("Unable to purge data older than " + dataPurgeConfig.getMaxAgeInDays() + " days");
+                log.info("Unable to purge data older than " + dataPurgeConfig.getMaxAgeInDays() + " days");
             } else {
-                log.warn("Successfully purged data older than " + dataPurgeConfig.getMaxAgeInDays() + " days");
+                log.info("Successfully purged data older than " + dataPurgeConfig.getMaxAgeInDays() + " days");
             }
         }
     }

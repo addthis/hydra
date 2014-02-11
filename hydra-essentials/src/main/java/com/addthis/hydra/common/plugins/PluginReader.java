@@ -134,18 +134,41 @@ public class PluginReader {
         List<String[]> filters = PluginReader.readProperties(suffix);
         for (String[] filter : filters) {
             if (filter.length >= 2) {
-                try {
-                    Class clazz = Class.forName(filter[1]);
-                    if (parentClass.isAssignableFrom(clazz)) {
-                        map.add(filter[0], clazz);
-                    } else {
-                        log.warn("For key \"" + filter[0] +
-                                 "\" the corresponding class " + filter[1] +
-                                 " is not a subtype of " + parentClass.getCanonicalName());
-                    }
-                } catch (ClassNotFoundException e) {
-                    ignoreJunitEnvironment(e, suffix, filter[0]);
-                }
+                Class clazz = loadClass(suffix, filter[0], filter[1], parentClass);
+                map.add(filter[0], clazz);
+            }
+        }
+    }
+
+    public static Class loadClass(String suffix, String key, String className, Class parentClass) {
+        try {
+            Class clazz = Class.forName(className);
+            if (parentClass.isAssignableFrom(clazz)) {
+                return clazz;
+            } else {
+                log.warn("For key \"{}\" the corresponding class {} is not a subtype of {}",
+                        key, className, parentClass.getCanonicalName());
+            }
+        } catch (ClassNotFoundException e) {
+            ignoreJunitEnvironment(e, suffix, key);
+        }
+        return null;
+    }
+
+    /**
+     * Reads all the the properties that match the specified suffix
+     * and load them into the class map without actually loading the classes.
+     * Use the {@link PluginReader#loadClass(String, String, String, Class)}
+     * method to load a specific class into memory.
+     *
+     * @param suffix
+     * @param map
+     */
+    public static void registerLazyPlugin(String suffix, Map<String,String> map) {
+        List<String[]> filters = PluginReader.readProperties(suffix);
+        for (String[] filter : filters) {
+            if (filter.length >= 2) {
+                map.put(filter[0], filter[1]);
             }
         }
     }
@@ -162,18 +185,8 @@ public class PluginReader {
         List<String[]> filters = PluginReader.readProperties(suffix);
         for (String[] filter : filters) {
             if (filter.length >= 2) {
-                try {
-                    Class clazz = Class.forName(filter[1]);
-                    if (parentClass.isAssignableFrom(clazz)) {
-                        map.put(filter[0], clazz);
-                    } else {
-                        log.warn("For key \"" + filter[0] +
-                                 "\" the corresponding class " + filter[1] +
-                                 " is not a subtype of " + parentClass.getCanonicalName());
-                    }
-                } catch (ClassNotFoundException e) {
-                    ignoreJunitEnvironment(e, suffix, filter[0]);
-                }
+                Class clazz = loadClass(suffix, filter[0], filter[1], parentClass);
+                map.put(filter[0], clazz);
             }
         }
     }

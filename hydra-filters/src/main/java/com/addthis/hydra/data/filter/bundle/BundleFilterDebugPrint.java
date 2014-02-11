@@ -94,9 +94,9 @@ public class BundleFilterDebugPrint extends BundleFilter {
         if (bundleCounter.getAndIncrement() < maxBundles) {
             String bundleString = formatBundle(bundle);
             if (Strings.isEmpty(prefix)) {
-                log.warn(bundleString);
+                log.info(bundleString);
             } else {
-                log.warn(prefix + " : " + bundleString);
+                log.info(prefix + " : " + bundleString);
             }
             if (enableCacheOutput) {
                 cacheOutput = bundleString;

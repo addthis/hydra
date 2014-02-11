@@ -715,6 +715,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
 
     public void testIntegrity() {
         int counter = 0;
+        int failedPages = 0;
         try {
             byte[] encodedKey = pages.firstKey();
             K key = keyCoder.keyDecode(encodedKey);
@@ -725,12 +726,14 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                     K nextKey = keyCoder.keyDecode(encodedNextKey);
                     K nextFirstKey = newPage.getNextFirstKey();
                     if (nextFirstKey == null) {
+                        failedPages++;
                         log.warn("On page " + counter + " the firstKey is " +
                              newPage.getFirstKey() +
                              " the nextFirstKey is null" +
                              " and the next page is associated with key " + nextKey);
                         assert(false);
                     } else if (!nextFirstKey.equals(nextKey)) {
+                        failedPages++;
                         int compareTo = compareKeys(nextFirstKey, nextKey);
                         char direction = compareTo > 0 ? '>' : '<';
                         log.warn("On page " + counter + " the firstKey is " +
@@ -744,13 +747,13 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                 encodedKey = encodedNextKey;
                 counter++;
                 if (counter % 10000 == 0) {
-                    log.info("Scanned " + counter + " pages.");
+                    log.info("Scanned " + counter + " pages. Detected " + failedPages + " failed pages.");
                 }
             } while (encodedKey != null);
         } catch (ExecutionException ex) {
             log.error(ex.toString());
         }
-        log.info("Scanned " + counter + " pages.");
+        log.info("Scan complete. Scanned " + counter + " pages. Detected " + failedPages + " failed pages.");
     }
 
 }

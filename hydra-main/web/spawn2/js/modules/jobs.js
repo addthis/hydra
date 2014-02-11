@@ -231,8 +231,11 @@ function(
                 type: "GET",
                 data: {id:self.id, user:app.user.get("username")},
                 statusCode: {
+                    304: function() {
+                        Alertify.log.error("Job with id "+self.id+" has \"do not delete\" parameter enabled.");
+                    },
                     404: function() {
-                        Alertify.log.info("Job with id "+self.id+" was not found.");
+                        Alertify.log.error("Job with id "+self.id+" was not found.");
                     },
                     500: function(res){
                         Alertify.log.error("Error deleting job "+self.id+":\n"+res.responseText);

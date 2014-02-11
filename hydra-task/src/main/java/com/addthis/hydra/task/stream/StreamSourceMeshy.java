@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.ConcurrentModificationException;
@@ -210,7 +211,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
      */
     private List<MeshyStreamFile> findMeshFiles(final DateTime date, String[] patterns) throws IOException {
         if (log.isTraceEnabled()) {
-            log.trace("find using mesh=" + meshLink + " patterns=" + patterns);
+            log.trace("find using mesh=" + meshLink + " patterns=" + Arrays.toString(patterns));
         }
         // responding peer count should only be mutated by meshy threads
         final AtomicInteger respondingPeerCount = new AtomicInteger();

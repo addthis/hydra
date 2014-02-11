@@ -42,6 +42,7 @@ import com.addthis.bundle.value.ValueSimple;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.bundle.value.ValueTranslationException;
 import com.addthis.hydra.data.query.AbstractQueryOp;
+import com.addthis.hydra.data.query.QueryStatusObserver;
 
 
 /**
@@ -103,7 +104,7 @@ public class OpPivot extends AbstractQueryOp {
     private BundleField cellField;
     private BundleField labelCol;
     private BundleField sumCol;
-    private PivotOp cellop;
+    private PivotOp cellop = PivotOp.SUM;
     private PivotOp rowop;
     private PivotOp colop;
     private SortOp sortop;
@@ -115,10 +116,12 @@ public class OpPivot extends AbstractQueryOp {
     private final String rowkeys[];
     private final String colkeys[];
     private final String cellkey;
+    private final QueryStatusObserver queryStatusObserver;
 
-    public OpPivot(DataTableFactory tableFactory, String args) {
+    public OpPivot(DataTableFactory tableFactory, String args, QueryStatusObserver queryStatusObserver) {
         this.tableFactory = tableFactory;
         this.output = tableFactory.createTable(0);
+        this.queryStatusObserver = queryStatusObserver;
         String parg[] = Strings.splitArray(args, ",");
         rowkeys = Strings.splitArray(parg[0], ":");
         colkeys = Strings.splitArray(parg[1], ":");
@@ -171,18 +174,20 @@ public class OpPivot extends AbstractQueryOp {
             //System.out.println("accum = " + accum + "  cell = " + cell);
             return accum != null ? accum : cell;
         }
-        switch (op) {
-            case SUM:
-                return accum.sum(cell);
-            case MIN:
-                return accum.min(cell);
-            case MAX:
-                return accum.max(cell);
-            case AVG:
-                if (accum.getClass() != PivotAvg.class) {
-                    accum = new PivotAvg(accum);
-                }
-                return accum.sum(cell);
+        if (op != null) {
+            switch (op) {
+                case SUM:
+                    return accum.sum(cell);
+                case MIN:
+                    return accum.min(cell);
+                case MAX:
+                    return accum.max(cell);
+                case AVG:
+                    if (accum.getClass() != PivotAvg.class) {
+                        accum = new PivotAvg(accum);
+                    }
+                    return accum.sum(cell);
+            }
         }
         return accum;
     }
@@ -307,7 +312,7 @@ public class OpPivot extends AbstractQueryOp {
                     sortstr = sumCol.getName() + ":n:d";
                     break;
             }
-            OpSort sort = new OpSort(tableFactory, sortstr);
+            OpSort sort = new OpSort(tableFactory, sortstr, queryStatusObserver);
             sort.sendTable(output);
             output = sort.getTable();
         }
@@ -319,7 +324,7 @@ public class OpPivot extends AbstractQueryOp {
         if (colop != null) {
             output.append(footer);
         }
-        getNext().sendTable(output);
+        getNext().sendTable(output, queryStatusObserver);
     }
 
     /**

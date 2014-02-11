@@ -16,6 +16,7 @@ package com.addthis.hydra.data.query.op;
 import com.addthis.bundle.table.DataTable;
 import com.addthis.hydra.data.query.AbstractTableOp;
 import com.addthis.hydra.data.query.QueryOpProcessor;
+import com.addthis.hydra.data.query.QueryStatusObserver;
 
 
 /**
@@ -35,8 +36,8 @@ public class OpRange extends AbstractTableOp {
     private int begin;
     private int end;
 
-    public OpRange(QueryOpProcessor processor, String args) {
-        super(processor);
+    public OpRange(QueryOpProcessor processor, String args, QueryStatusObserver queryStatusObserver) {
+        super(processor, queryStatusObserver);
         int ov[] = csvToInts(args);
         begin = ov[0];
         end = ov.length > 1 ? ov[1] : 0;

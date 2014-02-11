@@ -26,6 +26,7 @@ import com.addthis.bundle.table.DataTableFactory;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.hydra.data.query.AbstractTableOp;
+import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.data.util.ChangePoint;
 import com.addthis.hydra.data.util.FindChangePoints;
 
@@ -46,8 +47,8 @@ public class OpChangePoints extends AbstractTableOp {
     int inactiveThreshold;
     int windowSize;
 
-    public OpChangePoints(DataTableFactory factory, String args) {
-        super(factory);
+    public OpChangePoints(DataTableFactory factory, String args, QueryStatusObserver queryStatusObserver) {
+        super(factory, queryStatusObserver);
         try {
             String[] opt = args.split(":");
             timeColumn = opt.length >= 1 ? Integer.parseInt(opt[0]) : 0;
@@ -57,10 +58,10 @@ public class OpChangePoints extends AbstractTableOp {
             minZScore = opt.length >= 5 ? Double.parseDouble(opt[4]) : 1.5;
             inactiveThreshold = opt.length >= 6 ? Integer.parseInt(opt[5]) : 1;
             windowSize = opt.length >= 7 ? Integer.parseInt(opt[6]) : 5;
-            log.warn("Initiated changepoints with parameters " +
+            log.info("Initiated changepoints with parameters " +
                      Strings.join(new Object[]{valColumn, minChange, minRatio, minZScore, inactiveThreshold}, ","));
         } catch (Exception ex)  {
-            log.warn("", ex);
+            log.error("", ex);
         }
     }
 
