@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.common.plugins;
 
+import javax.annotation.Nonnull;
+
 import java.io.IOException;
 import java.io.InputStreamReader;
 
@@ -35,9 +37,11 @@ public class PluginReader {
 
     private static final Logger log = LoggerFactory.getLogger(PluginReader.class);
 
-    private static final PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+    private static final PathMatchingResourcePatternResolver resolver =
+            new PathMatchingResourcePatternResolver();
 
-    private static final CsvPreference csvParserOptions = new CsvPreference.Builder(CsvPreference.STANDARD_PREFERENCE)
+    private static final CsvPreference csvParserOptions =
+            new CsvPreference.Builder(CsvPreference.STANDARD_PREFERENCE)
             .surroundingSpacesNeedQuotes(true)
             .build();
 
@@ -50,7 +54,7 @@ public class PluginReader {
      * @param suffix filename suffix. Matches against files with this suffix in their filename.
      * @return list of String[] elements that represent CSV values
      */
-    public static List<String[]> readProperties(String suffix) {
+    public static List<String[]> readProperties(@Nonnull String suffix) {
         List<String[]> result = new ArrayList<>();
         try {
             String locationPattern = "classpath*:plugins/*" + suffix;
@@ -84,7 +88,7 @@ public class PluginReader {
      * @param suffix filename suffix. Matches against files with this suffix in their filename.
      * @return list of String[] elements that represent CSV values
      */
-    public static Map<Resource, List<String[]>> readPropertiesAndMap(String suffix) {
+    public static Map<Resource, List<String[]>> readPropertiesAndMap(@Nonnull String suffix) {
         Map<Resource, List<String[]>> result = new HashMap<>();
         try {
             String locationPattern = "classpath*:plugins/*" + suffix;
@@ -113,11 +117,13 @@ public class PluginReader {
      * A workaround the plugin framework does not work in junit
      * but we do not use the plugin framework in junit tests.
      */
-    private static void ignoreJunitEnvironment(ClassNotFoundException e, String suffix, String key) {
+    private static void ignoreJunitEnvironment(ClassNotFoundException e,
+            String suffix, String key) {
         boolean junitRunning = false;
         assert (junitRunning = true);
         if (!junitRunning) {
-            log.warn("registerPlugin failure. File suffix is \"{}\", key is \"{}\", exception is {}.",
+            log.warn("registerPlugin failure. File suffix is \"{}\"," +
+                     " key is \"{}\", exception is {}.",
                     suffix, key, e.toString());
         }
     }
@@ -130,7 +136,8 @@ public class PluginReader {
      * @param map
      * @param parentClass
      */
-    public static void registerPlugin(String suffix, Codec.ClassMap map, Class parentClass) {
+    public static void registerPlugin(@Nonnull String suffix,
+            @Nonnull Codec.ClassMap map, @Nonnull Class parentClass) {
         List<String[]> filters = PluginReader.readProperties(suffix);
         for (String[] filter : filters) {
             if (filter.length >= 2) {
@@ -140,7 +147,8 @@ public class PluginReader {
         }
     }
 
-    public static Class loadClass(String suffix, String key, String className, Class parentClass) {
+    public static Class loadClass(@Nonnull String suffix, @Nonnull String key,
+            @Nonnull String className, @Nonnull Class parentClass) {
         try {
             Class clazz = Class.forName(className);
             if (parentClass.isAssignableFrom(clazz)) {
@@ -164,7 +172,8 @@ public class PluginReader {
      * @param suffix
      * @param map
      */
-    public static void registerLazyPlugin(String suffix, Map<String,String> map) {
+    public static void registerLazyPlugin(@Nonnull String suffix,
+            @Nonnull Map<String,String> map) {
         List<String[]> filters = PluginReader.readProperties(suffix);
         for (String[] filter : filters) {
             if (filter.length >= 2) {
@@ -181,7 +190,8 @@ public class PluginReader {
      * @param map
      * @param parentClass
      */
-    public static void registerPlugin(String suffix, Map<String, Class> map, Class parentClass) {
+    public static void registerPlugin(@Nonnull String suffix,
+            @Nonnull Map<String, Class> map, @Nonnull Class parentClass) {
         List<String[]> filters = PluginReader.readProperties(suffix);
         for (String[] filter : filters) {
             if (filter.length >= 2) {

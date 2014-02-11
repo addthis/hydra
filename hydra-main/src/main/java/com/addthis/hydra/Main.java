@@ -31,6 +31,7 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.codec.Codec;
+import com.addthis.hydra.common.plugins.DynamicLoader;
 import com.addthis.hydra.common.plugins.PluginReader;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.query.CLIQuery;
@@ -70,7 +71,9 @@ public class Main {
 
     /** register types */
     static {
+        Map<String,String> extras = DynamicLoader.readDynamicClasses("hydra.loader");
         PluginReader.registerLazyPlugin("-executables.classmap", cmap);
+        cmap.putAll(extras);
     }
 
 
