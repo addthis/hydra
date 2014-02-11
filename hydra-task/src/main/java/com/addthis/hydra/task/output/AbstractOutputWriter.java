@@ -13,17 +13,21 @@
  */
 package com.addthis.hydra.task.output;
 
+import javax.annotation.Nonnull;
+
 import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.addthis.basis.util.JitterClock;
 
@@ -105,22 +109,24 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
     private BundleFilter filter;
 
     private final Semaphore diskFlushThreadSemaphore = new Semaphore(0);
-
-    private final AtomicBoolean stopped = new AtomicBoolean(false);
+    private volatile boolean stopped = false;
+    private volatile boolean exiting = false;
+    private volatile boolean errored = false;
     private DiskFlushThread[] diskFlushThreadArray;
     protected ScheduledExecutorService writerMaintenanceThread =
             MoreExecutors.getExitingScheduledExecutorService(
                     new ScheduledThreadPoolExecutor(1,
                             new ThreadFactoryBuilder().setNameFormat("AbstractOutputWriterCleanUpThread-%d").build()));
     private QueueWriter queueWriter;
-    private volatile AtomicBoolean exiting = new AtomicBoolean(false);
+    private final AtomicReference<IOException> errorCause = new AtomicReference<>();
 
-    public final void writeLine(String file, Bundle nextLine) {
-        if (stopped.get()) {
+    public final void writeLine(String file, Bundle nextLine) throws IOException {
+        if (errored) {
+            throw new IOException(errorCause.get());
+        } else if (stopped) {
             log.warn("Tried to write a line after the writer has been stopped, line was: " + nextLine);
             throw new RuntimeException("Tried to write a line after the writer has been stopped");
-        }
-        if (filter == null || filter.filter(nextLine)) {
+        } else if (filter == null || filter.filter(nextLine)) {
             queueWriter.addBundle(file, nextLine);
         }
     }
@@ -129,19 +135,30 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
 
     public final void closeOpenOutputs() {
         try {
-            exiting.set(true);
+            exiting = true;
             // first stop the async flush threads
             shutdownMaintenanceThreads();
             shutdownDiskFlushThreads();
             queueWriter.drain(true);
             doCloseOpenOutputs();
         } finally {
-            stopped.set(true);
+            stopped = true;
         }
     }
 
     private boolean bufferSizeInRange(int bufferSize) {
         return bufferSize > maxBundles && bufferSize < maxBufferSize;
+    }
+
+    /**
+     * Sets the volatile boolean error variable and stores
+     * the first exception that is encountered.
+     *
+     * @param cause the error to store if it is the first exception
+     */
+    private void setErrorCause(@Nonnull IOException cause) {
+        errorCause.compareAndSet(null, cause);
+        errored = true;
     }
 
     @Override
@@ -231,16 +248,18 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
                         tupleProcessed = buffer.offer(tuple);
                     }
                 } catch (InterruptedException e) {
-                    log.warn("error writing to buffer: " + e, e);
+                    log.error("error writing to buffer: ", e);
                     tupleProcessed = true;
+                    setErrorCause(new IOException(e));
                 }
                 if (!tupleProcessed) {
                     try {
                         List<WriteTuple> outputList = drainOutputBundles(maxBundles);
                         dequeueWrite(outputList);
                     } catch (IOException e) {
-                        log.warn("error dequeuing write: " + e, e);
+                        log.error("error dequeuing write: ", e);
                         tupleProcessed = true;
+                        setErrorCause(e);
                     }
                 }
             }
@@ -269,8 +288,9 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
                     List<WriteTuple> outputList = drainOutputBundles(size());
                     dequeueWrite(outputList);
                 } catch (IOException e) {
-                    log.warn("error draining queue: " + e, e);
-                    }
+                    log.error("error draining queue: ", e);
+                    setErrorCause(e);
+                }
             }
             while (iterate && size() > 0);
         }
@@ -304,7 +324,7 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
 
                     int outstandingBundles;
                     do {
-                        if (exiting.get()) {
+                        if (exiting) {
                             return;
                         }
 
@@ -320,8 +340,9 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
                     }
                     while (outstandingBundles > maxBundles);
                 } catch (Exception ex) {
-                    log.warn("output writer disk flush error : " + ex, ex);
-                    }
+                    log.error("output writer disk flush error : ", ex);
+                    setErrorCause(new IOException(ex));
+                }
             }
         }
 
@@ -337,10 +358,10 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
         writerMaintenanceThread.shutdown();
         try {
             if (!writerMaintenanceThread.awaitTermination(30, TimeUnit.SECONDS)) {
-                log.warn("Waited 30 seconds for write maintenance termination but it did not finish");
+                log.error("Waited 30 seconds for write maintenance termination but it did not finish");
             }
         } catch (InterruptedException ie) {
-            log.warn("Thread interrupted while wating for write maintenance termination");
+            log.error("Thread interrupted while waiting for write maintenance termination");
         }
     }
 
@@ -351,8 +372,8 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
             try {
                 diskFlushThreadArray[i].join();
             } catch (InterruptedException ex) {
-                log.warn("shutdown disk flush threads error : " + ex, ex);
-                }
+                log.error("shutdown disk flush threads error : ", ex);
+            }
         }
     }
 
