@@ -84,7 +84,7 @@ public class DataOutputFile extends AbstractDataOutput {
     private OutputWriter writer;
 
 
-    public AbstractDataOutput setWriter(OutputWriter writer) {
+    public DataOutputFile setWriter(OutputWriter writer) {
         this.writer = writer;
         return this;
     }
