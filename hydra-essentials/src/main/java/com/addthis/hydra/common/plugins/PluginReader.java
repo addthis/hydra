@@ -14,6 +14,7 @@
 package com.addthis.hydra.common.plugins;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -114,21 +115,6 @@ public class PluginReader {
     }
 
     /**
-     * A workaround the plugin framework does not work in junit
-     * but we do not use the plugin framework in junit tests.
-     */
-    private static void ignoreJunitEnvironment(ClassNotFoundException e,
-            String suffix, String key) {
-        boolean junitRunning = false;
-        assert (junitRunning = true);
-        if (!junitRunning) {
-            log.warn("registerPlugin failure. File suffix is \"{}\"," +
-                     " key is \"{}\", exception is {}.",
-                    suffix, key, e.toString());
-        }
-    }
-
-    /**
      * Reads all the the properties that match the specified suffix
      * and load them into the class map.
      *
@@ -141,16 +127,17 @@ public class PluginReader {
         List<String[]> filters = PluginReader.readProperties(suffix);
         for (String[] filter : filters) {
             if (filter.length >= 2) {
-                Class clazz = loadClass(suffix, filter[0], filter[1], parentClass);
+                Class clazz = loadClass(suffix, filter[0],
+                        filter[1], parentClass, null);
                 map.add(filter[0], clazz);
             }
         }
     }
 
-    public static Class loadClass(@Nonnull String suffix, @Nonnull String key,
-            @Nonnull String className, @Nonnull Class parentClass) {
+    private static Class loadClassHelper(String suffix, String key,
+            String className, Class parentClass, ClassLoader loader, boolean ignoreError) {
         try {
-            Class clazz = Class.forName(className);
+            Class clazz = Class.forName(className, true, loader);
             if (parentClass.isAssignableFrom(clazz)) {
                 return clazz;
             } else {
@@ -158,15 +145,39 @@ public class PluginReader {
                         key, className, parentClass.getCanonicalName());
             }
         } catch (ClassNotFoundException e) {
-            ignoreJunitEnvironment(e, suffix, key);
+            if (!ignoreError) {
+                log.warn("registerPlugin failure. File suffix is \"{}\"," +
+                         " key is \"{}\", exception is {}.",
+                        suffix, key, e.toString());
+            }
         }
         return null;
+    }
+
+    public static Class loadClass(@Nonnull String suffix, @Nonnull String key,
+            @Nonnull String className, @Nonnull Class parentClass,
+            @Nullable ClassLoader extraLoader) {
+        if (extraLoader != null) {
+            Class clazz =  loadClassHelper(suffix, key, className, parentClass, extraLoader, true);
+            if (clazz != null) {
+                return clazz;
+            }
+        }
+        /**
+         * A workaround the plugin framework does not work in junit
+         * but we do not use the plugin framework in junit tests.
+         */
+        boolean junitRunning = false;
+        assert (junitRunning = true);
+        Class clazz = loadClassHelper(suffix, key, className, parentClass, PluginReader.class.getClassLoader(),
+                junitRunning);
+        return clazz;
     }
 
     /**
      * Reads all the the properties that match the specified suffix
      * and load them into the class map without actually loading the classes.
-     * Use the {@link PluginReader#loadClass(String, String, String, Class)}
+     * Use the {@link PluginReader#loadClass(String, String, String, Class, ClassLoader)}
      * method to load a specific class into memory.
      *
      * @param suffix
@@ -195,7 +206,8 @@ public class PluginReader {
         List<String[]> filters = PluginReader.readProperties(suffix);
         for (String[] filter : filters) {
             if (filter.length >= 2) {
-                Class clazz = loadClass(suffix, filter[0], filter[1], parentClass);
+                Class clazz = loadClass(suffix, filter[0],
+                        filter[1], parentClass, null);
                 map.put(filter[0], clazz);
             }
         }

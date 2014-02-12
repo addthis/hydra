@@ -23,6 +23,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -46,6 +47,16 @@ public class DynamicLoader {
                     .surroundingSpacesNeedQuotes(true)
                     .build();
 
+    public static class DynamicLoaderResult {
+        public Map<String,String> executables;
+        public ClassLoader loader;
+
+        public DynamicLoaderResult() {
+            executables = Collections.unmodifiableMap(new HashMap<String,String>());
+            loader = null;
+        }
+    }
+
     /**
      * Looks up the system property specified as input.
      * Treats the value associated with the input as a URI.
@@ -62,11 +73,12 @@ public class DynamicLoader {
      * @param propertyName system property associated with a URI
      * @return map of execution target names to fully qualified class names
      */
-    public static Map<String,String> readDynamicClasses(@Nonnull String propertyName) {
+    public static DynamicLoaderResult readDynamicClasses(@Nonnull String propertyName) {
         Map<String,String> executables = new HashMap<>();
+        DynamicLoaderResult result = new DynamicLoaderResult();
         String urlSpecifier = System.getProperty(propertyName);
         if (urlSpecifier == null) {
-            return executables;
+            return result;
         }
         URL url;
         try {
@@ -75,16 +87,18 @@ public class DynamicLoader {
             log.error("The value for the system property {} " +
                       "is \"{}\" cannot be translated into a valid URL.",
                     propertyName, urlSpecifier);
-            return executables;
+            return result;
         }
         Set<URL> jarLocations = new HashSet<>();
         Set<String> classNames = new HashSet<>();
         readDynamicClasses(urlSpecifier, url, jarLocations, classNames, executables);
-        loadDynamicClasses(jarLocations, classNames);
-        return executables;
+        ClassLoader loader = loadDynamicClasses(jarLocations, classNames);
+        result.executables = Collections.unmodifiableMap(executables);
+        result.loader = loader;
+        return result;
     }
 
-    private static void loadDynamicClasses(Set<URL> jarLocations,
+    private static URLClassLoader loadDynamicClasses(Set<URL> jarLocations,
             Set<String> classNames) {
         String jarString = Joiner.on(", ").join(jarLocations);
         if (jarLocations.size() > 0) {
@@ -99,7 +113,9 @@ public class DynamicLoader {
                             className, jarString);
                 }
             }
+            return loader;
         }
+        return null;
     }
 
     private static void readDynamicClasses(String urlSpecifier,
