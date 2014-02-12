@@ -63,7 +63,6 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
     private static final String NOW_PREFIX = "{{now";
     private static final String NOW_POSTFIX = "}}";
     public static final String TIME_NOW = "{{now}}";
-    public static final String TIME_LAST_PROCESSED = "{{last}}";
 
     /**
      * The format of startDate and endDate values using the
@@ -78,7 +77,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
      * files that have been created before this date will not be processed. Default is {{last}}.
      */
     @Codec.Set(codable = true)
-    private String startDate = TIME_LAST_PROCESSED;
+    private String startDate = TIME_NOW;
 
     /**
      * files that have been created after this date will not be processed. Default is {{now}}.
