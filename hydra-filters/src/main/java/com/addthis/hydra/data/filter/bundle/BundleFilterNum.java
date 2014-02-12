@@ -146,6 +146,12 @@ import com.addthis.hydra.data.filter.util.BundleCalculator;
  * <td>0</td>
  * </tr>
  * <tr>
+ * <td>"eq"</td>
+ * <td>2</td>
+ * <td>if long integer (a == b) is false then end the calculation</td>
+ * <td>0</td>
+ * </tr>
+ * <tr>
  * <td>"toi" or "toint"</td>
  * <td>1</td>
  * <td>convert a to a long integer</td>

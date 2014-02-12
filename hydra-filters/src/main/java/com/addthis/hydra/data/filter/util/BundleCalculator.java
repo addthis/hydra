@@ -110,7 +110,7 @@ public class BundleCalculator {
                 ops.add(new MathOp(Operation.OP_LT, null));
             } else if (o.equals("<=") || o.equals("lteq")) {
                 ops.add(new MathOp(Operation.OP_LT_EQ, null));
-            } else if (o.equals("=") || o.equals("eq")) {
+            } else if (o.equals("eq")) {
                 ops.add(new MathOp(Operation.OP_EQ, null));
             } else if (o.equals("toi") || o.equals("toint")) {
                 ops.add(new MathOp(Operation.OP_TOINT, null));
