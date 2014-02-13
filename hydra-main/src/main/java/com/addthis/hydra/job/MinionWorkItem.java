@@ -163,7 +163,7 @@ public abstract class MinionWorkItem implements Runnable {
                 stdoutWatch = new Minion.FileWatcher(logOut, kick.getKillSignal());
                 stderrWatch = new Minion.FileWatcher(logErr, kick.getKillSignal());
             }
-            while (!task.isDeleted() && !doneFile.exists()) {
+            while (!task.isDeleted() && !doneFile.exists() && doneFile.getParentFile().exists()) {
                 Thread.sleep(100);
                 executeWaitingCommands();
                 if (stdoutWatch != null && stdoutWatch.containsKill()) {

@@ -2101,9 +2101,13 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 if (kill) {
                     resetStartTime();
                     log.warn("[stopWait] creating done files if they do not exist");
-                    createDoneFileIfNoProcessRunning(jobPid, jobDone);
-                    createDoneFileIfNoProcessRunning(replicatePid, replicateDone);
-                    createDoneFileIfNoProcessRunning(backupPid, backupDone);
+                    if (!jobDone.getParentFile().exists()) {
+                        log.warn("The directory " + jobDone.getParent() + " does not exist.");
+                    } else {
+                        createDoneFileIfNoProcessRunning(jobPid, jobDone);
+                        createDoneFileIfNoProcessRunning(replicatePid, replicateDone);
+                        createDoneFileIfNoProcessRunning(backupPid, backupDone);
+                    }
                 }
                 for (File pidFile : pidFiles) {
                     Integer pid = getPID(pidFile);
@@ -2545,9 +2549,13 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                     task.sendEndStatus(0);
                 } else if (stop.force()) {
                     log.warn("[task.stop] " + task.getName() + " force stop unmatched");
-                    task.createDoneFileIfNoProcessRunning(task.jobPid, task.jobDone);
-                    task.createDoneFileIfNoProcessRunning(task.replicatePid, task.replicateDone);
-                    task.createDoneFileIfNoProcessRunning(task.backupPid, task.backupDone);
+                    if (!task.jobDone.getParentFile().exists()) {
+                        log.warn("The directory " + task.jobDone.getParent() + " does not exist.");
+                    } else {
+                        task.createDoneFileIfNoProcessRunning(task.jobPid, task.jobDone);
+                        task.createDoneFileIfNoProcessRunning(task.replicatePid, task.replicateDone);
+                        task.createDoneFileIfNoProcessRunning(task.backupPid, task.backupDone);
+                    }
                     if (task.jobDone != null && task.jobDone.exists()) {
                         int endStatus = 0;
                         try {
