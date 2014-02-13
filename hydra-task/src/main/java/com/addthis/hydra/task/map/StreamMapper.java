@@ -27,6 +27,7 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
@@ -272,7 +273,11 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
 
     private Bundle mapBundle(Bundle in) {
         if (map.fields == null) {
-            return in;
+            Bundle out = getOutput().createBundle();
+            for (BundleField bundleField : in) {
+                out.setValue(out.getFormat().getField(bundleField.getName()), in.getValue(bundleField));
+            }
+            return out;
         }
         Bundle out = getOutput().createBundle();
         for (int i = 0; i < map.fields.length; i++) {
