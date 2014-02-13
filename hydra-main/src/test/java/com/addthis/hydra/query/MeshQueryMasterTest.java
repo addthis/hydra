@@ -185,8 +185,8 @@ public class MeshQueryMasterTest {
         FileReference fileReference2 = new FileReference("test1", 1000, 1000) {{ setHostUUID("h2"); }};
         HashMap<String, Boolean> readOnlyHostMap = new HashMap<String, Boolean>();
         HashSet<QueryData> queryDataSet = new HashSet<QueryData>();
-        queryDataSet.add(new QueryData(null, fileReference1, null, 0));
-        queryDataSet.add(new QueryData(null, fileReference2, null, 0));
+        queryDataSet.add(new QueryData(null, fileReference1, null, "jobid", 0));
+        queryDataSet.add(new QueryData(null, fileReference2, null, "jobid", 0));
         QueryData bestQueryData = MeshSourceAggregator.allocateQueryTaskLegacy(queryTaskCountMap, queryDataSet, readOnlyHostMap);
         assertEquals(bestQueryData.hostEntryInfo.getHostName(), fileReference2.getHostUUID());
     }

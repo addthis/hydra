@@ -55,6 +55,8 @@ import com.addthis.meshy.service.file.FileReference;
 import com.addthis.meshy.service.stream.SourceInputStream;
 import com.addthis.meshy.service.stream.StreamSource;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -104,6 +106,11 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
      */
     private static final double MULTIPLE_STD_DEVS = Double.parseDouble(Parameter.value("meshSourceAggregator.multipleStdDevs", "2"));
 
+    /* A cache for task ids that recently were not in their expected locations */
+    private static final int RECENTLY_MISPLACED_TASK_TTL_MILLIS = Parameter.intValue("meshSourceAggregator.recentlyMisplacedTaskTtl", 120000);
+    private static final int RECENTLY_MISPLACED_TASK_MAX_SIZE = Parameter.intValue("meshSourceAggregator.recentlyMisplacedTaskTtl", 300);
+    private static final Cache<String, Boolean> recentMisplacedTasks;
+
     private static final AtomicBoolean initialize = new AtomicBoolean(false);
     private static final AtomicBoolean exiting = new AtomicBoolean(false);
 
@@ -121,6 +128,8 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
     private static StragglerCheckThread stragglerCheckThread;
 
     static {
+        recentMisplacedTasks = CacheBuilder.newBuilder().maximumSize(RECENTLY_MISPLACED_TASK_MAX_SIZE)
+                .expireAfterWrite(RECENTLY_MISPLACED_TASK_TTL_MILLIS, TimeUnit.MILLISECONDS).build();
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 exiting.set(true);
@@ -469,44 +478,17 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                 QuerySource querySource = null;
                 try {
                     querySource = readerQueue.poll(100, TimeUnit.MILLISECONDS);
-                    if (querySource != null) {
-                        // loops until the source is done, query is canceled
-                        // or source returns a null bundle which indicates its complete or just doesn't
-                        // have data at the moment
-                        while (!querySource.done && !querySource.consumer.canceled.get()) {
-                            if (!processNextBundle(querySource)) {
-                                // is the source exhausted, not canceled and not obsolete
-                                if (querySource.done
-                                    && !querySource.obsolete
-                                    && !querySource.consumer.canceled.get()) {
-                                    // Save the time and lines in the hostEntryInfo
-                                    QueryData queryData = querySource.queryData;
-                                    queryData.hostEntryInfo.setLines(querySource.lines);
-                                    queryData.hostEntryInfo.setFinished();
-
-                                    // Mark this task as complete (and query if all done)
-                                    querySource.consumer.markTaskCompleted(queryData.taskId, querySource);
-                                    querySource.done = true;
-                                    querySource.close();
-
-                                    if (log.isTraceEnabled()) {
-                                        log.trace("Adding time & lines: QueryID: " + querySource.query.uuid() + " host:" + queryData.hostEntryInfo.getHostName());
-                                    }
-
-                                } else if (!querySource.dataChannelReader.busy && querySource.done || querySource.obsolete || querySource.consumer.canceled.get()) {
-                                    if (log.isTraceEnabled() || querySource.query.isTraced()) {
-                                        Query.emitTrace("ignoring response for query: " + querySource.query.uuid() + " from source: " + querySource.id + " for task: " + querySource.getTaskId() + " d:" + querySource.done + " o:" + querySource.obsolete + " c:" + querySource.consumer.canceled.get() + " l:" + querySource.lines);
-                                    }
-                                    QueryData queryData = querySource.queryData;
-                                    queryData.hostEntryInfo.setIgnored();
-                                }
-                                break;
-                            }
-                        }
-                        if (!querySource.consumer.done.get() && !querySource.consumer.errored.get() &&
-                            !querySource.done && !querySource.isEof() && !querySource.obsolete && !querySource.canceled) {
-                            // source still has more data but hasn't completed yet.
-                            readerQueue.add(querySource);
+                    boolean querySourceDone = processQuerySource(querySource);
+                    if (!querySourceDone) {
+                        // If the query communicated a possibly-recoverable IO failure, get a fresh FileReference and attempt to query it instead
+                        String key = querySource.getKey();
+                        if (recentMisplacedTasks.getIfPresent(key) == null) {
+                            Query.emitTrace("Received FileNotFoundException for task " + key + "; attempting retry");
+                            processQuerySource(replaceQuerySource(querySource));
+                            meshQueryMaster.invalidateFileReferenceForJob(querySource.getJobId());
+                        } else {
+                            Query.emitTrace("Received FileNotFoundException for already-failed task " + key + "; aborting");
+                            throw new QueryException("Failed to resolve FileReference for task " + key + " after retry");
                         }
                     }
                 } catch (Exception e) {
@@ -515,6 +497,71 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                     handleQuerySourceError(querySource, e);
                 }
             }
+        }
+
+        private QuerySource replaceQuerySource(QuerySource querySource) throws IOException {
+            // Invoked when a cached FileReference throws an IO Exception
+            // Get a fresh FileReference and make a new QuerySource with that FileReference and the same parameters otherwise
+            FileReference fileReference = meshQueryMaster.getFileReferenceForSingleTask(querySource.getJobId(), querySource.getTaskId());
+            return querySource.createCloneWithFileReference(fileReference);
+        }
+
+        private boolean processQuerySource(QuerySource querySource) throws DataChannelError, IOException {
+            if (querySource != null) {
+                // loops until the source is done, query is canceled
+                // or source returns a null bundle which indicates its complete or just doesn't
+                // have data at the moment
+                while (!querySource.done && !querySource.consumer.canceled.get()) {
+                    boolean processedNext = false;
+                    try {
+                        processedNext = processNextBundle(querySource);
+                    } catch (DataChannelError err) {
+                        if (querySource.lines == 0 && err.getCause() instanceof IOException) {
+                            // This QuerySource does not have this file anymore. Signal to the caller that a retry may resolve the issue.
+                            return false;
+                        }
+                        else {
+                            // This query source has started sending lines. Need to fail the query.
+                            throw err;
+                        }
+                    }
+
+                    if (!processedNext) {
+                        // is the source exhausted, not canceled and not obsolete
+                        if (querySource.done
+                            && !querySource.obsolete
+                            && !querySource.consumer.canceled.get()) {
+                            // Save the time and lines in the hostEntryInfo
+                            QueryData queryData = querySource.queryData;
+                            queryData.hostEntryInfo.setLines(querySource.lines);
+                            queryData.hostEntryInfo.setFinished();
+
+                            // Mark this task as complete (and query if all done)
+                            querySource.consumer.markTaskCompleted(queryData.taskId, querySource);
+                            querySource.done = true;
+                            querySource.close();
+
+                            if (log.isTraceEnabled()) {
+                                log.trace("Adding time & lines: QueryID: " + querySource.query.uuid() + " host:" + queryData.hostEntryInfo.getHostName());
+                            }
+
+                        } else if (!querySource.dataChannelReader.busy && querySource.done || querySource.obsolete || querySource.consumer.canceled.get()) {
+                            if (log.isTraceEnabled() || querySource.query.isTraced()) {
+                                Query.emitTrace("ignoring response for query: " + querySource.query.uuid() + " from source: " + querySource.id + " for task: " + querySource.getTaskId() + " d:" + querySource.done + " o:" + querySource.obsolete + " c:" + querySource.consumer.canceled.get() + " l:" + querySource.lines);
+                            }
+                            QueryData queryData = querySource.queryData;
+                            queryData.hostEntryInfo.setIgnored();
+                        }
+                        break;
+                    }
+                }
+                if (!querySource.consumer.done.get() && !querySource.consumer.errored.get() &&
+                    !querySource.done && !querySource.isEof() && !querySource.obsolete && !querySource.canceled) {
+                    // source still has more data but hasn't completed yet.
+                    readerQueue.add(querySource);
+                }
+            }
+            return true;
         }
 
         private void handleQuerySourceError(QuerySource querySource, Exception error) {
@@ -652,6 +699,10 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
             }
         }
 
+        public String getJobId() {
+            return queryData.jobId;
+        }
+
         @Override
         public void cancel(String message) {
             canceled = true;
@@ -681,8 +732,17 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
             return queryData.taskId;
         }
 
+        public String getKey() {
+            return getJobId() + "/" + getTaskId();
+        }
+
         public String toString() {
             return "" + queryData.taskId;
+        }
+
+        public QuerySource createCloneWithFileReference(FileReference fileReference) {
+            QueryData cloneQueryData = new QueryData(this.queryData.channelMaster, fileReference, this.queryData.queryOptions, this.getJobId(), this.getTaskId());
+            return new QuerySource(cloneQueryData, consumer, query);
         }
     }
 

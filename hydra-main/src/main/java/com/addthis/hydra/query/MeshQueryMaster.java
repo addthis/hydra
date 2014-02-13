@@ -52,6 +52,7 @@ import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.ChannelState;
 import com.addthis.meshy.MeshyServer;
+import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -292,7 +293,7 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
             for (Map.Entry<Integer, Set<FileReferenceWrapper>> entry : fileReferenceMap.entrySet()) {
                 HashSet<QueryData> queryDataSet = new HashSet<>();
                 for (FileReferenceWrapper wrapper : entry.getValue()) {
-                    QueryData queryData = new QueryData(meshy, wrapper.fileReference, options, wrapper.taskId);
+                    QueryData queryData = new QueryData(meshy, wrapper.fileReference, options, query.getJob(), wrapper.taskId);
                     queryDataSet.add(queryData);
                     potentialQueryDataList.add(queryData);
                 }
@@ -339,8 +340,16 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
         return job;
     }
 
+    public synchronized void invalidateFileReferenceForJob(String job) {
+        cachey.invalidate(job);
+    }
+
     public synchronized void invalidateFileReferenceCache() {
         cachey.invalidateFileReferenceCache();
+    }
+
+    public FileReference getFileReferenceForSingleTask(String job, int task) throws IOException {
+        return cachey.getFileReferenceWrapperForSingleTask(job, task).fileReference;
     }
 
     public String getMeshHostJSON() {

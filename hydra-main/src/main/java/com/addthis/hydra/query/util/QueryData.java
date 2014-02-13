@@ -24,13 +24,15 @@ public class QueryData implements Comparable<QueryData> {
     public final FileReference fileReference;
     public final Map<String, String> queryOptions;
     public final int taskId;
+    public final String jobId;
     public HostEntryInfo hostEntryInfo;
 
-    public QueryData(ChannelMaster channelMaster, FileReference fileReference, Map<String, String> queryOptions, int taskId) {
+    public QueryData(ChannelMaster channelMaster, FileReference fileReference, Map<String, String> queryOptions, String jobId, int taskId) {
         this.channelMaster = channelMaster;
         this.fileReference = fileReference;
         this.queryOptions = queryOptions;
         this.taskId = taskId;
+        this.jobId = jobId;
         this.hostEntryInfo = new HostEntryInfo(fileReference.getHostUUID(), taskId);
     }
 
@@ -42,6 +44,9 @@ public class QueryData implements Comparable<QueryData> {
         QueryData queryData = (QueryData) o;
 
         if (taskId != queryData.taskId) return false;
+        if (jobId != null ? !jobId.equals(queryData.jobId) : queryData.jobId != null) {
+            return false;
+        }
         if (fileReference != null ? !fileReference.equals(queryData.fileReference) : queryData.fileReference != null) {
             return false;
         }

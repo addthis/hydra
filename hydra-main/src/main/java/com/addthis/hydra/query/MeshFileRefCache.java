@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.hydra.data.query.QueryException;
 import com.addthis.meshy.ChannelCloseListener;
 import com.addthis.meshy.MeshyConstants;
 import com.addthis.meshy.MeshyServer;
@@ -158,7 +159,7 @@ public class MeshFileRefCache implements ChannelCloseListener {
             return null;
         }
 
-        Map<Integer, Set<FileReferenceWrapper>> fileRefDataSet = getFileReferences(job);
+        Map<Integer, Set<FileReferenceWrapper>> fileRefDataSet = getFileReferences(job, "*");
         if (log.isTraceEnabled()) {
             final StringBuilder sb = new StringBuilder();
             TreeMap<Integer, Set<FileReferenceWrapper>> sortedMap = new TreeMap<>(fileRefDataSet);
@@ -239,8 +240,8 @@ public class MeshFileRefCache implements ChannelCloseListener {
     }
 
 
-    private Map<Integer, Set<FileReferenceWrapper>> getFileReferences(String job) throws IOException {
-        final String prefix = "*/" + job + "/*/gold/data/query";
+    private Map<Integer, Set<FileReferenceWrapper>> getFileReferences(String job, String task) throws IOException {
+        final String prefix = "*/" + job + "/" + task + "/gold/data/query";
         final Semaphore gate = new Semaphore(1);
         final ConcurrentHashMap<Integer, Set<FileReferenceWrapper>> fileRefMap = new ConcurrentHashMap<>();
         try {
@@ -272,6 +273,16 @@ public class MeshFileRefCache implements ChannelCloseListener {
             log.debug("found: " + fileRefMap.keySet().size() + " pairs");
         }
         return fileRefMap;
+    }
+
+    public FileReferenceWrapper getFileReferenceWrapperForSingleTask(String job, int taskId) throws IOException {
+        Set<FileReferenceWrapper> refSet = getFileReferences(job, Integer.toString(taskId)).get(taskId);
+        if (refSet == null || refSet.isEmpty()) {
+            throw new QueryException("Could not find task reference for " + job + "/" + taskId);
+        } else {
+            return refSet.iterator().next();
+        }
+
     }
 
     @Override
