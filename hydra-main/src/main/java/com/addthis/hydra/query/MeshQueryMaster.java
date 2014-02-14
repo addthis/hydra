@@ -341,7 +341,9 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
     }
 
     public synchronized void invalidateFileReferenceForJob(String job) {
-        cachey.invalidate(job);
+        if (job != null) {
+            cachey.invalidate(job);
+        }
     }
 
     public synchronized void invalidateFileReferenceCache() {

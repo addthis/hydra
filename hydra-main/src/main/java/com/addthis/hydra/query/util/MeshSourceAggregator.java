@@ -483,11 +483,11 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                         // If the query communicated a possibly-recoverable IO failure, get a fresh FileReference and attempt to query it instead
                         String key = querySource.getKey();
                         if (recentMisplacedTasks.getIfPresent(key) == null) {
-                            Query.emitTrace("Received FileNotFoundException for task " + key + "; attempting retry");
+                            log.warn("Received FileNotFoundException for task " + key + "; attempting retry");
                             processQuerySource(replaceQuerySource(querySource));
                             meshQueryMaster.invalidateFileReferenceForJob(querySource.getJobId());
                         } else {
-                            Query.emitTrace("Received FileNotFoundException for already-failed task " + key + "; aborting");
+                            log.warn("Received FileNotFoundException for already-failed task " + key + "; aborting");
                             throw new QueryException("Failed to resolve FileReference for task " + key + " after retry");
                         }
                     }
@@ -503,7 +503,7 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
             // Invoked when a cached FileReference throws an IO Exception
             // Get a fresh FileReference and make a new QuerySource with that FileReference and the same parameters otherwise
             FileReference fileReference = meshQueryMaster.getFileReferenceForSingleTask(querySource.getJobId(), querySource.getTaskId());
-            return querySource.createCloneWithFileReference(fileReference);
+            return querySource.createCloneWithReplacementFileReference(fileReference);
         }
 
         private boolean processQuerySource(QuerySource querySource) throws DataChannelError, IOException {
@@ -516,7 +516,8 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                     try {
                         processedNext = processNextBundle(querySource);
                     } catch (DataChannelError err) {
-                        if (querySource.lines == 0 && err.getCause() instanceof IOException) {
+                        log.warn("DCE: " + err.toString() + " :::: " + err.getCause() + " lines=" + querySource.lines);
+                        if (querySource.lines == 0) { // && err.getCause instanceof IOException (???)
                             // This QuerySource does not have this file anymore. Signal to the caller that a retry may resolve the issue.
                             return false;
                         }
@@ -524,6 +525,17 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                             // This query source has started sending lines. Need to fail the query.
                             throw err;
                         }
+                    } catch (IOException io) {
+                        log.warn("IO: " + io + " :::: " + io.getCause() + " lines=" + querySource.lines);
+                        if (querySource.lines == 0) {
+                            // This QuerySource does not have this file anymore. Signal to the caller that a retry may resolve the issue.
+                            return false;
+                        }
+                        else {
+                            // This query source has started sending lines. Need to fail the query.
+                            throw io;
+                        }
+
                     }
 
                     if (!processedNext) {
@@ -737,10 +749,10 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
         }
 
         public String toString() {
-            return "" + queryData.taskId;
+            return queryData.jobId + "/" + queryData.taskId;
         }
 
-        public QuerySource createCloneWithFileReference(FileReference fileReference) {
+        public QuerySource createCloneWithReplacementFileReference(FileReference fileReference) {
             QueryData cloneQueryData = new QueryData(this.queryData.channelMaster, fileReference, this.queryData.queryOptions, this.getJobId(), this.getTaskId());
             return new QuerySource(cloneQueryData, consumer, query);
         }
