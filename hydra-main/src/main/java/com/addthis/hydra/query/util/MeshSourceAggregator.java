@@ -47,6 +47,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.io.DataChannelCodec;
 import com.addthis.hydra.data.query.FramedDataChannelReader;
 import com.addthis.hydra.data.query.Query;
+import com.addthis.hydra.data.query.QueryChannelException;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.source.QueryConsumer;
 import com.addthis.hydra.data.query.source.QueryHandle;
@@ -106,11 +107,6 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
      */
     private static final double MULTIPLE_STD_DEVS = Double.parseDouble(Parameter.value("meshSourceAggregator.multipleStdDevs", "2"));
 
-    /* A cache for task ids that recently were not in their expected locations */
-    private static final int RECENTLY_MISPLACED_TASK_TTL_MILLIS = Parameter.intValue("meshSourceAggregator.recentlyMisplacedTaskTtl", 120000);
-    private static final int RECENTLY_MISPLACED_TASK_MAX_SIZE = Parameter.intValue("meshSourceAggregator.recentlyMisplacedTaskTtl", 300);
-    private static final Cache<String, Boolean> recentMisplacedTasks;
-
     private static final AtomicBoolean initialize = new AtomicBoolean(false);
     private static final AtomicBoolean exiting = new AtomicBoolean(false);
 
@@ -128,8 +124,6 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
     private static StragglerCheckThread stragglerCheckThread;
 
     static {
-        recentMisplacedTasks = CacheBuilder.newBuilder().maximumSize(RECENTLY_MISPLACED_TASK_MAX_SIZE)
-                .expireAfterWrite(RECENTLY_MISPLACED_TASK_TTL_MILLIS, TimeUnit.MILLISECONDS).build();
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 exiting.set(true);
@@ -478,18 +472,12 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                 QuerySource querySource = null;
                 try {
                     querySource = readerQueue.poll(100, TimeUnit.MILLISECONDS);
-                    boolean querySourceDone = processQuerySource(querySource);
-                    if (!querySourceDone) {
-                        // If the query communicated a possibly-recoverable IO failure, get a fresh FileReference and attempt to query it instead
-                        String key = querySource.getKey();
-                        if (recentMisplacedTasks.getIfPresent(key) == null) {
-                            log.warn("Received FileNotFoundException for task " + key + "; attempting retry");
-                            processQuerySource(replaceQuerySource(querySource));
-                            meshQueryMaster.invalidateFileReferenceForJob(querySource.getJobId());
-                        } else {
-                            log.warn("Received FileNotFoundException for already-failed task " + key + "; aborting");
-                            throw new QueryException("Failed to resolve FileReference for task " + key + " after retry");
-                        }
+                    try {
+                        processQuerySource(querySource);
+                    } catch (FileReferenceIOException ex) {
+                        log.warn("Received IOException for task " + querySource.getKey() + "; attempting retry");
+                        processQuerySource(replaceQuerySource(querySource));
+                        meshQueryMaster.invalidateFileReferenceForJob(querySource.getJobId());
                     }
                 } catch (Exception e) {
                     // this is going to rethrow exception, so we need to replace this SourceReader in the pool
@@ -506,7 +494,7 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
             return querySource.createCloneWithReplacementFileReference(fileReference);
         }
 
-        private boolean processQuerySource(QuerySource querySource) throws DataChannelError, IOException {
+        private void processQuerySource(QuerySource querySource) throws DataChannelError, IOException, FileReferenceIOException {
             if (querySource != null) {
                 // loops until the source is done, query is canceled
                 // or source returns a null bundle which indicates its complete or just doesn't
@@ -518,7 +506,7 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                     } catch (IOException io) {
                         if (querySource.lines == 0) {
                             // This QuerySource does not have this file anymore. Signal to the caller that a retry may resolve the issue.
-                            return false;
+                            throw new FileReferenceIOException();
                         }
                         else {
                             // This query source has started sending lines. Need to fail the query.
@@ -562,7 +550,6 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                     readerQueue.add(querySource);
                 }
             }
-            return true;
         }
 
         private void handleQuerySourceError(QuerySource querySource, Exception error) {
@@ -611,6 +598,10 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
             return false;
         }
     }
+
+    /* A special type of Exception that indicates that a FileReference in MeshQueryMaster's cache may be out of date and
+    that retrying via a mesh lookup may */
+    private static class FileReferenceIOException extends Exception {}
 
     private class QuerySource implements QueryHandle {
 
