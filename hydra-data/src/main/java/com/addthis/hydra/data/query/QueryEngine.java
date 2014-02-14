@@ -27,6 +27,8 @@ import com.addthis.bundle.core.kvp.KVBundleFormat;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.DataTreeNode;
 
+import com.google.common.collect.Iterators;
+
 import org.slf4j.Logger;
 
 import org.slf4j.LoggerFactory;
@@ -37,12 +39,11 @@ import org.slf4j.LoggerFactory;
 public class QueryEngine {
 
     private static final Logger log = LoggerFactory.getLogger(QueryEngine.class);
-    private static final LinkedList<DataTreeNode> emptylist = new LinkedList<DataTreeNode>();
 
-    protected DataTree tree;
-    private AtomicInteger used;
-    private AtomicBoolean isOpen;
-    private AtomicBoolean isClosed;
+    protected final DataTree tree;
+    private final AtomicInteger used;
+    private final AtomicBoolean isOpen;
+    private final AtomicBoolean isClosed;
     private final HashSet<Thread> active;
     private boolean closeWhenIdle;
 
@@ -110,13 +111,9 @@ public class QueryEngine {
         closeWhenIdle = true;
         if (used.get() == 0) {
             close();
-            if (log.isDebugEnabled()) {
-                log.debug("close on idle/close for " + tree);
-            }
+            log.debug("close on idle/close for {}", tree);
         } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Query Engine " + tree + " is busy, did not call close");
-            }
+            log.debug("Query Engine {} is busy, did not call close", tree);
         }
     }
 
@@ -328,7 +325,7 @@ public class QueryEngine {
             return;
         }
         QueryElement next = path[pathIndex];
-        Iterator<DataTreeNode> iter = root != null ? next.matchNodes(tree, stack) : next.emptyok() ? emptylist.iterator() : null;
+        Iterator<DataTreeNode> iter = root != null ? next.matchNodes(tree, stack) : next.emptyok() ? Iterators.<DataTreeNode>emptyIterator() : null;
         if (iter == null) {
             return;
         }

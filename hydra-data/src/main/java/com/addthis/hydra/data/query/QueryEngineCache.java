@@ -172,8 +172,7 @@ public class QueryEngineCache {
                             public void onRemoval(RemovalNotification<String, QueryEngine> note) {
                                 QueryEngine qe = note.getValue();
                                 // a refresh call that returns the current value can generate spurious events
-                                if (loadingEngineCache.asMap().get(note.getKey()) != qe)
-                                {
+                                if (loadingEngineCache.asMap().get(note.getKey()) != qe) {
                                     qe.closeWhenIdle();
                                 }
                             }
