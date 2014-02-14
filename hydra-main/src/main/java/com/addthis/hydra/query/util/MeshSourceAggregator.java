@@ -515,18 +515,7 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                     boolean processedNext = false;
                     try {
                         processedNext = processNextBundle(querySource);
-                    } catch (DataChannelError err) {
-                        log.warn("DCE: " + err.toString() + " :::: " + err.getCause() + " lines=" + querySource.lines);
-                        if (querySource.lines == 0) { // && err.getCause instanceof IOException (???)
-                            // This QuerySource does not have this file anymore. Signal to the caller that a retry may resolve the issue.
-                            return false;
-                        }
-                        else {
-                            // This query source has started sending lines. Need to fail the query.
-                            throw err;
-                        }
                     } catch (IOException io) {
-                        log.warn("IO: " + io + " :::: " + io.getCause() + " lines=" + querySource.lines);
                         if (querySource.lines == 0) {
                             // This QuerySource does not have this file anymore. Signal to the caller that a retry may resolve the issue.
                             return false;
