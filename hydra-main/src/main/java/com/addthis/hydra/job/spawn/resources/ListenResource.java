@@ -66,7 +66,7 @@ public class ListenResource {
 
     private AtomicInteger clientCounter;
 
-    private static final CodecJSON codec = new CodecJSON(true);
+    private static final CodecJSON codec = new CodecJSON();
 
     public ListenResource(Spawn spawn, int pollTimeout) {
         this.spawn = spawn;

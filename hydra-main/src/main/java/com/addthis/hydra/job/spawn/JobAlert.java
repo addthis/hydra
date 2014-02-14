@@ -316,7 +316,7 @@ public class JobAlert implements Codec.Codable {
     @Override
     public String toString() {
         try {
-            return CodecJSON.encodeString(this, true);
+            return CodecJSON.encodeString(this);
         } catch (Exception e) {
             return super.toString();
         }
