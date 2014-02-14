@@ -2014,14 +2014,14 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             try {
                 Integer pid = getPID(pidFile);
                 if (pid == null || !activeProcessExistsWithPid(pid, rootDir)) {
-                    success = doneFile.exists() || doneFile.createNewFile();
+                    success = doneFile.exists() || !doneFile.getParentFile().exists() || doneFile.createNewFile();
                 } else {
                     success = true; // Process exists, nothing to do.
                 }
             } catch (IOException io) {
                 success = false;
                 log.warn("[task.state.check] exception when creating done file: " + io, io);
-                }
+            }
             if (!success) {
                 log.warn("[task.state.check] failed to create done file for task " + getName() + " path " + doneFile);
             }
