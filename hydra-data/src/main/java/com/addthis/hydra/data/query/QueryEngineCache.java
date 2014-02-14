@@ -171,7 +171,8 @@ public class QueryEngineCache {
                         new RemovalListener<String, QueryEngine>() {
                             public void onRemoval(RemovalNotification<String, QueryEngine> note) {
                                 QueryEngine qe = note.getValue();
-                                if (loadingEngineCache.asMap().get(note.getKey()) != qe) //filter out spurious events
+                                // a refresh call that returns the current value can generate spurious events
+                                if (loadingEngineCache.asMap().get(note.getKey()) != qe)
                                 {
                                     qe.closeWhenIdle();
                                 }
