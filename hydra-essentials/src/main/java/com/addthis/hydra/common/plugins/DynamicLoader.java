@@ -127,12 +127,19 @@ public class DynamicLoader {
             reader = new InputStreamReader(stream);
             CsvListReader csvParser = new CsvListReader(reader, csvParserOptions);
             List<String> next;
+            int line = 0;
             while ((next = csvParser.read()) != null) {
+                line++;
                 String[] fields = next.toArray(new String[next.size()]);
                 try {
-                    if (fields.length >= 2) {
+                    if (fields.length < 2) {
+                        log.error("Line {} in the file {} contains less than two columns",
+                                line, urlSpecifier);
+                    } else {
                         classNames.add(fields[0]);
-                        jarLocations.add(new URL(fields[1]));
+                        if (fields[1].length() > 0) {
+                            jarLocations.add(new URL(fields[1]));
+                        }
                     }
                     if (fields.length >= 4) {
                         if (fields[2].equals("executable")) {
