@@ -386,6 +386,7 @@ function(
             DataTable.View.prototype.initialize.apply(this,[{
                 columns:columns,
                 filterTemplate:taskFilterTemplate,
+                enableSearch:false,
                 selectableTemplate:taskSelectableTemplate,
                 heightBuffer:80,
                 columnFilterIndex:1,
