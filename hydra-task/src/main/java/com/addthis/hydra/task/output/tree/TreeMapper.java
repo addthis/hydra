@@ -740,7 +740,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
         public void handle(String target, Request request, HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws IOException, ServletException {
             httpServletResponse.setCharacterEncoding(CharEncoding.UTF_8);
             if (target.equals("/ping")) {
-                httpServletResponse.getWriter().write("thank you, come again ...");
+                httpServletResponse.getWriter().write("ok");
             } else if (target.equals("/do")) {
                 List<String> did = new LinkedList<>();
                 try {
@@ -780,7 +780,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
                 if (getIntParam(request, "dump", 0) == 1) {
                     String json;
                     try {
-                        json = CodecJSON.encodeString(config, false);
+                        json = CodecJSON.encodeString(config);
                     } catch (Exception e) {
                         throw new IOException(e);
                     }

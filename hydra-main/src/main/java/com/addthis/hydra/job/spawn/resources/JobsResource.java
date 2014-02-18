@@ -979,8 +979,7 @@ public class JobsResource {
         JSONObject jobJSON;
 
         try {
-            //jobJSON = new JSONObject(expandedConfig, true); // error on duplicate not yet supported
-            jobJSON = new JSONObject(expandedConfig);
+            jobJSON = new JSONObject(expandedConfig, false);
         } catch (JSONException ex) {
             lineErrors.put(ex.getLine());
             lineColumns.put(ex.getColumn());

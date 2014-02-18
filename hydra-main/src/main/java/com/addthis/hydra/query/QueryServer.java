@@ -228,13 +228,13 @@ public class QueryServer extends AbstractHandler {
         } else if (target.equals("/query/list")) {
             response.getWriter().write("[\n");
             for (QueryTracker.QueryEntryInfo stat : tracker.getRunning()) {
-                response.getWriter().write(CodecJSON.encodeString(stat, false).concat(",\n"));
+                response.getWriter().write(CodecJSON.encodeString(stat).concat(",\n"));
             }
             response.getWriter().write("]");
         } else if (target.equals("/completed/list")) {
             response.getWriter().write("[\n");
             for (QueryTracker.QueryEntryInfo stat : tracker.getCompleted()) {
-                response.getWriter().write(CodecJSON.encodeString(stat, false).concat(",\n"));
+                response.getWriter().write(CodecJSON.encodeString(stat).concat(",\n"));
             }
             response.getWriter().write("]");
         } else if (target.equals("/host/list")) {
