@@ -302,26 +302,20 @@ public class JobAlertRunner {
      */
     private void loadLegacyAlerts() {
         List<JobAlert> alerts;
-        spawn.acquireJobLock();
-        try {
-            synchronized (alertMap) {
-                for (Job job : spawn.listJobs()) {
-                    if (job != null && (alerts = job.getAlerts()) != null) {
-                        for (JobAlert alert : alerts) {
-                            alert.setJobIds(new String[] {job.getId()});
-                            String newUUID = UUID.randomUUID().toString();
-                            alert.setAlertId(newUUID);
-                            alertMap.put(newUUID, alert);
-                            storeAlert(newUUID, alert);
-                        }
-                        job.setAlerts(null);
+        synchronized (alertMap) {
+            for (Job job : spawn.listJobsConcurrentImmutable()) {
+                if (job != null && (alerts = job.getAlerts()) != null) {
+                    for (JobAlert alert : alerts) {
+                        alert.setJobIds(new String[]{job.getId()});
+                        String newUUID = UUID.randomUUID().toString();
+                        alert.setAlertId(newUUID);
+                        alertMap.put(newUUID, alert);
+                        storeAlert(newUUID, alert);
                     }
+                    job.setAlerts(null);
                 }
             }
-        }  finally {
-            spawn.releaseJobLock();
         }
-
     }
 
     private void storeAlert(String alertId, JobAlert alert) {
