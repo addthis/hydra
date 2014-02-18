@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
@@ -152,6 +154,7 @@ public final class Job implements IJob, Codable {
     private JobQueryConfig queryConfig;
 
     private JobCommand submitCommand;
+    private final Lock lock = new ReentrantLock();
 
     // If all errored tasks from an errored job are resolved and the job has started within this cutoff, automatically enable the job. Default is 3 days.
     private static final long AUTO_ENABLE_CUTOFF = Parameter.longValue("job.enable.cutoff", 1000 * 60 * 60 * 24 * 3);
@@ -225,6 +228,15 @@ public final class Job implements IJob, Codable {
         this.properties = job.getProperties();
         setEnabled(job.isEnabled());
     }
+
+    public void lock() {
+        lock.lock();
+    }
+
+    public void unlock() {
+        lock.unlock();
+    }
+
 
     @Override
     public String getId() {

@@ -48,9 +48,11 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import java.text.ParseException;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.addthis.basis.net.HttpUtil;
 import com.addthis.basis.util.Bytes;
@@ -253,7 +255,6 @@ public class Spawn implements Codec.Codable {
     private SpawnBalancer balancer;
     private SpawnQueuesByPriority taskQueuesByPriority = new SpawnQueuesByPriority();
     private volatile int lastQueueSize = 0;
-    private final Lock jobLock = new ReentrantLock();
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     private final LinkedBlockingQueue<String> jobUpdateQueue = new LinkedBlockingQueue<>();
     private final SpawnJobFixer spawnJobFixer = new SpawnJobFixer(this);
@@ -428,14 +429,6 @@ public class Spawn implements Codec.Codable {
         return httpHost;
     }
 
-    public void acquireJobLock() {
-        jobLock.lock();
-    }
-
-    public void releaseJobLock() {
-        jobLock.unlock();
-    }
-
     private void startSpawnWeb(File dataDir, File webDir) throws Exception {
         log.info("[init] starting http server");
         SpawnHttp http = new SpawnHttp(this, webDir);
@@ -535,15 +528,10 @@ public class Spawn implements Codec.Codable {
     @VisibleForTesting
     protected void loadJobs() {
         if (jobConfigManager != null) {
-            jobLock.lock();
-            try {
-                for (IJob iJob : jobConfigManager.getJobs().values()) {
-                    if (iJob != null) {
-                        putJobInSpawnState(new Job(iJob));
-                    }
+            for (IJob iJob : jobConfigManager.getJobs().values()) {
+                if (iJob != null) {
+                    putJobInSpawnState(new Job(iJob));
                 }
-            } finally {
-                jobLock.unlock();
             }
         }
         Thread loadDependencies = new Thread() {
@@ -677,24 +665,19 @@ public class Spawn implements Codec.Codable {
     }
 
     public Set<String> getDataSources(String jobId) {
-        HashSet<String> dataSources = new HashSet<>();
+        Set<String> dataSources = new HashSet<>();
         Job job = this.getJob(jobId);
         if (job == null || job.getParameters() == null) {
             return dataSources;
         }
-        jobLock.lock();
-        try {
-            for (JobParameter param : job.getParameters()) {
-                String value = param.getValue();
-                if (Strings.isEmpty(value)) {
-                    value = param.getDefaultValue();
-                }
-                if (value != null && spawnState.jobs.containsKey(value)) {
-                    dataSources.add(value);
-                }
+        for (JobParameter param : job.getParameters()) {
+            String value = param.getValue();
+            if (Strings.isEmpty(value)) {
+                value = param.getDefaultValue();
             }
-        } finally {
-            jobLock.unlock();
+            if (value != null && spawnState.jobs.containsKey(value)) {
+                dataSources.add(value);
+            }
         }
         return dataSources;
     }
@@ -706,20 +689,15 @@ public class Spawn implements Codec.Codable {
     //* returns the jobs that depend on a given job. dependency is established if the job's ID is used as a job parameter
     public Collection<Job> listDependentJobs(String jobId) {
         ArrayList<Job> dependents = new ArrayList<>();
-        jobLock.lock();
-        try {
-            for (Job job : spawnState.jobs.values()) {
-                for (JobParameter param : job.getParameters()) {
-                    if (param.getValue() != null && param.getValue().equals(jobId)) {
-                        dependents.add(job);
-                        break;
-                    }
+        for (Job job : spawnState.jobs.values()) {
+            for (JobParameter param : job.getParameters()) {
+                if (param.getValue() != null && param.getValue().equals(jobId)) {
+                    dependents.add(job);
+                    break;
                 }
             }
-            return dependents;
-        } finally {
-            jobLock.unlock();
         }
+        return dependents;
     }
 
     public void buildDependencyFlowGraph(FlowGraph graph, String jobId) {
@@ -771,19 +749,6 @@ public class Spawn implements Codec.Codable {
         }
     }
 
-    public Collection<Job> listJobs() {
-        ArrayList<Job> clones = new ArrayList<>(spawnState.jobs.size());
-        jobLock.lock();
-        try {
-            for (Job job : spawnState.jobs.values()) {
-                clones.add(job);
-            }
-            return clones;
-        } finally {
-            jobLock.unlock();
-        }
-    }
-
     public Collection<Job> listJobsConcurrentImmutable() {
         return Collections.unmodifiableCollection(spawnState.jobs.values());
     }
@@ -829,12 +794,7 @@ public class Spawn implements Codec.Codable {
         if (jobUUID == null) {
             return null;
         }
-        jobLock.lock();
-        try {
-            return spawnState.jobs.get(jobUUID);
-        } finally {
-            jobLock.unlock();
-        }
+        return spawnState.jobs.get(jobUUID);
     }
 
     public void setJobConfig(String jobUUID, String config) throws Exception {
@@ -845,12 +805,7 @@ public class Spawn implements Codec.Codable {
         if (jobUUID == null) {
             return null;
         }
-        jobLock.lock();
-        try {
-            return jobConfigManager.getConfig(jobUUID);
-        } finally {
-            jobLock.unlock();
-        }
+        return jobConfigManager.getConfig(jobUUID);
     }
 
     public Job putJobInSpawnState(Job job) {
@@ -881,37 +836,32 @@ public class Spawn implements Codec.Codable {
     }
 
     public Job createJob(String creator, int taskCount, Collection<String> taskHosts, String minionType, String command) throws Exception {
-        jobLock.lock();
-        try {
-            Job job = new Job(UUID.randomUUID().toString(), creator != null ? creator : "anonymous");
-            job.setOwner(job.getCreator());
-            job.setState(JobState.IDLE);
-            job.setCommand(command);
-            job.setDailyBackups(1);
-            job.setWeeklyBackups(1);
-            job.setMonthlyBackups(1);
-            job.setHourlyBackups(1);
-            job.setReplicas(1);
-            job.setMinionType(minionType);
-            List<HostState> hostStates = getOrCreateHostStateList(minionType, taskHosts);
-            List<JobTask> tasksAssignedToHosts = balancer.generateAssignedTasksForNewJob(job.getId(), taskCount, hostStates);
-            job.setTasks(tasksAssignedToHosts);
-            for (JobTask task : tasksAssignedToHosts) {
-                HostState host = getHostState(task.getHostUUID());
-                if (host == null) {
-                    throw new Exception("Unable to allocate job tasks because no suitable host was found");
-                }
-                host.addJob(job.getId());
+        Job job = new Job(UUID.randomUUID().toString(), creator != null ? creator : "anonymous");
+        job.setOwner(job.getCreator());
+        job.setState(JobState.IDLE);
+        job.setCommand(command);
+        job.setDailyBackups(1);
+        job.setWeeklyBackups(1);
+        job.setMonthlyBackups(1);
+        job.setHourlyBackups(1);
+        job.setReplicas(1);
+        job.setMinionType(minionType);
+        List<HostState> hostStates = getOrCreateHostStateList(minionType, taskHosts);
+        List<JobTask> tasksAssignedToHosts = balancer.generateAssignedTasksForNewJob(job.getId(), taskCount, hostStates);
+        job.setTasks(tasksAssignedToHosts);
+        for (JobTask task : tasksAssignedToHosts) {
+            HostState host = getHostState(task.getHostUUID());
+            if (host == null) {
+                throw new Exception("Unable to allocate job tasks because no suitable host was found");
             }
-            putJobInSpawnState(job);
-            if (jobConfigManager != null) {
-                jobConfigManager.addJob(job);
-            }
-            submitConfigUpdate(job.getId(), null);
-            return job;
-        } finally {
-            jobLock.unlock();
+            host.addJob(job.getId());
         }
+        putJobInSpawnState(job);
+        if (jobConfigManager != null) {
+            jobConfigManager.addJob(job);
+        }
+        submitConfigUpdate(job.getId(), null);
+        return job;
     }
 
     public boolean synchronizeJobState(String jobUUID) {
@@ -919,10 +869,10 @@ public class Spawn implements Codec.Codable {
             throw new NullPointerException("missing job uuid");
         }
         if (jobUUID.equals("ALL")) {
-            Collection<Job> jobList = listJobs();
+            Collection<Job> jobList = listJobsConcurrentImmutable();
             for (Job job : jobList) {
                 if (!synchronizeSingleJob(job.getId())) {
-                    log.warn("Stopping synchronize all jobs to to failure synchronizing job: " + job.getId());
+                    log.warn("Stopping synchronize all jobs to prevent failure synchronizing job: " + job.getId());
                     return false;
                 }
             }
@@ -1048,22 +998,16 @@ public class Spawn implements Codec.Codable {
             log.warn("[swap.task.stopped] failed; exiting");
             return false;
         }
-        Job job;
-        jobLock.lock();
-        try {
-            job = getJob(jobUUID);
-            task.replaceReplica(replicaHostID, task.getHostUUID());
-            task.setHostUUID(replicaHostID);
-            queueJobTaskUpdateEvent(job);
-        } finally {
-            jobLock.unlock();
-        }
+        Job job = getJob(jobUUID);
+        task.replaceReplica(replicaHostID, task.getHostUUID());
+        task.setHostUUID(replicaHostID);
+        queueJobTaskUpdateEvent(job);
         if (kickOnComplete) {
             try {
                 scheduleTask(job, task, expandJob(job));
             } catch (Exception e) {
                 log.warn("Warning: failed to kick task " + task.getJobKey() + " with: " + e, e);
-                }
+            }
         }
         return true;
     }
@@ -1290,13 +1234,13 @@ public class Spawn implements Codec.Codable {
      * @return A string description
      */
     public String fixTaskDir(String jobId, int node, boolean ignoreTaskState, boolean idleOnly) {
-        jobLock.lock();
+        Job job = getJob(jobId);
+        if (job == null) {
+            return "Null job";
+        }
+        int numChanged = 0;
+        job.lock();
         try {
-            Job job = getJob(jobId);
-            if (job == null) {
-                return "Null job";
-            }
-            int numChanged = 0;
             List<JobTask> tasks = node < 0 ? job.getCopyOfTasks() : Arrays.asList(job.getTask(node));
             for (JobTask task : tasks) {
                 boolean shouldModifyTask = !spawnJobFixer.haveRecentlyFixedTask(task.getJobKey()) &&
@@ -1315,11 +1259,10 @@ public class Spawn implements Codec.Codable {
                     }
                 }
             }
-            return "Changed " + numChanged + " tasks";
         } finally {
-            jobLock.unlock();
+            job.unlock();
         }
-
+        return "Changed " + numChanged + " tasks";
     }
 
     public boolean resolveJobTaskDirectoryMatches(Job job, JobTask task, List<JobTaskDirectoryMatch> matches) throws Exception {
@@ -1399,33 +1342,27 @@ public class Spawn implements Codec.Codable {
     }
 
     public String checkTaskDirText(String jobId, int node) {
-        jobLock.lock();
-        try {
-            Job job = getJob(jobId);
-            if (job == null) {
-                return "NULL JOB";
-            }
-            StringBuilder sb = new StringBuilder();
-            List<JobTask> tasks = node < 0 ? new ArrayList<>(job.getCopyOfTasks()) : Arrays.asList(job.getTask(node));
-            Collections.sort(tasks, new Comparator<JobTask>() {
-                @Override
-                public int compare(JobTask jobTask, JobTask jobTask1) {
-                    return Double.compare(jobTask.getTaskID(), jobTask1.getTaskID());
-                }
-            });
-            sb.append("Directory check for job " + job.getId() + "\n");
-            for (JobTask task : tasks) {
-                sb.append("Task " + task.getTaskID() + ": " + matchTaskToDirectories(task, true) + "\n");
-            }
-            return sb.toString();
-        } finally {
-            jobLock.unlock();
+        Job job = getJob(jobId);
+        if (job == null) {
+            return "NULL JOB";
         }
+        StringBuilder sb = new StringBuilder();
+        List<JobTask> tasks = node < 0 ? new ArrayList<>(job.getCopyOfTasks()) : Arrays.asList(job.getTask(node));
+        Collections.sort(tasks, new Comparator<JobTask>() {
+            @Override
+            public int compare(JobTask jobTask, JobTask jobTask1) {
+                return Double.compare(jobTask.getTaskID(), jobTask1.getTaskID());
+            }
+        });
+        sb.append("Directory check for job " + job.getId() + "\n");
+        for (JobTask task : tasks) {
+            sb.append("Task " + task.getTaskID() + ": " + matchTaskToDirectories(task, true) + "\n");
+        }
+        return sb.toString();
     }
 
     public JSONArray checkTaskDirJSON(String jobId, int node) {
         JSONArray resultList = new JSONArray();
-        jobLock.lock();
         try {
             Job job = getJob(jobId);
             if (job == null) {
@@ -1449,8 +1386,6 @@ public class Spawn implements Codec.Codable {
         } catch (Exception ex) {
             log.warn("Error: checking dirs for job: " + jobId + ", node: " + node);
             ex.printStackTrace();
-        } finally {
-            jobLock.unlock();
         }
         return resultList;
     }
@@ -1630,7 +1565,7 @@ public class Spawn implements Codec.Codable {
     }
 
     public boolean prepareTaskStatesForRebalance(Job job, JobTask task, boolean allowQueuedTasks, boolean isMigration) {
-        jobLock.lock();
+        job.lock();
         try {
             if (task.getState() != JobTaskState.IDLE && (!allowQueuedTasks && task.getState() != JobTaskState.QUEUED)) {
                 log.warn("[task.mover] decided not to move non-idle task " + task);
@@ -1641,16 +1576,19 @@ public class Spawn implements Codec.Codable {
             queueJobTaskUpdateEvent(job);
             return true;
         } finally {
-            jobLock.unlock();
+            job.unlock();
         }
     }
 
     public boolean switchReplicaHost(JobKey taskKey, String sourceHostUUID, String targetHostUUID) throws Exception {
         // After we move a replica directory, switch a task's replica object to point at the new host
         boolean switched = false;
-        jobLock.lock();
+        Job job = getJob(taskKey);
+        if (job == null) {
+            return false;
+        }
+        job.lock();
         try {
-            Job job = getJob(taskKey);
             JobTask task = getTask(taskKey.getJobUuid(), taskKey.getNodeNumber());
             if (task != null) {
                 List<JobTaskReplica> replicas = task.getReplicas();
@@ -1670,7 +1608,7 @@ public class Spawn implements Codec.Codable {
             }
             return switched;
         } finally {
-            jobLock.unlock();
+            job.unlock();
         }
     }
 
@@ -1850,7 +1788,7 @@ public class Spawn implements Codec.Codable {
     public void updateJob(IJob ijob, boolean reviseReplicas) throws Exception {
         if (useZk) {
             Job job = new Job(ijob);
-            jobLock.lock();
+            job.lock();
             try {
                 require(getJob(job.getId()) != null, "job " + job.getId() + " does not exist");
                 updateJobDependencies(job);
@@ -1865,7 +1803,7 @@ public class Spawn implements Codec.Codable {
                 }
                 sendJobUpdateEvent(job);
             } finally {
-                jobLock.unlock();
+                job.unlock();
             }
         }
     }
@@ -1895,12 +1833,14 @@ public class Spawn implements Codec.Codable {
     }
 
     public DeleteStatus deleteJob(String jobUUID) throws Exception {
-        jobLock.lock();
+
+        Job job = getJob(jobUUID);
+        if (job == null) {
+            return DeleteStatus.JOB_MISSING;
+        }
+        job.lock();
         try {
-            Job job = getJob(jobUUID);
-            if (job == null) {
-                return DeleteStatus.JOB_MISSING;
-            }
+
             if (job.getDontDeleteMe()) {
                 return DeleteStatus.JOB_DO_NOT_DELETE;
             }
@@ -1917,7 +1857,7 @@ public class Spawn implements Codec.Codable {
             }
             return DeleteStatus.SUCCESS;
         } finally {
-            jobLock.unlock();
+            job.unlock();
         }
     }
 
@@ -1936,10 +1876,10 @@ public class Spawn implements Codec.Codable {
      * @return True if the task is successfully removed
      */
     public boolean deleteTask(String jobUUID, String hostUuid, Integer node, boolean isReplica) {
-        jobLock.lock();
-        try {
-            Job job = getJob(jobUUID);
-            if (job != null) {
+        Job job = getJob(jobUUID);
+        if (job != null) {
+            job.lock();
+            try {
                 log.warn("[job.delete.host] " + hostUuid + "/" + job.getId() + " >> " + node);
                 spawnMQ.sendControlMessage(new CommandTaskDelete(hostUuid, job.getId(), node, job.getRunCount(), false));
                 if (isReplica) {
@@ -1949,11 +1889,11 @@ public class Spawn implements Codec.Codable {
                     queueJobTaskUpdateEvent(job);
                 }
                 return true;
-            } else {
-                return false;
+            } finally {
+                job.unlock();
             }
-        } finally {
-            jobLock.unlock();
+        } else {
+            return false;
         }
     }
 
@@ -2037,7 +1977,6 @@ public class Spawn implements Codec.Codable {
         boolean success = false;
         while (!success & !shuttingDown.get()) {
             try {
-                jobLock.lock();
                 if (taskQueuesByPriority.tryLock()) {
                     success = true;
                     Job job = getJob(jobUUID);
@@ -2051,7 +1990,6 @@ public class Spawn implements Codec.Codable {
                     job.setHadMoreData(false);
                 }
             } finally {
-                jobLock.unlock();
                 if (success) {
                     taskQueuesByPriority.unlock();
                 }
@@ -2236,7 +2174,7 @@ public class Spawn implements Codec.Codable {
 
     public boolean deleteCommand(String key) throws Exception {
         /* prevent deletion of commands used in jobs */
-        for (Job job : listJobs()) {
+        for (Job job : listJobsConcurrentImmutable()) {
             if (job.getCommand() != null && job.getCommand().equals(key)) {
                 return false;
             }
@@ -2276,7 +2214,7 @@ public class Spawn implements Codec.Codable {
 
     public boolean deleteMacro(String key) {
         /* prevent deletion of macros used in job configs */
-        for (Job job : listJobs()) {
+        for (Job job : listJobsConcurrentImmutable()) {
             String rawconf = getJobConfig(job.getId());
             if (rawconf != null && rawconf.contains("%{" + key + "}%")) {
                 return false;
@@ -2662,31 +2600,27 @@ public class Spawn implements Codec.Codable {
     JobMacro createJobHostMacro(String job, int port) {
         String sPort = Integer.valueOf(port).toString();
         Set<String> jobHosts = new TreeSet<>();// best set?
-        jobLock.lock();
-        try {
-            Collection<HostState> hosts = listHostStatus(null);
-            Map<String, String> uuid2Host = new HashMap<>();
-            for (HostState host : hosts) {
-                if (host.isUp()) {
-                    uuid2Host.put(host.getHostUuid(), host.getHost());
-                }
+
+        Collection<HostState> hosts = listHostStatus(null);
+        Map<String, String> uuid2Host = new HashMap<>();
+        for (HostState host : hosts) {
+            if (host.isUp()) {
+                uuid2Host.put(host.getHostUuid(), host.getHost());
             }
-            if (uuid2Host.size() == 0) {
-                log.warn("[createJobHostMacro] warning job was found on no available hosts: " + job);
+        }
+        if (uuid2Host.size() == 0) {
+            log.warn("[createJobHostMacro] warning job was found on no available hosts: " + job);
+        }
+        IJob ijob = getJob(job);
+        if (ijob == null) {
+            log.warn("[createJobHostMacro] Unable to get job config for job: " + job);
+            throw new RuntimeException("[createJobHostMacro] Unable to get job config for job: " + job);
+        }
+        for (JobTask task : ijob.getCopyOfTasks()) {
+            String host = uuid2Host.get(task.getHostUUID());
+            if (host != null) {
+                jobHosts.add(host);
             }
-            IJob ijob = getJob(job);
-            if (ijob == null) {
-                log.warn("[createJobHostMacro] Unable to get job config for job: " + job);
-                throw new RuntimeException("[createJobHostMacro] Unable to get job config for job: " + job);
-            }
-            for (JobTask task : ijob.getCopyOfTasks()) {
-                String host = uuid2Host.get(task.getHostUUID());
-                if (host != null) {
-                    jobHosts.add(host);
-                }
-            }
-        } finally {
-            jobLock.unlock();
         }
 
         List<String> hostStrings = new ArrayList<>();
@@ -2703,24 +2637,14 @@ public class Spawn implements Codec.Codable {
      * send job update event to registered listeners (usually http clients)
      */
     private void sendJobUpdateEvent(Job job) {
-        jobLock.lock();
-        try {
-            if (jobConfigManager != null) {
-                jobConfigManager.updateJob(job);
-            }
-        } finally {
-            jobLock.unlock();
+        if (jobConfigManager != null) {
+            jobConfigManager.updateJob(job);
         }
         sendJobUpdateEvent("job.update", job);
     }
 
     public void queueJobTaskUpdateEvent(Job job) {
-        jobLock.lock();
-        try {
-            jobUpdateQueue.add(job.getId());
-        } finally {
-            jobLock.unlock();
-        }
+        jobUpdateQueue.add(job.getId());
     }
 
     public void drainJobTaskUpdateQueue() {
@@ -2742,16 +2666,10 @@ public class Spawn implements Codec.Codable {
     }
 
     public void sendJobTaskUpdateEvent(Job job, JobTask jobTask) {
-        jobLock.lock();
-        try {
-            if (jobConfigManager != null) {
-                jobConfigManager.updateJob(job, jobTask);
-            }
-        } finally {
-            jobLock.unlock();
+        if (jobConfigManager != null) {
+            jobConfigManager.updateJob(job, jobTask);
         }
         sendJobUpdateEvent("job.update", job);
-
     }
 
     public void sendJobUpdateEvent(String label, Job job) {
@@ -2949,50 +2867,46 @@ public class Spawn implements Codec.Codable {
             int taskqueued = 0;
             long files = 0;
             long bytes = 0;
-            jobLock.lock();
-            try {
-                for (Job job : spawnState.jobs.values()) {
-                    for (JobTask jn : job.getCopyOfTasks()) {
-                        switch (jn.getState()) {
-                            case ALLOCATED:
-                                taskallocated++;
-                                break;
-                            case BUSY:
-                                taskbusy++;
-                                break;
-                            case ERROR:
-                                taskerrored++;
-                                break;
-                            case IDLE:
-                                break;
-                            case QUEUED:
-                                taskqueued++;
-                                break;
-                        }
-                        files += jn.getFileCount();
-                        bytes += jn.getByteCount();
-                    }
-                    switch (job.getState()) {
+            for (Job job : spawnState.jobs.values()) {
+                for (JobTask jn : job.getCopyOfTasks()) {
+                    switch (jn.getState()) {
+                        case ALLOCATED:
+                            taskallocated++;
+                            break;
+                        case BUSY:
+                            taskbusy++;
+                            break;
+                        case ERROR:
+                            taskerrored++;
+                            break;
                         case IDLE:
                             break;
-                        case RUNNING:
-                            jobrunning++;
-                            if (job.getStartTime() != null && job.getMaxRunTime() != null &&
-                                (JitterClock.globalTime() - job.getStartTime() > job.getMaxRunTime() * 2)) {
-                                jobshung++;
-                            }
-                            break;
-                        case SCHEDULED:
-                            jobscheduled++;
+                        case QUEUED:
+                            taskqueued++;
                             break;
                     }
-                    if (job.getState() == JobState.ERROR) {
-                        joberrored++;
-                    }
+                    files += jn.getFileCount();
+                    bytes += jn.getByteCount();
                 }
-            } finally {
-                jobLock.unlock();
+                switch (job.getState()) {
+                    case IDLE:
+                        break;
+                    case RUNNING:
+                        jobrunning++;
+                        if (job.getStartTime() != null && job.getMaxRunTime() != null &&
+                                (JitterClock.globalTime() - job.getStartTime() > job.getMaxRunTime() * 2)) {
+                            jobshung++;
+                        }
+                        break;
+                    case SCHEDULED:
+                        jobscheduled++;
+                        break;
+                }
+                if (job.getState() == JobState.ERROR) {
+                    joberrored++;
+                }
             }
+
             events.clear();
             events.put("time", System.currentTimeMillis());
             events.put("hosts", (long) monitored.size());
@@ -3076,13 +2990,8 @@ public class Spawn implements Codec.Codable {
                 try {
                     if (!quiesce) {
                         String jobids[] = null;
-                        jobLock.lock();
-                        try {
-                            jobids = new String[spawnState.jobs.size()];
-                            jobids = spawnState.jobs.keySet().toArray(jobids);
-                        } finally {
-                            jobLock.unlock();
-                        }
+                        jobids = new String[spawnState.jobs.size()];
+                        jobids = spawnState.jobs.keySet().toArray(jobids);
                         long clock = System.currentTimeMillis();
                         for (String jobid : jobids) {
                             Job job = getJob(jobid);
@@ -3164,7 +3073,6 @@ public class Spawn implements Codec.Codable {
     private void kickIncludingQueue(Job job, JobTask task, String config, boolean inQueue, boolean ignoreQuiesce) throws Exception {
         boolean success = false;
         while (!success && !shuttingDown.get()) {
-            jobLock.lock();
             try {
                 if (taskQueuesByPriority.tryLock()) {
                     success = true;
@@ -3174,7 +3082,6 @@ public class Spawn implements Codec.Codable {
                     }
                 }
             } finally {
-                jobLock.unlock();
                 if (success) {
                     taskQueuesByPriority.unlock();
                 }
@@ -3268,11 +3175,8 @@ public class Spawn implements Codec.Codable {
                 }
             } catch (Exception e) {
                 log.warn("failed to kick job " + jobId + " task " + kick.getNodeID() + " on host " + kick.getHostUuid() + ":\n" + e);
-                jobLock.lock();
-                try {
+                if (job != null) {
                     job.errorTask(task, JobTaskErrorCode.KICK_ERROR);
-                } finally {
-                    jobLock.unlock();
                 }
             }
         }
@@ -3542,7 +3446,6 @@ public class Spawn implements Codec.Codable {
         boolean success = false;
         while (!success && !shuttingDown.get()) {
             // need the job lock first
-            jobLock.lock();
             try {
                 if (taskQueuesByPriority.tryLock()) {
                     success = true;
@@ -3555,7 +3458,6 @@ public class Spawn implements Codec.Codable {
                     sendTaskQueueUpdateEvent();
                 }
             } finally {
-                jobLock.unlock();
                 if (success) {
                     taskQueuesByPriority.unlock();
                 }

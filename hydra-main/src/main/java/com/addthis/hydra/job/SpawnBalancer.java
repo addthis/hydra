@@ -749,10 +749,10 @@ public class SpawnBalancer implements Codec.Codable {
         List<JobTaskMoveAssignment> rv = new ArrayList<JobTaskMoveAssignment>();
         String hostID = host.getHostUuid();
         for (String jobID : activeJobs) {
-            spawn.acquireJobLock();
-            try {
-                Job job = spawn.getJob(jobID);
-                if (job != null) {
+            Job job = spawn.getJob(jobID);
+            if (job != null) {
+                job.lock();
+                try {
                     JobTaskItemByHostMap tasksByHost = new JobTaskItemByHostMap(hosts, config.getTasksMovedPerUnspecifiedHost(), config.getTasksMovedPerUnspecifiedHost());
                     for (JobTask task : job.getCopyOfTasks()) {
                         tasksByHost.addLiveAndReplicasForTask(task);
@@ -765,16 +765,16 @@ public class SpawnBalancer implements Codec.Codable {
                     boolean pushFrom = numExistingTasks > maxPerHost || numExistingTasks == maxPerHost && tasksByHost.findLeastTasksOnHost() < maxPerHost - 1;
                     if (totalTasksToMove > 0) {
                         MoveAssignmentList assignments = pushFrom ? moveTasksOffHost(tasksByHost, maxPerHost, 1, totalBytesToMove, host.getHostUuid())
-                                                                  : moveTasksOntoHost(tasksByHost, maxPerHost, 1, totalBytesToMove, host.getHostUuid());
+                                : moveTasksOntoHost(tasksByHost, maxPerHost, 1, totalBytesToMove, host.getHostUuid());
                         rv.addAll(assignments);
                         totalTasksToMove -= assignments.size();
                         totalBytesToMove -= assignments.getBytesUsed();
                     } else {
                         break;
                     }
+                } finally {
+                    job.unlock();
                 }
-            } finally {
-                spawn.releaseJobLock();
             }
         }
         return rv;
@@ -939,7 +939,7 @@ public class SpawnBalancer implements Codec.Codable {
             return false;
         }
         // Don't autobalance if there are still jobs in rebalance state
-        for (Job job : spawn.listJobs()) {
+        for (Job job : spawn.listJobsConcurrentImmutable()) {
             if (JobState.REBALANCE.equals(job.getState())) {
                 return false;
             }
@@ -1006,7 +1006,7 @@ public class SpawnBalancer implements Codec.Codable {
 
     public List<Job> getJobsToAutobalance(List<HostState> hosts) {
         List<Job> autobalanceJobs = new ArrayList<>();
-        for (Job job : spawn.listJobs()) {
+        for (Job job : spawn.listJobsConcurrentImmutable()) {
             if (shouldAutobalanceJob(job, hosts)) {
                 autobalanceJobs.add(job);
             }
@@ -1280,7 +1280,7 @@ public class SpawnBalancer implements Codec.Codable {
         aggregateStatisticsLock.lock();
         try {
             activeJobIDs = new HashSet<>();
-            Collection<Job> jobs = spawn.listJobs();
+            Collection<Job> jobs = spawn.listJobsConcurrentImmutable();
             if (jobs != null && !jobs.isEmpty()) {
                 for (Job job : jobs) {
                     if (isWellFormedAndActiveJob(job)) {
@@ -1321,26 +1321,21 @@ public class SpawnBalancer implements Codec.Codable {
      * @param hosts A list of HostStates
      */
     protected void updateAggregateStatistics(List<HostState> hosts) {
-        spawn.acquireJobLock();
+        aggregateStatisticsLock.lock();
         try {
-            aggregateStatisticsLock.lock();
-            try {
-                lastAggregateStatUpdateTime = JitterClock.globalTime();
-                findActiveJobIDs();
-                double maxMeanActive = -1;
-                double maxDiskPercentUsed = -1;
-                for (HostState host : hosts) {
-                    maxMeanActive = Math.max(maxMeanActive, host.getMeanActiveTasks());
-                    maxDiskPercentUsed = Math.max(maxDiskPercentUsed, getUsedDiskPercent(host));
-                }
-                for (HostState host : hosts) {
-                    cachedHostScores.put(host.getHostUuid(), calculateHostScore(host, maxMeanActive, maxDiskPercentUsed));
-                }
-            } finally {
-                aggregateStatisticsLock.unlock();
+            lastAggregateStatUpdateTime = JitterClock.globalTime();
+            findActiveJobIDs();
+            double maxMeanActive = -1;
+            double maxDiskPercentUsed = -1;
+            for (HostState host : hosts) {
+                maxMeanActive = Math.max(maxMeanActive, host.getMeanActiveTasks());
+                maxDiskPercentUsed = Math.max(maxDiskPercentUsed, getUsedDiskPercent(host));
+            }
+            for (HostState host : hosts) {
+                cachedHostScores.put(host.getHostUuid(), calculateHostScore(host, maxMeanActive, maxDiskPercentUsed));
             }
         } finally {
-            spawn.releaseJobLock();
+            aggregateStatisticsLock.unlock();
         }
     }
 
@@ -1505,21 +1500,16 @@ public class SpawnBalancer implements Codec.Codable {
 
     private List<JobTask> findAllTasksAssignedToHost(String failedHostUUID) {
         List<JobTask> rv = new ArrayList<>();
-        spawn.acquireJobLock();
-        try {
-            for (Job job : spawn.listJobs()) {
-                if (job != null) {
-                    for (JobTask task : job.getCopyOfTasks()) {
-                        if (task != null && (task.getHostUUID().equals(failedHostUUID) || task.hasReplicaOnHost(failedHostUUID))) {
-                            rv.add(task);
-                        }
+        for (Job job : spawn.listJobsConcurrentImmutable()) {
+            if (job != null) {
+                for (JobTask task : job.getCopyOfTasks()) {
+                    if (task != null && (task.getHostUUID().equals(failedHostUUID) || task.hasReplicaOnHost(failedHostUUID))) {
+                        rv.add(task);
                     }
                 }
             }
-            return rv;
-        } finally {
-            spawn.releaseJobLock();
         }
+        return rv;
     }
 
     /**

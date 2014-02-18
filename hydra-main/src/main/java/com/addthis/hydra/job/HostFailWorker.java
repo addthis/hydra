@@ -252,22 +252,17 @@ public class HostFailWorker {
      * @return A list of tasks that have a copy on the failed host
      */
     private boolean areTasksAssignedToHost(String failedHostUuid) {
-        spawn.acquireJobLock();
-        try {
-            for (Job job : spawn.listJobs()) {
-                if (job == null) {
-                    continue;
-                }
-                for (JobTask task : job.getCopyOfTasks()) {
-                    if (!(task == null) && (task.getHostUUID().equals(failedHostUuid) || task.hasReplicaOnHost(failedHostUuid))) {
-                        return true;
-                    }
+        for (Job job : spawn.listJobsConcurrentImmutable()) {
+            if (job == null) {
+                continue;
+            }
+            for (JobTask task : job.getCopyOfTasks()) {
+                if (!(task == null) && (task.getHostUUID().equals(failedHostUuid) || task.hasReplicaOnHost(failedHostUuid))) {
+                    return true;
                 }
             }
-            return false;
-        } finally {
-            spawn.releaseJobLock();
         }
+        return false;
     }
 
     /**
