@@ -251,7 +251,13 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
 
         @Override
         public ValueMap asMap() throws ValueTranslationException {
-            throw new ValueTranslationException();
+            try {
+                ValueMap map = ValueFactory.createMap();
+                map.put("sketch", ValueFactory.create(CountMinSketch.serialize(sketch)));
+                return map;
+            } catch (Exception ex) {
+                throw new ValueTranslationException(ex);
+            }
         }
 
         @Override
@@ -280,8 +286,8 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
         }
 
         @Override
-        public void setValues(ValueMap valueMapEntries) {
-            throw new UnsupportedOperationException();
+        public void setValues(ValueMap map) {
+            sketch = CountMinSketch.deserialize(map.get("sketch").asBytes().getBytes());
         }
 
         @Override
