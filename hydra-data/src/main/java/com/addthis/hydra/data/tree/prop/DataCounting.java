@@ -78,8 +78,10 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements C
      *   used  : if the estimator is linear then return the utilization. Otherwise an command.
      *   put(x): offer x / show x to the estimator to be counted. 1 if the estimate changed, else 0.</pre>
      *
-     * <p>If no command is specified or an invalid command is specified : the estimator is returned as
-     * a custom value type which usually resolves to count.
+     * <p>If no command is specified or an invalid command is specified then the estimator returns as
+     * a custom value type. This custom value yields the correct estimate when merged across
+     * multiple nodes. The recommended usage is to provide no command to the remote query operations
+     * and then provide a command to the query master operation.
      *
      * <p>"%" operations are not supported.
      *
