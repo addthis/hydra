@@ -476,8 +476,8 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                         processQuerySource(querySource);
                     } catch (FileReferenceIOException ex) {
                         log.warn("Received IOException for task " + querySource.getKey() + "; attempting retry");
-                        processQuerySource(replaceQuerySource(querySource));
                         meshQueryMaster.invalidateFileReferenceForJob(querySource.getJobId());
+                        processQuerySource(replaceQuerySource(querySource));
                     }
                 } catch (Exception e) {
                     // this is going to rethrow exception, so we need to replace this SourceReader in the pool
