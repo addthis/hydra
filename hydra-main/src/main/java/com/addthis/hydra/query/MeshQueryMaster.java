@@ -350,8 +350,29 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
         cachey.invalidateFileReferenceCache();
     }
 
-    public FileReference getFileReferenceForSingleTask(String job, int task) throws IOException {
-        return cachey.getFileReferenceWrapperForSingleTask(job, task).fileReference;
+    /**
+     * Called after MeshSourceAggregator detects that one of the FileReferences in the cache is invalid/out of date.
+     * Look for an alternate FileReferenceWrapper in the cache. If none exists, fetch a replacement via a mesh lookup.
+     * @param job The job id to search
+     * @param task The task id to search
+     * @param failedReference The FileReference that threw the exception
+     * @return A replacement FileReference, which is also placed into the cache if it was newly generated
+     * @throws IOException If there is a problem fetching a replacement FileReference
+     */
+    public synchronized FileReference getReplacementFileReferenceForSingleTask(String job, int task, FileReference failedReference) throws IOException {
+        Set<FileReferenceWrapper> wrappers = cachey.getTaskReferencesIfPresent(job, task);
+        if (wrappers != null) {
+            wrappers.remove(new FileReferenceWrapper(failedReference, task));
+            if (!wrappers.isEmpty()) {
+                return wrappers.iterator().next().fileReference;
+            }
+        }
+        // If mqm got to this point, there was no replacement fileReference in the cache, so we need to fetch a new one
+        FileReference freshFileReference = cachey.getFileReferenceWrapperForSingleTask(job, task).fileReference;
+        HashSet<FileReferenceWrapper> baseSet = wrappers == null ? new HashSet<FileReferenceWrapper>() : new HashSet<>(wrappers);
+        baseSet.add(new FileReferenceWrapper(freshFileReference, task));
+        cachey.updateFileReferenceForTask(job, task, baseSet);
+        return freshFileReference;
     }
 
     public String getMeshHostJSON() {

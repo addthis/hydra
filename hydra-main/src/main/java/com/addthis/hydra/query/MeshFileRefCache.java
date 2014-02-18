@@ -104,6 +104,14 @@ public class MeshFileRefCache implements ChannelCloseListener {
         return fileReferenceCache.get(job);
     }
 
+    public Set<FileReferenceWrapper> getTaskReferencesIfPresent(String job, int taskId) {
+        Map<Integer, Set<FileReferenceWrapper>> refMap = fileReferenceCache.getIfPresent(job);
+        if (refMap != null) {
+            return refMap.get(taskId);
+        }
+        return null;
+    }
+
     public void invalidate(String job) {
         fileReferenceCache.invalidate(job);
     }
@@ -240,6 +248,13 @@ public class MeshFileRefCache implements ChannelCloseListener {
     }
 
 
+    /**
+     * Fetch the file references for a specified job/task combination
+     * @param job The job id to search for
+     * @param task A comma-separated list of tasks to search for, or "*" for all
+     * @return A map of task ids to a set of FileReferenceWrappers corresponding to that task's data
+     * @throws IOException If there is a failure fetching file references
+     */
     private Map<Integer, Set<FileReferenceWrapper>> getFileReferences(String job, String task) throws IOException {
         final String prefix = "*/" + job + "/" + task + "/gold/data/query";
         final Semaphore gate = new Semaphore(1);
@@ -299,6 +314,15 @@ public class MeshFileRefCache implements ChannelCloseListener {
     public synchronized void invalidateFileReferenceCache() {
         if (fileReferenceCache != null) {
             fileReferenceCache.invalidateAll();
+        }
+    }
+
+    public void updateFileReferenceForTask(String job, int task, HashSet<FileReferenceWrapper> baseSet) {
+        if (fileReferenceCache != null) {
+            Map<Integer, Set<FileReferenceWrapper>> existing = fileReferenceCache.getIfPresent(job);
+            if (existing != null) {
+                existing.put(task, baseSet);
+            }
         }
     }
 }

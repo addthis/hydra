@@ -47,7 +47,6 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.io.DataChannelCodec;
 import com.addthis.hydra.data.query.FramedDataChannelReader;
 import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.data.query.QueryChannelException;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.source.QueryConsumer;
 import com.addthis.hydra.data.query.source.QueryHandle;
@@ -56,8 +55,6 @@ import com.addthis.meshy.service.file.FileReference;
 import com.addthis.meshy.service.stream.SourceInputStream;
 import com.addthis.meshy.service.stream.StreamSource;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -476,7 +473,6 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                         processQuerySource(querySource);
                     } catch (FileReferenceIOException ex) {
                         log.warn("Received IOException for task " + querySource.getKey() + "; attempting retry");
-                        meshQueryMaster.invalidateFileReferenceForJob(querySource.getJobId());
                         processQuerySource(replaceQuerySource(querySource));
                     }
                 } catch (Exception e) {
@@ -490,7 +486,7 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
         private QuerySource replaceQuerySource(QuerySource querySource) throws IOException {
             // Invoked when a cached FileReference throws an IO Exception
             // Get a fresh FileReference and make a new QuerySource with that FileReference and the same parameters otherwise
-            FileReference fileReference = meshQueryMaster.getFileReferenceForSingleTask(querySource.getJobId(), querySource.getTaskId());
+            FileReference fileReference = meshQueryMaster.getReplacementFileReferenceForSingleTask(querySource.getJobId(), querySource.getTaskId(), querySource.getFileReference());
             return querySource.createCloneWithReplacementFileReference(fileReference);
         }
 
@@ -671,6 +667,10 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                 done = true;
             }
             return bundle;
+        }
+
+        public FileReference getFileReference() {
+            return queryData.fileReference;
         }
 
         public boolean isEof() {
