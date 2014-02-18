@@ -146,7 +146,7 @@ public class Spawn implements Codec.Codable {
     private static int webPort = Parameter.intValue("spawn.http.port", 5050);
     private static int requestHeaderBufferSize = Parameter.intValue("spawn.http.bufsize", 8192);
     private static int hostStatusRequestInterval = Parameter.intValue("spawn.status.interval", 10000);
-    private static int queueKickInterval = Parameter.intValue("spawn.queue.kick.interval", 3000);
+    private static int queueKickInterval = Parameter.intValue("spawn.queue.kick.interval", 6000);
     private static String debugOverride = Parameter.value("spawn.debug");
     private static final boolean useStructuredLogger = Parameter.boolValue("spawn.logger.bundle.enable",
             clusterName.equals("localhost")); // default to true if-and-only-if we are running local stack
@@ -3459,7 +3459,11 @@ public class Spawn implements Codec.Codable {
             return null;
         }
         for (HostState host : hosts) {
-            if (host != null && host.canMirrorTasks() && !host.isReadOnly() && balancer.canReceiveNewTasks(host, false) &&
+            if (host == null || (forMigration && hostFailWorker.getFailureState(host.getHostUuid()) != HostFailWorker.FailState.ALIVE)) {
+                // Don't migrate onto hosts that are being failed in any capacity
+                continue;
+            }
+            if (host.canMirrorTasks() && !host.isReadOnly() && balancer.canReceiveNewTasks(host, false) &&
                 taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid()) &&
                 (!forMigration || taskQueuesByPriority.shouldMigrateTaskToHost(task, host.getHostUuid()))) {
                 return host;

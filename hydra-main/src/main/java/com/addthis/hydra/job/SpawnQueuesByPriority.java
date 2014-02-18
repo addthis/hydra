@@ -43,8 +43,8 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     private final Lock queueLock = new ReentrantLock();
     private final HashMap<String, Long> hostKickTimes = new HashMap<>();
     private final HashMap<String, Integer> hostAvailSlots = new HashMap<>();
-    private static final int SPAWN_QUEUE_KICK_DELAY = Parameter.intValue("spawn.queue.kick.delay", 10_000);
-    private static final int SPAWN_QUEUE_SWAP_DELAY = Parameter.intValue("spawn.queue.swap.delay", 10_000);
+    private static final int SPAWN_QUEUE_KICK_DELAY = Parameter.intValue("spawn.queue.kick.delay", 20_000);
+    private static final int SPAWN_QUEUE_SWAP_DELAY = Parameter.intValue("spawn.queue.swap.delay", 20_000);
     private static final int SPAWN_QUEUE_AVAIL_REFRESH = Parameter.intValue("spawn.queue.avail.refresh", 60_000);
     private long lastAvailSlotsUpdate = 0;
 
@@ -52,7 +52,7 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     private static final long TASK_MIGRATION_MIN_BYTES = Parameter.longValue("task.migration.min.bytes", 50_000_000); // Tasks this small can always migrate
     private static final long TASK_MIGRATION_MAX_BYTES = Parameter.longValue("task.migration.max.bytes", 10_000_000_000L); // Tasks up to this big can migrate if they stay in the queue long enough
     private static final long TASK_MIGRATION_LIMIT_GROWTH_INTERVAL = Parameter.longValue("task.migration.limit.growth.interval", 1_200_000); // The byte limit raises to the max value if tasks are queued this long (20 minutes)
-    private static final long TASK_MIGRATION_INTERVAL_PER_HOST = Parameter.longValue("task.migration.interval", 180_000); // Only migrate a task to a particular host once per interval
+    private static final long TASK_MIGRATION_INTERVAL_PER_HOST = Parameter.longValue("task.migration.interval", 240_000); // Only migrate a task to a particular host once per interval
     private final Cache<String, Boolean> migrateHosts; // Use cache ttl to mark hosts that have recently performed or received a migration
     private final AtomicBoolean stoppedJob = new AtomicBoolean(false); // When tasks are stopped, track this behavior so that the queue can be modified as soon as possible
 
