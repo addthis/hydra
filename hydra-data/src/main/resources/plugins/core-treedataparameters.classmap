@@ -16,4 +16,5 @@
 "sum", com.addthis.hydra.data.tree.prop.DataSum$Config
 "sumf", com.addthis.hydra.data.tree.prop.DataSumFloat$Config
 "time", com.addthis.hydra.data.tree.prop.DataTime$Config
+"tdigest", com.addthis.hydra.data.tree.prop.DataTDigest$Config
 "top", com.addthis.hydra.data.tree.prop.DataTop$Config
