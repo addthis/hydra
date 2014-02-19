@@ -96,7 +96,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
     public ReadExternalPagedStore(final KeyCoder<K, V> keyCoder, final ByteStore pages, int maxSize, int maxWeight, boolean collect) {
         this.keyCoder = keyCoder;
         this.pages = pages;
-        log.warn("[init] maxSize=" + maxSize + " maxWeight=" + maxWeight);
+        log.info("[init] maxSize=" + maxSize + " maxWeight=" + maxWeight);
 
         collectMetrics = collectMetricsParameter || collect;
 
@@ -321,7 +321,11 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
 
         @Override
         public K getLastKey() {
-            return map.lastKey();
+            if (map.size() == 0) {
+                return null;
+            } else {
+                return map.lastKey();
+            }
         }
 
         @Override
@@ -725,10 +729,12 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                 if (encodedNextKey != null) {
                     K nextKey = keyCoder.keyDecode(encodedNextKey);
                     K nextFirstKey = newPage.getNextFirstKey();
+                    K firstKey = newPage.getFirstKey();
+                    K lastKey = newPage.getLastKey();
                     if (nextFirstKey == null) {
                         failedPages++;
                         log.warn("On page " + counter + " the firstKey is " +
-                             newPage.getFirstKey() +
+                                 firstKey +
                              " the nextFirstKey is null" +
                              " and the next page is associated with key " + nextKey);
                         assert(false);
@@ -737,9 +743,16 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                         int compareTo = compareKeys(nextFirstKey, nextKey);
                         char direction = compareTo > 0 ? '>' : '<';
                         log.warn("On page " + counter + " the firstKey is " +
-                             newPage.getFirstKey() +
+                                 firstKey +
                              " the nextFirstKey is " + nextFirstKey +
                              " which is " + direction + " the next page is associated with key " + nextKey);
+                        assert(false);
+                    } else if (lastKey != null && compareKeys(lastKey,nextKey) >= 0) {
+                        failedPages++;
+                        log.warn("On page " + counter + " the firstKey is " +
+                                 firstKey + " the largest key is " + lastKey +
+                                 " the next key is " + nextKey +
+                                 " which is less than or equal to the largest key.");
                         assert(false);
                     }
                     key = nextKey;

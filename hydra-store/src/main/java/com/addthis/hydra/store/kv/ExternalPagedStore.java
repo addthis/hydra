@@ -630,7 +630,11 @@ public class ExternalPagedStore<K extends Comparable<K>, V> extends CachedPagedS
         public K getLastKey() {
             lock.readLock().lock();
             try {
-                return map.lastKey();
+                if (map.size() == 0) {
+                    return null;
+                } else {
+                    return map.lastKey();
+                }
             } finally {
                 lock.readLock().unlock();
             }

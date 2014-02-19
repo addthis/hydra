@@ -167,7 +167,7 @@ public final class ReadTree implements DataTree {
                 pageCacheSize, pageCacheWeight, metrics);
 
         long openTime = System.currentTimeMillis() - start;
-        log.warn("dir=" + root + " openms=" + openTime);
+        log.info("dir=" + root + " openms=" + openTime);
         return source;
     }
 
@@ -303,7 +303,7 @@ public final class ReadTree implements DataTree {
         try {//source is final in read-tree
             source.close();
         } catch (Exception ex)  {
-            log.warn("", ex);
+            log.error("While closing source:", ex);
         }
     }
 
