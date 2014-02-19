@@ -1369,9 +1369,16 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 sendStatusMessage(new StatusTaskReplica(replica.getHostUuid(), id, node, runCount, System.currentTimeMillis()));
                 rv.add(mkTarget);
                 if (replicateAllBackups) {
-                    rv.add(createRsyncCommand(userAT, jobDir.getParentFile().getAbsolutePath() + "/", target) +
-                           " \n" + createTouchCommand(false, userAT, target + "/live/replicate.complete")
-                    );
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(createRsyncCommand(userAT, jobDir.getParentFile().getAbsolutePath() + "/", target));
+                    for (String backup : findLocalBackups(true)) {
+                        if (backup.startsWith(ScheduledBackupType.getBackupPrefix())) {
+                            // only include "b-" dirs/exclude gold - it won't exist on the remote host after the rsync.
+                            sb.append("\n" + createTouchCommand(false, userAT, target + "/" + backup + "/backup.complete"));
+                        }
+                    }
+                    sb.append("\n" + createTouchCommand(false, userAT, target + "/live/replicate.complete"));
+                    rv.add(sb.toString());
                 } else {
                     rv.add(createDeleteCommand(false, userAT, target + "/replicate.complete") +
                            "\n" + createRsyncCommand(userAT, jobDir.getAbsolutePath() + "/", target) +
@@ -1415,7 +1422,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         }
 
         private String createRsyncCommand(String userAT, String source, String target) throws Exception {
-            return "retry " + rsyncCommand + " -Hqav --exclude config --exclude gold --exclude replicate.complete --delete-after -e \\'" + remoteConnectMethod + "\\' " + source + " " + userAT + ":" + target;
+            return "retry " + rsyncCommand + " -Hqav --exclude config --exclude gold --exclude replicate.complete --exclude backup.complete --delete-after -e \\'" + remoteConnectMethod + "\\' " + source + " " + userAT + ":" + target;
         }
 
         private String createBackupCommand(boolean local, String userAT, String baseDir, String source, String name) {

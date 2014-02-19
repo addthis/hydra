@@ -831,7 +831,7 @@ public class SpawnManager {
                 int node = kv.getIntValue("node", 0);
                 boolean isReplica = kv.getValue("rep", "0").equals("1");
                 JobTask task = spawn.getTask(id, node);
-                String defaultSource = isReplica ? task.getReplicas().get(0).getHostUUID() : spawn.getTask(id, node).getHostUUID();
+                String defaultSource = isReplica ? task.getReplicas().get(0).getHostUUID() : task.getHostUUID();
                 String source = kv.getValue("source", defaultSource);
                 String target = kv.getValue("target", "");
                 spawn.moveTask(id, node, source, target, isReplica);
