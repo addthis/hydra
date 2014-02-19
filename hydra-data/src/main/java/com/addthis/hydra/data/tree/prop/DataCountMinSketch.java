@@ -13,6 +13,9 @@
  */
 package com.addthis.hydra.data.tree.prop;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import java.util.List;
 
 import com.addthis.basis.util.Strings;
@@ -20,8 +23,17 @@ import com.addthis.basis.util.Strings;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.ValueArray;
+import com.addthis.bundle.value.ValueBytes;
+import com.addthis.bundle.value.ValueCustom;
+import com.addthis.bundle.value.ValueDouble;
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueLong;
+import com.addthis.bundle.value.ValueMap;
+import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
+import com.addthis.bundle.value.ValueSimple;
+import com.addthis.bundle.value.ValueString;
 import com.addthis.bundle.value.ValueTranslationException;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.tree.DataTreeNode;
@@ -66,8 +78,13 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
      * <pre>"$" operations support the following commands in the format $+{attachment}={command}:
      * <p/>
      *   total : total of all the values inserted into the sketch.
-     *   est(x): value estimation associated with key x</pre>
+     *   est(x): custom value associated with key x that can be merged across nodes</pre>
+     *   val(x): literal value estimation associated with key x</pre>
      * <p/>
+     *
+     * <p>If no command is specified or an invalid command is specified then the estimator returns as
+     * a custom value type.
+     *
      * <p>%{attachment}={a "~" separated list of key} : generates a virtual node for each key.
      * The number of hits for each virtual node is equal to the count estimate in the sketch.
      * Keys with an estimate of 0 will not appear in the output.</p>
@@ -113,7 +130,7 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
         @Override
         public DataCountMinSketch newInstance() {
             DataCountMinSketch db = new DataCountMinSketch();
-            db.filter = new CountMinSketch(depth, width, 0);
+            db.sketch = new CountMinSketch(depth, width, 0);
             return db;
         }
     }
@@ -121,7 +138,7 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
     @Codec.Set(codable = true)
     private byte[] raw;
 
-    private CountMinSketch filter;
+    private CountMinSketch sketch;
     private BundleField keyAccess;
     private BundleField countAccess;
 
@@ -129,14 +146,17 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
     public ValueObject getValue(String key) {
         if (key != null) {
             if (key.equals("total")) {
-                return ValueFactory.create(filter.size());
+                return ValueFactory.create(sketch.size());
+            } else if (key.startsWith("val(") && key.endsWith(")")) {
+                String input = key.substring(4, key.length() - 1);
+                long count = sketch.estimateCount(input);
+                return ValueFactory.create(count);
             } else if (key.startsWith("est(") && key.endsWith(")")) {
                 String input = key.substring(4, key.length() - 1);
-                long count = filter.estimateCount(input);
-                return ValueFactory.create(count);
+                return new CMSValue(sketch, input);
             }
         }
-        return null;
+        return new CMSValue(sketch);
     }
 
 
@@ -145,7 +165,7 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
         String keys[] = Strings.splitArray(key, "~");
         TreeNodeList list = new TreeNodeList(keys.length);
         for (String k : keys) {
-            long count = filter.estimateCount(k);
+            long count = sketch.estimateCount(k);
             list.add(new VirtualTreeNode(k, count));
         }
         return list;
@@ -181,7 +201,7 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
                     return false;
                 }
             }
-            filter.add(o, myCount);
+            sketch.add(o, myCount);
             return true;
         }
         return false;
@@ -189,11 +209,145 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
 
     @Override
     public void postDecode() {
-        filter = CountMinSketch.deserialize(raw);
+        sketch = CountMinSketch.deserialize(raw);
     }
 
     @Override
     public void preEncode() {
-        raw = CountMinSketch.serialize(filter);
+        raw = CountMinSketch.serialize(sketch);
+    }
+
+    public static final class CMSValue implements ValueCustom, ValueNumber {
+
+        @Nonnull private CountMinSketch sketch;
+
+        @Nullable private String item;
+
+        public CMSValue() {
+
+        }
+
+        private long toLong() {
+            if (item == null) {
+                return sketch.size();
+            } else {
+                return sketch.estimateCount(item);
+            }
+        }
+
+        public CMSValue(CountMinSketch sketch) {
+            this.sketch = sketch;
+        }
+
+        public CMSValue(CountMinSketch sketch, String item) {
+            this.sketch = sketch;
+            this.item = item;
+        }
+
+        @Override
+        public Class<? extends ValueCustom> getContainerClass() {
+            return CMSValue.class;
+        }
+
+        @Override
+        public TYPE getObjectType() {
+            return TYPE.CUSTOM;
+        }
+
+        @Override
+        public ValueBytes asBytes() throws ValueTranslationException {
+            throw new ValueTranslationException();
+        }
+
+        @Override
+        public ValueArray asArray() throws ValueTranslationException {
+            throw new ValueTranslationException();
+        }
+
+        @Override
+        public ValueMap asMap() throws ValueTranslationException {
+            try {
+                ValueMap map = ValueFactory.createMap();
+                map.put("sketch", ValueFactory.create(CountMinSketch.serialize(sketch)));
+                if (item != null) {
+                    map.put("item", ValueFactory.create(item));
+                }
+                return map;
+            } catch (Exception ex) {
+                throw new ValueTranslationException(ex);
+            }
+        }
+
+        @Override
+        public ValueNumber asNumber() throws ValueTranslationException {
+            return this;
+        }
+
+        @Override
+        public ValueLong asLong() {
+            return ValueFactory.create(toLong());
+        }
+
+        @Override
+        public ValueDouble asDouble() {
+            return ValueFactory.create(toLong()).asDouble();
+        }
+
+        @Override
+        public ValueString asString() throws ValueTranslationException {
+            throw new ValueTranslationException();
+        }
+
+        @Override
+        public ValueCustom asCustom() throws ValueTranslationException {
+            return this;
+        }
+
+        @Override
+        public void setValues(ValueMap map) {
+            sketch = CountMinSketch.deserialize(map.get("sketch").asBytes().getBytes());
+            if (map.containsKey("item")) {
+                item = map.get("item").asString().getString();
+            }
+        }
+
+        @Override
+        public ValueSimple asSimple() {
+            return asLong();
+        }
+
+        @Override
+        public ValueNumber sum(ValueNumber val) {
+            try {
+                if (val instanceof CMSValue) {
+                    CountMinSketch other = ((CMSValue) val).sketch;
+                    return new CMSValue(sketch.merge(other));
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            return null;
+        }
+
+        @Override
+        public ValueNumber avg(int count) {
+            return ValueFactory.create(toLong() / count);
+        }
+
+        @Override
+        public ValueNumber diff(ValueNumber val) {
+            return sum(val).asLong().diff(asLong());
+        }
+
+        @Override
+        public ValueNumber max(ValueNumber val) {
+            return val.asLong().getLong() > toLong() ? val : this;
+        }
+
+        @Override
+        public ValueNumber min(ValueNumber val) {
+            return val.asLong().getLong() < toLong() ? val : this;
+        }
     }
 }
