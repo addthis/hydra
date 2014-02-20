@@ -235,38 +235,12 @@ public class HostFailWorker {
                 // File system is okay. Push some tasks off the host if it has some available capacity.
                 List<JobTaskMoveAssignment> assignments = spawn.getSpawnBalancer().pushTasksOffDiskForFilesystemOkayFailure(host, tasksMovedPerHostIteration);
                 spawn.executeReallocationAssignments(assignments);
-                if (assignments.isEmpty() && !areTasksAssignedToHost(failedHostUuid)) {
+                if (assignments.isEmpty() && host.countTotalLive() == 0) {
                     // Found no tasks on the failed host, so fail it for real.
                     markHostDead(failedHostUuid);
                     spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.listHostStatus(host.getMinionTypes()), failedHostUuid);
                 }
             }
-        }
-    }
-
-    /**
-     * Iterate over all tasks, finding if any are assigned to a given host. Note that finding jobkeys from the hoststate
-     * is not correct here -- that will not find tasks that have not yet run, tasks where the replica was incomplete, etc.
-     *
-     * @param failedHostUuid The host being failed
-     * @return A list of tasks that have a copy on the failed host
-     */
-    private boolean areTasksAssignedToHost(String failedHostUuid) {
-        spawn.acquireJobLock();
-        try {
-            for (Job job : spawn.listJobs()) {
-                if (job == null) {
-                    continue;
-                }
-                for (JobTask task : job.getCopyOfTasks()) {
-                    if (!(task == null) && (task.getHostUUID().equals(failedHostUuid) || task.hasReplicaOnHost(failedHostUuid))) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        } finally {
-            spawn.releaseJobLock();
         }
     }
 
