@@ -36,6 +36,18 @@
       <groupId>com.yammer.metrics</groupId>
       <artifactId>metrics-servlet</artifactId>
       <version>${dep.metrics.version}</version>
+      <exclusions>
+        <!-- metrics-servlet uses an older version of jackson-core -->
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+        </exclusion>
+        <!-- metrics-servlet uses an older version of jackson-databind -->
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-databind</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.yammer.metrics</groupId>

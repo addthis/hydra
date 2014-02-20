@@ -38,7 +38,14 @@
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-core</artifactId>
-      <version>4.0.0.RELEASE</version>
+      <version>${hydra.dep.spring.version}</version>
+      <exclusions>
+        <!-- spring-core uses an older version of commons-logging -->
+        <exclusion>
+          <groupId>commons-logging</groupId>
+          <artifactId>commons-logging</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>net.sf.supercsv</groupId>
