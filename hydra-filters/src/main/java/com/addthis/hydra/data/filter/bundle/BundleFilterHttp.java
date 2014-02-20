@@ -32,8 +32,6 @@ import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.common.hash.MD5HashFunction;
 import com.addthis.hydra.data.filter.value.ValueFilterHttpGet;
 
-import org.apache.commons.httpclient.URIException;
-
 import org.slf4j.Logger;
 
 import org.slf4j.LoggerFactory;
@@ -212,11 +210,11 @@ public class BundleFilterHttp extends BundleFilter {
                     } else if (trace) {
                         System.err.println(urlValue + " returned " + (val != null ? val.length : -1) + " retries left = " + retries);
                     }
-                } catch (URIException e)  {
-                    log.warn("", e, "error creating url: " + urlValue);
+                } catch (IllegalArgumentException e)  {
+                    log.error("error creating url {} : {} ", urlValue, e);
                     break;
                 } catch (IOException e)  {
-                    log.warn("", e, "error accessing url: " + urlValue);
+                    log.error("error accessing url {} : {}", urlValue, e);
                 }
                 try {
                     Thread.sleep(http.retryTimeout);

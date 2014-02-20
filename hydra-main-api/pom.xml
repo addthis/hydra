@@ -41,6 +41,13 @@
       <groupId>com.yammer.metrics</groupId>
       <artifactId>metrics-ganglia</artifactId>
       <version>${dep.metrics.version}</version>
+      <exclusions>
+        <!-- metrics-ganglia uses an older version of slf4j-api -->
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 

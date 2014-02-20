@@ -36,6 +36,13 @@
       <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
       <version>1.7.5</version>
+      <exclusions>
+        <!-- avro uses an older version of slf4j-api -->
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <!-- end 3rd part -->
   </dependencies>

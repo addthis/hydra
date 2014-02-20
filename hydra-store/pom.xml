@@ -64,7 +64,7 @@
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-compress</artifactId>
-      <version>${hydra.dep.compress.lzma-java.version}</version>
+      <version>${hydra.dep.compress.apache.commons-compress.version}</version>
     </dependency>
     <!-- end compression libraries -->
 

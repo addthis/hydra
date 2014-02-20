@@ -150,11 +150,6 @@
       <version>${hydra.dep.sleepycat.je.version}</version>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>commons-httpclient</groupId>
-      <artifactId>commons-httpclient</artifactId>
-      <version>${hydra.dep.apache.httpclient.version}</version>
-    </dependency>
     <!-- end 3rd party deps -->
     <!-- test deps -->
     <!-- end test deps -->
