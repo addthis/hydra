@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.Parameter;
@@ -344,9 +345,9 @@ public class HostFailWorker {
 
         public HostFailState() {
             synchronized (hostsToFailByType) {
-                failFsDead = new HashSet<>();
+                failFsDead = new TreeSet<>();
                 hostsToFailByType.put(false, failFsDead);
-                failFsOkay = new HashSet<>();
+                failFsOkay = new TreeSet<>();
                 hostsToFailByType.put(true, failFsOkay);
             }
         }
