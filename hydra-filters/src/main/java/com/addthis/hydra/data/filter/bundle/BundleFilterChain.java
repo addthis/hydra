@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
@@ -55,6 +57,15 @@ public class BundleFilterChain extends BundleFilter {
     @Codec.Set(codable = true)
     private boolean debug;
 
+    /**
+     * Maximum number of bundles to print when
+     * {@link #debug} is true. Default is 100.
+     */
+    @Codec.Set(codable = true)
+    private long debugMaxBundles = 100;
+
+    private final AtomicLong bundleCounter = new AtomicLong();
+
     @Override
     public void initialize() {
         for (BundleFilter f : filter) {
@@ -66,7 +77,7 @@ public class BundleFilterChain extends BundleFilter {
     public boolean filterExec(Bundle row) {
         for (BundleFilter f : filter) {
             if (!f.filterExec(row) && failStop) {
-                if (debug) {
+                if (debug && bundleCounter.getAndIncrement() < debugMaxBundles) {
                     log.warn("fail @ " + CodecJSON.encodeString(f));
                 }
                 return failReturn;
