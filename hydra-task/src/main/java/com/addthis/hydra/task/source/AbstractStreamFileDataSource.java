@@ -106,6 +106,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     private static final int DEFAULT_WORKERS = Parameter.intValue("dataSourceMeshy2.workers", 2);
     private static final int DEFAULT_BUFFER = Parameter.intValue("dataSourceMeshy2.buffer", 128);
     private static final int DEFAULT_COUNTDOWN_LATCH_TIMEOUT = Parameter.intValue("dataSourceMeshy2.timeout.sec", 30);
+    private static final int DEFAULT_MAGIC_MARKS_NUM = 42;
 
     /**
      * A StringFilter that processes file names as a string bundle field. If the filter returns
@@ -263,7 +264,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     private PageDB<SimpleMark> markDB;
     private BundleField injectSourceField;
     private File markDirFile;
-    private int magicMarksNumber = 42;
+    private int magicMarksNumber = DEFAULT_MAGIC_MARKS_NUM;
     private boolean useSimpleMarks = false;
     private boolean useLegacyStreamPath = false;
 
