@@ -54,7 +54,7 @@ public class RabbitMessageConsumer extends DefaultConsumer implements MessageCon
 
     public void open() throws IOException {
         getChannel().exchangeDeclare(exchange, "direct");
-        getChannel().queueDeclare(queueName, true, false, false, null);
+        getChannel().queueDeclare(queueName, false, false, false, null);
         for (String routingKey : routingKeys) {
             getChannel().queueBind(queueName, exchange, routingKey);
         }
