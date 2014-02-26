@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import com.addthis.basis.net.HttpUtil;
 import com.addthis.basis.util.Parameter;
@@ -47,6 +48,8 @@ public class JobExpand {
 
         private static Logger log = LoggerFactory.getLogger(MacroTokenReplacer.class);
 
+        private static final Pattern macroPattern = Pattern.compile("%\\{(.+?)\\}%");
+
         MacroTokenReplacer(Spawn.SpawnState spawnState) {
             super("%{", "}%");
             this.spawnState = spawnState;
@@ -68,7 +71,26 @@ public class JobExpand {
             }
             JobMacro macro = spawnState.macros.get(label);
             if (macro != null) {
-                return macro.getMacro();
+                List<String> contents = new ArrayList<>();
+                List<String> delimiters = new ArrayList<>();
+                CommentTokenizer commentTokenizer = new CommentTokenizer(macro.getMacro());
+                commentTokenizer.tokenize(contents, delimiters);
+                StringBuilder builder = new StringBuilder();
+                int length = contents.size();
+
+                builder.append(contents.get(0));
+                builder.append(delimiters.get(0));
+                for (int i = 1; i < length; i++) {
+                    String delimiter = delimiters.get(i - 1);
+                    if (delimiter.equals("//") || delimiter.equals("/*")) {
+                        /* disable any macros inside comments so they don't get expanded */
+                        builder.append(macroPattern.matcher(contents.get(i)).replaceAll("%_{$1}_%"));
+                    } else {
+                        builder.append(contents.get(i));
+                    }
+                    builder.append(delimiters.get(i));
+                }
+                return builder.toString();
             } else {
                 String msg = "non-existent macro referenced : " + label;
                 log.warn(msg);
