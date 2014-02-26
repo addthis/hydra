@@ -13,13 +13,10 @@
  */
 package com.addthis.hydra.job;
 
-import com.addthis.basis.test.SlowTest;
-
-import com.addthis.bark.ZkHelpers;
 import com.addthis.bark.ZkStartUtil;
-
+import com.addthis.basis.test.SlowTest;
 import com.google.common.collect.ImmutableSet;
-
+import org.apache.zookeeper.CreateMode;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -30,15 +27,15 @@ public class SetMembershipListenerTest extends ZkStartUtil {
 
     @Test
     public void testAvailableMinions() throws Exception {
-        ZkHelpers.makeSurePersistentPathExists(myZkClient, "/minion/up");
-        myZkClient.createEphemeral("/minion/up/foo", "");
-        SetMembershipListener setMembershipListener = new SetMembershipListener("/minion/up", true);
+        zkClient.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath("/minion/up/foo");
+        SetMembershipListener setMembershipListener = new SetMembershipListener(zkClient, "/minion/up");
         assertEquals(ImmutableSet.of("foo"), setMembershipListener.getMemberSet());
-        myZkClient.createEphemeral("/minion/up/bar", "");
-        Thread.sleep(100);
+        zkClient.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath("/minion/up/bar");
+        Thread.sleep(1000);
         assertEquals(ImmutableSet.of("foo", "bar"), setMembershipListener.getMemberSet());
-        myZkClient.delete("/minion/up/foo");
-        Thread.sleep(100);
+        zkClient.delete().forPath("/minion/up/foo");
+        Thread.sleep(1000);
         assertEquals(ImmutableSet.of("bar"), setMembershipListener.getMemberSet());
+        setMembershipListener.shutdown();
     }
 }

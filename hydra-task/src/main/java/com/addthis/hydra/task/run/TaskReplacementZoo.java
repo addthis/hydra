@@ -17,16 +17,19 @@ import javax.annotation.Nonnull;
 
 import java.io.IOException;
 
-import com.addthis.bark.ZkClientFactory;
-import com.addthis.bark.ZkHelpers;
-
-import org.I0Itec.zkclient.ZkClient;
+import com.addthis.bark.StringSerializer;
+import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 
 import org.slf4j.LoggerFactory;
 public class TaskReplacementZoo implements TaskRunner.TaskStringReplacement {
 
     private static final Logger log = LoggerFactory.getLogger(TaskReplacementZoo.class);
+    private final CuratorFramework zkClient;
+
+    public TaskReplacementZoo(CuratorFramework zkClient) {
+        this.zkClient = zkClient;
+    }
 
     @Nonnull
     @Override
@@ -35,16 +38,19 @@ public class TaskReplacementZoo implements TaskRunner.TaskStringReplacement {
         int cpos = input.indexOf(")", atpos + 6);
         if (atpos >= 0 && cpos > atpos) {
             String path = input.substring(atpos + 6, cpos);
-            input = input.replace("@zoo(" + path + ")", readZoo(path));
+            try {
+                input = input.replace("@zoo(" + path + ")", readZoo(path));
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
             log.warn("found " + path);
         }
         return input;
     }
 
-    public static String readZoo(String path) {
-        ZkClient zkClient = ZkClientFactory.makeStandardClient();
-        if (ZkHelpers.pathExists(zkClient, path)) {
-            return ZkHelpers.readData(zkClient, path);
+    public String readZoo(@Nonnull String path) throws Exception {
+        if (zkClient.checkExists().forPath(path) != null) {
+            return StringSerializer.deserialize(zkClient.getData().forPath(path));
         }
         throw new RuntimeException("zoo path not found '" + path + "'");
     }

@@ -20,12 +20,12 @@ import java.util.Map;
 
 import com.addthis.basis.test.SlowTest;
 
-import com.addthis.bark.ZkHelpers;
 import com.addthis.bark.ZkStartUtil;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
 
+import org.apache.zookeeper.CreateMode;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -47,8 +47,8 @@ public class SpawnTest extends ZkStartUtil {
 
     @Test
     public void toggleHostTest() throws Exception {
-        ZkHelpers.makeSurePersistentPathExists(myZkClient, "/minion/up");
-        ZkHelpers.makeSurePersistentPathExists(myZkClient, "/minion/dead");
+        zkClient.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT).forPath("/minion/up");
+        zkClient.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT).forPath("/minion/dead");
         HostState tmpDisableHostState = createHostState("tmp");
         tmpDisableHostState.setDisabled(true);
         assertTrue("disabled host states should not be able to run tasks", !tmpDisableHostState.canMirrorTasks());
@@ -155,9 +155,9 @@ public class SpawnTest extends ZkStartUtil {
         assertTrue("should allow migration between distinct hosts", q.shouldMigrateTaskToHost(task3, "c"));
     }
 
-    private HostState createHostState(String hostUUID) {
+    private HostState createHostState(String hostUUID) throws Exception {
         String zkPath = "/minion/up/" + hostUUID;
-        myZkClient.createEphemeral(zkPath, "");
+        zkClient.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(zkPath);
         HostState origState = new HostState(hostUUID);
         origState.setMax(new HostCapacity(10, 10, 10));
         origState.setHost("hostname-for:" + hostUUID);

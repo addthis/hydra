@@ -40,7 +40,7 @@ public class HostFailWorkerTest extends ZkStartUtil {
 
     @Before
     public void setup() throws Exception {
-        spawn = new Spawn(true);
+        spawn = new Spawn(zkClient);
         hostFailWorker = spawn.getHostFailWorker();
     }
 

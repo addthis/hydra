@@ -13,29 +13,23 @@
  */
 package com.addthis.hydra.job;
 
-import java.util.List;
-import java.util.Map;
-
-import com.addthis.basis.test.SlowTest;
-
 import com.addthis.bark.ZkStartUtil;
+import com.addthis.basis.test.SlowTest;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
-
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import java.util.List;
+import java.util.Map;
+
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PATH;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.*;
 
 @Category(SlowTest.class)
 public class JobConfigManagerTest extends ZkStartUtil {
@@ -46,7 +40,7 @@ public class JobConfigManagerTest extends ZkStartUtil {
 
     private JobConfigManager getJobConfigManager() {
         if (spawnDataStore == null) {
-            spawnDataStore = DataStoreUtil.makeSpawnDataStore(myZkClient);
+            spawnDataStore = DataStoreUtil.makeSpawnDataStore(zkClient);
         }
         if (jobConfigManager == null) {
             jobConfigManager = new JobConfigManager(spawnDataStore);
@@ -73,8 +67,7 @@ public class JobConfigManagerTest extends ZkStartUtil {
         IJob job = new ZnodeJob(id);
         jcm.addJob(job);
         assertNotNull(spawnDataStore.get(SPAWN_JOB_CONFIG_PATH + "/foo/queryconfig"));
-        JobQueryConfig jqc = codec.decode(JobQueryConfig.class,
-                ((String) myZkClient.readData(SPAWN_JOB_CONFIG_PATH + "/foo/queryconfig")).getBytes());
+        JobQueryConfig jqc = codec.decode(JobQueryConfig.class, zkClient.getData().forPath(SPAWN_JOB_CONFIG_PATH + "/foo/queryconfig"));
         assertEquals(jqc, new JobQueryConfig());
     }
 

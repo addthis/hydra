@@ -24,6 +24,7 @@ import java.net.URLClassLoader;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.addthis.bark.ZkUtil;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
@@ -114,7 +115,7 @@ public class TaskRunner {
 
     static {
         replaceOperators.add(new TaskReplacementFile());
-        replaceOperators.add(new TaskReplacementZoo());
+        replaceOperators.add(new TaskReplacementZoo(ZkUtil.makeStandardClient()));
     }
 
     /**

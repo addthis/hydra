@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.JitterClock;
 
@@ -43,16 +44,24 @@ public class ChoreWatcher {
     protected ChoreMap choreMap = new ChoreMap();
     protected final ObjectMapper mapper = new ObjectMapper();
     private final String id;
+    private final AtomicBoolean shutdown = new AtomicBoolean(false);
 
     public ChoreWatcher(String id, SpawnDataStore spawnDataStore, ExecutorService choreExecutor, int choreCleanerInterval) throws Exception {
         this.choreCleanupInterval = choreCleanerInterval;
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                shutdown.set(true);
+            }
+        });
         Timer timer = new Timer(true);
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
-                cleanChoreMap();
+                if (!shutdown.get()) {
+                    cleanChoreMap();
+                }
             }
-        }, choreCleanerInterval, choreCleanerInterval);
+        }, choreCleanerInterval * 2, choreCleanerInterval);
         this.spawnDataStore = spawnDataStore;
         this.choreExecutor = choreExecutor;
         this.id = id;
@@ -209,7 +218,7 @@ public class ChoreWatcher {
             spawnDataStore.put(CHOREWATCHER_PATH, new String(mapper.writeValueAsBytes(choreMap)));
         } catch (Exception e) {
             log.warn("[ChoreWatcher] Unable to write chorewatcher state, exception: " + e, e);
-            }
+        }
     }
 
     @Override

@@ -67,7 +67,7 @@ public class ChoreWatcherTest extends ZkStartUtil {
 
     @Before
     public void setParams() throws Exception {
-        spawnDataStore = DataStoreUtil.makeSpawnDataStore(myZkClient);
+        spawnDataStore = DataStoreUtil.makeSpawnDataStore(zkClient);
         System.setProperty("SPAWN_DATA_DIR", "/tmp/spawn/data");
         System.setProperty("SPAWN_LOG_DIR", "/tmp/spawn/log/events");
     }

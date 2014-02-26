@@ -13,43 +13,8 @@
  */
 package com.addthis.hydra.job;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.RandomAccessFile;
-import java.io.Serializable;
-
-import java.lang.management.ManagementFactory;
-
-import java.net.InetAddress;
-import java.net.ServerSocket;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Scanner;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
+import com.addthis.bark.ZkGroupMembership;
+import com.addthis.bark.ZkUtil;
 import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.Backoff;
 import com.addthis.basis.util.Bytes;
@@ -59,10 +24,6 @@ import com.addthis.basis.util.Numbers;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.SimpleExec;
 import com.addthis.basis.util.Strings;
-
-import com.addthis.bark.ZkClientFactory;
-import com.addthis.bark.ZkGroupMembership;
-import com.addthis.bark.ZkHelpers;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.backup.DailyBackup;
@@ -98,17 +59,13 @@ import com.addthis.hydra.mq.MessageListener;
 import com.addthis.hydra.mq.MessageProducer;
 import com.addthis.hydra.mq.RabbitMessageConsumer;
 import com.addthis.hydra.mq.RabbitMessageProducer;
-import com.addthis.hydra.mq.SessionExpireListener;
 import com.addthis.hydra.mq.ZKMessageProducer;
-import com.addthis.hydra.mq.ZkSessionExpirationHandler;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
 import com.addthis.maljson.JSONObject;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.MoreExecutors;
-
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.QueueingConsumer;
@@ -117,8 +74,11 @@ import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
-
-import org.I0Itec.zkclient.ZkClient;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.imps.CuratorFrameworkState;
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
+import org.apache.zookeeper.KeeperException;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
@@ -126,12 +86,44 @@ import org.eclipse.jetty.servlet.ServletHandler;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.RandomAccessFile;
+import java.io.Serializable;
+import java.lang.management.ManagementFactory;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Scanner;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 /**
  * TODO implement APIs for extended probing, sanity, clearing of job state
  */
-public class Minion extends AbstractHandler implements MessageListener, ZkSessionExpirationHandler, Codec.Codable {
+public class Minion extends AbstractHandler implements MessageListener, Codec.Codable {
 
     private static Logger log = LoggerFactory.getLogger(Minion.class);
     private static int webPort = Parameter.intValue("minion.web.port", 5051);
@@ -250,7 +242,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
     private Histogram activeTaskHistogram;
 
     @VisibleForTesting
-    public Minion() {
+    public Minion(CuratorFramework zkClient) {
         uuid = UUID.randomUUID().toString();
 
         // null placeholder for now
@@ -268,6 +260,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         this.diskReadOnly = false;
         this.minionPid = -1;
         this.activeTaskKeys = new HashSet<>();
+        this.zkClient = zkClient;
     }
 
     @VisibleForTesting
@@ -306,7 +299,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 try {
                     jetty.stop();
                     minionTaskDeleter.stopDeletionThread();
-                    if (zkClient != null) {
+                    if (zkClient != null && zkClient.getState() == CuratorFrameworkState.STARTED) {
                         minionGroupMembership.removeFromGroup("/minion/up", getUUID());
                         zkClient.close();
                     }
@@ -369,7 +362,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
     private MessageProducer zkBatchControlProducer;
     private MessageProducer batchControlProducer;
     private Channel channel;
-    private ZkClient zkClient;
+    private CuratorFramework zkClient;
     private ZkGroupMembership minionGroupMembership;
 
     private void connectToMQ() throws Exception {
@@ -733,11 +726,18 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
     }
 
     // Not Thread Safe!
-    private ZkClient getZkClient() {
+    private CuratorFramework getZkClient() {
         if (zkClient == null) {
-            zkClient = ZkClientFactory.makeStandardClient();
-            zkClient.subscribeStateChanges(new SessionExpireListener(this));
+            zkClient = ZkUtil.makeStandardClient();
         }
+        zkClient.getConnectionStateListenable().addListener(new ConnectionStateListener() {
+            @Override
+            public void stateChanged(CuratorFramework client, ConnectionState newState) {
+                if (newState == ConnectionState.RECONNECTED) {
+                    joinGroup();
+                }
+            }
+        });
         return zkClient;
     }
 
@@ -748,16 +748,20 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         }
     }
 
-    @Override
-    public void handleExpiredSession() {
-        joinGroup();
-    }
-
     protected void joinGroup() {
-        minionGroupMembership = new ZkGroupMembership(getZkClient());
-        ZkHelpers.makeSurePersistentPathExists(getZkClient(), ("/minion/up"));
-        log.info("joining group: " + "/minion/up");
-        minionGroupMembership.addToGroup("/minion/up", getUUID(), shutdown);
+        minionGroupMembership = new ZkGroupMembership(getZkClient(), true);
+        String upPath = MINION_ZK_PATH + "up";
+        try {
+            if (zkClient.checkExists().forPath(upPath) == null) {
+                zkClient.create().creatingParentsIfNeeded().forPath(upPath, null);
+            }
+        } catch (KeeperException.NodeExistsException e) {
+            // someone beat us to it
+        } catch (Exception e) {
+            log.error("Exception joining group", e);
+        }
+        log.info("joining group: " + upPath);
+        minionGroupMembership.addToGroup(upPath, getUUID(), shutdown);
     }
 
 

@@ -52,6 +52,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import java.text.ParseException;
 
+import com.addthis.bark.StringSerializer;
+import com.addthis.bark.ZkUtil;
 import com.addthis.basis.net.HttpUtil;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
@@ -59,8 +61,6 @@ import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.bark.ZkClientFactory;
-import com.addthis.bark.ZkHelpers;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
@@ -118,7 +118,8 @@ import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Gauge;
 import com.yammer.metrics.core.Meter;
 
-import org.I0Itec.zkclient.ZkClient;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.zookeeper.KeeperException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
@@ -226,7 +227,7 @@ public class Spawn implements Codec.Codable {
     private final SpawnMesh spawnMesh;
     private final SpawnFormattedLogger spawnFormattedLogger;
 
-    private ZkClient zkClient;
+    private CuratorFramework zkClient;
     private SpawnMQ spawnMQ;
     private Server jetty;
     private JobConfigManager jobConfigManager;
@@ -269,25 +270,25 @@ public class Spawn implements Codec.Codable {
 
     @VisibleForTesting
     public Spawn() throws Exception {
-        this(false);
+        this(null);
     }
 
     @VisibleForTesting
-    public Spawn(boolean zk) throws Exception {
+    public Spawn(CuratorFramework zkClient) throws Exception {
         this.dataDir = Files.initDirectory(SPAWN_DATA_DIR);
         this.listeners = new ConcurrentHashMap<>();
         this.monitored = new ConcurrentHashMap<>();
-        this.useZk = zk;
+        this.useZk = zkClient != null;
         this.spawnFormattedLogger = useStructuredLogger ?
                                     SpawnFormattedLogger.createFileBasedLogger(new File(SPAWN_STRUCTURED_LOG_DIR)) :
                                     SpawnFormattedLogger.createNullLogger();
-        if (zk) {
+        if (useZk) {
             log.info("[init] starting zkclient, config manager, and listening for minions");
-            this.zkClient = ZkClientFactory.makeStandardClient();
+            this.zkClient = zkClient;
             this.spawnDataStore = DataStoreUtil.makeSpawnDataStore(zkClient);
             this.jobConfigManager = new JobConfigManager(this.spawnDataStore);
-            this.minionMembers = new SetMembershipListener(MINION_UP_PATH, true);
-            this.deadMinionMembers = new SetMembershipListener(MINION_DEAD_PATH, false);
+            this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
+            this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
         }
         this.hostFailWorker = new HostFailWorker(this);
         this.balancer = new SpawnBalancer(this);
@@ -302,7 +303,7 @@ public class Spawn implements Codec.Codable {
         this.spawnFormattedLogger = useStructuredLogger ?
                                     SpawnFormattedLogger.createFileBasedLogger(new File(SPAWN_STRUCTURED_LOG_DIR)) :
                                     SpawnFormattedLogger.createNullLogger();
-        this.zkClient = ZkClientFactory.makeStandardClient();
+        this.zkClient = ZkUtil.makeStandardClient();
         this.spawnDataStore = DataStoreUtil.makeSpawnDataStore(zkClient);
         File statefile = new File(dataDir, stateFilePath);
         if (statefile.exists() && statefile.isFile()) {
@@ -340,8 +341,8 @@ public class Spawn implements Codec.Codable {
 
         log.info("[init] connecting to message queue");
         this.spawnMQ = new SpawnMQImpl(zkClient, this);
-        this.minionMembers = new SetMembershipListener(MINION_UP_PATH, true);
-        this.deadMinionMembers = new SetMembershipListener(MINION_DEAD_PATH, false);
+        this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
+        this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
         this.aliasBiMap = new AliasBiMap(spawnDataStore);
         aliasBiMap.loadCurrentValues();
         hostFailWorker = new HostFailWorker(this);
@@ -455,7 +456,7 @@ public class Spawn implements Codec.Codable {
         return spawnMesh.getClient();
     }
 
-    public ZkClient getZkClient() {
+    public CuratorFramework getZkClient() {
         return zkClient;
     }
 
@@ -608,8 +609,14 @@ public class Spawn implements Codec.Codable {
             state.setUpdated();
             if (useZk) {
                 // delete minion state
-                ZkHelpers.deletePath(zkClient, Minion.MINION_ZK_PATH + hostUUID);
-                ZkHelpers.makeSurePersistentPathExists(zkClient, MINION_DEAD_PATH + "/" + hostUUID);
+                spawnDataStore.delete(Minion.MINION_ZK_PATH + hostUUID);
+                try {
+                    zkClient.create().creatingParentsIfNeeded().forPath(MINION_DEAD_PATH + "/" + hostUUID, null);
+                } catch (KeeperException.NodeExistsException ne) {
+                    // host already marked as dead
+                } catch (Exception e) {
+                    log.error("Unable to add host: " + hostUUID + " to " + MINION_DEAD_PATH);
+                }
             }
             sendHostUpdateEvent(state);
             updateHostState(state);
@@ -945,7 +952,13 @@ public class Spawn implements Codec.Codable {
                 log.warn("task is currently assigned to a dead minion, need to check job: " + job.getId() + " host/node:" + task.getHostUUID() + "/" + task.getTaskID());
                 continue;
             }
-            String hostStateString = ZkHelpers.readData(zkClient, Minion.MINION_ZK_PATH + taskHost);
+            String hostStateString;
+            try {
+                hostStateString = StringSerializer.deserialize(zkClient.getData().forPath(Minion.MINION_ZK_PATH + taskHost));
+            } catch (Exception e) {
+                log.error("Unable to get hostStateString from zookeeper for " + Minion.MINION_ZK_PATH + taskHost, e);
+                continue;
+            }
             HostState hostState;
             try {
                 hostState = mapper.readValue(hostStateString, HostState.class);
@@ -3050,6 +3063,13 @@ public class Spawn implements Codec.Codable {
             }
         } catch (Exception ex) {
             log.warn("", ex);
+        }
+
+        try {
+            minionMembers.shutdown();
+            deadMinionMembers.shutdown();
+        } catch (IOException e) {
+            log.warn("unable to cleanly shutdown membership listeners", e);
         }
 
         try {

@@ -13,21 +13,15 @@
  */
 package com.addthis.hydra.job.store;
 
+import com.addthis.hydra.query.AliasBiMap;
+import org.apache.curator.framework.CuratorFramework;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Arrays;
 import java.util.List;
 
-import com.addthis.hydra.query.AliasBiMap;
-
-import org.I0Itec.zkclient.ZkClient;
-import org.slf4j.Logger;
-
-import org.slf4j.LoggerFactory;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_COMMAND_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_MACRO_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.*;
 
 /**
  * A class providing various utility functions for common data storage between hydra components
@@ -59,7 +53,7 @@ public class DataStoreUtil {
      * @param zkClient If non-null, use this ZkClient in the ZookeeperDataStore, if that is the standard
      * @return A SpawnDataStore of the appropriate implementation
      */
-    public static SpawnDataStore makeSpawnDataStore(ZkClient zkClient) {
+    public static SpawnDataStore makeSpawnDataStore(CuratorFramework zkClient) {
         return new ZookeeperDataStore(zkClient);
     }
 
