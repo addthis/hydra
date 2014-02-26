@@ -91,7 +91,7 @@ public class JobExpand {
             expanders.put(macroName, (JobConfigExpander) o);
         } catch (InstantiationException | IllegalAccessException e) {
             log.warn("Class '" + clazz + "' registered for '" + macroName + "' cannot be initialized: " + e, e);
-            } catch (ClassCastException e) {
+        } catch (ClassCastException e) {
             log.warn("Class '" + clazz + "' registered for '" + macroName + "' is not JobConfigExpander but '" + o.getClass() + "'");
         }
     }

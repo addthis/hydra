@@ -215,7 +215,6 @@ public class Spawn implements Codec.Codable {
     private final HashSet<String> disabledHosts = new HashSet<>();
     private int choreCleanerInterval = Parameter.intValue("spawn.chore.interval", 10000);
     private static final int CHORE_TTL = Parameter.intValue("spawn.chore.ttl", 60 * 60 * 24 * 1000);
-    private static final int SWAP_CHORE_TTL = Parameter.intValue("spawn.chore.ttl.swap", 10 * 60 * 1000);
     private static final int TASK_QUEUE_DRAIN_INTERVAL = Parameter.intValue("task.queue.drain.interval", 500);
     private static final boolean ENABLE_JOB_STORE = Parameter.boolValue("job.store.enable", true);
     private static final boolean ENABLE_JOB_FIXDIRS_ONCOMPLETE = Parameter.boolValue("job.fixdirs.oncomplete", true);
@@ -3216,7 +3215,7 @@ public class Spawn implements Codec.Codable {
         JobCommand jobCmd = job.getSubmitCommand();
         CommandTaskKick kick = new CommandTaskKick(
                 task.getHostUUID(),
-                new JobKey(job.getId(), task.getTaskID()),
+                task.getJobKey(),
                 job.getPriority(),
                 job.getCopyOfTasks().size(),
                 job.getMaxRunTime() != null ? job.getMaxRunTime() * 60000 : 0,

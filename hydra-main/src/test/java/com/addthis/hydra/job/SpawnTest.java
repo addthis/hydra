@@ -22,6 +22,7 @@ import com.addthis.basis.test.SlowTest;
 
 import com.addthis.bark.ZkHelpers;
 import com.addthis.bark.ZkStartUtil;
+import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
@@ -36,13 +37,28 @@ import static org.junit.Assert.assertTrue;
 @Category(SlowTest.class)
 public class SpawnTest extends ZkStartUtil {
 
-    private final String minionType = Minion.getDefaultMinionType();
-
     // todo: use random temp dirs
     @Before
     public void setParams() {
         System.setProperty("SPAWN_DATA_DIR", "/tmp/spawn/data");
         System.setProperty("SPAWN_LOG_DIR", "/tmp/spawn/log/events");
+    }
+
+    @Test
+    public void jobTaskPersistenceTest() throws Exception {
+        int taskId = 3;
+        String jobId = "somejob";
+        JobTask testTask = new JobTask();
+        testTask.setTaskID(taskId);
+        testTask.setJobUUID(jobId);
+        CodecJSON codec = new CodecJSON();
+        byte[] encoded = codec.encode(testTask);
+        JobTask decodedTask = new JobTask();
+        codec.decode(decodedTask, encoded);
+        assertEquals(decodedTask.getJobUUID(), jobId);
+        assertEquals(decodedTask.getTaskID(), taskId);
+        assertEquals(decodedTask.getJobKey(), new JobKey(jobId, taskId));
+
     }
 
     @Test
