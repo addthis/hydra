@@ -21,8 +21,10 @@ import java.util.List;
 import java.util.Map;
 
 import com.addthis.basis.net.HttpUtil;
+import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacer;
+import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.hydra.common.plugins.PluginReader;
 import com.addthis.hydra.data.util.CommentTokenizer;
@@ -35,6 +37,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 public class JobExpand {
 
+    private static final int maxDepth = Parameter.intValue("spawn.macro.expand.depth", 256);
+
     private static Logger log = LoggerFactory.getLogger(JobExpand.class);
 
     private static class MacroTokenReplacer extends TokenReplacer {
@@ -46,6 +50,11 @@ public class JobExpand {
         MacroTokenReplacer(Spawn.SpawnState spawnState) {
             super("%{", "}%");
             this.spawnState = spawnState;
+        }
+
+        @Override
+        public long getMaxDepth() {
+            return maxDepth;
         }
 
         @Override
@@ -96,16 +105,23 @@ public class JobExpand {
         }
     }
 
-    private static String macroTemplateParamsHelper(String input, final HashMap<String, String> map) {
+    private static String macroTemplateParamsHelper(String input, final HashMap<String, String> map)
+            throws TokenReplacerOverflowException {
         return new TokenReplacer("%[", "]%") {
             @Override
             public String replace(Region region, String label) {
                 return map.get(Strings.splitArray(label, ":")[0]);
             }
+
+            @Override
+            public long getMaxDepth() {
+                return maxDepth;
+            }
         }.process(input);
     }
 
-    static String macroTemplateParams(String expandedJob, Collection<JobParameter> params) {
+    static String macroTemplateParams(String expandedJob, Collection<JobParameter> params)
+            throws TokenReplacerOverflowException {
         if (params != null && expandedJob != null) {
             final HashMap<String, String> map = new HashMap<>();
             for (JobParameter param : params) {
@@ -212,7 +228,7 @@ public class JobExpand {
     /**
      * recursively expand macros
      */
-    public static String macroExpand(Spawn spawn, String rawtext) {
+    public static String macroExpand(Spawn spawn, String rawtext) throws TokenReplacerOverflowException {
         MacroTokenReplacer replacer = new MacroTokenReplacer(spawn.getSpawnState());
         List<String> contents = new ArrayList<>();
         List<String> delimiters = new ArrayList<>();
@@ -238,7 +254,8 @@ public class JobExpand {
     /* special pass that injects spawn metadata and specific tokens
     * TODO - expand to include job shards option
     */
-    public static String magicMacroExpand(final Spawn spawn, String rawtext, final String jobId) {
+    public static String magicMacroExpand(final Spawn spawn, String rawtext, final String jobId)
+            throws TokenReplacerOverflowException {
         return new TokenReplacer("%(", ")%") {
             @Override
             public String replace(Region region, String label) {
@@ -255,6 +272,11 @@ public class JobExpand {
                     log.warn(msg);
                     throw new RuntimeException(msg);
                 }
+            }
+
+            @Override
+            public long getMaxDepth() {
+                return maxDepth;
             }
         }.process(rawtext);
     }

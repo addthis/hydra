@@ -42,6 +42,7 @@ import java.util.regex.Pattern;
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.codec.CodecExceptionLineNumber;
 import com.addthis.codec.CodecJSON;
@@ -164,7 +165,7 @@ public class JobsResource {
         }
     }
 
-    private String configExpansion(KVPairs kv) {
+    private String configExpansion(KVPairs kv) throws TokenReplacerOverflowException {
         String id, jobConfig, expandedConfig;
 
         KVPair idPair = kv.removePair("id");
@@ -590,10 +591,10 @@ public class JobsResource {
                 setParams.put(kvp.getKey().substring(3), kvp.getValue());
             }
         }
-        /** set params from hash and build new param set */
-        setJobParameters(spawn, job, setParams);
-        /** update job */
         try {
+            /** set params from hash and build new param set */
+            setJobParameters(spawn, job, setParams);
+            /** update job */
             spawn.updateJob(job);
             spawn.submitConfigUpdate(kv.getValue("id"), kv.getValue("commit"));
         } catch (Exception ex) {
@@ -602,7 +603,8 @@ public class JobsResource {
         return Response.ok("{\"id\":\"" + kv.getValue("id") + "\",\"updated\":\"true\"}").build();
     }
 
-    public static void setJobParameters(Spawn spawn, IJob job, Map<String, String> setParams) {
+    public static void setJobParameters(Spawn spawn, IJob job, Map<String, String> setParams)
+            throws TokenReplacerOverflowException {
         /** set params from hash and build new param set */
         String expandedConfig = JobExpand.macroExpand(spawn, spawn.getJobConfig(job.getId()));
         Map<String, JobParameter> macroParams = JobExpand.macroFindParameters(expandedConfig);

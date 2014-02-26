@@ -58,6 +58,8 @@ import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.TokenReplacer;
+import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.bark.ZkClientFactory;
 import com.addthis.bark.ZkHelpers;
@@ -1992,7 +1994,7 @@ public class Spawn implements Codec.Codable {
         return expandJob(job);
     }
 
-    public String expandJob(Job job) {
+    public String expandJob(Job job) throws TokenReplacerOverflowException {
         return expandJob(job.getId(), job.getParameters(), getJobConfig(job.getId()));
     }
 
@@ -2007,7 +2009,8 @@ public class Spawn implements Codec.Codable {
         return true;
     }
 
-    public String expandJob(String id, Collection<JobParameter> parameters, String rawConfig) {
+    public String expandJob(String id, Collection<JobParameter> parameters, String rawConfig)
+            throws TokenReplacerOverflowException {
         // macro recursive expansion
         String pass0 = JobExpand.macroExpand(this, rawConfig);
         // template in params that "may" contain other macros
@@ -3213,6 +3216,12 @@ public class Spawn implements Codec.Codable {
     /* helper for SpawnMesh */
     CommandTaskKick getCommandTaskKick(Job job, JobTask task) {
         JobCommand jobCmd = job.getSubmitCommand();
+        final String expandedJob;
+        try {
+            expandedJob = expandJob(job);
+        } catch (TokenReplacerOverflowException e) {
+            return null;
+        }
         CommandTaskKick kick = new CommandTaskKick(
                 task.getHostUUID(),
                 task.getJobKey(),
@@ -3220,7 +3229,7 @@ public class Spawn implements Codec.Codable {
                 job.getCopyOfTasks().size(),
                 job.getMaxRunTime() != null ? job.getMaxRunTime() * 60000 : 0,
                 job.getRunCount(),
-                expandJob(job),
+                expandedJob,
                 Strings.join(jobCmd.getCommand(), " "),
                 Strings.isEmpty(job.getKillSignal()) ? null : job.getKillSignal(),
                 job.getHourlyBackups(),

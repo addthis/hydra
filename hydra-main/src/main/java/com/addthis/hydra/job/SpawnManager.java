@@ -32,6 +32,7 @@ import com.addthis.basis.net.HttpUtil;
 import com.addthis.basis.net.http.HttpResponse;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.Spawn.ClientEvent;
@@ -1165,7 +1166,8 @@ public class SpawnManager {
         spawn.updateJob(job);
     }
 
-    public static void setJobParameters(Spawn spawn, IJob job, Map<String, String> setParams) {
+    public static void setJobParameters(Spawn spawn, IJob job, Map<String, String> setParams)
+            throws TokenReplacerOverflowException {
         /** set params from hash and build new param set */
         String expandedConfig = JobExpand.macroExpand(spawn, spawn.getJobConfig(job.getId()));
         Map<String, JobParameter> macroParams = JobExpand.macroFindParameters(expandedConfig);
