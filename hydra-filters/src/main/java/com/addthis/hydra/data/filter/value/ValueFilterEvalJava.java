@@ -71,8 +71,8 @@ import org.slf4j.LoggerFactory;
  *       "switch(intInput)",
  *       "{",
  *       "case 1: return \"foo\";",
- *       "case 2: return "bar\";",
- *       "default: return "baz\";",
+ *       "case 2: return \"bar\";",
+ *       "default: return \"baz\";",
  *       "}"
  *     ]
  *   }
