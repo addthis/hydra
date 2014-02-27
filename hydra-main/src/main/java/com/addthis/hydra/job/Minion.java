@@ -184,7 +184,6 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
     private Timer fileStatsTimer;
     private Counter sendStatusFailCount;
     private Counter sendStatusFailAfterRetriesCount;
-    private final Backoff jobConsumerBackoff = new Backoff(1000, 60000);
 
     private final int replicateCommandDelaySeconds = Parameter.intValue("replicate.cmd.delay.seconds", 0);
     private final int backupCommandDelaySeconds = Parameter.intValue("backup.cmd.delay.seconds", 0);
