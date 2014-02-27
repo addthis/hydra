@@ -54,11 +54,9 @@ public class HostFailWorker {
     private final Spawn spawn;
 
     // Perform host-failure related operations at a given interval
-    private final long hostFailDelayMillis = Parameter.longValue("host.fail.delay", 10_000);
+    private final long hostFailDelayMillis = Parameter.longValue("host.fail.delay", 15_000);
     // Quiet period between when host is failed in UI and when Spawn begins failure-related operations
     private final long hostFailQuietPeriod = Parameter.longValue("host.fail.quiet.period", 20_000);
-    // Perform this many moves at a time
-    private final int tasksMovedPerHostIteration = Parameter.intValue("host.fail.tasks.moved", 3);
 
     private final Timer failTimer = new Timer(true);
 
@@ -234,7 +232,7 @@ public class HostFailWorker {
                 spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.listHostStatus(host.getMinionTypes()), failedHostUuid);
             } else if (host.getAvailableTaskSlots() > 0) {
                 // File system is okay. Push some tasks off the host if it has some available capacity.
-                List<JobTaskMoveAssignment> assignments = spawn.getSpawnBalancer().pushTasksOffDiskForFilesystemOkayFailure(host, tasksMovedPerHostIteration);
+                List<JobTaskMoveAssignment> assignments = spawn.getSpawnBalancer().pushTasksOffDiskForFilesystemOkayFailure(host, host.getAvailableTaskSlots());
                 spawn.executeReallocationAssignments(assignments);
                 if (assignments.isEmpty() && host.countTotalLive() == 0) {
                     // Found no tasks on the failed host, so fail it for real.

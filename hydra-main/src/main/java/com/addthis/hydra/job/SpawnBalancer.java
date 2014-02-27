@@ -341,7 +341,7 @@ public class SpawnBalancer implements Codec.Codable {
         HashSet<JobKey> movedTasks = new HashSet<>();
         List<JobTaskMoveAssignment> rv = new ArrayList<>();
         for (JobTaskMoveAssignment assignment : candidateAssignments) {
-            JobKey jobKey = assignment.getTask().getJobKey();
+            JobKey jobKey = assignment.getJobKey();
             if (!movedTasks.contains(jobKey)) {
                 rv.add(assignment);
                 movedTasks.add(jobKey);
@@ -380,7 +380,7 @@ public class SpawnBalancer implements Codec.Codable {
                     continue;
                 }
                 if (!alreadyMoved.contains(jobKey) && pullHost != null && tasksByHost.moveTask(nextTaskItem, pushHost, pullHost)) {
-                    rv.add(new JobTaskMoveAssignment(nextTaskItem.getTask(), pushHost, pullHost, false, false, false));
+                    rv.add(new JobTaskMoveAssignment(nextTaskItem.getTask().getJobKey(), pushHost, pullHost, false, false, false));
                     alreadyMoved.add(nextTaskItem.getTask().getJobKey());
                     maxBytesToMove -= trueSizeBytes;
                 }
@@ -417,7 +417,7 @@ public class SpawnBalancer implements Codec.Codable {
                     continue;
                 }
                 if (!alreadyMoved.contains(jobKey) && tasksByHost.moveTask(item, pushHost, pullHost)) {
-                    rv.add(new JobTaskMoveAssignment(item.getTask(), pushHost, pullHost, false, false, false));
+                    rv.add(new JobTaskMoveAssignment(item.getTask().getJobKey(), pushHost, pullHost, false, false, false));
                     alreadyMoved.add(item.getTask().getJobKey());
                     maxBytesToMove -= trueSizeBytes;
                 }
@@ -685,21 +685,37 @@ public class SpawnBalancer implements Codec.Codable {
 
     /* Push/pull the tasks on a host to balance its disk, obeying an overall limit on the number of tasks/bytes to move */
     private List<JobTaskMoveAssignment> pushTasksOffHost(HostState host, List<HostState> otherHosts, boolean limitBytes, double byteLimitFactor, int moveLimit, boolean obeyDontAutobalanceMe) {
+        List<JobTaskMoveAssignment> rv = purgeTasksForNonexistentJobs(host, moveLimit);
+        if (rv.size() <= moveLimit) {
+            long byteLimit = (long) (byteLimitFactor * config.getBytesMovedFullRebalance());
+            List<HostState> hostsSorted = sortHostsByDiskSpace(otherHosts);
+            for (JobTask task : findTasksToMove(host, obeyDontAutobalanceMe)) {
+                long taskTrueSize = getTaskTrueSize(task);
+                if (limitBytes && taskTrueSize > byteLimit) {
+                    continue;
+                }
+                JobTaskMoveAssignment assignment = moveTask(task, host.getHostUuid(), hostsSorted);
+                if (assignment != null) {
+                    markRecentlyReplicatedTo(assignment.getTargetUUID());
+                    rv.add(assignment);
+                    byteLimit -= taskTrueSize;
+                }
+                if (rv.size() >= moveLimit) {
+                    break;
+                }
+            }
+        }
+        return rv;
+    }
+
+    /* Look through a hoststate to find tasks that don't correspond to an actual job */
+    private List<JobTaskMoveAssignment> purgeTasksForNonexistentJobs(HostState host, int deleteLimit) {
         List<JobTaskMoveAssignment> rv = new ArrayList<>();
-        long byteLimit = (long) (byteLimitFactor * config.getBytesMovedFullRebalance());
-        List<HostState> hostsSorted = sortHostsByDiskSpace(otherHosts);
-        for (JobTask task : findTasksToMove(host, obeyDontAutobalanceMe)) {
-            long taskTrueSize = getTaskTrueSize(task);
-            if (limitBytes && taskTrueSize > byteLimit) {
-                continue;
+        for (JobKey key : host.allJobKeys()) {
+            if (spawn.getJob(key) == null) {
+                rv.add(new JobTaskMoveAssignment(key, host.getHostUuid(), null, false, false, true));
             }
-            JobTaskMoveAssignment assignment = moveTask(task, host.getHostUuid(), hostsSorted);
-            if (assignment != null) {
-                markRecentlyReplicatedTo(assignment.getTargetUUID());
-                rv.add(assignment);
-                byteLimit -= taskTrueSize;
-            }
-            if (rv.size() >= moveLimit) {
+            if (rv.size() >= deleteLimit) {
                 break;
             }
         }
@@ -727,7 +743,7 @@ public class SpawnBalancer implements Codec.Codable {
         boolean live = task.getHostUUID().equals(fromHostId);
         if (!live && !task.hasReplicaOnHost(fromHostId)) {
             // Task was found somewhere it didn't belong
-            return new JobTaskMoveAssignment(task, fromHostId, null, false, false, true);
+            return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, null, false, false, true);
         }
         while (hostStateIterator.hasNext()) {
             HostState next = hostStateIterator.next();
@@ -735,7 +751,7 @@ public class SpawnBalancer implements Codec.Codable {
             if (!taskHost.equals(nextId) && !task.hasReplicaOnHost(nextId) && next.canMirrorTasks() && okToPutReplicaOnHost(next, task)) {
                 hostStateIterator.remove();
                 otherHosts.add(next);
-                return new JobTaskMoveAssignment(task, fromHostId, nextId, !live, false, false);
+                return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, nextId, !live, false, false);
             }
         }
         return null;
@@ -814,7 +830,7 @@ public class SpawnBalancer implements Codec.Codable {
                 continue;
             }
             HostState newHost = spawn.getHostState(newHostID);
-            JobKey jobKey = assignment.getTask().getJobKey();
+            JobKey jobKey = assignment.getJobKey();
             if (newHost.hasLive(jobKey) || !canReceiveNewTasks(newHost, assignment.isFromReplica())) {
                 log.warn("[spawn.balancer] decided not to move task onto " + newHostID + " because it cannot receive the new task");
                 continue;
@@ -1411,14 +1427,6 @@ public class SpawnBalancer implements Codec.Codable {
             this.overallScore = overallScore;
         }
 
-        public double getMeanActiveTasks() {
-            return meanActiveTasks;
-        }
-
-        public double getUsedDiskPercent() {
-            return usedDiskPercent;
-        }
-
         public double getOverallScore() {
             return overallScore;
         }
@@ -1435,7 +1443,7 @@ public class SpawnBalancer implements Codec.Codable {
 
         @Override
         public boolean add(JobTaskMoveAssignment assignment) {
-            bytesUsed += taskSizer.estimateTrueSize(assignment.getTask());
+            bytesUsed += taskSizer.estimateTrueSize(spawn.getTask(assignment.getJobKey()));
             return super.add(assignment);
         }
 

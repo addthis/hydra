@@ -1189,37 +1189,39 @@ public class Spawn implements Codec.Codable {
         }
         HashSet<String> jobsNeedingUpdate = new HashSet<>();
         for (JobTaskMoveAssignment assignment : assignments) {
-            JobTask task = assignment.getTask();
-            Job job = getJob(task.getJobUUID());
-            if (job == null || job.getCopyOfTasks() == null || job.getCopyOfTasks().isEmpty()) {
-                log.warn("[job.reallocate] invalid or empty job");
-                continue;
-            }
-            String sourceHostID = assignment.getSourceUUID();
-            String targetHostID = assignment.getTargetUUID();
-            HostState targetHost = getHostState(targetHostID);
-            if (sourceHostID == null || targetHostID == null || sourceHostID.equals(targetHostID) || targetHost == null) {
-                log.warn("[job.reallocate] received invalid host assignment: from " + sourceHostID + " to " + targetHostID);
-                continue;
-            }
             if (assignment.delete()) {
-                log.warn("[job.reallocate] deleting job off " + assignment.getSourceUUID());
-                deleteTask(assignment.getTask().getJobUUID(), assignment.getSourceUUID(), assignment.getTask().getTaskID(), false);
-                deleteTask(assignment.getTask().getJobUUID(), assignment.getSourceUUID(), assignment.getTask().getTaskID(), true);
-            } else if (assignment.promote()) {
-                log.warn("[job.reallocate] promoting " + task.getJobKey() + " on " + sourceHostID);
-                task.setHostUUID(sourceHostID);
-                List<JobTaskReplica> replicasToModify = targetHost.isReadOnly() ? task.getReadOnlyReplicas() : task.getReplicas();
-                removeReplicasForHost(sourceHostID, replicasToModify);
-                replicasToModify.add(new JobTaskReplica(targetHostID, task.getJobUUID(), task.getRunCount(), 0l));
-                swapTask(task.getJobUUID(), task.getTaskID(), sourceHostID, false, false);
-                jobsNeedingUpdate.add(task.getJobUUID());
+                log.warn("[job.reallocate] deleting " + assignment.getJobKey() + " off " + assignment.getSourceUUID());
+                deleteTask(assignment.getJobKey().getJobUuid(), assignment.getSourceUUID(), assignment.getJobKey().getNodeNumber(), false);
+                deleteTask(assignment.getJobKey().getJobUuid(), assignment.getSourceUUID(), assignment.getJobKey().getNodeNumber(), true);
             } else {
-                JobKey key = task.getJobKey();
-                log.warn("[job.reallocate] replicating task " + key + " onto " + targetHostID + " as " + (assignment.isFromReplica() ? "replica" : "live"));
-                TaskMover tm = new TaskMover(this, key, targetHostID, sourceHostID, false);
-                tm.execute(false);
-                numExecuted++;
+                String sourceHostID = assignment.getSourceUUID();
+                String targetHostID = assignment.getTargetUUID();
+                HostState targetHost = getHostState(targetHostID);
+                if (sourceHostID == null || targetHostID == null || sourceHostID.equals(targetHostID) || targetHost == null) {
+                    log.warn("[job.reallocate] received invalid host assignment: from " + sourceHostID + " to " + targetHostID);
+                    continue;
+                }
+                JobTask task = getTask(assignment.getJobKey());
+                Job job = getJob(task.getJobUUID());
+                if (job == null || job.getCopyOfTasks() == null || job.getCopyOfTasks().isEmpty()) {
+                    log.warn("[job.reallocate] invalid or empty job");
+                    continue;
+                }
+                if (assignment.promote()) {
+                    log.warn("[job.reallocate] promoting " + task.getJobKey() + " on " + sourceHostID);
+                    task.setHostUUID(sourceHostID);
+                    List<JobTaskReplica> replicasToModify = targetHost.isReadOnly() ? task.getReadOnlyReplicas() : task.getReplicas();
+                    removeReplicasForHost(sourceHostID, replicasToModify);
+                    replicasToModify.add(new JobTaskReplica(targetHostID, task.getJobUUID(), task.getRunCount(), 0l));
+                    swapTask(task.getJobUUID(), task.getTaskID(), sourceHostID, false, false);
+                    jobsNeedingUpdate.add(task.getJobUUID());
+                } else {
+                    JobKey key = task.getJobKey();
+                    log.warn("[job.reallocate] replicating task " + key + " onto " + targetHostID + " as " + (assignment.isFromReplica() ? "replica" : "live"));
+                    TaskMover tm = new TaskMover(this, key, targetHostID, sourceHostID, false);
+                    tm.execute(false);
+                    numExecuted++;
+                }
             }
         }
         for (String jobUUID : jobsNeedingUpdate) {
@@ -1781,7 +1783,7 @@ public class Spawn implements Codec.Codable {
         if (!isNewTask(task)) {
             while (newReplicas.size() > desiredNumberOfReplicas) {
                 JobTaskReplica replica = newReplicas.remove(newReplicas.size() - 1);
-                spawnMQ.sendControlMessage(new CommandTaskDelete(replica.getHostUUID(), task.getJobUUID(), task.getTaskID(), task.getRunCount(), false));
+                spawnMQ.sendControlMessage(new CommandTaskDelete(replica.getHostUUID(), task.getJobUUID(), task.getTaskID(), task.getRunCount()));
                 log.warn("[replica.delete] " + task.getJobUUID() + "/" + task.getTaskID() + " from " + replica.getHostUUID() + " @ " + getHostState(replica.getHostUUID()).getHost());
             }
         }
@@ -1908,7 +1910,7 @@ public class Spawn implements Codec.Codable {
             spawnState.jobs.remove(jobUUID);
             spawnState.jobDependencies.removeNode(jobUUID);
             log.warn("[job.delete] " + job.getId() + " >> " + job.getCopyOfTasks());
-            spawnMQ.sendControlMessage(new CommandTaskDelete(HostMessage.ALL_HOSTS, job.getId(), null, job.getRunCount(), true));
+            spawnMQ.sendControlMessage(new CommandTaskDelete(HostMessage.ALL_HOSTS, job.getId(), null, job.getRunCount()));
             sendJobUpdateEvent("job.delete", job);
             if (jobConfigManager != null) {
                 jobConfigManager.deleteJob(job.getId());
@@ -1939,20 +1941,19 @@ public class Spawn implements Codec.Codable {
     public boolean deleteTask(String jobUUID, String hostUuid, Integer node, boolean isReplica) {
         jobLock.lock();
         try {
-            Job job = getJob(jobUUID);
-            if (job != null) {
-                log.warn("[job.delete.host] " + hostUuid + "/" + job.getId() + " >> " + node);
-                spawnMQ.sendControlMessage(new CommandTaskDelete(hostUuid, job.getId(), node, job.getRunCount(), false));
-                if (isReplica) {
-                    JobTask task = job.getTask(node);
-                    task.setReplicas(removeReplicasForHost(hostUuid, task.getReplicas()));
-                    task.setReadOnlyReplicas(removeReplicasForHost(hostUuid, task.getReadOnlyReplicas()));
-                    queueJobTaskUpdateEvent(job);
-                }
-                return true;
-            } else {
+            if (jobUUID == null || node == null) {
                 return false;
             }
+            log.warn("[job.delete.host] " + hostUuid + "/" + jobUUID + " >> " + node);
+            spawnMQ.sendControlMessage(new CommandTaskDelete(hostUuid, jobUUID, node, 0));
+            Job job = getJob(jobUUID);
+            if (isReplica && job != null) {
+                JobTask task = job.getTask(node);
+                task.setReplicas(removeReplicasForHost(hostUuid, task.getReplicas()));
+                task.setReadOnlyReplicas(removeReplicasForHost(hostUuid, task.getReadOnlyReplicas()));
+                queueJobTaskUpdateEvent(job);
+            }
+            return true;
         } finally {
             jobLock.unlock();
         }

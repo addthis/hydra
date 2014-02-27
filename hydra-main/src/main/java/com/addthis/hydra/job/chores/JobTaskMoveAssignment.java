@@ -14,21 +14,22 @@
 package com.addthis.hydra.job.chores;
 
 import com.addthis.hydra.job.JobTask;
+import com.addthis.hydra.job.mq.JobKey;
 
 /**
  * A simple class for communicating where and how a JobTask should be moved.
  */
 public class JobTaskMoveAssignment {
 
-    private final JobTask task;
+    private final JobKey jobKey;
     private final String sourceUUID;
     private final String targetUUID;
     private final boolean promote;
     private final boolean delete;
     private final boolean fromReplica;
 
-    public JobTaskMoveAssignment(JobTask task, String sourceUUID, String targetUUID, boolean fromReplica, boolean promote, boolean delete) {
-        this.task = task;
+    public JobTaskMoveAssignment(JobKey jobKey, String sourceUUID, String targetUUID, boolean fromReplica, boolean promote, boolean delete) {
+        this.jobKey = jobKey;
         this.sourceUUID = sourceUUID;
         this.targetUUID = targetUUID;
         this.fromReplica = fromReplica;
@@ -36,8 +37,8 @@ public class JobTaskMoveAssignment {
         this.delete = delete;
     }
 
-    public JobTask getTask() {
-        return task;
+    public JobKey getJobKey() {
+        return jobKey;
     }
 
     public String getSourceUUID() {
@@ -63,7 +64,7 @@ public class JobTaskMoveAssignment {
     @Override
     public String toString() {
         return "JobTaskMoveAssignment{" +
-               "task=" + task.getJobKey() +
+               "jobKey=" + jobKey +
                ", sourceUUID='" + sourceUUID + '\'' +
                ", targetUUID='" + targetUUID + '\'' +
                ", fromReplica=" + fromReplica +

@@ -329,16 +329,14 @@ public class SpawnBalancerTest extends ZkStartUtil {
         List<JobTaskMoveAssignment> heavyHostTaskAssignments = bal.getAssignmentsToBalanceHost(heavyHost, hosts);
         assertEquals("should move 2 tasks", 2, heavyHostTaskAssignments.size());
         for (JobTaskMoveAssignment assignment : heavyHostTaskAssignments) {
-            JobTask task = assignment.getTask();
-            assertEquals("should move task from heavy host", heavyHostUUID, task.getHostUUID());
+            assertEquals("should move task from heavy host", heavyHostUUID, assignment.getSourceUUID());
             assertEquals("should move task to light host", lightHostUUID, assignment.getTargetUUID());
         }
         bal.clearRecentlyRebalancedHosts();
         List<JobTaskMoveAssignment> lightHostTaskAssignments = bal.getAssignmentsToBalanceHost(lightHost, hosts);
         assertEquals("should move 2 tasks", 2, lightHostTaskAssignments.size());
         for (JobTaskMoveAssignment assignment : lightHostTaskAssignments) {
-            JobTask task = assignment.getTask();
-            assertEquals("should move task from heavy host", heavyHostUUID, task.getHostUUID());
+            assertEquals("should move task from heavy host", heavyHostUUID, assignment.getSourceUUID());
             assertEquals("should move task to light host", lightHostUUID, assignment.getTargetUUID());
         }
     }
@@ -377,11 +375,10 @@ public class SpawnBalancerTest extends ZkStartUtil {
         List<JobTaskMoveAssignment> assignments = bal.getAssignmentsToBalanceHost(heavyHost, hosts);
         long bytesMoved = 0;
         for (JobTaskMoveAssignment assignment : assignments) {
-            assertTrue("shouldn't move gargantuan task", !assignment.getTask().getHostUUID().equals(gargantuanJob.getId()));
+            assertTrue("shouldn't move gargantuan task", !assignment.getJobKey().getJobUuid().equals(gargantuanJob.getId()));
             assertTrue("shouldn't move to read-only host", !(assignment.getTargetUUID().equals(readOnlyHostUUID)));
-            bytesMoved += assignment.getTask().getByteCount();
         }
-        assertTrue("should move something", bytesMoved > 0);
+        assertTrue("should move something", !assignments.isEmpty());
     }
 
     @Test
