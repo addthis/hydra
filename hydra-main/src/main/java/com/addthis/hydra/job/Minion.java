@@ -338,8 +338,8 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             log.info("[minion.start] pid for minion process is: " + minionPid);
             minionTaskDeleter.startDeletionThread();
         } catch (Exception ex) {
-            log.warn("Exception during startup: " + ex, ex);
-            }
+            log.warn("Exception during startup", ex);
+        }
     }
 
     public File getRootDir() {
