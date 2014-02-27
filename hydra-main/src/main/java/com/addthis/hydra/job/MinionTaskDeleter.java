@@ -14,6 +14,7 @@
 package com.addthis.hydra.job;
 
 import java.io.File;
+import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -178,6 +179,7 @@ public class MinionTaskDeleter implements Codec.Codable {
             }
         }
         deleteIfEmpty(taskDirectory);
+        deleteIfEmpty(taskDirectory.getParentFile());
     }
 
     /**
@@ -226,7 +228,12 @@ public class MinionTaskDeleter implements Codec.Codable {
      */
     private static void deleteIfEmpty(File file) {
         if (file.isDirectory() && file.list().length == 0) {
-            deleteFile(file);
+            try {
+                // Use rmdir to ensure failure if files are unexpectedly created
+                new SimpleExec("rmdir " + file.getAbsolutePath()).join();
+            } catch (Exception e) {
+                log.warn("deleteIfEmpty failed on " + file + ": " + e);
+            }
         }
     }
 
