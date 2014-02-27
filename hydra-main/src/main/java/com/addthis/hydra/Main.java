@@ -31,6 +31,7 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.codec.Codec;
+import com.addthis.hydra.common.plugins.DynamicLoader;
 import com.addthis.hydra.common.plugins.PluginReader;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.query.CLIQuery;
@@ -62,6 +63,7 @@ public class Main {
     private static final boolean GANGLIA_SHORT_NAMES = Parameter.boolValue("ganglia.useShortNames", false);
 
     public static final Map<String, String> cmap = new HashMap<>();
+    public static final DynamicLoader.DynamicLoaderResult dlr;
 
     @SuppressWarnings("unused")
     public static void registerFilter(String name, String clazz) {
@@ -70,7 +72,9 @@ public class Main {
 
     /** register types */
     static {
+        dlr =  DynamicLoader.readDynamicClasses("hydra.loader");
         PluginReader.registerLazyPlugin("-executables.classmap", cmap);
+        cmap.putAll(dlr.executables);
     }
 
 
@@ -137,8 +141,8 @@ public class Main {
                     default:
                         String className = cmap.get(args[0]);
                         if (className != null) {
-                            Class clazz = PluginReader.loadClass(
-                                    "-executables.classmap", args[0], className, Object.class);
+                            Class clazz = PluginReader.loadClass("-executables.classmap or dynamic loader",
+                                    args[0], className, Object.class, dlr.loader);
                             if (clazz != null) {
                                 Method m = clazz.getDeclaredMethod("main", String[].class);
                                 m.invoke(null, (Object) cutargs(args));
@@ -220,7 +224,7 @@ public class Main {
             }
 
             // Now convert URL to a filename
-            String configFileName = null;
+            String configFileName;
             try {
                 // first try URL.getFile() which works for opaque URLs (file:foo) and paths without spaces
                 configFileName = configLocation.getFile();
@@ -234,7 +238,9 @@ public class Main {
             }
 
             try {
-                Class.forName("org.apache.log4j.PropertyConfigurator").getMethod("configureAndWatch", String.class, Long.TYPE).invoke(null, configFileName, 10000);
+                Class.forName("org.apache.log4j.PropertyConfigurator")
+                        .getMethod("configureAndWatch", String.class, Long.TYPE)
+                        .invoke(null, configFileName, 10000);
             } catch(Exception e) {
                 throw new RuntimeException("Failed to enable log4j", e);
             }
