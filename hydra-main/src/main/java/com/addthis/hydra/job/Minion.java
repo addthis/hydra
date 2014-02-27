@@ -1848,7 +1848,6 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 replicateStartTime = System.currentTimeMillis();
                 // save it
                 save();
-                sendHostStatus();
                 // start watcher
                 workItemThread = new Thread(new ReplicateWorkItem(jobDir, replicatePid, replicateRun, replicateDone, this, choreWatcherKey, execute));
                 workItemThread.setName("Replicate-WorkItem-" + getName());
@@ -1882,7 +1881,6 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 }
                 backupStartTime = System.currentTimeMillis();
                 save();
-                sendHostStatus();
                 workItemThread = new Thread(new BackupWorkItem(jobDir, backupPid, backupRun, backupDone, this, choreWatcherKey, execute));
                 workItemThread.setName("Backup-WorkItem-" + getName());
                 workItemThread.start();
