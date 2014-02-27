@@ -113,6 +113,7 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AlreadyClosedException;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.QueueingConsumer;
+import com.rabbitmq.client.ShutdownSignalException;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
@@ -120,6 +121,7 @@ import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
 
 import org.I0Itec.zkclient.ZkClient;
+import org.apache.zookeeper.Watcher;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
@@ -307,12 +309,12 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 try {
                     jetty.stop();
                     minionTaskDeleter.stopDeletionThread();
-                    if (zkClient != null) {
+                    if (zkClient != null && zkClient.waitForKeeperState(Watcher.Event.KeeperState.SyncConnected, 1000, TimeUnit.MILLISECONDS)) {
                         minionGroupMembership.removeFromGroup("/minion/up", getUUID());
                         zkClient.close();
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    log.error("Error shutting down", e);
                 }
             }
         });
@@ -438,7 +440,9 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             if (channel != null) {
                 channel.close();
             }
-        } catch (Exception ex)  {
+        } catch (AlreadyClosedException ace) {
+            // do nothing
+        } catch (Exception ex) {
             log.warn("", ex);
         }
     }
@@ -840,19 +844,20 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
 
     @Override
     public void doStop() {
-        shutdown.set(true);
-        writeState();
-        log.info("[minion] stopping and sending updated stats to spawn");
-        sendHostStatus();
-        if (runner != null) {
-            runner.shutdown();
+        if (!shutdown.getAndSet(true)) {
+            writeState();
+            log.info("[minion] stopping and sending updated stats to spawn");
+            sendHostStatus();
+            if (runner != null) {
+                runner.stopTaskRunner();
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (Exception ex)  {
+                log.warn("", ex);
+            }
+            disconnectFromMQ();
         }
-        try {
-            Thread.sleep(1000);
-        } catch (Exception ex)  {
-            log.warn("", ex);
-        }
-        disconnectFromMQ();
     }
 
     @Override
@@ -899,7 +904,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
 
         private boolean done;
 
-        public void shutdown() {
+        public void stopTaskRunner() {
             done = true;
             interrupt();
         }
@@ -920,32 +925,24 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                     kickNextJob();
                     channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
                 } catch (InterruptedException ex) {
-                    exitTaskRunner(ex);
+                    log.warn("Interrupted while processing task messages");
+                    shutdown();
+                } catch (ShutdownSignalException shutdownException) {
+                    log.warn("Received unexpected shutdown exception from rabbitMQ");
+                    shutdown();
                 } catch (Throwable ex) {
                     try {
                         channel.basicNack(delivery.getEnvelope().getDeliveryTag(), false, true);
                     } catch (Exception e) {
-                        log.warn("[task.runner] unable to nack message delivery due to " + e, ex);
-                        }
+                        log.warn("[task.runner] unable to nack message delivery", ex);
+                    }
                     log.warn("[task.runner] error: " + ex);
                     if (!(ex instanceof ExecException)) {
-                        ex.printStackTrace();
+                        log.error("Error nacking message", ex);
                     }
-                    // backoff to prevent excessive message production when rabbitmq is down
-                    try {
-                        jobConsumerBackoff.sleep();
-                    } catch (InterruptedException e) {
-                        exitTaskRunner(e);
-                    }
+                    shutdown();
                 }
-            }
-        }
 
-        private void exitTaskRunner(InterruptedException ex) {
-            if (!done) {
-                log.warn("", ex);
-            } else {
-                log.warn("[task.runner] exiting");
             }
         }
     }
