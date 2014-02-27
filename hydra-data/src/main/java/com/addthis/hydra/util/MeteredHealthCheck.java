@@ -24,7 +24,7 @@ public class MeteredHealthCheck extends HealthCheck {
 
     public MeteredHealthCheck(int maxFailures, String meterName, TimeUnit meterInterval) {
         super(maxFailures);
-        this.failedCheckMeter = Metrics.newMeter(MeteredHealthCheck.class, meterName, null, meterInterval);
+        this.failedCheckMeter = Metrics.newMeter(MeteredHealthCheck.class, meterName, meterName, meterInterval);
     }
 
     @Override
