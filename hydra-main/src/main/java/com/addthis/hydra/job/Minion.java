@@ -110,6 +110,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.AlreadyClosedException;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.QueueingConsumer;
 import com.yammer.metrics.Metrics;
@@ -405,7 +406,9 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             if (batchControlConsumer != null) {
                 batchControlConsumer.close();
             }
-        } catch (Exception ex)  {
+        } catch (AlreadyClosedException ace) {
+            // do nothing
+        } catch (Exception ex) {
             log.warn("", ex);
         }
         try {
@@ -419,6 +422,8 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             if (batchControlProducer != null) {
                 batchControlProducer.close();
             }
+        } catch (AlreadyClosedException ace) {
+            // do nothing
         } catch (Exception ex)  {
             log.warn("", ex);
         }
