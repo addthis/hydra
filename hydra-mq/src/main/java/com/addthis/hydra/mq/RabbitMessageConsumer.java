@@ -74,8 +74,7 @@ public class RabbitMessageConsumer extends DefaultConsumer implements MessageCon
             }
         } catch (ClassNotFoundException e) {
             log.warn("[rabbitConsumer] error reading message", e);
-            }
-
+        }
     }
 
     public boolean addMessageListener(MessageListener hostMessageListener) {
