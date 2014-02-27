@@ -402,27 +402,37 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
 
     private void disconnectFromMQ() {
         try {
-            batchControlConsumer.close();
+            if (batchControlConsumer != null) {
+                batchControlConsumer.close();
+            }
         } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
-            queryControlProducer.close();
+            if (queryControlProducer != null) {
+                queryControlProducer.close();
+            }
         } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
-            batchControlProducer.close();
+            if (batchControlProducer != null) {
+                batchControlProducer.close();
+            }
         } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
-            zkBatchControlProducer.close();
+            if (zkBatchControlProducer != null) {
+                zkBatchControlProducer.close();
+            }
         } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
-            channel.close();
+            if (channel != null) {
+                channel.close();
+            }
         } catch (Exception ex)  {
             log.warn("", ex);
         }
