@@ -675,6 +675,7 @@ public class SpawnBalancer implements Codec.Codable {
             double byteLimitFactor = 1 - ((double) (moveAssignments.getBytesUsed())) / config.getBytesMovedFullRebalance();
             moveAssignments.addAll(pushTasksOffHost(heavyHost, Arrays.asList(host), true, byteLimitFactor, config.getTasksMovedFullRebalance(), true));
         }
+        moveAssignments.addAll(purgeTasksForNonexistentJobs(host, 1));
         return moveAssignments;
     }
 
@@ -762,7 +763,7 @@ public class SpawnBalancer implements Codec.Codable {
         int totalTasksToMove = config.getTasksMovedFullRebalance();
         long totalBytesToMove = config.getBytesMovedFullRebalance();
         Set<String> activeJobs = findActiveJobIDs();
-        List<JobTaskMoveAssignment> rv = new ArrayList<JobTaskMoveAssignment>();
+        List<JobTaskMoveAssignment> rv = purgeTasksForNonexistentJobs(host, 1);
         String hostID = host.getHostUuid();
         for (String jobID : activeJobs) {
             spawn.acquireJobLock();

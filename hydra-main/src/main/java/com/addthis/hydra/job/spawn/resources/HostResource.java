@@ -55,7 +55,7 @@ public class HostResource {
             JSONArray outcomes = new JSONArray();
             for (String uuid : hostUuids) {
                 emitLogLineForAction(user.getUsername(), "host rebalance on " + hostUuid);
-                RebalanceOutcome outcome = spawn.reallocateHost(uuid);
+                RebalanceOutcome outcome = spawn.rebalanceHost(uuid);
                 JSONObject json = CodecJSON.encodeJSON(outcome);
                 outcomes.put(json);
             }

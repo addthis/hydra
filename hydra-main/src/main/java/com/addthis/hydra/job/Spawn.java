@@ -1164,7 +1164,7 @@ public class Spawn implements Codec.Codable {
      * @param hostUUID The ID of the host
      * @return a boolean describing if at least one task was scheduled to be moved
      */
-    public RebalanceOutcome reallocateHost(String hostUUID) {
+    public RebalanceOutcome rebalanceHost(String hostUUID) {
         if (hostUUID == null || !monitored.containsKey(hostUUID)) {
             return new RebalanceOutcome(hostUUID, "missing host", null, null);
         }

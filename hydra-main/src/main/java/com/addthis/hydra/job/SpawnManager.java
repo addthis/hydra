@@ -405,7 +405,7 @@ public class SpawnManager {
                 KVPairs kv = link.getRequestValues();
                 String id = kv.getValue("uuid", "");
                 emitLogLineForAction(kv, "host rebalance on " + id);
-                RebalanceOutcome outcome = spawn.reallocateHost(id);
+                RebalanceOutcome outcome = spawn.rebalanceHost(id);
                 link.sendShortReply(200, "OK", outcome.toString());
             }
         });
