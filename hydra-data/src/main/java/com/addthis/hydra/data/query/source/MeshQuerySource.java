@@ -70,7 +70,7 @@ import org.slf4j.LoggerFactory;
  */
 public class MeshQuerySource implements LocalFileHandler {
 
-    static final Logger log = LoggerFactory.getLogger(MeshQuerySource.class);
+    private static final Logger log = LoggerFactory.getLogger(MeshQuerySource.class);
 
     static final int slowQueryThreshold = Parameter.intValue("meshQuerySource.slowQueryThreshold", 5000);
 
