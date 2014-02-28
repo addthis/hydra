@@ -222,7 +222,7 @@ function(
             });
         },
         query:function(){
-            window.open("http://"+document.domain+":2222/query/index.html?job="+this.id,"_blank");
+            window.open("http://"+app.queryHost+"/query/index.html?job="+this.id,"_blank");
         },
         delete:function(dontShowSuccessAlert){
             var self=this;
@@ -999,7 +999,7 @@ function(
                     "mRender":function(val,type,data){
                         var html = "";
                         if(data.qc_canQuery){
-                            html+="<a data-id='"+data.id+"' class='btn btn-default btn-tiny btn-blue' href='http://"+window.location.hostname+":2222/query/index.html?job="+data.id+"' target='_blank'>Q</a>";
+                            html+="<a data-id='"+data.id+"' class='btn btn-default btn-tiny btn-blue' href='http://"+app.queryHost+"/query/index.html?job="+data.id+"' target='_blank'>Q</a>";
                         }
                         return html;
                     }
@@ -1223,7 +1223,7 @@ function(
                     "mRender":function(val,type,data){
                         var html = "";
                         if(data.qc_canQuery){
-                            html+="<a data-id='"+val+"' class='btn btn-default btn-tiny btn-blue' href='http://"+window.location.hostname+":2222/query/index.html?job="+data.id+"' target='_blank'>Q</a>";
+                            html+="<a data-id='"+val+"' class='btn btn-default btn-tiny btn-blue' href='http://"+app.queryHost+"/query/index.html?job="+data.id+"' target='_blank'>Q</a>";
                         }
                         return html;
                     }

@@ -159,6 +159,7 @@ public class ListenResource {
                 }
                 aliases.put(alias.getKey(), aliasJson.put("name", alias.getKey()).put("jobs", aliasJobs));
             }
+            setup.put("queryHost", spawn.getSettings().getQueryHost());
             setup.put("macros", macrolist);
             setup.put("commands", commandlist);
             setup.put("hosts", hostlist);
