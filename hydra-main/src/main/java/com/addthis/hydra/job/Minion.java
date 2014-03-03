@@ -51,7 +51,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.addthis.basis.kv.KVPairs;
-import com.addthis.basis.util.Backoff;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
@@ -1385,15 +1384,16 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                     for (String backup : findLocalBackups(true)) {
                         if (backup.startsWith(ScheduledBackupType.getBackupPrefix())) {
                             // only include "b-" dirs/exclude gold - it won't exist on the remote host after the rsync.
-                            sb.append("\n" + createTouchCommand(false, userAT, target + "/" + backup + "/backup.complete"));
+                            // On some occasions, this logic can attempt to touch a backup that is about to be deleted -- if so, log a message but don't fail the command
+                            sb.append("\n" + createTouchCommand(false, userAT, target + "/" + backup + "/backup.complete", true));
                         }
                     }
-                    sb.append("\n" + createTouchCommand(false, userAT, target + "/live/replicate.complete"));
+                    sb.append("\n" + createTouchCommand(false, userAT, target + "/live/replicate.complete", false));
                     rv.add(sb.toString());
                 } else {
                     rv.add(createDeleteCommand(false, userAT, target + "/replicate.complete") +
                            "\n" + createRsyncCommand(userAT, jobDir.getAbsolutePath() + "/", target) +
-                           "\n" + createTouchCommand(false, userAT, target + "/replicate.complete")
+                           "\n" + createTouchCommand(false, userAT, target + "/replicate.complete", false)
                     );
                 }
             } catch (Exception ex) {
@@ -1442,7 +1442,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             log.warn("[backup] executing backup from " + sourceDir + " to " + targetDir);
             return createDeleteCommand(local, userAT, targetDir) + " && " +
                    createCopyCommand(local, userAT, sourceDir, targetDir) + " && " +
-                   createTouchCommand(local, userAT, targetDir + "/backup.complete");
+                   createTouchCommand(local, userAT, targetDir + "/backup.complete", false);
         }
 
         private String createSymlinkCommand(boolean local, String userAt, String baseDir, String source, String name) {
@@ -1456,8 +1456,8 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             return wrapCommandWithRetries(local, userAt, cpcmd + cpParams + sourceDir + " " + targetDir);
         }
 
-        private String createTouchCommand(boolean local, String userAT, String path) {
-            return wrapCommandWithRetries(local, userAT, "touch " + path);
+        private String createTouchCommand(boolean local, String userAT, String path, boolean failSafe) {
+            return wrapCommandWithRetries(local, userAT, "touch " + path + (failSafe ? " 2>/dev/null || echo 'Skipped deleted backup'" : ""));
         }
 
         private String createDeleteCommand(boolean local, String userAT, String dirPath) {
