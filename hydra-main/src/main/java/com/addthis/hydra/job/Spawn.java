@@ -58,7 +58,6 @@ import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
-import com.addthis.basis.util.TokenReplacer;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.bark.ZkClientFactory;
@@ -1264,7 +1263,7 @@ public class Spawn implements Codec.Codable {
                 List<JobTaskDirectoryMatch> directoryMismatches = matchTaskToDirectories(task, false);
                 if (!directoryMismatches.isEmpty()) {
                     // If there are issues with a task's directories, resolve them.
-                    resolveJobTaskDirectoryMatches(job, task, directoryMismatches);
+                    resolveJobTaskDirectoryMatches(job, task, directoryMismatches, false);
                     allMismatches.addAll(directoryMismatches);
                 }
             }
@@ -1289,10 +1288,10 @@ public class Spawn implements Codec.Codable {
      * @param jobId           The job id to fix
      * @param node            The task id to fix, or -1 to fix all
      * @param ignoreTaskState Whether to ignore the task's state (mostly when recovering from a host failure)
-     * @param idleOnly        Whether to skip errored tasks and only fix idle ones
+     * @param orphansOnly     Whether to only delete orphans for idle tasks
      * @return A string description
      */
-    public String fixTaskDir(String jobId, int node, boolean ignoreTaskState, boolean idleOnly) {
+    public String fixTaskDir(String jobId, int node, boolean ignoreTaskState, boolean orphansOnly) {
         jobLock.lock();
         try {
             Job job = getJob(jobId);
@@ -1303,13 +1302,13 @@ public class Spawn implements Codec.Codable {
             List<JobTask> tasks = node < 0 ? job.getCopyOfTasks() : Arrays.asList(job.getTask(node));
             for (JobTask task : tasks) {
                 boolean shouldModifyTask = !spawnJobFixer.haveRecentlyFixedTask(task.getJobKey()) &&
-                        (ignoreTaskState || (task.getState() == JobTaskState.IDLE || (!idleOnly && task.getState() == JobTaskState.ERROR)));
+                        (ignoreTaskState || (task.getState() == JobTaskState.IDLE || (!orphansOnly && task.getState() == JobTaskState.ERROR)));
                 if (log.isDebugEnabled()) {
                     log.debug("[fixTaskDir] considering modifying task " + task.getJobKey() + " shouldModifyTask=" + shouldModifyTask);
                 }
                 if (shouldModifyTask) {
                     try {
-                        numChanged += resolveJobTaskDirectoryMatches(job, task, matchTaskToDirectories(task, false)) ? 1 : 0;
+                        numChanged += resolveJobTaskDirectoryMatches(job, task, matchTaskToDirectories(task, false), orphansOnly) ? 1 : 0;
                         spawnJobFixer.markTaskRecentlyFixed(task.getJobKey());
                     } catch (Exception ex) {
                         log.warn("fixTaskDir exception " + ex, ex);
@@ -1325,7 +1324,7 @@ public class Spawn implements Codec.Codable {
 
     }
 
-    public boolean resolveJobTaskDirectoryMatches(Job job, JobTask task, List<JobTaskDirectoryMatch> matches) throws Exception {
+    public boolean resolveJobTaskDirectoryMatches(Job job, JobTask task, List<JobTaskDirectoryMatch> matches, boolean deleteOrphansOnly) throws Exception {
         boolean changed = false;
         for (JobTaskDirectoryMatch match : matches) {
             boolean resolvedMissingLive = false;
@@ -1333,6 +1332,9 @@ public class Spawn implements Codec.Codable {
                 case MATCH:
                     continue;
                 case MISMATCH_MISSING_LIVE:
+                    if (deleteOrphansOnly) {
+                        continue;
+                    }
                     changed = true;
                     resolveMissingLive(task);
                     resolvedMissingLive = true; // Only need to resolve missing live once, since all replicas will be recopied
