@@ -272,6 +272,7 @@ public class QueryTracker {
                                 (query.getOps() == null ? "" : query.getOps());
 
             final String timeoutInSeconds = query.getParameter("timeout");
+            this.startTime = System.currentTimeMillis();
             if (timeoutInSeconds != null) {
                 waitTime = Integer.parseInt(timeoutInSeconds);
             } else {
