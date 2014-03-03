@@ -449,7 +449,7 @@ public class HostState implements HostMessage {
 
     public int countTotalLive() {
         int total = 0;
-        for (JobKey[] keys : Arrays.asList(stopped, replicating, backingup, queued)) {
+        for (JobKey[] keys : Arrays.asList(stopped, running, replicating, backingup, queued)) {
             if (keys != null) {
                 total += keys.length;
             }
