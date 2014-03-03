@@ -340,13 +340,7 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
         return job;
     }
 
-    public synchronized void invalidateFileReferenceForJob(String job) {
-        if (job != null) {
-            cachey.invalidate(job);
-        }
-    }
-
-    public synchronized void invalidateFileReferenceCache() {
+    public void invalidateFileReferenceCache() {
         cachey.invalidateFileReferenceCache();
     }
 
@@ -359,7 +353,7 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
      * @return A replacement FileReference, which is also placed into the cache if it was newly generated
      * @throws IOException If there is a problem fetching a replacement FileReference
      */
-    public synchronized FileReference getReplacementFileReferenceForSingleTask(String job, int task, FileReference failedReference) throws IOException {
+    public FileReference getReplacementFileReferenceForSingleTask(String job, int task, FileReference failedReference) throws IOException {
         Set<FileReferenceWrapper> wrappers = cachey.getTaskReferencesIfPresent(job, task);
         if (wrappers != null) {
             wrappers.remove(new FileReferenceWrapper(failedReference, task));
