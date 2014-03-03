@@ -655,7 +655,9 @@ function(
             app.hostCollection.each(function(hostModel){
                 diskUsed+=hostModel.get("diskUsed");
                 diskMax+=hostModel.get("diskMax");
-                avail+=hostModel.get("availableTaskSlots");
+                if (!hostModel.get("dead")) {
+                	avail+=hostModel.get("availableTaskSlots");
+                }
             });
             if(diskMax>0){
                 var disk = Math.floor((diskUsed/diskMax)*100)/100;
@@ -691,7 +693,7 @@ function(
         },
         handleAvailTaskChange:function(model){
             var delta = parseInt(model.get("availableTaskSlots"))-parseInt(model.previous("availableTaskSlots"));
-            if(_.isNumber(delta) && !_.isNaN(delta)){
+            if(_.isNumber(delta) && !_.isNaN(delta) && !this.get("dead")){
                 var prev = this.get("availTaskSlots");
                 this.set("availTaskSlots",prev+delta);
             }

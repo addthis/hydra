@@ -1295,7 +1295,9 @@ function renderHostsCall() {
 		if (host.backingup) {
 			sumrunning += host.backingup.length
 		}
-		sumavail += host.availableTaskSlots;
+		if (!host.dead) {
+			sumavail += host.availableTaskSlots;
+		}
 		var shortName = host.host.replace(/\.[a-zA-Z\.]+:/, ':').split(':')[0];
 		if (host.uuid) {
 			hosts[host.uuid] = host;
