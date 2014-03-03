@@ -299,7 +299,7 @@ public class Hoover extends TaskRunnable implements Runnable {
             this.jodaEndDate = DateUtil.getDateTime(DateUtil.getFormatter(startEndDateFormat), endDate);
         }
 
-        log.warn("init job=" + config.jobId + " mods=" + Strings.join(mods, ",") + " node=" + config.node + " of " + config.nodeCount);
+        log.info("init job=" + config.jobId + " mods=" + Strings.join(mods, ",") + " node=" + config.node + " of " + config.nodeCount);
         /* create job files from map if not already existing or changed */
         for (Map.Entry<String, String> file : staticFiles.entrySet()) {
             String fileName[] = Strings.splitArray(file.getKey(), ";");
@@ -324,14 +324,14 @@ public class Hoover extends TaskRunnable implements Runnable {
         thread = new Thread(this);
         thread.setName("Hoover Rsync");
         thread.start();
-        log.warn("exec " + config.jobId);
+        log.info("exec " + config.jobId);
     }
 
     @Override
     public void terminate() {
         if (terminated.compareAndSet(false, true)) {
             thread.interrupt();
-            log.warn("terminate " + config.jobId);
+            log.info("terminate " + config.jobId);
         }
     }
 
@@ -339,7 +339,7 @@ public class Hoover extends TaskRunnable implements Runnable {
     public void waitExit() {
         try {
             thread.join();
-            log.warn("exit " + config.jobId);
+            log.info("exit " + config.jobId);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -349,17 +349,17 @@ public class Hoover extends TaskRunnable implements Runnable {
     public void run() {
         File outDirFile = new File(outDir);
         if (!outDirFile.exists()) {
-            log.warn("out dir does not yet exist, creating: " + outDir);
+            log.info("out dir does not yet exist, creating: " + outDir);
             outDirFile.mkdirs();
         }
         for (Map.Entry<String, String> host : hosts.entrySet()) {
-            log.warn("fetching from " + host.getValue() + " ...");
+            log.info("fetching from " + host.getValue() + " ...");
             Collection<MarkFile> files;
             int attempts = 0;
             while (true) {
                 files = findFiles(host.getKey(), host.getValue());
                 if (files == null && attempts++ > maxFindAttempts) {
-                    log.warn("Unable to find files to hoover after " + attempts + " attempts");
+                    log.error("Unable to find files to hoover after " + attempts + " attempts");
                     throw new RuntimeException("Unable to find files to hoover after " + attempts + " attempts");
                 } else if (files == null) {
                     log.warn("error running findFiles command, backing off before retry.  This is attempt: " + attempts);
@@ -394,7 +394,7 @@ public class Hoover extends TaskRunnable implements Runnable {
                                 }
                             }
                         } else {
-                            log.warn("max retry attempts: " + attempts + " breaking retry loop");
+                            log.error("max retry attempts: " + attempts + " breaking retry loop");
                             break;
                         }
                     }
@@ -409,7 +409,7 @@ public class Hoover extends TaskRunnable implements Runnable {
         final int postRet = postCommand();
         if (postRet != 0) {
             if (!terminated.get() && (failOnPostIfOutEmpty && outDirFile.list().length == 0)) {
-                log.warn("error returned by postCommand, forcing system.exit:" + postRet);
+                log.error("error returned by postCommand, forcing system.exit:" + postRet);
                 // We need to exit in a separate thread, because
                 // another thread is joining on this one, and
                 // inexplicably System.exit does not interrupt blocked
@@ -449,7 +449,7 @@ public class Hoover extends TaskRunnable implements Runnable {
                     reader.close();
                     int exit = 0;
                     if ((exit = proc.waitFor()) != 0) {
-                        log.warn("post exited with " + exit);
+                        log.error("post exited with " + exit);
                         String eline = null;
                         while ((eline = ereader.readLine()) != null) {
                             System.err.println(eline);
@@ -457,9 +457,9 @@ public class Hoover extends TaskRunnable implements Runnable {
                         return exit;
                     }
                 } catch (Exception ex)  {
-                    log.warn("", ex);
+                    log.error("", ex);
                     if (proc != null) {
-                        log.warn("Problem during postCommand, destroying process " + ex);
+                        log.error("Problem during postCommand, destroying process " + ex);
                         proc.destroy();
                     }
                     if (attempts++ < maxFindAttempts && !terminated.get()) {
@@ -470,7 +470,7 @@ public class Hoover extends TaskRunnable implements Runnable {
                         }
                         continue;
                     } else {
-                        log.warn("Max retry attempts: " + attempts + " reached.  Post command failed");
+                        log.error("Max retry attempts: " + attempts + " reached.  Post command failed");
                         return 1;
                     }
 
@@ -493,25 +493,25 @@ public class Hoover extends TaskRunnable implements Runnable {
     private boolean checkFile(MarkFile markFile) {
         if (match != null && !markFile.path.matches(match)) {
             if (verboseCheck || log.isDebugEnabled()) {
-                log.warn("match skip for host=" + markFile.host + " path=" + markFile.path + " match=" + match);
+                log.info("match skip for host=" + markFile.host + " path=" + markFile.path + " match=" + match);
             }
             return false;
         }
         if (jodaStartDate != null && markFile.dateTime != null && markFile.dateTime.isBefore(jodaStartDate)) {
             if (verboseCheck || log.isDebugEnabled()) {
-                log.warn("skipping host=" + markFile.host + " path=" + markFile.path + " because " + markFile.dateTime + " is before startime" + jodaStartDate);
+                log.info("skipping host=" + markFile.host + " path=" + markFile.path + " because " + markFile.dateTime + " is before startime" + jodaStartDate);
             }
             return false;
         }
         if (jodaEndDate != null && markFile.dateTime != null && markFile.dateTime.isAfter(jodaEndDate)) {
             if (verboseCheck || log.isDebugEnabled()) {
-                log.warn("skipping host=" + markFile.host + " path=" + markFile.path + " because " + markFile.dateTime + " is after end" + jodaEndDate);
+                log.info("skipping host=" + markFile.host + " path=" + markFile.path + " because " + markFile.dateTime + " is after end" + jodaEndDate);
             }
             return false;
         }
 
         if (markFile.markFile.exists()) {
-            if (verboseCheck || log.isDebugEnabled()) log.warn("mark skip for host=" + markFile.host + " file=" + markFile.name());
+            if (verboseCheck || log.isDebugEnabled()) log.info("mark skip for host=" + markFile.host + " file=" + markFile.name());
             return false;
         }
         int hashMod = Math.abs(PluggableHashFunction.hash(markFile.host.concat(markFile.name()))) % config.nodeCount;
@@ -522,7 +522,7 @@ public class Hoover extends TaskRunnable implements Runnable {
             }
         }
         if (verboseCheck || log.isDebugEnabled()) {
-            log.warn("hash skip [" + hashMod + "] host=" + markFile.host + " file=" + markFile.name());
+            log.info("hash skip [" + hashMod + "] host=" + markFile.host + " file=" + markFile.name());
         }
         return false;
     }
@@ -607,7 +607,7 @@ public class Hoover extends TaskRunnable implements Runnable {
             return false;
         }
         if (verbose || log.isDebugEnabled()) {
-            log.warn("fetched " + markFile.host + " --> " + markFile.name() + " marked by " + markFile.markFile);
+            log.info("fetched " + markFile.host + " --> " + markFile.name() + " marked by " + markFile.markFile);
         }
         return true;
     }
@@ -618,13 +618,13 @@ public class Hoover extends TaskRunnable implements Runnable {
             newCmd[i] = purgeCommand[i].replace("{{DIR}}", dir).replace("{{DAYS}}", Integer.toString(days));
         }
         if (log.isDebugEnabled()) log.debug("purge cmd = " + Strings.join(newCmd, " "));
-        if (verbose || log.isDebugEnabled()) log.warn("purging older than days=" + days + " from dir=" + dir);
+        if (verbose || log.isDebugEnabled()) log.info("purging older than days=" + days + " from dir=" + dir);
         try {
             Process proc = Runtime.getRuntime().exec(newCmd);
             BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
             String line = null;
             while ((line = reader.readLine()) != null) {
-                if (verbose || log.isDebugEnabled()) log.warn(" --> " + line);
+                if (verbose || log.isDebugEnabled()) log.info(" --> " + line);
             }
             reader.close();
             return proc.waitFor() == 0;
