@@ -335,9 +335,9 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
                 long out = outputCountMetric.count();
                 outputCountMetric.clear();
                 if (stats) {
-                    log.info("run={} in={} out={} skip={} ms={} rate={} total={} filterTime={}",
-                            System.currentTimeMillis() - startTime, in, out, Math.max(in - out, 0),
-                            time - lastMark, Math.round(processedMeterMetric.oneMinuteRate()), totalEmit,
+                    log.info("in={} out={} skip={} ms={} rate={} total={} filterTime={}",
+                            in, out, Math.max(in - out, 0), time - lastMark,
+                            Math.round(processedMeterMetric.oneMinuteRate()), totalEmit,
                             pad(bundleFilterTime.getAndSet(0), 6));
                 }
                 lastMark = time;
