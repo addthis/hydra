@@ -199,14 +199,15 @@ function deletePidFiles() {
     for process in $1; do
         if [ -f pid/pid.${process} ]
         then
-            isrunning=`ps h $(cat pid/pid.${process}) | wc -l`
+            # ps h (--no-header) does not work on mac
+            pid=`cat pid/pid.${process}`
+            isrunning=`ps $pid | grep $pid | wc -l`
             if [ "$isrunning" -eq "0" ]
             then
                 rm pid/pid.${process}
             fi
         fi
     done
-
 }
 
 function silentKill() {
