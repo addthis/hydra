@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -343,9 +344,9 @@ public class HostFailWorker {
 
         public HostFailState() {
             synchronized (hostsToFailByType) {
-                failFsDead = new TreeSet<>();
+                failFsDead = new LinkedHashSet<>();
                 hostsToFailByType.put(false, failFsDead);
-                failFsOkay = new TreeSet<>();
+                failFsOkay = new LinkedHashSet<>();
                 hostsToFailByType.put(true, failFsOkay);
             }
         }
