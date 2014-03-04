@@ -358,6 +358,7 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
         if (wrappers != null) {
             wrappers.remove(new FileReferenceWrapper(failedReference, task));
             if (!wrappers.isEmpty()) {
+                cachey.updateFileReferenceForTask(job, task, new HashSet<>(wrappers));
                 return wrappers.iterator().next().fileReference;
             }
         }
