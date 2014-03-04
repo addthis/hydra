@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.io.StringWriter;
 
 import java.util.Enumeration;
@@ -207,6 +208,24 @@ public class QueryServer extends AbstractHandler {
         return handlers;
     }
 
+    private PrintWriter startResponse(HttpServletResponse response, String cbf, String cba) throws Exception {
+        PrintWriter writer = response.getWriter();
+        if (cbf != null) {
+            response.setContentType("application/javascript; charset=utf-8");
+            writer.write(cbf + "(");
+            if (cba != null) writer.write(cba + ",");
+        } else {
+            response.setContentType("application/json; charset=utf-8");
+        }
+        return writer;
+    }
+
+    private void endResponse(PrintWriter writer, String cbf) throws Exception {
+        if (cbf != null) {
+            writer.write(");");
+        }
+    }
+
     private void handler(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws Exception {
         response.setBufferSize(65535);
         KVPairs kv = new KVPairs();
@@ -216,6 +235,9 @@ public class QueryServer extends AbstractHandler {
             String v = request.getParameter(k);
             kv.add(k, v);
         }
+        String cbf = kv.getValue("cbfunc");
+        String cba = kv.getValue("cbfunc-arg");
+        boolean jsonp = cbf != null;
         if (target.equals("/")) {
             response.sendRedirect("/query/index.html");
         } else if (target.startsWith("/metrics")) {
@@ -223,42 +245,59 @@ public class QueryServer extends AbstractHandler {
         } else if (target.equals("/q/")) {
             response.sendRedirect("/query/call?" + kv.toString());
         } else if (target.equals("/query/call") || target.equals("/query/call/")) {
+            // TODO jsonp enable
             rawQueryCalls.inc();
             QueryServlet.handleQuery(meshQueryMaster, kv, request, response);
         } else if (target.equals("/query/list")) {
-            response.getWriter().write("[\n");
+            PrintWriter writer = startResponse(response, cbf, cba);
+            writer.write("[\n");
             for (QueryTracker.QueryEntryInfo stat : tracker.getRunning()) {
-                response.getWriter().write(CodecJSON.encodeString(stat).concat(",\n"));
+                writer.write(CodecJSON.encodeString(stat).concat(",\n"));
             }
-            response.getWriter().write("]");
+            writer.write("]");
+            endResponse(writer, cbf);
         } else if (target.equals("/completed/list")) {
-            response.getWriter().write("[\n");
+            PrintWriter writer = startResponse(response, cbf, cba);
+            writer.write("[\n");
             for (QueryTracker.QueryEntryInfo stat : tracker.getCompleted()) {
-                response.getWriter().write(CodecJSON.encodeString(stat).concat(",\n"));
+                writer.write(CodecJSON.encodeString(stat).concat(",\n"));
             }
-            response.getWriter().write("]");
+            writer.write("]");
+            endResponse(writer, cbf);
         } else if (target.equals("/host/list")) {
-            response.getWriter().write("[\n");
+            PrintWriter writer = startResponse(response, cbf, cba);
+            writer.write("[\n");
             for (HostEntryInfo hostEntryInfo : tracker.getQueryHosts(kv.getValue("uuid"))) {
-                response.getWriter().write("{'hostname':'" + hostEntryInfo.getHostName() + "','lines':'" + hostEntryInfo.getLines() + "','starttime':" + hostEntryInfo.getStarttime() + ", 'finished':'" + hostEntryInfo.getFinished() + "', 'endtime':" + hostEntryInfo.getEndtime() + ", 'runtime':" + hostEntryInfo.getRuntime() + "},");
+                writer.write("{'hostname':'" + hostEntryInfo.getHostName() + "','lines':'" + hostEntryInfo.getLines() + "','starttime':" + hostEntryInfo.getStarttime() + ", 'finished':'" + hostEntryInfo.getFinished() + "', 'endtime':" + hostEntryInfo.getEndtime() + ", 'runtime':" + hostEntryInfo.getRuntime() + "},");
             }
-            response.getWriter().write("]");
+            writer.write("]");
+            endResponse(writer, cbf);
         } else if (target.equals("/query/cancel")) {
+            PrintWriter writer = startResponse(response, cbf, cba);
+            int status = 200;
             if (tracker.cancelRunning(kv.getValue("uuid"))) {
-                response.getWriter().write("canceled " + kv.getValue("uuid"));
-                response.setStatus(200);
+                if (jsonp) writer.write("{canceled:true,message:'");
+                writer.write("canceled " + kv.getValue("uuid"));
             } else {
-                response.getWriter().write("canceled failed for " + kv.getValue("uuid"));
-                response.setStatus(500);
+                if (jsonp) writer.write("{canceled:false,message:'");
+                writer.write("canceled failed for " + kv.getValue("uuid"));
+                status = 500;
             }
+            if (jsonp) writer.write("'}");
+            endResponse(writer, cbf);
+            response.setStatus(status);
         } else if (target.equals("/query/encode")) {
             Query q = new Query(null, kv.getValue("query", kv.getValue("path", "")), null);
             JSONArray path = CodecJSON.encodeJSON(q).getJSONArray("path");
-            response.getWriter().write(path.toString());
+            PrintWriter writer = startResponse(response, cbf, cba);
+            writer.write(path.toString());
+            endResponse(writer, cbf);
         } else if (target.equals("/query/decode")) {
             String qo = "{path:" + kv.getValue("query", kv.getValue("path", "")) + "}";
             Query q = CodecJSON.decodeString(new Query(), qo);
-            response.getWriter().write(q.getPaths()[0]);
+            PrintWriter writer = startResponse(response, cbf, cba);
+            writer.write(q.getPaths()[0]);
+            endResponse(writer, cbf);
         } else if (target.equals("/v2/queries/finished.list")) {
             JSONArray runningEntries = new JSONArray();
             for (QueryTracker.QueryEntryInfo entryInfo : tracker.getCompleted()) {
@@ -268,7 +307,9 @@ public class QueryServer extends AbstractHandler {
                 runningEntries.put(entryJSON);
             }
             response.setContentType("application/json; charset=utf-8");
-            response.getWriter().write(runningEntries.toString());
+            PrintWriter writer = startResponse(response, cbf, cba);
+            writer.write(runningEntries.toString());
+            endResponse(writer, cbf);
         } else if (target.equals("/v2/queries/running.list")) {
             JSONArray runningEntries = new JSONArray();
             for (QueryTracker.QueryEntryInfo entryInfo : tracker.getRunning()) {
@@ -277,8 +318,9 @@ public class QueryServer extends AbstractHandler {
                 entryJSON.put("hostInfoSet", "");
                 runningEntries.put(entryJSON);
             }
-            response.setContentType("application/json; charset=utf-8");
-            response.getWriter().write(runningEntries.toString());
+            PrintWriter writer = startResponse(response, cbf, cba);
+            writer.write(runningEntries.toString());
+            endResponse(writer, cbf);
         } else if (target.equals("/v2/queries/list")) {
             JSONArray queries = new JSONArray();
             for (QueryTracker.QueryEntryInfo entryInfo : tracker.getCompleted()) {
@@ -299,11 +341,12 @@ public class QueryServer extends AbstractHandler {
                 entryJSON.put("state", 3);
                 queries.put(entryJSON);
             }
-            response.setContentType("application/json; charset=utf-8");
-            response.getWriter().write(queries.toString());
+            PrintWriter writer = startResponse(response, cbf, cba);
+            writer.write(queries.toString());
+            endResponse(writer, cbf);
         } else if (target.equals("/v2/job/list")) {
-            StringWriter writer = new StringWriter();
-            final JsonGenerator json = factory.createJsonGenerator(writer);
+            StringWriter swriter = new StringWriter();
+            final JsonGenerator json = factory.createJsonGenerator(swriter);
             json.writeStartArray();
             for (IJob job : meshQueryMaster.getJobs()) {
                 if (job.getQueryConfig() != null && job.getQueryConfig().getCanQuery()) {
@@ -325,11 +368,12 @@ public class QueryServer extends AbstractHandler {
             }
             json.writeEndArray();
             json.close();
-            response.setContentType("application/json; charset=utf-8");
-            response.getWriter().write(writer.toString());
+            PrintWriter writer = startResponse(response, cbf, cba);
+            writer.write(swriter.toString());
+            endResponse(writer, cbf);
         } else if (target.equals("/v2/host/list")) {
-            StringWriter writer = new StringWriter();
-            final JsonGenerator json = factory.createJsonGenerator(writer);
+            StringWriter swriter = new StringWriter();
+            final JsonGenerator json = factory.createJsonGenerator(swriter);
             json.writeStartArray();
             for (HostEntryInfo hostEntryInfo : tracker.getQueryHosts(kv.getValue("uuid"))) {
                 json.writeStartObject();
@@ -343,11 +387,12 @@ public class QueryServer extends AbstractHandler {
             }
             json.writeEndArray();
             json.close();
-            response.setContentType("application/json; charset=utf-8");
-            response.getWriter().write(writer.toString());
+            PrintWriter writer = startResponse(response, cbf, cba);
+            writer.write(swriter.toString());
+            endResponse(writer, cbf);
         } else if (target.equals("/v2/settings/git.properties")) {
-            StringWriter writer = new StringWriter();
-            final JsonGenerator json = factory.createJsonGenerator(writer);
+            StringWriter swriter = new StringWriter();
+            final JsonGenerator json = factory.createJsonGenerator(swriter);
             Properties gitProperties = new Properties();
             json.writeStartObject();
             try {
@@ -370,16 +415,19 @@ public class QueryServer extends AbstractHandler {
             }
             json.writeEndObject();
             json.close();
-            response.setContentType("application/json; charset=utf-8");
-            response.getWriter().write(writer.toString());
+            PrintWriter writer = startResponse(response, cbf, cba);
+            writer.write(swriter.toString());
+            endResponse(writer, cbf);
         } else if (target.equals("/v2/hosts/list")) {
-            response.setContentType("application/json; charset=utf-8");
             String hosts = meshQueryMaster.getMeshHostJSON();
-            response.getWriter().write(hosts);
+            PrintWriter writer = startResponse(response, cbf, cba);
+            writer.write(hosts);
+            endResponse(writer, cbf);
         } else if (target.equals("/v2/user/list")) {
             String usersConnected = webSocketManager.getWebSocketsJSON();
-            response.setContentType("application/json; charset=utf-8");
-            response.getWriter().write(usersConnected);
+            PrintWriter writer = startResponse(response, cbf, cba);
+            writer.write(usersConnected);
+            endResponse(writer, cbf);
         }
 //      else if (target.equals("/monitors.rescan"))
 //      {

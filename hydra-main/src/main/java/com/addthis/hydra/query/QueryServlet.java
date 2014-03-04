@@ -160,8 +160,8 @@ public class QueryServlet {
         String filename = kv.getValue("filename", "query");
         String format = kv.getValue("format", "json");
         String async = kv.getValue("async");
-        String jsonp = kv.getValue("jsonp");
-        String jargs = kv.getValue("jargs");
+        String jsonp = kv.getValue("jsonp",kv.getValue("cbfunc"));
+        String jargs = kv.getValue("jargs",kv.getValue("cbfunc-arg"));
 
         int timeout = Math.min(kv.getIntValue("timeout", maxQueryTime), maxQueryTime);
         query.setParameterIfNotYetSet("timeout", timeout);
