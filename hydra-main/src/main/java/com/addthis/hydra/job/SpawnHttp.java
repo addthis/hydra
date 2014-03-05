@@ -50,6 +50,7 @@ import org.slf4j.LoggerFactory;
 public class SpawnHttp extends AbstractHandler {
 
     private static Logger log = LoggerFactory.getLogger(SpawnHttp.class);
+    private static final String authKey = System.getProperty("auth.key");
 
     private final Spawn spawn;
     private final File webDir;
@@ -242,6 +243,13 @@ public class SpawnHttp extends AbstractHandler {
         }
     }
 
+    protected boolean failAuth(HTTPLink link) {
+        if (authKey == null) return false;
+        if (link.getRequestValues().getValue("auth","").equals(authKey)) return false;
+        link.sendShortReply(403, "Forbidden", "{}");
+        return true;
+    }
+
     @Override
     public void handle(String target, Request request, HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws IOException, ServletException {
         //To change body of implemented methods use File | Settings | File Templates.
@@ -257,7 +265,9 @@ public class SpawnHttp extends AbstractHandler {
             HTTPService handler = serviceMap.get(target);
             if (handler != null) {
                 try {
-                    handler.httpService(new HTTPLink(target, request, httpServletResponse));
+                    HTTPLink link = new HTTPLink(target, request, httpServletResponse);
+                    if (failAuth(link)) return;
+                    handler.httpService(link);
                 } catch (Exception ex) {
                     log.warn("handler error " + ex, ex);
                     httpServletResponse.sendError(500, ex.getMessage());
