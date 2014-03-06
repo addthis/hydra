@@ -206,8 +206,17 @@ public class SpawnHttp extends AbstractHandler {
         }
 
         public void sendShortReply(int code, String topic, String message) {
+            KVPairs kv = getRequestValues();
+            String cbf = kv.getValue("cbfunc");
+            String cbv = kv.getValue("cbfunc-arg");
+            if (cbf != null) {
+                message = Strings.cat(cbf,"(",message,",\"",topic,"\"");
+                if (cbv != null) message = Strings.cat(message,",",cbv);
+                message = Strings.cat(message,");");
+            }
             try {
                 response.setStatus(code);
+                response.setHeader("Content-Type", "application/javascript");
                 response.setHeader("topic", topic);
                 response.getWriter().write(message);
             } catch (Exception ex) {

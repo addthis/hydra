@@ -944,7 +944,8 @@ public class SpawnManager {
                 KVPairs kv = link.getRequestValues();
                 try {
                     Object o = spawn.getZkClient().readData(kv.getValue("path", "/"));
-                    link.sendShortReply(200, "OK", CodecJSON.encodeString(o, 1));
+                    String reply = CodecJSON.encodeString(o, 1);
+                    link.sendShortReply(200, "OK", reply != null && reply.length() > 0 ? reply : "''");
                 } catch (Exception e) {
                     link.sendShortReply(500, "Server Error", new JSONObject().put("error", e.getMessage()).toString());
                 }
@@ -973,9 +974,10 @@ public class SpawnManager {
                 try {
                     InputStream in = spawn.getMeshyClient().readFile(kv.getValue("uuid", "-"), kv.getValue("path", "-"));
                     byte data[] = Bytes.readFully(in);
-                    link.sendShortReply(200, "OK", Bytes.toString(data));
+                    String value = Bytes.toString(data);
+                    link.sendShortReply(200, "OK", value.length() > 0 ? value : "''");
                 } catch (Exception e) {
-                    link.sendShortReply(500, "Server Error", new JSONObject().put("error", e.getMessage()).toString());
+                    link.sendShortReply(200, "No Content", "''");
                 }
             }
         });
