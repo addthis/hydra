@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.Parameter;
@@ -58,6 +57,10 @@ public class HostFailWorker {
     private final long hostFailDelayMillis = Parameter.longValue("host.fail.delay", 15_000);
     // Quiet period between when host is failed in UI and when Spawn begins failure-related operations
     private final long hostFailQuietPeriod = Parameter.longValue("host.fail.quiet.period", 20_000);
+
+    // Don't rebalance additional tasks if spawn is already rebalancing at least this many.
+    // Note that the number of rsyncs performed by a single host is also limited by the availableTaskSlots of that host.
+    private final int maxMovingTasks = Parameter.intValue("host.fail.maxMovingTasks", 10);
 
     private final Timer failTimer = new Timer(true);
 
@@ -231,10 +234,15 @@ public class HostFailWorker {
                 // File system is dead. Relocate all tasks ASAP.
                 markHostDead(failedHostUuid);
                 spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.listHostStatus(host.getMinionTypes()), failedHostUuid);
-            } else if (host.getAvailableTaskSlots() > 0) {
-                // File system is okay. Push some tasks off the host if it has some available capacity.
-                List<JobTaskMoveAssignment> assignments = spawn.getSpawnBalancer().pushTasksOffDiskForFilesystemOkayFailure(host, host.getAvailableTaskSlots());
-                spawn.executeReallocationAssignments(assignments);
+            } else {
+                int tasksToMove = maxMovingTasks - countRebalancingTasks();
+                if (tasksToMove <= 0) {
+                    // Spawn is already moving enough tasks; hold off until later
+                    return;
+                }
+                List<JobTaskMoveAssignment> assignments = spawn.getSpawnBalancer().pushTasksOffDiskForFilesystemOkayFailure(host, tasksToMove);
+                // Use available task slots to push tasks off the host in question. Not all of these assignments will necessarily be moved.
+                spawn.executeReallocationAssignments(assignments, true);
                 if (assignments.isEmpty() && host.countTotalLive() == 0) {
                     // Found no tasks on the failed host, so fail it for real.
                     markHostDead(failedHostUuid);
@@ -475,6 +483,20 @@ public class HostFailWorker {
             }
         }
 
+    }
+
+    private int countRebalancingTasks() {
+        int count = 0;
+        for (Job job : spawn.listJobs()) {
+            if (job.getState() == JobState.REBALANCE) {
+                for (JobTask task : job.getCopyOfTasks()) {
+                    if (task.getState() == JobTaskState.REBALANCE) {
+                        count++;
+                    }
+                }
+            }
+        }
+        return count;
     }
 
     public enum FailState {ALIVE, FAILING_FS_DEAD, FAILING_FS_OKAY}

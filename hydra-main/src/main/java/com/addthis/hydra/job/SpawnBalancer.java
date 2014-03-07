@@ -1614,11 +1614,11 @@ public class SpawnBalancer implements Codec.Codable {
                     numHostRebalances++;
                     log.warn("Performing host autobalance.");
                     RebalanceWeight weight = numHostRebalances % 2 == 0 ? RebalanceWeight.HEAVY : RebalanceWeight.LIGHT;
-                    spawn.executeReallocationAssignments(getAssignmentsForAutoBalance(RebalanceType.HOST, weight));
+                    spawn.executeReallocationAssignments(getAssignmentsForAutoBalance(RebalanceType.HOST, weight), false);
                     lastHostAutobalanceTime = now;
                 } else if (now - lastJobAutobalanceTime > config.getJobAutobalanceIntervalMillis()) {
                     log.warn("Performing job autobalance.");
-                    spawn.executeReallocationAssignments(getAssignmentsForAutoBalance(RebalanceType.JOB, RebalanceWeight.HEAVY));
+                    spawn.executeReallocationAssignments(getAssignmentsForAutoBalance(RebalanceType.JOB, RebalanceWeight.HEAVY), false);
                     lastJobAutobalanceTime = now;
                 }
             }

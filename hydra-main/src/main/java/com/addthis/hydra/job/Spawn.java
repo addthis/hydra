@@ -1024,7 +1024,7 @@ public class Spawn implements Codec.Codable {
             return null;
         }
         List<JobTaskMoveAssignment> assignments = balancer.getAssignmentsForJobReallocation(job, tasksToMove, getLiveHostsByReadOnlyStatus(job.getMinionType(), readonly));
-        executeReallocationAssignments(assignments);
+        executeReallocationAssignments(assignments, false);
         return assignments;
     }
 
@@ -1171,7 +1171,7 @@ public class Spawn implements Codec.Codable {
         boolean readOnly = host.isReadOnly();
         log.warn("[job.reallocate] starting reallocation for host: " + hostUUID + " host is " + (readOnly ? "" : "not") + " a read only host");
         List<JobTaskMoveAssignment> assignments = balancer.getAssignmentsToBalanceHost(host, getLiveHostsByReadOnlyStatus(host.getMinionTypes(), host.isReadOnly()));
-        executeReallocationAssignments(assignments);
+        executeReallocationAssignments(assignments, false);
         return new RebalanceOutcome(hostUUID, null, null, Strings.join(assignments.toArray(), "\n"));
     }
 
@@ -1179,14 +1179,16 @@ public class Spawn implements Codec.Codable {
      * Sanity-check a series of task move assignments coming from SpawnBalancer, then execute the sensible ones.
      *
      * @param assignments The assignments to execute
+     * @param limitToAvailableSlots Whether movements should honor their host's availableTaskSlots count
      * @return The number of tasks that were actually moved
      */
-    public int executeReallocationAssignments(List<JobTaskMoveAssignment> assignments) {
+    public int executeReallocationAssignments(List<JobTaskMoveAssignment> assignments, boolean limitToAvailableSlots) {
         int numExecuted = 0;
         if (assignments == null) {
             return numExecuted;
         }
         HashSet<String> jobsNeedingUpdate = new HashSet<>();
+        HashSet<String> hostsAlreadyMovingTasks = new HashSet<>();
         for (JobTaskMoveAssignment assignment : assignments) {
             if (assignment.delete()) {
                 log.warn("[job.reallocate] deleting " + assignment.getJobKey() + " off " + assignment.getSourceUUID());
@@ -1215,6 +1217,11 @@ public class Spawn implements Codec.Codable {
                     swapTask(task.getJobUUID(), task.getTaskID(), sourceHostID, false, false);
                     jobsNeedingUpdate.add(task.getJobUUID());
                 } else {
+                    HostState liveHost = getHostState(task.getHostUUID());
+                    if (limitToAvailableSlots && liveHost != null && (liveHost.getAvailableTaskSlots() == 0 || hostsAlreadyMovingTasks.contains(task.getHostUUID()))) {
+                        continue;
+                    }
+                    hostsAlreadyMovingTasks.add(task.getHostUUID());
                     JobKey key = task.getJobKey();
                     log.warn("[job.reallocate] replicating task " + key + " onto " + targetHostID + " as " + (assignment.isFromReplica() ? "replica" : "live"));
                     TaskMover tm = new TaskMover(this, key, targetHostID, sourceHostID, false);
@@ -3127,7 +3134,7 @@ public class Spawn implements Codec.Codable {
     }
 
     protected void autobalance(SpawnBalancer.RebalanceType type, SpawnBalancer.RebalanceWeight weight) {
-        executeReallocationAssignments(balancer.getAssignmentsForAutoBalance(type, weight));
+        executeReallocationAssignments(balancer.getAssignmentsForAutoBalance(type, weight), false);
     }
 
     private boolean schedulePrep(Job job) {
