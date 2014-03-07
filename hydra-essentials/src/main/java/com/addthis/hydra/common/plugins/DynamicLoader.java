@@ -101,21 +101,18 @@ public class DynamicLoader {
     private static URLClassLoader loadDynamicClasses(Set<URL> jarLocations,
             Set<String> classNames) {
         String jarString = Joiner.on(", ").join(jarLocations);
-        if (jarLocations.size() > 0) {
-            URLClassLoader loader = new URLClassLoader(
-                    jarLocations.toArray(new URL[jarLocations.size()]));
-            for(String className : classNames) {
-                try {
-                    loader.loadClass(className);
-                } catch (ClassNotFoundException ex) {
-                    log.error("ClassNotFoundException when attempting" +
-                              "to load {} from classpath {}",
-                            className, jarString);
-                }
+        URLClassLoader loader = new URLClassLoader(
+                jarLocations.toArray(new URL[jarLocations.size()]));
+        for(String className : classNames) {
+             try {
+                loader.loadClass(className);
+             } catch (ClassNotFoundException ex) {
+                log.error("ClassNotFoundException when attempting" +
+                          "to load {} from classpath {} and {}",
+                          className, jarString, System.getProperty("java.class.path"));
             }
-            return loader;
         }
-        return null;
+        return loader;
     }
 
     private static void readDynamicClasses(String urlSpecifier,
