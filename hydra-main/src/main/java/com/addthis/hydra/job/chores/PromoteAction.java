@@ -76,7 +76,7 @@ public class PromoteAction extends SpawnAction {
                 job.setTaskState(task, JobTaskState.QUEUED, true);
                 spawn.addToTaskQueue(taskKey, false, true);
             } else {
-                job.setTaskState(task, JobTaskState.IDLE);
+                job.setTaskState(task, JobTaskState.IDLE, true);
             }
         } catch (Exception ex) {
             log.warn("[task.mover] exception during promoting", ex);
