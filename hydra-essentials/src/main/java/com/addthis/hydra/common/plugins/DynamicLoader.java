@@ -61,10 +61,12 @@ public class DynamicLoader {
      * Looks up the system property specified as input.
      * Treats the value associated with the input as a URI.
      * The contents of the URI should be a CSV file.
-     * Each row of the the file should have at least two columns.
+     * Each row of the the file should have at least one column.
      * The first column is the fully qualified class name of
      * a class to load. The second column specifies a URI which
      * the classloader will use to search for the class.
+     * A legal value for the second column is the empty string ""
+     * if you don't want to copy/paste the URI to multiple rows.
      * Executable targets should be specified with four columns:
      * [fully qualified class name], [uri], "executable", [name]
      * The fourth column is the execution name to be associated with
@@ -129,12 +131,12 @@ public class DynamicLoader {
                 line++;
                 String[] fields = next.toArray(new String[next.size()]);
                 try {
-                    if (fields.length < 2) {
-                        log.error("Line {} in the file {} contains less than two columns",
+                    if (fields.length < 1) {
+                        log.error("Line {} in the file {} contains less than one column",
                                 line, urlSpecifier);
                     } else {
                         classNames.add(fields[0]);
-                        if (fields[1].length() > 0) {
+                        if (fields.length > 1 && fields[1].length() > 0) {
                             jarLocations.add(new URL(fields[1]));
                         }
                     }
