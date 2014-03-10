@@ -54,13 +54,13 @@ public class HostFailWorker {
     private final Spawn spawn;
 
     // Perform host-failure related operations at a given interval
-    private final long hostFailDelayMillis = Parameter.longValue("host.fail.delay", 15_000);
+    private static final long hostFailDelayMillis = Parameter.longValue("host.fail.delay", 15_000);
     // Quiet period between when host is failed in UI and when Spawn begins failure-related operations
-    private final long hostFailQuietPeriod = Parameter.longValue("host.fail.quiet.period", 20_000);
+    private static final long hostFailQuietPeriod = Parameter.longValue("host.fail.quiet.period", 20_000);
 
     // Don't rebalance additional tasks if spawn is already rebalancing at least this many.
     // Note that the number of rsyncs performed by a single host is also limited by the availableTaskSlots of that host.
-    private final int maxMovingTasks = Parameter.intValue("host.fail.maxMovingTasks", 10);
+    private static final int maxMovingTasks = Parameter.intValue("host.fail.maxMovingTasks", 8);
 
     private final Timer failTimer = new Timer(true);
 

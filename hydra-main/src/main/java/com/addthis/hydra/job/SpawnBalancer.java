@@ -1545,13 +1545,13 @@ public class SpawnBalancer implements Codec.Codable {
             log.warn("Skipping nonexistent job for task " + task + " during host fail.");
             return;
         }
-        if (task.getReplicas() == null || task.getReplicas().isEmpty()) {
-            log.warn("Found no replica for task " + task.getJobKey());
-            job.setState(JobState.DEGRADED, true);
-            return;
-        }
         if (!task.getHostUUID().equals(failedHostUuid) && !task.hasReplicaOnHost(failedHostUuid)) {
             // This task was not actually assigned to the failed host. Nothing to do.
+            return;
+        }
+        if (!spawn.isNewTask(task) && (task.getReplicas() == null || task.getReplicas().isEmpty())) {
+            log.warn("Found no replica for task " + task.getJobKey());
+            job.setState(JobState.DEGRADED, true);
             return;
         }
         while (hostIterator.hasNext()) {
@@ -1582,17 +1582,24 @@ public class SpawnBalancer implements Codec.Codable {
         boolean liveOnFailedHost = task.getHostUUID().equals(failedHostUuid);
         String newReplicaUuid = newReplicaHost.getHostUuid();
         if (liveOnFailedHost) {
-            // Send a kill message if the task is running on the failed host
-            spawn.sendControlMessage(new CommandTaskStop(failedHostUuid, task.getJobUUID(), task.getTaskID(), 0, true, false));
-            // Find a replica, promote it, and tell it to replicate to the new replica on completion
-            String chosenReplica = task.getReplicas().get(0).getHostUUID();
-            task.replaceReplica(chosenReplica, newReplicaUuid);
-            task.setHostUUID(chosenReplica);
-            spawn.replicateTask(task, Arrays.asList(newReplicaUuid));
+            if (spawn.isNewTask(task)) {
+                // Task has never run before. Just switch to the new host.
+                task.setHostUUID(newReplicaHost.getHostUuid());
+            } else {
+                // Send a kill message if the task is running on the failed host
+                spawn.sendControlMessage(new CommandTaskStop(failedHostUuid, task.getJobUUID(), task.getTaskID(), 0, true, false));
+                // Find a replica, promote it, and tell it to replicate to the new replica on completion
+                String chosenReplica = task.getReplicas().get(0).getHostUUID();
+                task.replaceReplica(chosenReplica, newReplicaUuid);
+                task.setHostUUID(chosenReplica);
+                spawn.replicateTask(task, Arrays.asList(newReplicaUuid));
+            }
         } else {
             // Replace the replica on the failed host with one on a new host
             task.replaceReplica(failedHostUuid, newReplicaUuid);
-            spawn.replicateTask(task, Arrays.asList(newReplicaUuid));
+            if (!spawn.isNewTask(task)) {
+                spawn.replicateTask(task, Arrays.asList(newReplicaUuid));
+            }
         }
     }
 

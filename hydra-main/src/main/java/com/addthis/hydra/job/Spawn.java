@@ -3521,7 +3521,7 @@ public class Spawn implements Codec.Codable {
         return false;
     }
 
-    private boolean isNewTask(JobTask task) {
+    protected boolean isNewTask(JobTask task) {
         HostState liveHost = getHostState(task.getHostUUID());
         return liveHost != null && !liveHost.hasLive(task.getJobKey()) && task.getFileCount() == 0 && task.getByteCount() == 0;
     }
