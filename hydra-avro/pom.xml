@@ -16,7 +16,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>4.1.5</version>
+    <version>4.1.5.1</version>
   </parent>
 
   <artifactId>hydra-avro</artifactId>
@@ -38,6 +38,10 @@
       <version>1.7.6</version>
       <exclusions>
         <!-- avro uses an older version of slf4j-api -->
+        <exclusion>
+          <groupId>org.xerial.snappy</groupId>
+          <artifactId>snappy-java</artifactId>
+        </exclusion>
         <exclusion>
           <groupId>org.slf4j</groupId>
           <artifactId>slf4j-api</artifactId>
