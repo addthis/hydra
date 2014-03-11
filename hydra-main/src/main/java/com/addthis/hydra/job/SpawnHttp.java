@@ -51,6 +51,7 @@ public class SpawnHttp extends AbstractHandler {
 
     private static Logger log = LoggerFactory.getLogger(SpawnHttp.class);
     private static final String authKey = System.getProperty("auth.key");
+    private static final boolean authLocal = System.getProperty("auth.local","true").equals("true");
 
     private final Spawn spawn;
     private final File webDir;
@@ -254,6 +255,7 @@ public class SpawnHttp extends AbstractHandler {
 
     protected boolean failAuth(HTTPLink link) {
         if (authKey == null) return false;
+        if (authLocal && link.request().getRemoteAddr().equals("127.0.0.1")) return false;
         if (link.getRequestValues().getValue("auth","").equals(authKey)) return false;
         link.sendShortReply(403, "Forbidden", "{}");
         return true;
