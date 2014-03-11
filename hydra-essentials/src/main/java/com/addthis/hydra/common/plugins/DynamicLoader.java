@@ -40,6 +40,8 @@ import org.supercsv.prefs.CsvPreference;
 
 public class DynamicLoader {
 
+    public static interface Instantiate { }
+
     private static final Logger log = LoggerFactory.getLogger(DynamicLoader.class);
 
     private static final CsvPreference csvParserOptions =
@@ -107,8 +109,11 @@ public class DynamicLoader {
                 jarLocations.toArray(new URL[jarLocations.size()]));
         for(String className : classNames) {
              try {
-                loader.loadClass(className);
-             } catch (ClassNotFoundException ex) {
+                Class clazz = loader.loadClass(className);
+                if (Instantiate.class.isAssignableFrom(clazz)) {
+                    clazz.newInstance();
+                }
+             } catch (Exception ex) {
                 log.error("ClassNotFoundException when attempting" +
                           "to load {} from classpath {} and {}",
                           className, jarString, System.getProperty("java.class.path"));
