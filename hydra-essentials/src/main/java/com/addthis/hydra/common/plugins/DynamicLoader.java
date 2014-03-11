@@ -106,9 +106,9 @@ public class DynamicLoader {
         URLClassLoader loader = new URLClassLoader(
                 jarLocations.toArray(new URL[jarLocations.size()]));
         for(String className : classNames) {
-             try {
-                loader.loadClass(className);
-             } catch (ClassNotFoundException ex) {
+            try {
+                Class.forName(className, true, loader);
+            } catch (ClassNotFoundException ex) {
                 log.error("ClassNotFoundException when attempting" +
                           "to load {} from classpath {} and {}",
                           className, jarString, System.getProperty("java.class.path"));
