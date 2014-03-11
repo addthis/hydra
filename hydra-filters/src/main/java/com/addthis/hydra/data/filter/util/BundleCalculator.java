@@ -23,6 +23,8 @@ import java.util.List;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.BundleFormatted;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
@@ -69,12 +71,14 @@ public class BundleCalculator {
         OP_MINIF,
         OP_MAXIF,
         OP_ABS,
-        OP_COLNAMEVAL
+        OP_COLNAMEVAL,
+        OP_DEFAULT,
     }
 
     private List<MathOp> ops;
     private boolean diverr;
     private BundleColumnBinder sourceBinder;
+    private ValueNumber defaultValue = ValueFactory.create(0);
 
     public BundleCalculator(String args) {
         String op[] = Strings.splitArray(args, ",");
@@ -146,6 +150,8 @@ public class BundleCalculator {
                 ops.add(new MathOp(Operation.OP_MEAN, null));
             } else if (o.equals("variance")) {
                 ops.add(new MathOp(Operation.OP_VARIANCE, null));
+            } else if (o.equals("def") || o.equals("default")) {
+                ops.add(new MathOp(Operation.OP_DEFAULT, null));
             } else {
                 if (o.startsWith("c")) {
                     String cols[] = Strings.splitArray(o.substring(1), ":");
@@ -231,8 +237,12 @@ public class BundleCalculator {
                 case OP_COLVAL:
                     stack.push(getSourceColumnBinder(line).getColumn(line, (int) op.val.asLong().getLong()).asNumber());
                     break;
-                case OP_COLNAMEVAL:
-                    stack.push(line.getValue(line.getFormat().getField(op.val.toString())).asNumber());
+                case OP_COLNAMEVAL: {
+                    BundleFormat format = line.getFormat();
+                    String colName = op.val.toString();
+                    ValueObject colval = format.hasField(colName) ? line.getValue(format.getField(colName)) : defaultValue;
+                    stack.push(colval != null ? colval.asNumber() : defaultValue);
+                    }
                     break;
                 case OP_DUP:
                     stack.push(stack.peek());
@@ -387,6 +397,9 @@ public class BundleCalculator {
 
                     break;
                 }
+                case OP_DEFAULT:
+                    defaultValue = stack.pop();
+                    break;
                 case OP_ABS:
                     v1 = stack.pop();
                     stack.push(ValueFactory.create(Math.abs(v1.asDouble().getDouble())));
