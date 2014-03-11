@@ -486,7 +486,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V> extends CachedPagedS
 
         TreePage(K firstKey) {
             this.firstKey = firstKey;
-            this.map = new TreeMap<K, PageValue>(this);
+            this.map = new TreeMap<>(this);
         }
 
         TreePage setNextFirstKey(K nextFirstKey) {
