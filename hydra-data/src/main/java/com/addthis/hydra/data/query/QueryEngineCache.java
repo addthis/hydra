@@ -42,6 +42,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.Meter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,15 +104,18 @@ public class QueryEngineCache {
     /**
      * metric to track the number of engines opened. Should be an aggregate of new and refresh'd
      */
-    protected static final Counter enginesOpened = Metrics.newCounter(QueryEngineCache.class, "enginesOpened");
+    protected static final Meter enginesOpened = Metrics.newMeter(QueryEngineCache.class, "enginesOpened",
+            "enginesOpened", TimeUnit.MINUTES);
     /**
      * metric to track the number of engines refreshed
      */
-    protected static final Counter enginesRefreshed = Metrics.newCounter(QueryEngineCache.class, "enginesRefreshed");
+    protected static final Meter enginesRefreshed = Metrics.newMeter(QueryEngineCache.class, "enginesRefreshed",
+            "enginesRefreshed", TimeUnit.MINUTES);
     /**
      * metric to track the number of 'new' engines opened
      */
-    protected static final Counter newEnginesOpened = Metrics.newCounter(QueryEngineCache.class, "newEnginesOpened");
+    protected static final Meter newEnginesOpened = Metrics.newMeter(QueryEngineCache.class, "newEnginesOpened",
+            "newEnginesOpened", TimeUnit.MINUTES);
 
     /**
      * thread pool for refreshing engines. the max size of the pool tunes how many engine refreshes are allowed to
@@ -182,7 +186,7 @@ public class QueryEngineCache {
                         new CacheLoader<String, QueryEngine>() {
                             public QueryEngine load(String dir) throws Exception {
                                 QueryEngine qe = createEngine(dir);
-                                newEnginesOpened.inc();
+                                newEnginesOpened.mark();
                                 return qe;
                             }
 
@@ -202,7 +206,7 @@ public class QueryEngineCache {
                                                     e.printStackTrace(); //can't think of any reason it wouldn't be recoverable
                                                 }
                                             }
-                                            enginesRefreshed.inc();
+                                            enginesRefreshed.mark();
                                             return qe;
                                         }
                                     });
@@ -290,7 +294,7 @@ public class QueryEngineCache {
         String canonicalDirString = new File(dir).getCanonicalPath();
 
         DataTree tree = new ReadTree(new File(canonicalDirString));
-        enginesOpened.inc(); //Metric for total trees/engines initialized
+        enginesOpened.mark(); //Metric for total trees/engines initialized
         try {
             return new QueryEngineDirectory(tree, canonicalDirString);
         } catch (Exception e) {
