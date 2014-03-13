@@ -1593,10 +1593,19 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             if (file != null && file.exists()) {
                 File tmpLocation = new File(file.getParent(), "BAD-" + System.currentTimeMillis());
                 if (file.renameTo(tmpLocation)) {
-                    minionTaskDeleter.submitPathToDelete(tmpLocation.getPath());
+                    submitPathToDelete(tmpLocation.getPath());
                 } else {
                     throw new RuntimeException("Could not rename file for asynchronous deletion: " + file);
                 }
+            }
+        }
+
+        private void submitPathToDelete(String path) {
+            minionStateLock.lock();
+            try {
+                minionTaskDeleter.submitPathToDelete(path);
+            } finally {
+                minionStateLock.unlock();
             }
         }
 
