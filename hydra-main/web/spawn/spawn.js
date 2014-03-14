@@ -2093,7 +2093,7 @@ function showJobNodesCallback(rpc,focus) {
 		var node = nodes[i];
 		var host = hosts[node.hostUuid];
 		var alt = "starts:"+node.starts+" errors:"+node.errors+" files:"+fnum(node.fileCount)+" bytes:"+fnum(node.fileBytes);
-		var nodestate = ["idle","busy","error","allocated","backup","replicate", "UNKNOWN", "rebalance","revert","disk_full","swapping","queued","migrating"][node.state];
+		var nodestate = ["idle","busy","error","allocated","backup","replicate", "UNKNOWN", "rebalance","revert","disk_full","swapping","queued","migrating","full replicate"][node.state];
 		if (node.state == 0 && node.wasStopped) {
 			nodestate += " (STOPPED)"
 		}

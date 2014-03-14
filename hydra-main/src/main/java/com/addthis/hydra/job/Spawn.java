@@ -2440,7 +2440,7 @@ public class Spawn implements Codec.Codable {
                     log.info("[task.replicate] " + job.getId() + "/" + task.getTaskID());
                     JobTaskState taskState = task.getState();
                     if (taskState != JobTaskState.REBALANCE && taskState != JobTaskState.MIGRATING) {
-                        job.setTaskState(task, JobTaskState.REPLICATE, true);
+                        job.setTaskState(task, replicate.isFullReplication() ? JobTaskState.FULL_REPLICATE : JobTaskState.REPLICATE, true);
                     }
                     queueJobTaskUpdateEvent(job);
                 }

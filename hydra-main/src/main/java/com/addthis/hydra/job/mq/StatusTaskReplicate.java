@@ -16,9 +16,15 @@ package com.addthis.hydra.job.mq;
 public class StatusTaskReplicate extends AbstractJobMessage {
 
     private static final long serialVersionUID = 3232052848594886109L;
+    private boolean isFullReplication;
 
-    public StatusTaskReplicate(String host, String job, int node) {
+    public StatusTaskReplicate(String host, String job, int node, boolean isFullReplication) {
         super(host, job, node);
+        this.isFullReplication = isFullReplication;
+    }
+
+    public boolean isFullReplication() {
+        return isFullReplication;
     }
 
     @Override

@@ -1511,7 +1511,7 @@ public class SpawnBalancer implements Codec.Codable {
                 spawn.updateJob(spawn.getJob(jobId));
             } catch (Exception e) {
                 log.warn("Warning: failed to update job " + jobId + ": " + e, e);
-                }
+            }
         }
     }
 
