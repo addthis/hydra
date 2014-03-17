@@ -1418,13 +1418,7 @@ public class Spawn implements Codec.Codable {
                 return "NULL JOB";
             }
             StringBuilder sb = new StringBuilder();
-            List<JobTask> tasks = node < 0 ? new ArrayList<>(job.getCopyOfTasks()) : Arrays.asList(job.getTask(node));
-            Collections.sort(tasks, new Comparator<JobTask>() {
-                @Override
-                public int compare(JobTask jobTask, JobTask jobTask1) {
-                    return Double.compare(jobTask.getTaskID(), jobTask1.getTaskID());
-                }
-            });
+            List<JobTask> tasks = node < 0 ? new ArrayList<>(job.getCopyOfTasksSorted()) : Arrays.asList(job.getTask(node));
             sb.append("Directory check for job " + job.getId() + "\n");
             for (JobTask task : tasks) {
                 sb.append("Task " + task.getTaskID() + ": " + matchTaskToDirectories(task, true) + "\n");
@@ -1443,24 +1437,16 @@ public class Spawn implements Codec.Codable {
             if (job == null) {
                 return resultList;
             }
-            List<JobTask> tasks = node < 0 ? new ArrayList<>(job.getCopyOfTasks()) : Arrays.asList(job.getTask(node));
-            Collections.sort(tasks, new Comparator<JobTask>() {
-                @Override
-                public int compare(JobTask jobTask, JobTask jobTask1) {
-                    return Double.compare(jobTask.getTaskID(), jobTask1.getTaskID());
-                }
-            });
+            List<JobTask> tasks = node < 0 ? new ArrayList<>(job.getCopyOfTasksSorted()) : Arrays.asList(job.getTask(node));
             for (JobTask task : tasks) {
                 List<JobTaskDirectoryMatch> taskMatches = matchTaskToDirectories(task, true);
                 for (JobTaskDirectoryMatch taskMatch : taskMatches) {
                     JSONObject jsonObject = CodecJSON.encodeJSON(taskMatch);
                     resultList.put(jsonObject);
                 }
-                //resultList.put(taskMatches);
             }
         } catch (Exception ex) {
             log.warn("Error: checking dirs for job: " + jobId + ", node: " + node);
-            ex.printStackTrace();
         } finally {
             jobLock.unlock();
         }
@@ -1476,7 +1462,15 @@ public class Spawn implements Codec.Codable {
         if (task.getAllReplicas() != null) {
             for (JobTaskReplica replica : task.getAllReplicas()) {
                 match = checkHostForTask(task, replica.getHostUUID());
-                if (includeCorrect || match.getType() != JobTaskDirectoryMatch.MatchType.MATCH) {
+                if (match.getType() != JobTaskDirectoryMatch.MatchType.MATCH) {
+                    if (task.getState() == JobTaskState.REPLICATE || task.getState() == JobTaskState.FULL_REPLICATE) {
+                        // If task is replicating, it will temporarily look like it's missing on the target host. Make this visible to the UI.
+                        rv.add(new JobTaskDirectoryMatch(JobTaskDirectoryMatch.MatchType.REPLICATE_IN_PROGRESS, match.getJobKey(), match.getHostId()));
+                    } else {
+                        rv.add(match);
+                    }
+                }
+                else if (includeCorrect) {
                     rv.add(match);
                 }
             }

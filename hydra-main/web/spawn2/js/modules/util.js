@@ -125,7 +125,21 @@ define([],function(){
             }
         },
     	alertTypes: {0: "On Job Error", 1: "On Job Completion", 2: "Runtime Exceeded", 3: "Rekick Timeout", 4: "Split Canary", 5: "Map Canary"},
-
+    	generateTaskDirStatusText:function(type){
+        	switch (type) {
+        		case "MISMATCH_MISSING_LIVE":
+        			return "<div class='label label-danger'>Missing</div>";
+        		case "MATCH":
+        			return "<div class='label label-success'>Correct</div>";
+        		case "ORPHAN_LIVE":
+	        		return "<div class='label label-danger'>Orphan</div>";
+	        	case "REPLICATE_IN_PROGRESS":
+	        		return "<div class='label label-success'>Replication in Progress</div>";
+	        	default:
+	        		console.log("Unexpected task state: " + type);
+	        		return "<div class='label label-danger'>Unknown State</div>";        			       			
+        	}
+        },
     };
     return util;
 });

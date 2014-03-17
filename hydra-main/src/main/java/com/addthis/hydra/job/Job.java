@@ -15,6 +15,8 @@ package com.addthis.hydra.job;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
@@ -43,6 +45,12 @@ import org.slf4j.LoggerFactory;
 public final class Job implements IJob, Codable {
 
     private static Logger log = LoggerFactory.getLogger(Job.class);
+    private static final Comparator<JobTask> taskNodeComparator = new Comparator<JobTask>() {
+        @Override
+        public int compare(JobTask jobTask, JobTask jobTask1) {
+            return Integer.compare(jobTask.getTaskID(), jobTask1.getTaskID());
+        }
+    };
 
     /* what is the state of this job */
     @Codec.Set(codable = true)
@@ -554,6 +562,12 @@ public final class Job implements IJob, Codable {
             nodes = new ArrayList<>();
         }
         return ImmutableList.copyOf(nodes);
+    }
+
+    public List<JobTask> getCopyOfTasksSorted() {
+        List<JobTask> tasksCopy = new ArrayList<>(getCopyOfTasks());
+        Collections.sort(tasksCopy);
+        return tasksCopy;
     }
 
     @Override
