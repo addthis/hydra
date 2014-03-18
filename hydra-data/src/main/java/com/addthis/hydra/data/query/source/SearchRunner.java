@@ -25,7 +25,7 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.data.query.QueryEngine;
+import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 
 import com.google.common.util.concurrent.MoreExecutors;
