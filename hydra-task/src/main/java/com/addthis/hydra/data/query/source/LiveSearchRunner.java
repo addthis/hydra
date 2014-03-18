@@ -16,7 +16,7 @@ package com.addthis.hydra.data.query.source;
 
 import java.util.Map;
 
-import com.addthis.hydra.data.query.QueryEngine;
+import com.addthis.hydra.data.query.engine.QueryEngine;
 
 public class LiveSearchRunner extends SearchRunner {
 

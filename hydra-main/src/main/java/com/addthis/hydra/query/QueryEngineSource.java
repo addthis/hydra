@@ -19,7 +19,7 @@ import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.data.query.QueryEngine;
+import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.source.QueryHandle;
 import com.addthis.hydra.data.query.source.QuerySource;

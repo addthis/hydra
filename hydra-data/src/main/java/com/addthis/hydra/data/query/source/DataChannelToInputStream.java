@@ -55,7 +55,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     private final ByteArrayOutputStream out;
     /**
      * A wrapper for a boolean flag that gets set if close is called. This observer object will be passed all
-     * the way down to {@link com.addthis.hydra.data.query.QueryEngine#tableSearch(java.util.LinkedList, com.addthis.hydra.data.tree.DataTreeNode, com.addthis.hydra.data.query.FieldValueList, com.addthis.hydra.data.query.QueryElement[], int, com.addthis.bundle.channel.DataChannelOutput, int, com.addthis.hydra.data.query.QueryStatusObserver)}.
+     * the way down to {@link com.addthis.hydra.data.query.engine.QueryEngine#tableSearch(java.util.LinkedList, com.addthis.hydra.data.tree.DataTreeNode, com.addthis.hydra.data.query.FieldValueList, com.addthis.hydra.data.query.QueryElement[], int, com.addthis.bundle.channel.DataChannelOutput, int, com.addthis.hydra.data.query.QueryStatusObserver)}.
      */
     public QueryStatusObserver queryStatusObserver = new QueryStatusObserver();
     private int rows = 0;
