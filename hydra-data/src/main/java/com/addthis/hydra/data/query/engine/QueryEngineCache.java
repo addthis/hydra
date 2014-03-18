@@ -129,13 +129,13 @@ public class QueryEngineCache {
         this.failInterval = failInterval;
         this.maintenanceInterval = maintenanceInterval;
 
-        log.info("Initializing QueryEngineCache: {}", this); //using this is just more efficient
+        log.info("Initializing QueryEngineCache: {}", this); //using 'this' is just more efficient
 
+        // no easy way around escaping 'this' here, but at least it is more obvious what is going on now
         loadingEngineCache = CacheBuilder.newBuilder()
                 .maximumSize(engineCacheSize)
                 .refreshAfterWrite(refreshInterval, TimeUnit.SECONDS)
                 .expireAfterWrite(failInterval, TimeUnit.SECONDS)
-                        // no easy way around escaping 'this' here, but at least it is more obvious what is going on now
                 .removalListener(new EngineRemovalListener(this))
                 .build(engineLoader);
 

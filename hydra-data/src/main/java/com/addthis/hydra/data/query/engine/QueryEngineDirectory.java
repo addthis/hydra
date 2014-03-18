@@ -37,7 +37,6 @@ public class QueryEngineDirectory extends QueryEngine {
 
     private static final Logger log = LoggerFactory.getLogger(QueryEngineDirectory.class);
 
-    private final String dir;
 
     /**
      * metric to track the number of open engines
@@ -49,6 +48,8 @@ public class QueryEngineDirectory extends QueryEngine {
      */
     protected static final Meter enginesOpened = Metrics.newMeter(QueryEngineCache.class, "enginesOpened",
             "enginesOpened", TimeUnit.MINUTES);
+
+    private final String dir;
 
     public QueryEngineDirectory(DataTree tree, String dir) {
         super(tree);
