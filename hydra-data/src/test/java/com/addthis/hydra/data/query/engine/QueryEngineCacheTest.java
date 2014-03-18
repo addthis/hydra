@@ -88,7 +88,7 @@ public class QueryEngineCacheTest {
         public String status() {
             return "status: newOpenedEngines=" + EngineLoader.newEnginesOpened.count() +
                    " enginesRefreshed=" + RefreshEngineCall.enginesRefreshed.count() +
-                   " openEngines=" + oe + " evictedEngines=" + EngineRemovalListener.directoriesEvicted.count();
+                   " openEngines=" + oe + " evictedDirectories=" + EngineRemovalListener.directoriesEvicted.count();
         }
     }
 
