@@ -37,25 +37,24 @@ public class QueryEngineDirectory extends QueryEngine {
 
     private static final Logger log = LoggerFactory.getLogger(QueryEngineDirectory.class);
 
-
     /**
      * metric to track the number of open engines
      */
-    private static final Counter openEngines = Metrics.newCounter(QueryEngineDirectory.class, "openEngines");
+    private static final Counter currentlyOpenEngines = Metrics.newCounter(QueryEngineDirectory.class, "currentlyOpenEngines");
 
     /**
      * metric to track the number of engines opened. Should be an aggregate of new and refresh'd
      */
-    protected static final Meter enginesOpened = Metrics.newMeter(QueryEngineCache.class, "enginesOpened",
-            "enginesOpened", TimeUnit.MINUTES);
+    protected static final Meter engineCreations = Metrics.newMeter(QueryEngineCache.class, "engineCreations",
+            "engineCreations", TimeUnit.MINUTES);
 
     private final String dir;
 
     public QueryEngineDirectory(DataTree tree, String dir) {
         super(tree);
         this.dir = dir;
-        openEngines.inc();
-        enginesOpened.mark(); //Metric for total trees/engines initialized
+        currentlyOpenEngines.inc();
+        engineCreations.mark(); //Metric for total trees/engines initialized
     }
 
     public void loadAllFrom(QueryEngineDirectory other) {
@@ -69,13 +68,13 @@ public class QueryEngineDirectory extends QueryEngine {
     @Override
     public void close() {
         super.close();
-        openEngines.dec();
+        currentlyOpenEngines.dec();
     }
 
     public boolean isOlder(String dir) {
         try {
             final String currentCanonical = getDirectory();
-            final String newCanonical = (new File(dir)).getCanonicalPath();
+            final String newCanonical = new File(dir).getCanonicalPath();
             return currentCanonical.compareTo(newCanonical) < 0;
         } catch (Exception e) {
             log.warn("Exception getting query engine path comparison", e);
