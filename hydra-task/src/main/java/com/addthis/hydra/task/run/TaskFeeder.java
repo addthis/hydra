@@ -20,6 +20,7 @@ import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -63,7 +64,7 @@ public final class TaskFeeder extends Thread {
     private static final DecimalFormat timeFormat = new DecimalFormat("#,###.00");
     private static final DecimalFormat countFormat = new DecimalFormat("#,###");
     private static final int QUEUE_DEPTH = Parameter.intValue("task.queue.depth", 100);
-    private static final int QUEUE_ABS_MAX = Parameter.intValue("task.queue.absmax", 2500);
+    private static final int stealThreshold = Parameter.intValue("task.queue.worksteal.threshold", 50);
     private static final boolean shouldSteal = Parameter.boolValue("task.worksteal", false);
     private static final int stealPollMS = Parameter.intValue("task.worksteal.stealPollMS", 10);
     private static final boolean interruptOnExit = Parameter.boolValue("task.exit.interrupt", false);
@@ -106,12 +107,12 @@ public final class TaskFeeder extends Thread {
 
         shardField = source.getShardField();
         threads = new Thread[feeders];
-        queues = new ArrayBlockingQueue[feeders];
+        queues = new LinkedBlockingQueue[feeders];
 
         threadsRunning.set(threads.length);
         for (int i = 0; i < threads.length; i++) {
             final int processorID = i;
-            queues[i] = new ArrayBlockingQueue<Bundle>(QUEUE_DEPTH);
+            queues[i] = new ArrayBlockingQueue<>(QUEUE_DEPTH);
             threads[i] = new Thread(this, "MapProcessor #" + i) {
                 @Override
                 public void run() {
@@ -181,18 +182,15 @@ public final class TaskFeeder extends Thread {
             return null;
         }
         int stealQ = 0;
-        int maxSize = -1;
+        Bundle item = null;
         for (int i = 0; i < queues.length; i++) {
-            if (queues[i].size() == QUEUE_DEPTH) {
-                stealQ = i;
-                break;
-            }
-            if (maxSize < queues[i].size()) {
-                maxSize = queues[i].size();
-                stealQ = i;
+            if (queues[i].size() >= stealThreshold) {
+                item = queues[stealQ].poll();
+                if (item != null) {
+                    break;
+                }
             }
         }
-        Bundle item = queues[stealQ].poll(stealPollMS, TimeUnit.MILLISECONDS);
         if (item == TERM_BUNDLE) {
             queues[stealQ].put(item);
             return null;
@@ -375,7 +373,7 @@ public final class TaskFeeder extends Thread {
 
             @Override
             public void run() {
-                LinkedList<long[]> oomer = new LinkedList<long[]>();
+                LinkedList<long[]> oomer = new LinkedList<>();
                 try {
                     log.warn("[oomer] starting in " + oomAfter + " ms");
                     Thread.sleep(oomAfter);
