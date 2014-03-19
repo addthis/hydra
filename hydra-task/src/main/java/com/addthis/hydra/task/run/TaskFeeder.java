@@ -66,7 +66,6 @@ public final class TaskFeeder extends Thread {
     private static final int QUEUE_DEPTH = Parameter.intValue("task.queue.depth", 100);
     private static final int stealThreshold = Parameter.intValue("task.queue.worksteal.threshold", 50);
     private static final boolean shouldSteal = Parameter.boolValue("task.worksteal", false);
-    private static final int stealPollMS = Parameter.intValue("task.worksteal.stealPollMS", 10);
     private static final boolean interruptOnExit = Parameter.boolValue("task.exit.interrupt", false);
 
     private boolean exiting = !Parameter.boolValue("task.feed", true);
@@ -112,7 +111,7 @@ public final class TaskFeeder extends Thread {
         threadsRunning.set(threads.length);
         for (int i = 0; i < threads.length; i++) {
             final int processorID = i;
-            queues[i] = new ArrayBlockingQueue<>(QUEUE_DEPTH);
+            queues[i] = new LinkedBlockingQueue<>(QUEUE_DEPTH);
             threads[i] = new Thread(this, "MapProcessor #" + i) {
                 @Override
                 public void run() {
