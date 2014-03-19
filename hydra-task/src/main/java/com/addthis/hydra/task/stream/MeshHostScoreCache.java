@@ -69,6 +69,7 @@ public class MeshHostScoreCache {
                                              = new StreamSource(meshLink, host, "/meshy/statsMap", 0).getInputStream()) {
                                     byte[] response = meshSource.poll(pollTime, TimeUnit.MILLISECONDS);
                                     if (response == null) {
+                                        log.warn("Slow score assessment for {}", host);
                                         loadProblems.mark();
                                         return 50;
                                     }
@@ -90,7 +91,7 @@ public class MeshHostScoreCache {
         try {
             return meshCache.get(host);
         } catch (Exception e) {
-            log.debug("", e);
+            log.warn("unknown problem loading score for {}", host, e);
             // If an unexpected error occurs, say that the host has about 50 open files as a safe case
             loadProblems.mark();
             return 50;
