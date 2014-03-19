@@ -211,6 +211,11 @@ public class SpawnHttp extends AbstractHandler {
             String cbf = kv.getValue("cbfunc");
             String cbv = kv.getValue("cbfunc-arg");
             if (cbf != null) {
+                if (message == null || message.length() == 0) {
+                    message = "null";
+                } else if (!(message.startsWith("{") || message.startsWith("["))) {
+                    message = "{message:'"+message+"'}";
+                }
                 message = Strings.cat(cbf,"(",message,",\"",topic,"\"");
                 if (cbv != null) message = Strings.cat(message,",",cbv);
                 message = Strings.cat(message,");");

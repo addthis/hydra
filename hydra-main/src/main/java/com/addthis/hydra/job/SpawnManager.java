@@ -134,9 +134,9 @@ public class SpawnManager {
                             spawn.updateJob(job);
                         }
                     }
-                    link.sendShortReply(200, "OK", "done");
+                    link.sendShortReply(200, "OK", "{success:true}");
                 } else {
-                    link.sendShortReply(400, "Error", "missing jobs parameter");
+                    link.sendShortReply(400, "Error", "{error:'missing jobs parameter'}");
                 }
             }
         });
@@ -230,7 +230,7 @@ public class SpawnManager {
                     link.setResponseContentType("application/json; charset=utf-8");
                     link.sendShortReply(200, "OK", macro.toJSON().toString());
                 } else {
-                    link.sendShortReply(400, "OK", "no such macro");
+                    link.sendShortReply(400, "OK", "{error:'no such macro'}");
                 }
             }
         });
@@ -248,14 +248,14 @@ public class SpawnManager {
                 require(owner != null, "missing owner");
                 require(macro != null, "missing macro");
                 spawn.putMacro(label, new JobMacro(owner, description, macro), true);
-                link.sendShortReply(200, "OK", "macro saved");
+                link.sendShortReply(200, "OK", "{success:true}");
             }
         });
         server.mapService("/macro.delete", new HTTPService() {
             @Override
             public void httpService(HTTPLink link) throws Exception {
                 if (spawn.deleteMacro(link.getRequestValues().getValue("label", ""))) {
-                    link.sendShortReply(200, "OK", "deleted");
+                    link.sendShortReply(200, "OK", "{success:true}");
                 } else {
                     link.sendShortReply(500, "ERROR", "{error:'macro delete failed'}");
                 }
@@ -421,7 +421,6 @@ public class SpawnManager {
                     link.setResponseContentType("application/octet-stream");
                     link.sendShortReply(200, "expanded_job", "attachment; filename=expanded_job.json", expandedJobConfig);
                 }
-
             }
         });
         /** url called via ajax by client to rebalance a job */
@@ -643,7 +642,7 @@ public class SpawnManager {
                     link.setResponseContentType("application/json; charset=utf-8");
                     link.sendShortReply(200, "OK", jsonp != null ? jsonp + "(" + jobobj + ")" : jobobj.toString(4));
                 } else {
-                    link.sendShortReply(400, "No Job", "no such job");
+                    link.sendShortReply(400, "No Job", "{error:'no such job'}");
                 }
             }
         });
@@ -657,7 +656,7 @@ public class SpawnManager {
                 if (job != null) {
                     link.sendShortReply(200, "OK", spawn.checkTaskDirText(id, node));
                 } else {
-                    link.sendShortReply(400, "No Job", "no such job");
+                    link.sendShortReply(400, "No Job", "{error:'no such job'}");
                 }
             }
         });
@@ -671,7 +670,7 @@ public class SpawnManager {
                 if (job != null) {
                     link.sendShortReply(200, "OK", spawn.fixTaskDir(id, node, false, false));
                 } else {
-                    link.sendShortReply(400, "No Job", "no such job");
+                    link.sendShortReply(400, "No Job", "{error:'no such job'}");
                 }
             }
         });
@@ -683,7 +682,7 @@ public class SpawnManager {
                 try {
                     jobset(link);
                 } catch (Exception ex) {
-                    link.sendShortReply(500, "Error", ex.getMessage());
+                    link.sendShortReply(500, "Error", "{error:'"+ex.getMessage()+"'}");
                     log.trace("500 error", ex);
                 }
             }
@@ -730,7 +729,7 @@ public class SpawnManager {
                     }
                     link.sendShortReply(200, "OK", job.toJSON().toString(4));
                 } else {
-                    link.sendShortReply(400, "No Job", "no such job");
+                    link.sendShortReply(400, "No Job", "{error:'no such job'}");
                 }
             }
         });
@@ -770,7 +769,7 @@ public class SpawnManager {
                 } catch (Exception ex) {
                     log.warn("[job.submit] error :: " + ex);
                     ex.printStackTrace();
-                    link.sendShortReply(500, "Server Error", ex.getMessage());
+                    link.sendShortReply(500, "Server Error", "{error:'"+ex.getMessage()+"'}");
                 }
             }
         });
@@ -897,10 +896,10 @@ public class SpawnManager {
                 try {
                     List<String> jobs = Lists.newArrayList(Splitter.on(',').split(kv.getValue("jobs")));
                     spawn.addAlias(kv.getValue("alias"), jobs);
-                    link.sendShortReply(200, "ok", "success");
+                    link.sendShortReply(200, "ok", "{success:true}");
                 } catch (Exception e) {
                     e.printStackTrace();
-                    link.sendShortReply(500, "oh no", e.toString());
+                    link.sendShortReply(500, "oh no", "{error:'"+e+"'}");
                 }
             }
         });
@@ -915,10 +914,10 @@ public class SpawnManager {
                 }
                 try {
                     spawn.deleteAlias(kv.getValue("alias"));
-                    link.sendShortReply(200, "ok", "success");
+                    link.sendShortReply(200, "ok", "{success:true}");
                 } catch (Exception e) {
                     e.printStackTrace();
-                    link.sendShortReply(500, "oh no", e.toString());
+                    link.sendShortReply(500, "oh no", "{error:'"+e+"'}");
                 }
             }
         });
@@ -975,7 +974,7 @@ public class SpawnManager {
                     InputStream in = spawn.getMeshyClient().readFile(kv.getValue("uuid", "-"), kv.getValue("path", "-"));
                     byte data[] = Bytes.readFully(in);
                     String value = Bytes.toString(data);
-                    link.sendShortReply(200, "OK", value.length() > 0 ? value : "''");
+                    link.sendShortReply(200, "OK", value.length() > 0 ? value : "");
                 } catch (Exception e) {
                     link.sendShortReply(200, "No Content", "''");
                 }
@@ -990,7 +989,7 @@ public class SpawnManager {
                 String hosts = kv.getValue("hosts");
                 try {
                     spawn.toggleHosts(hosts, false);
-                    link.sendShortReply(200, "ok", "enabled");
+                    link.sendShortReply(200, "ok", "{success:true}");
                 } catch (Exception e) {
                     link.sendShortReply(500, "Server Error", new JSONObject().put("error", e.getMessage()).toString());
                 }
@@ -1021,7 +1020,7 @@ public class SpawnManager {
                     String sourceHostUUID = kv.getValue("source");
                     boolean isReplica = kv.hasKey("rep") ? kv.getValue("rep").equals("1") : true;
                     spawn.deleteTask(job, sourceHostUUID, node, isReplica);
-                    link.sendShortReply(200, "ok", "deleted");
+                    link.sendShortReply(200, "ok", "{success:true}");
                 } catch (Exception e) {
                     link.sendShortReply(500, "Server Error", new JSONObject().put("error", e.getMessage()).toString());
                 }
