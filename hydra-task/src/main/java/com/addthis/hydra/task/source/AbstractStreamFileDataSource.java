@@ -17,7 +17,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -388,7 +387,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        queue = new ArrayBlockingQueue<>(buffer);
+        queue = new LinkedBlockingQueue<>(buffer);
 
         if (workers == 0) {
             log.error("Either we failed to find any meshy sources or workers was set to 0. Shutting down.");
