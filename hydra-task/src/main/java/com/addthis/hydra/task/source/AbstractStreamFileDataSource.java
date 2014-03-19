@@ -275,7 +275,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     private boolean useLegacyStreamPath = false;
 
     private StreamFileSource source;
-    private final Object nextSourceLock = new Object();
 
     public AbstractStreamFileDataSource() {
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -600,15 +599,11 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     }
 
     private Wrap nextWrappedSource() throws IOException {
-        StreamFile stream;
-        synchronized (nextSourceLock) {
-            stream = source.nextSource();
-        }
+        StreamFile stream = source.nextSource();
         if (stream == null) {
             return null;
         }
         return new Wrap(stream);
-
     }
 
     private boolean multiFill(Wrap wrap, int fillCount) throws Exception {

@@ -182,6 +182,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
     private final LinkedList<String> cache = new LinkedList<>();
     private static final ConcurrentHashMap<String, Integer> lateFileFindMap = new ConcurrentHashMap<>();
     private final HashMap<String, List<MeshyStreamFile>> cacheMap = new HashMap<>();
+    private final Object nextSourceLock = new Object();
 
     private MeshyClient meshLink;
     private MeshHostScoreCache scoreCache;
@@ -346,42 +347,43 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
 
     @Override
     public StreamFile nextSource() {
-        while (cache.size() == 0 && dates.size() > 0) {
-            try {
-                fillCache(dates.removeFirst());
-            } catch (Exception ex)  {
-                log.warn("", ex);
+        String cacheKey;
+        synchronized (nextSourceLock) {
+            while (cache.size() == 0 && dates.size() > 0) {
+                try {
+                    fillCache(dates.removeFirst());
+                } catch (Exception ex) {
+                    log.warn("", ex);
+                    return null;
+                }
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("@ next source dates=" + dates.size() + " cache=" + cache.size() + " peek=" + cache.peekFirst() + " map=" + cacheMap.get(cache.peekFirst()));
+            }
+            if (cache.isEmpty()) {
                 return null;
             }
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("@ next source dates=" + dates.size() + " cache=" + cache.size() + " peek=" + cache.peekFirst() + " map=" + cacheMap.get(cache.peekFirst()));
-        }
-        if (cache.size() > 0) {
-            String cacheKey;
             if (reverse) {
                 cacheKey = cache.removeLast();
             } else {
                 cacheKey = cache.removeFirst();
             }
-            MeshyStreamFile next = selectMeshHost(cacheMap.remove(cacheKey));
-            if (maxRangeDays > 0 && firstDate != null) {
-                if (next.date.getMillis() - firstDate.getMillis() > ONE_DAY_IN_MILLIS * maxRangeDays) {
-                    log.warn("truncating source list. over max days: " + maxRangeDays);
-                    moreData = true;
-                    return null;
-                }
-            }
-            if (maxRangeHours > 0 && firstDate != null) {
-                if (next.date.getMillis() - firstDate.getMillis() > ONE_HOUR_IN_MILLIS * maxRangeHours) {
-                    log.warn("truncating source list. over max hours: " + maxRangeHours);
-                    moreData = true;
-                    return null;
-                }
-            }
-            return next;
+//            if (maxRangeDays > 0 && firstDate != null) {
+//                if (next.date.getMillis() - firstDate.getMillis() > ONE_DAY_IN_MILLIS * maxRangeDays) {
+//                    log.warn("truncating source list. over max days: " + maxRangeDays);
+//                    moreData = true;
+//                    return null;
+//                }
+//            }
+//            if (maxRangeHours > 0 && firstDate != null) {
+//                if (next.date.getMillis() - firstDate.getMillis() > ONE_HOUR_IN_MILLIS * maxRangeHours) {
+//                    log.warn("truncating source list. over max hours: " + maxRangeHours);
+//                    moreData = true;
+//                    return null;
+//                }
+//            }
         }
-        return null;
+        return selectMeshHost(cacheMap.remove(cacheKey));
     }
 
     /**
