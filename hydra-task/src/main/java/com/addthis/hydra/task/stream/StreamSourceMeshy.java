@@ -33,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.addthis.basis.io.IOWrap;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
@@ -50,20 +49,14 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 
-import com.ning.compress.lzf.LZFInputStream;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Histogram;
-
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xerial.snappy.SnappyInputStream;
 
 import static com.google.common.base.Objects.toStringHelper;
-import lzma.sdk.lzma.Decoder;
-import lzma.streams.LzmaInputStream;
 
 /**
  * <p>Specifies a set of files to fetch from the meshy server. The files are filtered based on a range of dates.</p>
@@ -557,17 +550,6 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
             }
             // this fails on linux with out the explicit cast to InputStream
             InputStream in = new StreamSource(meshLink, meshFile.getHostUUID(), meshFile.name, meshStreamCache * meshStreamCacheUnits).getInputStream();
-            if (name().endsWith(".gz")) {
-                in = IOWrap.gz(in, 4096);
-            } else if (name().endsWith(".lzf")) {
-                in = new LZFInputStream(in);
-            } else if (name().endsWith(".snappy")) {
-                in = new SnappyInputStream(in);
-            } else if (name().endsWith(".bz2")) {
-                in = new BZip2CompressorInputStream(in, true);
-            } else if (name().endsWith(".lzma")) {
-                in = new LzmaInputStream(in, new Decoder());
-            }
             return in;
         }
 
