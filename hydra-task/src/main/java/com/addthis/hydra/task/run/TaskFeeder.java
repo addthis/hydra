@@ -76,23 +76,17 @@ public final class TaskFeeder extends Thread {
     private TaskDataSource source;
     private final TaskRunTarget task;
     private final int readers;
-    private final int minQueue;
-    private final int maxQueue;
 
     private final Thread threads[];
     private final BlockingQueue<Bundle> queues[];
     private volatile boolean queuesInit;
-    private final AtomicInteger queueItems = new AtomicInteger(0);
     private final AtomicBoolean errored = new AtomicBoolean(false);
     private final AtomicBoolean closed = new AtomicBoolean(false);
-    private final AtomicBoolean throttled = new AtomicBoolean(false);
     private final AtomicInteger processed = new AtomicInteger(0);
     private final AtomicLong totalReads = new AtomicLong(0);
     private final AtomicLong currentStreamReads = new AtomicLong(0);
     private final AtomicInteger threadsRunning = new AtomicInteger(0);
 
-    private final Gauge queueItemsGuage;
-    private final Meter throttleRateMeter;
     private final Meter stealAttemptMeter;
     private final Meter stealSuccessMeter;
     private final Histogram modHistrogram;
@@ -100,13 +94,6 @@ public final class TaskFeeder extends Thread {
     public TaskFeeder(TaskRunTarget task, int feeders) {
         super("SourceReader");
 
-        queueItemsGuage = Metrics.newGauge(getClass(), "queueItems", new Gauge<Integer>() {
-            @Override
-            public Integer value() {
-                return queueItems.get();
-            }
-        });
-        throttleRateMeter = Metrics.newMeter(getClass(), "throttleRate", "throttles", TimeUnit.SECONDS);
         stealAttemptMeter = Metrics.newMeter(getClass(), "stealAttemptRate", "steals", TimeUnit.SECONDS);
         stealSuccessMeter = Metrics.newMeter(getClass(), "stealSuccessRate", "steals", TimeUnit.SECONDS);
         modHistrogram = Metrics.newHistogram(getClass(), "mod");
@@ -114,8 +101,6 @@ public final class TaskFeeder extends Thread {
         this.source = task.getSource();
         this.task = task;
         this.readers = feeders;
-        this.maxQueue = Math.max(Math.min(readers * 2, QUEUE_ABS_MAX), 100);
-        this.minQueue = maxQueue / 2;
 
         log.info("starting " + feeders + " thread(s) for src=" + source);
 
@@ -169,16 +154,6 @@ public final class TaskFeeder extends Thread {
     private void pushQueue(int queueNum, Bundle item) throws InterruptedException {
         BlockingQueue<Bundle> queue = queues[queueNum];
         queue.put(item);
-        if (queueItems.incrementAndGet() >= maxQueue) {
-            while (queueItems.get() >= maxQueue) {
-                throttled.set(true);
-                throttleRateMeter.mark();
-                synchronized (queueItems) {
-                    queueItems.wait(1000);
-                }
-                throttled.set(false);
-            }
-        }
     }
 
     private Bundle popQueue(int queueNum) throws InterruptedException {
@@ -198,11 +173,6 @@ public final class TaskFeeder extends Thread {
             item = queue.take();
         }
 
-        if (queueItems.decrementAndGet() < minQueue && throttled.get()) {
-            synchronized (queueItems) {
-                queueItems.notify();
-            }
-        }
         return item == TERM_BUNDLE ? null : item;
     }
 
