@@ -1225,10 +1225,10 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         }
 
         public void sendEndStatus(int exit) {
-            sendEndStatus(exit, null);
+            sendEndStatus(exit, null, null);
         }
 
-        public void sendEndStatus(int exit, String choreWatcherKey) {
+        public void sendEndStatus(int exit, String rebalanceSource, String rebalanceTarget) {
             TaskExitState exitState = new TaskExitState();
             File jobExit = new File(jobDir, "job.exit");
             if (jobExit.exists() && jobExit.canRead()) {
@@ -1239,9 +1239,11 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 }
             }
             exitState.setWasStopped(wasStopped());
-            sendStatusMessage(new StatusTaskEnd(uuid, id, node, exit, fileCount, fileBytes).
-                    setChoreWatcherKey(choreWatcherKey).
-                    setExitState(exitState));
+            StatusTaskEnd end = new StatusTaskEnd(uuid, id, node, exit, fileCount, fileBytes);
+            end.setRebalanceSource(rebalanceSource);
+            end.setRebalanceTarget(rebalanceTarget);
+            end.setExitState(exitState);
+            sendStatusMessage(end);
             try {
                 kickNextJob();
             } catch (Exception e) {
@@ -1313,10 +1315,10 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                     exec(this.kick, false);
                 } else if (isReplicating()) {
                     log.warn("[restore] " + getName() + " as replicating");
-                    execReplicate(null, false, false);
+                    execReplicate(null, null, false, false);
                 } else if (isBackingUp()) {
                     log.warn("[restore] " + getName() + " as backing up");
-                    execBackup(null, false);
+                    execBackup(null, null, false);
                 } else if ((startTime > 0 || replicateStartTime > 0 || backupStartTime > 0)) {
                     // Minion had a process running that finished during the downtime; notify Spawn
                     log.warn("[restore]" + getName() + " as previously active; now finished");
@@ -1637,7 +1639,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 boolean promoteSuccess = promoteBackupToLive(oldBackup, jobDir);
                 if (promoteSuccess) {
                     try {
-                        execReplicate(null, false, true);
+                        execReplicate(null, null, false, true);
                         return true;
                     } catch (Exception ex) {
                         log.warn("[revert] post-revert replicate of " + getName() + " failed with exception " + ex, ex);
@@ -1819,13 +1821,13 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             workItemThread.start();
         }
 
-        public void execReplicate(String choreWatcherKey, boolean replicateAllBackups, boolean execute) throws Exception {
+        public void execReplicate(String rebalanceSource, String rebalanceTarget, boolean replicateAllBackups, boolean execute) throws Exception {
             if (log.isDebugEnabled()) {
                 log.debug("[task.execReplicate] " + this.getJobKey());
             }
             require(testTaskIdle(), "task is not idle");
             if ((replicas == null || replicas.length == 0) && (failureRecoveryReplicas == null || failureRecoveryReplicas.length == 0)) {
-                execBackup(choreWatcherKey, true);
+                execBackup(rebalanceSource, rebalanceTarget, true);
                 return;
             }
             if (findActiveRsync(id, node) != null) {
@@ -1857,7 +1859,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 // save it
                 save();
                 // start watcher
-                workItemThread = new Thread(new ReplicateWorkItem(jobDir, replicatePid, replicateRun, replicateDone, this, choreWatcherKey, execute));
+                workItemThread = new Thread(new ReplicateWorkItem(jobDir, replicatePid, replicateRun, replicateDone, this, rebalanceSource, rebalanceTarget, execute));
                 workItemThread.setName("Replicate-WorkItem-" + getName());
                 workItemThread.start();
             } catch (Exception ex) {
@@ -1866,7 +1868,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             }
         }
 
-        public void execBackup(String choreWatcherKey, boolean execute) throws Exception {
+        public void execBackup(String rebalanceSource, String rebalanceTarget, boolean execute) throws Exception {
             if (log.isDebugEnabled()) {
                 log.debug("[task.execBackup] " + this.getJobKey());
             }
@@ -1889,7 +1891,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 }
                 backupStartTime = System.currentTimeMillis();
                 save();
-                workItemThread = new Thread(new BackupWorkItem(jobDir, backupPid, backupRun, backupDone, this, choreWatcherKey, execute));
+                workItemThread = new Thread(new BackupWorkItem(jobDir, backupPid, backupRun, backupDone, this, rebalanceSource, rebalanceTarget, execute));
                 workItemThread.setName("Backup-WorkItem-" + getName());
                 workItemThread.start();
             } catch (Exception ex) {
@@ -2649,7 +2651,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                     task.setReplicas(revert.getReplicas());
                     if (revert.getSkipMove()) {
                         try {
-                            task.execReplicate(null, false, true);
+                            task.execReplicate(null, null, false, true);
                         } catch (Exception ex) {
                             task.sendEndStatus(JobTaskErrorCode.EXIT_REVERT_FAILURE);
                         }
@@ -2693,7 +2695,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                     }
                     try {
                         task.setReplicas(replicate.getReplicas());
-                        task.execReplicate(replicate.getChoreWatcherKey(), true, true);
+                        task.execReplicate(replicate.getRebalanceSource(), replicate.getRebalanceTarget(), true, true);
                     } catch (Exception e) {
                         log.warn("[task.replicate] received exception after replicate request for " + task.getJobKey() + ": " + e, e);
                     }
