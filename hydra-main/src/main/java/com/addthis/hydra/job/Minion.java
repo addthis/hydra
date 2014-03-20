@@ -2798,7 +2798,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
     }
 
     private static Integer findActiveRsync(String id, int node) {
-        return findActiveProcessWithTokens(new String[]{id + "/" + node + "/", rsyncCommand}, new String[]{});
+        return findActiveProcessWithTokens(new String[]{id + "/" + node + "/", rsyncCommand}, new String[]{"server"});
     }
 
     private static Integer findActiveProcessWithTokens(String[] requireTokens, String[] omitTokens) {
