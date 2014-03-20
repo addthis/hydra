@@ -566,7 +566,7 @@ public final class Job implements IJob, Codable {
 
     public List<JobTask> getCopyOfTasksSorted() {
         List<JobTask> tasksCopy = new ArrayList<>(getCopyOfTasks());
-        Collections.sort(tasksCopy);
+        Collections.sort(tasksCopy, taskNodeComparator);
         return tasksCopy;
     }
 
