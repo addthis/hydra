@@ -235,6 +235,12 @@ public class Hoover extends TaskRunnable implements Runnable {
     private boolean verboseCheck = false;
 
     /**
+     * If true, log the stderr instead of stdout of the process
+     */
+    @Codec.Set(codable = true)
+    private boolean traceError = false;
+
+    /**
      * Files that are older than this number of days will be deleted.
      */
     @Codec.Set(codable = true)
@@ -285,13 +291,24 @@ public class Hoover extends TaskRunnable implements Runnable {
     private DateTime jodaEndDate = null;
     private final Backoff backoff = new Backoff(1000, 10000);
 
+    public Date parseDate(String input) throws Exception {
+        if (dateExtractor.equals("seconds")) {
+            return new Date(Long.parseLong(input)*1000);
+        } else if (dateExtractor.equals("millis") || dateExtractor.equals("milliseconds")) {
+            return new Date(Long.parseLong(input));
+        } else {
+            if (dateFormat == null) dateFormat = new SimpleDateFormat(dateExtractor);
+            return dateFormat.parse(input);
+        }
+    }
+
     @Override
     public void init(TaskRunConfig config) {
         this.config = config;
         this.mods = config.calcShardList(config.nodeCount);
         this.markRoot = Files.initDirectory(new File(markDir));
         this.datePattern = Pattern.compile(dateMatcher);
-        this.dateFormat = new SimpleDateFormat(dateExtractor);
+//        this.dateFormat = new SimpleDateFormat(dateExtractor);
         if (startDate != null) {
             this.jodaStartDate = DateUtil.getDateTime(DateUtil.getFormatter(startEndDateFormat), startDate);
         }
@@ -536,14 +553,14 @@ public class Hoover extends TaskRunnable implements Runnable {
         for (int i = 0; i < newCmd.length; i++) {
             newCmd[i] = listCommand[i].replace("{{USER}}", user).replace("{{HOST}}", host).replace("{{PATH}}", path);
         }
-        if (log.isDebugEnabled()) log.debug("find cmd=" + Strings.join(newCmd, " "));
+        if (verboseCheck || log.isDebugEnabled()) log.info("find cmd=" + Strings.join(newCmd, " "));
         try {
             Process proc = Runtime.getRuntime().exec(newCmd);
             BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
             String fileName = null;
             while ((fileName = reader.readLine()) != null) {
                 MarkFile markFile = getMarkFile(hostNickname, fileName.trim());
-                if (log.isDebugEnabled()) log.debug("found host=" + host + " file=" + fileName);
+                if (verboseCheck || log.isDebugEnabled()) log.info("found host=" + host + " file=" + fileName);
                 if (checkFile(markFile)) {
                     files.add(markFile);
                 }
@@ -573,21 +590,22 @@ public class Hoover extends TaskRunnable implements Runnable {
         String newCmd[] = new String[copyCommand.length];
         File fileOut = new File(pathString);
         File fileDir = Files.initDirectory(fileOut.getParentFile());
-        if (log.isDebugEnabled()) log.debug("fileDir = " + fileDir + " fileOut=" + fileOut);
+        if (verboseCheck || log.isDebugEnabled()) log.info("fileDir=" + fileDir + " fileOut=" + fileOut+" outDir="+fileDir+", "+fileDir.exists());
         for (int i = 0; i < newCmd.length; i++) {
             newCmd[i] = copyCommand[i].replace("{{USER}}", user).replace("{{HOST}}", host).replace("{{LOCALPATH}}", pathString).replace("{{REMOTEPATH}}", markFile.path);
         }
         if (log.isDebugEnabled()) log.debug("copy cmd = " + Strings.join(newCmd, " "));
         try {
             Process proc = Runtime.getRuntime().exec(newCmd);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(traceError ? proc.getErrorStream() : proc.getInputStream()));
             String line = null;
             while ((line = reader.readLine()) != null) {
-                if (log.isDebugEnabled()) log.debug(" --> " + line);
+                if (verboseCheck || log.isDebugEnabled()) log.info(" --> " + line);
             }
             reader.close();
-            if (proc.waitFor() != 0) {
-                log.warn("non-zero return code while executing: " + Strings.join(newCmd, " "));
+            int ret = proc.waitFor();
+            if (ret != 0) {
+                log.warn("non-zero return code ("+ret+") while executing: " + Strings.join(newCmd, " "));
                 return false;
             }
             if (compress && !pathString.endsWith(".gz")) {
@@ -613,6 +631,7 @@ public class Hoover extends TaskRunnable implements Runnable {
     }
 
     private boolean purgeDir(String dir, int days) {
+        if (days <= 0) return true;
         String newCmd[] = new String[purgeCommand.length];
         for (int i = 0; i < newCmd.length; i++) {
             newCmd[i] = purgeCommand[i].replace("{{DIR}}", dir).replace("{{DAYS}}", Integer.toString(days));
@@ -661,10 +680,10 @@ public class Hoover extends TaskRunnable implements Runnable {
                 Matcher pathMatcher = datePattern.matcher(path);
                 if (!pathBasedDateMatching && fileMatcher.find(0)) {
                     String group1 = fileMatcher.group(1);
-                    Date date = dateFormat.parse(group1);
+                    Date date = parseDate(group1);
                     String datePrint = dateOut.format(date);
-                    if (log.isDebugEnabled()) {
-                        log.debug("extract group1=" + group1 + " date=" + date + " datePrint=" + datePrint);
+                    if (verboseCheck || log.isDebugEnabled()) {
+                        log.info("extract group1=" + group1 + " date=" + date + " datePrint=" + datePrint);
                     }
                     dateYear = datePrint.substring(0, 4);
                     dateMonth = datePrint.substring(4, 6);
@@ -673,10 +692,10 @@ public class Hoover extends TaskRunnable implements Runnable {
                     dateTime = new DateTime(date);
                 } else if (pathBasedDateMatching && pathMatcher.find(0)) {
                     String group1 = pathMatcher.group(1);
-                    Date date = dateFormat.parse(group1);
+                    Date date = parseDate(group1);
                     String datePrint = dateOut.format(date);
-                    if (log.isDebugEnabled()) {
-                        log.debug("extract group1=" + group1 + " date=" + date + " datePrint=" + datePrint);
+                    if (verboseCheck || log.isDebugEnabled()) {
+                        log.info("extract group1=" + group1 + " date=" + date + " datePrint=" + datePrint);
                     }
                     dateYear = datePrint.substring(0, 4);
                     dateMonth = datePrint.substring(4, 6);
@@ -690,13 +709,17 @@ public class Hoover extends TaskRunnable implements Runnable {
                     dateHour = null;
                     dateTime = null;
                 }
-                if (log.isDebugEnabled()) {
-                    log.debug("extract dp=" + datePattern + " fn=" + fileName + " dy=" + dateYear + " dm=" + dateMonth + " dd=" + dateDay + " dh=" + dateHour);
+                if (verboseCheck || log.isDebugEnabled()) {
+                    log.info("extract "+toString());
                 }
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
             }
-            if (log.isDebugEnabled()) log.debug("mark " + host + " -> " + path + " = " + markFile);
+            if (verboseCheck || log.isDebugEnabled()) log.info("mark " + host + " -> " + path + " = " + markFile);
+        }
+
+        public String toString() {
+            return "dp=" + datePattern + " fn=" + fileName + " dy=" + dateYear + " dm=" + dateMonth + " dd=" + dateDay + " dh=" + dateHour;
         }
 
         public String name() {
