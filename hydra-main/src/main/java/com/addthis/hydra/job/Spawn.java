@@ -1539,7 +1539,7 @@ public class Spawn implements Codec.Codable {
             return targetHostUUID + "&&&" + taskKey;
         }
 
-        private void executeReplicateAndPromoteChore() throws Exception {
+        private void startReplicate() throws Exception {
             ReplicaTarget[] target = new ReplicaTarget[]{
                     new ReplicaTarget(
                             targetHostUUID,
@@ -1584,9 +1584,11 @@ public class Spawn implements Codec.Codable {
                 return;
             }
             try {
-                executeReplicateAndPromoteChore();
+                startReplicate();
             } catch (Exception ex) {
                 log.warn("[task.mover] exception during replicate initiation; terminating for task: " + taskKey, ex);
+                task.setErrorCode(JobTaskErrorCode.EXIT_REPLICATE_FAILURE);
+                task.setState(JobTaskState.ERROR);
             }
         }
 
@@ -1603,10 +1605,6 @@ public class Spawn implements Codec.Codable {
             sb.append('}');
             return sb.toString();
         }
-    }
-
-    public enum SpawnAction {
-        PROMOTE, CLEANUP
     }
 
     public boolean checkStatusForMove(String hostID) {
@@ -1633,35 +1631,6 @@ public class Spawn implements Codec.Codable {
             job.setTaskState(task, newState, true);
             queueJobTaskUpdateEvent(job);
             return true;
-        } finally {
-            jobLock.unlock();
-        }
-    }
-
-    public boolean switchReplicaHost(JobKey taskKey, String sourceHostUUID, String targetHostUUID) throws Exception {
-        // After we move a replica directory, switch a task's replica object to point at the new host
-        boolean switched = false;
-        jobLock.lock();
-        try {
-            Job job = getJob(taskKey);
-            JobTask task = getTask(taskKey.getJobUuid(), taskKey.getNodeNumber());
-            if (task != null) {
-                List<JobTaskReplica> replicas = task.getReplicas();
-                if (task.getReplicas() != null) {
-                    for (JobTaskReplica replica : replicas) {
-                        if (replica.getHostUUID().equals(sourceHostUUID)) {
-                            log.warn("[task.mover] switched replica " + taskKey + " from " + sourceHostUUID + " to " + targetHostUUID);
-                            replica.setHostUUID(targetHostUUID);
-                            task.setReplicas(replicas);
-                            job.setTaskState(task, JobTaskState.IDLE);
-                            queueJobTaskUpdateEvent(job);
-                            switched = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            return switched;
         } finally {
             jobLock.unlock();
         }
@@ -1989,7 +1958,7 @@ public class Spawn implements Codec.Codable {
         return expandJob(job.getId(), job.getParameters(), getJobConfig(job.getId()));
     }
 
-    public boolean moveTask(String jobID, int node, String sourceUUID, String targetUUID, boolean isReplica) {
+    public boolean moveTask(String jobID, int node, String sourceUUID, String targetUUID) {
         if (sourceUUID == null || targetUUID == null || sourceUUID.equals(targetUUID)) {
             log.warn("[task.move] fail: invalid input " + sourceUUID + "," + targetUUID);
             return false;
@@ -2058,7 +2027,7 @@ public class Spawn implements Codec.Codable {
      */
     public JobTask getTask(String jobUUID, int taskID) {
         Job job = getJob(jobUUID);
-        if (job != null && job.getCopyOfTasks() != null) {
+        if (job != null) {
             return job.getTask(taskID);
         }
         return null;
@@ -2481,9 +2450,8 @@ public class Spawn implements Codec.Codable {
      * @param job    The job to modify
      * @param task   The task to modify
      * @param update The message
-     * @throws Exception If there is a problem executing the cleanup actions
      */
-    private void handleStatusTaskEnd(Job job, JobTask task, StatusTaskEnd update) throws Exception {
+    private void handleStatusTaskEnd(Job job, JobTask task, StatusTaskEnd update) {
         TaskExitState exitState = update.getExitState();
         boolean more = exitState != null && exitState.hadMoreData();
         boolean wasStopped = exitState != null && exitState.getWasStopped();
@@ -2492,22 +2460,23 @@ public class Spawn implements Codec.Codable {
         boolean errored = update.getExitCode() != 0;
         if (update.getRebalanceSource() != null) {
             handleRebalanceFinish(job, task, update);
+        } else {
+            if (exitState != null) {
+                task.setInput(exitState.getInput());
+                task.setMeanRate(exitState.getMeanRate());
+                task.setTotalEmitted(exitState.getTotalEmitted());
+            }
+            if (more) {
+                job.setHadMoreData(more);
+            }
+            task.setWasStopped(wasStopped);
         }
-        if (exitState != null) {
-            task.setInput(exitState.getInput());
-            task.setMeanRate(exitState.getMeanRate());
-            task.setTotalEmitted(exitState.getTotalEmitted());
-        }
-        if (more) {
-            job.setHadMoreData(more);
-        }
-        task.setWasStopped(wasStopped);
         if (errored) {
             handleTaskError(job, task, update.getExitCode());
         } else {
             job.setTaskFinished(task);
         }
-        if (job.isFinished()) {
+        if (job.isFinished() && update.getRebalanceSource() == null) {
             finishJob(job, errored);
         }
         queueJobTaskUpdateEvent(job);
@@ -2527,6 +2496,7 @@ public class Spawn implements Codec.Codable {
         String rebalanceSource = update.getRebalanceSource();
         String rebalanceTarget = update.getRebalanceTarget();
         if (update.getExitCode() != 0) {
+            // The rsync failed. Clean up the task directory.
             fixTaskDir(job.getId(), task.getTaskID(), true, true);
         } else if (checkHostStatesForSwap(task.getJobKey(), rebalanceSource, rebalanceTarget, false)) {
             if (task.getHostUUID().equals(rebalanceSource)) {
@@ -2536,6 +2506,7 @@ public class Spawn implements Codec.Codable {
             }
             deleteTask(job.getId(), rebalanceSource, task.getTaskID(), false);
         } else {
+            // The hosts returned by end message were not found, or weren't in a usable state.
             fixTaskDir(job.getId(), task.getTaskID(), true, true);
         }
 
