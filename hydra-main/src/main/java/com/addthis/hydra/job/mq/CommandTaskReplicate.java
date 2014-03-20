@@ -40,6 +40,12 @@ public class CommandTaskReplicate extends AbstractJobMessage {
     @Codec.Set(codable = true)
     private String jobCommand;
 
+    /* For rebalances, these are the hosts that are gaining/losing a replica */
+    @Codec.Set(codable = true)
+    private String rebalanceSource;
+    @Codec.Set(codable = true)
+    private String rebalanceTarget;
+
     public ReplicaTarget[] getReplicas() {
         return replicas;
     }
@@ -59,6 +65,22 @@ public class CommandTaskReplicate extends AbstractJobMessage {
 
     public boolean isForce() {
         return force;
+    }
+
+    public String getRebalanceSource() {
+        return rebalanceSource;
+    }
+
+    public void setRebalanceSource(String rebalanceSource) {
+        this.rebalanceSource = rebalanceSource;
+    }
+
+    public String getRebalanceTarget() {
+        return rebalanceTarget;
+    }
+
+    public void setRebalanceTarget(String rebalanceTarget) {
+        this.rebalanceTarget = rebalanceTarget;
     }
 
     @Override

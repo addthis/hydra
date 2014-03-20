@@ -29,7 +29,6 @@ import com.addthis.basis.util.JitterClock;
 
 import com.addthis.bark.ZkHelpers;
 import com.addthis.bark.ZkStartUtil;
-import com.addthis.hydra.job.chores.JobTaskMoveAssignment;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;

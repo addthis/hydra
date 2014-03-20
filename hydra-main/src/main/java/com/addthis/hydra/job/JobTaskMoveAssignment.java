@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.job.chores;
+package com.addthis.hydra.job;
 
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.mq.JobKey;

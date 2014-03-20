@@ -37,7 +37,6 @@ import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.Codec;
-import com.addthis.hydra.job.chores.JobTaskMoveAssignment;
 import com.addthis.hydra.job.mq.CommandTaskStop;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
