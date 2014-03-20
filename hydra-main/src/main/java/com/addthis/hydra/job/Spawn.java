@@ -1584,6 +1584,8 @@ public class Spawn implements Codec.Codable {
                 return;
             }
             try {
+                task.setRebalanceSource(sourceHostUUID);
+                task.setRebalanceTarget(targetHostUUID);
                 startReplicate();
             } catch (Exception ex) {
                 log.warn("[task.mover] exception during replicate initiation; terminating for task: " + taskKey, ex);
@@ -2080,37 +2082,43 @@ public class Spawn implements Codec.Codable {
         if (job != null && task != null) {
             taskQueuesByPriority.setStoppedJob(true); // Terminate the current queue iteration cleanly
             HostState host = getHostState(task.getHostUUID());
+            if (force) {
+                task.setRebalanceSource(null);
+                task.setRebalanceTarget(null);
+            }
             if (task.getState() == JobTaskState.QUEUED) {
                 removeFromQueue(task);
                 log.warn("[taskQueuesByPriority] queued job " + jobUUID);
-            } else if (force && (task.getState() == JobTaskState.SWAPPING || task.getState() == JobTaskState.REVERT || task.getState() == JobTaskState.REBALANCE)) {
+            } else if (task.getState() == JobTaskState.REBALANCE) {
+                log.warn("[task.stop] " + task.getJobKey() + " rebalance stopped with force=" + force);
+            } else if (force && (task.getState() == JobTaskState.REVERT)) {
                 log.warn("[task.stop] " + task.getJobKey() + " killed in state " + task.getState());
                 int code;
                 if (task.getState() == JobTaskState.REBALANCE) {
                     code = JobTaskErrorCode.EXIT_REPLICATE_FAILURE;
-                    spawnMQ.sendControlMessage(new CommandTaskStop(host.getHostUuid(), jobUUID, taskID, job.getRunCount(), force, onlyIfQueued));
                 } else if (task.getState() == JobTaskState.REVERT) {
                     code = JobTaskErrorCode.EXIT_REVERT_FAILURE;
-                    spawnMQ.sendControlMessage(new CommandTaskStop(host.getHostUuid(), jobUUID, taskID, job.getRunCount(), force, onlyIfQueued));
                 } else {
                     code = JobTaskErrorCode.SWAP_FAILURE;
                 }
                 job.errorTask(task, code);
                 queueJobTaskUpdateEvent(job);
-                return;
             } else if (force && (host == null || host.isDead() || !host.isUp())) {
                 log.warn("[task.stop] " + task.getJobKey() + " killed on down host");
                 job.errorTask(task, 1);
                 queueJobTaskUpdateEvent(job);
+                // Host is unreachable; bail once the task is errored.
                 return;
             } else if (host != null && !host.hasLive(task.getJobKey())) {
                 log.warn("[task.stop] node that minion doesn't think is running: " + task.getJobKey());
                 job.setTaskState(task, JobTaskState.IDLE);
                 queueJobTaskUpdateEvent(job);
             }
-            if (task.getState() == JobTaskState.ALLOCATED) {
+            else if (task.getState() == JobTaskState.ALLOCATED) {
                 log.warn("[task.stop] node in allocated state " + jobUUID + "/" + taskID + " host = " + (host != null ? host.getHost() : "unknown"));
             }
+
+            // The following is called regardless of task state, unless the host is nonexistent/failed
             if (host != null) {
                 spawnMQ.sendControlMessage(new CommandTaskStop(host.getHostUuid(), jobUUID, taskID, job.getRunCount(), force, onlyIfQueued));
             } else {
@@ -2495,6 +2503,8 @@ public class Spawn implements Codec.Codable {
     public void handleRebalanceFinish(Job job, JobTask task, StatusTaskEnd update) {
         String rebalanceSource = update.getRebalanceSource();
         String rebalanceTarget = update.getRebalanceTarget();
+        task.setRebalanceSource(null);
+        task.setRebalanceTarget(null);
         if (update.getExitCode() != 0) {
             // The rsync failed. Clean up the task directory.
             fixTaskDir(job.getId(), task.getTaskID(), true, true);
@@ -2715,19 +2725,6 @@ public class Spawn implements Codec.Codable {
                 log.trace("[drain] Finished Draining " + jobIds.size() + " jobs from the update queue in " + (System.currentTimeMillis() - start) + "ms");
             }
         }
-    }
-
-    public void sendJobTaskUpdateEvent(Job job, JobTask jobTask) {
-        jobLock.lock();
-        try {
-            if (jobConfigManager != null) {
-                jobConfigManager.updateJob(job, jobTask);
-            }
-        } finally {
-            jobLock.unlock();
-        }
-        sendJobUpdateEvent("job.update", job);
-
     }
 
     public void sendJobUpdateEvent(String label, Job job) {
@@ -3289,6 +3286,12 @@ public class Spawn implements Codec.Codable {
         task.setPreFailErrorCode(0);
         JobCommand jobcmd = job.getSubmitCommand();
 
+        if (task.getRebalanceSource() != null && task.getRebalanceTarget() != null) {
+            // If a rebalance was stopped cleanly, resume it.
+            if (moveTask(job.getId(), task.getTaskID(), task.getRebalanceSource(), task.getRebalanceTarget())) {
+                return true;
+            }
+        }
         CommandTaskKick kick = new CommandTaskKick(
                 task.getHostUUID(),
                 new JobKey(job.getId(), task.getTaskID()),
@@ -3304,7 +3307,7 @@ public class Spawn implements Codec.Codable {
                 job.getWeeklyBackups(),
                 job.getMonthlyBackups(),
                 getTaskReplicaTargets(task, task.getAllReplicas())
-                );
+        );
         kick.setRetries(job.getRetries());
 
         // Creating a runnable to expand the job and send kick message outside of the main queue-iteration thread.
