@@ -14,6 +14,7 @@
 package com.addthis.hydra.query;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
@@ -365,7 +366,7 @@ public class QueryTracker {
                     log(new StringMapHelper()
                             .put("type", "query.error")
                             .put("query.path", query.getPaths()[0])
-                            .put("query.ops", query.getOps())
+                            .put("query.ops", Arrays.toString(query.getOps()))
                             .put("sources", query.getParameter("sources"))
                             .put("time", System.currentTimeMillis())
                             .put("time.run", runTime)
@@ -384,7 +385,7 @@ public class QueryTracker {
                 StringMapHelper queryLine = new StringMapHelper()
                         .put("type", "query.done")
                         .put("query.path", query.getPaths()[0])
-                        .put("query.ops", query.getOps())
+                        .put("query.ops", Arrays.toString(query.getOps()))
                         .put("sources", query.getParameter("sources"))
                         .put("time", System.currentTimeMillis())
                         .put("time.run", runTime)
