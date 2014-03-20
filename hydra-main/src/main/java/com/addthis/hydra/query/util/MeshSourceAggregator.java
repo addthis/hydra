@@ -110,6 +110,7 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
     /* metrics */
     private static Counter totalQueries = Metrics.newCounter(MeshSourceAggregator.class, "totalQueries");
     private static Counter totalStragglerCheckerRequests = Metrics.newCounter(MeshSourceAggregator.class, "totalStragglerCheckerRequests");
+    private static Counter totalRetryRequests = Metrics.newCounter(MeshSourceAggregator.class, "totalRetryRequests");
 
     private final Map<Integer, Set<QueryData>> sourcesByTaskID;
     private final Map<String, Boolean> hostMap;
@@ -472,7 +473,10 @@ public class MeshSourceAggregator implements com.addthis.hydra.data.query.source
                     try {
                         processQuerySource(querySource);
                     } catch (FileReferenceIOException ex) {
-                        log.warn("Received IOException for task " + querySource.getKey() + "; attempting retry");
+                        if (log.isDebugEnabled()) {
+                            log.debug("Received IOException for task " + querySource.getKey() + "; attempting retry");
+                        }
+                        totalRetryRequests.inc();
                         processQuerySource(replaceQuerySource(querySource));
                     }
                 } catch (Exception e) {
