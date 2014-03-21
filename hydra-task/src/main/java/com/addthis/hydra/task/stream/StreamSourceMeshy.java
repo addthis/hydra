@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -200,6 +201,10 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
         return true;
     }
 
+    private boolean useProcessedTimeRangeMax() {
+        return (maxRangeDays + maxRangeHours) > 0;
+    }
+
     /**
      * query the mesh for a list of matching files
      */
@@ -212,7 +217,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
         final Semaphore gate = new Semaphore(1);
         final ConcurrentHashMap<String, Histogram> responseTimeMap = new ConcurrentHashMap<>();
 
-        final List<MeshyStreamFile> fileReferences = new ArrayList<>();
+        final List<MeshyStreamFile> fileReferences = new ArrayList<>(100 * patterns.length);
         try {
             gate.acquire();
         } catch (InterruptedException e) {
@@ -347,9 +352,26 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
 
     @Override
     public StreamFile nextSource() {
-        String cacheKey;
+        MeshyStreamFile next = selectMeshHost(getOrLoadNextHosts());
+        if ((firstDate != null) && useProcessedTimeRangeMax()) {
+            long range = next.date.getMillis() - firstDate.getMillis();
+            if ((maxRangeDays > 0) && (range > (ONE_DAY_IN_MILLIS * maxRangeDays))) {
+                log.warn("truncating source list. over max days: {}", maxRangeDays);
+                moreData = true;
+                return null;
+            }
+            if ((maxRangeHours > 0) && (range > (ONE_HOUR_IN_MILLIS * maxRangeHours))) {
+                log.warn("truncating source list. over max hours: {}", maxRangeHours);
+                moreData = true;
+                return null;
+            }
+        }
+        return next;
+    }
+
+    private List<MeshyStreamFile> getOrLoadNextHosts() {
         synchronized (nextSourceLock) {
-            while (cache.size() == 0 && dates.size() > 0) {
+            while (cache.isEmpty() && !dates.isEmpty()) {
                 try {
                     fillCache(dates.removeFirst());
                 } catch (Exception ex) {
@@ -358,32 +380,14 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
                 }
             }
             if (log.isDebugEnabled()) {
-                log.debug("@ next source dates=" + dates.size() + " cache=" + cache.size() + " peek=" + cache.peekFirst() + " map=" + cacheMap.get(cache.peekFirst()));
+                log.debug("@ next source dates={} cache={} peek={} map={}", dates.size(), cache.size(), cache.peekFirst(), cacheMap.get(cache.peekFirst()));
             }
             if (cache.isEmpty()) {
                 return null;
             }
-            if (reverse) {
-                cacheKey = cache.removeLast();
-            } else {
-                cacheKey = cache.removeFirst();
-            }
-//            if (maxRangeDays > 0 && firstDate != null) {
-//                if (next.date.getMillis() - firstDate.getMillis() > ONE_DAY_IN_MILLIS * maxRangeDays) {
-//                    log.warn("truncating source list. over max days: " + maxRangeDays);
-//                    moreData = true;
-//                    return null;
-//                }
-//            }
-//            if (maxRangeHours > 0 && firstDate != null) {
-//                if (next.date.getMillis() - firstDate.getMillis() > ONE_HOUR_IN_MILLIS * maxRangeHours) {
-//                    log.warn("truncating source list. over max hours: " + maxRangeHours);
-//                    moreData = true;
-//                    return null;
-//                }
-//            }
+            String cacheKey = reverse ? cache.removeLast() : cache.removeFirst();
+            return cacheMap.remove(cacheKey);
         }
-        return selectMeshHost(cacheMap.remove(cacheKey));
     }
 
     /**
@@ -394,13 +398,16 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
         if (sourceCandidates.size() == 1) {
             return sourceCandidates.get(0);
         }
-        sourceCandidates = filterFiles(sourceCandidates);
-        Map<MeshyStreamFile, Integer> scoreMap = new HashMap<>();
-        for (MeshyStreamFile file : sourceCandidates) {
+        List<MeshyStreamFile> filteredCandidates = filterFiles(sourceCandidates);
+        int[] scores = new int[filteredCandidates.size()];
+        int idx = 0;
+        for (MeshyStreamFile file : filteredCandidates) {
             int score = scoreCache.get(file.meshFile.getHostUUID());
-            scoreMap.put(file, score);
+            scores[idx] = score;
+            idx += 1;
         }
-        return inverseLotterySelection(scoreMap);
+        int selection = inverseLotterySelection(scores);
+        return filteredCandidates.get(selection);
     }
 
     /**
@@ -417,40 +424,39 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
                 longest = file.length();
             }
         }
-        List<MeshyStreamFile> filteredSourceCandidates = new LinkedList<>();
-        for (MeshyStreamFile file : sourceCandidates) {
-            if (file.date.isBefore(mostRecent) || file.length() < longest) {
-                log.warn("Ignoring a file choice from " + file.meshFile.getHostUUID() + " because it was behind." +
-                         "\nThis is expected to happen rarely under normal conditions.");
-                continue;
+        Iterator<MeshyStreamFile> iterator = sourceCandidates.iterator();
+        while (iterator.hasNext()) {
+            MeshyStreamFile file = iterator.next();
+            if (file.date.isBefore(mostRecent) || (file.length() < longest)) {
+                log.warn("Ignoring a file choice from {} because it was behind." +
+                         "\nThis is expected to happen rarely under normal conditions.", file.meshFile.getHostUUID());
+                 // remove ops on a List aren't super efficient but this is not supposed to be common
+                iterator.remove();
             }
-            filteredSourceCandidates.add(file);
         }
-        return filteredSourceCandidates;
+        return sourceCandidates;
     }
 
     /**
      * Performs an inverse lottery selection based on the scores provided. Higher scores mean you are less
      * likely to be selected. Each point in your score gives a ticket to everyone else.
      */
-    private MeshyStreamFile inverseLotterySelection(Map<MeshyStreamFile, Integer> scoreMap) {
+    private static int inverseLotterySelection(int... scores) {
         int totalScore = 0;
-        for (Integer i : scoreMap.values()) {
+        for (int i: scores) {
             totalScore += i;
         }
-        int adjustedTotalScore = totalScore * (scoreMap.size() - 1);
+        int adjustedTotalScore = totalScore * (scores.length - 1);
         int selection = (int) (adjustedTotalScore * Math.random());
-        for (Map.Entry<MeshyStreamFile, Integer> e : scoreMap.entrySet()) {
-            int adjustedScore = totalScore - e.getValue();
+        for (int i = 0; i < scores.length; i++) {
+            int adjustedScore = totalScore - scores[i];
             adjustedTotalScore -= adjustedScore;
             if (selection >= adjustedTotalScore) {
-                return e.getKey();
+                return i;
             }
         }
-        if (log.isDebugEnabled()) {
-            log.debug("There was an error in lottery selection; defaulting to the first choice.");
-        }
-        return scoreMap.keySet().iterator().next();
+        log.warn("There was an error in lottery selection; defaulting to the first choice.");
+        return 0;
     }
 
     /**
@@ -471,7 +477,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
             String cacheKey = streamSource.getPath();
             List<MeshyStreamFile> sourceOptions = cacheMap.get(cacheKey);
             if (sourceOptions == null) {
-                sourceOptions = new LinkedList<>();
+                sourceOptions = new ArrayList<>(2);
                 cacheMap.put(cacheKey, sourceOptions);
                 cache.add(cacheKey);
             }
@@ -538,21 +544,19 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
 
         @Override
         public InputStream getInputStream() throws IOException {
-            if (firstDate == null || date.getMillis() < firstDate.getMillis()) {
-                firstDate = date;
-                if (log.isDebugEnabled()) {
-                    log.debug("FIRST DATE = " + firstDate);
+            if (useProcessedTimeRangeMax()) {
+                if ((firstDate == null) || (date.getMillis() < firstDate.getMillis())) {
+                    firstDate = date;
+                    log.debug("FIRST DATE = {}", firstDate);
                 }
             }
-            if (lastDate == null || date.getMillis() > lastDate.getMillis()) {
+            if ((lastDate == null) || (date.getMillis() > lastDate.getMillis())) {
                 lastDate = date;
-                if (log.isDebugEnabled()) {
-                    log.debug("LAST DATE = " + lastDate);
-                }
+                log.debug("LAST DATE = {}", lastDate);
             }
             // this fails on linux with out the explicit cast to InputStream
-            InputStream in = new StreamSource(meshLink, meshFile.getHostUUID(), meshFile.name, meshStreamCache * meshStreamCacheUnits).getInputStream();
-            return in;
+            return new StreamSource(meshLink, meshFile.getHostUUID(),
+                    meshFile.name, meshStreamCache * meshStreamCacheUnits).getInputStream();
         }
 
         @Override
@@ -601,7 +605,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
 
     @Override
     public void doShutdown() {
-        if (lateFileFindMap.size() > 0) {
+        if (!lateFileFindMap.isEmpty()) {
             StringBuilder sb = new StringBuilder();
             sb.append("Late File Finds:").append("\n");
             for (Map.Entry<String, Integer> entry : lateFileFindMap.entrySet()) {
@@ -620,7 +624,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
                 JSONObject jo = new JSONObject().put("lastDate", formatter.print(autoResumeDate)).put("moreData", moreData);
                 Files.write(Bytes.toBytes(jo.toString(2)), autoResumeFile);
             } catch (Exception ex) {
-                log.warn("unable to write auto-resume file: " + ex);
+                log.warn("unable to write auto-resume file", ex);
             }
         }
     }
