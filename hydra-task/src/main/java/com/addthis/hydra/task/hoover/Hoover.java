@@ -308,7 +308,6 @@ public class Hoover extends TaskRunnable implements Runnable {
         this.mods = config.calcShardList(config.nodeCount);
         this.markRoot = Files.initDirectory(new File(markDir));
         this.datePattern = Pattern.compile(dateMatcher);
-//        this.dateFormat = new SimpleDateFormat(dateExtractor);
         if (startDate != null) {
             this.jodaStartDate = DateUtil.getDateTime(DateUtil.getFormatter(startEndDateFormat), startDate);
         }
