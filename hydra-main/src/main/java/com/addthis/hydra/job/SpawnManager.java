@@ -454,7 +454,7 @@ public class SpawnManager {
                     Spawn.DeleteStatus status = spawn.deleteJob(id);
                     switch (status) {
                         case SUCCESS:
-                            String callback = kv.getValue("id", "");
+                            String callback = kv.getValue("callback", "");
                             String msg = "{id:'" + id + "',action:'deleted'}";
                             link.setResponseContentType("application/json; charset=utf-8");
                             link.sendShortReply(200, "OK", callback != null ? callback + "(" + msg + ");" : msg);
@@ -487,7 +487,7 @@ public class SpawnManager {
                 } else {
                     emitLogLineForAction(kv, "job delete on " + id);
                     if (spawn.deleteTask(id, host, node, isReplica)) {
-                        String callback = kv.getValue("id", "");
+                        String callback = kv.getValue("callback", "");
                         String msg = "{id:'" + id + "/" + node + "',action:'deleted'}";
                         link.setResponseContentType("application/json; charset=utf-8");
                         link.sendShortReply(200, "OK", callback != null ? callback + "(" + msg + ");" : msg);
@@ -944,7 +944,7 @@ public class SpawnManager {
                 try {
                     Object o = spawn.getZkClient().readData(kv.getValue("path", "/"));
                     String reply = CodecJSON.encodeString(o, 1);
-                    link.sendShortReply(200, "OK", reply != null && reply.length() > 0 ? reply : "''");
+                    link.sendShortReply(200, "OK", reply != null && reply.length() > 0 ? reply : "");
                 } catch (Exception e) {
                     link.sendShortReply(500, "Server Error", new JSONObject().put("error", e.getMessage()).toString());
                 }
@@ -976,7 +976,7 @@ public class SpawnManager {
                     String value = Bytes.toString(data);
                     link.sendShortReply(200, "OK", value.length() > 0 ? value : "");
                 } catch (Exception e) {
-                    link.sendShortReply(200, "No Content", "''");
+                    link.sendShortReply(200, "No Content", "");
                 }
             }
         });
