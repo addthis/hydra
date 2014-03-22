@@ -48,9 +48,16 @@ class DBKeyCoder<V extends Codec.BytesCodable> implements KeyCoder<DBKey, V> {
     }
 
     @Override
-    public byte[] valueEncode(V value) {
+    public byte[] valueEncode(V value, ENCODE_TYPE encodeType) {
         try {
-            return value.bytesEncode();
+            switch (encodeType) {
+                case LEGACY:
+                    return codec.encode(value);
+                case SPARSE:
+                    return value.bytesEncode();
+                default:
+                    throw new RuntimeException("UNKNOWN ENCODING TYPE: " + encodeType);
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -62,12 +69,19 @@ class DBKeyCoder<V extends Codec.BytesCodable> implements KeyCoder<DBKey, V> {
     }
 
     @Override
-    public V valueDecode(byte[] value) {
+    public V valueDecode(byte[] value, ENCODE_TYPE encodeType) {
 
         try {
-            V v = clazz.newInstance();
-            v.bytesDecode(value);
-            return v;
+            switch (encodeType) {
+                case LEGACY:
+                    return codec.decode(clazz.newInstance(), value);
+                case SPARSE:
+                    V v = clazz.newInstance();
+                    v.bytesDecode(value);
+                    return v;
+                default:
+                    throw new RuntimeException("UNKNOWN ENCODING TYPE: " + encodeType);
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

@@ -29,7 +29,7 @@ class SimpleStringKeyCoder implements KeyCoder<String, DBValue> {
     }
 
     @Override
-    public byte[] valueEncode(DBValue value) {
+    public byte[] valueEncode(DBValue value, ENCODE_TYPE encodeType) {
         return value.bytesEncode();
     }
 
@@ -39,7 +39,7 @@ class SimpleStringKeyCoder implements KeyCoder<String, DBValue> {
     }
 
     @Override
-    public DBValue valueDecode(byte[] value) {
+    public DBValue valueDecode(byte[] value, ENCODE_TYPE encodeType) {
         return new DBValue(new String(value));
     }
 
