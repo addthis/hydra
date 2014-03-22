@@ -49,6 +49,7 @@ import com.addthis.hydra.store.util.NamedThreadFactory;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Gauge;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 import org.slf4j.Logger;
@@ -438,7 +439,7 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
         private final Gauge<Long> timeoutGauge;
 
         BackgroundEvictionTask(int evictions) {
-            byteStream = new ByteBufOutputStream(Unpooled.buffer());
+            byteStream = new ByteBufOutputStream(ByteBufAllocator.DEFAULT.buffer());
             id = evictionId.getAndIncrement();
             maxEvictions = evictions;
             scope = "EvictionTask-" + SkipListCache.this.scope + "-" + id;
@@ -664,7 +665,7 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
                 prevPage.state = ExternalMode.DISK_MEMORY_DIRTY;
             }
         } else {
-            Page<K, V> diskPage = Page.generateEmptyPage(SkipListCache.this, floorKey);
+            Page<K, V> diskPage = Page.generateEmptyPage(SkipListCache.this, floorKey, KeyCoder.ENCODE_TYPE.SPARSE);
             diskPage.decode(entry.getValue());
             assert (diskPage.nextFirstKey.equals(targetKey));
             assert (compareKeys(prevPage.firstKey, diskPage.firstKey) <= 0);
@@ -822,7 +823,7 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
         encodeKey = keyCoder.keyEncode(sibMinKey);
 
         placeHolder = Page.generateEmptyPage(SkipListCache.this,
-                sibling.firstKey, sibling.nextFirstKey).encode(false);
+                sibling.firstKey, sibling.nextFirstKey, sibling.getEncodeType()).encode(false);
 
         externalStore.put(encodeKey, placeHolder);
 
@@ -918,7 +919,7 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
      */
     private void loadFromExternalStore() {
         byte[] encodedFirstKey = externalStore.firstKey();
-        Page<K, V> leftSentinel = Page.generateEmptyPage(this, negInf);
+        Page<K, V> leftSentinel = Page.generateEmptyPage(this, negInf, KeyCoder.ENCODE_TYPE.SPARSE);
         if (encodedFirstKey == null) {
             leftSentinel.initialize();
             byte[] encodeKey = keyCoder.keyEncode(negInf);
@@ -939,7 +940,7 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
                 byte[] encodePage = leftSentinel.encode();
                 externalStore.put(encodeKey, encodePage);
 
-                Page<K, V> minPage = Page.generateEmptyPage(this, firstKey);
+                Page<K, V> minPage = Page.generateEmptyPage(this, firstKey, leftSentinel.getEncodeType());
                 minPage.decode(page);
 
                 cache.put(firstKey, minPage);
@@ -1283,7 +1284,7 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
      */
     private Page<K, V> constructNewPage(Page<K, V> current, Page<K, V> next,
             K externalKey, byte[] floorPageEncoded) {
-        Page<K, V> newPage = Page.generateEmptyPage(this, externalKey);
+        Page<K, V> newPage = Page.generateEmptyPage(this, externalKey, current.getEncodeType());
         newPage.decode(floorPageEncoded);
         newPage.writeLock();
         assert (newPage.firstKey.equals(externalKey));
@@ -2076,7 +2077,7 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
     }
 
     private void pushAllPagesToDisk() {
-        final ByteBufOutputStream byteStream = new ByteBufOutputStream(Unpooled.buffer());
+        final ByteBufOutputStream byteStream = new ByteBufOutputStream(ByteBufAllocator.DEFAULT.buffer());
 
         for (Page<K, V> page : evictionQueue) {
 
@@ -2207,7 +2208,7 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
 
     private void repairInvalidKeys(final int counter, Page<K, V> page, final K key, final K nextKey) {
         boolean pageTransfer = false;
-        Page<K,V> nextPage = Page.generateEmptyPage(this, nextKey);
+        Page<K,V> nextPage = Page.generateEmptyPage(this, nextKey, page.getEncodeType());
         byte[] encodedNextPage = externalStore.get(keyCoder.keyEncode(nextKey));
         nextPage.decode(encodedNextPage);
         for(int i = 0, pos = 0; i < page.size; i++, pos++) {
@@ -2274,7 +2275,7 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
         K key = keyCoder.keyDecode(encodedKey);
         while(encodedKey != null) {
             counter++;
-            Page<K, V> page = Page.generateEmptyPage(this, key);
+            Page<K, V> page = Page.generateEmptyPage(this, key, KeyCoder.ENCODE_TYPE.SPARSE);
             byte[] encodedNextKey = externalStore.higherKey(encodedKey);
             if (encodedNextKey != null) {
                 page.decode(encodedPage);

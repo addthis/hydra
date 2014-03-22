@@ -27,6 +27,7 @@ import com.ning.compress.lzf.LZFInputStream;
 import com.ning.compress.lzf.LZFOutputStream;
 import com.yammer.metrics.core.Histogram;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
@@ -109,7 +110,7 @@ final class Page<K, V extends Codec.BytesCodable> {
 
     private final KeyCoder<K, V> keyCoder;
 
-    private Page(SkipListCache<K, V> cache, K firstKey, K nextFirstKey) {
+    private Page(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, KeyCoder.ENCODE_TYPE encodeType) {
         this.parent = cache;
         this.keyCoder = parent != null ? parent.keyCoder : null;
         this.firstKey = firstKey;
@@ -117,6 +118,7 @@ final class Page<K, V extends Codec.BytesCodable> {
         this.lock = new ReentrantReadWriteLock();
         this.timeStamp = SkipListCache.generateTimestamp();
         this.state = ExternalMode.DISK_MEMORY_IDENTICAL;
+        this.encodeType = encodeType;
     }
 
     public Page(SkipListCache<K, V> cache, K firstKey,
@@ -145,17 +147,17 @@ final class Page<K, V extends Codec.BytesCodable> {
     }
 
     public static <K, V extends Codec.BytesCodable> Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
-            K firstKey, K nextFirstKey) {
-        return new Page<>(cache, firstKey, nextFirstKey);
+            K firstKey, K nextFirstKey, KeyCoder.ENCODE_TYPE encodeType) {
+        return new Page<>(cache, firstKey, nextFirstKey, encodeType);
     }
 
     public static <K, V extends Codec.BytesCodable> Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
-            K firstKey) {
-        return new Page<>(cache, firstKey, null);
+            K firstKey, KeyCoder.ENCODE_TYPE encodeType) {
+        return new Page<>(cache, firstKey, null, encodeType);
     }
 
     public static <K, V extends Codec.BytesCodable> Page<K, V> measureMemoryEmptyPage() {
-        return new Page<>(null, null, null);
+        return new Page<>(null, null, null, KeyCoder.ENCODE_TYPE.SPARSE);
     }
 
     public static <K, V extends Codec.BytesCodable> Page<K, V> generateSiblingPage(SkipListCache<K, V> cache,
@@ -188,11 +190,11 @@ final class Page<K, V extends Codec.BytesCodable> {
     }
 
     public byte[] encode(boolean record) {
-        return encode(new ByteBufOutputStream(Unpooled.buffer()), record);
+        return encode(new ByteBufOutputStream(ByteBufAllocator.DEFAULT.buffer()), record);
     }
 
     public byte[] encode() {
-        return encode(new ByteBufOutputStream(Unpooled.buffer()), true);
+        return encode(new ByteBufOutputStream(ByteBufAllocator.DEFAULT.buffer()), true);
     }
 
     public byte[] encode(ByteBufOutputStream out) {

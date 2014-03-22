@@ -4,6 +4,7 @@ import com.addthis.codec.Codec;
 import com.addthis.codec.CodecBin2;
 import com.addthis.hydra.store.util.Varint;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
 import java.nio.charset.Charset;
@@ -28,7 +29,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
     @Override
     public byte[] bytesEncode() {
         preEncode();
-        ByteBuf b = Unpooled.buffer();
+        ByteBuf b = ByteBufAllocator.DEFAULT.buffer();
 
         if (!encodeLock()) {
             throw new RuntimeException("Unable to acquire encoding lock");
