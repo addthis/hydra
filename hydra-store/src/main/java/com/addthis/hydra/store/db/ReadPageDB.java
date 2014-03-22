@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  * 2. a data range object that notably has RIGHT-side bounded iteration (left as well
  * but that is stolen from an iterator it wraps. There are like five nested iterators).
  */
-public class ReadPageDB<V extends IReadWeighable & Codec.Codable> implements IPageDB<DBKey, V> {
+public class ReadPageDB<V extends IReadWeighable & Codec.BytesCodable> implements IPageDB<DBKey, V> {
 
     private static final Logger log = LoggerFactory.getLogger(ReadPageDB.class);
     static final String defaultDbName = Parameter.value("pagedb.dbname", "db.key");

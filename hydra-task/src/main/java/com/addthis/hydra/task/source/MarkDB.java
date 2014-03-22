@@ -60,7 +60,7 @@ public class MarkDB {
         }
     }
 
-    public static final class Record implements Codec.Codable, IReadWeighable {
+    public static final class Record implements Codec.Codable, IReadWeighable, Codec.BytesCodable {
 
         public String val;
         public long index;
@@ -77,9 +77,19 @@ public class MarkDB {
         public int getWeight() {
             return weight;
         }
+
+        @Override
+        public byte[] bytesEncode() {
+            return new byte[0];
+        }
+
+        @Override
+        public void bytesDecode(byte[] b) {
+
+        }
     }
 
-    public static final class Mark implements Codec.Codable, IReadWeighable {
+    public static final class Mark implements Codec.Codable, Codec.BytesCodable, IReadWeighable {
 
         public String value;
         public long index;
@@ -96,6 +106,16 @@ public class MarkDB {
         @Override
         public int getWeight() {
             return weight;
+        }
+
+        @Override
+        public byte[] bytesEncode() {
+            return new byte[0];
+        }
+
+        @Override
+        public void bytesDecode(byte[] b) {
+
         }
     }
 }

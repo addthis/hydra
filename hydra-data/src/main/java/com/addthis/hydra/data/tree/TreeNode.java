@@ -13,6 +13,11 @@
  */
 package com.addthis.hydra.data.tree;
 
+import com.addthis.basis.util.ClosableIterator;
+import com.addthis.basis.util.MemoryCounter.Mem;
+import com.addthis.hydra.store.db.DBKey;
+import com.addthis.hydra.store.db.IPageDB.Range;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -26,15 +31,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.addthis.basis.util.ClosableIterator;
-import com.addthis.basis.util.MemoryCounter.Mem;
 
-import com.addthis.codec.Codec;
-import com.addthis.hydra.store.db.DBKey;
-import com.addthis.hydra.store.db.IPageDB.Range;
-
-
-public class TreeNode implements DataTreeNode, Codec.SuperCodable, Codec.ConcurrentCodable {
+public class TreeNode extends AbstractTreeNode {
 
     public static final int DELETED = 1 << 0;
     public static final int ALIAS = 1 << 1;
@@ -64,18 +62,6 @@ public class TreeNode implements DataTreeNode, Codec.SuperCodable, Codec.Concurr
         this.dbkey = key;
         this.name = name;
     }
-
-    @Codec.Set(codable = true)
-    protected long hits;
-    @Codec.Set(codable = true)
-    protected int nodes;
-    @Codec.Set(codable = true)
-    private Integer nodedb;
-    @Codec.Set(codable = true)
-    private int bits;
-    @SuppressWarnings("unchecked")
-    @Codec.Set(codable = true)
-    private HashMap<String, TreeNodeData> data;
 
     @Mem(estimate = false, size = 64)
     private Tree tree;

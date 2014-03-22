@@ -15,6 +15,8 @@ package com.addthis.hydra.store.kv;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -39,10 +41,12 @@ import com.addthis.basis.util.IteratorClone;
 import com.addthis.basis.util.MemoryCounter;
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.codec.Codec;
 import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.store.kv.metrics.ExternalPagedStoreMetrics;
 import com.addthis.hydra.store.util.MetricsUtil;
 
+import com.addthis.hydra.store.util.Varint;
 import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.DeflaterOutputStream;
 import com.jcraft.jzlib.InflaterInputStream;
@@ -66,7 +70,7 @@ import org.xerial.snappy.SnappyOutputStream;
  * @param <K>
  * @param <V>
  */
-public class ExternalPagedStore<K extends Comparable<K>, V> extends CachedPagedStore<K, V> {
+public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCodable> extends CachedPagedStore<K, V> {
 
     private static final boolean collectMetrics = Parameter.boolValue("eps.debug.collect", false);
 
@@ -336,16 +340,19 @@ public class ExternalPagedStore<K extends Comparable<K>, V> extends CachedPagedS
                 default:
                     throw new RuntimeException("invalid gztype: " + gztype);
             }
-            Bytes.writeLength(page.map.size(), os);
+
+            DataOutputStream dos = new DataOutputStream(os);
+            Varint.writeUnsignedVarInt(page.map.size(), dos);
 
             byte[] firstKeyEncoded = keyCoder.keyEncode(page.getFirstKey());
             byte[] nextFirstKeyEncoded = keyCoder.keyEncode(page.getNextFirstKey());
 
-            updateHistogram(encodeFirstKeySize, firstKeyEncoded.length);
             updateHistogram(encodeNextFirstKeySize, nextFirstKeyEncoded.length);
 
-            Bytes.writeBytes(firstKeyEncoded, os);
-            Bytes.writeBytes(nextFirstKeyEncoded, os);
+            Varint.writeUnsignedVarInt(firstKeyEncoded.length, dos);
+            dos.write(firstKeyEncoded);
+            Varint.writeUnsignedVarInt(nextFirstKeyEncoded.length, dos);
+            dos.write(nextFirstKeyEncoded);
 
 
             for (Entry<K, PageValue> e : page.map.entrySet()) {
@@ -355,11 +362,14 @@ public class ExternalPagedStore<K extends Comparable<K>, V> extends CachedPagedS
                 updateHistogram(encodeKeySize, nextKey.length);
                 updateHistogram(encodeValueSize, nextValue.length);
 
-                Bytes.writeBytes(nextKey, os);
-                Bytes.writeBytes(nextValue, os);
+                Varint.writeUnsignedVarInt(nextKey.length, dos);
+                dos.write(nextKey);
+                Varint.writeUnsignedVarInt(nextValue.length, dos);
+                dos.write(nextValue);
             }
-            Bytes.writeLength((page.estimateTotal > 0 ? page.estimateTotal : 1), os);
-            Bytes.writeLength((page.estimates > 0 ? page.estimates : 1), os);
+
+            Varint.writeUnsignedVarInt((page.estimateTotal > 0 ? page.estimateTotal : 1), dos);
+            Varint.writeUnsignedVarInt((page.estimates > 0 ? page.estimates : 1), dos);
             switch (gztype) {
                 case 1:
                     ((DeflaterOutputStream) os).finish();
@@ -367,9 +377,13 @@ public class ExternalPagedStore<K extends Comparable<K>, V> extends CachedPagedS
                 case 2:
                     ((GZOut) os).finish();
                     break;
+                case 4:
+                    os.flush();
+                    break;
             }
             os.flush();
             os.close();
+            dos.close();
             byte[] bytesOut = out.toByteArray();
             if (log.isDebugEnabled()) log.debug("encoded " + bytesOut.length + " bytes to " + page);
             updateHistogram(encodePageSize, bytesOut.length);
@@ -403,22 +417,25 @@ public class ExternalPagedStore<K extends Comparable<K>, V> extends CachedPagedS
                     in = new SnappyInputStream(in);
                     break;
             }
-            int entries = (int) Bytes.readLength(in);
+            DataInputStream dis = new DataInputStream(in);
+            int entries = Varint.readUnsignedVarInt(dis);
             int count = entries;
-            K firstKey = keyCoder.keyDecode(Bytes.readBytes(in));
-            K nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in));
+
+            K firstKey = keyCoder.keyDecode(Bytes.readBytes(in, Varint.readUnsignedVarInt(dis)));
+            K nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in, Varint.readUnsignedVarInt(dis)));
             TreePage decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
             int bytes = 0;
             while (count-- > 0) {
-                byte kb[] = Bytes.readBytes(in);
-                byte vb[] = Bytes.readBytes(in);
+                byte kb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                byte vb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
                 bytes += kb.length + vb.length;
                 K key = keyCoder.keyDecode(kb);
                 decode.map.put(key, new PageValue(vb));
             }
-            if (maxTotalMem > 0) {
+
+            if (decode != null && maxTotalMem > 0) {
                 if (hasEstimates) {
-                    decode.setAverage((int) Bytes.readLength(in), (int) Bytes.readLength(in));
+                    decode.setAverage(Varint.readUnsignedVarInt(dis), Varint.readUnsignedVarInt(dis));
                 } else {
                     /** use a pessimistic/conservative byte/entry estimate */
                     decode.setAverage(bytes * estimateMissingFactor, entries);

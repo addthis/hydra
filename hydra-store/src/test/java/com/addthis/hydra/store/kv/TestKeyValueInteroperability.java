@@ -24,6 +24,7 @@ import java.util.concurrent.CyclicBarrier;
 import com.addthis.basis.test.SlowTest;
 import com.addthis.basis.util.Files;
 
+import com.addthis.hydra.store.DBIntValue;
 import com.addthis.hydra.store.skiplist.SimpleIntKeyCoder;
 import com.addthis.hydra.store.skiplist.SkipListCache;
 
@@ -65,11 +66,11 @@ public class TestKeyValueInteroperability {
             directory = makeTemporaryDirectory();
             ExternalPagedStore.ByteStore externalStore = new ByteStoreBDB(directory, "db", false);
 
-            ArrayList<Integer> values = new ArrayList<Integer>(numElements);
+            ArrayList<Integer> values = new ArrayList<>(numElements);
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             int[] threadId = new int[numElements];
             InsertionThread[] threads = new InsertionThread[numThreads];
-            PagedKeyValueStore<Integer, Integer> tree = new ExternalPagedStore<>(new SimpleIntKeyCoder(),
+            PagedKeyValueStore<Integer, DBIntValue> tree = new ExternalPagedStore<>(new SimpleIntKeyCoder(),
                     externalStore, 64, Integer.MAX_VALUE);
             tree.setMaxTotalMem(Integer.MAX_VALUE);
 
@@ -99,7 +100,7 @@ public class TestKeyValueInteroperability {
             System.out.println("EPS size is " + ((ExternalPagedStore) tree).getMemoryEstimate());
 
             for (int i = 0; i < numElements; i++) {
-                assertEquals(new Integer(i), tree.getValue(i));
+                assertEquals(new Integer(i), tree.getValue(i).getVal());
             }
 
             for (int i = 0; i < numThreads; i++) {
@@ -113,7 +114,7 @@ public class TestKeyValueInteroperability {
             tree = new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 64, Integer.MAX_VALUE).build();
 
             for (int i = 0; i < numElements; i++) {
-                assertEquals(new Integer(i), tree.getValue(i));
+                assertEquals(new Integer(i), tree.getValue(i).getVal());
             }
 
             System.out.println("skip list size is " + ((SkipListCache) tree).getMemoryEstimate());
@@ -138,11 +139,11 @@ public class TestKeyValueInteroperability {
             directory = makeTemporaryDirectory();
             ExternalPagedStore.ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
 
-            ArrayList<Integer> values = new ArrayList<Integer>(numElements);
+            ArrayList<Integer> values = new ArrayList<>(numElements);
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             int[] threadId = new int[numElements];
             InsertionThread[] threads = new InsertionThread[numThreads];
-            PagedKeyValueStore<Integer, Integer> tree =
+            PagedKeyValueStore<Integer, DBIntValue> tree =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 64, Integer.MAX_VALUE).build();
 
             for (int i = 0; i < numElements; i++) {
@@ -171,7 +172,7 @@ public class TestKeyValueInteroperability {
             System.out.println("skip list size is " + ((SkipListCache) tree).getMemoryEstimate());
 
             for (int i = 0; i < numElements; i++) {
-                assertEquals(new Integer(i), tree.getValue(i));
+                assertEquals(new Integer(i), tree.getValue(i).getVal());
             }
 
             for (int i = 0; i < numThreads; i++) {
@@ -186,7 +187,7 @@ public class TestKeyValueInteroperability {
             tree.setMaxTotalMem(Integer.MAX_VALUE);
 
             for (int i = 0; i < numElements; i++) {
-                assertEquals(new Integer(i), tree.getValue(i));
+                assertEquals(new Integer(i), tree.getValue(i).getVal());
             }
 
             System.out.println("EPS size is " + ((ExternalPagedStore) tree).getMemoryEstimate());
@@ -211,11 +212,11 @@ public class TestKeyValueInteroperability {
             directory = makeTemporaryDirectory();
             ExternalPagedStore.ByteStore externalStore = new ByteStoreBDB(directory, "db", false);
 
-            ArrayList<Integer> values = new ArrayList<Integer>(numElements);
+            ArrayList<Integer> values = new ArrayList<>(numElements);
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             int[] threadId = new int[numElements];
             InsertionThread[] threads = new InsertionThread[numThreads];
-            PagedKeyValueStore<Integer, Integer> tree = new ExternalPagedStore<>(new SimpleIntKeyCoder(),
+            PagedKeyValueStore<Integer, DBIntValue> tree = new ExternalPagedStore<>(new SimpleIntKeyCoder(),
                     externalStore, 64, Integer.MAX_VALUE);
             tree.setMaxTotalMem(Integer.MAX_VALUE);
 
@@ -247,7 +248,7 @@ public class TestKeyValueInteroperability {
             System.out.println("EPS size is " + firstMemoryEstimate);
 
             for (int i = 0; i < numElements; i++) {
-                assertEquals(new Integer(i), tree.getValue(i));
+                assertEquals(new Integer(i), tree.getValue(i).getVal());
             }
 
             for (int i = 0; i < numThreads; i++) {
@@ -262,7 +263,7 @@ public class TestKeyValueInteroperability {
             tree.setMaxTotalMem(Integer.MAX_VALUE);
 
             for (int i = 0; i < numElements; i++) {
-                assertEquals(new Integer(i), tree.getValue(i));
+                assertEquals(new Integer(i), tree.getValue(i).getVal());
             }
 
             long secondMemoryEstimate = ((ExternalPagedStore) tree).getMemoryEstimate();
@@ -289,11 +290,11 @@ public class TestKeyValueInteroperability {
             directory = makeTemporaryDirectory();
             ExternalPagedStore.ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
 
-            ArrayList<Integer> values = new ArrayList<Integer>(numElements);
+            ArrayList<Integer> values = new ArrayList<>(numElements);
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             int[] threadId = new int[numElements];
             InsertionThread[] threads = new InsertionThread[numThreads];
-            PagedKeyValueStore<Integer, Integer> tree =
+            PagedKeyValueStore<Integer, DBIntValue> tree =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 64, Integer.MAX_VALUE).build();
 
             for (int i = 0; i < numElements; i++) {
@@ -324,7 +325,7 @@ public class TestKeyValueInteroperability {
             System.out.println("skip list size is " + firstMemoryEstimate);
 
             for (int i = 0; i < numElements; i++) {
-                assertEquals(new Integer(i), tree.getValue(i));
+                assertEquals(new Integer(i), tree.getValue(i).getVal());
             }
 
             for (int i = 0; i < numThreads; i++) {
@@ -338,7 +339,7 @@ public class TestKeyValueInteroperability {
             tree = new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 64, Integer.MAX_VALUE).build();
 
             for (int i = 0; i < numElements; i++) {
-                assertEquals(new Integer(i), tree.getValue(i));
+                assertEquals(new Integer(i), tree.getValue(i).getVal());
             }
 
             long secondMemoryEstimate = ((SkipListCache) tree).getMemoryEstimate();
@@ -367,11 +368,11 @@ public class TestKeyValueInteroperability {
         final List<Integer> values;
         final int[] threadId;
         final int myId;
-        final PagedKeyValueStore<Integer, Integer> tree;
+        final PagedKeyValueStore<Integer, DBIntValue> tree;
         int counter;
 
         public InsertionThread(CyclicBarrier barrier, List<Integer> values,
-                int[] threadId, int id, PagedKeyValueStore<Integer, Integer> tree) {
+                int[] threadId, int id, PagedKeyValueStore<Integer, DBIntValue> tree) {
             this.barrier = barrier;
             this.values = values;
             this.threadId = threadId;
@@ -387,7 +388,7 @@ public class TestKeyValueInteroperability {
                 for (int i = 0; i < threadId.length; i++) {
                     if (threadId[i] == myId) {
                         Integer val = values.get(i);
-                        tree.putValue(val, val);
+                        tree.putValue(val, new DBIntValue(val));
                         counter++;
                     }
 

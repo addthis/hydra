@@ -13,7 +13,9 @@
  */
 package com.addthis.hydra.store.kv;
 
-public interface KeyValuePage<K, V> extends KeyValueStore<K, V> {
+import com.addthis.codec.Codec;
+
+public interface KeyValuePage<K, V extends Codec.BytesCodable> extends KeyValueStore<K, V> {
 
     /**
      * @return first key of next page or null if last page

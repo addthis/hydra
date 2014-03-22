@@ -42,6 +42,11 @@
     <!-- 3rd party -->
     <!-- begin compression libraries -->
     <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-buffer</artifactId>
+      <version>4.0.17.Final</version>
+    </dependency>
+    <dependency>
       <groupId>com.ning</groupId>
       <artifactId>compress-lzf</artifactId>
       <version>${hydra.dep.compress.compress-lzf.version}</version>
