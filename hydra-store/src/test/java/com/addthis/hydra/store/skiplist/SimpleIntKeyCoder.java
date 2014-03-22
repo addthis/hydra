@@ -39,7 +39,7 @@ public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
 
     @Override
     public Integer keyDecode(byte[] key) {
-        return key.length > 0 ? (Bytes.toInt(key) ^ Integer.MIN_VALUE) : null;
+        return (key != null && key.length > 0) ? (Bytes.toInt(key) ^ Integer.MIN_VALUE) : null;
     }
 
     @Override

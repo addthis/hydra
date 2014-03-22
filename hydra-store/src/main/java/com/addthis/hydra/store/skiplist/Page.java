@@ -101,6 +101,7 @@ final class Page<K, V extends Codec.BytesCodable> {
     @GuardedBy("lock")
     private int memoryEstimate;
 
+    private static final int FLAGS_IS_SPARSE = 1 << 5;
     private static final int FLAGS_HAS_ESTIMATES = 1 << 4;
 
     private final KeyCoder<K, V> keyCoder;
@@ -199,7 +200,7 @@ final class Page<K, V extends Codec.BytesCodable> {
         parent.numPagesEncoded.getAndIncrement();
         try {
             OutputStream os = out;
-            out.write(gztype | FLAGS_HAS_ESTIMATES);
+            out.write(gztype | FLAGS_HAS_ESTIMATES | FLAGS_IS_SPARSE);
             switch (gztype) {
                 case 0:
                     break;
@@ -229,7 +230,9 @@ final class Page<K, V extends Codec.BytesCodable> {
             Varint.writeUnsignedVarInt(firstKeyEncoded.length, dos);
             dos.write(firstKeyEncoded);
             Varint.writeUnsignedVarInt(nextFirstKeyEncoded.length, dos);
-            dos.write(nextFirstKeyEncoded);
+            if (nextFirstKeyEncoded.length > 0) {
+                dos.write(nextFirstKeyEncoded);
+            }
             for (int i = 0; i < size; i++) {
                 byte[] keyEncoded = keyCoder.keyEncode(keys.get(i));
                 byte[] rawVal = rawValues.get(i);
@@ -285,6 +288,7 @@ final class Page<K, V extends Codec.BytesCodable> {
             InputStream in = new ByteBufInputStream(Unpooled.wrappedBuffer(page));
             int flags = in.read() & 0xff;
             int gztype = flags & 0x0f;
+            boolean isSparse = (flags & FLAGS_IS_SPARSE) != 0;
             boolean hasEstimates = (flags & FLAGS_HAS_ESTIMATES) != 0;
             int readEstimateTotal, readEstimates;
             switch (gztype) {
@@ -301,35 +305,74 @@ final class Page<K, V extends Codec.BytesCodable> {
                     in = new SnappyInputStream(in);
                     break;
             }
-            DataInputStream dis = new DataInputStream(in);
-            int entries = Varint.readUnsignedVarInt(dis);
+            K firstKey;
+            byte[] nextFirstKey;
+            if (isSparse) {
+                DataInputStream dis = new DataInputStream(in);
+                int entries = Varint.readUnsignedVarInt(dis);
 
-            K firstKey = keyCoder.keyDecode(Bytes.readBytes(in, Varint.readUnsignedVarInt(dis)));
-            byte[] nextFirstKey = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                firstKey = keyCoder.keyDecode(Bytes.readBytes(in, Varint.readUnsignedVarInt(dis)));
+                int nextFirstKeyLength = Varint.readUnsignedVarInt(dis);
+                if (nextFirstKeyLength > 0) {
+                    nextFirstKey = Bytes.readBytes(in, nextFirstKeyLength);
+                } else {
+                    nextFirstKey = null;
+                }
 
-            int bytes = 0;
+                int bytes = 0;
 
-            size = entries;
-            keys = new ArrayList<>(size);
-            values = new ArrayList<>(size);
-            rawValues = new ArrayList<>(size);
+                size = entries;
+                keys = new ArrayList<>(size);
+                values = new ArrayList<>(size);
+                rawValues = new ArrayList<>(size);
 
-            for (int i = 0; i < entries; i++) {
-                byte kb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
-                byte vb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
-                bytes += kb.length + vb.length;
-                keys.add(keyCoder.keyDecode(kb));
-                values.add(null);
-                rawValues.add(vb);
-            }
+                for (int i = 0; i < entries; i++) {
+                    byte kb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                    byte vb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                    bytes += kb.length + vb.length;
+                    keys.add(keyCoder.keyDecode(kb));
+                    values.add(null);
+                    rawValues.add(vb);
+                }
 
-            if (hasEstimates) {
-                readEstimateTotal = Varint.readUnsignedVarInt(dis);
-                readEstimates = Varint.readUnsignedVarInt(dis);
-                setAverage(readEstimateTotal, readEstimates);
+                if (hasEstimates) {
+                    readEstimateTotal = Varint.readUnsignedVarInt(dis);
+                    readEstimates = Varint.readUnsignedVarInt(dis);
+                    setAverage(readEstimateTotal, readEstimates);
+                } else {
+                    /** use a pessimistic/conservative byte/entry estimate */
+                    setAverage(bytes * estimateMissingFactor, entries);
+                }
             } else {
-                /** use a pessimistic/conservative byte/entry estimate */
-                setAverage(bytes * estimateMissingFactor, entries);
+                int entries = (int) Bytes.readLength(in);
+
+                firstKey = keyCoder.keyDecode(Bytes.readBytes(in));
+                nextFirstKey = Bytes.readBytes(in);
+
+                int bytes = 0;
+
+                size = entries;
+                keys = new ArrayList<>(size);
+                values = new ArrayList<>(size);
+                rawValues = new ArrayList<>(size);
+
+                for (int i = 0; i < entries; i++) {
+                    byte kb[] = Bytes.readBytes(in);
+                    byte vb[] = Bytes.readBytes(in);
+                    bytes += kb.length + vb.length;
+                    keys.add(keyCoder.keyDecode(kb));
+                    values.add(null);
+                    rawValues.add(vb);
+                }
+
+                if (hasEstimates) {
+                    readEstimateTotal = (int) Bytes.readLength(in);
+                    readEstimates = (int) Bytes.readLength(in);
+                    setAverage(readEstimateTotal, readEstimates);
+                } else {
+                    /** use a pessimistic/conservative byte/entry estimate */
+                    setAverage(bytes * estimateMissingFactor, entries);
+                }
             }
 
             updateMemoryEstimate();
