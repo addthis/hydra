@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.store.kv;
 
+import com.addthis.codec.Codec;
+
 import java.util.Iterator;
 import java.util.Map.Entry;
 
@@ -22,7 +24,7 @@ import java.util.Map.Entry;
  * @param <K>
  * @param <V>
  */
-public interface KeyValueStore<K, V> {
+public interface KeyValueStore<K, V extends Codec.BytesCodable> {
 
     /**
      * @param key key for locating bound data

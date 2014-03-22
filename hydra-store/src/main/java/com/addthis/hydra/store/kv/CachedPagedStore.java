@@ -26,6 +26,7 @@ import com.addthis.basis.collect.HotMap;
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.codec.Codec;
 import com.addthis.hydra.store.kv.metrics.CachedPagedStoreMetrics;
 
 import com.yammer.metrics.core.TimerContext;
@@ -45,7 +46,7 @@ import org.slf4j.LoggerFactory;
  *         <p/>
  *         TODO enable single CacheEvictor for multi-db environments
  */
-public abstract class CachedPagedStore<K, V> implements PagedKeyValueStore<K, V> {
+public abstract class CachedPagedStore<K, V extends Codec.BytesCodable> implements PagedKeyValueStore<K, V> {
 
     private static final boolean collectMetrics = Parameter.boolValue("eps.debug.collect", false);
     private static final Logger log = LoggerFactory.getLogger(CachedPagedStore.class);

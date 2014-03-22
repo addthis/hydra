@@ -17,7 +17,7 @@ import com.addthis.codec.Codec;
 
 /**
  */
-public class ReadDBKeyCoder<V extends IReadWeighable & Codec.Codable> extends DBKeyCoder<V> {
+public class ReadDBKeyCoder<V extends IReadWeighable & Codec.BytesCodable> extends DBKeyCoder<V> {
 
     public ReadDBKeyCoder(Codec codec, Class<? extends V> clazz) {
         super(codec, clazz);

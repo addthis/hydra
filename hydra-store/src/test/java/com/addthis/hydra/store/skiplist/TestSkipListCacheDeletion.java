@@ -24,6 +24,7 @@ import java.util.concurrent.CyclicBarrier;
 import com.addthis.basis.test.SlowTest;
 import com.addthis.basis.util.Files;
 
+import com.addthis.hydra.store.DBIntValue;
 import com.addthis.hydra.store.kv.ConcurrentByteStoreBDB;
 import com.addthis.hydra.store.kv.ExternalPagedStore.ByteStore;
 
@@ -71,11 +72,11 @@ public class TestSkipListCacheDeletion {
         final List<Integer> values;
         final int[] threadId;
         final int myId;
-        final SkipListCache<Integer, Integer> cache;
+        final SkipListCache<Integer, DBIntValue> cache;
         int counter;
 
         public InsertionThread(CyclicBarrier barrier, List<Integer> values,
-                int[] threadId, int id, SkipListCache<Integer, Integer> cache) {
+                int[] threadId, int id, SkipListCache<Integer, DBIntValue> cache) {
             super("InsertionThread" + id);
             this.barrier = barrier;
             this.values = values;
@@ -93,7 +94,7 @@ public class TestSkipListCacheDeletion {
                     if (threadId[i] == myId) {
                         Integer val = values.get(i);
                         if (val % insertFraction == 0) {
-                            cache.put(val, 2 * val);
+                            cache.put(val, new DBIntValue(2 * val));
                         }
                         counter++;
                     }
@@ -113,11 +114,11 @@ public class TestSkipListCacheDeletion {
         final List<Integer> values;
         final int[] threadId;
         final int myId;
-        final SkipListCache<Integer, Integer> cache;
+        final SkipListCache<Integer, DBIntValue> cache;
         int counter;
 
         public DeletionThread(CyclicBarrier barrier, List<Integer> values,
-                int[] threadId, int id, SkipListCache<Integer, Integer> cache) {
+                int[] threadId, int id, SkipListCache<Integer, DBIntValue> cache) {
             super("DeletionThread" + id);
             this.barrier = barrier;
             this.values = values;
@@ -162,12 +163,12 @@ public class TestSkipListCacheDeletion {
             int[] threadId = new int[numElements];
             InsertionThread[] insertionThreads = new InsertionThread[numThreads];
             DeletionThread[] deletionThreads = new DeletionThread[numThreads];
-            SkipListCache<Integer, Integer> cache =
+            SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, pageSize, 1000).build();
 
             for (int i = 0; i < numElements; i++) {
                 values.add(i);
-                cache.put(i, i);
+                cache.put(i, new DBIntValue(i));
                 threadId[i] = i % numThreads;
             }
 
@@ -201,7 +202,7 @@ public class TestSkipListCacheDeletion {
 
             for (int i = 0; i < numElements; i++) {
                 if (i % insertFraction == 0) {
-                    assertEquals(new Integer(2 * i), cache.get(i));
+                    assertEquals(new Integer(2 * i), cache.get(i).getVal());
                 } else {
                     assertNull(cache.get(i));
                 }

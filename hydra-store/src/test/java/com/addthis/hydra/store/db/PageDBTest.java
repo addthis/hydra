@@ -61,7 +61,7 @@ public class PageDBTest {
 
     @Test
     public void testSimplePutGet() throws Exception {
-        PageDB<TestRecord> db = new PageDB<TestRecord>(Files.initDirectory(tmpDir), TestRecord.class, 100, 100);
+        PageDB<TestRecord> db = new PageDB<>(Files.initDirectory(tmpDir), TestRecord.class, 100, 100);
         TestRecord record = new TestRecord();
         record.setValue("value");
         assertNull(db.put(new DBKey(0, "key"), record));
@@ -76,20 +76,30 @@ public class PageDBTest {
         assertNotNull(currentValue3);
         assertEquals("value2", currentValue.value);
         db.close();
-        db = new PageDB<TestRecord>(new File(tmpDir), TestRecord.class, 100, 100);
+        db = new PageDB<>(new File(tmpDir), TestRecord.class, 100, 100);
         TestRecord currentValue2 = db.get(new DBKey(0, "key"));
         assertNotNull(currentValue2);
         assertEquals("value2", currentValue2.value);
     }
 
 
-    public static final class TestRecord implements Codec.Codable {
+    public static final class TestRecord implements Codec.BytesCodable {
 
         @Codec.Set(codable = true)
         private String value;
 
         public void setValue(String value) {
             this.value = value;
+        }
+
+        @Override
+        public byte[] bytesEncode() {
+            return value.getBytes();
+        }
+
+        @Override
+        public void bytesDecode(byte[] b) {
+            value = new String(b);
         }
     }
 }

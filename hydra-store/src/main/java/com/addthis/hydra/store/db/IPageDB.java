@@ -26,7 +26,7 @@ import com.addthis.hydra.store.kv.PagedKeyValueStore;
 import com.addthis.hydra.store.util.Raw;
 
 
-public interface IPageDB<K extends Key, V extends Codec.Codable> {
+public interface IPageDB<K extends Key, V extends Codec.BytesCodable> {
 
     public interface Key {
 

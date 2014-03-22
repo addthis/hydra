@@ -13,41 +13,40 @@
  */
 package com.addthis.hydra.store.skiplist;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-
-import java.util.ArrayList;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.zip.GZIPInputStream;
-
 import com.addthis.basis.io.GZOut;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.MemoryCounter;
 import com.addthis.basis.util.Parameter;
-
+import com.addthis.codec.Codec;
 import com.addthis.hydra.store.kv.KeyCoder;
-
+import com.addthis.hydra.store.util.Varint;
 import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.DeflaterOutputStream;
 import com.jcraft.jzlib.InflaterInputStream;
 import com.ning.compress.lzf.LZFInputStream;
 import com.ning.compress.lzf.LZFOutputStream;
 import com.yammer.metrics.core.Histogram;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.Unpooled;
 import org.xerial.snappy.SnappyInputStream;
 import org.xerial.snappy.SnappyOutputStream;
 
-final class Page<K, V> {
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.zip.GZIPInputStream;
 
-    private static final Logger log = LoggerFactory.getLogger(Page.class);
+final class Page<K, V extends Codec.BytesCodable> {
 
     static final int gzlevel = Parameter.intValue("eps.gz.level", 1);
     static final int gztype = Parameter.intValue("eps.gz.type", 1);
@@ -142,21 +141,21 @@ final class Page<K, V> {
         this.state = ExternalMode.DISK_MEMORY_IDENTICAL;
     }
 
-    public static <K, V> Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
+    public static <K, V extends Codec.BytesCodable> Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
             K firstKey, K nextFirstKey) {
         return new Page<>(cache, firstKey, nextFirstKey);
     }
 
-    public static <K, V> Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
+    public static <K, V extends Codec.BytesCodable> Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
             K firstKey) {
         return new Page<>(cache, firstKey, null);
     }
 
-    public static <K, V> Page<K, V> measureMemoryEmptyPage() {
+    public static <K, V extends Codec.BytesCodable> Page<K, V> measureMemoryEmptyPage() {
         return new Page<>(null, null, null);
     }
 
-    public static <K, V> Page<K, V> generateSiblingPage(SkipListCache<K, V> cache,
+    public static <K, V extends Codec.BytesCodable> Page<K, V> generateSiblingPage(SkipListCache<K, V> cache,
             K firstKey, K nextFirstKey,
             int size, ArrayList<K> keys,
             ArrayList<V> values,
@@ -186,18 +185,18 @@ final class Page<K, V> {
     }
 
     public byte[] encode(boolean record) {
-        return encode(new ByteArrayOutputStream(), record);
+        return encode(new ByteBufOutputStream(Unpooled.buffer()), record);
     }
 
     public byte[] encode() {
-        return encode(new ByteArrayOutputStream(), true);
+        return encode(new ByteBufOutputStream(Unpooled.buffer()), true);
     }
 
-    public byte[] encode(ByteArrayOutputStream out) {
+    public byte[] encode(ByteBufOutputStream out) {
         return encode(out, true);
     }
 
-    private byte[] encode(ByteArrayOutputStream out, boolean record) {
+    private byte[] encode(ByteBufOutputStream out, boolean record) {
         SkipListCacheMetrics metrics = parent.metrics;
         parent.numPagesEncoded.getAndIncrement();
         try {
@@ -222,15 +221,17 @@ final class Page<K, V> {
                     throw new RuntimeException("invalid gztype: " + gztype);
             }
 
+            DataOutputStream dos = new DataOutputStream(os);
             byte[] firstKeyEncoded = keyCoder.keyEncode(firstKey);
             byte[] nextFirstKeyEncoded = keyCoder.keyEncode(nextFirstKey);
 
-            updateHistogram(metrics.encodeFirstKeySize, firstKeyEncoded.length, record);
             updateHistogram(metrics.encodeNextFirstKeySize, nextFirstKeyEncoded.length, record);
 
-            Bytes.writeLength(size, os);
-            Bytes.writeBytes(firstKeyEncoded, os);
-            Bytes.writeBytes(nextFirstKeyEncoded, os);
+            Varint.writeUnsignedVarInt(size, dos);
+            Varint.writeUnsignedVarInt(firstKeyEncoded.length, dos);
+            dos.write(firstKeyEncoded);
+            Varint.writeUnsignedVarInt(nextFirstKeyEncoded.length, dos);
+            dos.write(nextFirstKeyEncoded);
             for (int i = 0; i < size; i++) {
                 byte[] keyEncoded = keyCoder.keyEncode(keys.get(i));
                 byte[] rawVal = rawValues.get(i);
@@ -242,11 +243,14 @@ final class Page<K, V> {
                 updateHistogram(metrics.encodeKeySize, keyEncoded.length, record);
                 updateHistogram(metrics.encodeValueSize, rawVal.length, record);
 
-                Bytes.writeBytes(keyEncoded, os);
-                Bytes.writeBytes(rawVal, os);
+                Varint.writeUnsignedVarInt(keyEncoded.length, dos);
+                dos.write(keyEncoded);
+                Varint.writeUnsignedVarInt(rawVal.length, dos);
+                dos.write(rawVal);
             }
-            Bytes.writeLength((estimateTotal > 0 ? estimateTotal : 1), os);
-            Bytes.writeLength((estimates > 0 ? estimates : 1), os);
+
+            Varint.writeUnsignedVarInt((estimateTotal > 0 ? estimateTotal : 1), dos);
+            Varint.writeUnsignedVarInt((estimates > 0 ? estimates : 1), dos);
             switch (gztype) {
                 case 1:
                     ((DeflaterOutputStream) os).finish();
@@ -260,8 +264,12 @@ final class Page<K, V> {
             }
             os.flush();
             os.close();
-            byte[] returnValue = out.toByteArray();
-            out.reset();
+            dos.close();
+
+            ByteBuf buffer = out.buffer();
+            byte[] returnValue = new byte[out.writtenBytes()];
+            buffer.readBytes(returnValue);
+            buffer.clear();
             updateHistogram(metrics.numberKeysPerPage, size, record);
             updateHistogram(metrics.encodePageSize, returnValue.length, record);
             return returnValue;
@@ -276,7 +284,7 @@ final class Page<K, V> {
     public void decode(byte[] page) {
         parent.numPagesDecoded.getAndIncrement();
         try {
-            InputStream in = new ByteArrayInputStream(page);
+            InputStream in = new ByteBufInputStream(Unpooled.wrappedBuffer(page));
             int flags = in.read() & 0xff;
             int gztype = flags & 0x0f;
             boolean hasEstimates = (flags & FLAGS_HAS_ESTIMATES) != 0;
@@ -295,10 +303,11 @@ final class Page<K, V> {
                     in = new SnappyInputStream(in);
                     break;
             }
-            int entries = (int) Bytes.readLength(in);
+            DataInputStream dis = new DataInputStream(in);
+            int entries = Varint.readUnsignedVarInt(dis);
 
-            K firstKey = keyCoder.keyDecode(Bytes.readBytes(in));
-            byte[] nextFirstKey = Bytes.readBytes(in);
+            K firstKey = keyCoder.keyDecode(Bytes.readBytes(in, Varint.readUnsignedVarInt(dis)));
+            byte[] nextFirstKey = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
 
             int bytes = 0;
 
@@ -308,8 +317,8 @@ final class Page<K, V> {
             rawValues = new ArrayList<>(size);
 
             for (int i = 0; i < entries; i++) {
-                byte kb[] = Bytes.readBytes(in);
-                byte vb[] = Bytes.readBytes(in);
+                byte kb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                byte vb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
                 bytes += kb.length + vb.length;
                 keys.add(keyCoder.keyDecode(kb));
                 values.add(null);
@@ -317,8 +326,8 @@ final class Page<K, V> {
             }
 
             if (hasEstimates) {
-                readEstimateTotal = (int) Bytes.readLength(in);
-                readEstimates = (int) Bytes.readLength(in);
+                readEstimateTotal = Varint.readUnsignedVarInt(dis);
+                readEstimates = Varint.readUnsignedVarInt(dis);
                 setAverage(readEstimateTotal, readEstimates);
             } else {
                 /** use a pessimistic/conservative byte/entry estimate */
@@ -493,7 +502,7 @@ final class Page<K, V> {
     public void fetchValue(int position) {
         V value = values.get(position);
         byte[] rawValue = rawValues.get(position);
-        if (value == null && !parent.nullRawValue(rawValue)) {
+        if (value == null) {
             values.set(position, keyCoder.valueDecode(rawValue));
         }
     }

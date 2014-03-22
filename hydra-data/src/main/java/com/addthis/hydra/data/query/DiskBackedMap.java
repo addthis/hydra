@@ -179,7 +179,7 @@ public class DiskBackedMap<T extends DiskBackedMap.DiskObject> implements Map<St
 
     // funky non-static class to maintain compatibility with
     // DiskObject interface
-    public class CodableDiskObject implements Codec.SuperCodable {
+    public class CodableDiskObject implements Codec.SuperCodable, Codec.BytesCodable {
 
         private DiskObject d;
 
@@ -205,6 +205,18 @@ public class DiskBackedMap<T extends DiskBackedMap.DiskObject> implements Map<St
         @Override
         public void preEncode() {
             bytes = d.toBytes();
+        }
+
+        @Override
+        public byte[] bytesEncode() {
+            preEncode();
+            return bytes;
+        }
+
+        @Override
+        public void bytesDecode(byte[] b) {
+            bytes = b;
+            postDecode();
         }
     }
 }

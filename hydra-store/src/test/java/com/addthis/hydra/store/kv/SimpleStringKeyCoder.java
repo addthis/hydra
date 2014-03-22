@@ -14,8 +14,9 @@
 package com.addthis.hydra.store.kv;
 
 import com.addthis.basis.util.Bytes;
+import com.addthis.hydra.store.DBValue;
 
-class SimpleStringKeyCoder implements KeyCoder<String, String> {
+class SimpleStringKeyCoder implements KeyCoder<String, DBValue> {
 
     @Override
     public String negInfinity() {
@@ -28,8 +29,8 @@ class SimpleStringKeyCoder implements KeyCoder<String, String> {
     }
 
     @Override
-    public byte[] valueEncode(String value) {
-        return keyEncode(value);
+    public byte[] valueEncode(DBValue value) {
+        return value.bytesEncode();
     }
 
     @Override
@@ -38,8 +39,8 @@ class SimpleStringKeyCoder implements KeyCoder<String, String> {
     }
 
     @Override
-    public String valueDecode(byte[] value) {
-        return keyDecode(value);
+    public DBValue valueDecode(byte[] value) {
+        return new DBValue(new String(value));
     }
 
     @Override

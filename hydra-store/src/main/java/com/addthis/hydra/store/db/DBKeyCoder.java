@@ -23,7 +23,7 @@ import com.google.common.base.Objects;
 
 /**
  */
-class DBKeyCoder<V extends Codec.Codable> implements KeyCoder<DBKey, V> {
+class DBKeyCoder<V extends Codec.BytesCodable> implements KeyCoder<DBKey, V> {
 
     protected final Codec codec;
     protected final Class<? extends V> clazz;
@@ -50,7 +50,7 @@ class DBKeyCoder<V extends Codec.Codable> implements KeyCoder<DBKey, V> {
     @Override
     public byte[] valueEncode(V value) {
         try {
-            return codec.encode(value);
+            return value.bytesEncode();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -63,8 +63,11 @@ class DBKeyCoder<V extends Codec.Codable> implements KeyCoder<DBKey, V> {
 
     @Override
     public V valueDecode(byte[] value) {
+
         try {
-            return codec.decode(clazz, value);
+            V v = clazz.newInstance();
+            v.bytesDecode(value);
+            return v;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
