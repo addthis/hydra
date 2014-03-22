@@ -36,7 +36,12 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
         try {
             Varint.writeUnsignedVarLong(hits, b);
             Varint.writeUnsignedVarInt(nodes, b);
-            Varint.writeUnsignedVarInt(nodedb == null ? -1 : nodedb, b);
+            if (nodedb == null) {
+                b.writeByte(0);
+            } else {
+                b.writeByte(1);
+                Varint.writeUnsignedVarInt(nodedb, b);
+            }
             Varint.writeUnsignedVarInt(bits, b);
             int numAttachments = data == null ? 0 : data.size();
             Varint.writeUnsignedVarInt(numAttachments, b);
@@ -72,11 +77,11 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
         try {
             hits = Varint.readUnsignedVarLong(buf);
             nodes = Varint.readUnsignedVarInt(buf);
-            int nodedbInt = Varint.readUnsignedVarInt(buf);
-            if (nodedbInt < 0) {
-                nodedb = null;
+            boolean hasNodeDB = buf.readByte() == 1;
+            if (hasNodeDB) {
+                nodedb = Varint.readUnsignedVarInt(buf);
             } else {
-                nodedb = nodedbInt;
+                nodedb = null;
             }
             bits = Varint.readUnsignedVarInt(buf);
             int numAttachments = Varint.readUnsignedVarInt(buf);
@@ -84,6 +89,9 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
                 HashMap<String, TreeNodeData> dataMap = new HashMap<>();
                 for (int i = 0; i < numAttachments; i++) {
                     int kl = Varint.readUnsignedVarInt(buf);
+                    if (kl == 0) {
+                        continue;
+                    }
                     String key = new String(buf.readBytes(kl).array(), Charset.forName("UTF-8"));
                     int cl = Varint.readUnsignedVarInt(buf);
                     String className = new String(buf.readBytes(cl).array(), Charset.forName("UTF-8"));
@@ -97,7 +105,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
             }
             postDecode();
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 }

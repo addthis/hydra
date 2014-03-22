@@ -109,7 +109,7 @@ final class Page<K, V extends Codec.BytesCodable> {
 
     private final KeyCoder<K, V> keyCoder;
 
-    private Page(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, KeyCoder.ENCODE_TYPE encodeType) {
+    private Page(SkipListCache<K, V> cache, K firstKey, K nextFirstKey) {
         this.parent = cache;
         this.keyCoder = parent != null ? parent.keyCoder : null;
         this.firstKey = firstKey;
@@ -117,7 +117,6 @@ final class Page<K, V extends Codec.BytesCodable> {
         this.lock = new ReentrantReadWriteLock();
         this.timeStamp = SkipListCache.generateTimestamp();
         this.state = ExternalMode.DISK_MEMORY_IDENTICAL;
-        this.encodeType = encodeType;
     }
 
     public Page(SkipListCache<K, V> cache, K firstKey,
@@ -147,24 +146,23 @@ final class Page<K, V extends Codec.BytesCodable> {
 
     public static <K, V extends Codec.BytesCodable> Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
             K firstKey, K nextFirstKey) {
-        return new Page<>(cache, firstKey, nextFirstKey, KeyCoder.ENCODE_TYPE.SPARSE);
+        return new Page<>(cache, firstKey, nextFirstKey);
     }
 
     public static <K, V extends Codec.BytesCodable> Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
             K firstKey) {
-        return new Page<>(cache, firstKey, null, KeyCoder.ENCODE_TYPE.SPARSE);
+        return new Page<>(cache, firstKey, null);
     }
 
     public static <K, V extends Codec.BytesCodable> Page<K, V> measureMemoryEmptyPage() {
-        return new Page<>(null, null, null, KeyCoder.ENCODE_TYPE.SPARSE);
+        return new Page<>(null, null, null);
     }
 
     public static <K, V extends Codec.BytesCodable> Page<K, V> generateSiblingPage(SkipListCache<K, V> cache,
-            K firstKey, K nextFirstKey,
-            int size, ArrayList<K> keys,
-            ArrayList<V> values,
-            ArrayList<byte[]> rawValues,
-            KeyCoder.ENCODE_TYPE encodeType) {
+                                                                                   K firstKey, K nextFirstKey,
+                                                                                   int size, ArrayList<K> keys,
+                                                                                   ArrayList<V> values,
+                                                                                   ArrayList<byte[]> rawValues, KeyCoder.ENCODE_TYPE encodeType) {
         return new Page<>(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
     }
 
@@ -244,7 +242,7 @@ final class Page<K, V extends Codec.BytesCodable> {
                 byte[] rawVal = rawValues.get(i);
 
                 if (rawVal == null) {
-                    rawVal = keyCoder.valueEncode(values.get(i), KeyCoder.ENCODE_TYPE.SPARSE);
+                    rawVal = keyCoder.valueEncode(values.get(i), encodeType);
                 }
 
                 updateHistogram(metrics.encodeKeySize, keyEncoded.length, record);
@@ -420,7 +418,7 @@ final class Page<K, V extends Codec.BytesCodable> {
             switch (memEstimationStrategy) {
                 case 0:
                     /** use encoded byte size as crude proxy for mem size */
-                    updateAverage((keyCoder.keyEncode(key).length + keyCoder.valueEncode(val, KeyCoder.ENCODE_TYPE.SPARSE).length), count);
+                    updateAverage((keyCoder.keyEncode(key).length + keyCoder.valueEncode(val, encodeType).length), count);
                     break;
                 case 1:
                     /** walk objects and estimate.  possibly slower and not demonstrably more accurate */
@@ -549,7 +547,7 @@ final class Page<K, V extends Codec.BytesCodable> {
      * result of {@link #rawValues}.
      */
     public void fetchValue(int position) {
-        V value = values.get(position);
+       V value = values.get(position);
         byte[] rawValue = rawValues.get(position);
         if (value == null) {
             values.set(position, keyCoder.valueDecode(rawValue, encodeType));
@@ -577,10 +575,6 @@ final class Page<K, V extends Codec.BytesCodable> {
 
     public KeyCoder.ENCODE_TYPE getEncodeType() {
         return encodeType;
-    }
-
-    public void setEncodeType(KeyCoder.ENCODE_TYPE encodeType) {
-        this.encodeType = encodeType;
     }
 }
 
