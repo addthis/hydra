@@ -58,7 +58,7 @@ class DBKeyCoder<V extends Codec.BytesCodable> implements KeyCoder<DBKey, V> {
 
     @Override
     public DBKey keyDecode(byte[] key) {
-        return key.length > 0 ? new DBKey(key) : null;
+        return (key != null && key.length > 0) ? new DBKey(key) : null;
     }
 
     @Override

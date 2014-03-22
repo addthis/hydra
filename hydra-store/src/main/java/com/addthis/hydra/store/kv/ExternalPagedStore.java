@@ -101,6 +101,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
     private final ExternalPagedStoreMetrics metrics;
 
     private static final int FLAGS_HAS_ESTIMATES = 1 << 4;
+    private static final int FLAGS_IS_SPARSE = 1 << 5;
 
     private static final AtomicInteger scopeGenerator = new AtomicInteger();
 
@@ -321,7 +322,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             OutputStream os = out;
-            out.write(gztype | FLAGS_HAS_ESTIMATES);
+            out.write(gztype | FLAGS_HAS_ESTIMATES | FLAGS_IS_SPARSE);
             switch (gztype) {
                 case 0:
                     break;
@@ -352,7 +353,9 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
             Varint.writeUnsignedVarInt(firstKeyEncoded.length, dos);
             dos.write(firstKeyEncoded);
             Varint.writeUnsignedVarInt(nextFirstKeyEncoded.length, dos);
-            dos.write(nextFirstKeyEncoded);
+            if (nextFirstKeyEncoded.length > 0) {
+                dos.write(nextFirstKeyEncoded);
+            }
 
 
             for (Entry<K, PageValue> e : page.map.entrySet()) {
@@ -403,6 +406,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
             int flags = in.read() & 0xff;
             int gztype = flags & 0x0f;
             boolean hasEstimates = (flags & FLAGS_HAS_ESTIMATES) != 0;
+            boolean isSparse = (flags & FLAGS_IS_SPARSE) != 0;
             switch (gztype) {
                 case 1:
                     in = new InflaterInputStream(in);
@@ -417,28 +421,57 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
                     in = new SnappyInputStream(in);
                     break;
             }
-            DataInputStream dis = new DataInputStream(in);
-            int entries = Varint.readUnsignedVarInt(dis);
-            int count = entries;
+            TreePage decode;
+            if (isSparse) {
+                DataInputStream dis = new DataInputStream(in);
+                int entries = Varint.readUnsignedVarInt(dis);
+                int count = entries;
 
-            K firstKey = keyCoder.keyDecode(Bytes.readBytes(in, Varint.readUnsignedVarInt(dis)));
-            K nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in, Varint.readUnsignedVarInt(dis)));
-            TreePage decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
-            int bytes = 0;
-            while (count-- > 0) {
-                byte kb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
-                byte vb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
-                bytes += kb.length + vb.length;
-                K key = keyCoder.keyDecode(kb);
-                decode.map.put(key, new PageValue(vb));
-            }
+                K firstKey = keyCoder.keyDecode(Bytes.readBytes(in, Varint.readUnsignedVarInt(dis)));
+                int nextFirstKeyLength = Varint.readUnsignedVarInt(dis);
+                K nextFirstKey = null;
+                if (nextFirstKeyLength > 0) {
+                    nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in, nextFirstKeyLength));
+                }
+                decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
+                int bytes = 0;
+                while (count-- > 0) {
+                    byte kb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                    byte vb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                    bytes += kb.length + vb.length;
+                    K key = keyCoder.keyDecode(kb);
+                    decode.map.put(key, new PageValue(vb));
+                }
 
-            if (decode != null && maxTotalMem > 0) {
-                if (hasEstimates) {
-                    decode.setAverage(Varint.readUnsignedVarInt(dis), Varint.readUnsignedVarInt(dis));
-                } else {
-                    /** use a pessimistic/conservative byte/entry estimate */
-                    decode.setAverage(bytes * estimateMissingFactor, entries);
+                if (decode != null && maxTotalMem > 0) {
+                    if (hasEstimates) {
+                        decode.setAverage(Varint.readUnsignedVarInt(dis), Varint.readUnsignedVarInt(dis));
+                    } else {
+                        /** use a pessimistic/conservative byte/entry estimate */
+                        decode.setAverage(bytes * estimateMissingFactor, entries);
+                    }
+                }
+            } else {
+                int entries = (int) Bytes.readLength(in);
+                int count = entries;
+                K firstKey = keyCoder.keyDecode(Bytes.readBytes(in));
+                K nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in));
+                decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
+                int bytes = 0;
+                while (count-- > 0) {
+                    byte kb[] = Bytes.readBytes(in);
+                    byte vb[] = Bytes.readBytes(in);
+                    bytes += kb.length + vb.length;
+                    K key = keyCoder.keyDecode(kb);
+                    decode.map.put(key, new PageValue(vb));
+                }
+                if (maxTotalMem > 0) {
+                    if (hasEstimates) {
+                        decode.setAverage((int) Bytes.readLength(in), (int) Bytes.readLength(in));
+                    } else {
+                        /** use a pessimistic/conservative byte/entry estimate */
+                        decode.setAverage(bytes * estimateMissingFactor, entries);
+                    }
                 }
             }
             in.close();
