@@ -14,6 +14,7 @@
 package com.addthis.hydra.store.kv;
 
 import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.InputStream;
 
 import java.util.Comparator;
@@ -35,6 +36,7 @@ import com.addthis.hydra.store.db.ReadDBKeyCoder;
 import com.addthis.hydra.store.kv.ExternalPagedStore.ByteStore;
 import com.addthis.hydra.store.kv.metrics.ExternalPagedStoreMetrics;
 
+import com.addthis.hydra.store.util.Varint;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -77,6 +79,8 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
     private final ExternalPagedStoreMetrics metrics;
 
     private final boolean collectMetrics;
+
+    private static final int FLAGS_IS_SPARSE = 1 << 5;
 
     /**
      * guava loading cache for storing pages. Get method takes the exact page key, so finding the
@@ -186,6 +190,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
             InputStream in = new ByteArrayInputStream(page);
             int flags = in.read() & 0xff;
             int gztype = flags & 0x0f;
+            boolean isSparse = (flags & FLAGS_IS_SPARSE) != 0;
             switch (gztype) {
                 case 1:
                     in = new InflaterInputStream(in);
@@ -200,25 +205,51 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                     in = new SnappyInputStream(in);
                     break;
             }
-            int entries = (int) Bytes.readLength(in);
-            if (collectMetrics) {
-                metrics.updatePageSize(entries);
+            TreePage decode;
+            if (isSparse) {
+                DataInputStream dis = new DataInputStream(in);
+                int entries = Varint.readUnsignedVarInt(dis);
+                if (collectMetrics) {
+                    metrics.updatePageSize(entries);
+                }
+                int count = entries;
+
+                K firstKey = keyCoder.keyDecode(Bytes.readBytes(in, Varint.readUnsignedVarInt(dis)));
+                int nextFirstKeyLength = Varint.readUnsignedVarInt(dis);
+                K nextFirstKey = null;
+                if (nextFirstKeyLength > 0) {
+                    nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in, nextFirstKeyLength));
+                }
+                decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
+                while (count-- > 0) {
+                    byte kb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                    byte vb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                    K key = keyCoder.keyDecode(kb);
+                    decode.map.put(key, new PageValue(vb, KeyCoder.ENCODE_TYPE.SPARSE));
+                }
+
+            } else {
+                int entries = (int) Bytes.readLength(in);
+                if (collectMetrics) {
+                    metrics.updatePageSize(entries);
+                }
+                K firstKey = keyCoder.keyDecode(Bytes.readBytes(in));
+                K nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in));
+                decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
+                while (entries-- > 0) {
+                    byte kb[] = Bytes.readBytes(in);
+                    byte vb[] = Bytes.readBytes(in);
+                    K key = keyCoder.keyDecode(kb);
+                    decode.map.put(key, new PageValue(vb, KeyCoder.ENCODE_TYPE.LEGACY));
+                }
+                //ignoring memory data
+                in.close();
+                if (log.isDebugEnabled()) {
+                    log.debug("decoded " + decode);
+                }
+                decode.originalByteSize = page.length;
             }
-            K firstKey = keyCoder.keyDecode(Bytes.readBytes(in));
-            K nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in));
-            TreePage decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
-            while (entries-- > 0) {
-                byte kb[] = Bytes.readBytes(in);
-                byte vb[] = Bytes.readBytes(in);
-                K key = keyCoder.keyDecode(kb);
-                decode.map.put(key, new PageValue(vb));
-            }
-            //ignoring memory data
-            in.close();
-            if (log.isDebugEnabled()) {
-                log.debug("decoded " + decode);
-            }
-            decode.originalByteSize = page.length;
+
             return decode;
         } catch (RuntimeException ex) {
             throw ex;
@@ -238,9 +269,11 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         private V value;
         private byte[] raw;
         private volatile V realValue;
+        private KeyCoder.ENCODE_TYPE encodeType;
 
-        PageValue(byte[] raw) {
+        PageValue(byte[] raw, KeyCoder.ENCODE_TYPE encodeType) {
             this.raw = raw;
+            this.encodeType = encodeType;
         }
 
         @Override
@@ -254,7 +287,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                 if (realValue != null) {
                     value = realValue;
                 } else if (r != null) {
-                    realValue = keyCoder.valueDecode(r);
+                    realValue = keyCoder.valueDecode(r, encodeType);
                     value = realValue;
                     raw = null;
                 }

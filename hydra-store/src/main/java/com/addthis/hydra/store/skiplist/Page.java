@@ -101,12 +101,15 @@ final class Page<K, V extends Codec.BytesCodable> {
     @GuardedBy("lock")
     private int memoryEstimate;
 
+    @GuardedBy("lock")
+    private KeyCoder.ENCODE_TYPE encodeType;
+
     private static final int FLAGS_IS_SPARSE = 1 << 5;
     private static final int FLAGS_HAS_ESTIMATES = 1 << 4;
 
     private final KeyCoder<K, V> keyCoder;
 
-    private Page(SkipListCache<K, V> cache, K firstKey, K nextFirstKey) {
+    private Page(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, KeyCoder.ENCODE_TYPE encodeType) {
         this.parent = cache;
         this.keyCoder = parent != null ? parent.keyCoder : null;
         this.firstKey = firstKey;
@@ -114,11 +117,12 @@ final class Page<K, V extends Codec.BytesCodable> {
         this.lock = new ReentrantReadWriteLock();
         this.timeStamp = SkipListCache.generateTimestamp();
         this.state = ExternalMode.DISK_MEMORY_IDENTICAL;
+        this.encodeType = encodeType;
     }
 
     public Page(SkipListCache<K, V> cache, K firstKey,
             K nextFirstKey, int size, ArrayList<K> keys, ArrayList<V> values,
-            ArrayList<byte[]> rawValues) {
+            ArrayList<byte[]> rawValues, KeyCoder.ENCODE_TYPE encodeType) {
         assert (keys != null);
         assert (values != null);
         assert (rawValues != null);
@@ -138,28 +142,30 @@ final class Page<K, V extends Codec.BytesCodable> {
         this.lock = new ReentrantReadWriteLock();
         this.timeStamp = SkipListCache.generateTimestamp();
         this.state = ExternalMode.DISK_MEMORY_IDENTICAL;
+        this.encodeType = encodeType;
     }
 
     public static <K, V extends Codec.BytesCodable> Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
             K firstKey, K nextFirstKey) {
-        return new Page<>(cache, firstKey, nextFirstKey);
+        return new Page<>(cache, firstKey, nextFirstKey, KeyCoder.ENCODE_TYPE.SPARSE);
     }
 
     public static <K, V extends Codec.BytesCodable> Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
             K firstKey) {
-        return new Page<>(cache, firstKey, null);
+        return new Page<>(cache, firstKey, null, KeyCoder.ENCODE_TYPE.SPARSE);
     }
 
     public static <K, V extends Codec.BytesCodable> Page<K, V> measureMemoryEmptyPage() {
-        return new Page<>(null, null, null);
+        return new Page<>(null, null, null, KeyCoder.ENCODE_TYPE.SPARSE);
     }
 
     public static <K, V extends Codec.BytesCodable> Page<K, V> generateSiblingPage(SkipListCache<K, V> cache,
             K firstKey, K nextFirstKey,
             int size, ArrayList<K> keys,
             ArrayList<V> values,
-            ArrayList<byte[]> rawValues) {
-        return new Page<>(cache, firstKey, nextFirstKey, size, keys, values, rawValues);
+            ArrayList<byte[]> rawValues,
+            KeyCoder.ENCODE_TYPE encodeType) {
+        return new Page<>(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
     }
 
     /**
@@ -238,7 +244,7 @@ final class Page<K, V extends Codec.BytesCodable> {
                 byte[] rawVal = rawValues.get(i);
 
                 if (rawVal == null) {
-                    rawVal = keyCoder.valueEncode(values.get(i));
+                    rawVal = keyCoder.valueEncode(values.get(i), KeyCoder.ENCODE_TYPE.SPARSE);
                 }
 
                 updateHistogram(metrics.encodeKeySize, keyEncoded.length, record);
@@ -308,6 +314,7 @@ final class Page<K, V extends Codec.BytesCodable> {
             K firstKey;
             byte[] nextFirstKey;
             if (isSparse) {
+                encodeType = KeyCoder.ENCODE_TYPE.SPARSE;
                 DataInputStream dis = new DataInputStream(in);
                 int entries = Varint.readUnsignedVarInt(dis);
 
@@ -344,6 +351,7 @@ final class Page<K, V extends Codec.BytesCodable> {
                     setAverage(bytes * estimateMissingFactor, entries);
                 }
             } else {
+                encodeType = KeyCoder.ENCODE_TYPE.LEGACY;
                 int entries = (int) Bytes.readLength(in);
 
                 firstKey = keyCoder.keyDecode(Bytes.readBytes(in));
@@ -412,7 +420,7 @@ final class Page<K, V extends Codec.BytesCodable> {
             switch (memEstimationStrategy) {
                 case 0:
                     /** use encoded byte size as crude proxy for mem size */
-                    updateAverage((keyCoder.keyEncode(key).length + keyCoder.valueEncode(val).length), count);
+                    updateAverage((keyCoder.keyEncode(key).length + keyCoder.valueEncode(val, KeyCoder.ENCODE_TYPE.SPARSE).length), count);
                     break;
                 case 1:
                     /** walk objects and estimate.  possibly slower and not demonstrably more accurate */
@@ -544,7 +552,7 @@ final class Page<K, V extends Codec.BytesCodable> {
         V value = values.get(position);
         byte[] rawValue = rawValues.get(position);
         if (value == null) {
-            values.set(position, keyCoder.valueDecode(rawValue));
+            values.set(position, keyCoder.valueDecode(rawValue, encodeType));
         }
     }
 
@@ -565,6 +573,14 @@ final class Page<K, V extends Codec.BytesCodable> {
 
     public boolean inTransientState() {
         return state.isTransient();
+    }
+
+    public KeyCoder.ENCODE_TYPE getEncodeType() {
+        return encodeType;
+    }
+
+    public void setEncodeType(KeyCoder.ENCODE_TYPE encodeType) {
+        this.encodeType = encodeType;
     }
 }
 
