@@ -138,7 +138,7 @@ public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
 
     @Override
     public V get(DBKey key) {
-        return eps.getValue(key);
+            return eps.getValue(key);
     }
 
     @Override

@@ -785,7 +785,6 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
 
         Page<K, V> sibling = Page.generateSiblingPage(SkipListCache.this,
                 sibMinKey, target.nextFirstKey, sibSize, sibKeys, sibValues, sibRawValues, target.getEncodeType());
-
         sibling.writeLock();
 
         byte[] encodeKey;
