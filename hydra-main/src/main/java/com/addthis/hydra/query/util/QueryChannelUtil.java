@@ -38,7 +38,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.channel.BlockingBufferedConsumer;
 import com.addthis.hydra.data.channel.BlockingNullConsumer;
 import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.data.query.QueryEngine;
+import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.data.query.channel.QueryChannelClient;
 import com.addthis.hydra.data.query.channel.QueryChannelClientX;

@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.data.query.QueryEngineCache;
+import com.addthis.hydra.data.query.engine.QueryEngineCache;
 import com.addthis.meshy.LocalFileHandler;
 import com.addthis.meshy.VirtualFileFilter;
 import com.addthis.meshy.VirtualFileReference;

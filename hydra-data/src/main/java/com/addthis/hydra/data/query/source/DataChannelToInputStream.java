@@ -55,7 +55,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     private final ByteArrayOutputStream out;
     /**
      * A wrapper for a boolean flag that gets set if close is called. This observer object will be passed all
-     * the way down to {@link com.addthis.hydra.data.query.QueryEngine#tableSearch(java.util.LinkedList, com.addthis.hydra.data.tree.DataTreeNode, com.addthis.hydra.data.query.FieldValueList, com.addthis.hydra.data.query.QueryElement[], int, com.addthis.bundle.channel.DataChannelOutput, int, com.addthis.hydra.data.query.QueryStatusObserver)}.
+     * the way down to {@link com.addthis.hydra.data.query.engine.QueryEngine#tableSearch(java.util.LinkedList, com.addthis.hydra.data.tree.DataTreeNode, com.addthis.hydra.data.query.FieldValueList, com.addthis.hydra.data.query.QueryElement[], int, com.addthis.bundle.channel.DataChannelOutput, int, com.addthis.hydra.data.query.QueryStatusObserver)}.
      */
     public QueryStatusObserver queryStatusObserver = new QueryStatusObserver();
     private int rows = 0;
@@ -179,7 +179,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     public void send(List<Bundle> bundles) {
         // Just in case the list was empty, we check if the channel is closed here
         if (isClosed()) {
-            log.warn("Unable ot send bundles due to closed channel");
+            log.warn("Unable to send bundles due to closed channel");
         }
         for (Bundle bundle : bundles) {
             send(bundle);
@@ -195,7 +195,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     @Override
     public void send(Bundle bundle) throws DataChannelError {
         if (isClosed()) {
-            log.warn("Unable ot send bundles due to closed channel");
+            log.warn("Unable to send bundles due to closed channel");
         }
         try {
             synchronized (out) {
@@ -218,7 +218,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     @Override
     public void sendComplete() {
         if (isClosed()) {
-            log.warn("Unable ot send complete due to closed channel");
+            log.warn("Unable to send complete due to closed channel");
         }
         synchronized (out) {
             out.write(FramedDataChannelReader.FRAME_EOF);
@@ -235,7 +235,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     @Override
     public void sourceError(DataChannelError er) {
         if (isClosed()) {
-            log.warn("Unable ot send source error due to closed channel", er);
+            log.warn("Unable to send source error due to closed channel", er);
         }
         try {
             // if we know writer is closed, don't try to write to it.

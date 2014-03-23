@@ -66,10 +66,10 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
 
     /**
      * Options for data layout within the output files.
-     * This field is required.
+     * The default is type "channel".
      */
-    @Codec.Set(codable = true, required = true)
-    protected OutputStreamFormatter format;
+    @Codec.Set(codable = true)
+    protected OutputStreamFormatter format = new OutputStreamChannel();
 
     /**
      * Maximum number of bundles that can be stored

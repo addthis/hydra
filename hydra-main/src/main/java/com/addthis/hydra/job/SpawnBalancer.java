@@ -1151,6 +1151,9 @@ public class SpawnBalancer implements Codec.Codable {
         if (host == null || (!isReplica && host.isReadOnly())) {
             return false;
         }
+        if (spawn.getHostFailWorker().getFailureState(host.getHostUuid()) != HostFailWorker.FailState.ALIVE) {
+            return false;
+        }
         return host.canMirrorTasks() && getUsedDiskPercent(host) < 1 - config.getMinDiskPercentAvailToReceiveNewTasks();
     }
 
@@ -1508,7 +1511,7 @@ public class SpawnBalancer implements Codec.Codable {
                 spawn.updateJob(spawn.getJob(jobId));
             } catch (Exception e) {
                 log.warn("Warning: failed to update job " + jobId + ": " + e, e);
-                }
+            }
         }
     }
 

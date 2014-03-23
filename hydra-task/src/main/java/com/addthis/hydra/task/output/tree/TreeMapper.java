@@ -61,7 +61,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.data.query.QueryEngine;
+import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.channel.QueryChannelServer;
 import com.addthis.hydra.data.query.source.LiveMeshyServer;
@@ -78,7 +78,6 @@ import com.addthis.hydra.task.output.DataOutputTypeList;
 import com.addthis.hydra.task.output.tree.TreeMapperStats.Snapshot;
 import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.meshy.MeshyServer;
-import com.addthis.meshy.VirtualFileSystem;
 
 import org.apache.commons.lang3.CharEncoding;
 

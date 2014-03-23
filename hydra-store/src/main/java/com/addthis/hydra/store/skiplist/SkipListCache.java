@@ -310,7 +310,6 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
          * TRYLOCK_FAIL implies we optimistically attempted to call writeTryLock() and failed.
          * DELETION_SCHEDULED implies the page has 0 entries. This page will either
          * move into a transient state or new keys will be inserted into the page.
-         * LARGE_PAGE indicates the page is large enough to split.
          */
         boolean needsAdditionalProcessing() {
             return this == NO_STATUS || this == TRYLOCK_FAIL ||

@@ -1593,10 +1593,19 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             if (file != null && file.exists()) {
                 File tmpLocation = new File(file.getParent(), "BAD-" + System.currentTimeMillis());
                 if (file.renameTo(tmpLocation)) {
-                    minionTaskDeleter.submitPathToDelete(tmpLocation.getPath());
+                    submitPathToDelete(tmpLocation.getPath());
                 } else {
                     throw new RuntimeException("Could not rename file for asynchronous deletion: " + file);
                 }
+            }
+        }
+
+        private void submitPathToDelete(String path) {
+            minionStateLock.lock();
+            try {
+                minionTaskDeleter.submitPathToDelete(path);
+            } finally {
+                minionStateLock.unlock();
             }
         }
 
@@ -1826,7 +1835,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 shell(echoWithDate_cmd + msg + " >> " + logErr.getCanonicalPath(), rootDir);
                 return;
             }
-            sendStatusMessage(new StatusTaskReplicate(uuid, id, node));
+            sendStatusMessage(new StatusTaskReplicate(uuid, id, node, replicateAllBackups));
             try {
                 jobDir = Files.initDirectory(new File(rootDir, id + File.separator + node + File.separator + "live"));
                 log.warn("[task.execReplicate] replicating " + jobDir.getPath());
@@ -2004,7 +2013,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 sendStatusMessage(new StatusTaskBegin(uuid, id, node));
                 return false;
             } else if (isReplicating()) {
-                sendStatusMessage(new StatusTaskReplicate(uuid, id, node));
+                sendStatusMessage(new StatusTaskReplicate(uuid, id, node, false));
                 return false;
             } else if (isBackingUp()) {
                 sendStatusMessage(new StatusTaskBackup(uuid, id, node));
@@ -2787,7 +2796,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
     }
 
     private static Integer findActiveRsync(String id, int node) {
-        return findActiveProcessWithTokens(new String[]{id + "/" + node + "/", rsyncCommand}, new String[]{"gold"});
+        return findActiveProcessWithTokens(new String[]{id + "/" + node + "/", rsyncCommand}, new String[]{});
     }
 
     private static Integer findActiveProcessWithTokens(String[] requireTokens, String[] omitTokens) {

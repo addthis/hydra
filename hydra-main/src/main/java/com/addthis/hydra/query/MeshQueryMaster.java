@@ -37,6 +37,7 @@ import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
+import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.data.query.source.ErrorHandlingQuerySource;
 import com.addthis.hydra.data.query.source.QueryHandle;
@@ -224,6 +225,8 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
     @Override
     public QueryHandle query(Query query, DataChannelOutput consumer) throws QueryException {
         try {
+            String[] opsLog = query.getOps();   // being able to log and monitor rops is kind of important
+
             /* creates query for worker and updates local query ops */
             Query remoteQuery = query.createPipelinedQuery();
 
@@ -237,7 +240,8 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
             query.setTraced((enableZooKeeper && queryConfigWatcher.shouldTrace(query.getJob())) || query.isTraced());
 
             /** create a processor chain based in query ops terminating in provided consumer */
-            consumer = query.getProcessor(consumer, new QueryStatusObserver());
+            QueryOpProcessor wrappedConsumer = query.getProcessor(consumer, new QueryStatusObserver());
+            query.queryStatusObserver = wrappedConsumer.getQueryStatusObserver();
 
             Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap;
             try {
@@ -300,7 +304,8 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
                 sourceMap.put(entry.getKey(), queryDataSet);
             }
             MeshSourceAggregator aggregator = new MeshSourceAggregator(sourceMap, new ConcurrentHashMap<>(hostMap), this);
-            QueryHandle handle = tracker.runAndTrackQuery(aggregator, potentialQueryDataList, query, consumer);
+            QueryHandle handle = tracker.runAndTrackQuery(aggregator, potentialQueryDataList,
+                    query, wrappedConsumer, opsLog);
             if (enableZooKeeper) {
                 jobFailureDetector.indicateSuccess(query.getParameter("job", query.getJob()));
             }

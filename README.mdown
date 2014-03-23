@@ -14,6 +14,21 @@ if terabytes per day is your cup of tea run a Hydra Cluster that
 supports your job with resource sharing, job management, distributed
 backups, data partitioning, and efficient bulk file transfer.
 
+## Documentation and References
+
+[The Hydra Documentation Page](http://oss-docs.addthiscode.net/hydra/latest/user-guide/index.html)
+contains concepts, tutorials, guides, and the web api.
+
+[The Hydra User Reference](http://oss-docs.clearspring.com/hydra/latest/user-reference/)
+is built automatically from the source code and contains reference material
+on hydra's configurable job components.
+
+[Getting Started With Hydra](https://www.addthis.com/blog/2014/02/18/getting-started-with-hydra)
+is a blog post that contains a nice self-contained introduction to hydra processing.
+
+[AddThis Java Code Style](http://oss-docs.addthiscode.net/hydra/latest/user-guide/guide/standards.html)
+is the code style that hydra tries to adhere to.
+
 ## Building
 
 Assuming you have [Apache Maven](http://maven.apache.org/) installed

@@ -14,6 +14,7 @@
 package com.addthis.hydra.query;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
@@ -184,18 +185,13 @@ public class QueryTracker {
     }
 
     public QueryHandle runAndTrackQuery(QuerySource source, Collection<QueryData> queryDataCollection,
-            Query query, DataChannelOutput consumer) throws QueryException {
+            Query query, QueryOpProcessor consumer, String[] opsLog) throws QueryException {
         if (queuedCounter.count() > MAX_QUEUED_QUERIES) {
             // server overloaded, reject query to prevent OOM
             throw new QueryException("Unable to handle query: " + query.uuid() + ". Queue size exceeds max value: " + MAX_QUEUED_QUERIES);
         }
         calls.inc();
-        QueryOpProcessor queryOpProcessor = null;
-        if (consumer instanceof QueryOpProcessor) {
-            queryOpProcessor = (QueryOpProcessor) consumer;
-            query.queryStatusObserver = queryOpProcessor.getQueryStatusObserver();
-        }
-        QueryEntry entry = new QueryEntry(query, queryOpProcessor);
+        QueryEntry entry = new QueryEntry(query, consumer, opsLog);
 
         if (MAX_CONCURRENT_QUERIES > 0 && !acquireQueryGate(query, entry)) {
             throw new QueryException("Timed out waiting for queryGate.  Timeout was: " + MAX_QUERY_GATE_WAIT_TIME + " seconds");
@@ -258,15 +254,17 @@ public class QueryTracker {
         private final String queryDetails;
         // Stores a reference to the queryopprocessor, which will be used in case the query gets closed
         private final QueryOpProcessor queryOpProcessor;
+        private final String[] opsLog;
 
         private volatile long runTime;
         private volatile long startTime;
         private volatile QueryHandle queryHandle;
 
 
-        QueryEntry(Query query, QueryOpProcessor queryOpProcessor) {
+        QueryEntry(Query query, QueryOpProcessor queryOpProcessor, String[] opsLog) {
             this.query = query;
             this.queryOpProcessor = queryOpProcessor;
+            this.opsLog = opsLog;
             this.lines = new AtomicInteger();
             this.queryDetails = query.getJob() + "--" +
                                 (query.getOps() == null ? "" : query.getOps());
@@ -289,7 +287,7 @@ public class QueryTracker {
             QueryEntryInfo stat = new QueryEntryInfo();
             stat.paths = query.getPaths();
             stat.uuid = query.uuid();
-            stat.ops = query.getOps();
+            stat.ops = opsLog;
             stat.job = query.getJob();
             stat.alias = query.getParameter("track.alias");
             stat.sources = query.getParameter("sources");
@@ -365,7 +363,7 @@ public class QueryTracker {
                     log(new StringMapHelper()
                             .put("type", "query.error")
                             .put("query.path", query.getPaths()[0])
-                            .put("query.ops", query.getOps())
+                            .put("query.ops", Arrays.toString(opsLog))
                             .put("sources", query.getParameter("sources"))
                             .put("time", System.currentTimeMillis())
                             .put("time.run", runTime)
@@ -384,7 +382,7 @@ public class QueryTracker {
                 StringMapHelper queryLine = new StringMapHelper()
                         .put("type", "query.done")
                         .put("query.path", query.getPaths()[0])
-                        .put("query.ops", query.getOps())
+                        .put("query.ops", Arrays.toString(opsLog))
                         .put("sources", query.getParameter("sources"))
                         .put("time", System.currentTimeMillis())
                         .put("time.run", runTime)

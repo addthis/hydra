@@ -11,40 +11,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.query;
+package com.addthis.hydra.data.query.engine;
 
-import java.io.File;
-
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.data.tree.DataTree;
-import com.addthis.hydra.data.tree.ReadTree;
-
 import com.google.common.base.Objects;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.cache.RemovalListener;
-import com.google.common.cache.RemovalNotification;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListenableFutureTask;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.SettableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Counter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * This class implements an LRU cache to keep our QueryEngines. It is instantiated only from MeshQuerySource.
  * <p/>
@@ -74,7 +57,7 @@ public class QueryEngineCache {
      * 'soft cap' on the number of engines to have open. this + concurrent queries +/- a few should closely
      * resemble the real cap on open engines
      */
-    private static final int engineCacheSize = Parameter.intValue("queryEngineCache.engineCacheSize", 5);
+    private static final long DEFAULT_ENGINE_CACHE_SIZE = Parameter.longValue("queryEngineCache.engineCacheSize", 5);
 
     /**
      * seconds to let an engine be in cache before attempting to refresh it. Refreshing it means checking whether
@@ -82,54 +65,23 @@ public class QueryEngineCache {
      * directory. It is important to note that this scheduled refresh is not checked unless a get is called on it,
      * and that even if the refresh returns the old engine, it resets the fail timer.
      */
-    private static final int refreshInterval = Parameter.intValue("queryEngineCache.refreshInterval", 2 * 60);
+    private static final long DEFAULT_REFRESH_INTERVAL = Parameter.longValue("queryEngineCache.refreshInterval", 2 * 60);
 
     /**
-     * seconds in between cache maintenance runs. This helps query sources and jobs in lower throughput environments.
+     * seconds in between cache malongenance runs. This helps query sources and jobs in lower throughput environments.
      * It does the guava api clean up method which handles any pending expiration events, and also attempts to provoke
      * refresh attempts on cached keys by calling get on them. The latter is more important for our purposes. Without it,
-     * relatively idle engines would become stale or subject to undesired eviction by the fail interval. 0 disables it.
+     * relatively idle engines would become stale or subject to undesired eviction by the fail longerval. 0 disables it.
      */
-    private static final int maintenanceInterval = Parameter.intValue("queryEngineCache.maintenanceInterval", 20 * 60);
+    private static final long DEFAULT_MAINTENANCE_INTERVAL = Parameter.longValue("queryEngineCache.maintenanceInterval", 20 * 60);
 
     /**
-     * seconds to let an engine be in cache after the most recent write. This is intended only for situations
+     * seconds to let an engine be in cache after the most recent write. This is longended only for situations
      * where re-opening that engine is failing, and thus while the refresh is not occuring. it might appear that
      * an engine is alive and up to date and this attempts to limit that disparity if desired. Note that by failing,
      * we mean that the refresh method is throwing exceptions.
      */
-    private static final int failInterval = Parameter.intValue("queryEngineCache.failInterval", 70 * 60);
-
-    /**
-     * metric to track the number of engines opened. Should be an aggregate of new and refresh'd
-     */
-    protected static final Counter enginesOpened = Metrics.newCounter(QueryEngineCache.class, "enginesOpened");
-    /**
-     * metric to track the number of engines refreshed
-     */
-    protected static final Counter enginesRefreshed = Metrics.newCounter(QueryEngineCache.class, "enginesRefreshed");
-    /**
-     * metric to track the number of 'new' engines opened
-     */
-    protected static final Counter newEnginesOpened = Metrics.newCounter(QueryEngineCache.class, "newEnginesOpened");
-
-    /**
-     * thread pool for refreshing engines. the max size of the pool tunes how many engine refreshes are allowed to
-     * occur concurrently. by limiting this amount, we reduce its ability to interfere with opening new engines.
-     * since new engines are actually blocking queries, they are more important.
-     */
-    private static final int maxRefreshThreads = Parameter.intValue("queryEngineCache.maxRefreshThreads", 1);
-
-    /**
-     * try to load all tree nodes from the old engine's cache before completing an engine refresh. Provokes a lot of
-     * activity and hopefully helpful cache initialization from the new page cache.
-     */
-    private static final boolean warmOnRefresh = Parameter.boolValue("queryEngineCache.warmOnRefresh", true);
-
-    private final ExecutorService engineRefresherPool = MoreExecutors
-            .getExitingExecutorService(new ThreadPoolExecutor(1, maxRefreshThreads, 5000L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(),
-                    new ThreadFactoryBuilder().setNameFormat("engineRefresher-%d").build()));
+    private static final long DEFAULT_FAIL_INTERVAL = Parameter.longValue("queryEngineCache.failInterval", 70 * 60);
 
     /**
      * thread pool for cache maintenance runs. Should only need one thread.
@@ -142,7 +94,12 @@ public class QueryEngineCache {
      * The {@link LoadingCache} that provides the backing data structure for this class.
      * Acts like an intelligent semi-persistent Map that has logic for loading and reloading complex objects.
      */
-    private final LoadingCache<String, QueryEngine> loadingEngineCache;
+    protected final LoadingCache<String, QueryEngine> loadingEngineCache;
+
+    private final long engineCacheSize;
+    private final long refreshInterval;
+    private final long failInterval;
+    private final long maintenanceInterval;
 
     /**
      * Initialize a {@link LoadingCache} that is capable of loading and reloading
@@ -158,66 +115,34 @@ public class QueryEngineCache {
      * available to new get calls. This meets our requirements.
      */
     public QueryEngineCache() {
-        this(engineCacheSize, refreshInterval, failInterval);
+        this(DEFAULT_ENGINE_CACHE_SIZE, DEFAULT_REFRESH_INTERVAL, DEFAULT_FAIL_INTERVAL, DEFAULT_MAINTENANCE_INTERVAL);
     }
 
-    public QueryEngineCache(int engineCacheSize, int refreshInterval, int failInterval) {
-        log.warn("Initializing QueryEngineCache: " + this);
+    public QueryEngineCache(long engineCacheSize, long refreshInterval, long failInterval, long maintenanceInterval) {
+        this(engineCacheSize, refreshInterval, failInterval, maintenanceInterval, new EngineLoader());
+    }
+
+    public QueryEngineCache(long engineCacheSize, long refreshInterval, long failInterval, long maintenanceInterval,
+            EngineLoader engineLoader) {
+        this.engineCacheSize = engineCacheSize;
+        this.refreshInterval = refreshInterval;
+        this.failInterval = failInterval;
+        this.maintenanceInterval = maintenanceInterval;
+
+        log.info("Initializing QueryEngineCache: {}", this); //using 'this' is just more efficient
+
+        // no easy way around escaping 'this' here, but at least it is more obvious what is going on now
         loadingEngineCache = CacheBuilder.newBuilder()
                 .maximumSize(engineCacheSize)
                 .refreshAfterWrite(refreshInterval, TimeUnit.SECONDS)
                 .expireAfterWrite(failInterval, TimeUnit.SECONDS)
-                .removalListener(
-                        new RemovalListener<String, QueryEngine>() {
-                            public void onRemoval(RemovalNotification<String, QueryEngine> note) {
-                                QueryEngine qe = note.getValue();
-                                // a refresh call that returns the current value can generate spurious events
-                                if (loadingEngineCache.asMap().get(note.getKey()) != qe) {
-                                    qe.closeWhenIdle();
-                                }
-                            }
-                        }
-                )
-                .build(
-                        new CacheLoader<String, QueryEngine>() {
-                            public QueryEngine load(String dir) throws Exception {
-                                QueryEngine qe = createEngine(dir);
-                                newEnginesOpened.inc();
-                                return qe;
-                            }
+                .removalListener(new EngineRemovalListener(this))
+                .build(engineLoader);
 
-                            @Override
-                            public ListenableFuture<QueryEngine> reload(final String dir, final QueryEngine oldValue) throws Exception {
-                                if (((QueryEngineDirectory) oldValue).isOlder(dir)) //test for new data
-                                {
-                                    ListenableFutureTask<QueryEngine> task = ListenableFutureTask.create(new Callable<QueryEngine>() {
-                                        @Override
-                                        public QueryEngine call() throws Exception {
-                                            QueryEngine qe = createEngine(dir);
-                                            if (warmOnRefresh) {
-                                                try {
-                                                    ((QueryEngineDirectory) qe).loadAllFrom((QueryEngineDirectory) oldValue);
-                                                } catch (Exception e) //should either swallow if recoverable or close and rethrow if not
-                                                {
-                                                    e.printStackTrace(); //can't think of any reason it wouldn't be recoverable
-                                                }
-                                            }
-                                            enginesRefreshed.inc();
-                                            return qe;
-                                        }
-                                    });
-                                    engineRefresherPool.submit(task);
-                                    return task;
-                                } else {
-                                    SettableFuture<QueryEngine> task = SettableFuture.create();
-                                    task.set(oldValue);
-                                    return task;
-                                }
-                            }
-                        });
         //schedule maintenance runs
         maybeInitMaintenance();
     }
+
 
     /**
      * schedules maintenance for the cache using the maintenanceInterval parameter. Values less than 1
@@ -273,30 +198,8 @@ public class QueryEngineCache {
                 return qe;
             }
         }
-        log.warn("Tried three times but unable to get lease for engine with path: " + directoryPath);
+        log.warn("Tried three times but unable to get lease for engine with path: {}", directoryPath);
         throw new RuntimeException("Can't lease engine");
-    }
-
-    /**
-     * Creates engines for the cacheLoader and is called by load and reload to be the backend of get/refresh.
-     * Takes an unresolved directory, resolves it, creates an engine with the resolved directory, and returns it.
-     * If for any reason, it fails to create an engine, it throws an exception and attempts to close the tree/bdb if needed
-     *
-     * @param dir - Directory to open engine for -- may be (and usually is) an unresolved path with symlinks
-     * @return QueryEngine for that directory
-     * @throws Exception - any problem while making the engine
-     */
-    protected QueryEngine createEngine(String dir) throws Exception {
-        String canonicalDirString = new File(dir).getCanonicalPath();
-
-        DataTree tree = new ReadTree(new File(canonicalDirString));
-        enginesOpened.inc(); //Metric for total trees/engines initialized
-        try {
-            return new QueryEngineDirectory(tree, canonicalDirString);
-        } catch (Exception e) {
-            tree.close();
-            throw e;
-        }
     }
 
     @Override
@@ -306,14 +209,7 @@ public class QueryEngineCache {
                 .add("refreshInterval", refreshInterval)
                 .add("maintenanceInterval", maintenanceInterval)
                 .add("failInterval", failInterval)
-                .add("maxRefreshThreads", maxRefreshThreads)
-                .add("warmOnRefresh", warmOnRefresh)
-                .add("enginesOpened", enginesOpened.count())
-                .add("enginesRefreshed", enginesRefreshed.count())
-                .add("newEnginesOpened", newEnginesOpened.count())
-                .add("engineRefresherPool", engineRefresherPool)
-                .add("queryEngineCacheMaintainer", queryEngineCacheMaintainer)
-                .add("loadingEngineCache", loadingEngineCache)
                 .toString();
     }
+
 }

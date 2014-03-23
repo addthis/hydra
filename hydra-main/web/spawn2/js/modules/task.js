@@ -42,7 +42,8 @@ function(
         "DISK FULL",
         "SWAPPING",
         "QUEUED",
-        "MIGRATING"
+        "MIGRATING",
+        "FULL REPLICATE"
     ];
     var StateLabels=[
         "label-default",//idle
@@ -58,6 +59,7 @@ function(
         "label-info",//swapping
         "label-info",//queued
         "label-success",//migrating
+        "label-success",//full replicate
     ];
     var errorCodes={
 

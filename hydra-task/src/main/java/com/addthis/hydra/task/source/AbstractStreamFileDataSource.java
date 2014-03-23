@@ -118,6 +118,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
     /**
      * Specifies conversion to bundles.
+     * The default is type "channel".
      */
     @Codec.Set(codable = true)
     private BundleizerFactory format = new ChannelBundleizer();
