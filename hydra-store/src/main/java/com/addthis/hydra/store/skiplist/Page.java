@@ -189,19 +189,11 @@ final class Page<K, V extends Codec.BytesCodable> {
         }
     }
 
-    public byte[] encode(boolean record) {
-        return encode(new ByteBufOutputStream(ByteBufAllocator.DEFAULT.buffer()), record);
-    }
-
-    public byte[] encode() {
-        return encode(new ByteBufOutputStream(ByteBufAllocator.DEFAULT.buffer()), true);
-    }
-
     public byte[] encode(ByteBufOutputStream out) {
         return encode(out, true);
     }
 
-    private byte[] encode(ByteBufOutputStream out, boolean record) {
+    public byte[] encode(ByteBufOutputStream out, boolean record) {
         SkipListCacheMetrics metrics = parent.metrics;
         parent.numPagesEncoded.getAndIncrement();
         try {
@@ -274,14 +266,14 @@ final class Page<K, V extends Codec.BytesCodable> {
             dos.close();
 
             ByteBuf buffer = out.buffer();
+
             byte[] returnValue = new byte[out.writtenBytes()];
+
             buffer.readBytes(returnValue);
             buffer.clear();
             updateHistogram(metrics.numberKeysPerPage, size, record);
             updateHistogram(metrics.encodePageSize, returnValue.length, record);
             return returnValue;
-        } catch (RuntimeException ex) {
-            throw ex;
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }

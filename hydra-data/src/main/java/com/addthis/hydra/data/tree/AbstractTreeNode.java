@@ -5,6 +5,7 @@ import com.addthis.codec.CodecBin2;
 import com.addthis.hydra.store.util.Varint;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
 import java.nio.charset.Charset;
@@ -34,6 +35,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
         if (!encodeLock()) {
             throw new RuntimeException("Unable to acquire encoding lock");
         }
+        byte[] returnBytes;
         try {
             Varint.writeUnsignedVarLong(hits, b);
             Varint.writeUnsignedVarInt(nodes, b);
@@ -62,19 +64,20 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
                     b.writeBytes(bytes);
                 }
             }
+            returnBytes = new byte[b.readableBytes()];
+            b.readBytes(returnBytes);
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         } finally {
+            b.release();
             encodeUnlock();
         }
-        byte[] bytes = new byte[b.readableBytes()];
-        b.readBytes(bytes);
-        return bytes;
+        return returnBytes;
     }
 
     @Override
     public void bytesDecode(byte[] b) {
-        ByteBuf buf = Unpooled.copiedBuffer(b);
+        ByteBuf buf = Unpooled.wrappedBuffer(b);
         try {
             hits = Varint.readUnsignedVarLong(buf);
             nodes = Varint.readUnsignedVarInt(buf);
@@ -107,6 +110,8 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
             postDecode();
         } catch (Exception e) {
             throw new RuntimeException(e);
+        } finally {
+            buf.release();
         }
     }
 }
