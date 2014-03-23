@@ -73,6 +73,14 @@ public final class Varint {
         out.writeByte((int) value & 0x7F);
     }
 
+    public static void writeSignedVarLong(long value, ByteBuf out) {
+        while ((value & 0xFFFFFFFFFFFFFF80L) != 0L) {
+            out.writeByte(((int) value & 0x7F) | 0x80);
+            value >>>= 7;
+        }
+        out.writeByte((int) value & 0x7F);
+    }
+
     /**
      * Encodes a value using the variable-length encoding from
      * <a href="http://code.google.com/apis/protocolbuffers/docs/encoding.html">
@@ -84,7 +92,7 @@ public final class Varint {
      * @param buf   to write bytes to
      * @throws IOException if {@link DataOutput} throws {@link IOException}
      */
-    public static void writeUnsignedVarLong(long value, ByteBuf buf) throws IOException {
+    public static void writeUnsignedVarLong(long value, ByteBuf buf) {
         while ((value & 0xFFFFFFFFFFFFFF80L) != 0L) {
             buf.writeByte(((int) value & 0x7F) | 0x80);
             value >>>= 7;
@@ -114,7 +122,7 @@ public final class Varint {
     /**
      * @see #writeUnsignedVarLong(long, DataOutput)
      */
-    public static void writeUnsignedVarInt(int value, ByteBuf buf) throws IOException {
+    public static void writeUnsignedVarInt(int value, ByteBuf buf) {
         while ((value & 0xFFFFFF80) != 0L) {
             buf.writeByte((value & 0x7F) | 0x80);
             value >>>= 7;
@@ -131,6 +139,16 @@ public final class Varint {
      * @see #writeSignedVarLong(long, DataOutput)
      */
     public static long readSignedVarLong(DataInput in) throws IOException {
+        long raw = readUnsignedVarLong(in);
+        // This undoes the trick in writeSignedVarLong()
+        long temp = (((raw << 63) >> 63) ^ raw) >> 1;
+        // This extra step lets us deal with the largest signed values by treating
+        // negative results from read unsigned methods as like unsigned values
+        // Must re-flip the top bit if the original read value had it set.
+        return temp ^ (raw & (1L << 63));
+    }
+
+    public static long readSignedVarLong(ByteBuf in) {
         long raw = readUnsignedVarLong(in);
         // This undoes the trick in writeSignedVarLong()
         long temp = (((raw << 63) >> 63) ^ raw) >> 1;
@@ -168,7 +186,7 @@ public final class Varint {
      *                                  after 9 bytes have been read
      * @see #writeUnsignedVarLong(long, DataOutput)
      */
-    public static long readUnsignedVarLong(ByteBuf buf) throws IOException {
+    public static long readUnsignedVarLong(ByteBuf buf) {
         long value = 0L;
         int i = 0;
         long b;
@@ -221,7 +239,7 @@ public final class Varint {
      * @throws IOException              if {@link DataInput} throws {@link IOException}
      * @see #readUnsignedVarLong(DataInput)
      */
-    public static int readUnsignedVarInt(ByteBuf buf) throws IOException {
+    public static int readUnsignedVarInt(ByteBuf buf) {
         int value = 0;
         int i = 0;
         int b;
@@ -232,5 +250,4 @@ public final class Varint {
         }
         return value | (b << i);
     }
-
 }

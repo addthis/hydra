@@ -31,6 +31,10 @@ import com.addthis.hydra.data.tree.ReadTreeNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.util.ConcurrentKeyTopper;
+import com.addthis.hydra.store.util.Varint;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec.Codable {
 
@@ -271,5 +275,34 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
             list.add(new VirtualTreeNode(s.getKey(), s.getValue()));
         }
         return list;
+    }
+
+    @Override
+    public byte[] bytesEncode() {
+        ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
+        byte[] topBytes = top.bytesEncode();
+        Varint.writeUnsignedVarInt(topBytes.length, buf);
+        buf.writeBytes(topBytes);
+        Varint.writeUnsignedVarInt(size, buf);
+        byte[] bytes = new byte[buf.readableBytes()];
+        buf.readBytes(bytes);
+        buf.release();
+        return bytes;
+    }
+
+    @Override
+    public void bytesDecode(byte[] b) {
+        ByteBuf buf = Unpooled.wrappedBuffer(b);
+        top = new ConcurrentKeyTopper();
+        int topBytesLength = Varint.readUnsignedVarInt(buf);
+        if (topBytesLength > 0) {
+            byte[] topBytes = new byte[topBytesLength];
+            buf.readBytes(topBytes);
+            top.bytesDecode(topBytes);
+        } else {
+            top.init();
+        }
+        size = Varint.readUnsignedVarInt(buf);
+        buf.release();
     }
 }
