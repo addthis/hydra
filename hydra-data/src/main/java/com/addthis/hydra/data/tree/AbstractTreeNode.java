@@ -53,14 +53,14 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
                 for (Map.Entry<String, TreeNodeData> entry : data.entrySet()) {
 
                     byte[] keyBytes = entry.getKey().getBytes(Charset.forName("UTF-8"));
-                    Varint.writeUnsignedVarLong(keyBytes.length, b);
+                    Varint.writeUnsignedVarInt(keyBytes.length, b);
                     b.writeBytes(keyBytes);
                     String classInfo = CodecBin2.getClassFieldMap(entry.getValue().getClass()).getClassName(entry.getValue());
                     byte[] classNameBytes = classInfo.getBytes(Charset.forName("UTF-8"));
-                    Varint.writeUnsignedVarLong(classNameBytes.length, b);
+                    Varint.writeUnsignedVarInt(classNameBytes.length, b);
                     b.writeBytes(classNameBytes);
-                    byte[] bytes = CodecBin2.encodeBytes(entry.getValue());
-                    Varint.writeUnsignedVarLong(bytes.length, b);
+                    byte[] bytes = entry.getValue().bytesEncode();
+                    Varint.writeUnsignedVarInt(bytes.length, b);
                     b.writeBytes(bytes);
                 }
             }
@@ -99,9 +99,9 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
                     String key = new String(buf.readBytes(kl).array(), Charset.forName("UTF-8"));
                     int cl = Varint.readUnsignedVarInt(buf);
                     String className = new String(buf.readBytes(cl).array(), Charset.forName("UTF-8"));
-                    Class<?> vc = CodecBin2.getClassFieldMap(TreeNodeData.class).getClass(className);
+                    TreeNodeData tn = (TreeNodeData) CodecBin2.getClassFieldMap(TreeNodeData.class).getClass(className).newInstance();
                     int vl = Varint.readUnsignedVarInt(buf);
-                    TreeNodeData tn = (TreeNodeData) CodecBin2.decodeBytes(vc.newInstance(), buf.readBytes(vl).array());
+                    tn.bytesDecode(buf.readBytes(vl).array());
                     dataMap.put(key, tn);
 
                 }
