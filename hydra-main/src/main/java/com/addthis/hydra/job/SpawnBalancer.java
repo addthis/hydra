@@ -1378,7 +1378,7 @@ public class SpawnBalancer implements Codec.Codable {
     protected boolean isExtremeHost(String hostID, boolean diskSpace, boolean high) {
         aggregateStatisticsLock.lock();
         try {
-            if (cachedHostScores == null || !cachedHostScores.containsKey(hostID) || cachedHostScores.isEmpty()) {
+            if (hostID == null || cachedHostScores == null || !cachedHostScores.containsKey(hostID) || cachedHostScores.isEmpty()) {
                 return false;
             }
             double clusterAverage = 0;
