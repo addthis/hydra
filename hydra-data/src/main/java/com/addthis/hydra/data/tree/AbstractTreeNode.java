@@ -38,9 +38,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
         byte[] returnBytes;
         try {
             Varint.writeUnsignedVarLong(hits, b);
-            Varint.writeUnsignedVarInt(nodes, b);
             Varint.writeSignedVarInt(nodedb == null ? -1 : nodedb, b);
-            Varint.writeUnsignedVarInt(bits, b);
             if (data != null && data.size() > 0) {
                 int numAttachments = data.size();
                 Varint.writeSignedVarInt(numAttachments, b);
@@ -58,7 +56,11 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
                     b.writeBytes(bytes);
                 }
             } else {
-               Varint.writeSignedVarInt(-1, b);
+                Varint.writeSignedVarInt(-1, b);
+            }
+            if (nodedb != null) {
+                Varint.writeUnsignedVarInt(nodes, b);
+                Varint.writeUnsignedVarInt(bits, b);
             }
             returnBytes = new byte[b.readableBytes()];
             b.readBytes(returnBytes);
@@ -76,12 +78,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
         ByteBuf buf = Unpooled.wrappedBuffer(b);
         try {
             hits = Varint.readUnsignedVarLong(buf);
-            nodes = Varint.readUnsignedVarInt(buf);
             nodedb = Varint.readSignedVarInt(buf);
-            if (nodedb < 0) {
-                nodedb = null;
-            }
-            bits = Varint.readUnsignedVarInt(buf);
             int numAttachments = Varint.readSignedVarInt(buf);
             if (numAttachments > 0) {
                 HashMap<String, TreeNodeData> dataMap = new HashMap<>();
@@ -99,6 +96,12 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
                     dataMap.put(key, tn);
                 }
                 data = dataMap;
+            }
+            if (nodedb > 0) {
+                nodes = Varint.readUnsignedVarInt(buf);
+                bits = Varint.readUnsignedVarInt(buf);
+            } else {
+                nodedb = null;
             }
             postDecode();
         } catch (Exception e) {
