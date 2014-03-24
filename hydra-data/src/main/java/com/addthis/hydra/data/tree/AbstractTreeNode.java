@@ -46,10 +46,12 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
                 Varint.writeUnsignedVarInt(nodedb, b);
             }
             Varint.writeUnsignedVarInt(bits, b);
-            int numAttachments = data == null ? 0 : data.size();
-            Varint.writeUnsignedVarInt(numAttachments, b);
-
-            if (data != null) {
+            if (data == null || data.size() == 0) {
+                b.writeByte(0);
+            } else {
+                b.writeByte(1);
+                int numAttachments = data == null ? 0 : data.size();
+                Varint.writeUnsignedVarInt(numAttachments, b);
                 for (Map.Entry<String, TreeNodeData> entry : data.entrySet()) {
 
                     byte[] keyBytes = entry.getKey().getBytes(Charset.forName("UTF-8"));
@@ -88,8 +90,9 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
                 nodedb = null;
             }
             bits = Varint.readUnsignedVarInt(buf);
-            int numAttachments = Varint.readUnsignedVarInt(buf);
-            if (numAttachments > 0) {
+            boolean hasData = buf.readByte() == 1;
+            if (hasData) {
+                int numAttachments = Varint.readUnsignedVarInt(buf);
                 HashMap<String, TreeNodeData> dataMap = new HashMap<>();
                 for (int i = 0; i < numAttachments; i++) {
                     int kl = Varint.readUnsignedVarInt(buf);
@@ -103,7 +106,6 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
                     int vl = Varint.readUnsignedVarInt(buf);
                     tn.bytesDecode(buf.readBytes(vl).array());
                     dataMap.put(key, tn);
-
                 }
                 data = dataMap;
             }
