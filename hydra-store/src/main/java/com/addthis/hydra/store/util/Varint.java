@@ -109,6 +109,14 @@ public final class Varint {
     }
 
     /**
+     * @see #writeSignedVarLong(long, DataOutput)
+     */
+    public static void writeSignedVarInt(int value, ByteBuf out)  {
+        // Great trick from http://code.google.com/apis/protocolbuffers/docs/encoding.html#types
+        writeUnsignedVarInt((value << 1) ^ (value >> 31), out);
+    }
+
+    /**
      * @see #writeUnsignedVarLong(long, DataOutput)
      */
     public static void writeUnsignedVarInt(int value, DataOutput out) throws IOException {
@@ -205,6 +213,23 @@ public final class Varint {
      * @see #readSignedVarLong(DataInput)
      */
     public static int readSignedVarInt(DataInput in) throws IOException {
+        int raw = readUnsignedVarInt(in);
+        // This undoes the trick in writeSignedVarInt()
+        int temp = (((raw << 31) >> 31) ^ raw) >> 1;
+        // This extra step lets us deal with the largest signed values by treating
+        // negative results from read unsigned methods as like unsigned values.
+        // Must re-flip the top bit if the original read value had it set.
+        return temp ^ (raw & (1 << 31));
+    }
+
+
+    /**
+     * @throws IllegalArgumentException if variable-length value does not terminate
+     *                                  after 5 bytes have been read
+     * @throws IOException              if {@link DataInput} throws {@link IOException}
+     * @see #readSignedVarLong(DataInput)
+     */
+    public static int readSignedVarInt(ByteBuf in) {
         int raw = readUnsignedVarInt(in);
         // This undoes the trick in writeSignedVarInt()
         int temp = (((raw << 31) >> 31) ^ raw) >> 1;
