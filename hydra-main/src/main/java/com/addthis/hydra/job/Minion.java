@@ -158,6 +158,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
     private static final int maxActiveTasks = Parameter.intValue("minion.max.active.tasks", 3);
     private static final int copyRetryLimit = Parameter.intValue("minion.copy.retry.limit", 3);
     private static final int copyRetryDelaySeconds = Parameter.intValue("minion.copy.retry.delay", 10);
+    /* If the following var is positive, it is passed as the bwlimit arg to rsync. If <= 0, it is ignored. */
     private static final int copyBandwidthLimit = Parameter.intValue("minion.copy.bwlimit", -1);
     private static ReentrantLock revertLock = new ReentrantLock();
 
@@ -1919,7 +1920,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                       "until [ $try -ge $retries ]; do\n" +
                       "\tif [ \"$try\" -ge \"1\" ]; then echo starting retry $try; sleep $retryDelaySeconds; fi\n" +
                       "\ttry=$((try+1)); eval $cmd; exitCode=$?\n" +
-                      "\tif [ \"$exitCode\" == \"0\" ]; then return 0; fi\n" +
+                      "\tif [ \"$exitCode\" == \"0\" ] || [ \"$exitCode\" == \"127\" ] || [ \"$exitCode\" == \"137\"]; then return $exitCode; fi\n" +
                       "done\n" +
                       "echo \"Command failed after $retries retries: $cmd\"; exit $exitCode\n" +
                       "}\n");
@@ -2134,10 +2135,11 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
 
         public boolean stopWait(File[] pidFiles, boolean kill) {
             boolean result = true;
+            boolean isRunning = isRunning();
             try {
                 if (kill) {
                     resetStartTime();
-                    log.warn("[stopWait] creating done files if they do not exist");
+                    log.warn("[stopWait] creating done files for " + getName() + " if they do not exist");
                     if (!jobDone.getParentFile().exists()) {
                         log.warn("The directory " + jobDone.getParent() + " does not exist.");
                     } else {
@@ -2167,9 +2169,11 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                                 result = false;
                             }
                         }
-                        jobStopped = new File(jobDir, "job.stopped");
-                        if (!jobStopped.createNewFile()) {
-                            log.warn("Failed to create job.stopped file for stopped job " + getName());
+                        if (isRunning) {
+                            jobStopped = new File(jobDir, "job.stopped");
+                            if (!jobStopped.createNewFile()) {
+                                log.warn("Failed to create job.stopped file for stopped job " + getName());
+                            }
                         }
                         if (kill) {
                             log.warn("[minion.kill] killing pid:" + pid + " hard");

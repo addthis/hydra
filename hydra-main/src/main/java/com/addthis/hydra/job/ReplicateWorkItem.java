@@ -53,7 +53,10 @@ public class ReplicateWorkItem extends MinionWorkItem {
             task.clearFailureReplicas();
             informReplicaHosts();
             task.execBackup(rebalanceSource, rebalanceTarget, true);
-        } else {
+        } else if (task.getRebalanceSource() != null) {
+            task.sendEndStatus(JobTaskErrorCode.REBALANCE_PAUSE);
+        }
+        else {
             if (!doneFile.exists()) {
                 doneFile.createNewFile();
             }
@@ -80,5 +83,18 @@ public class ReplicateWorkItem extends MinionWorkItem {
         setStartTime(0);
         task.setProcess(null);
         task.save();
+    }
+
+    @Override
+    public int getExitStatusFromString(String exitString) {
+        if (exitString == null) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(exitString);
+        } catch (NumberFormatException ex) {
+            log.warn("Unparsable exit code: " + exitString);
+            return 0;
+        }
     }
 }

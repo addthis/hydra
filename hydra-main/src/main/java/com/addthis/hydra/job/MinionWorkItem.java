@@ -193,7 +193,7 @@ public abstract class MinionWorkItem implements Runnable {
         task.setWorkItemThread(null);
     }
 
-    protected static int getExitStatusFromString(String exitString) {
+    public int getExitStatusFromString(String exitString) {
         int exit;
         try {
             exit = Integer.parseInt(exitString);
