@@ -1076,6 +1076,11 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         @Codec.Set(codable = true)
         private long backupStartTime;
 
+        @Codec.Set(codable = true)
+        private String rebalanceSource;
+        @Codec.Set(codable = true)
+        private String rebalanceTarget;
+
         private Process process;
         private Thread workItemThread;
         private File taskRoot;
@@ -1243,6 +1248,8 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             end.setRebalanceSource(rebalanceSource);
             end.setRebalanceTarget(rebalanceTarget);
             end.setExitState(exitState);
+            setRebalanceSource(null);
+            setRebalanceTarget(null);
             sendStatusMessage(end);
             try {
                 kickNextJob();
@@ -1822,6 +1829,8 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         }
 
         public void execReplicate(String rebalanceSource, String rebalanceTarget, boolean replicateAllBackups, boolean execute) throws Exception {
+            setRebalanceSource(rebalanceSource);
+            setRebalanceTarget(rebalanceTarget);
             if (log.isDebugEnabled()) {
                 log.debug("[task.execReplicate] " + this.getJobKey());
             }
@@ -2333,6 +2342,22 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             return jobStopped.exists();
         }
 
+        public String getRebalanceSource() {
+            return rebalanceSource;
+        }
+
+        public void setRebalanceSource(String rebalanceSource) {
+            this.rebalanceSource = rebalanceSource;
+        }
+
+        public String getRebalanceTarget() {
+            return rebalanceTarget;
+        }
+
+        public void setRebalanceTarget(String rebalanceTarget) {
+            this.rebalanceTarget = rebalanceTarget;
+        }
+
         @Override
         public String toString() {
             return "JobTask{" +
@@ -2558,16 +2583,17 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 sendStatusMessage(new StatusTaskEnd(uuid, stop.getJobUuid(), stop.getNodeID(), 0, 0, 0));
             }
             for (JobTask task : match) {
-                boolean terminated = false;
                 if (!task.getConfigDir().exists()) {
                     Files.initDirectory(task.getConfigDir());
                 }
                 if (task.isRunning() || task.isReplicating() || task.isBackingUp()) {
-                    if (!stop.force() && (task.isReplicating() || task.isBackingUp())) {
-                        log.warn("[task.stop] " + task.getName() + " wasn't terminated because task was replicating/backing up and the stop wasn't a kill");
+                    if (!stop.force() && task.isBackingUp()) {
+                        log.warn("[task.stop] " + task.getName() + " wasn't terminated because task was backing up and the stop wasn't a kill");
+                    } else if (task.isReplicating() && task.getRebalanceSource() == null) {
+                        log.warn("[task.stop] " + task.getName() + " wasn't terminated because task was replicating up and the stop wasn't a kill");
                     } else if (!stop.getOnlyIfQueued()) {
                         task.stopWait(stop.force());
-                        log.warn("[task.stop] " + task.getName() + " terminated=" + terminated);
+                        log.warn("[task.stop] " + task.getName());
                     } else {
                         log.warn("[task.stop] " + task.getName() + " wasn't terminated because task was running and the stop specified only-if-queued");
                     }
