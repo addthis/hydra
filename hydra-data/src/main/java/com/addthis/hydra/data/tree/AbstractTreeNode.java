@@ -39,19 +39,11 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
         try {
             Varint.writeUnsignedVarLong(hits, b);
             Varint.writeUnsignedVarInt(nodes, b);
-            if (nodedb == null) {
-                b.writeByte(0);
-            } else {
-                b.writeByte(1);
-                Varint.writeUnsignedVarInt(nodedb, b);
-            }
+            Varint.writeSignedVarInt(nodedb == null ? -1 : nodedb, b);
             Varint.writeUnsignedVarInt(bits, b);
-            if (data == null || data.size() == 0) {
-                b.writeByte(0);
-            } else {
-                b.writeByte(1);
-                int numAttachments = data == null ? 0 : data.size();
-                Varint.writeUnsignedVarInt(numAttachments, b);
+            if (data != null && data.size() > 0) {
+                int numAttachments = data.size();
+                Varint.writeSignedVarInt(numAttachments, b);
                 for (Map.Entry<String, TreeNodeData> entry : data.entrySet()) {
 
                     byte[] keyBytes = entry.getKey().getBytes(Charset.forName("UTF-8"));
@@ -65,6 +57,8 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
                     Varint.writeUnsignedVarInt(bytes.length, b);
                     b.writeBytes(bytes);
                 }
+            } else {
+               Varint.writeSignedVarInt(-1, b);
             }
             returnBytes = new byte[b.readableBytes()];
             b.readBytes(returnBytes);
@@ -83,16 +77,13 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
         try {
             hits = Varint.readUnsignedVarLong(buf);
             nodes = Varint.readUnsignedVarInt(buf);
-            boolean hasNodeDB = buf.readByte() == 1;
-            if (hasNodeDB) {
-                nodedb = Varint.readUnsignedVarInt(buf);
-            } else {
+            nodedb = Varint.readSignedVarInt(buf);
+            if (nodedb < 0) {
                 nodedb = null;
             }
             bits = Varint.readUnsignedVarInt(buf);
-            boolean hasData = buf.readByte() == 1;
-            if (hasData) {
-                int numAttachments = Varint.readUnsignedVarInt(buf);
+            int numAttachments = Varint.readSignedVarInt(buf);
+            if (numAttachments > 0) {
                 HashMap<String, TreeNodeData> dataMap = new HashMap<>();
                 for (int i = 0; i < numAttachments; i++) {
                     int kl = Varint.readUnsignedVarInt(buf);
