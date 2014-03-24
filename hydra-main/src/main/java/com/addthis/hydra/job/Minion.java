@@ -158,6 +158,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
     private static final int maxActiveTasks = Parameter.intValue("minion.max.active.tasks", 3);
     private static final int copyRetryLimit = Parameter.intValue("minion.copy.retry.limit", 3);
     private static final int copyRetryDelaySeconds = Parameter.intValue("minion.copy.retry.delay", 10);
+    private static final int copyBandwidthLimit = Parameter.intValue("minion.copy.bwlimit", -1);
     private static ReentrantLock revertLock = new ReentrantLock();
 
     private static String cpcmd = "cp";
@@ -1442,7 +1443,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         }
 
         private String createRsyncCommand(String userAT, String source, String target) throws Exception {
-            return "retry " + rsyncCommand + " -Hqav --exclude config --exclude gold --exclude replicate.complete --exclude backup.complete --delete-after -e \\'" + remoteConnectMethod + "\\' " + source + " " + userAT + ":" + target;
+            return "retry " + rsyncCommand + (copyBandwidthLimit > 0 ? " --bwlimit " + copyBandwidthLimit : "") + " -Hqa --exclude config --exclude gold --exclude replicate.complete --exclude backup.complete --delete-after -e \\'" + remoteConnectMethod + "\\' " + source + " " + userAT + ":" + target;
         }
 
         private String createBackupCommand(boolean local, String userAT, String baseDir, String source, String name) {
