@@ -291,25 +291,31 @@ public final class ConcurrentKeyTopper implements Codec.SuperCodable, Codec.Byte
     @Override
     public byte[] bytesEncode() {
         preEncode();
-        ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
-        if (map.isEmpty()) {
+        if (map.size() == 0) {
             return EMPTY;
         }
+        ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
+        byte[] retBytes = null;
         try {
             Varint.writeUnsignedVarInt(map.size(), byteBuf);
             for (Map.Entry<String, Long> mapEntry : map.entrySet()) {
-                byte[] keyBytes = mapEntry.getKey().getBytes("UTF-8");
+                String key = mapEntry.getKey();
+                if (key == null) {
+                    key = "MISSING_KEY";
+                }
+                byte[] keyBytes = key.getBytes("UTF-8");
                 Varint.writeUnsignedVarInt(keyBytes.length, byteBuf);
                 byteBuf.writeBytes(keyBytes);
                 Varint.writeUnsignedVarLong(mapEntry.getValue(), byteBuf);
             }
+            retBytes = new byte[byteBuf.readableBytes()];
+            byteBuf.readBytes(retBytes);
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
             throw new RuntimeException(e);
+        } finally {
+            byteBuf.release();
         }
-        byte[] retBytes = new byte[byteBuf.readableBytes()];
-        byteBuf.readBytes(retBytes);
-        byteBuf.release();
         return retBytes;
 
     }
@@ -317,19 +323,18 @@ public final class ConcurrentKeyTopper implements Codec.SuperCodable, Codec.Byte
     @Override
     public void bytesDecode(byte[] b) {
         ByteBuf byteBuf = Unpooled.wrappedBuffer(b);
+        int mapSize = Varint.readUnsignedVarInt(byteBuf);
+        int i = 0;
         try {
-            int mapSize = Varint.readUnsignedVarInt(byteBuf);
             if (mapSize > 0) {
                 map = new ConcurrentHashMapV8<>(mapSize + 16, 0.75f, 4);
-                for (int i = 0; i < mapSize; i++) {
+                for (i = 0; i < mapSize; i++) {
                     int keyLength = Varint.readUnsignedVarInt(byteBuf);
-                    if (keyLength > 0) {
-                        byte[] keybytes = new byte[keyLength];
-                        byteBuf.readBytes(keybytes);
-                        String k = new String(keybytes, "UTF-8");
-                        long value = Varint.readUnsignedVarLong(byteBuf);
-                        map.put(k, value);
-                    }
+                    byte[] keybytes = new byte[keyLength];
+                    byteBuf.readBytes(keybytes);
+                    String k = new String(keybytes, "UTF-8");
+                    long value = Varint.readUnsignedVarLong(byteBuf);
+                    map.put(k, value);
                 }
             } else {
                 map = new ConcurrentHashMapV8<>(16, 0.75f, 4);
