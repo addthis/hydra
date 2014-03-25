@@ -15,20 +15,19 @@ package com.addthis.hydra.data.util;
 
 import javax.annotation.Nonnull;
 
-import java.io.DataInputStream;
 import java.io.UnsupportedEncodingException;
+
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.MemoryCounter;
 
 import com.addthis.codec.Codec;
-
 import com.addthis.hydra.store.util.Varint;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -292,32 +291,21 @@ public final class ConcurrentKeyTopper implements Codec.SuperCodable, Codec.Byte
     @Override
     public byte[] bytesEncode() {
         preEncode();
-        if (minKey == null || minKey.isEmpty()) {
+        ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
+        if (map.isEmpty()) {
             return EMPTY;
         }
-        ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
-
-        if (minKey != null) {
-            try {
-                byte[] minKeyBytes = minKey.getBytes("UTF-8");
-                int minKeyLength = minKeyBytes.length;
-                Varint.writeUnsignedVarInt(minKeyLength, byteBuf);
-                byteBuf.writeBytes(minKeyBytes);
-                Varint.writeUnsignedVarLong(minVal, byteBuf);
-                byteBuf.writeBoolean(lossy);
-                Varint.writeUnsignedVarInt(map.size(), byteBuf);
-                if (map.size() > 0) {
-                    for (Map.Entry<String, Long> mapEntry : map.entrySet()) {
-                        byte[] keyBytes = mapEntry.getKey().getBytes("UTF-8");
-                        Varint.writeUnsignedVarInt(keyBytes.length, byteBuf);
-                        byteBuf.writeBytes(keyBytes);
-                        Varint.writeUnsignedVarLong(mapEntry.getValue(), byteBuf);
-                    }
-                }
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-                throw new RuntimeException(e);
+        try {
+            Varint.writeUnsignedVarInt(map.size(), byteBuf);
+            for (Map.Entry<String, Long> mapEntry : map.entrySet()) {
+                byte[] keyBytes = mapEntry.getKey().getBytes("UTF-8");
+                Varint.writeUnsignedVarInt(keyBytes.length, byteBuf);
+                byteBuf.writeBytes(keyBytes);
+                Varint.writeUnsignedVarLong(mapEntry.getValue(), byteBuf);
             }
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
         byte[] retBytes = new byte[byteBuf.readableBytes()];
         byteBuf.readBytes(retBytes);
@@ -330,14 +318,7 @@ public final class ConcurrentKeyTopper implements Codec.SuperCodable, Codec.Byte
     public void bytesDecode(byte[] b) {
         ByteBuf byteBuf = Unpooled.wrappedBuffer(b);
         try {
-            int minKeyLength = Varint.readUnsignedVarInt(byteBuf);
-            byte[] minkKeyBytes = new byte[minKeyLength];
-            byteBuf.readBytes(minkKeyBytes);
-            minKey = new String(minkKeyBytes, "UTF-8");
-            minVal = Varint.readUnsignedVarLong(byteBuf);
-            lossy = byteBuf.readBoolean();
             int mapSize = Varint.readUnsignedVarInt(byteBuf);
-
             if (mapSize > 0) {
                 map = new ConcurrentHashMapV8<>(mapSize + 16, 0.75f, 4);
                 for (int i = 0; i < mapSize; i++) {
