@@ -49,6 +49,9 @@ function(
         			jobIds:this.get("jobIds"),
         			canaryPath:this.get("canaryPath"),
         			canaryConfigThreshold:this.get("canaryConfigThreshold"),
+                    canaryOps:this.get("canaryOps"),
+                    canaryRops:this.get("canaryRops"),
+                    canaryFilter:this.get("canaryFilter")
         		};
         		if (!this.isNew()) {
         			postData.alertId= this.get("alertId");
@@ -204,7 +207,8 @@ function(
         	render:function(){
          		var html = this.template({
             		alert:this.model.toJSON(),
-            		alertTypes:util.alertTypes
+            		alertTypes:util.alertTypes,
+            		util:util,
          		});
         		this.$el.html(html);
         		$("#alertType").val(this.model.get("type"));
@@ -228,25 +232,28 @@ function(
             		return;
             	}
             	this.model.save().done(function(data){
-             		Alertify.log.success("Alert saved successfully.");
-             		if (!self.model.get("alertId")) {
-             			self.model.set("alertId", data.alertId);
-             			self.model.fetch({
-             				success: function(model) {
-             					app.alertCollection.add(model);
-             					app.alert=undefined;
-             					var location = window.location.hash;
-             					location=location.replace("create",data.alertId);
-             					app.router.navigate(location,{trigger:true});
-             				
-             				},
-             				error:function(xhr) {
-             					Alertify.log.error("Error loading alert for: " + data.alertId);
-             				}
-             			});
-             		}
-            	}).fail(function(xhr){
-            		Alertify.log.error("Error saving alert: "+self.model.id);
+					if (data.message) {
+						Alertify.log.error("Error saving alert: " + data.message);
+					} else {
+						Alertify.log.success("Alert saved successfully.");
+						if (!self.model.get("alertId")) {
+							self.model.set("alertId", data.alertId);
+							self.model.fetch({
+								success: function(model) {
+									app.alertCollection.add(model);
+									app.alert=undefined;
+									var location = window.location.hash;
+									location=location.replace("create",data.alertId);
+									app.router.navigate(location,{trigger:true});
+								},
+								error:function(xhr) {
+									Alertify.log.error("Error loading alert for: " + data.alertId);
+								}
+							});
+						}
+					}
+				}).fail(function(xhr){
+                    Alertify.log.error("Error saving alert.");
             	});
         	},
         	handleInputKeyUp:function(event){
@@ -274,6 +281,9 @@ function(
         		$("#alertTimeout").toggle(type == 2 || type == 3);
         		// Only show canary config for canary alerts (4 and 5)
         		$("#alertCanaryConfig").toggle(type == 4 || type == 5);
+        		$("#alertCanaryConfig").toggle(type == 4 || type == 5);
+        		// Show query path, ops, rops, and bundle filter fields for canary map filter (6)
+        		$("#alertCanaryFilterConfig").toggle(type == 6);
         		if (type == 4) {
         			$("#canaryPathHint").text("For example, 'split/importantfiles/{{now-1}}/*.gz'. Mesh lookups are performed relative to the gold directories, so do not include jobid/taskid/gold in your path.")
         		} else if (type == 5) {

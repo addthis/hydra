@@ -22,6 +22,7 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
+import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
 import com.addthis.maljson.JSONObject;
@@ -40,12 +41,13 @@ public class JobAlert implements Codec.Codable {
     private static final Logger log = LoggerFactory.getLogger(JobAlert.class);
 
     //Alert types
-    private static final int ON_ERROR = 0;
-    private static final int ON_COMPLETE = 1;
-    private static final int RUNTIME_EXCEEDED = 2;
-    private static final int REKICK_TIMEOUT = 3;
-    private static final int SPLIT_CANARY = 4;
-    private static final int MAP_CANARY = 5;
+    public static final int ON_ERROR = 0;
+    public static final int ON_COMPLETE = 1;
+    public static final int RUNTIME_EXCEEDED = 2;
+    public static final int REKICK_TIMEOUT = 3;
+    public static final int SPLIT_CANARY = 4;
+    public static final int MAP_CANARY = 5;
+    public static final int MAP_FILTER_CANARY = 6;
 
     @Codec.Set(codable = true)
     private String alertId;
@@ -54,7 +56,7 @@ public class JobAlert implements Codec.Codable {
     @Codec.Set(codable = true)
     private int type;
     @Codec.Set(codable = true)
-    private Integer timeout;
+    private int timeout;
     @Codec.Set(codable = true)
     private String email;
     @Codec.Set(codable = true)
@@ -62,11 +64,18 @@ public class JobAlert implements Codec.Codable {
     @Codec.Set(codable = true)
     private String canaryPath;
     @Codec.Set(codable = true)
-    private Integer canaryConfigThreshold;
+    private String canaryRops;
+    @Codec.Set(codable = true)
+    private String canaryOps;
+    @Codec.Set(codable = true)
+    private String canaryFilter;
+    @Codec.Set(codable = true)
+    private int canaryConfigThreshold;
 
     /* For alerts tracking multiple jobs, this variable marks if the set of active jobs has changed since the last alert check */
     private boolean hasChanged = false;
 
+    /* Number of milliseconds in one minute */
     private static final int MINUTE = 60 * 1000;
 
     /* Map storing {job id : job description} for all alerted jobs the last time this alert was checked */
@@ -83,7 +92,8 @@ public class JobAlert implements Codec.Codable {
             .put(RUNTIME_EXCEEDED, "Task runtime exceeded ")
             .put(REKICK_TIMEOUT, "Task rekick exceeded ")
             .put(SPLIT_CANARY, "Split canary ")
-            .put(MAP_CANARY, "Map canary")
+            .put(MAP_CANARY, "Map canary ")
+            .put(MAP_FILTER_CANARY, "Bundle canary ")
             .build();
 
     public JobAlert() {
@@ -95,7 +105,7 @@ public class JobAlert implements Codec.Codable {
         priorActiveJobs = new HashMap<>();
     }
 
-    public JobAlert(String alertId, int type, Integer timeout, String email, String[] jobIds) {
+    public JobAlert(String alertId, int type, int timeout, String email, String[] jobIds) {
         this.alertId = alertId;
         this.lastAlertTime = -1;
         this.type = type;
@@ -180,8 +190,24 @@ public class JobAlert implements Codec.Codable {
         return canaryPath;
     }
 
-    public void setCanaryPath(String canaryPath) {
-        this.canaryPath = canaryPath;
+    public void setCanaryPath(String canaryPath) { this.canaryPath = canaryPath; }
+
+    public String getCanaryRops() { return canaryRops; }
+
+    public void setCanaryRops(String canaryRops) {
+        this.canaryRops = canaryRops;
+    }
+
+    public String getCanaryOps() { return canaryRops; }
+
+    public void setCanaryOps(String canaryOps) {
+        this.canaryOps = canaryOps;
+    }
+
+    public String getCanaryFilter() { return canaryFilter; }
+
+    public void setCanaryFilter(String canaryFilter) {
+        this.canaryFilter = canaryFilter;
     }
 
     public Integer getCanaryConfigThreshold() {
@@ -251,7 +277,7 @@ public class JobAlert implements Codec.Codable {
         sb.append(JobAlertRunner.getClusterHead());
         sb.append(" - ");
         sb.append(hasAlerted() ? getActiveJobs().toString() : priorActiveJobs.toString());
-        if (isCanaryAlert()) {
+        if (hasLastActual()) {
             sb.append(" - expected=" + canaryConfigThreshold + " actual=" + lastActual);
         }
         return sb.toString();
@@ -274,6 +300,8 @@ public class JobAlert implements Codec.Codable {
                 return checkSplitCanary(meshClient, job);
             case MAP_CANARY:
                 return checkMapCanary(job);
+            case MAP_FILTER_CANARY:
+                return checkMapFilterCanary(job);
             default:
                 log.warn("Warning: alert " + alertId + " has unexpected type " + type);
                 return false;
@@ -281,7 +309,7 @@ public class JobAlert implements Codec.Codable {
     }
 
     private boolean checkMapCanary(Job job) {
-        if (!isCanaryConfigValid()) {
+        if (isValid() != null) {
             return false;
         }
         try {
@@ -294,8 +322,26 @@ public class JobAlert implements Codec.Codable {
         }
     }
 
+    private boolean checkMapFilterCanary(Job job) {
+        if (isValid() != null) {
+            return false;
+        }
+        try {
+            boolean[] result = JobAlertUtil.evaluateQueryWithFilter(job.getId(),
+                    canaryPath, canaryOps, canaryRops, canaryFilter);
+            boolean failure = false;
+            for(int i = 0; i < result.length; i++) {
+                failure = failure || !result[i];
+            }
+            return failure;
+        } catch (Exception ex) {
+            log.warn("Exception during canary check: ", ex);
+            return false;
+        }
+    }
+
     private boolean checkSplitCanary(MeshyClient meshClient, Job job) {
-        if (!isCanaryConfigValid()) {
+        if (isValid() != null) {
             return false;
         }
         // Strip off preceding slash, if it exists.
@@ -305,12 +351,43 @@ public class JobAlert implements Codec.Codable {
         return totalBytes < canaryConfigThreshold;
     }
 
-    private boolean isCanaryConfigValid() {
-        boolean valid = !(canaryPath == null || canaryConfigThreshold == null || canaryConfigThreshold < 0);
-        if (!valid) {
-            log.warn("Warning: invalid config for alert {}: canaryPath={} canaryConfigThreshold={}", alertId, canaryPath, canaryConfigThreshold);
+    /**
+     * Returns either a message indicating an error with the configuration
+     * or null if the configuration is valid.
+     *
+     * @return null if configuration is valid.
+     */
+    public String isValid() {
+        switch (type) {
+            case ON_ERROR:
+            case ON_COMPLETE:
+            case RUNTIME_EXCEEDED:
+            case REKICK_TIMEOUT:
+                return null;
+            case SPLIT_CANARY:
+            case MAP_CANARY:
+                if (Strings.isEmpty(canaryPath)) {
+                    return "Canary path is empty";
+                } else if (canaryConfigThreshold <= 0) {
+                    return "Canary config is not a positive integer";
+                } else {
+                    return null;
+                }
+            case MAP_FILTER_CANARY:
+                if (Strings.isEmpty(canaryPath)) {
+                    return "Canary path is empty";
+                } else if (Strings.isEmpty(canaryFilter)) {
+                    return "Canary filter is empty";
+                }
+                try {
+                    CodecJSON.decodeObject(BundleFilter.class, new JSONObject(canaryFilter));
+                } catch (Exception ex) {
+                    return "Error attempting to create bundle filter";
+                }
+                return null;
+            default:
+                return "alert " + alertId + " has unexpected type " + type;
         }
-        return valid;
     }
 
     @Override
@@ -322,7 +399,7 @@ public class JobAlert implements Codec.Codable {
         }
     }
 
-    public boolean isCanaryAlert() {
+    public boolean hasLastActual() {
         return type == SPLIT_CANARY || type == MAP_CANARY;
     }
 }

@@ -52,7 +52,7 @@ try {
 
 /* escape ++ */
 function esc(v) {
-    return encodeURIComponent(v || '').replace('-','%2d');;
+    return encodeURIComponent(v || '').replace('-','%2d');
 }
 
 /* unescape ++ */
@@ -149,7 +149,7 @@ function fetchValue(c,dv) {
     return store[c] || dv;
 }
 
-/* create quuery object from input fields */
+/* create query object from input fields */
 function fieldsToQuery() {
     return {
         query:$('query').value,
