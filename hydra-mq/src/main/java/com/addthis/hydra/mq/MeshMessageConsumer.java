@@ -150,7 +150,7 @@ public class MeshMessageConsumer implements MessageConsumer {
                     Bytes.writeString(routingKey, out);
                 }
                 out.close();
-                scanner.bump();
+                poller.bump();
             }
         });
         if (debug) log.info("listening to " + sources);
