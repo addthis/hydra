@@ -32,13 +32,14 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MeshMessageProducer implements MessageProducer {
 
     private static Logger log = LoggerFactory.getLogger(MeshMessageProducer.class);
     private static final long noticeRefreshTime = Parameter.longValue("mesh.queue.notice.interval", 1000);
     private static final boolean debug = Parameter.boolValue("mesh.queue.debug", false);
-    private static final boolean removeFailed = Parameter.boolValue("mesh.queue.fail.remove", false);
+    private static final boolean removeFailed = Parameter.boolValue("mesh.queue.fail.remove", true);
 
     private final MeshyClient mesh;
     private final String topic;
@@ -72,6 +73,8 @@ public class MeshMessageProducer implements MessageProducer {
     }
 
     class Queue extends LinkedList<Serializable> {
+        final AtomicBoolean hasEndpoint = new AtomicBoolean(false);
+        final HashSet<String> routing = new HashSet<>();
         final FileReference wantRef;
         final String havePath;
         long lastNotify;
@@ -82,7 +85,20 @@ public class MeshMessageProducer implements MessageProducer {
             this.havePath = path;
         }
 
-        public boolean enqueue(Serializable message) {
+        public boolean hasRouting(final String key) {
+            synchronized (routing) {
+                return routing.contains(key);
+            }
+        }
+
+        public void addRouting(final String key) {
+            synchronized (routing) {
+                routing.add(key);
+            }
+        }
+
+        public boolean enqueue(final Serializable message) {
+            ensureEndpoint();
             synchronized (this) {
                 addLast(message);
             }
@@ -100,57 +116,27 @@ public class MeshMessageProducer implements MessageProducer {
             return true;
         }
 
-        public Serializable dequeue() {
-            return removeFirst();
-        }
-    }
-
-    class HaveTargets {
-        final String wantPath;
-        final String havePath;
-        final String routing;
-
-        long lastUpdate;
-        int lastPeerCount;
-        LinkedList<Queue> queues = new LinkedList<>();
-        LinkedList<FileReference> refs = new LinkedList<>();
-        HashSet<String> registered = new HashSet<>();
-
-        HaveTargets(final String wantPath, final String havePath, final String routing) {
-            this.wantPath = wantPath;
-            this.havePath = havePath;
-            this.routing = routing;
-        }
-
-        void ensureHavePath(final FileReference wantRef, final String uuid) {
-            final String fullPath = havePath + "/" + uuid;
-            synchronized (registered) {
-                if (registered.contains(fullPath)) {
-                    return;
-                }
-                registered.add(fullPath);
+        void ensureEndpoint() {
+            if (!hasEndpoint.compareAndSet(false, true)) {
+                return;
             }
-            if (debug) log.info("creating endpoint for "+fullPath);
-            final Queue haveQueue = new Queue(wantRef,fullPath);
-            synchronized (queues) {
-                queues.add(haveQueue);
-            }
-            provider.setListener(fullPath, new com.addthis.meshy.service.message.MessageListener() {
+            if (debug) log.info("creating endpoint for "+havePath);
+            provider.setListener(havePath, new com.addthis.meshy.service.message.MessageListener() {
                 @Override
                 public void requestContents(String fileName, Map<String, String> options, OutputStream out) throws IOException {
-                    if (debug) log.info("topic producer request fileName={} queue={} options={}", fileName, haveQueue.size(), options);
+                    if (debug) log.info("topic producer request fileName={} queue={} options={}", fileName, size(), options);
                     if (options == null || options.size() == 0) {
-                        Bytes.writeString("{items:" + haveQueue.size()+"}", out);
+                        Bytes.writeString("{items:" + size()+",keys:\""+routing+"\"}", out);
                     } else {
                         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        synchronized (haveQueue) {
-                            int fetch = Math.max(0, Math.min(haveQueue.size(), Integer.parseInt(options.get("fetch"))));
+                        synchronized (Queue.this) {
+                            int fetch = Math.max(0, Math.min(size(), Integer.parseInt(options.get("fetch"))));
                             if (debug && fetch > 0) log.info("encoding {} objects", fetch);
                             if (fetch > 0) {
                                 Bytes.writeInt(fetch, bos);
                                 ObjectOutputStream oos = new ObjectOutputStream(bos);
-                                while (haveQueue.size() > 0 && fetch-- > 0) {
-                                    oos.writeObject(haveQueue.removeFirst());
+                                while (size() > 0 && fetch-- > 0) {
+                                    oos.writeObject(removeFirst());
                                 }
                                 oos.close();
                             }
@@ -162,13 +148,57 @@ public class MeshMessageProducer implements MessageProducer {
             });
         }
 
-        void send(Serializable message) {
-            HashSet<Queue> queueFails = new HashSet<>();
+        void removeEndpoint() {
+            if (hasEndpoint.compareAndSet(true, false)) {
+                if (debug) log.info("deleting endpoint for "+havePath);
+                provider.deleteListener(havePath);
+            }
+        }
+
+        public Serializable dequeue() {
+            return removeFirst();
+        }
+    }
+
+    class HaveTargets {
+        final String wantPath;
+        final String havePath;
+
+        long lastUpdate;
+        int lastPeerCount;
+        HashMap<String,Queue> queues = new HashMap<>();
+        LinkedList<FileReference> refs = new LinkedList<>();
+
+        HaveTargets(final String wantPath, final String havePath) {
+            this.wantPath = wantPath;
+            this.havePath = havePath;
+        }
+
+        void ensureHaveQueue(final FileReference wantRef, final String uuid, final String routing) {
+            final String fullPath = havePath + "/" + uuid;
+            Queue queue = null;
             synchronized (queues) {
-                for (Queue queue : queues) {
+                queue = queues.get(fullPath);
+                if (queue != null) {
+                    queue.addRouting(routing);
+                    return;
+                }
+                queue = new Queue(wantRef, fullPath);
+                queues.put(fullPath, queue);
+            }
+            final Queue haveQueue = queue;
+            haveQueue.addRouting(routing);
+        }
+
+        void send(final Serializable message, final String routing) {
+            HashSet<String> queueFails = new HashSet<>();
+            synchronized (queues) {
+                for (Map.Entry<String, Queue> entry : queues.entrySet()) {
+                    String path = entry.getKey();
+                    Queue queue = entry.getValue();
                     if (debug) log.info("queue have={} size={} msg={}", queue.havePath, queue.size(), message);
-                    if (!queue.enqueue(message)) {
-                        queueFails.add(queue);
+                    if (queue.hasRouting(routing) && !queue.enqueue(message)) {
+                        queueFails.add(path);
                     }
                 }
                 /**
@@ -177,13 +207,10 @@ public class MeshMessageProducer implements MessageProducer {
                  */
                 if (removeFailed && queueFails.size() > 0){
                     if (debug) log.info("queue fails={} have={} routing={} queues={}", queueFails.size(), wantPath, routing, queues.size());
-                    for (Queue queue : queueFails) {
-                        boolean queueRemove = queues.remove(queue);
-                        boolean regRemove = false;
-                        synchronized (registered) {
-                            regRemove = registered.remove(queue.havePath);
-                        }
-                        if (debug) log.info("queue remove={} have={} routing={} rm.queue={} rm.reg={}", queue.wantRef.name, wantPath, routing, queueRemove, regRemove);
+                    for (String path : queueFails) {
+                        Queue queueRemove = queues.remove(path);
+                        queueRemove.removeEndpoint();
+                        if (debug) log.info("queue remove={} have={} routing={} rm.queue={}", path, wantPath, routing, queueRemove);
                     }
                 }
             }
@@ -196,17 +223,15 @@ public class MeshMessageProducer implements MessageProducer {
                 return;
             }
             try {
-                if (debug) log.info("update want={} routing={}", wantPath, routing);
+                if (debug) log.info("update want={}", wantPath);
                 for (FileReference ref : mesh.listFiles(new String[] { wantPath })) {
                     InputStream in = mesh.readFile(ref);
                     String uuid = Bytes.readString(in);
                     int keyCount = Bytes.readInt(in);
                     while (keyCount-- > 0) {
                         String routingKey = Bytes.readString(in);
-                        if (debug) log.info("update want={} peer={} routing={} key={}", wantPath, uuid, routing, routingKey);
-                        if (routingKey.equals(routing)) {
-                            ensureHavePath(ref, uuid);
-                        }
+                        if (debug) log.info("update want={} peer={} key={}", wantPath, uuid, routingKey);
+                        ensureHaveQueue(ref, uuid, routingKey);
                     }
                 }
                 lastUpdate = System.currentTimeMillis();
@@ -226,11 +251,11 @@ public class MeshMessageProducer implements MessageProducer {
         synchronized (consumers) {
             targets = consumers.get(wantPath);
             if (targets == null) {
-                targets = new HaveTargets(wantPath, havePath, routing);
+                targets = new HaveTargets(wantPath, havePath);
                 consumers.put(wantPath, targets);
             }
         }
         targets.update();
-        targets.send(message);
+        targets.send(message, routing);
     }
 }
