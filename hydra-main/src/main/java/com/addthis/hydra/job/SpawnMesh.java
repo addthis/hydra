@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Parameter;
@@ -52,12 +53,13 @@ public class SpawnMesh implements MessageListener {
 
     private MeshyClientConnector meshClient;
     private MessageFileProvider provider;
+    private AtomicBoolean linkUp = new AtomicBoolean(false);
 
     SpawnMesh(final Spawn spawn) {
         this.spawn = spawn;
         this.meshPrefix = "/spawn/" + spawn.getUuid();
         if (meshPort == 0) {
-            return;
+            throw new RuntimeException("invalid mesh port 0");
         }
         meshClient = new MeshyClientConnector(meshHost, meshPort, 1000, meshRetryTimeout) {
             @Override
@@ -67,21 +69,32 @@ public class SpawnMesh implements MessageListener {
                 provider.setListener(meshPrefix + "/status", SpawnMesh.this);
                 provider.setListener(meshPrefix + "/shutdown", SpawnMesh.this);
                 provider.setListener(meshPrefix + "/task/get.config", SpawnMesh.this);
+                linkUp.set(true);
+                synchronized (this) { this.notifyAll(); }
             }
 
             @Override
             public void linkDown(MeshyClient client) {
                 log.warn("disconnected from mesh on " + client);
+                linkUp.set(false);
             }
         };
     }
 
-    public MeshyClient getClient() {
-        if (meshClient != null) {
-            return meshClient.getClient();
-        } else {
-            return null;
+    public void waitLinkUp() {
+        while (!linkUp.get()) {
+            synchronized (meshClient) {
+                try {
+                    meshClient.wait(1000);
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+            }
         }
+    }
+
+    public MeshyClient getClient() {
+        return meshClient.getClient();
     }
 
     private String getString(Map<String, String> map, String key, String defVal) {
