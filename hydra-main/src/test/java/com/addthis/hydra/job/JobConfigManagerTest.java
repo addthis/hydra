@@ -29,7 +29,10 @@ import java.util.List;
 import java.util.Map;
 
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PATH;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 @Category(SlowTest.class)
 public class JobConfigManagerTest extends ZkStartUtil {

@@ -17,7 +17,11 @@ import javax.annotation.Nonnull;
 
 import java.io.IOException;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import com.addthis.bark.StringSerializer;
+import com.addthis.bark.ZkUtil;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 
@@ -25,11 +29,13 @@ import org.slf4j.LoggerFactory;
 public class TaskReplacementZoo implements TaskRunner.TaskStringReplacement {
 
     private static final Logger log = LoggerFactory.getLogger(TaskReplacementZoo.class);
-    private final CuratorFramework zkClient;
 
-    public TaskReplacementZoo(CuratorFramework zkClient) {
-        this.zkClient = zkClient;
-    }
+    /**
+     * Create the zookeeper client on-demand. This amortizes the cost of
+     * constructing a zookeeper client and additionally prevents zookeeper client
+     * error messages when running the unit tests.
+     */
+    private final AtomicReference<CuratorFramework> zkClient = new AtomicReference<>();
 
     @Nonnull
     @Override
@@ -49,8 +55,13 @@ public class TaskReplacementZoo implements TaskRunner.TaskStringReplacement {
     }
 
     public String readZoo(@Nonnull String path) throws Exception {
-        if (zkClient.checkExists().forPath(path) != null) {
-            return StringSerializer.deserialize(zkClient.getData().forPath(path));
+        CuratorFramework client = zkClient.get();
+        if (client == null) {
+            client = ZkUtil.makeStandardClient();
+            zkClient.compareAndSet(null, client);
+        }
+        if (client.checkExists().forPath(path) != null) {
+            return StringSerializer.deserialize(client.getData().forPath(path));
         }
         throw new RuntimeException("zoo path not found '" + path + "'");
     }

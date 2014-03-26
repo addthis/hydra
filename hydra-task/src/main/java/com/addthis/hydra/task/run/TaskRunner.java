@@ -115,7 +115,7 @@ public class TaskRunner {
 
     static {
         replaceOperators.add(new TaskReplacementFile());
-        replaceOperators.add(new TaskReplacementZoo(ZkUtil.makeStandardClient()));
+        replaceOperators.add(new TaskReplacementZoo());
     }
 
     /**
