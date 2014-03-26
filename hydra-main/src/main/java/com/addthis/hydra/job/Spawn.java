@@ -3452,7 +3452,7 @@ public class Spawn implements Codec.Codable {
                 return true;
             }
         }
-        if (taskQueuesByPriority.isMigrationEnabled()) {
+        if (taskQueuesByPriority.isMigrationEnabled() && !job.getQueryConfig().getCanQuery() && !job.getDontAutoBalanceMe()) {
             return attemptMigrateTask(job, task, timeOnQueue);
         }
         return false;
@@ -3497,7 +3497,6 @@ public class Spawn implements Codec.Codable {
         HostState target;
         if (
                 !quiesce &&  // If spawn is not quiesced,
-                !job.getDontAutoBalanceMe() && // and the job is allowed to be swapped,
                 taskQueuesByPriority.checkSizeAgeForMigration(task.getByteCount(), timeOnQueue) &&
                 // and the task is small enough that migration is sensible
                 (target = findHostWithAvailableSlot(task, listHostStatus(job.getMinionType()), true)) != null)
