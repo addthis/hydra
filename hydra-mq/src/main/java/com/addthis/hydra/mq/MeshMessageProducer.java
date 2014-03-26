@@ -108,8 +108,8 @@ public class MeshMessageProducer implements MessageProducer {
                     Bytes.readFully(mesh.readFile(wantRef));
                     lastNotify = now;
                     return true;
-                } catch (IOException e) {
-                    e.printStackTrace();
+                } catch (IOException ex) {
+                    log.warn("", ex);
                     return false;
                 }
             }
@@ -236,8 +236,8 @@ public class MeshMessageProducer implements MessageProducer {
                 }
                 lastUpdate = System.currentTimeMillis();
                 lastPeerCount = peers;
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (IOException ex) {
+                log.warn("", ex);
             }
         }
     }
