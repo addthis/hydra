@@ -341,7 +341,7 @@ public class SpawnBalancer implements Codec.Codable {
         HashSet<JobKey> movedTasks = new HashSet<>();
         List<JobTaskMoveAssignment> rv = new ArrayList<>();
         for (JobTaskMoveAssignment assignment : candidateAssignments) {
-            JobKey jobKey = assignment.getTask().getJobKey();
+            JobKey jobKey = assignment.getJobKey();
             if (!movedTasks.contains(jobKey)) {
                 rv.add(assignment);
                 movedTasks.add(jobKey);
@@ -380,7 +380,7 @@ public class SpawnBalancer implements Codec.Codable {
                     continue;
                 }
                 if (!alreadyMoved.contains(jobKey) && pullHost != null && tasksByHost.moveTask(nextTaskItem, pushHost, pullHost)) {
-                    rv.add(new JobTaskMoveAssignment(nextTaskItem.getTask(), pushHost, pullHost, false, false, false));
+                    rv.add(new JobTaskMoveAssignment(nextTaskItem.getTask().getJobKey(), pushHost, pullHost, false, false, false));
                     alreadyMoved.add(nextTaskItem.getTask().getJobKey());
                     maxBytesToMove -= trueSizeBytes;
                 }
@@ -417,7 +417,7 @@ public class SpawnBalancer implements Codec.Codable {
                     continue;
                 }
                 if (!alreadyMoved.contains(jobKey) && tasksByHost.moveTask(item, pushHost, pullHost)) {
-                    rv.add(new JobTaskMoveAssignment(item.getTask(), pushHost, pullHost, false, false, false));
+                    rv.add(new JobTaskMoveAssignment(item.getTask().getJobKey(), pushHost, pullHost, false, false, false));
                     alreadyMoved.add(item.getTask().getJobKey());
                     maxBytesToMove -= trueSizeBytes;
                 }
@@ -675,6 +675,7 @@ public class SpawnBalancer implements Codec.Codable {
             double byteLimitFactor = 1 - ((double) (moveAssignments.getBytesUsed())) / config.getBytesMovedFullRebalance();
             moveAssignments.addAll(pushTasksOffHost(heavyHost, Arrays.asList(host), true, byteLimitFactor, config.getTasksMovedFullRebalance(), true));
         }
+        moveAssignments.addAll(purgeTasksForNonexistentJobs(host, 1));
         return moveAssignments;
     }
 
@@ -685,21 +686,37 @@ public class SpawnBalancer implements Codec.Codable {
 
     /* Push/pull the tasks on a host to balance its disk, obeying an overall limit on the number of tasks/bytes to move */
     private List<JobTaskMoveAssignment> pushTasksOffHost(HostState host, List<HostState> otherHosts, boolean limitBytes, double byteLimitFactor, int moveLimit, boolean obeyDontAutobalanceMe) {
+        List<JobTaskMoveAssignment> rv = purgeTasksForNonexistentJobs(host, moveLimit);
+        if (rv.size() <= moveLimit) {
+            long byteLimit = (long) (byteLimitFactor * config.getBytesMovedFullRebalance());
+            List<HostState> hostsSorted = sortHostsByDiskSpace(otherHosts);
+            for (JobTask task : findTasksToMove(host, obeyDontAutobalanceMe)) {
+                long taskTrueSize = getTaskTrueSize(task);
+                if (limitBytes && taskTrueSize > byteLimit) {
+                    continue;
+                }
+                JobTaskMoveAssignment assignment = moveTask(task, host.getHostUuid(), hostsSorted);
+                if (assignment != null) {
+                    markRecentlyReplicatedTo(assignment.getTargetUUID());
+                    rv.add(assignment);
+                    byteLimit -= taskTrueSize;
+                }
+                if (rv.size() >= moveLimit) {
+                    break;
+                }
+            }
+        }
+        return rv;
+    }
+
+    /* Look through a hoststate to find tasks that don't correspond to an actual job */
+    private List<JobTaskMoveAssignment> purgeTasksForNonexistentJobs(HostState host, int deleteLimit) {
         List<JobTaskMoveAssignment> rv = new ArrayList<>();
-        long byteLimit = (long) (byteLimitFactor * config.getBytesMovedFullRebalance());
-        List<HostState> hostsSorted = sortHostsByDiskSpace(otherHosts);
-        for (JobTask task : findTasksToMove(host, obeyDontAutobalanceMe)) {
-            long taskTrueSize = getTaskTrueSize(task);
-            if (limitBytes && taskTrueSize > byteLimit) {
-                continue;
+        for (JobKey key : host.allJobKeys()) {
+            if (spawn.getJob(key) == null) {
+                rv.add(new JobTaskMoveAssignment(key, host.getHostUuid(), null, false, false, true));
             }
-            JobTaskMoveAssignment assignment = moveTask(task, host.getHostUuid(), hostsSorted);
-            if (assignment != null) {
-                markRecentlyReplicatedTo(assignment.getTargetUUID());
-                rv.add(assignment);
-                byteLimit -= taskTrueSize;
-            }
-            if (rv.size() >= moveLimit) {
+            if (rv.size() >= deleteLimit) {
                 break;
             }
         }
@@ -727,7 +744,7 @@ public class SpawnBalancer implements Codec.Codable {
         boolean live = task.getHostUUID().equals(fromHostId);
         if (!live && !task.hasReplicaOnHost(fromHostId)) {
             // Task was found somewhere it didn't belong
-            return new JobTaskMoveAssignment(task, fromHostId, null, false, false, true);
+            return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, null, false, false, true);
         }
         while (hostStateIterator.hasNext()) {
             HostState next = hostStateIterator.next();
@@ -735,7 +752,7 @@ public class SpawnBalancer implements Codec.Codable {
             if (!taskHost.equals(nextId) && !task.hasReplicaOnHost(nextId) && next.canMirrorTasks() && okToPutReplicaOnHost(next, task)) {
                 hostStateIterator.remove();
                 otherHosts.add(next);
-                return new JobTaskMoveAssignment(task, fromHostId, nextId, !live, false, false);
+                return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, nextId, !live, false, false);
             }
         }
         return null;
@@ -746,7 +763,7 @@ public class SpawnBalancer implements Codec.Codable {
         int totalTasksToMove = config.getTasksMovedFullRebalance();
         long totalBytesToMove = config.getBytesMovedFullRebalance();
         Set<String> activeJobs = findActiveJobIDs();
-        List<JobTaskMoveAssignment> rv = new ArrayList<JobTaskMoveAssignment>();
+        List<JobTaskMoveAssignment> rv = purgeTasksForNonexistentJobs(host, 1);
         String hostID = host.getHostUuid();
         for (String jobID : activeJobs) {
             spawn.acquireJobLock();
@@ -814,7 +831,7 @@ public class SpawnBalancer implements Codec.Codable {
                 continue;
             }
             HostState newHost = spawn.getHostState(newHostID);
-            JobKey jobKey = assignment.getTask().getJobKey();
+            JobKey jobKey = assignment.getJobKey();
             if (newHost.hasLive(jobKey) || !canReceiveNewTasks(newHost, assignment.isFromReplica())) {
                 log.warn("[spawn.balancer] decided not to move task onto " + newHostID + " because it cannot receive the new task");
                 continue;
@@ -1134,6 +1151,9 @@ public class SpawnBalancer implements Codec.Codable {
         if (host == null || (!isReplica && host.isReadOnly())) {
             return false;
         }
+        if (spawn.getHostFailWorker().getFailureState(host.getHostUuid()) != HostFailWorker.FailState.ALIVE) {
+            return false;
+        }
         return host.canMirrorTasks() && getUsedDiskPercent(host) < 1 - config.getMinDiskPercentAvailToReceiveNewTasks();
     }
 
@@ -1411,14 +1431,6 @@ public class SpawnBalancer implements Codec.Codable {
             this.overallScore = overallScore;
         }
 
-        public double getMeanActiveTasks() {
-            return meanActiveTasks;
-        }
-
-        public double getUsedDiskPercent() {
-            return usedDiskPercent;
-        }
-
         public double getOverallScore() {
             return overallScore;
         }
@@ -1435,7 +1447,7 @@ public class SpawnBalancer implements Codec.Codable {
 
         @Override
         public boolean add(JobTaskMoveAssignment assignment) {
-            bytesUsed += taskSizer.estimateTrueSize(assignment.getTask());
+            bytesUsed += taskSizer.estimateTrueSize(spawn.getTask(assignment.getJobKey()));
             return super.add(assignment);
         }
 
@@ -1499,7 +1511,7 @@ public class SpawnBalancer implements Codec.Codable {
                 spawn.updateJob(spawn.getJob(jobId));
             } catch (Exception e) {
                 log.warn("Warning: failed to update job " + jobId + ": " + e, e);
-                }
+            }
         }
     }
 
@@ -1536,13 +1548,13 @@ public class SpawnBalancer implements Codec.Codable {
             log.warn("Skipping nonexistent job for task " + task + " during host fail.");
             return;
         }
-        if (task.getReplicas() == null || task.getReplicas().isEmpty()) {
-            log.warn("Found no replica for task " + task.getJobKey());
-            job.setState(JobState.DEGRADED, true);
-            return;
-        }
         if (!task.getHostUUID().equals(failedHostUuid) && !task.hasReplicaOnHost(failedHostUuid)) {
             // This task was not actually assigned to the failed host. Nothing to do.
+            return;
+        }
+        if (!spawn.isNewTask(task) && (task.getReplicas() == null || task.getReplicas().isEmpty())) {
+            log.warn("Found no replica for task " + task.getJobKey());
+            job.setState(JobState.DEGRADED, true);
             return;
         }
         while (hostIterator.hasNext()) {
@@ -1573,17 +1585,24 @@ public class SpawnBalancer implements Codec.Codable {
         boolean liveOnFailedHost = task.getHostUUID().equals(failedHostUuid);
         String newReplicaUuid = newReplicaHost.getHostUuid();
         if (liveOnFailedHost) {
-            // Send a kill message if the task is running on the failed host
-            spawn.sendControlMessage(new CommandTaskStop(failedHostUuid, task.getJobUUID(), task.getTaskID(), 0, true, false));
-            // Find a replica, promote it, and tell it to replicate to the new replica on completion
-            String chosenReplica = task.getReplicas().get(0).getHostUUID();
-            task.replaceReplica(chosenReplica, newReplicaUuid);
-            task.setHostUUID(chosenReplica);
-            spawn.replicateTask(task, Arrays.asList(newReplicaUuid));
+            if (spawn.isNewTask(task)) {
+                // Task has never run before. Just switch to the new host.
+                task.setHostUUID(newReplicaHost.getHostUuid());
+            } else {
+                // Send a kill message if the task is running on the failed host
+                spawn.sendControlMessage(new CommandTaskStop(failedHostUuid, task.getJobUUID(), task.getTaskID(), 0, true, false));
+                // Find a replica, promote it, and tell it to replicate to the new replica on completion
+                String chosenReplica = task.getReplicas().get(0).getHostUUID();
+                task.replaceReplica(chosenReplica, newReplicaUuid);
+                task.setHostUUID(chosenReplica);
+                spawn.replicateTask(task, Arrays.asList(newReplicaUuid));
+            }
         } else {
             // Replace the replica on the failed host with one on a new host
             task.replaceReplica(failedHostUuid, newReplicaUuid);
-            spawn.replicateTask(task, Arrays.asList(newReplicaUuid));
+            if (!spawn.isNewTask(task)) {
+                spawn.replicateTask(task, Arrays.asList(newReplicaUuid));
+            }
         }
     }
 
@@ -1605,11 +1624,11 @@ public class SpawnBalancer implements Codec.Codable {
                     numHostRebalances++;
                     log.warn("Performing host autobalance.");
                     RebalanceWeight weight = numHostRebalances % 2 == 0 ? RebalanceWeight.HEAVY : RebalanceWeight.LIGHT;
-                    spawn.executeReallocationAssignments(getAssignmentsForAutoBalance(RebalanceType.HOST, weight));
+                    spawn.executeReallocationAssignments(getAssignmentsForAutoBalance(RebalanceType.HOST, weight), false);
                     lastHostAutobalanceTime = now;
                 } else if (now - lastJobAutobalanceTime > config.getJobAutobalanceIntervalMillis()) {
                     log.warn("Performing job autobalance.");
-                    spawn.executeReallocationAssignments(getAssignmentsForAutoBalance(RebalanceType.JOB, RebalanceWeight.HEAVY));
+                    spawn.executeReallocationAssignments(getAssignmentsForAutoBalance(RebalanceType.JOB, RebalanceWeight.HEAVY), false);
                     lastJobAutobalanceTime = now;
                 }
             }

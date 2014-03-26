@@ -222,7 +222,7 @@ function(
             });
         },
         query:function(){
-            window.open("http://"+document.domain+":2222/query/index.html?job="+this.id,"_blank");
+            window.open("http://"+app.queryHost+"/query/index.html?job="+this.id,"_blank");
         },
         delete:function(dontShowSuccessAlert){
             var self=this;
@@ -655,7 +655,9 @@ function(
             app.hostCollection.each(function(hostModel){
                 diskUsed+=hostModel.get("diskUsed");
                 diskMax+=hostModel.get("diskMax");
-                avail+=hostModel.get("availableTaskSlots");
+                if (!hostModel.get("dead")) {
+                	avail+=hostModel.get("availableTaskSlots");
+                }
             });
             if(diskMax>0){
                 var disk = Math.floor((diskUsed/diskMax)*100)/100;
@@ -691,7 +693,7 @@ function(
         },
         handleAvailTaskChange:function(model){
             var delta = parseInt(model.get("availableTaskSlots"))-parseInt(model.previous("availableTaskSlots"));
-            if(_.isNumber(delta) && !_.isNaN(delta)){
+            if(_.isNumber(delta) && !_.isNaN(delta) && !this.get("dead")){
                 var prev = this.get("availTaskSlots");
                 this.set("availTaskSlots",prev+delta);
             }
@@ -999,7 +1001,7 @@ function(
                     "mRender":function(val,type,data){
                         var html = "";
                         if(data.qc_canQuery){
-                            html+="<a data-id='"+data.id+"' class='btn btn-default btn-tiny btn-blue' href='http://"+window.location.hostname+":2222/query/index.html?job="+data.id+"' target='_blank'>Q</a>";
+                            html+="<a data-id='"+data.id+"' class='btn btn-default btn-tiny btn-blue' href='http://"+app.queryHost+"/query/index.html?job="+data.id+"' target='_blank'>Q</a>";
                         }
                         return html;
                     }
@@ -1223,7 +1225,7 @@ function(
                     "mRender":function(val,type,data){
                         var html = "";
                         if(data.qc_canQuery){
-                            html+="<a data-id='"+val+"' class='btn btn-default btn-tiny btn-blue' href='http://"+window.location.hostname+":2222/query/index.html?job="+data.id+"' target='_blank'>Q</a>";
+                            html+="<a data-id='"+val+"' class='btn btn-default btn-tiny btn-blue' href='http://"+app.queryHost+"/query/index.html?job="+data.id+"' target='_blank'>Q</a>";
                         }
                         return html;
                     }
@@ -1948,7 +1950,6 @@ function(
             var button = $(event.currentTarget);
             var jobId = button.data("job"), node=parseInt(button.data("node"));
             this.model.fixDirs(node);
-            //alert("Fix: "+button.data("job")+", node: "+button.data("node"));
         },
         handleCollectionChange:function(){
             var html = "";
@@ -1961,14 +1962,14 @@ function(
                             (match.isReplica?"Replica":"Live")+
                         "</td>"+
                         "<td>"+
-                            (_.isEqual(match.type.indexOf("MISMATCH"),0)?"<div class='label label-danger'>Missing</div>":"<div class='label label-success'>Correct</div>")+
+                            util.generateTaskDirStatusText(match.type)+
                         "</td>"+
                         "<td>"+
                             match.hostId+
                         "</td>"+
                         "<td>"+
-                            (_.isEqual(match.type.indexOf("MISMATCH"),0)?"<button class='btn btn-default btn-small fix' data-job='"+match.jobKey.jobUuid+"' data-node='"+match.jobKey.nodeNumber+"' class='btn btn-default btn-small'>Fix</button>":"<button class='btn btn-default btn-small disabled'>Fix</button>")+
-                        "</td>"
+                            ((match.type != "MATCH" && match.type != "REPLICATION_IN_PROGRESS") ? "<button class='btn btn-default btn-small fix' data-job='"+match.jobKey.jobUuid+"' data-node='"+match.jobKey.nodeNumber+"' class='btn btn-default btn-small'>Fix</button>":"<button class='btn btn-default btn-small disabled'>Fix</button>")+
+                        "</td>"+
                     "</tr>";
             });
             this.$el.find("table tbody").html(html);
@@ -2067,7 +2068,7 @@ function(
                 Alertify.log.success("Loaded config from "+commit+". Save the job to finalize the change.");
                 app.router.navigate("#jobs/"+jobId+"/conf",{trigger:true});
             }).fail(function(xhr){
-                Alertify.log.error("Error loading configo for commit: "+commit);
+                Alertify.log.error("Error loading config for commit: "+commit);
             });
             //this.configModel.set("config",c)
         }

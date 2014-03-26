@@ -19,10 +19,13 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import com.addthis.basis.net.HttpUtil;
+import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacer;
+import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.hydra.common.plugins.PluginReader;
 import com.addthis.hydra.data.util.CommentTokenizer;
@@ -35,6 +38,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 public class JobExpand {
 
+    private static final int maxDepth = Parameter.intValue("spawn.macro.expand.depth", 256);
+
     private static Logger log = LoggerFactory.getLogger(JobExpand.class);
 
     private static class MacroTokenReplacer extends TokenReplacer {
@@ -43,9 +48,16 @@ public class JobExpand {
 
         private static Logger log = LoggerFactory.getLogger(MacroTokenReplacer.class);
 
+        private static final Pattern macroPattern = Pattern.compile("%\\{(.+?)\\}%");
+
         MacroTokenReplacer(Spawn.SpawnState spawnState) {
             super("%{", "}%");
             this.spawnState = spawnState;
+        }
+
+        @Override
+        public long getMaxDepth() {
+            return maxDepth;
         }
 
         @Override
@@ -59,7 +71,26 @@ public class JobExpand {
             }
             JobMacro macro = spawnState.macros.get(label);
             if (macro != null) {
-                return macro.getMacro();
+                List<String> contents = new ArrayList<>();
+                List<String> delimiters = new ArrayList<>();
+                CommentTokenizer commentTokenizer = new CommentTokenizer(macro.getMacro());
+                commentTokenizer.tokenize(contents, delimiters);
+                StringBuilder builder = new StringBuilder();
+                int length = contents.size();
+
+                builder.append(contents.get(0));
+                builder.append(delimiters.get(0));
+                for (int i = 1; i < length; i++) {
+                    String delimiter = delimiters.get(i - 1);
+                    if (delimiter.equals("//") || delimiter.equals("/*")) {
+                        /* disable any macros inside comments so they don't get expanded */
+                        builder.append(macroPattern.matcher(contents.get(i)).replaceAll("%_{$1}_%"));
+                    } else {
+                        builder.append(contents.get(i));
+                    }
+                    builder.append(delimiters.get(i));
+                }
+                return builder.toString();
             } else {
                 String msg = "non-existent macro referenced : " + label;
                 log.warn(msg);
@@ -91,21 +122,28 @@ public class JobExpand {
             expanders.put(macroName, (JobConfigExpander) o);
         } catch (InstantiationException | IllegalAccessException e) {
             log.warn("Class '" + clazz + "' registered for '" + macroName + "' cannot be initialized: " + e, e);
-            } catch (ClassCastException e) {
+        } catch (ClassCastException e) {
             log.warn("Class '" + clazz + "' registered for '" + macroName + "' is not JobConfigExpander but '" + o.getClass() + "'");
         }
     }
 
-    private static String macroTemplateParamsHelper(String input, final HashMap<String, String> map) {
+    private static String macroTemplateParamsHelper(String input, final HashMap<String, String> map)
+            throws TokenReplacerOverflowException {
         return new TokenReplacer("%[", "]%") {
             @Override
             public String replace(Region region, String label) {
                 return map.get(Strings.splitArray(label, ":")[0]);
             }
+
+            @Override
+            public long getMaxDepth() {
+                return maxDepth;
+            }
         }.process(input);
     }
 
-    static String macroTemplateParams(String expandedJob, Collection<JobParameter> params) {
+    static String macroTemplateParams(String expandedJob, Collection<JobParameter> params)
+            throws TokenReplacerOverflowException {
         if (params != null && expandedJob != null) {
             final HashMap<String, String> map = new HashMap<>();
             for (JobParameter param : params) {
@@ -212,7 +250,7 @@ public class JobExpand {
     /**
      * recursively expand macros
      */
-    public static String macroExpand(Spawn spawn, String rawtext) {
+    public static String macroExpand(Spawn spawn, String rawtext) throws TokenReplacerOverflowException {
         MacroTokenReplacer replacer = new MacroTokenReplacer(spawn.getSpawnState());
         List<String> contents = new ArrayList<>();
         List<String> delimiters = new ArrayList<>();
@@ -238,7 +276,8 @@ public class JobExpand {
     /* special pass that injects spawn metadata and specific tokens
     * TODO - expand to include job shards option
     */
-    public static String magicMacroExpand(final Spawn spawn, String rawtext, final String jobId) {
+    public static String magicMacroExpand(final Spawn spawn, String rawtext, final String jobId)
+            throws TokenReplacerOverflowException {
         return new TokenReplacer("%(", ")%") {
             @Override
             public String replace(Region region, String label) {
@@ -255,6 +294,11 @@ public class JobExpand {
                     log.warn(msg);
                     throw new RuntimeException(msg);
                 }
+            }
+
+            @Override
+            public long getMaxDepth() {
+                return maxDepth;
             }
         }.process(rawtext);
     }

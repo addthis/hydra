@@ -26,6 +26,7 @@ import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
 import org.slf4j.Logger;
@@ -77,6 +78,8 @@ public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTa
     @Codec.Set(codable = true)
     private long totalEmitted;
 
+    private volatile JobKey jobKey;
+
     public JobTask() {
     }
 
@@ -87,6 +90,7 @@ public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTa
         this.jobUuid = "";
         this.node = node;
         this.runCount = runCount;
+        jobKey = new JobKey(jobUuid, node);
     }
 
 
@@ -101,24 +105,16 @@ public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTa
     }
 
     private static final Set<JobTaskState> nonRunningStates;
-    private static final Set<JobTaskState> validEndStates;
 
     static {
-        nonRunningStates = new HashSet<>(Arrays.asList(JobTaskState.IDLE, JobTaskState.ERROR,
+        nonRunningStates = ImmutableSet.copyOf(Arrays.asList(JobTaskState.IDLE, JobTaskState.ERROR,
                 JobTaskState.ALLOCATED, JobTaskState.REBALANCE, JobTaskState.DISK_FULL,
                 JobTaskState.QUEUED));
-        validEndStates = new HashSet<>(Arrays.asList(JobTaskState.BUSY, JobTaskState.BACKUP,
-                JobTaskState.REPLICATE, JobTaskState.ALLOCATED));
     }
 
     public boolean isRunning() {
         JobTaskState taskState = getState();
         return !nonRunningStates.contains(taskState);
-    }
-
-    public boolean isValidEndState() {
-        JobTaskState taskState = getState();
-        return validEndStates.contains(taskState);
     }
 
     public void setHostUUID(String uuid) {
@@ -130,6 +126,7 @@ public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTa
     }
 
     public void setJobUUID(String uuid) {
+        getJobKey().setJobUuid(uuid);
         jobUuid = uuid;
     }
 
@@ -138,6 +135,7 @@ public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTa
     }
 
     public void setTaskID(int id) {
+        getJobKey().setNodeNumber(id);
         node = id;
     }
 
@@ -177,10 +175,6 @@ public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTa
 
     public void setRunCount(int runCount) {
         this.runCount = runCount;
-    }
-
-    public int incrementRunCount() {
-        return ++runCount;
     }
 
     public int getStarts() {
@@ -272,8 +266,11 @@ public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTa
         return Integer.valueOf(getTaskID()).compareTo(o.getTaskID());
     }
 
-    public JobKey getJobKey() {
-        return new JobKey(this.getJobUUID(), this.node);
+    public synchronized JobKey getJobKey() {
+        if (jobKey == null) {
+            jobKey = new JobKey(jobUuid, node);
+        }
+        return jobKey;
     }
 
     public int getReplicationFactor() {
@@ -309,10 +306,6 @@ public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTa
 
     public void setPreFailErrorCode(int code) {
         preFailErrorCode = code;
-    }
-
-    public void updatePreFailErrorCode() {
-        this.preFailErrorCode = (getState() == JobTaskState.ERROR ? errorCode : 0);
     }
 
     public void setWasStopped(boolean wasStopped) {
@@ -383,10 +376,5 @@ public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTa
                 }
             }
         }
-    }
-
-    public void addReplica(String newHostUuid, boolean readonly) {
-        List<JobTaskReplica> modified = readonly ? readOnlyReplicas : replicas;
-        modified.add(new JobTaskReplica(newHostUuid, jobUuid, runCount, 0L));
     }
 }

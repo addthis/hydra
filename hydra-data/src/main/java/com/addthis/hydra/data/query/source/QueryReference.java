@@ -24,6 +24,8 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.meshy.VirtualFileFilter;
 import com.addthis.meshy.VirtualFileInput;
 import com.addthis.meshy.VirtualFileReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * virtualizes queries
@@ -36,6 +38,8 @@ import com.addthis.meshy.VirtualFileReference;
  * worth this explanation to prevent any confusion.
  */
 class QueryReference implements VirtualFileReference {
+
+    private static final Logger log = LoggerFactory.getLogger(QueryReference.class);
 
     static final String queryRoot = Parameter.value("mesh.query.root", "query");
 
@@ -99,7 +103,7 @@ class QueryReference implements VirtualFileReference {
         try {
             final DataChannelToInputStream bridge = new DataChannelToInputStream();
             if (options == null) {
-                MeshQuerySource.log.warn("Invalid request to getInput.  Options cannot be null");
+                log.warn("Invalid request to getInput.  Options cannot be null");
                 return null;
             }
             final String flag = options.get("flag");

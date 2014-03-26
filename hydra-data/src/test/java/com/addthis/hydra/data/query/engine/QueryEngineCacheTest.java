@@ -11,54 +11,61 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.query;
+package com.addthis.hydra.data.query.engine;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.addthis.basis.test.SlowTest;
 
-import com.addthis.hydra.data.query.QueryEngine;
-import com.addthis.hydra.data.query.QueryEngineCache;
-import com.addthis.hydra.data.query.QueryEngineDirectory;
-
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Category(SlowTest.class)
-public class TestQueryEngineCache {
+public class QueryEngineCacheTest {
+
+    private static final Logger log = LoggerFactory.getLogger(QueryEngineCacheTest.class);
 
     @Test
-    public void test() throws Exception {
-        QueryEngineTestCache cache = new QueryEngineTestCache();
+    public void stayUnderCacheMax() throws Exception {
+        AtomicInteger oe = new AtomicInteger(0);
+        QueryEngineTestCache cache = new QueryEngineTestCache(oe);
+        ExecutorService dummySearchService = Executors.newCachedThreadPool();
         for (int i = 0; i < 5; i++) {
-            (new DummySearcher(cache)).start();
+            dummySearchService.execute(new DummySearcher(cache));
         }
         for (int i = 0; i < 100; i++) {
-//			System.out.println(cache.status());
-            Assert.assertTrue("Engine cache grew too large at :" + cache.oe.get(), cache.oe.get() <= 30);
+            log.debug(cache.status());
+            Assert.assertTrue("Engine cache grew too large at :" + oe.get(), oe.get() <= 30);
             Thread.sleep(250);
         }
+        dummySearchService.shutdownNow();
     }
 
-    class DummySearcher extends Thread {
+    static class DummySearcher implements Runnable {
 
         QueryEngineTestCache cache;
 
         public DummySearcher(QueryEngineTestCache cache) {
             this.cache = cache;
-            setDaemon(true);
         }
 
+        @Override
         public void run() {
             while (true) {
                 try {
                     //get the engine we need
-                    QueryEngine qe = cache.getAndLease("" + (int) (Math.random() * 30));
+                    QueryEngine qe = cache.getAndLease(String.valueOf((int) (Math.random() * 30)));
                     //search
                     Thread.sleep(500 + (int) (Math.random() * 500));
                     //release engine
                     qe.release();
+                } catch (InterruptedException ignored) {
+                    break;
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -66,28 +73,40 @@ public class TestQueryEngineCache {
         }
     }
 
-    class QueryEngineTestCache extends QueryEngineCache {
+    static class QueryEngineTestCache extends QueryEngineCache {
 
         static final int engineCacheSize = 25;
         static final int refreshInterval = 1;
         static final int failInterval = 120;
-        public AtomicInteger oe = new AtomicInteger(0);
+        private final AtomicInteger oe;
 
-        public QueryEngineTestCache() {
-            super(engineCacheSize, refreshInterval, failInterval);
+        public QueryEngineTestCache(AtomicInteger oe) {
+            super(engineCacheSize, refreshInterval, failInterval, 0, new DummyEngineLoader(oe));
+            this.oe = oe;
         }
 
         public String status() {
-            return "status: newOpenedEngines=" + newEnginesOpened.count() + " enginesRefreshed=" + enginesRefreshed.count() + " openEngines=" + oe;
+            return "status: newOpenedEngines=" + EngineLoader.newEnginesOpened.count() +
+                   " enginesRefreshed=" + RefreshEngineCall.enginesRefreshed.count() +
+                   " openEngines=" + oe + " evictedDirectories=" + EngineRemovalListener.directoriesEvicted.count();
+        }
+    }
+
+    static class DummyEngineLoader extends EngineLoader {
+
+        private final AtomicInteger oe;
+
+        public DummyEngineLoader(AtomicInteger oe) {
+            this.oe = oe;
         }
 
         @Override
-        protected QueryEngine createEngine(String dir) throws Exception {
+        protected QueryEngine newQueryEngineDirectory(String dir) throws Exception {
             return new DummyEngine(oe);
         }
     }
 
-    class DummyEngine extends QueryEngineDirectory {
+    static class DummyEngine extends QueryEngineDirectory {
 
         public AtomicInteger oe;
 

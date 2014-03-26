@@ -20,12 +20,16 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 
-import com.addthis.hydra.data.query.QueryEngine;
+import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.meshy.VirtualFileFilter;
 import com.addthis.meshy.VirtualFileInput;
 import com.addthis.meshy.VirtualFileReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LiveQueryReference extends QueryReference {
+
+    private static final Logger log = LoggerFactory.getLogger(LiveQueryReference.class);
 
     private final String job;
     private final QueryEngine queryEngine;
@@ -70,7 +74,7 @@ public class LiveQueryReference extends QueryReference {
         try {
             final DataChannelToInputStream bridge = new DataChannelToInputStream();
             if (options == null) {
-                MeshQuerySource.log.warn("Invalid request to getInput.  Options cannot be null");
+                log.warn("Invalid request to getInput.  Options cannot be null");
                 return null;
             }
             SearchRunner.querySearchPool.execute(new LiveSearchRunner(options, dirString, bridge, queryEngine));

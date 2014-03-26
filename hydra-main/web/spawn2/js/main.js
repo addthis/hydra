@@ -127,6 +127,7 @@ function(
     _,
     $
 ){
+    app.queryHost = setupData.queryHost;
     app.jobCollection = new Jobs.Collection(
         Jobs.Collection.prototype.parse(setupData.jobs)
     );

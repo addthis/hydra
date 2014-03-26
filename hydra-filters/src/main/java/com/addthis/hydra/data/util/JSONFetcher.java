@@ -40,6 +40,10 @@ public class JSONFetcher {
         return new JSONFetcher().loadMap(mapURL, map);
     }
 
+    public static JSONArray staticLoadJSONArray(String mapURL, int urlTimeout, int urlRetries) {
+        return new JSONFetcher(urlTimeout, urlRetries, false).loadJSONArray(mapURL);
+    }
+
     public static HashMap<String, String> staticLoadMap(String mapURL, int urlTimeout, int urlRetries, HashMap<String, String> map) {
         return new JSONFetcher(urlTimeout, urlRetries, false).loadMap(mapURL, map);
     }
@@ -100,7 +104,7 @@ public class JSONFetcher {
                 }
                 JSONObject o = new JSONObject(kv);
                 if (map == null) {
-                    map = new HashMap<String, String>();
+                    map = new HashMap<>();
                 }
                 for (String key : o.keySet()) {
                     map.put(key, o.optString(key));
@@ -155,6 +159,27 @@ public class JSONFetcher {
         }
     }
 
+    public JSONArray loadJSONArray(String mapURL) {
+        int retry = retries;
+        while (true) {
+            try {
+                byte raw[] = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
+                String list = Bytes.toString(raw);
+                if (!(list.startsWith("[") && list.endsWith("]"))) {
+                    list = Strings.cat("[", list, "]");
+                }
+                JSONArray array = new JSONArray(list);
+                return array;
+            } catch (Exception e) {
+                if (retry-- > 0) {
+                    log.warn("fetch err on " + mapURL + ". retries=" + retry + ". err=" + e);
+                    continue;
+                }
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
     /**
      * loads a json-formatted array from an url and adds enclosing
      * square brackets if missing
@@ -173,7 +198,7 @@ public class JSONFetcher {
                 }
                 JSONArray o = new JSONArray(list);
                 if (set == null) {
-                    set = new HashSet<String>();
+                    set = new HashSet<>();
                 }
                 for (int i = 0; i < o.length(); i++) {
                     set.add(o.getString(i));

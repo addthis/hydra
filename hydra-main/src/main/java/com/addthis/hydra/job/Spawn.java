@@ -60,6 +60,7 @@ import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
@@ -216,7 +217,6 @@ public class Spawn implements Codec.Codable {
     private final HashSet<String> disabledHosts = new HashSet<>();
     private int choreCleanerInterval = Parameter.intValue("spawn.chore.interval", 10000);
     private static final int CHORE_TTL = Parameter.intValue("spawn.chore.ttl", 60 * 60 * 24 * 1000);
-    private static final int SWAP_CHORE_TTL = Parameter.intValue("spawn.chore.ttl.swap", 10 * 60 * 1000);
     private static final int TASK_QUEUE_DRAIN_INTERVAL = Parameter.intValue("task.queue.drain.interval", 500);
     private static final boolean ENABLE_JOB_STORE = Parameter.boolValue("job.store.enable", true);
     private static final boolean ENABLE_JOB_FIXDIRS_ONCOMPLETE = Parameter.boolValue("job.fixdirs.oncomplete", true);
@@ -1037,7 +1037,7 @@ public class Spawn implements Codec.Codable {
             return null;
         }
         List<JobTaskMoveAssignment> assignments = balancer.getAssignmentsForJobReallocation(job, tasksToMove, getLiveHostsByReadOnlyStatus(job.getMinionType(), readonly));
-        executeReallocationAssignments(assignments);
+        executeReallocationAssignments(assignments, false);
         return assignments;
     }
 
@@ -1176,7 +1176,7 @@ public class Spawn implements Codec.Codable {
      * @param hostUUID The ID of the host
      * @return a boolean describing if at least one task was scheduled to be moved
      */
-    public RebalanceOutcome reallocateHost(String hostUUID) {
+    public RebalanceOutcome rebalanceHost(String hostUUID) {
         if (hostUUID == null || !monitored.containsKey(hostUUID)) {
             return new RebalanceOutcome(hostUUID, "missing host", null, null);
         }
@@ -1184,7 +1184,7 @@ public class Spawn implements Codec.Codable {
         boolean readOnly = host.isReadOnly();
         log.warn("[job.reallocate] starting reallocation for host: " + hostUUID + " host is " + (readOnly ? "" : "not") + " a read only host");
         List<JobTaskMoveAssignment> assignments = balancer.getAssignmentsToBalanceHost(host, getLiveHostsByReadOnlyStatus(host.getMinionTypes(), host.isReadOnly()));
-        executeReallocationAssignments(assignments);
+        executeReallocationAssignments(assignments, false);
         return new RebalanceOutcome(hostUUID, null, null, Strings.join(assignments.toArray(), "\n"));
     }
 
@@ -1192,46 +1192,55 @@ public class Spawn implements Codec.Codable {
      * Sanity-check a series of task move assignments coming from SpawnBalancer, then execute the sensible ones.
      *
      * @param assignments The assignments to execute
+     * @param limitToAvailableSlots Whether movements should honor their host's availableTaskSlots count
      * @return The number of tasks that were actually moved
      */
-    public int executeReallocationAssignments(List<JobTaskMoveAssignment> assignments) {
+    public int executeReallocationAssignments(List<JobTaskMoveAssignment> assignments, boolean limitToAvailableSlots) {
         int numExecuted = 0;
         if (assignments == null) {
             return numExecuted;
         }
         HashSet<String> jobsNeedingUpdate = new HashSet<>();
+        HashSet<String> hostsAlreadyMovingTasks = new HashSet<>();
         for (JobTaskMoveAssignment assignment : assignments) {
-            JobTask task = assignment.getTask();
-            Job job = getJob(task.getJobUUID());
-            if (job == null || job.getCopyOfTasks() == null || job.getCopyOfTasks().isEmpty()) {
-                log.warn("[job.reallocate] invalid or empty job");
-                continue;
-            }
-            String sourceHostID = assignment.getSourceUUID();
-            String targetHostID = assignment.getTargetUUID();
-            HostState targetHost = getHostState(targetHostID);
-            if (sourceHostID == null || targetHostID == null || sourceHostID.equals(targetHostID) || targetHost == null) {
-                log.warn("[job.reallocate] received invalid host assignment: from " + sourceHostID + " to " + targetHostID);
-                continue;
-            }
             if (assignment.delete()) {
-                log.warn("[job.reallocate] deleting job off " + assignment.getSourceUUID());
-                deleteTask(assignment.getTask().getJobUUID(), assignment.getSourceUUID(), assignment.getTask().getTaskID(), false);
-                deleteTask(assignment.getTask().getJobUUID(), assignment.getSourceUUID(), assignment.getTask().getTaskID(), true);
-            } else if (assignment.promote()) {
-                log.warn("[job.reallocate] promoting " + task.getJobKey() + " on " + sourceHostID);
-                task.setHostUUID(sourceHostID);
-                List<JobTaskReplica> replicasToModify = targetHost.isReadOnly() ? task.getReadOnlyReplicas() : task.getReplicas();
-                removeReplicasForHost(sourceHostID, replicasToModify);
-                replicasToModify.add(new JobTaskReplica(targetHostID, task.getJobUUID(), task.getRunCount(), 0l));
-                swapTask(task.getJobUUID(), task.getTaskID(), sourceHostID, false, false);
-                jobsNeedingUpdate.add(task.getJobUUID());
+                log.warn("[job.reallocate] deleting " + assignment.getJobKey() + " off " + assignment.getSourceUUID());
+                deleteTask(assignment.getJobKey().getJobUuid(), assignment.getSourceUUID(), assignment.getJobKey().getNodeNumber(), false);
+                deleteTask(assignment.getJobKey().getJobUuid(), assignment.getSourceUUID(), assignment.getJobKey().getNodeNumber(), true);
             } else {
-                JobKey key = task.getJobKey();
-                log.warn("[job.reallocate] replicating task " + key + " onto " + targetHostID + " as " + (assignment.isFromReplica() ? "replica" : "live"));
-                TaskMover tm = new TaskMover(this, key, targetHostID, sourceHostID, false);
-                tm.execute(false);
-                numExecuted++;
+                String sourceHostID = assignment.getSourceUUID();
+                String targetHostID = assignment.getTargetUUID();
+                HostState targetHost = getHostState(targetHostID);
+                if (sourceHostID == null || targetHostID == null || sourceHostID.equals(targetHostID) || targetHost == null) {
+                    log.warn("[job.reallocate] received invalid host assignment: from " + sourceHostID + " to " + targetHostID);
+                    continue;
+                }
+                JobTask task = getTask(assignment.getJobKey());
+                Job job = getJob(task.getJobUUID());
+                if (job == null || job.getCopyOfTasks() == null || job.getCopyOfTasks().isEmpty()) {
+                    log.warn("[job.reallocate] invalid or empty job");
+                    continue;
+                }
+                if (assignment.promote()) {
+                    log.warn("[job.reallocate] promoting " + task.getJobKey() + " on " + sourceHostID);
+                    task.setHostUUID(sourceHostID);
+                    List<JobTaskReplica> replicasToModify = targetHost.isReadOnly() ? task.getReadOnlyReplicas() : task.getReplicas();
+                    removeReplicasForHost(sourceHostID, replicasToModify);
+                    replicasToModify.add(new JobTaskReplica(targetHostID, task.getJobUUID(), task.getRunCount(), 0l));
+                    swapTask(task.getJobUUID(), task.getTaskID(), sourceHostID, false, false);
+                    jobsNeedingUpdate.add(task.getJobUUID());
+                } else {
+                    HostState liveHost = getHostState(task.getHostUUID());
+                    if (limitToAvailableSlots && liveHost != null && (liveHost.getAvailableTaskSlots() == 0 || hostsAlreadyMovingTasks.contains(task.getHostUUID()))) {
+                        continue;
+                    }
+                    hostsAlreadyMovingTasks.add(task.getHostUUID());
+                    JobKey key = task.getJobKey();
+                    log.warn("[job.reallocate] replicating task " + key + " onto " + targetHostID + " as " + (assignment.isFromReplica() ? "replica" : "live"));
+                    TaskMover tm = new TaskMover(this, key, targetHostID, sourceHostID, false);
+                    tm.execute(false);
+                    numExecuted++;
+                }
             }
         }
         for (String jobUUID : jobsNeedingUpdate) {
@@ -1274,7 +1283,7 @@ public class Spawn implements Codec.Codable {
                 List<JobTaskDirectoryMatch> directoryMismatches = matchTaskToDirectories(task, false);
                 if (!directoryMismatches.isEmpty()) {
                     // If there are issues with a task's directories, resolve them.
-                    resolveJobTaskDirectoryMatches(job, task, directoryMismatches);
+                    resolveJobTaskDirectoryMatches(job, task, directoryMismatches, false);
                     allMismatches.addAll(directoryMismatches);
                 }
             }
@@ -1299,10 +1308,10 @@ public class Spawn implements Codec.Codable {
      * @param jobId           The job id to fix
      * @param node            The task id to fix, or -1 to fix all
      * @param ignoreTaskState Whether to ignore the task's state (mostly when recovering from a host failure)
-     * @param idleOnly        Whether to skip errored tasks and only fix idle ones
+     * @param orphansOnly     Whether to only delete orphans for idle tasks
      * @return A string description
      */
-    public String fixTaskDir(String jobId, int node, boolean ignoreTaskState, boolean idleOnly) {
+    public String fixTaskDir(String jobId, int node, boolean ignoreTaskState, boolean orphansOnly) {
         jobLock.lock();
         try {
             Job job = getJob(jobId);
@@ -1313,13 +1322,13 @@ public class Spawn implements Codec.Codable {
             List<JobTask> tasks = node < 0 ? job.getCopyOfTasks() : Arrays.asList(job.getTask(node));
             for (JobTask task : tasks) {
                 boolean shouldModifyTask = !spawnJobFixer.haveRecentlyFixedTask(task.getJobKey()) &&
-                        (ignoreTaskState || (task.getState() == JobTaskState.IDLE || (!idleOnly && task.getState() == JobTaskState.ERROR)));
+                        (ignoreTaskState || (task.getState() == JobTaskState.IDLE || (!orphansOnly && task.getState() == JobTaskState.ERROR)));
                 if (log.isDebugEnabled()) {
                     log.debug("[fixTaskDir] considering modifying task " + task.getJobKey() + " shouldModifyTask=" + shouldModifyTask);
                 }
                 if (shouldModifyTask) {
                     try {
-                        numChanged += resolveJobTaskDirectoryMatches(job, task, matchTaskToDirectories(task, false)) ? 1 : 0;
+                        numChanged += resolveJobTaskDirectoryMatches(job, task, matchTaskToDirectories(task, false), orphansOnly) ? 1 : 0;
                         spawnJobFixer.markTaskRecentlyFixed(task.getJobKey());
                     } catch (Exception ex) {
                         log.warn("fixTaskDir exception " + ex, ex);
@@ -1335,7 +1344,7 @@ public class Spawn implements Codec.Codable {
 
     }
 
-    public boolean resolveJobTaskDirectoryMatches(Job job, JobTask task, List<JobTaskDirectoryMatch> matches) throws Exception {
+    public boolean resolveJobTaskDirectoryMatches(Job job, JobTask task, List<JobTaskDirectoryMatch> matches, boolean deleteOrphansOnly) throws Exception {
         boolean changed = false;
         for (JobTaskDirectoryMatch match : matches) {
             boolean resolvedMissingLive = false;
@@ -1343,6 +1352,9 @@ public class Spawn implements Codec.Codable {
                 case MATCH:
                     continue;
                 case MISMATCH_MISSING_LIVE:
+                    if (deleteOrphansOnly) {
+                        continue;
+                    }
                     changed = true;
                     resolveMissingLive(task);
                     resolvedMissingLive = true; // Only need to resolve missing live once, since all replicas will be recopied
@@ -1419,13 +1431,7 @@ public class Spawn implements Codec.Codable {
                 return "NULL JOB";
             }
             StringBuilder sb = new StringBuilder();
-            List<JobTask> tasks = node < 0 ? new ArrayList<>(job.getCopyOfTasks()) : Arrays.asList(job.getTask(node));
-            Collections.sort(tasks, new Comparator<JobTask>() {
-                @Override
-                public int compare(JobTask jobTask, JobTask jobTask1) {
-                    return Double.compare(jobTask.getTaskID(), jobTask1.getTaskID());
-                }
-            });
+            List<JobTask> tasks = node < 0 ? new ArrayList<>(job.getCopyOfTasksSorted()) : Arrays.asList(job.getTask(node));
             sb.append("Directory check for job " + job.getId() + "\n");
             for (JobTask task : tasks) {
                 sb.append("Task " + task.getTaskID() + ": " + matchTaskToDirectories(task, true) + "\n");
@@ -1444,24 +1450,16 @@ public class Spawn implements Codec.Codable {
             if (job == null) {
                 return resultList;
             }
-            List<JobTask> tasks = node < 0 ? new ArrayList<>(job.getCopyOfTasks()) : Arrays.asList(job.getTask(node));
-            Collections.sort(tasks, new Comparator<JobTask>() {
-                @Override
-                public int compare(JobTask jobTask, JobTask jobTask1) {
-                    return Double.compare(jobTask.getTaskID(), jobTask1.getTaskID());
-                }
-            });
+            List<JobTask> tasks = node < 0 ? new ArrayList<>(job.getCopyOfTasksSorted()) : Arrays.asList(job.getTask(node));
             for (JobTask task : tasks) {
                 List<JobTaskDirectoryMatch> taskMatches = matchTaskToDirectories(task, true);
                 for (JobTaskDirectoryMatch taskMatch : taskMatches) {
                     JSONObject jsonObject = CodecJSON.encodeJSON(taskMatch);
                     resultList.put(jsonObject);
                 }
-                //resultList.put(taskMatches);
             }
         } catch (Exception ex) {
             log.warn("Error: checking dirs for job: " + jobId + ", node: " + node);
-            ex.printStackTrace();
         } finally {
             jobLock.unlock();
         }
@@ -1477,7 +1475,15 @@ public class Spawn implements Codec.Codable {
         if (task.getAllReplicas() != null) {
             for (JobTaskReplica replica : task.getAllReplicas()) {
                 match = checkHostForTask(task, replica.getHostUUID());
-                if (includeCorrect || match.getType() != JobTaskDirectoryMatch.MatchType.MATCH) {
+                if (match.getType() != JobTaskDirectoryMatch.MatchType.MATCH) {
+                    if (task.getState() == JobTaskState.REPLICATE || task.getState() == JobTaskState.FULL_REPLICATE) {
+                        // If task is replicating, it will temporarily look like it's missing on the target host. Make this visible to the UI.
+                        rv.add(new JobTaskDirectoryMatch(JobTaskDirectoryMatch.MatchType.REPLICATE_IN_PROGRESS, match.getJobKey(), match.getHostId()));
+                    } else {
+                        rv.add(match);
+                    }
+                }
+                else if (includeCorrect) {
                     rv.add(match);
                 }
             }
@@ -1793,7 +1799,7 @@ public class Spawn implements Codec.Codable {
         if (!isNewTask(task)) {
             while (newReplicas.size() > desiredNumberOfReplicas) {
                 JobTaskReplica replica = newReplicas.remove(newReplicas.size() - 1);
-                spawnMQ.sendControlMessage(new CommandTaskDelete(replica.getHostUUID(), task.getJobUUID(), task.getTaskID(), task.getRunCount(), false));
+                spawnMQ.sendControlMessage(new CommandTaskDelete(replica.getHostUUID(), task.getJobUUID(), task.getTaskID(), task.getRunCount()));
                 log.warn("[replica.delete] " + task.getJobUUID() + "/" + task.getTaskID() + " from " + replica.getHostUUID() + " @ " + getHostState(replica.getHostUUID()).getHost());
             }
         }
@@ -1920,7 +1926,7 @@ public class Spawn implements Codec.Codable {
             spawnState.jobs.remove(jobUUID);
             spawnState.jobDependencies.removeNode(jobUUID);
             log.warn("[job.delete] " + job.getId() + " >> " + job.getCopyOfTasks());
-            spawnMQ.sendControlMessage(new CommandTaskDelete(HostMessage.ALL_HOSTS, job.getId(), null, job.getRunCount(), true));
+            spawnMQ.sendControlMessage(new CommandTaskDelete(HostMessage.ALL_HOSTS, job.getId(), null, job.getRunCount()));
             sendJobUpdateEvent("job.delete", job);
             if (jobConfigManager != null) {
                 jobConfigManager.deleteJob(job.getId());
@@ -1951,20 +1957,19 @@ public class Spawn implements Codec.Codable {
     public boolean deleteTask(String jobUUID, String hostUuid, Integer node, boolean isReplica) {
         jobLock.lock();
         try {
-            Job job = getJob(jobUUID);
-            if (job != null) {
-                log.warn("[job.delete.host] " + hostUuid + "/" + job.getId() + " >> " + node);
-                spawnMQ.sendControlMessage(new CommandTaskDelete(hostUuid, job.getId(), node, job.getRunCount(), false));
-                if (isReplica) {
-                    JobTask task = job.getTask(node);
-                    task.setReplicas(removeReplicasForHost(hostUuid, task.getReplicas()));
-                    task.setReadOnlyReplicas(removeReplicasForHost(hostUuid, task.getReadOnlyReplicas()));
-                    queueJobTaskUpdateEvent(job);
-                }
-                return true;
-            } else {
+            if (jobUUID == null || node == null) {
                 return false;
             }
+            log.warn("[job.delete.host] " + hostUuid + "/" + jobUUID + " >> " + node);
+            spawnMQ.sendControlMessage(new CommandTaskDelete(hostUuid, jobUUID, node, 0));
+            Job job = getJob(jobUUID);
+            if (isReplica && job != null) {
+                JobTask task = job.getTask(node);
+                task.setReplicas(removeReplicasForHost(hostUuid, task.getReplicas()));
+                task.setReadOnlyReplicas(removeReplicasForHost(hostUuid, task.getReadOnlyReplicas()));
+                queueJobTaskUpdateEvent(job);
+            }
+            return true;
         } finally {
             jobLock.unlock();
         }
@@ -2006,7 +2011,7 @@ public class Spawn implements Codec.Codable {
         return expandJob(job);
     }
 
-    public String expandJob(Job job) {
+    public String expandJob(Job job) throws TokenReplacerOverflowException {
         return expandJob(job.getId(), job.getParameters(), getJobConfig(job.getId()));
     }
 
@@ -2021,7 +2026,8 @@ public class Spawn implements Codec.Codable {
         return true;
     }
 
-    public String expandJob(String id, Collection<JobParameter> parameters, String rawConfig) {
+    public String expandJob(String id, Collection<JobParameter> parameters, String rawConfig)
+            throws TokenReplacerOverflowException {
         // macro recursive expansion
         String pass0 = JobExpand.macroExpand(this, rawConfig);
         // template in params that "may" contain other macros
@@ -2441,7 +2447,7 @@ public class Spawn implements Codec.Codable {
                     log.info("[task.replicate] " + job.getId() + "/" + task.getTaskID());
                     JobTaskState taskState = task.getState();
                     if (taskState != JobTaskState.REBALANCE && taskState != JobTaskState.MIGRATING) {
-                        job.setTaskState(task, JobTaskState.REPLICATE, true);
+                        job.setTaskState(task, replicate.isFullReplication() ? JobTaskState.FULL_REPLICATE : JobTaskState.REPLICATE, true);
                     }
                     queueJobTaskUpdateEvent(job);
                 }
@@ -3142,7 +3148,7 @@ public class Spawn implements Codec.Codable {
     }
 
     protected void autobalance(SpawnBalancer.RebalanceType type, SpawnBalancer.RebalanceWeight weight) {
-        executeReallocationAssignments(balancer.getAssignmentsForAutoBalance(type, weight));
+        executeReallocationAssignments(balancer.getAssignmentsForAutoBalance(type, weight), false);
     }
 
     private boolean schedulePrep(Job job) {
@@ -3234,14 +3240,20 @@ public class Spawn implements Codec.Codable {
     /* helper for SpawnMesh */
     CommandTaskKick getCommandTaskKick(Job job, JobTask task) {
         JobCommand jobCmd = job.getSubmitCommand();
+        final String expandedJob;
+        try {
+            expandedJob = expandJob(job);
+        } catch (TokenReplacerOverflowException e) {
+            return null;
+        }
         CommandTaskKick kick = new CommandTaskKick(
                 task.getHostUUID(),
-                new JobKey(job.getId(), task.getTaskID()),
+                task.getJobKey(),
                 job.getPriority(),
                 job.getCopyOfTasks().size(),
                 job.getMaxRunTime() != null ? job.getMaxRunTime() * 60000 : 0,
                 job.getRunCount(),
-                expandJob(job),
+                expandedJob,
                 Strings.join(jobCmd.getCommand(), " "),
                 Strings.isEmpty(job.getKillSignal()) ? null : job.getKillSignal(),
                 job.getHourlyBackups(),
@@ -3460,7 +3472,7 @@ public class Spawn implements Codec.Codable {
                 return true;
             }
         }
-        if (taskQueuesByPriority.isMigrationEnabled()) {
+        if (taskQueuesByPriority.isMigrationEnabled() && !job.getQueryConfig().getCanQuery() && !job.getDontAutoBalanceMe()) {
             return attemptMigrateTask(job, task, timeOnQueue);
         }
         return false;
@@ -3505,7 +3517,6 @@ public class Spawn implements Codec.Codable {
         HostState target;
         if (
                 !quiesce &&  // If spawn is not quiesced,
-                !job.getDontAutoBalanceMe() && // and the job is allowed to be swapped,
                 taskQueuesByPriority.checkSizeAgeForMigration(task.getByteCount(), timeOnQueue) &&
                 // and the task is small enough that migration is sensible
                 (target = findHostWithAvailableSlot(task, listHostStatus(job.getMinionType()), true)) != null)
@@ -3523,7 +3534,7 @@ public class Spawn implements Codec.Codable {
         return false;
     }
 
-    private boolean isNewTask(JobTask task) {
+    protected boolean isNewTask(JobTask task) {
         HostState liveHost = getHostState(task.getHostUUID());
         return liveHost != null && !liveHost.hasLive(task.getJobKey()) && task.getFileCount() == 0 && task.getByteCount() == 0;
     }

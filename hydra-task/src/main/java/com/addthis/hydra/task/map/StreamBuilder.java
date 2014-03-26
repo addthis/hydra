@@ -40,6 +40,10 @@ public abstract class StreamBuilder {
         PluginReader.registerPlugin("-stream-builder.classmap", cmap, StreamBuilder.class);
     }
 
+    public static final void registerBuilder(String name, Class<? extends StreamBuilder> clazz) {
+        cmap.add(name, clazz);
+    }
+
     public abstract void init();
 
     public abstract void process(Bundle row, StreamEmitter emitter);

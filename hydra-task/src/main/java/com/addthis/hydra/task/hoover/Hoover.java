@@ -235,6 +235,12 @@ public class Hoover extends TaskRunnable implements Runnable {
     private boolean verboseCheck = false;
 
     /**
+     * If true, log the stderr instead of stdout of the process
+     */
+    @Codec.Set(codable = true)
+    private boolean traceError = false;
+
+    /**
      * Files that are older than this number of days will be deleted.
      */
     @Codec.Set(codable = true)
@@ -285,13 +291,23 @@ public class Hoover extends TaskRunnable implements Runnable {
     private DateTime jodaEndDate = null;
     private final Backoff backoff = new Backoff(1000, 10000);
 
+    public Date parseDate(String input) throws Exception {
+        if (dateExtractor.equals("seconds")) {
+            return new Date(Long.parseLong(input)*1000);
+        } else if (dateExtractor.equals("millis") || dateExtractor.equals("milliseconds")) {
+            return new Date(Long.parseLong(input));
+        } else {
+            if (dateFormat == null) dateFormat = new SimpleDateFormat(dateExtractor);
+            return dateFormat.parse(input);
+        }
+    }
+
     @Override
     public void init(TaskRunConfig config) {
         this.config = config;
         this.mods = config.calcShardList(config.nodeCount);
         this.markRoot = Files.initDirectory(new File(markDir));
         this.datePattern = Pattern.compile(dateMatcher);
-        this.dateFormat = new SimpleDateFormat(dateExtractor);
         if (startDate != null) {
             this.jodaStartDate = DateUtil.getDateTime(DateUtil.getFormatter(startEndDateFormat), startDate);
         }
@@ -299,7 +315,7 @@ public class Hoover extends TaskRunnable implements Runnable {
             this.jodaEndDate = DateUtil.getDateTime(DateUtil.getFormatter(startEndDateFormat), endDate);
         }
 
-        log.warn("init job=" + config.jobId + " mods=" + Strings.join(mods, ",") + " node=" + config.node + " of " + config.nodeCount);
+        log.info("init job=" + config.jobId + " mods=" + Strings.join(mods, ",") + " node=" + config.node + " of " + config.nodeCount);
         /* create job files from map if not already existing or changed */
         for (Map.Entry<String, String> file : staticFiles.entrySet()) {
             String fileName[] = Strings.splitArray(file.getKey(), ";");
@@ -324,14 +340,14 @@ public class Hoover extends TaskRunnable implements Runnable {
         thread = new Thread(this);
         thread.setName("Hoover Rsync");
         thread.start();
-        log.warn("exec " + config.jobId);
+        log.info("exec " + config.jobId);
     }
 
     @Override
     public void terminate() {
         if (terminated.compareAndSet(false, true)) {
             thread.interrupt();
-            log.warn("terminate " + config.jobId);
+            log.info("terminate " + config.jobId);
         }
     }
 
@@ -339,7 +355,7 @@ public class Hoover extends TaskRunnable implements Runnable {
     public void waitExit() {
         try {
             thread.join();
-            log.warn("exit " + config.jobId);
+            log.info("exit " + config.jobId);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -349,17 +365,17 @@ public class Hoover extends TaskRunnable implements Runnable {
     public void run() {
         File outDirFile = new File(outDir);
         if (!outDirFile.exists()) {
-            log.warn("out dir does not yet exist, creating: " + outDir);
+            log.info("out dir does not yet exist, creating: " + outDir);
             outDirFile.mkdirs();
         }
         for (Map.Entry<String, String> host : hosts.entrySet()) {
-            log.warn("fetching from " + host.getValue() + " ...");
+            log.info("fetching from " + host.getValue() + " ...");
             Collection<MarkFile> files;
             int attempts = 0;
             while (true) {
                 files = findFiles(host.getKey(), host.getValue());
                 if (files == null && attempts++ > maxFindAttempts) {
-                    log.warn("Unable to find files to hoover after " + attempts + " attempts");
+                    log.error("Unable to find files to hoover after " + attempts + " attempts");
                     throw new RuntimeException("Unable to find files to hoover after " + attempts + " attempts");
                 } else if (files == null) {
                     log.warn("error running findFiles command, backing off before retry.  This is attempt: " + attempts);
@@ -394,7 +410,7 @@ public class Hoover extends TaskRunnable implements Runnable {
                                 }
                             }
                         } else {
-                            log.warn("max retry attempts: " + attempts + " breaking retry loop");
+                            log.error("max retry attempts: " + attempts + " breaking retry loop");
                             break;
                         }
                     }
@@ -409,7 +425,7 @@ public class Hoover extends TaskRunnable implements Runnable {
         final int postRet = postCommand();
         if (postRet != 0) {
             if (!terminated.get() && (failOnPostIfOutEmpty && outDirFile.list().length == 0)) {
-                log.warn("error returned by postCommand, forcing system.exit:" + postRet);
+                log.error("error returned by postCommand, forcing system.exit:" + postRet);
                 // We need to exit in a separate thread, because
                 // another thread is joining on this one, and
                 // inexplicably System.exit does not interrupt blocked
@@ -449,7 +465,7 @@ public class Hoover extends TaskRunnable implements Runnable {
                     reader.close();
                     int exit = 0;
                     if ((exit = proc.waitFor()) != 0) {
-                        log.warn("post exited with " + exit);
+                        log.error("post exited with " + exit);
                         String eline = null;
                         while ((eline = ereader.readLine()) != null) {
                             System.err.println(eline);
@@ -457,9 +473,9 @@ public class Hoover extends TaskRunnable implements Runnable {
                         return exit;
                     }
                 } catch (Exception ex)  {
-                    log.warn("", ex);
+                    log.error("", ex);
                     if (proc != null) {
-                        log.warn("Problem during postCommand, destroying process " + ex);
+                        log.error("Problem during postCommand, destroying process " + ex);
                         proc.destroy();
                     }
                     if (attempts++ < maxFindAttempts && !terminated.get()) {
@@ -470,7 +486,7 @@ public class Hoover extends TaskRunnable implements Runnable {
                         }
                         continue;
                     } else {
-                        log.warn("Max retry attempts: " + attempts + " reached.  Post command failed");
+                        log.error("Max retry attempts: " + attempts + " reached.  Post command failed");
                         return 1;
                     }
 
@@ -493,25 +509,25 @@ public class Hoover extends TaskRunnable implements Runnable {
     private boolean checkFile(MarkFile markFile) {
         if (match != null && !markFile.path.matches(match)) {
             if (verboseCheck || log.isDebugEnabled()) {
-                log.warn("match skip for host=" + markFile.host + " path=" + markFile.path + " match=" + match);
+                log.info("match skip for host=" + markFile.host + " path=" + markFile.path + " match=" + match);
             }
             return false;
         }
         if (jodaStartDate != null && markFile.dateTime != null && markFile.dateTime.isBefore(jodaStartDate)) {
             if (verboseCheck || log.isDebugEnabled()) {
-                log.warn("skipping host=" + markFile.host + " path=" + markFile.path + " because " + markFile.dateTime + " is before startime" + jodaStartDate);
+                log.info("skipping host=" + markFile.host + " path=" + markFile.path + " because " + markFile.dateTime + " is before startime" + jodaStartDate);
             }
             return false;
         }
         if (jodaEndDate != null && markFile.dateTime != null && markFile.dateTime.isAfter(jodaEndDate)) {
             if (verboseCheck || log.isDebugEnabled()) {
-                log.warn("skipping host=" + markFile.host + " path=" + markFile.path + " because " + markFile.dateTime + " is after end" + jodaEndDate);
+                log.info("skipping host=" + markFile.host + " path=" + markFile.path + " because " + markFile.dateTime + " is after end" + jodaEndDate);
             }
             return false;
         }
 
         if (markFile.markFile.exists()) {
-            if (verboseCheck || log.isDebugEnabled()) log.warn("mark skip for host=" + markFile.host + " file=" + markFile.name());
+            if (verboseCheck || log.isDebugEnabled()) log.info("mark skip for host=" + markFile.host + " file=" + markFile.name());
             return false;
         }
         int hashMod = Math.abs(PluggableHashFunction.hash(markFile.host.concat(markFile.name()))) % config.nodeCount;
@@ -522,7 +538,7 @@ public class Hoover extends TaskRunnable implements Runnable {
             }
         }
         if (verboseCheck || log.isDebugEnabled()) {
-            log.warn("hash skip [" + hashMod + "] host=" + markFile.host + " file=" + markFile.name());
+            log.info("hash skip [" + hashMod + "] host=" + markFile.host + " file=" + markFile.name());
         }
         return false;
     }
@@ -536,14 +552,14 @@ public class Hoover extends TaskRunnable implements Runnable {
         for (int i = 0; i < newCmd.length; i++) {
             newCmd[i] = listCommand[i].replace("{{USER}}", user).replace("{{HOST}}", host).replace("{{PATH}}", path);
         }
-        if (log.isDebugEnabled()) log.debug("find cmd=" + Strings.join(newCmd, " "));
+        if (verboseCheck || log.isDebugEnabled()) log.info("find cmd=" + Strings.join(newCmd, " "));
         try {
             Process proc = Runtime.getRuntime().exec(newCmd);
             BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
             String fileName = null;
             while ((fileName = reader.readLine()) != null) {
                 MarkFile markFile = getMarkFile(hostNickname, fileName.trim());
-                if (log.isDebugEnabled()) log.debug("found host=" + host + " file=" + fileName);
+                if (verboseCheck || log.isDebugEnabled()) log.info("found host=" + host + " file=" + fileName);
                 if (checkFile(markFile)) {
                     files.add(markFile);
                 }
@@ -573,21 +589,22 @@ public class Hoover extends TaskRunnable implements Runnable {
         String newCmd[] = new String[copyCommand.length];
         File fileOut = new File(pathString);
         File fileDir = Files.initDirectory(fileOut.getParentFile());
-        if (log.isDebugEnabled()) log.debug("fileDir = " + fileDir + " fileOut=" + fileOut);
+        if (verboseCheck || log.isDebugEnabled()) log.info("fileDir=" + fileDir + " fileOut=" + fileOut+" outDir="+fileDir+", "+fileDir.exists());
         for (int i = 0; i < newCmd.length; i++) {
             newCmd[i] = copyCommand[i].replace("{{USER}}", user).replace("{{HOST}}", host).replace("{{LOCALPATH}}", pathString).replace("{{REMOTEPATH}}", markFile.path);
         }
         if (log.isDebugEnabled()) log.debug("copy cmd = " + Strings.join(newCmd, " "));
         try {
             Process proc = Runtime.getRuntime().exec(newCmd);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(traceError ? proc.getErrorStream() : proc.getInputStream()));
             String line = null;
             while ((line = reader.readLine()) != null) {
-                if (log.isDebugEnabled()) log.debug(" --> " + line);
+                if (verboseCheck || log.isDebugEnabled()) log.info(" --> " + line);
             }
             reader.close();
-            if (proc.waitFor() != 0) {
-                log.warn("non-zero return code while executing: " + Strings.join(newCmd, " "));
+            int ret = proc.waitFor();
+            if (ret != 0) {
+                log.warn("non-zero return code ("+ret+") while executing: " + Strings.join(newCmd, " "));
                 return false;
             }
             if (compress && !pathString.endsWith(".gz")) {
@@ -607,24 +624,25 @@ public class Hoover extends TaskRunnable implements Runnable {
             return false;
         }
         if (verbose || log.isDebugEnabled()) {
-            log.warn("fetched " + markFile.host + " --> " + markFile.name() + " marked by " + markFile.markFile);
+            log.info("fetched " + markFile.host + " --> " + markFile.name() + " marked by " + markFile.markFile);
         }
         return true;
     }
 
     private boolean purgeDir(String dir, int days) {
+        if (days <= 0) return true;
         String newCmd[] = new String[purgeCommand.length];
         for (int i = 0; i < newCmd.length; i++) {
             newCmd[i] = purgeCommand[i].replace("{{DIR}}", dir).replace("{{DAYS}}", Integer.toString(days));
         }
         if (log.isDebugEnabled()) log.debug("purge cmd = " + Strings.join(newCmd, " "));
-        if (verbose || log.isDebugEnabled()) log.warn("purging older than days=" + days + " from dir=" + dir);
+        if (verbose || log.isDebugEnabled()) log.info("purging older than days=" + days + " from dir=" + dir);
         try {
             Process proc = Runtime.getRuntime().exec(newCmd);
             BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
             String line = null;
             while ((line = reader.readLine()) != null) {
-                if (verbose || log.isDebugEnabled()) log.warn(" --> " + line);
+                if (verbose || log.isDebugEnabled()) log.info(" --> " + line);
             }
             reader.close();
             return proc.waitFor() == 0;
@@ -661,10 +679,10 @@ public class Hoover extends TaskRunnable implements Runnable {
                 Matcher pathMatcher = datePattern.matcher(path);
                 if (!pathBasedDateMatching && fileMatcher.find(0)) {
                     String group1 = fileMatcher.group(1);
-                    Date date = dateFormat.parse(group1);
+                    Date date = parseDate(group1);
                     String datePrint = dateOut.format(date);
-                    if (log.isDebugEnabled()) {
-                        log.debug("extract group1=" + group1 + " date=" + date + " datePrint=" + datePrint);
+                    if (verboseCheck || log.isDebugEnabled()) {
+                        log.info("extract group1=" + group1 + " date=" + date + " datePrint=" + datePrint);
                     }
                     dateYear = datePrint.substring(0, 4);
                     dateMonth = datePrint.substring(4, 6);
@@ -673,10 +691,10 @@ public class Hoover extends TaskRunnable implements Runnable {
                     dateTime = new DateTime(date);
                 } else if (pathBasedDateMatching && pathMatcher.find(0)) {
                     String group1 = pathMatcher.group(1);
-                    Date date = dateFormat.parse(group1);
+                    Date date = parseDate(group1);
                     String datePrint = dateOut.format(date);
-                    if (log.isDebugEnabled()) {
-                        log.debug("extract group1=" + group1 + " date=" + date + " datePrint=" + datePrint);
+                    if (verboseCheck || log.isDebugEnabled()) {
+                        log.info("extract group1=" + group1 + " date=" + date + " datePrint=" + datePrint);
                     }
                     dateYear = datePrint.substring(0, 4);
                     dateMonth = datePrint.substring(4, 6);
@@ -690,13 +708,17 @@ public class Hoover extends TaskRunnable implements Runnable {
                     dateHour = null;
                     dateTime = null;
                 }
-                if (log.isDebugEnabled()) {
-                    log.debug("extract dp=" + datePattern + " fn=" + fileName + " dy=" + dateYear + " dm=" + dateMonth + " dd=" + dateDay + " dh=" + dateHour);
+                if (verboseCheck || log.isDebugEnabled()) {
+                    log.info("extract "+toString());
                 }
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
             }
-            if (log.isDebugEnabled()) log.debug("mark " + host + " -> " + path + " = " + markFile);
+            if (verboseCheck || log.isDebugEnabled()) log.info("mark " + host + " -> " + path + " = " + markFile);
+        }
+
+        public String toString() {
+            return "dp=" + datePattern + " fn=" + fileName + " dy=" + dateYear + " dm=" + dateMonth + " dd=" + dateDay + " dh=" + dateHour;
         }
 
         public String name() {

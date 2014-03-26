@@ -52,7 +52,7 @@ try {
 
 /* escape ++ */
 function esc(v) {
-    return encodeURIComponent(v || '').replace('-','%2d');;
+    return encodeURIComponent(v || '').replace('-','%2d');
 }
 
 /* unescape ++ */
@@ -149,7 +149,7 @@ function fetchValue(c,dv) {
     return store[c] || dv;
 }
 
-/* create quuery object from input fields */
+/* create query object from input fields */
 function fieldsToQuery() {
     return {
         query:$('query').value,
@@ -475,7 +475,7 @@ function renderCacheList(list,div,kill) {
     html += ['submit','uuid','alias','job','path','ops','run','lines','kill'].join('</th><th>')+'</th></tr>';
     for (var i=0; i<list.length; i++) {
         var le = list[i];
-        var row = [new Date(le.startTime).toString('yy/MM/dd HH:mm:ss'), "<a onclick='QM.queryHostsRescan(\""+le.uuid+"\",\""+le.job+"\")' href='#'>"+le.uuid+"</a>", le.alias || '', limit(le.job,15), limit(le.path,80), limit(le.ops,40), fcsnum(le.runTime), fcsnum(le.lines), '<a href="#" onclick="QM.'+kill+'(\''+le.uuid+'\')">x</a>'];
+        var row = [new Date(le.startTime).toString('yy/MM/dd HH:mm:ss'), "<a onclick='QM.queryHostsRescan(\""+le.uuid+"\",\""+le.job+"\")' href='#'>"+le.uuid+"</a>", le.alias || '', limit(le.job,15), limit(le.paths,80), limit(le.ops,40), fcsnum(le.runTime), fcsnum(le.lines), '<a href="#" onclick="QM.'+kill+'(\''+le.uuid+'\')">x</a>'];
         html += '<tr><td>'+row.join('</td><td>')+'</td></tr>';
     }
     html += '</table>';

@@ -16,7 +16,6 @@ package com.addthis.hydra.job;
 import com.addthis.bark.ZkGroupMembership;
 import com.addthis.bark.ZkUtil;
 import com.addthis.basis.kv.KVPairs;
-import com.addthis.basis.util.Backoff;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
@@ -67,8 +66,10 @@ import com.addthis.maljson.JSONObject;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.AlreadyClosedException;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.QueueingConsumer;
+import com.rabbitmq.client.ShutdownSignalException;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
@@ -173,7 +174,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
     private Timer fileStatsTimer;
     private Counter sendStatusFailCount;
     private Counter sendStatusFailAfterRetriesCount;
-    private final Backoff jobConsumerBackoff = new Backoff(1000, 60000);
 
     private final int replicateCommandDelaySeconds = Parameter.intValue("replicate.cmd.delay.seconds", 0);
     private final int backupCommandDelaySeconds = Parameter.intValue("backup.cmd.delay.seconds", 0);
@@ -304,7 +304,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                         zkClient.close();
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    log.error("Error shutting down", e);
                 }
             }
         });
@@ -329,8 +329,8 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             log.info("[minion.start] pid for minion process is: " + minionPid);
             minionTaskDeleter.startDeletionThread();
         } catch (Exception ex) {
-            log.warn("Exception during startup: " + ex, ex);
-            }
+            log.warn("Exception during startup", ex);
+        }
     }
 
     public File getRootDir() {
@@ -395,28 +395,44 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
 
     private void disconnectFromMQ() {
         try {
-            batchControlConsumer.close();
+            if (batchControlConsumer != null) {
+                batchControlConsumer.close();
+            }
+        } catch (AlreadyClosedException ace) {
+            // do nothing
+        } catch (Exception ex) {
+            log.warn("", ex);
+        }
+        try {
+            if (queryControlProducer != null) {
+                queryControlProducer.close();
+            }
         } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
-            queryControlProducer.close();
+            if (batchControlProducer != null) {
+                batchControlProducer.close();
+            }
+        } catch (AlreadyClosedException ace) {
+            // do nothing
         } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
-            batchControlProducer.close();
+            if (zkBatchControlProducer != null) {
+                zkBatchControlProducer.close();
+            }
         } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
-            zkBatchControlProducer.close();
-        } catch (Exception ex)  {
-            log.warn("", ex);
-        }
-        try {
-            channel.close();
-        } catch (Exception ex)  {
+            if (channel != null) {
+                channel.close();
+            }
+        } catch (AlreadyClosedException ace) {
+            // do nothing
+        } catch (Exception ex) {
             log.warn("", ex);
         }
     }
@@ -829,19 +845,20 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
 
     @Override
     public void doStop() {
-        shutdown.set(true);
-        writeState();
-        log.info("[minion] stopping and sending updated stats to spawn");
-        sendHostStatus();
-        if (runner != null) {
-            runner.shutdown();
+        if (!shutdown.getAndSet(true)) {
+            writeState();
+            log.info("[minion] stopping and sending updated stats to spawn");
+            sendHostStatus();
+            if (runner != null) {
+                runner.stopTaskRunner();
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (Exception ex)  {
+                log.warn("", ex);
+            }
+            disconnectFromMQ();
         }
-        try {
-            Thread.sleep(1000);
-        } catch (Exception ex)  {
-            log.warn("", ex);
-        }
-        disconnectFromMQ();
     }
 
     @Override
@@ -888,7 +905,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
 
         private boolean done;
 
-        public void shutdown() {
+        public void stopTaskRunner() {
             done = true;
             interrupt();
         }
@@ -909,32 +926,24 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                     kickNextJob();
                     channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
                 } catch (InterruptedException ex) {
-                    exitTaskRunner(ex);
+                    log.warn("Interrupted while processing task messages");
+                    shutdown();
+                } catch (ShutdownSignalException shutdownException) {
+                    log.warn("Received unexpected shutdown exception from rabbitMQ");
+                    shutdown();
                 } catch (Throwable ex) {
                     try {
                         channel.basicNack(delivery.getEnvelope().getDeliveryTag(), false, true);
                     } catch (Exception e) {
-                        log.warn("[task.runner] unable to nack message delivery due to " + e, ex);
-                        }
+                        log.warn("[task.runner] unable to nack message delivery", ex);
+                    }
                     log.warn("[task.runner] error: " + ex);
                     if (!(ex instanceof ExecException)) {
-                        ex.printStackTrace();
+                        log.error("Error nacking message", ex);
                     }
-                    // backoff to prevent excessive message production when rabbitmq is down
-                    try {
-                        jobConsumerBackoff.sleep();
-                    } catch (InterruptedException e) {
-                        exitTaskRunner(e);
-                    }
+                    shutdown();
                 }
-            }
-        }
 
-        private void exitTaskRunner(InterruptedException ex) {
-            if (!done) {
-                log.warn("", ex);
-            } else {
-                log.warn("[task.runner] exiting");
             }
         }
     }
@@ -1378,15 +1387,16 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                     for (String backup : findLocalBackups(true)) {
                         if (backup.startsWith(ScheduledBackupType.getBackupPrefix())) {
                             // only include "b-" dirs/exclude gold - it won't exist on the remote host after the rsync.
-                            sb.append("\n" + createTouchCommand(false, userAT, target + "/" + backup + "/backup.complete"));
+                            // On some occasions, this logic can attempt to touch a backup that is about to be deleted -- if so, log a message but don't fail the command
+                            sb.append("\n" + createTouchCommand(false, userAT, target + "/" + backup + "/backup.complete", true));
                         }
                     }
-                    sb.append("\n" + createTouchCommand(false, userAT, target + "/live/replicate.complete"));
+                    sb.append("\n" + createTouchCommand(false, userAT, target + "/live/replicate.complete", false));
                     rv.add(sb.toString());
                 } else {
                     rv.add(createDeleteCommand(false, userAT, target + "/replicate.complete") +
                            "\n" + createRsyncCommand(userAT, jobDir.getAbsolutePath() + "/", target) +
-                           "\n" + createTouchCommand(false, userAT, target + "/replicate.complete")
+                           "\n" + createTouchCommand(false, userAT, target + "/replicate.complete", false)
                     );
                 }
             } catch (Exception ex) {
@@ -1435,7 +1445,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             log.warn("[backup] executing backup from " + sourceDir + " to " + targetDir);
             return createDeleteCommand(local, userAT, targetDir) + " && " +
                    createCopyCommand(local, userAT, sourceDir, targetDir) + " && " +
-                   createTouchCommand(local, userAT, targetDir + "/backup.complete");
+                   createTouchCommand(local, userAT, targetDir + "/backup.complete", false);
         }
 
         private String createSymlinkCommand(boolean local, String userAt, String baseDir, String source, String name) {
@@ -1449,8 +1459,8 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             return wrapCommandWithRetries(local, userAt, cpcmd + cpParams + sourceDir + " " + targetDir);
         }
 
-        private String createTouchCommand(boolean local, String userAT, String path) {
-            return wrapCommandWithRetries(local, userAT, "touch " + path);
+        private String createTouchCommand(boolean local, String userAT, String path, boolean failSafe) {
+            return wrapCommandWithRetries(local, userAT, "touch " + path + (failSafe ? " 2>/dev/null || echo 'Skipped deleted backup'" : ""));
         }
 
         private String createDeleteCommand(boolean local, String userAT, String dirPath) {
@@ -1586,10 +1596,19 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             if (file != null && file.exists()) {
                 File tmpLocation = new File(file.getParent(), "BAD-" + System.currentTimeMillis());
                 if (file.renameTo(tmpLocation)) {
-                    minionTaskDeleter.submitPathToDelete(tmpLocation.getPath());
+                    submitPathToDelete(tmpLocation.getPath());
                 } else {
                     throw new RuntimeException("Could not rename file for asynchronous deletion: " + file);
                 }
+            }
+        }
+
+        private void submitPathToDelete(String path) {
+            minionStateLock.lock();
+            try {
+                minionTaskDeleter.submitPathToDelete(path);
+            } finally {
+                minionStateLock.unlock();
             }
         }
 
@@ -1819,7 +1838,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                 shell(echoWithDate_cmd + msg + " >> " + logErr.getCanonicalPath(), rootDir);
                 return;
             }
-            sendStatusMessage(new StatusTaskReplicate(uuid, id, node));
+            sendStatusMessage(new StatusTaskReplicate(uuid, id, node, replicateAllBackups));
             try {
                 jobDir = Files.initDirectory(new File(rootDir, id + File.separator + node + File.separator + "live"));
                 log.warn("[task.execReplicate] replicating " + jobDir.getPath());
@@ -1840,7 +1859,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                 replicateStartTime = System.currentTimeMillis();
                 // save it
                 save();
-                sendHostStatus();
                 // start watcher
                 workItemThread = new Thread(new ReplicateWorkItem(jobDir, replicatePid, replicateRun, replicateDone, this, choreWatcherKey, execute));
                 workItemThread.setName("Replicate-WorkItem-" + getName());
@@ -1874,7 +1892,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                 }
                 backupStartTime = System.currentTimeMillis();
                 save();
-                sendHostStatus();
                 workItemThread = new Thread(new BackupWorkItem(jobDir, backupPid, backupRun, backupDone, this, choreWatcherKey, execute));
                 workItemThread.setName("Backup-WorkItem-" + getName());
                 workItemThread.start();
@@ -1999,7 +2016,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                 sendStatusMessage(new StatusTaskBegin(uuid, id, node));
                 return false;
             } else if (isReplicating()) {
-                sendStatusMessage(new StatusTaskReplicate(uuid, id, node));
+                sendStatusMessage(new StatusTaskReplicate(uuid, id, node, false));
                 return false;
             } else if (isBackingUp()) {
                 sendStatusMessage(new StatusTaskBackup(uuid, id, node));
@@ -2782,7 +2799,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
     }
 
     private static Integer findActiveRsync(String id, int node) {
-        return findActiveProcessWithTokens(new String[]{id + "/" + node + "/", rsyncCommand}, new String[]{"gold"});
+        return findActiveProcessWithTokens(new String[]{id + "/" + node + "/", rsyncCommand}, new String[]{});
     }
 
     private static Integer findActiveProcessWithTokens(String[] requireTokens, String[] omitTokens) {

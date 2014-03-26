@@ -64,6 +64,10 @@ public class JobTaskDirectoryMatch implements Codec.Codable {
          * There's a live directory on the host, but Spawn doesn't know about it
          */
         ORPHAN_LIVE,
+        /**
+         * The task is actively replicating to the target host
+         */
+        REPLICATE_IN_PROGRESS
     }
 
     public String getTypeDesc() {
@@ -74,6 +78,8 @@ public class JobTaskDirectoryMatch implements Codec.Codable {
                 return "FAIL: MISSING LIVE";
             case ORPHAN_LIVE:
                 return "ORPHAN: LIVE";
+            case REPLICATE_IN_PROGRESS:
+                return "REPLICATE IN PROGRESS";
             default:
                 return "UNKNOWN";
         }

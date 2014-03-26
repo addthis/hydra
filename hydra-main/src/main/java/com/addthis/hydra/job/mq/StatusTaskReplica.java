@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.job.mq;
 
-public class StatusTaskReplica extends StatusTaskReplicate {
+public class StatusTaskReplica extends AbstractJobMessage {
 
     private static final long serialVersionUID = 3232052848594886109L;
 

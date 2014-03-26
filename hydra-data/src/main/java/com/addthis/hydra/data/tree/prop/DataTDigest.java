@@ -170,9 +170,11 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Cod
     @Override
     public void preEncode() {
         int bound = filter.byteSize();
-        ByteBuffer buf = ByteBuffer.allocate(bound);
-        filter.asSmallBytes(buf);
-        raw = buf.array();
+        if (bound > 0) {
+            ByteBuffer buf = ByteBuffer.allocate(bound);
+            filter.asSmallBytes(buf);
+            raw = buf.array();
+        }
     }
 
     public static final class TDigestValue implements ValueCustom, ValueNumber {

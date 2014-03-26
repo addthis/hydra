@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.query;
+package com.addthis.hydra.data.query.engine;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -24,6 +24,11 @@ import com.addthis.basis.util.ClosableIterator;
 
 import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.bundle.core.kvp.KVBundleFormat;
+import com.addthis.hydra.data.query.FieldValueList;
+import com.addthis.hydra.data.query.Query;
+import com.addthis.hydra.data.query.QueryElement;
+import com.addthis.hydra.data.query.QueryException;
+import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.DataTreeNode;
 
@@ -32,6 +37,7 @@ import com.google.common.collect.Iterators;
 import org.slf4j.Logger;
 
 import org.slf4j.LoggerFactory;
+
 /**
  * wraps a Tree and provides the real work behind the query engine. keeps track
  * of active queries so that they can be canceled.
@@ -70,9 +76,7 @@ public class QueryEngine {
 
     public synchronized boolean lease() {
         if (isClosed.get()) {
-            if (log.isWarnEnabled()) {
-                log.warn("lease fail on closed for " + tree);
-            }
+            log.warn("lease fail on closed for {}", tree);
             return false;
         }
         if (used.getAndIncrement() >= 0) {
@@ -83,9 +87,7 @@ public class QueryEngine {
                 log.warn("", ex);
             }
         }
-        if (log.isWarnEnabled()) {
-            log.warn("lease fail on user count " + used + " for " + tree);
-        }
+        log.warn("lease fail on user count {} for {}", used, tree);
         used.decrementAndGet();
         return false;
     }
@@ -97,16 +99,12 @@ public class QueryEngine {
         assert (uv >= 0);
         if (uv == 0 && closeWhenIdle) {
             close();
-            if (log.isDebugEnabled()) {
-                log.debug("close on idle/release for " + tree);
-            }
-        } else if (log.isDebugEnabled()) {
-            log.debug("release but not closing for " + tree);
+            log.debug("close on idle/release for {}", tree);
+        } else {
+            log.debug("release but not closing for {}", tree);
         }
     }
 
-    /**
-     */
     public synchronized void closeWhenIdle() {
         closeWhenIdle = true;
         if (used.get() == 0) {
@@ -136,7 +134,7 @@ public class QueryEngine {
             try {
                 if (isClosed.compareAndSet(false, true) && isOpen.compareAndSet(true, false)) {
                     if (used.get() > 0 || active.size() > 0) {
-                        log.warn("closing with leases=" + used + ", active queries=" + active.size());
+                        log.warn("closing with leases={}, active queries={}", used, active.size());
                     }
                 }
                 cancelActiveThreads();
@@ -242,7 +240,7 @@ public class QueryEngine {
         } finally {
             synchronized (active) {
                 if (!active.remove(thread)) {
-                    log.warn("Active Thread " + thread + " missing from set");
+                    log.warn("Active Thread {} missing from set", thread);
                 }
             }
         }
@@ -307,7 +305,8 @@ public class QueryEngine {
 
         DataTreeNode root = stack != null ? stack.peek() : null;
         if (log.isDebugEnabled()) {
-            log.debug("root=" + root + " pre=" + prefix + " path=" + Arrays.toString(path) + " idx=" + pathIndex + " res=" + sink + " coll=" + collect);
+            log.debug("root={} pre={} path={} idx={} res={} coll={}",
+                    root, prefix, Arrays.toString(path), pathIndex, sink, collect);
         }
 
         if (Thread.currentThread().isInterrupted()) {
@@ -316,9 +315,7 @@ public class QueryEngine {
             throw exception;
         }
         if (pathIndex >= path.length) {
-            if (log.isDebugEnabled()) {
-                log.debug("pathIndex>path.length, return root=" + root);
-            }
+            log.debug("pathIndex>path.length, return root={}", root);
             if (queryStatusObserver != null && !queryStatusObserver.queryCompleted) {
                 sink.send(prefix.createBundle(sink));
             }
@@ -346,7 +343,7 @@ public class QueryEngine {
                             ((ClosableIterator<DataTreeNode>) iter).close();
                         }
 
-                        log.warn("Query closed during processing, root=" + root);
+                        log.warn("Query closed during processing, root={}", root);
                         throw new QueryException("Query closed during processing, root=" + root);
                     }
 
@@ -373,7 +370,7 @@ public class QueryEngine {
                 // Check for interruptions or cancellations
                 if (Thread.currentThread().isInterrupted()) {
                     QueryException exception = new QueryException("query interrupted");
-                    log.warn("Query closed due to thread interruption:\n", exception);
+                    log.warn("Query closed due to thread interruption", exception);
                     throw exception;
                 }
                 if (queryStatusObserver != null && queryStatusObserver.queryCompleted) {
@@ -384,7 +381,7 @@ public class QueryEngine {
                         ((ClosableIterator<DataTreeNode>) iter).close();
                     }
 
-                    log.warn("Query closed during processing, root=" + root);
+                    log.warn("Query closed during processing, root={}", root);
                     throw new QueryException("Query closed during processing, root=" + root);
                 }
 
@@ -418,7 +415,8 @@ public class QueryEngine {
             }
         } finally {
             if (log.isDebugEnabled()) {
-                log.debug("CLOSING: root=" + root + " pre=" + prefix + " path=" + Arrays.toString(path) + " idx=" + pathIndex + " res=" + sink + " coll=" + collect);
+                log.debug("CLOSING: root={} pre={} path={} idx={} res={} coll={}",
+                        root, prefix, Arrays.toString(path), pathIndex, sink, collect);
             }
 
             if (iter instanceof ClosableIterator) {

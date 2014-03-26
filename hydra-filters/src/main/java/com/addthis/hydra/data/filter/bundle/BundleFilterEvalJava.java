@@ -36,17 +36,19 @@ import org.slf4j.LoggerFactory;
 /**
  * This {@link BundleFilter BundleFilter}
  * <span class="hydra-summary">evaluates a user-defined java function.</span>.
- * <p/>
  * <p>This filter allows the user to select one or more fields from the
  * bundle for processing. These fields are copied into Java variables
  * that are processed in the user-specified function. The function must
  * return a boolean value. When the function completes the final values of the
  * Java variables are copied back into the bundle.</p>
- * <p/>
  * <p>Unlike the value filter, the 'eval-java' bundle filter
  * uses boxed variable types ie. Longs and Doubles. The user is responsible
  * for testing for null on these variables.</p>
- * <p/>
+ * <p>If you do not wish the bundle fields to be converted from the Hydra
+ * representation to the Java representation then you can use the value
+ * BUNDLE_RAW in the types declaration. In this case there must be exactly
+ * one type and one variable declaration (the fields parameter is ignored).
+ * This is for experts only who are familiar with the internals of Hydra.</p>
  * <p>The body of the function is placed inside the {@link #body}
  * parameter. This parameter is an array of Strings for the purposes
  * of making it easier to write down multiline functions. You may choose
@@ -92,6 +94,7 @@ public class BundleFilterEvalJava extends BundleFilter {
      * map types. The primitive types are "STRING", "LONG", "DOUBLE", and "BYTES".
      * The list types are LIST_[TYPE] where [TYPE] is one of the primitive types.
      * The map types are MAP_STRING_[TYPE] where [TYPE] is one of the primitive types.
+     * The bundle types are BUNDLE_RAW (see above).
      * Must be equal length as {@link #fields fields}.
      * This field is required and case sensitive.
      */
@@ -121,7 +124,14 @@ public class BundleFilterEvalJava extends BundleFilter {
      * then this field specifies whether to process a copy of the
      * input or not. Default is true.
      */
+    @Codec.Set(codable = true)
     private boolean copyInput = true;
+
+    /**
+     * This is used internally to track whether or not the user
+     * is manually processing the raw bundle.
+     */
+    private boolean typeBundle;
 
     private BundleFilter constructedFilter;
 
@@ -131,10 +141,8 @@ public class BundleFilterEvalJava extends BundleFilter {
         requiredImports.add("import com.addthis.bundle.core.*;");
         requiredImports.add("import com.addthis.hydra.data.filter.bundle.BundleFilter;");
         requiredImports.add("import com.addthis.hydra.data.filter.eval.*;");
-        requiredImports.add("import com.addthis.bundle.value.DefaultArray;");
-        requiredImports.add("import com.addthis.bundle.value.ValueArray;");
-        requiredImports.add("import com.addthis.bundle.value.ValueObject;");
-        requiredImports.add("import com.addthis.bundle.value.ValueFactory;");
+        requiredImports.add("import com.addthis.bundle.value.*;");
+        requiredImports.add("import com.addthis.bundle.core.*;");
         requiredImports.add("import java.util.List;");
         requiredImports.add("import java.util.Map;");
     }
@@ -211,16 +219,18 @@ public class BundleFilterEvalJava extends BundleFilter {
     }
 
     private void createFieldsVariable(StringBuffer classDecl) {
-        classDecl.append("private final String[] __fields = {");
-        for (int i = 0; i < fields.length; i++) {
-            classDecl.append("\"");
-            classDecl.append(fields[i]);
-            classDecl.append("\"");
-            if (i < fields.length - 1) {
-                classDecl.append(",");
+        if (!typeBundle) {
+            classDecl.append("private final String[] __fields = {");
+            for (int i = 0; i < fields.length; i++) {
+                classDecl.append("\"");
+                classDecl.append(fields[i]);
+               classDecl.append("\"");
+                if (i < fields.length - 1) {
+                    classDecl.append(",");
+                }
             }
+            classDecl.append("};\n");
         }
-        classDecl.append("};\n");
     }
 
     private void createInitializer(StringBuffer classDecl) {
@@ -249,49 +259,53 @@ public class BundleFilterEvalJava extends BundleFilter {
     private void createFilterExecMethod(StringBuffer classDecl) {
         classDecl.append("public boolean filterExec(Bundle __bundle)\n");
         classDecl.append("{\n");
-        classDecl.append("BundleField[] __bound = getBindings(__bundle, __fields);\n");
+        if (typeBundle) {
+            classDecl.append("Bundle " + variables[0] + " = __bundle;\n");
+        } else {
+            classDecl.append("BundleField[] __bound = getBindings(__bundle, __fields);\n");
 
-        for (int i = 0; i < variables.length; i++) {
-            InputType type = types[i];
-            String variable = variables[i];
-            String valueVar = "__value" + i;
-            String bindVar = "__bound[" + i + "]";
+            for (int i = 0; i < variables.length; i++) {
+                InputType type = types[i];
+                String variable = variables[i];
+                String valueVar = "__value" + i;
+                String bindVar = "__bound[" + i + "]";
 
-            classDecl.append("ValueObject ");
-            classDecl.append(valueVar);
-            classDecl.append(" = __bundle.getValue(");
-            classDecl.append(bindVar);
-            classDecl.append(");\n");
-            switch (type) {
-                case LONG:
-                    classDecl.append("Long");
-                    break;
-                case DOUBLE:
-                    classDecl.append("Double");
-                    break;
-                default:
-                    classDecl.append(types[i].getTypeName());
-            }
-            classDecl.append(" ");
-            classDecl.append(variable);
-            classDecl.append(" = ");
-            classDecl.append(valueVar);
-            classDecl.append(" == null ? null : ");
-            switch (type.getCategory()) {
-                case PRIMITIVE:
-                    classDecl.append(type.fromHydraAsReference(valueVar));
-                    break;
-                case LIST:
-                case MAP: {
-                    if (copyInput) {
-                        classDecl.append(type.fromHydraAsCopy(valueVar));
-                    } else {
-                        classDecl.append(type.fromHydraAsReference(valueVar));
-                    }
-                    break;
+                classDecl.append("ValueObject ");
+                classDecl.append(valueVar);
+                classDecl.append(" = __bundle.getValue(");
+                classDecl.append(bindVar);
+                classDecl.append(");\n");
+                switch (type) {
+                    case LONG:
+                        classDecl.append("Long");
+                        break;
+                   case DOUBLE:
+                        classDecl.append("Double");
+                        break;
+                    default:
+                        classDecl.append(types[i].getTypeName());
                 }
+                classDecl.append(" ");
+                classDecl.append(variable);
+                classDecl.append(" = ");
+                classDecl.append(valueVar);
+                classDecl.append(" == null ? null : ");
+                switch (type.getCategory()) {
+                  case PRIMITIVE:
+                        classDecl.append(type.fromHydraAsReference(valueVar));
+                        break;
+                    case LIST:
+                    case MAP: {
+                        if (copyInput) {
+                            classDecl.append(type.fromHydraAsCopy(valueVar));
+                        } else {
+                            classDecl.append(type.fromHydraAsReference(valueVar));
+                        }
+                        break;
+                    }
+                }
+               classDecl.append(";\n");
             }
-            classDecl.append(";\n");
         }
 
         classDecl.append("try {\n");
@@ -303,17 +317,19 @@ public class BundleFilterEvalJava extends BundleFilter {
 
         classDecl.append("} finally {\n");
 
-        for (int i = 0; i < variables.length; i++) {
-            InputType type = types[i];
-            String variable = variables[i];
-            String bindVar = "__bound[" + i + "]";
-            classDecl.append("__bundle.setValue(");
-            classDecl.append(bindVar);
-            classDecl.append(",");
-            classDecl.append(variable);
-            classDecl.append(" == null ? null : ");
-            classDecl.append(type.toHydra(variable));
-            classDecl.append(");\n");
+        if (!typeBundle) {
+            for (int i = 0; i < variables.length; i++) {
+                InputType type = types[i];
+                String variable = variables[i];
+                String bindVar = "__bound[" + i + "]";
+                classDecl.append("__bundle.setValue(");
+                classDecl.append(bindVar);
+                classDecl.append(",");
+                classDecl.append(variable);
+                classDecl.append(" == null ? null : ");
+                classDecl.append(type.toHydra(variable));
+                classDecl.append(");\n");
+            }
         }
 
         classDecl.append("}\n");
@@ -346,12 +362,22 @@ public class BundleFilterEvalJava extends BundleFilter {
 
     @Override
     public void initialize() {
-        if (fields.length != variables.length) {
-            String msg = "Parameter 'fields' and parameter 'variables' are not the same length!";
+        typeBundle = false;
+        for (int i = 0; i < types.length; i++) {
+            if (types[i].equals(InputType.BUNDLE_RAW)) {
+                typeBundle = true;
+            }
+        }
+        if (typeBundle && types.length > 1) {
+            String msg = "Type 'BUNDLE_RAW' must appear entirely by itself.";
             throw new IllegalStateException(msg);
         }
-        if (fields.length != types.length) {
-            String msg = "Parameter 'fields' and parameter 'types' are not the same length!";
+        if (types.length != variables.length) {
+            String msg = "Parameter 'types' and parameter 'variables' are not the same length!";
+            throw new IllegalStateException(msg);
+        }
+        if (!typeBundle && types.length != fields.length) {
+            String msg = "Parameter 'types' and parameter 'fields' are not the same length!";
             throw new IllegalStateException(msg);
         }
         constructedFilter = createConstructedFilter();

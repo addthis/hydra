@@ -18,16 +18,10 @@ public class CommandTaskDelete extends AbstractJobMessage {
     private static final long serialVersionUID = 4855355176382463012L;
 
     private int runCount;
-    private boolean isFullDelete;
 
     public CommandTaskDelete(String hostUuid, String job, Integer node, int runCount) {
-        this(hostUuid, job, node, runCount, true);
-    }
-
-    public CommandTaskDelete(String hostUuid, String job, Integer node, int runCount, boolean isFullDelete) {
         super(hostUuid, job, node);
         this.runCount = runCount;
-        this.isFullDelete = isFullDelete;
     }
 
     @Override
@@ -39,7 +33,4 @@ public class CommandTaskDelete extends AbstractJobMessage {
         return runCount;
     }
 
-    public boolean isFullDelete() {
-        return isFullDelete;
-    }
 }

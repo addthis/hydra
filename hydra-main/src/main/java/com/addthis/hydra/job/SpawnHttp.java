@@ -50,6 +50,8 @@ import org.slf4j.LoggerFactory;
 public class SpawnHttp extends AbstractHandler {
 
     private static Logger log = LoggerFactory.getLogger(SpawnHttp.class);
+    private static final String authKey = System.getProperty("auth.key");
+    private static final boolean authLocal = System.getProperty("auth.local","true").equals("true");
 
     private final Spawn spawn;
     private final File webDir;
@@ -205,8 +207,22 @@ public class SpawnHttp extends AbstractHandler {
         }
 
         public void sendShortReply(int code, String topic, String message) {
+            KVPairs kv = getRequestValues();
+            String cbf = kv.getValue("cbfunc");
+            String cbv = kv.getValue("cbfunc-arg");
+            if (cbf != null) {
+                if (message == null || message.length() == 0) {
+                    message = "null";
+                } else if (!(message.startsWith("{") || message.startsWith("["))) {
+                    message = "{message:'"+message+"'}";
+                }
+                message = Strings.cat(cbf,"(",message,",\"",topic,"\"");
+                if (cbv != null) message = Strings.cat(message,",",cbv);
+                message = Strings.cat(message,");");
+            }
             try {
                 response.setStatus(code);
+                response.setHeader("Content-Type", "application/javascript");
                 response.setHeader("topic", topic);
                 response.getWriter().write(message);
             } catch (Exception ex) {
@@ -242,6 +258,14 @@ public class SpawnHttp extends AbstractHandler {
         }
     }
 
+    protected boolean failAuth(HTTPLink link) {
+        if (authKey == null) return false;
+        if (authLocal && link.request().getRemoteAddr().equals("127.0.0.1")) return false;
+        if (link.getRequestValues().getValue("auth","").equals(authKey)) return false;
+        link.sendShortReply(403, "Forbidden", "{}");
+        return true;
+    }
+
     @Override
     public void handle(String target, Request request, HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws IOException, ServletException {
         //To change body of implemented methods use File | Settings | File Templates.
@@ -257,7 +281,9 @@ public class SpawnHttp extends AbstractHandler {
             HTTPService handler = serviceMap.get(target);
             if (handler != null) {
                 try {
-                    handler.httpService(new HTTPLink(target, request, httpServletResponse));
+                    HTTPLink link = new HTTPLink(target, request, httpServletResponse);
+                    if (failAuth(link)) return;
+                    handler.httpService(link);
                 } catch (Exception ex) {
                     log.warn("handler error " + ex, ex);
                     httpServletResponse.sendError(500, ex.getMessage());

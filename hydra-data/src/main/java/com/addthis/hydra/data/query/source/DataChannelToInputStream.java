@@ -29,12 +29,15 @@ import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.BundleFormatted;
-import com.addthis.bundle.core.kvp.KVBundle;
-import com.addthis.bundle.core.kvp.KVBundleFormat;
+import com.addthis.bundle.core.list.ListBundle;
+import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.io.DataChannelWriter;
 import com.addthis.hydra.data.query.FramedDataChannelReader;
 import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.meshy.VirtualFileInput;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is the last point the bundles reach before getting converted into bytes and read by meshy to be
@@ -42,16 +45,18 @@ import com.addthis.meshy.VirtualFileInput;
  */
 class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, BundleFormatted {
 
+    static final Logger log = LoggerFactory.getLogger(DataChannelToInputStream.class);
+
     private static final int outputQueueSize = Parameter.intValue("meshQuerySource.outputQueueSize", 1000);
     private static final int outputBufferSize = Parameter.intValue("meshQuerySource.outputBufferSize", 64000);
 
-    private final KVBundleFormat format = new KVBundleFormat();
+    private final ListBundleFormat format = new ListBundleFormat();
     private final LinkedBlockingQueue<byte[]> queue = new LinkedBlockingQueue<>(outputQueueSize);
     private final DataChannelWriter writer;
     private final ByteArrayOutputStream out;
     /**
      * A wrapper for a boolean flag that gets set if close is called. This observer object will be passed all
-     * the way down to {@link com.addthis.hydra.data.query.QueryEngine#tableSearch(java.util.LinkedList, com.addthis.hydra.data.tree.DataTreeNode, com.addthis.hydra.data.query.FieldValueList, com.addthis.hydra.data.query.QueryElement[], int, com.addthis.bundle.channel.DataChannelOutput, int, com.addthis.hydra.data.query.QueryStatusObserver)}.
+     * the way down to {@link com.addthis.hydra.data.query.engine.QueryEngine#tableSearch(java.util.LinkedList, com.addthis.hydra.data.tree.DataTreeNode, com.addthis.hydra.data.query.FieldValueList, com.addthis.hydra.data.query.QueryElement[], int, com.addthis.bundle.channel.DataChannelOutput, int, com.addthis.hydra.data.query.QueryStatusObserver)}.
      */
     public QueryStatusObserver queryStatusObserver = new QueryStatusObserver();
     private int rows = 0;
@@ -86,14 +91,14 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     @Override
     public byte[] nextBytes(long wait) {
         if (closed || isEOF()) {
-            MeshQuerySource.log.debug("EOF reached. rows={}", rows);
+            log.debug("EOF reached. rows={}", rows);
             return null;
         }
         byte[] data;
         try {
             data = queue.poll(wait, TimeUnit.MILLISECONDS);
         } catch (InterruptedException ignored) {
-            MeshQuerySource.log.warn("Interrupted while waiting for data");
+            log.warn("Interrupted while waiting for data");
             eof = true;
             return null;
         }
@@ -117,16 +122,19 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
                     {
                         if (queue.offer(chunk, 1000L, TimeUnit.MILLISECONDS)) {
                             if (i > 10) {
-                                MeshQuerySource.log.warn("Managed to add to output queue on the {} attempt", i);
+                                log.warn("Managed to add to output queue on the {} attempt", i);
                             }
                             return;
                         }
-                        checkClosed();
+                        if (isClosed()) {
+                            log.info("Unable to emit chunks due to closed channel");
+                            break;
+                        }
                     }
                     throw new DataChannelError("Output queue oversized for 100 attempts");
                 }
             } catch (InterruptedException e) {
-                MeshQuerySource.log.warn("Interrupted while putting bytes onto output buffer");
+                log.warn("Interrupted while putting bytes onto output buffer");
                 throw new DataChannelError("interrupted", e);
             }
         }
@@ -138,10 +146,8 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
      * In either case we want to stop the running of this stream and at that point this function will throw
      * a DataChannelError exception.
      */
-    private void checkClosed() {
-        if (closed) {
-            throw new DataChannelError("Query Closed by upstream action");
-        }
+    private boolean isClosed() {
+        return closed;
     }
 
     /**
@@ -172,7 +178,10 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
      */
     @Override
     public void send(List<Bundle> bundles) {
-        checkClosed(); // Just in case the list was empty, we check if the channel is closed here
+        // Just in case the list was empty, we check if the channel is closed here
+        if (isClosed()) {
+            log.warn("Unable to send bundles due to closed channel");
+        }
         for (Bundle bundle : bundles) {
             send(bundle);
         }
@@ -186,7 +195,9 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
      */
     @Override
     public void send(Bundle bundle) throws DataChannelError {
-        checkClosed();
+        if (isClosed()) {
+            log.warn("Unable to send bundles due to closed channel");
+        }
         try {
             synchronized (out) {
                 out.write(FramedDataChannelReader.FRAME_MORE);
@@ -207,7 +218,9 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
      */
     @Override
     public void sendComplete() {
-        checkClosed();
+        if (isClosed()) {
+            log.warn("Unable to send complete due to closed channel");
+        }
         synchronized (out) {
             out.write(FramedDataChannelReader.FRAME_EOF);
             emitChunks();
@@ -222,7 +235,9 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
      */
     @Override
     public void sourceError(DataChannelError er) {
-        checkClosed();
+        if (isClosed()) {
+            log.warn("Unable to send source error due to closed channel", er);
+        }
         try {
             // if we know writer is closed, don't try to write to it.
             if (!writer.isClosed()) {
@@ -241,7 +256,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
 
     @Override
     public Bundle createBundle() {
-        return new KVBundle(format);
+        return new ListBundle(format);
     }
 
     @Override

@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.query;
 
-import com.addthis.hydra.data.query.QueryEngine;
+import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.tree.DataTree;
 
 

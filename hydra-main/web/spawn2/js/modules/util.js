@@ -13,6 +13,29 @@
  */
 define([],function(){
     var util = {
+       htmlEscape:function(string) {
+           if (string == null) {
+             return "";
+           } else {
+             return string.replace(/[&<>"'\/]/g, function(match) {
+               var htmlEscapes = {
+                 '&': '&amp;',
+                 '<': '&lt;',
+                 '>': '&gt;',
+                 '"': '&quot;',
+                 "'": '&#x27;',
+                 '/': '&#x2F;'
+               };
+               return htmlEscapes[match];
+           });
+         }
+       },
+       escape:function(v) {
+           return encodeURIComponent(v || '').replace('-','%2d');
+        },
+        unescape:function(v) {
+            return decodeURIComponent(v || '');
+        },
         contains:function(self,str){
 			return self.indexOf(str) >= 0;
         },
@@ -124,8 +147,23 @@ define([],function(){
                 }
             }
         },
-    	alertTypes: {0: "On Job Error", 1: "On Job Completion", 2: "Runtime Exceeded", 3: "Rekick Timeout", 4: "Split Canary", 5: "Map Canary"},
-
+    	alertTypes: {0: "On Job Error", 1: "On Job Completion", 2: "Runtime Exceeded",
+    	             3: "Rekick Timeout", 4: "Split Canary", 5: "Map Canary", 6: "Bundle Canary"},
+    	generateTaskDirStatusText:function(type){
+        	switch (type) {
+        		case "MISMATCH_MISSING_LIVE":
+        			return "<div class='label label-danger'>Missing</div>";
+        		case "MATCH":
+        			return "<div class='label label-success'>Correct</div>";
+        		case "ORPHAN_LIVE":
+	        		return "<div class='label label-danger'>Orphan</div>";
+	        	case "REPLICATE_IN_PROGRESS":
+	        		return "<div class='label label-success'>Replication in Progress</div>";
+	        	default:
+	        		console.log("Unexpected task state: " + type);
+	        		return "<div class='label label-danger'>Unknown State</div>";        			       			
+        	}
+        },
     };
     return util;
 });

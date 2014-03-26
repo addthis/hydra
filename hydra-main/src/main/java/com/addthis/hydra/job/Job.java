@@ -15,8 +15,11 @@ package com.addthis.hydra.job;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
@@ -28,6 +31,7 @@ import com.addthis.hydra.job.spawn.JobAlert;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
 import org.slf4j.Logger;
@@ -41,6 +45,12 @@ import org.slf4j.LoggerFactory;
 public final class Job implements IJob, Codable {
 
     private static Logger log = LoggerFactory.getLogger(Job.class);
+    private static final Comparator<JobTask> taskNodeComparator = new Comparator<JobTask>() {
+        @Override
+        public int compare(JobTask jobTask, JobTask jobTask1) {
+            return Integer.compare(jobTask.getTaskID(), jobTask1.getTaskID());
+        }
+    };
 
     /* what is the state of this job */
     @Codec.Set(codable = true)
@@ -153,8 +163,13 @@ public final class Job implements IJob, Codable {
 
     private JobCommand submitCommand;
 
-    // If all errored tasks from an errored job are resolved and the job has started within this cutoff, automatically enable the job. Default is 3 days.
+    /* If all errored tasks from an errored job are resolved and the job has started within this cutoff, automatically
+    enable the job. Default is 3 days. */
     private static final long AUTO_ENABLE_CUTOFF = Parameter.longValue("job.enable.cutoff", 1000 * 60 * 60 * 24 * 3);
+
+    /* Task states that indicate that a job can be considered done. Rebalance/host-failure replications are included so
+    these long-running operations will not delay the job rekick. */
+    private static final Set<JobTaskState> taskStatesToFinishJob = ImmutableSet.of(JobTaskState.IDLE, JobTaskState.ERROR, JobTaskState.REBALANCE, JobTaskState.FULL_REPLICATE);
 
     // For codec only
     public Job() {
@@ -549,6 +564,12 @@ public final class Job implements IJob, Codable {
         return ImmutableList.copyOf(nodes);
     }
 
+    public List<JobTask> getCopyOfTasksSorted() {
+        List<JobTask> tasksCopy = new ArrayList<>(getCopyOfTasks());
+        Collections.sort(tasksCopy, taskNodeComparator);
+        return tasksCopy;
+    }
+
     @Override
     public synchronized void addTask(JobTask task) {
         if (nodes == null) {
@@ -713,9 +734,7 @@ public final class Job implements IJob, Codable {
      */
     public boolean isFinished() {
         for (JobTask jobTask : getCopyOfTasks()) {
-            if (jobTask.getState() != JobTaskState.IDLE &&
-                jobTask.getState() != JobTaskState.ERROR &&
-                jobTask.getState() != JobTaskState.REBALANCE) {
+            if (!taskStatesToFinishJob.contains(jobTask.getState())) {
                 return false;
             }
         }

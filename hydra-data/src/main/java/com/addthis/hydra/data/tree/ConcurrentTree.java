@@ -41,6 +41,7 @@ import com.addthis.basis.util.Meter;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
+import com.addthis.hydra.common.Configuration;
 import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB;
@@ -61,15 +62,24 @@ import com.yammer.metrics.core.Gauge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * @user-reference
+ */
 public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     private static final Logger log = LoggerFactory.getLogger(ConcurrentTree.class);
 
+    @Configuration.Parameter
     static int defaultKeyValueStoreType = Parameter.intValue("hydra.tree.concurrent.kvstore.type", 1);
+
     // number of background deletion threads
+    @Configuration.Parameter
     static int defaultNumDeletionThreads = Parameter.intValue("hydra.tree.clean.threads", 1);
+
     // sleep interval of deletion threads in between polls of deletion queue
+    @Configuration.Parameter
     static int deletionThreadSleepMillis = Parameter.intValue("hydra.tree.clean.interval", 10);
+
     static final boolean trashDebug = Parameter.boolValue("hydra.tree.trash.debug", false);
 
     private static final AtomicInteger scopeGenerator = new AtomicInteger();

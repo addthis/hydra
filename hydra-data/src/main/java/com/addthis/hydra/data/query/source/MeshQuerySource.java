@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.data.query.QueryEngineCache;
+import com.addthis.hydra.data.query.engine.QueryEngineCache;
 import com.addthis.meshy.LocalFileHandler;
 import com.addthis.meshy.VirtualFileFilter;
 import com.addthis.meshy.VirtualFileReference;
@@ -70,7 +70,7 @@ import org.slf4j.LoggerFactory;
  */
 public class MeshQuerySource implements LocalFileHandler {
 
-    static final Logger log = LoggerFactory.getLogger(MeshQuerySource.class);
+    private static final Logger log = LoggerFactory.getLogger(MeshQuerySource.class);
 
     static final int slowQueryThreshold = Parameter.intValue("meshQuerySource.slowQueryThreshold", 5000);
 
