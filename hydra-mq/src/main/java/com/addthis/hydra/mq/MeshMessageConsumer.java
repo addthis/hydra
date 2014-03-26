@@ -97,8 +97,8 @@ public class MeshMessageConsumer implements MessageConsumer {
                     poller.bump();
                 }
             });
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ex) {
+            log.warn("", ex);
         }
     }
 
@@ -129,8 +129,8 @@ public class MeshMessageConsumer implements MessageConsumer {
         } catch (ChannelException e) {
             // on shutdown
             log.info("shutting down? message={}", e.getMessage());
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception ex) {
+            log.warn("", ex);
         }
     }
 
@@ -202,14 +202,14 @@ public class MeshMessageConsumer implements MessageConsumer {
                 try {
                     task();
                 } catch (Exception ex) {
-                    ex.printStackTrace();
+                    log.warn("", ex);
                 }
                 try {
                     synchronized (bumper) {
                         bumper.wait(timeout);
                     }
                 } catch (Exception ex) {
-                    ex.printStackTrace();
+                    log.warn("", ex);
                 }
             }
         }
