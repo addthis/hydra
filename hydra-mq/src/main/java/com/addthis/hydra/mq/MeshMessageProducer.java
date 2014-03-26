@@ -126,7 +126,7 @@ public class MeshMessageProducer implements MessageProducer {
                 public void requestContents(String fileName, Map<String, String> options, OutputStream out) throws IOException {
                     if (debug) log.info("topic producer request fileName={} queue={} options={}", fileName, size(), options);
                     if (options == null || options.size() == 0) {
-                        Bytes.writeString("{items:" + size()+",keys:\""+routing+"\"}", out);
+                        out.write(Bytes.toBytes("{items:" + size()+",keys:\""+routing+"\"}"));
                     } else {
                         ByteArrayOutputStream bos = new ByteArrayOutputStream();
                         synchronized (Queue.this) {
