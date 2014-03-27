@@ -2092,10 +2092,15 @@ public class Spawn implements Codec.Codable {
             }
             if (task.getState() == JobTaskState.QUEUED) {
                 removeFromQueue(task);
-                log.warn("[taskQueuesByPriority] queued job " + jobUUID);
+                log.warn("[task.stop] stopping queued " + task.getJobKey());
             } else if (task.getState() == JobTaskState.REBALANCE) {
-                log.warn("[task.stop] " + task.getJobKey() + " rebalance stopped with force=" + force);
-            } else if (force && (task.getState() == JobTaskState.REVERT)) {
+                log.warn("[task.stop] stopping rebalancing " + task.getJobKey() + " with force=" + force);
+            } else if (task.getState() == JobTaskState.MIGRATING ) {
+                log.warn("[task.stop] stopping migrating " + task.getJobKey());
+                task.setRebalanceSource(null);
+                task.setRebalanceTarget(null);
+            }
+            else if (force && (task.getState() == JobTaskState.REVERT)) {
                 log.warn("[task.stop] " + task.getJobKey() + " killed in state " + task.getState());
                 int code  = JobTaskErrorCode.EXIT_REVERT_FAILURE;
                 job.errorTask(task, code);
