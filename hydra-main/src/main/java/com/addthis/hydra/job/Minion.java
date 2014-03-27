@@ -2410,6 +2410,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
 
     public void doHandle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws Exception {
         response.setBufferSize(65535);
+        response.setHeader("Access-Control-Allow-Origin","*");
         KVPairs kv = new KVPairs();
         boolean handled = true;
         for (Enumeration<String> e = request.getParameterNames(); e.hasMoreElements();) {
