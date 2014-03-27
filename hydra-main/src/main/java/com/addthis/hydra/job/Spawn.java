@@ -586,6 +586,9 @@ public class Spawn implements Codec.Codable {
     }
 
     public HostState getHostState(String hostUuid) {
+        if (hostUuid == null) {
+            return null;
+        }
         synchronized (monitored) {
             return monitored.get(hostUuid);
         }
