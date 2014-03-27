@@ -82,7 +82,6 @@ public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTa
     @Codec.Set(codable = true)
     private String rebalanceTarget;
 
-
     private volatile JobKey jobKey;
 
     public JobTask() {

@@ -13,13 +13,7 @@
  */
 package com.addthis.hydra.job;
 
-import java.io.IOException;
-import java.io.Serializable;
-
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.addthis.basis.util.Parameter;
-
 import com.addthis.hydra.job.mq.CoreMessage;
 import com.addthis.hydra.job.mq.HostMessage;
 import com.addthis.hydra.job.mq.HostState;
@@ -28,17 +22,18 @@ import com.addthis.hydra.mq.MessageProducer;
 import com.addthis.hydra.mq.RabbitMessageConsumer;
 import com.addthis.hydra.mq.RabbitMessageProducer;
 import com.addthis.hydra.mq.ZkMessageConsumer;
-
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ShutdownListener;
 import com.rabbitmq.client.ShutdownSignalException;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Gauge;
-
-import org.I0Itec.zkclient.ZkClient;
+import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.concurrent.atomic.AtomicInteger;
 public class SpawnMQImpl implements SpawnMQ {
 
     private static Logger log = LoggerFactory.getLogger(SpawnMQImpl.class);
@@ -54,7 +49,7 @@ public class SpawnMQImpl implements SpawnMQ {
     private Channel channel;
     private Spawn spawn;
     private boolean connected;
-    private final ZkClient zkClient;
+    private final CuratorFramework zkClient;
 
     private final AtomicInteger inHandler = new AtomicInteger(0);
     private Gauge<Integer> heartbeat = Metrics.newGauge(SpawnMQImpl.class, "heartbeat", new Gauge<Integer>() {
@@ -64,7 +59,7 @@ public class SpawnMQImpl implements SpawnMQ {
         }
     });
 
-    public SpawnMQImpl(ZkClient zkClient, Spawn spawn) {
+    public SpawnMQImpl(CuratorFramework zkClient, Spawn spawn) {
         this.spawn = spawn;
         this.zkClient = zkClient;
     }
