@@ -388,6 +388,7 @@ function renderTable(id,table,scrolling,addclass) {
 			delta = -1;
 		} else {
 			delta = Math.round(delta);
+			delta = delta * delta * (delta > 0 ? 1 : -1);
 		}
 		var maxwin = table.rowoff - table.rowon;
 		var maxlen = table.rows.length;
