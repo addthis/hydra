@@ -13,18 +13,19 @@
  */
 package com.addthis.hydra.job.store;
 
-import com.addthis.bark.StringSerializer;
-import com.addthis.bark.ZkUtil;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.zookeeper.KeeperException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.addthis.bark.ZkClientFactory;
+import com.addthis.bark.ZkHelpers;
+import com.addthis.codec.Codec;
+import com.addthis.codec.CodecJSON;
+
+import org.I0Itec.zkclient.ZkClient;
+import org.slf4j.Logger;
+
+import org.slf4j.LoggerFactory;
 /**
  * A class for persisting key-value data within zookeeper.
  */
@@ -34,10 +35,10 @@ public class ZookeeperDataStore implements SpawnDataStore {
     private static final Logger log = LoggerFactory.getLogger(ZookeeperDataStore.class);
     private static final String description = "zookeeper";
 
-    private final CuratorFramework zkClient;
+    private final ZkClient zkClient;
 
-    public ZookeeperDataStore(CuratorFramework zkClient) {
-        this.zkClient = zkClient != null ? zkClient : ZkUtil.makeStandardClient();
+    public ZookeeperDataStore(ZkClient zkClient) {
+        this.zkClient = zkClient != null ? zkClient : ZkClientFactory.makeStandardClient();
     }
 
     @Override
@@ -50,13 +51,9 @@ public class ZookeeperDataStore implements SpawnDataStore {
      * Read the value from the specified zookeeper path, or return null if it doesn't exist
      */
     public String get(String path) {
-        try {
-            if (zkClient.checkExists().forPath(path) != null) {
-                String val = StringSerializer.deserialize(zkClient.getData().forPath(path));
-                return val != null ? val : ""; // If path exists, but has no value, need to return empty String to correctly interpret "marker" nodes
-            }
-        } catch (Exception e) {
-            log.error("Error getting data for path: " + path, e);
+        if (ZkHelpers.pathExists(zkClient, path)) {
+            String val = ZkHelpers.readDataMaybeNull(zkClient, path);
+            return val != null ? val : ""; // If path exists, but has no value, need to return empty String to correctly interpret "marker" nodes
         }
         return null;
     }
@@ -78,11 +75,8 @@ public class ZookeeperDataStore implements SpawnDataStore {
      * Put a value into a zookeeper path, after ensuring that it exists
      */
     public void put(String path, String value) throws Exception {
-        try {
-            zkClient.create().creatingParentsIfNeeded().forPath(path, StringSerializer.serialize(value));
-        } catch (KeeperException.NodeExistsException nodeExists) {
-            zkClient.setData().forPath(path, StringSerializer.serialize(value));
-        }
+        ZkHelpers.makeSurePersistentPathExists(zkClient, path);
+        zkClient.writeData(path, value);
     }
 
     @Override
@@ -91,11 +85,8 @@ public class ZookeeperDataStore implements SpawnDataStore {
      * some special handling in PriamDataStore.
      */
     public void putAsChild(String parent, String childId, String value) throws Exception {
-        try {
-            zkClient.create().creatingParentsIfNeeded().forPath(parent + "/" + childId, StringSerializer.serialize(value));
-        } catch (KeeperException.NodeExistsException nodeExists) {
-            zkClient.setData().forPath(parent + "/" + childId, StringSerializer.serialize(value));
-        }
+        ZkHelpers.makeSurePersistentPathExists(zkClient, parent);
+        put(parent + "/" + childId, value);
     }
 
     @Override
@@ -103,14 +94,14 @@ public class ZookeeperDataStore implements SpawnDataStore {
      * Read data from a zookeeper path and decode it onto a Codable shell object
      */
     public <T extends Codec.Codable> boolean loadCodable(String path, T shell) {
+        if (!zkClient.exists(path)) {
+            return false;
+        }
+        String raw = zkClient.readData(path);
+        if (raw == null) {
+            return false;
+        }
         try {
-            if (zkClient.checkExists().forPath(path) == null) {
-                return false;
-            }
-            String raw = StringSerializer.deserialize(zkClient.getData().forPath(path));
-            if (raw == null) {
-                return false;
-            }
             codec.decode(shell, raw.getBytes());
             return true;
         } catch (Exception e) {
@@ -133,13 +124,7 @@ public class ZookeeperDataStore implements SpawnDataStore {
      * Delete the key and value of a particular child beneath a parent node
      */
     public void deleteChild(String parent, String childId) {
-        try {
-            if (zkClient.checkExists().forPath(parent + "/" + childId) != null) {
-                zkClient.delete().forPath(parent + "/" + childId);
-            }
-        } catch (Exception e) {
-            log.error("Failed to delete child: " + parent + "/" + childId, e);
-        }
+        ZkHelpers.deletePath(zkClient, parent + "/" + childId);
     }
 
     @Override
@@ -147,13 +132,7 @@ public class ZookeeperDataStore implements SpawnDataStore {
      * Delete a path from zookeeper
      */
     public void delete(String path) {
-        try {
-            if (zkClient.checkExists().forPath(path) != null) {
-                zkClient.delete().deletingChildrenIfNeeded().forPath(path);
-            }
-        } catch (Exception e) {
-            log.error("Failed to delete child: " + path, e);
-        }
+        zkClient.deleteRecursive(path);
     }
 
     @Override
@@ -161,16 +140,10 @@ public class ZookeeperDataStore implements SpawnDataStore {
      * Get all children beneath a zookeeper parent node
      */
     public List<String> getChildrenNames(String path) {
-        try {
-            if (zkClient.checkExists().forPath(path) != null) {
-                return zkClient.getChildren().forPath(path);
-            } else {
-                return null;
-            }
-        } catch (Exception e) {
-            log.error("Failed to get children for path: " + path, e);
-            return null;
+        if (ZkHelpers.pathExists(zkClient, path)) {
+            return zkClient.getChildren(path);
         }
+        return null;
     }
 
     @Override
@@ -183,7 +156,7 @@ public class ZookeeperDataStore implements SpawnDataStore {
                     rv.put(child, getChild(path, child));
                 } catch (Exception ex) {
                     log.warn("Failed to fetch child " + child + " of " + path + ": " + ex, ex);
-                }
+                    }
             }
         }
         return rv;

@@ -16,8 +16,9 @@ package com.addthis.hydra.mq;
 import java.io.IOException;
 import java.io.Serializable;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.zookeeper.KeeperException;
+import com.addthis.bark.ZkHelpers;
+
+import org.I0Itec.zkclient.ZkClient;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,15 +27,15 @@ public class ZKMessageProducer implements MessageProducer {
 
     private static Logger log = LoggerFactory.getLogger(ZKMessageProducer.class);
 
-    private CuratorFramework zkClient;
+    private ZkClient zkClient;
     private ObjectMapper mapper;
 
-    public ZKMessageProducer(CuratorFramework zkClient) {
+    public ZKMessageProducer(ZkClient zkClient) {
         this.zkClient = zkClient;
         mapper = new ObjectMapper();
         try {
             open();
-        } catch (IOException e) {
+        } catch (IOException e)  {
             log.warn("", "[zk.producer] error opening client: " + e);
         }
     }
@@ -51,14 +52,6 @@ public class ZKMessageProducer implements MessageProducer {
 
     @Override
     public void sendMessage(Serializable message, String routingKey) throws IOException {
-        try {
-            try {
-                zkClient.create().creatingParentsIfNeeded().forPath(routingKey, mapper.writeValueAsBytes(message));
-            } catch (KeeperException.NodeExistsException e) {
-                zkClient.setData().forPath(routingKey, mapper.writeValueAsBytes(message));
-            }
-        } catch (Exception e) {
-            throw new IOException(e);
-        }
+        ZkHelpers.updatePersistentPath(zkClient, routingKey, mapper.writeValueAsString(message));
     }
 }

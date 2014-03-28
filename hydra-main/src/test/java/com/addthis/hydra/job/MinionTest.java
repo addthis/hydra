@@ -31,9 +31,9 @@ public class MinionTest extends ZkStartUtil {
 
     @Test
     public void testJoinGroup() throws Exception {
-        Minion minion = new Minion(zkClient);
+        Minion minion = new Minion();
         minion.joinGroup();
-        List<String> upMinions = zkClient.getChildren().forPath("/minion/up");
+        List<String> upMinions = myZkClient.getChildren("/minion/up");
         assertEquals(ImmutableList.of(minion.getUUID()), upMinions);
         minion.closeZkClient();
     }

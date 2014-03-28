@@ -31,7 +31,7 @@ public class SpawnDataStoreTest extends ZkStartUtil {
      */
     @Test
     public void runTests() throws Exception {
-        ZookeeperDataStore zookeeperDataStore = new ZookeeperDataStore(zkClient);
+        ZookeeperDataStore zookeeperDataStore = new ZookeeperDataStore(myZkClient);
         putGetTest(zookeeperDataStore);
         childTest(zookeeperDataStore);
     }

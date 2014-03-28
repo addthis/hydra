@@ -27,21 +27,12 @@ import com.addthis.basis.test.SlowTest;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
 
+import com.addthis.bark.ZkHelpers;
 import com.addthis.bark.ZkStartUtil;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.imps.CuratorFrameworkState;
-import org.apache.curator.retry.RetryOneTime;
-import org.apache.curator.test.InstanceSpec;
-import org.apache.curator.test.QuorumConfigBuilder;
-import org.apache.curator.test.TestingServer;
-import org.apache.curator.test.TestingZooKeeperServer;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.server.NettyServerCnxnFactory;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;
@@ -62,19 +53,14 @@ public class SpawnBalancerTest extends ZkStartUtil {
 
     @Before
     public void setup() throws Exception {
-
         tmpRoot = Files.createTempDir().toString();
         System.setProperty("SPAWN_DATA_DIR", tmpRoot + "/tmp/spawn/data");
         System.setProperty("SPAWN_LOG_DIR", tmpRoot + "/tmp/spawn/log/events");
-        if (zkClient.checkExists().forPath("/minion/up") == null) {
-            zkClient.create().creatingParentsIfNeeded().forPath("/minon/up");
-        }
-        if (zkClient.checkExists().forPath("/minion/dead") == null) {
-            zkClient.create().creatingParentsIfNeeded().forPath("/minon/dead");
-        }
+        ZkHelpers.makeSurePersistentPathExists(myZkClient, "/minion/up");
+        ZkHelpers.makeSurePersistentPathExists(myZkClient, "/minion/dead");
         try {
             Thread.sleep(100);
-            spawn = new Spawn(zkClient);
+            spawn = new Spawn(true);
             bal = spawn.getSpawnBalancer();
             spawn.setSpawnMQ(EasyMock.createMock(SpawnMQ.class));
         } catch (Exception ex) {
@@ -82,15 +68,10 @@ public class SpawnBalancerTest extends ZkStartUtil {
     }
 
     @After
-    public void clear() throws Exception {
-        if (zkClient.checkExists().forPath("/minion/up") != null) {
-            zkClient.delete().forPath("/minon/up");
-        }
-        if (zkClient.checkExists().forPath("/minion/dead") != null) {
-            zkClient.delete().forPath("/minon/dead");
-        }
+    public void clear() {
+        ZkHelpers.deletePathRecursive(myZkClient, "/minion/up");
+        ZkHelpers.deletePathRecursive(myZkClient, "/minion/dead");
         Files.deleteDir(new File(tmpRoot));
-        spawn.runtimeShutdownHook();
     }
 
     @Test
@@ -442,7 +423,7 @@ public class SpawnBalancerTest extends ZkStartUtil {
         JobKey myKey = new JobKey(job.getId(), 0);
         spawn.addToTaskQueue(myKey, false, false);
         spawn.writeSpawnQueue();
-        Spawn spawn2 = new Spawn(zkClient);
+        Spawn spawn2 = new Spawn(true);
         spawn2.getSettings().setQuiesced(true);
         spawn2.loadSpawnQueue();
         assertEquals("should have one queued task", 1, spawn.getTaskQueuedCount());
@@ -505,7 +486,7 @@ public class SpawnBalancerTest extends ZkStartUtil {
     }
 
     @Test
-    public void hostScoreTest() throws Exception {
+    public void hostScoreTest() {
         // Test that heavily-loaded and lightly-loaded hosts are identified as such, and that medium-loaded hosts are
         // not identified as heavy or light
         long[] used = new long[]{1000, 9900, 10000, 10500, 20000};
@@ -618,13 +599,13 @@ public class SpawnBalancerTest extends ZkStartUtil {
         return keyList.toArray(sampleArray);
     }
 
-    private HostState installHostStateWithUUID(String hostUUID, Spawn spawn, boolean isUp) throws Exception {
+    private HostState installHostStateWithUUID(String hostUUID, Spawn spawn, boolean isUp) {
         return installHostStateWithUUID(hostUUID, spawn, isUp, false, 1, "default");
     }
 
-    private HostState installHostStateWithUUID(String hostUUID, Spawn spawn, boolean isUp, boolean readOnly, int availableSlots, String minionType) throws Exception {
+    private HostState installHostStateWithUUID(String hostUUID, Spawn spawn, boolean isUp, boolean readOnly, int availableSlots, String minionType) {
         String zkPath = isUp ? "/minion/up/" + hostUUID : "/minion/dead/" + hostUUID;
-        zkClient.create().withMode(CreateMode.EPHEMERAL).forPath(zkPath);
+        myZkClient.createEphemeral(zkPath, "");
         HostState newHostState = new HostState(hostUUID);
         newHostState.setMax(new HostCapacity(10, 10, 10, 1000));
         newHostState.setUsed(new HostCapacity(0, 0, 0, 100));
