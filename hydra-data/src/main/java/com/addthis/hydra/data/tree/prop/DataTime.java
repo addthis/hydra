@@ -23,6 +23,10 @@ import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
+import com.addthis.hydra.store.util.Varint;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 public class DataTime extends TreeNodeData<DataTime.Config> {
 
@@ -107,5 +111,33 @@ public class DataTime extends TreeNodeData<DataTime.Config> {
         } else {
             return null;
         }
+    }
+
+    @Override
+    public byte[] bytesEncode() {
+        ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
+        long delta = last - first;
+        Varint.writeUnsignedVarLong(first, byteBuf);
+        Varint.writeUnsignedVarLong(delta, byteBuf);
+        byte[] encodedBytes = new byte[byteBuf.readableBytes()];
+        byteBuf.readBytes(encodedBytes);
+        byteBuf.release();
+        return encodedBytes;
+    }
+
+    @Override
+    public void bytesDecode(byte[] b) {
+        ByteBuf byteBuf = Unpooled.wrappedBuffer(b);
+        first = Varint.readUnsignedVarLong(byteBuf);
+        last = first + Varint.readUnsignedVarLong(byteBuf);
+        byteBuf.release();
+    }
+
+    public void setFirst(long first) {
+        this.first = first;
+    }
+
+    public void setLast(long last) {
+        this.last = last;
     }
 }
