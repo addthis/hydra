@@ -19,7 +19,7 @@
             </a>
         </li>
         <li class="active">
-            <%=command.name%>
+            <%-command.name%>
         </li>
     </ul>
     <div class="job-detail-actions pull-right">
@@ -35,13 +35,13 @@
     <div class="form" role="form">
         <div class="form-group">
             <label class="sr-only" for="name" style="margin-bottom:0px;">Name</label>
-            <input value="<%=command.name%>" type="text" class="form-control" id="name" name="name" placeholder="Enter name">
+            <input value="<%-command.name%>" type="text" class="form-control" id="name" name="name" placeholder="Enter name">
         </div>
     </div>
     <div class="form" role="form">
         <div class="form-group">
             <label class="sr-only" for="name" style="margin-bottom:0px;">Commands</label>
-            <textarea class='form-control' id="commandInput" rows="12"><%=command.command.join('\n')%></textarea>
+            <textarea class='form-control' id="commandInput" rows="12"><%-command.command.join('\n')%></textarea>
         </div>
     </div>
 </div>
