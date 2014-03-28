@@ -3398,6 +3398,39 @@ public class Spawn implements Codec.Codable {
      * @throws Exception If there is a problem during task scheduling
      */
     public boolean kickOnExistingHosts(Job job, JobTask task, String config, long timeOnQueue, boolean allowSwap, boolean ignoreQuiesce) throws Exception {
+        if (!jobTaskCanKick(job, task)) {
+            return false;
+        }
+        List<HostState> possibleHosts = new ArrayList<>();
+        possibleHosts.add(getHostState(task.getHostUUID()));
+        if (allowSwap && isNewTask(task)) {
+            possibleHosts.addAll(listHostStatus(job.getMinionType()));
+        }
+        else if (allowSwap && !job.getDontAutoBalanceMe() && task.getReplicas() != null) {
+            for (JobTaskReplica replica : task.getReplicas()) {
+                possibleHosts.add(getHostState(replica.getHostUUID()));
+            }
+        }
+        HostState bestHost = findHostWithAvailableSlot(task, possibleHosts, false);
+        if (bestHost != null) {
+            String bestHostUuid = bestHost.getHostUuid();
+            if (task.getHostUUID().equals(bestHostUuid)) {
+                taskQueuesByPriority.markHostKick(bestHostUuid, false);
+                scheduleTask(job, task, config);
+                log.info("[taskQueuesByPriority] sending " + task.getJobKey() + " to " + bestHostUuid);
+                return true;
+            } else if (swapTask(task.getJobUUID(), task.getTaskID(), bestHostUuid, true, ignoreQuiesce)) {
+                taskQueuesByPriority.markHostKick(bestHostUuid, true);
+                log.info("[taskQueuesByPriority] swapping " + task.getJobKey() + " onto " + bestHostUuid);
+                return true;
+            }
+        } else if (taskQueuesByPriority.isMigrationEnabled() && !job.getQueryConfig().getCanQuery() && !job.getDontAutoBalanceMe()) {
+            return attemptMigrateTask(job, task, timeOnQueue);
+        }
+        return false;
+    }
+
+    private boolean jobTaskCanKick(Job job, JobTask task) {
         if (job == null || !job.isEnabled() ||
             (job.getMaxSimulRunning() > 0 && job.getCountActiveTasks() >= job.getMaxSimulRunning())) {
             return false;
@@ -3414,54 +3447,7 @@ public class Spawn implements Codec.Codable {
             log.warn("[taskQueuesByPriority] cannot kick " + task.getJobKey() + " because one or more of its hosts is down or scheduled to be failed: " + unavailableHosts.toString());
             return false;
         }
-        HostState liveHost = getHostState(task.getHostUUID());
-        if (liveHost.canMirrorTasks() && !liveHost.isReadOnly() && taskQueuesByPriority.shouldKickTaskOnHost(liveHost.getHostUuid())) {
-            taskQueuesByPriority.markHostKick(liveHost.getHostUuid(), false);
-            scheduleTask(job, task, config);
-            log.info("[taskQueuesByPriority] sending " + task.getJobKey() + " to " + task.getHostUUID());
-            return true;
-        } else if (allowSwap && !job.getDontAutoBalanceMe()) {
-            attemptKickTaskUsingSwap(job, task, isNewTask, ignoreQuiesce, timeOnQueue);
-        }
-        return false;
-    }
-
-    /**
-     * Attempt to kick a task under the assumption that the live host is unavailable.
-     *
-     * @param job           The job to kick
-     * @param task          The task to kick
-     * @param isNewTask     Whether the task is new and has no existing data to move
-     * @param ignoreQuiesce Whether this task kick should ignore the quiesce state
-     * @param timeOnQueue   How long the task has been on the queue
-     * @return True if the task was kicked
-     * @throws Exception
-     */
-    private boolean attemptKickTaskUsingSwap(Job job, JobTask task, boolean isNewTask, boolean ignoreQuiesce, long timeOnQueue) throws Exception {
-        if (isNewTask) {
-            HostState host = findHostWithAvailableSlot(task, listHostStatus(job.getMinionType()), false);
-            if (host != null && swapTask(job.getId(), task.getTaskID(), host.getHostUuid(), true, ignoreQuiesce)) {
-                taskQueuesByPriority.markHostKick(host.getHostUuid(), false);
-                log.info("[taskQueuesByPriority] swapping " + task.getJobKey() + " onto " + host.getHostUuid());
-                return true;
-            }
-            return false;
-        } else if (task.getReplicas() != null) {
-            List<HostState> replicaHosts = new ArrayList<>();
-            for (JobTaskReplica replica : task.getReplicas()) {
-                replicaHosts.add(getHostState(replica.getHostUUID()));
-            }
-            HostState availReplica = findHostWithAvailableSlot(task, replicaHosts, false);
-            if (availReplica != null && swapTask(job.getId(), task.getTaskID(), availReplica.getHostUuid(), true, ignoreQuiesce)) {
-                taskQueuesByPriority.markHostKick(availReplica.getHostUuid(), true);
-                log.info("[taskQueuesByPriority] swapping " + task.getJobKey() + " onto " + availReplica.getHostUuid());
-                return true;
-            }
-        }
-        if (taskQueuesByPriority.isMigrationEnabled() && !job.getQueryConfig().getCanQuery() && !job.getDontAutoBalanceMe()) {
-            return attemptMigrateTask(job, task, timeOnQueue);
-        }
-        return false;
+        return true;
     }
 
     /**
@@ -3476,18 +3462,22 @@ public class Spawn implements Codec.Codable {
         if (hosts == null) {
             return null;
         }
+        List<HostState> filteredHosts = new ArrayList<>();
         for (HostState host : hosts) {
             if (host == null || (forMigration && hostFailWorker.getFailureState(host.getHostUuid()) != HostFailWorker.FailState.ALIVE)) {
                 // Don't migrate onto hosts that are being failed in any capacity
                 continue;
             }
+            if (forMigration && !taskQueuesByPriority.shouldMigrateTaskToHost(task, host.getHostUuid())) {
+                // Not a valid migration target
+                continue;
+            }
             if (host.canMirrorTasks() && !host.isReadOnly() && balancer.canReceiveNewTasks(host, false) &&
-                taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid()) &&
-                (!forMigration || taskQueuesByPriority.shouldMigrateTaskToHost(task, host.getHostUuid()))) {
-                return host;
+                taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid())) {
+                filteredHosts.add(host);
             }
         }
-        return null;
+        return taskQueuesByPriority.findBestHostToRunTask(filteredHosts);
     }
 
     /**

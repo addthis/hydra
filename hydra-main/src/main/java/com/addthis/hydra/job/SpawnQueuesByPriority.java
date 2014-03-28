@@ -148,6 +148,36 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     }
 
     /**
+     * Out of a list of possible hosts to run a task, find the best one. TODO should be a priority queue?
+     * @param inputHosts The legal hosts for a task
+     * @return One of the hosts, if one with free slots is found; null otherwise
+     */
+    public HostState findBestHostToRunTask(List<HostState> inputHosts) {
+        if (inputHosts == null) {
+            return null;
+        }
+        HostState bestHost = null;
+        int maxAvailFoundSoFar = -1;
+        synchronized (hostAvailSlots) {
+            for (HostState hostState : inputHosts) {
+                String host;
+                if (hostState == null || (host = hostState.getHostUuid()) == null) {
+                    continue;
+                }
+                if (!hostAvailSlots.containsKey(host)) {
+                    continue;
+                }
+                int nextAvailCount = hostAvailSlots.get(host);
+                if (nextAvailCount > 0 && nextAvailCount > maxAvailFoundSoFar) {
+                    bestHost = hostState;
+                    maxAvailFoundSoFar = nextAvailCount;
+                }
+            }
+        }
+        return bestHost;
+    }
+
+    /**
      * Update the available host slots from the list, but only actually update on a periodic timer
      *
      * @param hosts The hosts to input
