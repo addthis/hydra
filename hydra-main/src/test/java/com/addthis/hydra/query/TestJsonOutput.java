@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.query;
 
+import com.addthis.hydra.query.web.QueryServlet;
+
 import org.junit.Test;
 
 public class TestJsonOutput {

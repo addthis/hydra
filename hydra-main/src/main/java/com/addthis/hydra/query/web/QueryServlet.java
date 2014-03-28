@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.query;
+package com.addthis.hydra.query.web;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -54,6 +54,7 @@ import org.apache.commons.lang3.CharEncoding;
 import org.eclipse.jetty.server.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 public class QueryServlet {
 
     private static final Logger log = LoggerFactory.getLogger(QueryServlet.class);
@@ -65,7 +66,7 @@ public class QueryServlet {
     // parametrize this we have created a monster.
     private static final Cache<String, Query> asyncCache = CacheBuilder.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
 
-    private static final char hex[] = new char[]{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+    private static final char hex[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
     private static final Timer queryTimes = Metrics.newTimer(QueryServlet.class, "queryTime", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
 
@@ -128,7 +129,7 @@ public class QueryServlet {
      */
     public static KVPairs requestToVKPairs(HttpServletRequest request) {
         KVPairs kv = new KVPairs();
-        for (Enumeration<String> e = request.getParameterNames(); e.hasMoreElements();) {
+        for (Enumeration<String> e = request.getParameterNames(); e.hasMoreElements(); ) {
             String k = e.nextElement();
             String v = request.getParameter(k);
             kv.add(k, v);
@@ -142,7 +143,7 @@ public class QueryServlet {
     public static void handleQuery(QuerySource querySource, KVPairs kv, HttpServletRequest request, HttpServletResponse response) throws Exception {
         String job = kv.getValue("job");
         String path = kv.getValue("path", kv.getValue("q", ""));
-        Query query = new Query(job, new String[] { path }, new String[] { kv.getValue("ops"), kv.getValue("rops") });
+        Query query = new Query(job, new String[]{path}, new String[]{kv.getValue("ops"), kv.getValue("rops")});
         query.setTraced(kv.getIntValue("trace", 0) == 1);
         handleQuery(querySource, query, kv, request, response);
     }
@@ -160,8 +161,8 @@ public class QueryServlet {
         String filename = kv.getValue("filename", "query");
         String format = kv.getValue("format", "json");
         String async = kv.getValue("async");
-        String jsonp = kv.getValue("jsonp",kv.getValue("cbfunc"));
-        String jargs = kv.getValue("jargs",kv.getValue("cbfunc-arg"));
+        String jsonp = kv.getValue("jsonp", kv.getValue("cbfunc"));
+        String jargs = kv.getValue("jargs", kv.getValue("cbfunc-arg"));
 
         int timeout = Math.min(kv.getIntValue("timeout", maxQueryTime), maxQueryTime);
         query.setParameterIfNotYetSet("timeout", timeout);
@@ -323,7 +324,7 @@ public class QueryServlet {
                 response.setStatus(500);
                 error = true;
                 log.error("", ex);
-            } catch (IOException e)  {
+            } catch (IOException e) {
                 log.warn("", "Exception sending error: " + e);
             } finally {
                 setDone();
