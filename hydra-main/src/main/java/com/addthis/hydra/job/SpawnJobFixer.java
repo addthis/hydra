@@ -55,6 +55,8 @@ public class SpawnJobFixer {
             if (errorCode != JobTaskErrorCode.HOST_FAILED) {
                 spawn.scheduleTask(job, task, null);
             }
+        } else if (errorCode == JobTaskErrorCode.REBALANCE_PAUSE) {
+            job.setTaskState(task, JobTaskState.IDLE, true);
         } else {
             job.errorTask(task, errorCode);
         }

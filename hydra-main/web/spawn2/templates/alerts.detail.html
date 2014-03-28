@@ -34,7 +34,7 @@
 <div id="detailContainer" class="main-container">
     <div class="form" role="form">
         <div class="form-group">
-            <label class="sr-only" for="type" style="margin-bottom:0px;">Type</label>
+            <label class="sr-only" for="alertType" style="margin-bottom:0px;">Type</label>
             <select id="alertType" class="form-control">
                 <%_.each(alertTypes,function(val, key){%>
                     <option value="<%=key%>"><%=val%></option>
@@ -63,14 +63,33 @@
     <div id="alertCanaryConfig" class="form" roles="form">
         <div class="form-group">
             <label class="sr-only" for="canaryPath" style="margin-bottom:0px;">Path</label><div id="canaryPathHint"></div>
-            <input value="<%=alert.canaryPath%>" type="text" class="form-control" id="canaryPath" name="canaryPath" placeholder="">
+            <input value="<%=util.htmlEscape(alert.canaryPath)%>" type="text" class="form-control" id="canaryPath" name="canaryPath" placeholder="">
         </div>
         <div class="form-group">
             <label class="sr-only" for="canaryConfigThreshold" style="margin-bottom:0px;">Threshold (alert if below this value)</label>
             <input value="<%=alert.canaryConfigThreshold%>" type="text" class="form-control" id="canaryConfigThreshold" name="canaryConfigThreshold" placeholder="">
         </div>
     </div>
-    
+    <div id="alertCanaryFilterConfig" class="form" roles="form">
+        <div class="form-group">
+            <label class="sr-only" for="canaryPath2" style="margin-bottom:0px;">Path</label>
+            <input value="<%=util.htmlEscape(alert.canaryPath)%>" type="text" class="form-control" id="canaryPath2" name="canaryPath" placeholder="">
+        </div>
+        <div class="form-group">
+            <label class="sr-only" for="canaryOps" style="margin-bottom:0px;">Ops</label>
+            <input value="<%=util.htmlEscape(alert.canaryOps)%>" type="text" class="form-control" id="canaryOps" name="canaryOps" placeholder="">
+        </div>
+        <div class="form-group">
+            <label class="sr-only" for="canaryRops" style="margin-bottom:0px;">Rops</label>
+            <input value="<%=util.htmlEscape(alert.canaryRops)%>" type="text" class="form-control" id="canaryRops" name="canaryRops" placeholder="">
+        </div>
+        <div class="form-group">
+            <label class="sr-only" for="canaryFilter" style="margin-bottom:0px;">Filter</label>
+            <input value="<%=util.htmlEscape(alert.canaryFilter)%>" type="text" class="form-control" id="canaryFilter" name="canaryFilter" placeholder="">
+        </div>
+    </div>
+
+
 </div>
 <div id="alertDetailContainer" class="main-container">
 </div>

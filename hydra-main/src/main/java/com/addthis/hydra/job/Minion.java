@@ -13,43 +13,8 @@
  */
 package com.addthis.hydra.job;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.RandomAccessFile;
-import java.io.Serializable;
-
-import java.lang.management.ManagementFactory;
-
-import java.net.InetAddress;
-import java.net.ServerSocket;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Scanner;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
+import com.addthis.bark.ZkGroupMembership;
+import com.addthis.bark.ZkUtil;
 import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
@@ -58,10 +23,6 @@ import com.addthis.basis.util.Numbers;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.SimpleExec;
 import com.addthis.basis.util.Strings;
-
-import com.addthis.bark.ZkClientFactory;
-import com.addthis.bark.ZkGroupMembership;
-import com.addthis.bark.ZkHelpers;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.backup.DailyBackup;
@@ -97,17 +58,13 @@ import com.addthis.hydra.mq.MessageListener;
 import com.addthis.hydra.mq.MessageProducer;
 import com.addthis.hydra.mq.RabbitMessageConsumer;
 import com.addthis.hydra.mq.RabbitMessageProducer;
-import com.addthis.hydra.mq.SessionExpireListener;
 import com.addthis.hydra.mq.ZKMessageProducer;
-import com.addthis.hydra.mq.ZkSessionExpirationHandler;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
 import com.addthis.maljson.JSONObject;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.MoreExecutors;
-
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AlreadyClosedException;
 import com.rabbitmq.client.Channel;
@@ -118,9 +75,11 @@ import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
-
-import org.I0Itec.zkclient.ZkClient;
-import org.apache.zookeeper.Watcher;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.imps.CuratorFrameworkState;
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
+import org.apache.zookeeper.KeeperException;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
@@ -128,12 +87,44 @@ import org.eclipse.jetty.servlet.ServletHandler;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.RandomAccessFile;
+import java.io.Serializable;
+import java.lang.management.ManagementFactory;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Scanner;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 /**
  * TODO implement APIs for extended probing, sanity, clearing of job state
  */
-public class Minion extends AbstractHandler implements MessageListener, ZkSessionExpirationHandler, Codec.Codable {
+public class Minion extends AbstractHandler implements MessageListener, Codec.Codable {
 
     private static Logger log = LoggerFactory.getLogger(Minion.class);
     private static int webPort = Parameter.intValue("minion.web.port", 5051);
@@ -158,6 +149,8 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
     private static final int maxActiveTasks = Parameter.intValue("minion.max.active.tasks", 3);
     private static final int copyRetryLimit = Parameter.intValue("minion.copy.retry.limit", 3);
     private static final int copyRetryDelaySeconds = Parameter.intValue("minion.copy.retry.delay", 10);
+    /* If the following var is positive, it is passed as the bwlimit arg to rsync. If <= 0, it is ignored. */
+    private static final int copyBandwidthLimit = Parameter.intValue("minion.copy.bwlimit", -1);
     private static ReentrantLock revertLock = new ReentrantLock();
 
     private static String cpcmd = "cp";
@@ -251,7 +244,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
     private Histogram activeTaskHistogram;
 
     @VisibleForTesting
-    public Minion() {
+    public Minion(CuratorFramework zkClient) {
         uuid = UUID.randomUUID().toString();
 
         // null placeholder for now
@@ -269,6 +262,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         this.diskReadOnly = false;
         this.minionPid = -1;
         this.activeTaskKeys = new HashSet<>();
+        this.zkClient = zkClient;
     }
 
     @VisibleForTesting
@@ -307,7 +301,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 try {
                     jetty.stop();
                     minionTaskDeleter.stopDeletionThread();
-                    if (zkClient != null && zkClient.waitForKeeperState(Watcher.Event.KeeperState.SyncConnected, 1000, TimeUnit.MILLISECONDS)) {
+                    if (zkClient != null && zkClient.getState() == CuratorFrameworkState.STARTED) {
                         minionGroupMembership.removeFromGroup("/minion/up", getUUID());
                         zkClient.close();
                     }
@@ -370,7 +364,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
     private MessageProducer zkBatchControlProducer;
     private MessageProducer batchControlProducer;
     private Channel channel;
-    private ZkClient zkClient;
+    private CuratorFramework zkClient;
     private ZkGroupMembership minionGroupMembership;
 
     private void connectToMQ() throws Exception {
@@ -750,11 +744,18 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
     }
 
     // Not Thread Safe!
-    private ZkClient getZkClient() {
+    private CuratorFramework getZkClient() {
         if (zkClient == null) {
-            zkClient = ZkClientFactory.makeStandardClient();
-            zkClient.subscribeStateChanges(new SessionExpireListener(this));
+            zkClient = ZkUtil.makeStandardClient();
         }
+        zkClient.getConnectionStateListenable().addListener(new ConnectionStateListener() {
+            @Override
+            public void stateChanged(CuratorFramework client, ConnectionState newState) {
+                if (newState == ConnectionState.RECONNECTED) {
+                    joinGroup();
+                }
+            }
+        });
         return zkClient;
     }
 
@@ -765,16 +766,20 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         }
     }
 
-    @Override
-    public void handleExpiredSession() {
-        joinGroup();
-    }
-
     protected void joinGroup() {
-        minionGroupMembership = new ZkGroupMembership(getZkClient());
-        ZkHelpers.makeSurePersistentPathExists(getZkClient(), ("/minion/up"));
-        log.info("joining group: " + "/minion/up");
-        minionGroupMembership.addToGroup("/minion/up", getUUID(), shutdown);
+        minionGroupMembership = new ZkGroupMembership(getZkClient(), true);
+        String upPath = MINION_ZK_PATH + "up";
+        try {
+            if (zkClient.checkExists().forPath(upPath) == null) {
+                zkClient.create().creatingParentsIfNeeded().forPath(upPath, null);
+            }
+        } catch (KeeperException.NodeExistsException e) {
+            // someone beat us to it
+        } catch (Exception e) {
+            log.error("Exception joining group", e);
+        }
+        log.info("joining group: " + upPath);
+        minionGroupMembership.addToGroup(upPath, getUUID(), shutdown);
     }
 
 
@@ -1076,6 +1081,11 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         @Codec.Set(codable = true)
         private long backupStartTime;
 
+        @Codec.Set(codable = true)
+        private String rebalanceSource;
+        @Codec.Set(codable = true)
+        private String rebalanceTarget;
+
         private Process process;
         private Thread workItemThread;
         private File taskRoot;
@@ -1225,10 +1235,10 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         }
 
         public void sendEndStatus(int exit) {
-            sendEndStatus(exit, null);
+            sendEndStatus(exit, null, null);
         }
 
-        public void sendEndStatus(int exit, String choreWatcherKey) {
+        public void sendEndStatus(int exit, String rebalanceSource, String rebalanceTarget) {
             TaskExitState exitState = new TaskExitState();
             File jobExit = new File(jobDir, "job.exit");
             if (jobExit.exists() && jobExit.canRead()) {
@@ -1239,9 +1249,13 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 }
             }
             exitState.setWasStopped(wasStopped());
-            sendStatusMessage(new StatusTaskEnd(uuid, id, node, exit, fileCount, fileBytes).
-                    setChoreWatcherKey(choreWatcherKey).
-                    setExitState(exitState));
+            StatusTaskEnd end = new StatusTaskEnd(uuid, id, node, exit, fileCount, fileBytes);
+            end.setRebalanceSource(rebalanceSource);
+            end.setRebalanceTarget(rebalanceTarget);
+            end.setExitState(exitState);
+            setRebalanceSource(null);
+            setRebalanceTarget(null);
+            sendStatusMessage(end);
             try {
                 kickNextJob();
             } catch (Exception e) {
@@ -1313,10 +1327,10 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                     exec(this.kick, false);
                 } else if (isReplicating()) {
                     log.warn("[restore] " + getName() + " as replicating");
-                    execReplicate(null, false, false);
+                    execReplicate(null, null, false, false);
                 } else if (isBackingUp()) {
                     log.warn("[restore] " + getName() + " as backing up");
-                    execBackup(null, false);
+                    execBackup(null, null, false);
                 } else if ((startTime > 0 || replicateStartTime > 0 || backupStartTime > 0)) {
                     // Minion had a process running that finished during the downtime; notify Spawn
                     log.warn("[restore]" + getName() + " as previously active; now finished");
@@ -1433,7 +1447,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
         }
 
         private String createRsyncCommand(String userAT, String source, String target) throws Exception {
-            return "retry " + rsyncCommand + " -Hqav --exclude config --exclude gold --exclude replicate.complete --exclude backup.complete --delete-after -e \\'" + remoteConnectMethod + "\\' " + source + " " + userAT + ":" + target;
+            return "retry " + rsyncCommand + (copyBandwidthLimit > 0 ? " --bwlimit " + copyBandwidthLimit : "") + " -Hqa --exclude config --exclude gold --exclude replicate.complete --exclude backup.complete --delete-after -e \\'" + remoteConnectMethod + "\\' " + source + " " + userAT + ":" + target;
         }
 
         private String createBackupCommand(boolean local, String userAT, String baseDir, String source, String name) {
@@ -1637,7 +1651,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 boolean promoteSuccess = promoteBackupToLive(oldBackup, jobDir);
                 if (promoteSuccess) {
                     try {
-                        execReplicate(null, false, true);
+                        execReplicate(null, null, false, true);
                         return true;
                     } catch (Exception ex) {
                         log.warn("[revert] post-revert replicate of " + getName() + " failed with exception " + ex, ex);
@@ -1819,13 +1833,15 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             workItemThread.start();
         }
 
-        public void execReplicate(String choreWatcherKey, boolean replicateAllBackups, boolean execute) throws Exception {
+        public void execReplicate(String rebalanceSource, String rebalanceTarget, boolean replicateAllBackups, boolean execute) throws Exception {
+            setRebalanceSource(rebalanceSource);
+            setRebalanceTarget(rebalanceTarget);
             if (log.isDebugEnabled()) {
                 log.debug("[task.execReplicate] " + this.getJobKey());
             }
             require(testTaskIdle(), "task is not idle");
             if ((replicas == null || replicas.length == 0) && (failureRecoveryReplicas == null || failureRecoveryReplicas.length == 0)) {
-                execBackup(choreWatcherKey, true);
+                execBackup(rebalanceSource, rebalanceTarget, true);
                 return;
             }
             if (findActiveRsync(id, node) != null) {
@@ -1857,7 +1873,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 // save it
                 save();
                 // start watcher
-                workItemThread = new Thread(new ReplicateWorkItem(jobDir, replicatePid, replicateRun, replicateDone, this, choreWatcherKey, execute));
+                workItemThread = new Thread(new ReplicateWorkItem(jobDir, replicatePid, replicateRun, replicateDone, this, rebalanceSource, rebalanceTarget, execute));
                 workItemThread.setName("Replicate-WorkItem-" + getName());
                 workItemThread.start();
             } catch (Exception ex) {
@@ -1866,7 +1882,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             }
         }
 
-        public void execBackup(String choreWatcherKey, boolean execute) throws Exception {
+        public void execBackup(String rebalanceSource, String rebalanceTarget, boolean execute) throws Exception {
             if (log.isDebugEnabled()) {
                 log.debug("[task.execBackup] " + this.getJobKey());
             }
@@ -1889,7 +1905,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 }
                 backupStartTime = System.currentTimeMillis();
                 save();
-                workItemThread = new Thread(new BackupWorkItem(jobDir, backupPid, backupRun, backupDone, this, choreWatcherKey, execute));
+                workItemThread = new Thread(new BackupWorkItem(jobDir, backupPid, backupRun, backupDone, this, rebalanceSource, rebalanceTarget, execute));
                 workItemThread.setName("Backup-WorkItem-" + getName());
                 workItemThread.start();
             } catch (Exception ex) {
@@ -1907,7 +1923,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                       "until [ $try -ge $retries ]; do\n" +
                       "\tif [ \"$try\" -ge \"1\" ]; then echo starting retry $try; sleep $retryDelaySeconds; fi\n" +
                       "\ttry=$((try+1)); eval $cmd; exitCode=$?\n" +
-                      "\tif [ \"$exitCode\" == \"0\" ]; then return 0; fi\n" +
+                      "\tif [ \"$exitCode\" == \"0\" ] || [ \"$exitCode\" == \"127\" ] || [ \"$exitCode\" == \"137\"]; then return $exitCode; fi\n" +
                       "done\n" +
                       "echo \"Command failed after $retries retries: $cmd\"; exit $exitCode\n" +
                       "}\n");
@@ -2122,10 +2138,11 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
 
         public boolean stopWait(File[] pidFiles, boolean kill) {
             boolean result = true;
+            boolean isRunning = isRunning();
             try {
                 if (kill) {
                     resetStartTime();
-                    log.warn("[stopWait] creating done files if they do not exist");
+                    log.warn("[stopWait] creating done files for " + getName() + " if they do not exist");
                     if (!jobDone.getParentFile().exists()) {
                         log.warn("The directory " + jobDone.getParent() + " does not exist.");
                     } else {
@@ -2155,9 +2172,11 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                                 result = false;
                             }
                         }
-                        jobStopped = new File(jobDir, "job.stopped");
-                        if (!jobStopped.createNewFile()) {
-                            log.warn("Failed to create job.stopped file for stopped job " + getName());
+                        if (isRunning) {
+                            jobStopped = new File(jobDir, "job.stopped");
+                            if (!jobStopped.createNewFile()) {
+                                log.warn("Failed to create job.stopped file for stopped job " + getName());
+                            }
                         }
                         if (kill) {
                             log.warn("[minion.kill] killing pid:" + pid + " hard");
@@ -2331,6 +2350,22 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
             return jobStopped.exists();
         }
 
+        public String getRebalanceSource() {
+            return rebalanceSource;
+        }
+
+        public void setRebalanceSource(String rebalanceSource) {
+            this.rebalanceSource = rebalanceSource;
+        }
+
+        public String getRebalanceTarget() {
+            return rebalanceTarget;
+        }
+
+        public void setRebalanceTarget(String rebalanceTarget) {
+            this.rebalanceTarget = rebalanceTarget;
+        }
+
         @Override
         public String toString() {
             return "JobTask{" +
@@ -2378,6 +2413,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
 
     public void doHandle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws Exception {
         response.setBufferSize(65535);
+        response.setHeader("Access-Control-Allow-Origin","*");
         KVPairs kv = new KVPairs();
         boolean handled = true;
         for (Enumeration<String> e = request.getParameterNames(); e.hasMoreElements();) {
@@ -2556,16 +2592,17 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                 sendStatusMessage(new StatusTaskEnd(uuid, stop.getJobUuid(), stop.getNodeID(), 0, 0, 0));
             }
             for (JobTask task : match) {
-                boolean terminated = false;
                 if (!task.getConfigDir().exists()) {
                     Files.initDirectory(task.getConfigDir());
                 }
                 if (task.isRunning() || task.isReplicating() || task.isBackingUp()) {
-                    if (!stop.force() && (task.isReplicating() || task.isBackingUp())) {
-                        log.warn("[task.stop] " + task.getName() + " wasn't terminated because task was replicating/backing up and the stop wasn't a kill");
+                    if (!stop.force() && task.isBackingUp()) {
+                        log.warn("[task.stop] " + task.getName() + " wasn't terminated because task was backing up and the stop wasn't a kill");
+                    } else if (task.isReplicating() && task.getRebalanceSource() == null) {
+                        log.warn("[task.stop] " + task.getName() + " wasn't terminated because task was replicating up and the stop wasn't a kill");
                     } else if (!stop.getOnlyIfQueued()) {
                         task.stopWait(stop.force());
-                        log.warn("[task.stop] " + task.getName() + " terminated=" + terminated);
+                        log.warn("[task.stop] " + task.getName());
                     } else {
                         log.warn("[task.stop] " + task.getName() + " wasn't terminated because task was running and the stop specified only-if-queued");
                     }
@@ -2649,7 +2686,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                     task.setReplicas(revert.getReplicas());
                     if (revert.getSkipMove()) {
                         try {
-                            task.execReplicate(null, false, true);
+                            task.execReplicate(null, null, false, true);
                         } catch (Exception ex) {
                             task.sendEndStatus(JobTaskErrorCode.EXIT_REVERT_FAILURE);
                         }
@@ -2693,7 +2730,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
                     }
                     try {
                         task.setReplicas(replicate.getReplicas());
-                        task.execReplicate(replicate.getChoreWatcherKey(), true, true);
+                        task.execReplicate(replicate.getRebalanceSource(), replicate.getRebalanceTarget(), true, true);
                     } catch (Exception e) {
                         log.warn("[task.replicate] received exception after replicate request for " + task.getJobKey() + ": " + e, e);
                     }
@@ -2796,7 +2833,7 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
     }
 
     private static Integer findActiveRsync(String id, int node) {
-        return findActiveProcessWithTokens(new String[]{id + "/" + node + "/", rsyncCommand}, new String[]{});
+        return findActiveProcessWithTokens(new String[]{id + "/" + node + "/", rsyncCommand}, new String[]{"server"});
     }
 
     private static Integer findActiveProcessWithTokens(String[] requireTokens, String[] omitTokens) {

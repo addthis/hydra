@@ -38,7 +38,7 @@ public class QueryConfigWatcherTest extends ZkStartUtil {
 
     @Before
     public void setUp() throws Exception {
-        spawnDataStore = new ZookeeperDataStore(myZkClient);
+        spawnDataStore = new ZookeeperDataStore(zkClient);
         jcm = setUpSampleState();
         qcw = new QueryConfigWatcher(spawnDataStore);
     }

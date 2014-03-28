@@ -37,7 +37,6 @@ import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.Codec;
-import com.addthis.hydra.job.chores.JobTaskMoveAssignment;
 import com.addthis.hydra.job.mq.CommandTaskStop;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
@@ -1379,7 +1378,7 @@ public class SpawnBalancer implements Codec.Codable {
     protected boolean isExtremeHost(String hostID, boolean diskSpace, boolean high) {
         aggregateStatisticsLock.lock();
         try {
-            if (cachedHostScores == null || !cachedHostScores.containsKey(hostID) || cachedHostScores.isEmpty()) {
+            if (hostID == null || cachedHostScores == null || !cachedHostScores.containsKey(hostID) || cachedHostScores.isEmpty()) {
                 return false;
             }
             double clusterAverage = 0;

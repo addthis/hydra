@@ -67,7 +67,7 @@ public class JobAlertTest {
 
     @Test
     public void jsonTest() throws Exception {
-        JobAlert initialAlert = new JobAlert("sampleid", 0, null, "someone@domain.com", new String[] {"j1", "j2"});
+        JobAlert initialAlert = new JobAlert("sampleid", 0, 0, "someone@domain.com", new String[] {"j1", "j2"});
         JSONObject json = initialAlert.toJSON();
         assertEquals(initialAlert.getAlertId(), json.getString("alertId"));
         assertEquals(initialAlert.getType(), json.getInt("type"));

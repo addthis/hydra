@@ -44,7 +44,7 @@ Example A:
 
 		paths:{
 			SAMPLE:[
-				{type:"value",key:"DATE_YMD"},
+				{type:"value", key:"DATE_YMD"},
 				{type:"value", key:"COUNTRY"},
 			],
 		},
@@ -81,11 +81,11 @@ Example B:
 
 	{type:"branch", list:[
 	[
-		{type:"const",key:"ymd"},
+		{type:"const", value:"ymd"},
 		{type:"value", key:"DATE_YMD"},
 	],
 	[
-		{type:"const",key:"country"},
+		{type:"const", value:"country"},
 		{type:"value", key:"COUNTRY"},
 	],
 	]},

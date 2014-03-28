@@ -30,6 +30,7 @@ import com.addthis.hydra.store.kv.ExternalPagedStore.ByteStore;
 import com.addthis.hydra.store.kv.ExternalPagedStore.PageEntry;
 import com.addthis.hydra.store.util.JEUtil;
 
+import com.sleepycat.je.CacheMode;
 import com.sleepycat.je.CheckpointConfig;
 import com.sleepycat.je.Cursor;
 import com.sleepycat.je.CursorConfig;
@@ -80,6 +81,7 @@ public class ByteStoreBDB implements ByteStore {
 //          bdb_eco.setDurability(Durability.COMMIT_NO_SYNC);
         if (ro) {
             bdb_eco.setConfigParam(EnvironmentConfig.ENV_RUN_CLEANER, "false");    // Disable log cleaner thread
+            bdb_eco.setCacheMode(CacheMode.EVICT_LN);
         }
         JEUtil.mergeSystemProperties(bdb_eco);
         SettingsJE.updateEnvironmentConfig(settings, bdb_eco);

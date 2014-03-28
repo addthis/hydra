@@ -29,12 +29,13 @@ import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.BundleFormatted;
-import com.addthis.bundle.core.kvp.KVBundle;
-import com.addthis.bundle.core.kvp.KVBundleFormat;
+import com.addthis.bundle.core.list.ListBundle;
+import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.io.DataChannelWriter;
 import com.addthis.hydra.data.query.FramedDataChannelReader;
 import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.meshy.VirtualFileInput;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +50,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     private static final int outputQueueSize = Parameter.intValue("meshQuerySource.outputQueueSize", 1000);
     private static final int outputBufferSize = Parameter.intValue("meshQuerySource.outputBufferSize", 64000);
 
-    private final KVBundleFormat format = new KVBundleFormat();
+    private final ListBundleFormat format = new ListBundleFormat();
     private final LinkedBlockingQueue<byte[]> queue = new LinkedBlockingQueue<>(outputQueueSize);
     private final DataChannelWriter writer;
     private final ByteArrayOutputStream out;
@@ -255,7 +256,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
 
     @Override
     public Bundle createBundle() {
-        return new KVBundle(format);
+        return new ListBundle(format);
     }
 
     @Override

@@ -224,6 +224,7 @@ public class SpawnHttp extends AbstractHandler {
                 response.setStatus(code);
                 response.setHeader("Content-Type", "application/javascript");
                 response.setHeader("topic", topic);
+                response.setHeader("Access-Control-Allow-Origin","*");
                 response.getWriter().write(message);
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
@@ -235,6 +236,7 @@ public class SpawnHttp extends AbstractHandler {
                 response.setStatus(code);
                 response.setHeader("topic", topic);
                 response.setHeader("Content-Disposition", contentType);
+                response.setHeader("Access-Control-Allow-Origin","*");
                 response.getWriter().write(message);
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
@@ -254,7 +256,6 @@ public class SpawnHttp extends AbstractHandler {
 
         public void setResponseContentType(String contentType) {
             response.setContentType(contentType);
-
         }
     }
 

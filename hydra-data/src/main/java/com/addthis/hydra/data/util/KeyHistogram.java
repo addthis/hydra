@@ -116,7 +116,7 @@ public class KeyHistogram implements Codec.SuperCodable {
     private long getBucket(long val) {
         long compare = 1;
         long last = compare;
-        while (val > compare) {
+        while (val >= compare) {
             last = compare;
             compare *= scale;
         }

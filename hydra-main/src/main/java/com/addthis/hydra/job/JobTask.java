@@ -77,6 +77,10 @@ public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTa
     private double meanRate;
     @Codec.Set(codable = true)
     private long totalEmitted;
+    @Codec.Set(codable = true)
+    private String rebalanceSource;
+    @Codec.Set(codable = true)
+    private String rebalanceTarget;
 
     private volatile JobKey jobKey;
 
@@ -338,6 +342,22 @@ public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTa
 
     public void setTotalEmitted(long totalEmitted) {
         this.totalEmitted = totalEmitted;
+    }
+
+    public String getRebalanceTarget() {
+        return rebalanceTarget;
+    }
+
+    public void setRebalanceTarget(String rebalanceTarget) {
+        this.rebalanceTarget = rebalanceTarget;
+    }
+
+    public String getRebalanceSource() {
+        return rebalanceSource;
+    }
+
+    public void setRebalanceSource(String rebalanceSource) {
+        this.rebalanceSource = rebalanceSource;
     }
 
     public Set<String> getAllTaskHosts() {

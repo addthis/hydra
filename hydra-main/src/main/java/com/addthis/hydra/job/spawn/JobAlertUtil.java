@@ -9,10 +9,17 @@ import java.util.regex.Pattern;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
+import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.BundleFormat;
+import com.addthis.bundle.core.list.ListBundle;
+import com.addthis.bundle.value.ValueFactory;
+import com.addthis.codec.CodecJSON;
+import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.util.DateUtil;
 import com.addthis.hydra.data.util.JSONFetcher;
 import com.addthis.hydra.task.stream.StreamFileUtil;
-import com.addthis.hydra.task.stream.StreamSourceMeshy;
+import com.addthis.maljson.JSONArray;
+import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
 
@@ -73,7 +80,8 @@ public class JobAlertUtil {
      */
     public static long getQueryCount(String jobId, String checkPath) {
 
-        HashSet<String> result = JSONFetcher.staticLoadSet(getQueryURL(jobId, checkPath, defaultOps, defaultOps), alertQueryTimeout, alertQueryRetries, null);
+        HashSet<String> result = JSONFetcher.staticLoadSet(getQueryURL(jobId, checkPath, defaultOps, defaultOps),
+                alertQueryTimeout, alertQueryRetries, null);
         if (result == null || result.isEmpty()) {
             log.warn("Found no data for job={} checkPath={}; returning zero", jobId, checkPath);
             return 0;
@@ -85,8 +93,76 @@ public class JobAlertUtil {
 
     }
 
+    private static boolean[] testQueryResult(JSONArray array, BundleFilter filter) {
+        boolean[] result = new boolean[array.length() - 1];
+        JSONArray headerRow = array.optJSONArray(0);
+        String[] header = new String[headerRow.length()];
+        for(int i = 0; i < header.length; i++) {
+            header[i] = headerRow.optString(i);
+        }
+        for(int i = 1; i < array.length(); i++) {
+            JSONArray row = array.optJSONArray(i);
+            Bundle bundle = new ListBundle();
+            BundleFormat format = bundle.getFormat();
+            for(int j = 0; j < row.length(); j++) {
+                bundle.setValue(format.getField(header[j]), ValueFactory.create(row.optString(j)));
+            }
+            try {
+                result[i - 1] = filter.filter(bundle);
+                log.trace("Row {} filter result is {}", i - 1, result[i-1]);
+            } catch(Exception ex) {
+                log.warn("Error while evaluating row {}: {}", i - 1, ex);
+                result[i - 1] = false;
+            }
+        }
+        return result;
+    }
+
+    public static boolean[] evaluateQueryWithFilter(String jobId, String query, String ops, String rops, String filter) {
+        String url = getQueryURL(jobId, query, ops, rops);
+        log.trace("Emitting query with url {}", url);
+        JSONArray array = JSONFetcher.staticLoadJSONArray(url, alertQueryTimeout, alertQueryRetries);
+        boolean valid = true;
+        /**
+         * Test the following conditions:
+         * - the array contains two or more values
+         * - each value of the array is itself an array
+         * - the lengths of all subarrays are identical
+         */
+        valid = valid && array.length() > 1;
+        log.trace("Array contains two or more values: {}", array.length() > 1);
+        JSONArray header = valid ? array.optJSONArray(0) : null;
+        valid = valid && (header != null);
+        log.trace("Header is an array: {}", header != null);
+        for(int i = 1; valid && i < array.length(); i++) {
+            JSONArray element = array.optJSONArray(i);
+            log.trace("Element {} is an array: {}", i, element != null);
+            if (element != null) {
+                valid = valid && (element.length() == header.length());
+                log.trace("Element {} has correct length: {}", i, element.length() == header.length());
+            } else {
+                valid = false;
+            }
+        }
+        BundleFilter bFilter = null;
+        try {
+            bFilter = CodecJSON.decodeObject(BundleFilter.class, new JSONObject(filter));
+        } catch (Exception ex) {
+            log.error("Error attempting to create bundle filter {}", ex);
+            valid = false;
+        }
+        if (valid) {
+            return testQueryResult(array, bFilter);
+        } else {
+            boolean[] result = new boolean[1];
+            result[0] = false;
+            return result;
+        }
+    }
+
     private static String getQueryURL(String jobId, String path, String ops, String rops) {
-        return queryURLBase + "?job=" + jobId + "&path=" + Strings.urlEncode(expandDateMacro(path)) + "&ops=" + Strings.urlEncode(ops) + "&rops=" + Strings.urlDecode(rops);
+        return queryURLBase + "?job=" + jobId + "&path=" + Strings.urlEncode(expandDateMacro(path))
+               + "&ops=" + Strings.urlEncode(ops) + "&rops=" + Strings.urlEncode(rops);
     }
 
     /**

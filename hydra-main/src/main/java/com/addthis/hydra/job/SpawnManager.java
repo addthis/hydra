@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import com.addthis.bark.StringSerializer;
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.net.HttpUtil;
@@ -454,7 +455,7 @@ public class SpawnManager {
                     Spawn.DeleteStatus status = spawn.deleteJob(id);
                     switch (status) {
                         case SUCCESS:
-                            String callback = kv.getValue("id", "");
+                            String callback = kv.getValue("callback", "");
                             String msg = "{id:'" + id + "',action:'deleted'}";
                             link.setResponseContentType("application/json; charset=utf-8");
                             link.sendShortReply(200, "OK", callback != null ? callback + "(" + msg + ");" : msg);
@@ -487,7 +488,7 @@ public class SpawnManager {
                 } else {
                     emitLogLineForAction(kv, "job delete on " + id);
                     if (spawn.deleteTask(id, host, node, isReplica)) {
-                        String callback = kv.getValue("id", "");
+                        String callback = kv.getValue("callback", "");
                         String msg = "{id:'" + id + "/" + node + "',action:'deleted'}";
                         link.setResponseContentType("application/json; charset=utf-8");
                         link.sendShortReply(200, "OK", callback != null ? callback + "(" + msg + ");" : msg);
@@ -834,8 +835,9 @@ public class SpawnManager {
                 String defaultSource = isReplica ? task.getReplicas().get(0).getHostUUID() : task.getHostUUID();
                 String source = kv.getValue("source", defaultSource);
                 String target = kv.getValue("target", "");
-                spawn.moveTask(id, node, source, target, isReplica);
-                emitLogLineForAction(kv, "move job " + id + " node " + node + " from " + source + " to " + target);
+                if (spawn.moveTask(id, node, source, target)) {
+                    emitLogLineForAction(kv, "move job " + id + " node " + node + " from " + source + " to " + target);
+                }
             }
         });
 
@@ -926,7 +928,7 @@ public class SpawnManager {
             public void httpService(HTTPLink link) throws Exception {
                 KVPairs kv = link.getRequestValues();
                 try {
-                    List<String> list = spawn.getZkClient().getChildren(kv.getValue("path", "/"));
+                    List<String> list = spawn.getZkClient().getChildren().forPath(kv.getValue("path", "/"));
                     JSONArray arr = new JSONArray();
                     for (String i : list) {
                         arr.put(i);
@@ -942,9 +944,9 @@ public class SpawnManager {
             public void httpService(HTTPLink link) throws Exception {
                 KVPairs kv = link.getRequestValues();
                 try {
-                    Object o = spawn.getZkClient().readData(kv.getValue("path", "/"));
+                    String o = StringSerializer.deserialize(spawn.getZkClient().getData().forPath(kv.getValue("path", "/")));
                     String reply = CodecJSON.encodeString(o, 1);
-                    link.sendShortReply(200, "OK", reply != null && reply.length() > 0 ? reply : "''");
+                    link.sendShortReply(200, "OK", reply != null && reply.length() > 0 ? reply : "");
                 } catch (Exception e) {
                     link.sendShortReply(500, "Server Error", new JSONObject().put("error", e.getMessage()).toString());
                 }
@@ -976,7 +978,7 @@ public class SpawnManager {
                     String value = Bytes.toString(data);
                     link.sendShortReply(200, "OK", value.length() > 0 ? value : "");
                 } catch (Exception e) {
-                    link.sendShortReply(200, "No Content", "''");
+                    link.sendShortReply(200, "No Content", "");
                 }
             }
         });

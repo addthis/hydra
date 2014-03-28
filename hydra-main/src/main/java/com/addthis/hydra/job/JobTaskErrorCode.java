@@ -27,6 +27,7 @@ public class JobTaskErrorCode {
     public static final int KICK_ERROR = -105;
     public static final int EXIT_DIR_ERROR = -106;
     public static final int EXIT_SCRIPT_EXEC_ERROR = -107;
+    public static final int REBALANCE_PAUSE = -108;
 }
 
 

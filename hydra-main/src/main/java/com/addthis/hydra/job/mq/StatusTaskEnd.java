@@ -24,12 +24,30 @@ public class StatusTaskEnd extends AbstractJobMessage {
     private long byteCount;
     private String choreWatcherKey;
     private TaskExitState exitState;
+    private String rebalanceSource;
+    private String rebalanceTarget;
 
     public StatusTaskEnd(String host, String job, Integer node, int exit, long files, long bytes) {
         super(host, job, node);
         this.exitCode = exit;
         this.fileCount = files;
         this.byteCount = bytes;
+    }
+
+    public String getRebalanceSource() {
+        return rebalanceSource;
+    }
+
+    public void setRebalanceSource(String rebalanceSource) {
+        this.rebalanceSource = rebalanceSource;
+    }
+
+    public String getRebalanceTarget() {
+        return rebalanceTarget;
+    }
+
+    public void setRebalanceTarget(String rebalanceTarget) {
+        this.rebalanceTarget = rebalanceTarget;
     }
 
     public StatusTaskEnd setChoreWatcherKey(String key) {

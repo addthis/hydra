@@ -13,27 +13,25 @@
  */
 package com.addthis.hydra.job;
 
+import com.google.common.collect.ImmutableSet;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.imps.CuratorFrameworkState;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.apache.curator.utils.ZKPaths;
+import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.addthis.bark.ZkClientFactory;
-import com.addthis.bark.ZkGroupMembership;
-import com.addthis.hydra.mq.SessionExpireListener;
-import com.addthis.hydra.mq.ZkSessionExpirationHandler;
-
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
-
-import org.I0Itec.zkclient.IZkChildListener;
-import org.I0Itec.zkclient.ZkClient;
-import org.slf4j.Logger;
-
-
-import org.slf4j.LoggerFactory;
-public class SetMembershipListener implements IZkChildListener, ZkSessionExpirationHandler {
+public class SetMembershipListener implements PathChildrenCacheListener {
 
     private static Logger log = LoggerFactory.getLogger(SetMembershipListener.class);
 
@@ -41,18 +39,17 @@ public class SetMembershipListener implements IZkChildListener, ZkSessionExpirat
     private final String path;
 
     private final ReentrantLock membershipLock = new ReentrantLock();
-    private final ZkClient zkClient;
-    private boolean ephemeral;
+    private final CuratorFramework zkClient;
+    private final PathChildrenCache cache;
     private final List<SetMembershipAdditionListener> setMembershipAdditionListeners = new CopyOnWriteArrayList<SetMembershipAdditionListener>();
     private final List<SetMembershipRemovalListener> setMembershipRemovedListeners = new CopyOnWriteArrayList<SetMembershipRemovalListener>();
 
 
-    public SetMembershipListener(String path, boolean ephemeral) {
+    public SetMembershipListener(CuratorFramework zkClient, String path) {
         this.memberSet = ImmutableSet.of();
         this.path = path;
-        this.zkClient = ZkClientFactory.makeStandardClient();
-        zkClient.subscribeStateChanges(new SessionExpireListener(this));
-        this.ephemeral = ephemeral;
+        this.zkClient = zkClient;
+        this.cache = new PathChildrenCache(zkClient, path, true);
         followGroup();
     }
 
@@ -74,67 +71,21 @@ public class SetMembershipListener implements IZkChildListener, ZkSessionExpirat
         }
     }
 
-    public void addAdditionListener(SetMembershipAdditionListener setMembershipAdditionListener) {
-        setMembershipAdditionListeners.add(setMembershipAdditionListener);
-    }
-
-    public boolean removeAdditionListener(SetMembershipAdditionListener setMembershipAdditionListener) {
-        return setMembershipAdditionListeners.remove(setMembershipAdditionListener);
-    }
-
-    public void addRemovalListener(SetMembershipRemovalListener setMembershipRemovalListener) {
-        setMembershipRemovedListeners.add(setMembershipRemovalListener);
-    }
-
-    public boolean removeRemovalListener(SetMembershipRemovalListener setMembershipRemovalListener) {
-        return setMembershipRemovedListeners.remove(setMembershipRemovalListener);
-    }
-
-    @Override
-    public void handleChildChange(String parentPath, List<String> currentChilds) throws Exception {
-        membershipLock.lock();
-        try {
-            Set<String> members = currentChilds == null ? new HashSet<String>() : ImmutableSet.copyOf(currentChilds);
-            Set<String> newMembers = Sets.difference(members, memberSet);
-            Set<String> removedMembers = Sets.difference(memberSet, members);
-            if (newMembers.size() > 0 || removedMembers.size() > 0) {
-                if (newMembers.size() > 0 && setMembershipAdditionListeners.size() > 0) {
-                    for (SetMembershipAdditionListener setMembershipAdditionListener : setMembershipAdditionListeners) {
-                        for (String newMember : newMembers) {
-                            setMembershipAdditionListener.memberAdded(newMember);
-                        }
-                    }
-                }
-                if (removedMembers.size() > 0 && setMembershipRemovedListeners.size() > 0) {
-                    for (SetMembershipRemovalListener setMembershipRemovalListener : setMembershipRemovedListeners) {
-                        for (String removedMember : removedMembers) {
-                            setMembershipRemovalListener.memberRemoved(removedMember);
-                        }
-                    }
-                }
-                log.warn("[membership change] " + path + " added: " + newMembers.toString() + " removed: " + removedMembers.toString());
-            }
-            memberSet = members;
-        } finally {
-            membershipLock.unlock();
-        }
-    }
-
-    @Override
-    public void handleExpiredSession() {
-        followGroup();
-    }
-
     protected void followGroup() {
         if (zkClient != null) {
             membershipLock.lock();
             try {
-                ZkGroupMembership zkGroupMembership = new ZkGroupMembership(zkClient, ephemeral);
-                List<String> currentMembers = zkGroupMembership.listenToGroup(path, this);
-                log.info("Initial members for path: " + path + " are: " + currentMembers);
-                if (currentMembers != null) {
-                    this.memberSet = ImmutableSet.copyOf(currentMembers);
+                this.cache.start();
+                this.cache.getListenable().addListener(this);
+                if (zkClient.checkExists().forPath(path) == null) {
+                    try {
+                        zkClient.create().creatingParentsIfNeeded().forPath(path, null);
+                    } catch (KeeperException.NodeExistsException e) {
+                        // do nothing if it already exists
+                    }
                 }
+                memberSet = getCurrentMembers();
+                log.info("Initial members for path: " + path + " are: " + memberSet);
             } catch (Exception ex) {
                 log.warn("Failed to pre-load members for path: " + path, ex);
             } finally {
@@ -143,6 +94,55 @@ public class SetMembershipListener implements IZkChildListener, ZkSessionExpirat
         } else {
             log.warn("no zkclient, not following group: " + path);
         }
+    }
+
+    protected void shutdown() throws IOException {
+        cache.close();
+    }
+
+    @Override
+    public void childEvent(CuratorFramework curatorFramework, PathChildrenCacheEvent event) throws Exception {
+        membershipLock.lock();
+        try {
+            switch (event.getType()) {
+                case CHILD_ADDED: {
+                    String memberAdded = ZKPaths.getNodeFromPath(event.getData().getPath());
+                    if (setMembershipAdditionListeners.size() > 0) {
+                        for (SetMembershipAdditionListener setMembershipAdditionListener : setMembershipAdditionListeners) {
+                            setMembershipAdditionListener.memberAdded(memberAdded);
+                        }
+                    }
+                    if (zkClient.getState() == CuratorFrameworkState.STARTED) {
+                        memberSet = getCurrentMembers();
+                    }
+                    break;
+                }
+                case CHILD_REMOVED: {
+                    String memberRemoved = ZKPaths.getNodeFromPath(event.getData().getPath());
+                    if (setMembershipRemovedListeners.size() > 0) {
+                        for (SetMembershipRemovalListener setMembershipRemovalListener : setMembershipRemovedListeners) {
+                            setMembershipRemovalListener.memberRemoved(memberRemoved);
+                        }
+                    }
+                    if (zkClient.getState() == CuratorFrameworkState.STARTED) {
+                        memberSet = getCurrentMembers();
+                    }
+                    break;
+                }
+
+                default:
+                    log.debug("Unhandled event type:" + event.getType());
+            }
+        } catch (Exception e) {
+            log.error("Error updating member list", e);
+        } finally {
+            membershipLock.unlock();
+        }
+    }
+
+    private Set<String> getCurrentMembers() throws Exception {
+        List<String> currentMembers = zkClient.getChildren().forPath(path);
+        return currentMembers == null ? new HashSet<String>() : ImmutableSet.copyOf(currentMembers);
     }
 
 }

@@ -23,11 +23,13 @@ import org.slf4j.LoggerFactory;
 public class ReplicateWorkItem extends MinionWorkItem {
 
     private static Logger log = LoggerFactory.getLogger(ReplicateWorkItem.class);
-    private String choreWatcherKey;
+    private String rebalanceSource;
+    private String rebalanceTarget;
 
-    public ReplicateWorkItem(File jobDir, File pidFile, File runFile, File doneFile, Minion.JobTask task, String choreWatcherKey, boolean execute) {
+    public ReplicateWorkItem(File jobDir, File pidFile, File runFile, File doneFile, Minion.JobTask task, String rebalanceSource, String rebalanceTarget, boolean execute) {
         super(jobDir, pidFile, runFile, doneFile, task, execute);
-        this.choreWatcherKey = choreWatcherKey;
+        this.rebalanceSource = rebalanceSource;
+        this.rebalanceTarget = rebalanceTarget;
     }
 
     @Override
@@ -50,8 +52,11 @@ public class ReplicateWorkItem extends MinionWorkItem {
         if (exit == 0) {
             task.clearFailureReplicas();
             informReplicaHosts();
-            task.execBackup(choreWatcherKey, true);
-        } else {
+            task.execBackup(rebalanceSource, rebalanceTarget, true);
+        } else if (task.getRebalanceSource() != null) {
+            task.sendEndStatus(JobTaskErrorCode.REBALANCE_PAUSE);
+        }
+        else {
             if (!doneFile.exists()) {
                 doneFile.createNewFile();
             }
@@ -78,5 +83,18 @@ public class ReplicateWorkItem extends MinionWorkItem {
         setStartTime(0);
         task.setProcess(null);
         task.save();
+    }
+
+    @Override
+    public int getExitStatusFromString(String exitString) {
+        if (exitString == null) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(exitString);
+        } catch (NumberFormatException ex) {
+            log.warn("Unparsable exit code: " + exitString);
+            return 0;
+        }
     }
 }

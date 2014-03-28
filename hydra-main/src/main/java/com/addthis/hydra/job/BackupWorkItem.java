@@ -21,11 +21,13 @@ import org.slf4j.LoggerFactory;
 public class BackupWorkItem extends MinionWorkItem {
 
     private static Logger log = LoggerFactory.getLogger(BackupWorkItem.class);
-    private final String choreWatcherKey;
+    private final String rebalanceSource;
+    private final String rebalanceTarget;
 
-    public BackupWorkItem(File jobDir, File pidFile, File runFile, File doneFile, Minion.JobTask task, String choreWatcherKey, boolean execute) {
+    public BackupWorkItem(File jobDir, File pidFile, File runFile, File doneFile, Minion.JobTask task, String rebalanceSource, String rebalanceTarget, boolean execute) {
         super(jobDir, pidFile, runFile, doneFile, task, execute);
-        this.choreWatcherKey = choreWatcherKey;
+        this.rebalanceSource = rebalanceSource;
+        this.rebalanceTarget = rebalanceTarget;
     }
 
     @Override
@@ -54,7 +56,7 @@ public class BackupWorkItem extends MinionWorkItem {
         if (!doneFile.exists()) {
             doneFile.createNewFile();
         }
-        task.sendEndStatus(code, choreWatcherKey);
+        task.sendEndStatus(code, rebalanceSource, rebalanceTarget);
     }
 
     @Override

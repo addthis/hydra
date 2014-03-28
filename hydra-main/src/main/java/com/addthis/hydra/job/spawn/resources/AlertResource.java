@@ -53,19 +53,26 @@ public class AlertResource {
         int timeout = kv.getIntValue("timeout", 0);
         String email = kv.getValue("email", "");
         String canaryPath = kv.getValue("canaryPath");
+        String canaryOps = kv.getValue("canaryOps");
+        String canaryRops = kv.getValue("canaryRops");
+        String canaryFilter = kv.getValue("canaryFilter");
         int canaryConfigThreshold = kv.getIntValue("canaryConfigThreshold", 0);
         if (jobIds != null) {
             JobAlert jobAlert = new JobAlert(alertId, type, timeout, email, jobIds.split(","));
-            if (canaryPath != null) {
-                jobAlert.setCanaryPath(canaryPath);
-                jobAlert.setCanaryConfigThreshold(canaryConfigThreshold);
+            jobAlert.setCanaryPath(canaryPath == null ? "" : canaryPath);
+            jobAlert.setCanaryOps(canaryOps == null ? "" : canaryOps);
+            jobAlert.setCanaryRops(canaryRops == null ? "" : canaryRops);
+            jobAlert.setCanaryFilter(canaryFilter == null ? "" : canaryFilter);
+            jobAlert.setCanaryConfigThreshold(canaryConfigThreshold);
+            String msg = jobAlert.isValid();
+            if (msg != null) {
+                return Response.ok("{\"message\" : \"" + msg + "\"}").build();
             }
             spawn.putAlert(alertId, jobAlert);
             return Response.ok("{\"alertId\":\"" + alertId +"\"}").build();
         }
         else {
-            log.warn("Received save alert request without job id; returning error");
-            return Response.serverError().build();
+            return Response.ok("{\"message\" : \"Job id is missing\"}").build();
         }
     }
 
