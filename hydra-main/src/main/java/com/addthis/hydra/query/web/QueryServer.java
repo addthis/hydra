@@ -98,11 +98,6 @@ public class QueryServer extends AbstractHandler {
     private final Server htmlQueryServer;
 
     /**
-     * server listens for client web socket requests using WebSocket protocol
-     */
-    private final WebSocketManager webSocketManager;
-
-    /**
      * used for tracking metrics and other interesting things about queries
      * that we have run.  Provides insight into currently running queries
      * and gives ability to cancel a query before it completes.
@@ -134,7 +129,6 @@ public class QueryServer extends AbstractHandler {
 
     public QueryServer() throws Exception {
         this.metricsHandler = MetricsServletMaker.makeHandler();
-        this.webSocketManager = new WebSocketManager();
 
         Query.setTraceLog(new RollingLog(new File(logDir, "events-trace"), "queryTrace", eventLogCompress, logMaxSize, logMaxAge));
 
@@ -428,11 +422,6 @@ public class QueryServer extends AbstractHandler {
             PrintWriter writer = startResponse(response, cbf, cba);
             writer.write(hosts);
             endResponse(writer, cbf);
-        } else if (target.equals("/v2/user/list")) {
-            String usersConnected = webSocketManager.getWebSocketsJSON();
-            PrintWriter writer = startResponse(response, cbf, cba);
-            writer.write(usersConnected);
-            endResponse(writer, cbf);
         }
 //      else if (target.equals("/monitors.rescan"))
 //      {
@@ -460,8 +449,6 @@ public class QueryServer extends AbstractHandler {
                 while ((read = in.read(buf)) >= 0) {
                     out.write(buf, 0, read);
                 }
-            } else if (target.startsWith("/ws")) {
-                webSocketManager.handle(target, baseRequest, request, response);
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("[http.unhandled] " + target);
