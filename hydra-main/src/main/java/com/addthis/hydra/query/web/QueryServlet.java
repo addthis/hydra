@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.kv.KVPairs;
-import com.addthis.basis.util.CUID;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.channel.DataChannelError;
@@ -43,9 +42,6 @@ import com.addthis.hydra.data.query.source.QueryHandle;
 import com.addthis.hydra.data.query.source.QuerySource;
 import com.addthis.hydra.util.StringMapHelper;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Timer;
 
@@ -55,23 +51,21 @@ import org.eclipse.jetty.server.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class QueryServlet {
+public final class QueryServlet {
 
     private static final Logger log = LoggerFactory.getLogger(QueryServlet.class);
 
     private static final int maxQueryTime = Parameter.intValue("qmaster.maxQueryTime", 24 * 60 * 60); // one day
 
-
-    // You have 5 minutes to claim your async result, if we ever need to
-    // parametrize this we have created a monster.
-    private static final Cache<String, Query> asyncCache = CacheBuilder.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
-
     private static final char hex[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
     private static final Timer queryTimes = Metrics.newTimer(QueryServlet.class, "queryTime", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
 
+    private QueryServlet() {
+    }
+
     /* convert string to json valid format */
-    public static final String jsonEncode(String s) {
+    public static String jsonEncode(String s) {
         char ca[] = s.toCharArray();
         int alt = 0;
         for (int i = 0; i < ca.length; i++) {
@@ -160,7 +154,6 @@ public class QueryServlet {
 
         String filename = kv.getValue("filename", "query");
         String format = kv.getValue("format", "json");
-        String async = kv.getValue("async");
         String jsonp = kv.getValue("jsonp", kv.getValue("cbfunc"));
         String jargs = kv.getValue("jargs", kv.getValue("cbfunc-arg"));
 
@@ -180,7 +173,6 @@ public class QueryServlet {
                     .put("job.id", query.getJob())
                     .put("query.id", query.uuid())
                     .put("sender", query.getParameter("sender"))
-                    .put("async", async)
                     .put("format", format)
                     .put("filename", filename)
                     .put("originalrequest", query.getParameter("originalrequest"))
@@ -192,38 +184,19 @@ public class QueryServlet {
         QueryHandle queryHandle = null;
         try {
             response.setCharacterEncoding(CharEncoding.UTF_8);
-            String asyncUuid = null;
-            if (async != null) {
-                if (async.equals("new")) {
-                    asyncUuid = genAsyncUuid(query);
-                    asyncCache.put(asyncUuid, query);
-                    if (query.isTraced()) {
-                        Query.emitTrace("async create " + asyncUuid + " from " + query);
-                    }
-                    format = "async";
-                } else {
-                    Query asyncQuery = asyncCache.getIfPresent(async);
-                    asyncCache.invalidate(async);
-                    if (query.isTraced()) {
-                        Query.emitTrace("async restore " + async + " as " + asyncQuery);
-                    }
-                    if (asyncQuery != null) {
-                        query = asyncQuery;
-                    }
-                }
+
+            // support legacy async query semantics
+            query = LegacyHandler.handleQuery(query, kv, request, response);
+            if (query == null) {
+                return;
             }
-            if (!format.equals("async")) {
-                if (query.getJob() == null) {
-                    response.sendError(500, "missing job");
-                    return;
-                }
+
+            if (query.getJob() == null) {
+                response.sendError(500, "missing job");
+                return;
             }
             ServletConsumer consumer = null;
             switch (format) {
-                case "async":
-                    response.getWriter().write("{\"id\":\"" + asyncUuid + "\"}");
-                    ((Request) request).setHandled(true);
-                    return;
                 case "json":
                     consumer = new OutputJson(response, jsonp, jargs);
                     break;
@@ -271,10 +244,6 @@ public class QueryServlet {
         if (source instanceof ErrorHandlingQuerySource) {
             ((ErrorHandlingQuerySource) source).handleError(query);
         }
-    }
-
-    private static String genAsyncUuid(Query query) {
-        return CUID.createCUID();
     }
 
     /**
