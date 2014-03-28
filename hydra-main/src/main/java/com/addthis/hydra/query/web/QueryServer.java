@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.query;
+package com.addthis.hydra.query.web;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -39,6 +39,10 @@ import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.channel.QueryChannelServer;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.JobTask;
+import com.addthis.hydra.query.MeshQueryMaster;
+import com.addthis.hydra.query.QueryServlet;
+import com.addthis.hydra.query.QueryTracker;
+import com.addthis.hydra.query.WebSocketManager;
 import com.addthis.hydra.query.util.HostEntryInfo;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.maljson.JSONArray;
@@ -65,6 +69,7 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ThreadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 public class QueryServer extends AbstractHandler {
 
     private static final Logger log = LoggerFactory.getLogger(QueryServer.class);
@@ -230,7 +235,7 @@ public class QueryServer extends AbstractHandler {
         response.setBufferSize(65535);
         KVPairs kv = new KVPairs();
         boolean handled = true;
-        for (Enumeration<String> e = request.getParameterNames(); e.hasMoreElements();) {
+        for (Enumeration<String> e = request.getParameterNames(); e.hasMoreElements(); ) {
             String k = e.nextElement();
             String v = request.getParameter(k);
             kv.add(k, v);
