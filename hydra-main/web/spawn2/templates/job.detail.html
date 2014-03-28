@@ -19,24 +19,24 @@
             </a>
         </li>
         <li class="active">
-            <%=(_.isUndefined(job.id)?'new':job.id)%>
+            <%-(_.isUndefined(job.id)?'new':job.id)%>
         </li>
     </ul>
     <%if(!_.isUndefined(job.id)){%>
-        <div id="stateTextBox" class="label <%=job.stateLabel%>" style="margin-right:10px;">
-            <%=job.stateText%>
+        <div id="stateTextBox" class="label <%-job.stateLabel%>" style="margin-right:10px;">
+            <%-job.stateText%>
         </div>
         <span style="margin-right:10px;">
             <strong>nodes</strong>
-            <%=job.nodes%>
+            <%-job.nodes%>
         </span>
         <span id="statusBox" style="margin-right:10px;">
-            <%=job.status%>
+            <%-job.status%>
         </span>
     <%}%>
     <div class="job-detail-actions pull-right">
         <%if(!_.isUndefined(job.id)){%>
-            <button id="queryJobButton" class="btn btn-default btn-small btn-blue" style="display:<%=(job.qc_canQuery?'inline':'none')%>;">
+            <button id="queryJobButton" class="btn btn-default btn-small btn-blue" style="display:<%-(job.qc_canQuery?'inline':'none')%>;">
                 Query
             </button>
             <button id="kickJobButton" class="btn btn-default btn-small btn-green">
@@ -70,44 +70,44 @@
         <button id="saveJobButton" class="btn btn-default btn-small" style="margin-left:8px;">
             Save
         </button>
-        <button id="commitJobButton" class="btn btn-default btn-small <%=(_.isUndefined(job.id)?'disabled':'')%>" style="margin-right:8px;">
+        <button id="commitJobButton" class="btn btn-default btn-small <%-(_.isUndefined(job.id)?'disabled':'')%>" style="margin-right:8px;">
             Commit
         </button>
     </div>
 </div>
 <ul class="nav nav-tabs nav-justified" style="margin-left: 0px; margin-bottom: 0px;">
     <li id="confTab">
-        <a href="#jobs/<%=(_.isUndefined(job.id)?(isClone?cloneId+'/conf/clone':'create/conf'):job.id+'/conf')%>">
+        <a href="#jobs/<%-(_.isUndefined(job.id)?(isClone?cloneId+'/conf/clone':'create/conf'):job.id+'/conf')%>">
             Configuration
         </a>
     </li>
-    <li class="<%=(_.isUndefined(job.id)?'disabled':'')%>" id="tasksTab">
-        <a href="#jobs/<%=(_.isUndefined(job.id)?'create/tasks':job.id+'/tasks')%>">
+    <li class="<%-(_.isUndefined(job.id)?'disabled':'')%>" id="tasksTab">
+        <a href="#jobs/<%-(_.isUndefined(job.id)?'create/tasks':job.id+'/tasks')%>">
             Tasks
         </a>
     </li>
     <li id="settingsTab">
-        <a href="#jobs/<%=(_.isUndefined(job.id)?(isClone?cloneId+'/settings/clone':'create/settings'):job.id+'/settings')%>">
+        <a href="#jobs/<%-(_.isUndefined(job.id)?(isClone?cloneId+'/settings/clone':'create/settings'):job.id+'/settings')%>">
             Settings
         </a>
     </li>
-    <li id="alertsTab" class="<%=(_.isUndefined(job.id)?'disabled':'')%>">
-        <a href="#jobs/<%=(_.isUndefined(job.id)?(isClone?cloneId+'/alerts/clone':'create/alerts'):job.id+'/alerts')%>">
+    <li id="alertsTab" class="<%-(_.isUndefined(job.id)?'disabled':'')%>">
+        <a href="#jobs/<%-(_.isUndefined(job.id)?(isClone?cloneId+'/alerts/clone':'create/alerts'):job.id+'/alerts')%>">
             Alerts
         </a>
     </li>
-    <li class="<%=(_.isUndefined(job.id)?'disabled':'')%>" id="depTab">
-        <a href="#jobs/<%=(_.isUndefined(job.id)?'create':job.id)%>/deps">
+    <li class="<%-(_.isUndefined(job.id)?'disabled':'')%>" id="depTab">
+        <a href="#jobs/<%-(_.isUndefined(job.id)?'create':job.id)%>/deps">
             Dependencies
         </a>
     </li>
     <li  id="expTab">
-        <a href="#jobs/<%=(_.isUndefined(job.id)?'create':job.id)%>/expanded">
+        <a href="#jobs/<%-(_.isUndefined(job.id)?'create':job.id)%>/expanded">
             Expanded Configuration
         </a>
     </li>
-    <li class="<%=(_.isUndefined(job.id)?'disabled':'')%>" id="historyTab">
-        <a href="#jobs/<%=(_.isUndefined(job.id)?'create':job.id)%>/history">
+    <li class="<%-(_.isUndefined(job.id)?'disabled':'')%>" id="historyTab">
+        <a href="#jobs/<%-(_.isUndefined(job.id)?'create':job.id)%>/history">
             History
         </a>
     </li>
