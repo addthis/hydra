@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import com.addthis.bark.StringSerializer;
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.net.HttpUtil;
@@ -927,7 +928,7 @@ public class SpawnManager {
             public void httpService(HTTPLink link) throws Exception {
                 KVPairs kv = link.getRequestValues();
                 try {
-                    List<String> list = spawn.getZkClient().getChildren(kv.getValue("path", "/"));
+                    List<String> list = spawn.getZkClient().getChildren().forPath(kv.getValue("path", "/"));
                     JSONArray arr = new JSONArray();
                     for (String i : list) {
                         arr.put(i);
@@ -943,7 +944,7 @@ public class SpawnManager {
             public void httpService(HTTPLink link) throws Exception {
                 KVPairs kv = link.getRequestValues();
                 try {
-                    Object o = spawn.getZkClient().readData(kv.getValue("path", "/"));
+                    String o = StringSerializer.deserialize(spawn.getZkClient().getData().forPath(kv.getValue("path", "/")));
                     String reply = CodecJSON.encodeString(o, 1);
                     link.sendShortReply(200, "OK", reply != null && reply.length() > 0 ? reply : "");
                 } catch (Exception e) {

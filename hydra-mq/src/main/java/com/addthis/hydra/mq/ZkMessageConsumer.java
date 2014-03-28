@@ -13,73 +13,80 @@
  */
 package com.addthis.hydra.mq;
 
-import java.io.IOException;
-import java.io.Serializable;
-
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import com.addthis.bark.ZkHelpers;
-
-import org.I0Itec.zkclient.IZkChildListener;
-import org.I0Itec.zkclient.IZkDataListener;
-import org.I0Itec.zkclient.ZkClient;
+import com.addthis.bark.StringSerializer;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class ZkMessageConsumer<T extends Serializable> implements MessageConsumer {
 
     private static Logger log = LoggerFactory.getLogger(ZKMessageProducer.class);
 
 
-    private ZkClient zkClient;
+    private CuratorFramework zkClient;
     private ObjectMapper mapper;
     private String path;
     private Class<T> clazz;
     private TypeReference typeReference;
     private final Set<MessageListener> messageListeners = new HashSet<MessageListener>();
-    private final IZkDataListener dataListener = new ZkDataListener();
+    private PathChildrenCache cache;
 
-    public ZkMessageConsumer(ZkClient zkClient, String path, MessageListener messageListener, final TypeReference<T> typeReference) {
+    public ZkMessageConsumer(CuratorFramework zkClient, String path, MessageListener messageListener, final TypeReference<T> typeReference) {
         this.typeReference = typeReference;
         init(zkClient, path, messageListener);
     }
 
-    public ZkMessageConsumer(ZkClient zkClient, String path, MessageListener messageListener, final Class<T> clazz) {
+    public ZkMessageConsumer(CuratorFramework zkClient, String path, MessageListener messageListener, final Class<T> clazz) {
         this.clazz = clazz;
         init(zkClient, path, messageListener);
     }
 
-    private void init(ZkClient zkClient, String path, MessageListener messageListener) {
+    private void init(final CuratorFramework zkClient, final String path, MessageListener messageListener) {
         this.zkClient = zkClient;
         this.path = path;
         mapper = new ObjectMapper();
         addMessageListener(messageListener);
         try {
             open();
-            ZkHelpers.makeSurePersistentPathExists(zkClient, path);
-            notifyListeners(zkClient.getChildren(path));
-            zkClient.subscribeChildChanges(path, new IZkChildListener() {
+            if (zkClient.checkExists().forPath(path) == null) {
+                zkClient.create().creatingParentsIfNeeded().forPath(path);
+            }
+            notifyListeners(zkClient.getChildren().forPath(path));
+            cache = new PathChildrenCache(zkClient, path, true);
+            cache.start();
+            cache.getListenable().addListener(new PathChildrenCacheListener() {
                 @Override
-                public void handleChildChange(String path, List<String> values) throws Exception {
-                    notifyListeners(values);
+                public void childEvent(CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent) throws Exception {
+                    switch (pathChildrenCacheEvent.getType()) {
+                        case CHILD_UPDATED:
+                            notifyListeners(StringSerializer.deserialize(pathChildrenCacheEvent.getData().getData()));
+                            break;
+                        default:
+                            log.debug("Ignored path event for node: " + pathChildrenCacheEvent);
+                    }
                 }
             });
-        } catch (IOException e) {
-            log.warn("[zk.producer] error opening client: " + e);
+        } catch (Exception e) {
+            log.warn("error opening client: ", e);
         }
     }
 
 
-    private void notifyListeners(List<String> values) throws IOException {
+    private void notifyListeners(List<String> values) throws Exception {
         if (values != null && values.size() > 0) {
             for (String node : values) {
-                zkClient.subscribeDataChanges(path + "/" + node, dataListener);
-                String json = ZkHelpers.readData(zkClient, path + "/" + node);
-                notifyListeners(json);
+                notifyListeners(StringSerializer.deserialize(zkClient.getData().forPath(path + "/" + node)));
             }
 
         }
@@ -88,16 +95,15 @@ public class ZkMessageConsumer<T extends Serializable> implements MessageConsume
     private void notifyListeners(String json) throws IOException {
         // A child znode may be used for another purpose and have no
         // data in it.
-        if (json == null) {
-            log.warn("[warning] got null notification.  Ignoring");
+        if (json == null || json.isEmpty()) {
+            log.warn("got null notification.  Ignoring");
             return;
         }
         T message;
         if (clazz != null) {
-
             message = mapper.readValue(json, clazz);
         } else {
-            message = mapper.<T>readValue(json, typeReference);
+            message = mapper.readValue(json, typeReference);
         }
 
         for (MessageListener listener : messageListeners) {
@@ -121,18 +127,5 @@ public class ZkMessageConsumer<T extends Serializable> implements MessageConsume
 
     public boolean removeMessageListener(MessageListener hostMessageListener) {
         return messageListeners.remove(hostMessageListener);
-    }
-
-    private class ZkDataListener implements IZkDataListener {
-
-        @Override
-        public void handleDataChange(String path, Object json) throws Exception {
-            notifyListeners((String) json);
-        }
-
-        @Override
-        public void handleDataDeleted(String path) throws Exception {
-            zkClient.unsubscribeDataChanges(path, dataListener);
-        }
     }
 }
