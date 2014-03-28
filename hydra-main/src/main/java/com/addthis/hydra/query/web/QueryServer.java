@@ -17,14 +17,11 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import java.io.File;
 import java.io.IOException;
 
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.RollingLog;
 
-import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.channel.QueryChannelServer;
 import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.hydra.query.QueryTracker;
@@ -54,14 +51,9 @@ public class QueryServer extends AbstractHandler {
     private static final Logger log = LoggerFactory.getLogger(QueryServer.class);
     private static final int webPort = Parameter.intValue("qmaster.web.port", 2222);
     private static final int queryPort = Parameter.intValue("qmaster.query. port", 2601);
-    private static final String logDir = Parameter.value("qmaster.log.dir", "log");
-    private static final boolean eventLogCompress = Parameter.boolValue("qmaster.eventlog.compress", true);
-    private static final int logMaxAge = Parameter.intValue("qmaster.log.maxAge", 60 * 60 * 1000);
-    private static final int logMaxSize = Parameter.intValue("qmaster.log.maxSize", 100 * 1024 * 1024);
     private static final boolean accessLogEnabled = Parameter.boolValue("qmaster.log.accessLogging", true);
     private static final String accessLogDir = Parameter.value("qmaster.log.accessLogDir", "log/qmaccess");
     private static final int headerBufferSize = Parameter.intValue("qmaster.headerBufferSize", 163840);
-
     static final String webDir = Parameter.value("qmaster.web.dir", "web");
     static final Counter rawQueryCalls = Metrics.newCounter(MeshQueryMaster.class, "rawQueryCalls");
     static final JsonFactory factory = new JsonFactory(new ObjectMapper());
@@ -93,11 +85,7 @@ public class QueryServer extends AbstractHandler {
 
     public QueryServer() throws Exception {
 
-        Query.setTraceLog(new RollingLog(new File(logDir, "events-trace"), "queryTrace", eventLogCompress, logMaxSize, logMaxAge));
-
-        RollingLog eventLog = new RollingLog(new File(logDir, "events-query"), "query", eventLogCompress, logMaxSize, logMaxAge);
-
-        QueryTracker queryTracker = new QueryTracker(eventLog);
+        QueryTracker queryTracker = new QueryTracker();
         MeshQueryMaster meshQueryMaster = new MeshQueryMaster(queryTracker);
         ServletHandler metricsHandler = MetricsServletMaker.makeHandler();
         queryHandler = new QueryHandler(this, queryTracker, meshQueryMaster, metricsHandler);

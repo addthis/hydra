@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.query;
 
+import java.io.File;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -66,6 +68,10 @@ public class QueryTracker {
     private static final int MAX_CONCURRENT_QUERIES = Parameter.intValue("QueryTracker.MAX_CONCURRENT", 5);
     private static final int MAX_QUEUED_QUERIES = Parameter.intValue("QueryTracker.MAX_QUEUED_QUERIES", 100);
     private static final int MAX_QUERY_GATE_WAIT_TIME = Parameter.intValue("QueryTracker.MAX_QUERY_GATE_WAIT_TIME", 180);
+    private static final String logDir = Parameter.value("qmaster.log.dir", "log");
+    private static final boolean eventLogCompress = Parameter.boolValue("qmaster.eventlog.compress", true);
+    private static final int logMaxAge = Parameter.intValue("qmaster.log.maxAge", 60 * 60 * 1000);
+    private static final int logMaxSize = Parameter.intValue("qmaster.log.maxSize", 100 * 1024 * 1024);
     private static SimpleDateFormat format = new SimpleDateFormat("yyMMdd-HHmmss.SSS");
 
     private final RollingLog eventLog;
@@ -95,8 +101,9 @@ public class QueryTracker {
         }
     });
 
-    public QueryTracker(RollingLog eventLog) {
-        this.eventLog = eventLog;
+    public QueryTracker() {
+        Query.setTraceLog(new RollingLog(new File(logDir, "events-trace"), "queryTrace", eventLogCompress, logMaxSize, logMaxAge));
+        this.eventLog = new RollingLog(new File(logDir, "events-query"), "query", eventLogCompress, logMaxSize, logMaxAge);
 
         this.recentlyCompleted = CacheBuilder.newBuilder()
                 .maximumSize(MAX_FINISHED_CACHE_SIZE).build();
