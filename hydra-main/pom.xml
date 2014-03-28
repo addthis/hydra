@@ -163,6 +163,11 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-all</artifactId>
+      <version>4.0.17.Final</version>
+    </dependency>
+    <dependency>
       <groupId>com.sleepycat</groupId>
       <artifactId>je</artifactId>
       <version>${hydra.dep.sleepycat.je.version}</version>
