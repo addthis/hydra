@@ -51,6 +51,9 @@ import org.eclipse.jetty.server.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.HttpRequest;
+
 public final class QueryServlet {
 
     private static final Logger log = LoggerFactory.getLogger(QueryServlet.class);
@@ -134,20 +137,23 @@ public final class QueryServlet {
     /**
      * special handler for query
      */
-    public static void handleQuery(QuerySource querySource, KVPairs kv, HttpServletRequest request, HttpServletResponse response) throws Exception {
+    public static void handleQuery(QuerySource querySource, KVPairs kv, HttpRequest request,
+            ChannelHandlerContext ctx) throws Exception {
         String job = kv.getValue("job");
         String path = kv.getValue("path", kv.getValue("q", ""));
         Query query = new Query(job, new String[]{path}, new String[]{kv.getValue("ops"), kv.getValue("rops")});
         query.setTraced(kv.getIntValue("trace", 0) == 1);
-        handleQuery(querySource, query, kv, request, response);
+        handleQuery(querySource, query, kv, request, ctx);
     }
 
     /** */
-    public static void handleQuery(QuerySource querySource, Query query, KVPairs kv, HttpServletRequest request, HttpServletResponse response) throws Exception {
+    public static void handleQuery(QuerySource querySource, Query query, KVPairs kv, HttpRequest request,
+            ChannelHandlerContext ctx) throws Exception {
+        HttpServletResponse response = null; //quiet compiler
         query.setParameterIfNotYetSet("hosts", kv.getValue("hosts"));
         query.setParameterIfNotYetSet("gate", kv.getValue("gate"));
         query.setParameterIfNotYetSet("originalrequest", kv.getValue("originalrequest"));
-        query.setParameterIfNotYetSet("remoteip", request.getRemoteAddr());
+//        query.setParameterIfNotYetSet("remoteip", request.getRemoteAddr());
         query.setParameterIfNotYetSet("parallel", kv.getValue("parallel"));
         query.setParameterIfNotYetSet("allowPartial", kv.getValue("allowPartial"));
         query.setParameterIfNotYetSet("dsortcompression", kv.getValue("dsortcompression"));
@@ -186,7 +192,7 @@ public final class QueryServlet {
             response.setCharacterEncoding(CharEncoding.UTF_8);
 
             // support legacy async query semantics
-            query = LegacyHandler.handleQuery(query, kv, request, response);
+//            query = LegacyHandler.handleQuery(query, kv, request, response);
             if (query == null) {
                 return;
             }
