@@ -18,7 +18,7 @@
  * This product includes software developed by Coda Hale and Yammer, Inc.
  */
 
-package com.yammer.metrics.reporting;
+package com.addthis.hydra.util;
 
 import javax.servlet.ServletException;
 
@@ -37,6 +37,7 @@ import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Clock;
 import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.core.VirtualMachineMetrics;
+import com.yammer.metrics.reporting.MetricsServlet;
 
 public class MetricsServletShim extends MetricsServlet {
 

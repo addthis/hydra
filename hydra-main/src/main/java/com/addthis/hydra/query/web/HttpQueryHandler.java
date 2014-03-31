@@ -38,7 +38,7 @@ import com.addthis.maljson.JSONObject;
 import com.google.common.base.Optional;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.yammer.metrics.reporting.MetricsServletShim;
+import com.addthis.hydra.util.MetricsServletShim;
 
 import org.apache.commons.io.output.StringBuilderWriter;
 
