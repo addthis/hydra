@@ -29,7 +29,6 @@ class OutputHTML extends AbstractHttpOutput {
     OutputHTML(ChannelHandlerContext ctx) {
         super(ctx);
         setContentTypeHeader(response, "text/html; charset=utf-8");
-        ctx.write("<table border=1 cellpadding=1 cellspacing=0>\n");
     }
 
     @Override
