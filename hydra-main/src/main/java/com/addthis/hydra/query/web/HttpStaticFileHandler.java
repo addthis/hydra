@@ -149,7 +149,7 @@ public class HttpStaticFileHandler extends SimpleChannelInboundHandler<FullHttpR
         }
 
         Path file = Paths.get(webDir + path);
-        log.info("trying to serve static file {}", file);
+        log.trace("trying to serve static file {}", file);
         if (Files.isHidden(file) || Files.notExists(file)) {
             sendError(ctx, NOT_FOUND);
             return;
@@ -160,7 +160,7 @@ public class HttpStaticFileHandler extends SimpleChannelInboundHandler<FullHttpR
             return;
         }
 
-        log.info("cache validation occuring for {}", file);
+        log.trace("cache validation occuring for {}", file);
         // Cache Validation
         String ifModifiedSince = request.headers().get(IF_MODIFIED_SINCE);
         if (ifModifiedSince != null && !ifModifiedSince.isEmpty()) {
@@ -177,7 +177,7 @@ public class HttpStaticFileHandler extends SimpleChannelInboundHandler<FullHttpR
             }
         }
 
-        log.info("sending {}", file);
+        log.trace("sending {}", file);
 
         FileChannel fileChannel;
         try {

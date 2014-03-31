@@ -32,13 +32,13 @@ import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.hydra.query.QueryTracker;
 import com.addthis.hydra.query.util.HostEntryInfo;
+import com.addthis.hydra.util.MetricsServletShim;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Optional;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.addthis.hydra.util.MetricsServletShim;
 
 import org.apache.commons.io.output.StringBuilderWriter;
 
@@ -115,14 +115,14 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
         }
         QueryStringDecoder urlDecoder = new QueryStringDecoder(request.getUri());
         String target = urlDecoder.path();
-        log.info("target uri {}", target);
+        log.trace("target uri {}", target);
         KVPairs kv = new KVPairs();
         for (Map.Entry<String, List<String>> entry : urlDecoder.parameters().entrySet()) {
             String k = entry.getKey();
             String v = entry.getValue().get(0); // ignore duplicates
             kv.add(k, v);
         }
-        log.info("kv pairs {}", kv);
+        log.trace("kv pairs {}", kv);
         switch (target) {
             case "/":
                 sendRedirect(ctx, "/query/index.html");
@@ -329,7 +329,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 return; // don't do text response clean up
         }
         HttpUtils.endResponse(writer, cbf);
-        log.info("response being sent {}", writer);
+        log.trace("response being sent {}", writer);
         ByteBuf textResponse = ByteBufUtil.encodeString(ctx.alloc(),
                 CharBuffer.wrap(writer.getBuilder()), CharsetUtil.UTF_8);
         HttpContent content = new DefaultHttpContent(textResponse);
@@ -340,9 +340,9 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
         ctx.write(response);
         ctx.write(content);
         ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-        log.info("response pending");
+        log.trace("response pending");
         if (!HttpHeaders.isKeepAlive(request)) {
-            log.info("Setting close listener");
+            log.trace("Setting close listener");
             lastContentFuture.addListener(ChannelFutureListener.CLOSE);
         }
     }

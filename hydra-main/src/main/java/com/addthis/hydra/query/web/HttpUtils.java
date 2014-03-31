@@ -112,7 +112,7 @@ public class HttpUtils {
     }
 
     static void sendRedirect(ChannelHandlerContext ctx, String newUri) {
-        log.info("issuing redirect to {}", newUri);
+        log.trace("issuing redirect to {}", newUri);
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, FOUND);
         response.headers().set(LOCATION, newUri);
 
@@ -121,7 +121,7 @@ public class HttpUtils {
     }
 
     static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
-        log.info("issuing error of {}", status);
+        log.trace("issuing error of {}", status);
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HTTP_1_1, status, Unpooled.copiedBuffer("Failure: " + status.toString() + "\r\n", CharsetUtil.UTF_8));
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");

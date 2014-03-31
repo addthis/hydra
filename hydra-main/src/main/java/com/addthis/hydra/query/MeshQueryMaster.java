@@ -61,7 +61,13 @@ import com.google.common.cache.LoadingCache;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-public class MeshQueryMaster implements ErrorHandlingQuerySource {
+
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+
+@ChannelHandler.Sharable
+public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> implements ErrorHandlingQuerySource {
 
     private static final Logger log = LoggerFactory.getLogger(MeshQueryMaster.class);
     private static final String tempDir = Parameter.value("query.tmpdir", "query.tmpdir");
@@ -396,5 +402,10 @@ public class MeshQueryMaster implements ErrorHandlingQuerySource {
     public boolean isClosed() {
         // if we are running we are not closed
         return false;
+    }
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, Query msg) throws Exception {
+
     }
 }
