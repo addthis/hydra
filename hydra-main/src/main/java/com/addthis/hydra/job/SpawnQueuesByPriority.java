@@ -166,20 +166,22 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     /**
      * Out of a list of possible hosts to run a task, find the best one.
      * @param inputHosts The legal hosts for a task
+     * @param requireAvailableSlot Whether to require at least one available slot
      * @return One of the hosts, if one with free slots is found; null otherwise
      */
-    public HostState findBestHostToRunTask(List<HostState> inputHosts) {
+    public HostState findBestHostToRunTask(List<HostState> inputHosts, boolean requireAvailableSlot) {
         if (inputHosts == null || inputHosts.isEmpty()) {
             return null;
         }
         synchronized (hostAvailSlots) {
             HostState bestHost = Collections.min(inputHosts, hostStateComparator);
-            if (bestHost != null && hostAvailSlots.containsKey(bestHost.getHostUuid()) && hostAvailSlots.get(bestHost.getHostUuid()) > 0) {
-                return bestHost;
+            if (bestHost != null) {
+                if (!requireAvailableSlot || hostAvailSlots.containsKey(bestHost.getHostUuid()) && hostAvailSlots.get(bestHost.getHostUuid()) > 0) {
+                    return bestHost;
+                }
             }
             return null;
         }
-
     }
 
     /**

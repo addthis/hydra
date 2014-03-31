@@ -25,14 +25,14 @@ public class SpawnQueuesByPriorityTest {
         List<HostState> allHosts = Arrays.asList(noSlots, oneSlotHighMeanActive, oneSlotLowMeanActive, twoSlots);
         spawnQueuesByPriority.updateAllHostAvailSlots(allHosts);
         // If host with two slots is available, should choose that host.
-        assertEquals("should choose host with two slots", twoSlots, spawnQueuesByPriority.findBestHostToRunTask(allHosts));
+        assertEquals("should choose host with two slots", twoSlots, spawnQueuesByPriority.findBestHostToRunTask(allHosts, true));
         // If multiple hosts with one slot are available, should choose one with lesser meanActiveTasks.
-        assertEquals("should choose less active host", oneSlotLowMeanActive, spawnQueuesByPriority.findBestHostToRunTask(allHosts.subList(0, 3)));
+        assertEquals("should choose less active host", oneSlotLowMeanActive, spawnQueuesByPriority.findBestHostToRunTask(allHosts.subList(0, 3), true));
         // If only available host has no slots, should return null
-        assertEquals("should return null", null, spawnQueuesByPriority.findBestHostToRunTask(Arrays.asList(noSlots)));
+        assertEquals("should return null", null, spawnQueuesByPriority.findBestHostToRunTask(Arrays.asList(noSlots), true));
         // Simulate a task kicking on the twoSlots host. Then we should choose the oneSlot host with the lowest meanActive value.
         spawnQueuesByPriority.markHostKick(twoSlots.getHostUuid(), false);
-        assertEquals("after kick, should return less active host", oneSlotLowMeanActive, spawnQueuesByPriority.findBestHostToRunTask(allHosts));
+        assertEquals("after kick, should return less active host", oneSlotLowMeanActive, spawnQueuesByPriority.findBestHostToRunTask(allHosts, true));
     }
 
     @Test
