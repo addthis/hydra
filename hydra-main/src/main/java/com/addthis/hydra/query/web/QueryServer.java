@@ -54,11 +54,6 @@ public class QueryServer {
      */
     private final QueryChannelServer queryChannelServer;
 
-    /**
-     * server listens for query requests using HTML protoc
-     */
-//    private final Server htmlQueryServer;
-
     private final HttpQueryHandler httpQueryHandler;
     private final QueryServerInitializer queryServerInitializer;
     private final int webPort;
@@ -89,7 +84,7 @@ public class QueryServer {
         queryChannelServer = new QueryChannelServer(queryPort, meshQueryMaster);
         queryChannelServer.start();
 
-//        log.info("[init] query port=" + queryPort + ", web port=" + htmlQueryServer.getConnectors()[0].getPort());
+        log.info("[init] query port={}, web port={}", queryPort, webPort);
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
@@ -107,13 +102,11 @@ public class QueryServer {
         b.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(queryServerInitializer);
-
         b.bind(webPort).sync();
     }
 
     protected void shutdown() {
         try {
-//            htmlQueryServer.stop();
             queryChannelServer.close();
             if (bossGroup != null) {
                 bossGroup.shutdownGracefully();
