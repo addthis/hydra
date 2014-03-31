@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.job;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -55,6 +56,21 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     private static final long TASK_MIGRATION_INTERVAL_PER_HOST = Parameter.longValue("task.migration.interval", 240_000); // Only migrate a task to a particular host once per interval
     private final Cache<String, Boolean> migrateHosts; // Use cache ttl to mark hosts that have recently performed or received a migration
     private final AtomicBoolean stoppedJob = new AtomicBoolean(false); // When tasks are stopped, track this behavior so that the queue can be modified as soon as possible
+
+    /* This comparator should only be used within a block that is synchronized on hostAvailSlots.
+    It does not internally synchronize to save a bunch of extraneous lock operations.*/
+    private final Comparator<HostState> hostStateComparator = new Comparator<HostState>() {
+        @Override
+        public int compare(HostState o1, HostState o2) {
+            int hostAvailSlots1 = hostAvailSlots.containsKey(o1.getHostUuid()) ? hostAvailSlots.get(o1.getHostUuid()) : 0;
+            int hostAvailSlots2 = hostAvailSlots.containsKey(o2.getHostUuid()) ? hostAvailSlots.get(o2.getHostUuid()) : 0;
+            if (hostAvailSlots1 != hostAvailSlots2) {
+                return Integer.compare(-hostAvailSlots1, -hostAvailSlots2); // Return hosts with large number of slots first
+            } else {
+                return Double.compare(o1.getMeanActiveTasks(), o2.getMeanActiveTasks()); // Return hosts with small meanActiveTask value first
+            }
+        }
+    };
 
     public SpawnQueuesByPriority() {
         super(new Comparator<Integer>() {
@@ -148,33 +164,22 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     }
 
     /**
-     * Out of a list of possible hosts to run a task, find the best one. TODO should be a priority queue?
+     * Out of a list of possible hosts to run a task, find the best one.
      * @param inputHosts The legal hosts for a task
      * @return One of the hosts, if one with free slots is found; null otherwise
      */
     public HostState findBestHostToRunTask(List<HostState> inputHosts) {
-        if (inputHosts == null) {
+        if (inputHosts == null || inputHosts.isEmpty()) {
             return null;
         }
-        HostState bestHost = null;
-        int maxAvailFoundSoFar = -1;
         synchronized (hostAvailSlots) {
-            for (HostState hostState : inputHosts) {
-                String host;
-                if (hostState == null || (host = hostState.getHostUuid()) == null) {
-                    continue;
-                }
-                if (!hostAvailSlots.containsKey(host)) {
-                    continue;
-                }
-                int nextAvailCount = hostAvailSlots.get(host);
-                if (nextAvailCount > 0 && nextAvailCount > maxAvailFoundSoFar) {
-                    bestHost = hostState;
-                    maxAvailFoundSoFar = nextAvailCount;
-                }
+            HostState bestHost = Collections.min(inputHosts, hostStateComparator);
+            if (bestHost != null && hostAvailSlots.containsKey(bestHost.getHostUuid()) && hostAvailSlots.get(bestHost.getHostUuid()) > 0) {
+                return bestHost;
             }
+            return null;
         }
-        return bestHost;
+
     }
 
     /**
