@@ -54,6 +54,7 @@ class OutputDelimited extends AbstractHttpOutput {
         return new OutputDelimited(filename, delimiter);
     }
 
+    @Override
     public void send(ChannelHandlerContext ctx, Bundle row) {
         super.send(ctx, row);
         int count = 0;
