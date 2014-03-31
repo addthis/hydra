@@ -106,7 +106,7 @@ function(
                 data.status = "stopped";
             }
             else{
-                data.status="";
+                data.status="enabled";
             }
             data.bytes = data.bytes || "";
             data.maxRunTime = data.maxRunTime || "";
