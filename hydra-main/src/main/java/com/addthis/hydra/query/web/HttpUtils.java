@@ -20,6 +20,7 @@ package com.addthis.hydra.query.web;
 import javax.activation.MimetypesFileTypeMap;
 
 import java.io.IOException;
+import java.io.Writer;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -38,6 +39,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CACHE_CONTROL;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
@@ -191,4 +193,21 @@ public class HttpUtils {
         response.headers().set(CONTENT_TYPE, type);
     }
 
+    static void endResponse(Writer writer, String cbf) throws IOException {
+        if (cbf != null) {
+            writer.write(");");
+        }
+    }
+
+    static HttpResponse startResponse(Writer writer, String cbf, String cba) throws IOException {
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
+        if (cbf != null) {
+            setContentTypeHeader(response, "application/javascript; charset=utf-8");
+            writer.write(cbf + "(");
+            if (cba != null) writer.write(cba + ",");
+        } else {
+            setContentTypeHeader(response, "application/json; charset=utf-8");
+        }
+        return response;
+    }
 }

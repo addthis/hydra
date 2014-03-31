@@ -16,7 +16,6 @@ package com.addthis.hydra.query.web;
 
 import java.io.InputStream;
 import java.io.StringWriter;
-import java.io.Writer;
 
 import java.util.List;
 import java.util.Map;
@@ -39,14 +38,15 @@ import com.addthis.maljson.JSONObject;
 import com.google.common.base.Optional;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.yammer.metrics.reporting.MetricsServletShim;
 
 import org.apache.commons.io.output.StringBuilderWriter;
 
-import org.eclipse.jetty.servlet.ServletHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static com.addthis.hydra.query.web.HttpUtils.sendError;
+import static com.addthis.hydra.query.web.HttpUtils.sendRedirect;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelFuture;
@@ -55,21 +55,19 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultHttpContent;
-import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.util.CharsetUtil;
 
 @ChannelHandler.Sharable
-public class QueryHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
+public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
 
-    private static final Logger log = LoggerFactory.getLogger(QueryHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(HttpQueryHandler.class);
 
     private final HttpStaticFileHandler staticFileHandler = new HttpStaticFileHandler();
 
@@ -87,15 +85,14 @@ public class QueryHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
      */
     private final MeshQueryMaster meshQueryMaster;
 
-    private final ServletHandler metricsHandler;
+    private final MetricsServletShim fakeMetricsServlet;
 
-    public QueryHandler(QueryServer queryServer, QueryTracker tracker, MeshQueryMaster meshQueryMaster,
-            ServletHandler metricsHandler) {
+    public HttpQueryHandler(QueryServer queryServer, QueryTracker tracker, MeshQueryMaster meshQueryMaster) {
         super(true); // auto release
         this.queryServer = queryServer;
         this.tracker = tracker;
         this.meshQueryMaster = meshQueryMaster;
-        this.metricsHandler = metricsHandler;
+        this.fakeMetricsServlet = new MetricsServletShim();
     }
 
     @Override
@@ -108,6 +105,10 @@ public class QueryHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
+        messageReceived(ctx, request); // redirect to more sensible netty5 naming scheme
+    }
+
+    protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
         if (!request.getDecoderResult().isSuccess()) {
             sendError(ctx, HttpResponseStatus.BAD_REQUEST);
             return;
@@ -122,18 +123,22 @@ public class QueryHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
             kv.add(k, v);
         }
         log.info("kv pairs {}", kv);
-        if (target.equals("/")) {
-            HttpUtils.sendRedirect(ctx, "/query/index.html");
-//        } else if (target.startsWith("/metrics")) {
-//            metricsHandler.handle(target, baseRequest, request, response);
-        } else if (target.equals("/q/")) {
-            HttpUtils.sendRedirect(ctx, "/query/call?" + kv.toString());
-        } else if (target.equals("/query/call") || target.equals("/query/call/")) {
-            // TODO jsonp enable
-            QueryServer.rawQueryCalls.inc();
-//            QueryServlet.handleQuery(meshQueryMaster, kv, request, response);
-        } else {
-            fastHandle(ctx, request, target, kv);
+        switch (target) {
+            case "/":
+                sendRedirect(ctx, "/query/index.html");
+                break;
+            case "/q/":
+                sendRedirect(ctx, "/query/call?" + kv.toString());
+                break;
+            case "/query/call":
+            case "/query/call/":
+                // TODO jsonp enable
+                QueryServer.rawQueryCalls.inc();
+                HttpQueryCallHandler.handleQuery(meshQueryMaster, kv, request, ctx);
+                break;
+            default:
+                fastHandle(ctx, request, target, kv);
+                break;
         }
     }
 
@@ -144,9 +149,12 @@ public class QueryHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
         String cba = kv.getValue("cbfunc-arg");
         boolean jsonp = cbf != null;
         StringBuilderWriter writer = new StringBuilderWriter(50);
-        HttpResponse response = startResponse(writer, cbf, cba);
+        HttpResponse response = HttpUtils.startResponse(writer, cbf, cba);
 
         switch (target) {
+            case "/metrics":
+                fakeMetricsServlet.writeMetrics(writer, kv);
+                break;
             case "/query/list":
                 writer.write("[\n");
                 for (QueryTracker.QueryEntryInfo stat : tracker.getRunning()) {
@@ -320,7 +328,7 @@ public class QueryHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
                 ctx.fireChannelRead(request);
                 return; // don't do text response clean up
         }
-        endResponse(writer, cbf);
+        HttpUtils.endResponse(writer, cbf);
         log.info("response being sent {}", writer);
         ByteBuf textResponse = ByteBufUtil.encodeString(ctx.alloc(),
                 CharBuffer.wrap(writer.getBuilder()), CharsetUtil.UTF_8);
@@ -337,23 +345,5 @@ public class QueryHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
             log.info("Setting close listener");
             lastContentFuture.addListener(ChannelFutureListener.CLOSE);
         }
-    }
-
-    static void endResponse(Writer writer, String cbf) throws Exception {
-        if (cbf != null) {
-            writer.write(");");
-        }
-    }
-
-    static HttpResponse startResponse(Writer writer, String cbf, String cba) throws Exception {
-        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-        if (cbf != null) {
-            HttpUtils.setContentTypeHeader(response, "application/javascript; charset=utf-8");
-            writer.write(cbf + "(");
-            if (cba != null) writer.write(cba + ",");
-        } else {
-            HttpUtils.setContentTypeHeader(response, "application/json; charset=utf-8");
-        }
-        return response;
     }
 }

@@ -14,10 +14,6 @@
 
 package com.addthis.hydra.query.web;
 
-import javax.servlet.http.HttpServletResponse;
-
-import java.io.IOException;
-
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -25,18 +21,21 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
 
-class OutputDelimited extends ServletConsumer {
+import static com.addthis.hydra.query.web.HttpUtils.setContentTypeHeader;
+import io.netty.channel.ChannelHandlerContext;
+
+class OutputDelimited extends AbstractHttpOutput {
 
     String delimiter;
 
-    OutputDelimited(HttpServletResponse response, String filename, String delimiter) throws IOException, InterruptedException {
-        super(response);
+    OutputDelimited(ChannelHandlerContext ctx, String filename, String delimiter) {
+        super(ctx);
         this.delimiter = delimiter;
-        response.setContentType("application/csv; charset=utf-8");
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        setContentTypeHeader(response, "application/csv; charset=utf-8");
+        response.headers().set("Content-Disposition", "attachment; filename=\"" + filename + "\"");
     }
 
-    public static OutputDelimited create(HttpServletResponse response, String filename, String format) throws IOException, InterruptedException {
+    public static OutputDelimited create(ChannelHandlerContext ctx, String filename, String format) {
         String delimiter;
         switch (format) {
             case "tsv":
@@ -54,7 +53,7 @@ class OutputDelimited extends ServletConsumer {
         if (!filename.toLowerCase().endsWith("." + format)) {
             filename = filename.concat("." + format);
         }
-        return new OutputDelimited(response, filename, delimiter);
+        return new OutputDelimited(ctx, filename, delimiter);
     }
 
     @Override
@@ -63,7 +62,7 @@ class OutputDelimited extends ServletConsumer {
         for (BundleField field : row.getFormat()) {
             ValueObject o = row.getValue(field);
             if (count++ > 0) {
-                writer.write(delimiter);
+                ctx.write(delimiter);
             }
             if (o != null) {
                 ValueObject.TYPE type = o.getObjectType();
@@ -74,19 +73,19 @@ class OutputDelimited extends ServletConsumer {
                 switch (type) {
                     case INT:
                     case FLOAT:
-                        writer.write(o.toString());
+                        ctx.write(o.toString());
                         break;
                     case STRING:
-                        writer.write('"');
-                        writer.write(o.toString().replace('"', '\'').replace('\n', ' ').replace('\r', ' '));
-                        writer.write('"');
+                        ctx.write("\"");
+                        ctx.write(o.toString().replace('"', '\'').replace('\n', ' ').replace('\r', ' '));
+                        ctx.write("\"");
                         break;
                     default:
                         break;
                 }
             }
         }
-        writer.write("\n");
+        ctx.write("\n");
     }
 
     @Override
@@ -100,7 +99,7 @@ class OutputDelimited extends ServletConsumer {
 
     @Override
     public void sendComplete() {
-        QueryServlet.queryTimes.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
-        setDone();
+        HttpQueryCallHandler.queryTimes.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
+        super.sendComplete();
     }
 }

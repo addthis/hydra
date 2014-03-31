@@ -14,10 +14,6 @@
 
 package com.addthis.hydra.query.web;
 
-import javax.servlet.http.HttpServletResponse;
-
-import java.io.IOException;
-
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -25,22 +21,31 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
 
-class OutputHTML extends ServletConsumer {
+import static com.addthis.hydra.query.web.HttpUtils.setContentTypeHeader;
+import io.netty.channel.ChannelHandlerContext;
 
-    OutputHTML(HttpServletResponse response) throws IOException, InterruptedException {
-        super(response);
-        response.setContentType("text/html; charset=utf-8");
-        writer.write("<table border=1 cellpadding=1 cellspacing=0>\n");
+class OutputHTML extends AbstractHttpOutput {
+
+    OutputHTML(ChannelHandlerContext ctx) {
+        super(ctx);
+        setContentTypeHeader(response, "text/html; charset=utf-8");
+        ctx.write("<table border=1 cellpadding=1 cellspacing=0>\n");
+    }
+
+    @Override
+    public void writeStart() {
+        super.writeStart();
+        ctx.write("<table border=1 cellpadding=1 cellspacing=0>\n");
     }
 
     @Override
     public synchronized void send(Bundle row) {
-        writer.write("<tr>");
+        ctx.write("<tr>");
         for (BundleField field : row.getFormat()) {
             ValueObject o = row.getValue(field);
-            writer.write("<td>" + o + "</td>");
+            ctx.write("<td>" + o + "</td>");
         }
-        writer.write("</tr>\n");
+        ctx.write("</tr>\n");
     }
 
     @Override
@@ -54,8 +59,8 @@ class OutputHTML extends ServletConsumer {
 
     @Override
     public void sendComplete() {
-        writer.write("</table>");
-        QueryServlet.queryTimes.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
-        setDone();
+        ctx.write("</table>");
+        HttpQueryCallHandler.queryTimes.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
+        super.sendComplete();
     }
 }

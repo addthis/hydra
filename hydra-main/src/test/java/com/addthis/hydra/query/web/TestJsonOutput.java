@@ -11,9 +11,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.query;
+package com.addthis.hydra.query.web;
 
-import com.addthis.hydra.query.web.QueryServlet;
+import com.addthis.hydra.query.web.OutputJson;
 
 import org.junit.Test;
 
@@ -22,7 +22,7 @@ public class TestJsonOutput {
     @Test
     public void encode() {
         String s1 = "abc\"def\'ghi\\jkl\nmno\tpqr";
-        String e1 = QueryServlet.jsonEncode(s1);
+        String e1 = OutputJson.jsonEncode(s1);
         System.out.println("s1 = " + s1);
         System.out.println("e1 = " + e1);
     }

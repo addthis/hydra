@@ -14,10 +14,11 @@
 
 package com.addthis.hydra.query.web;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 import java.util.concurrent.TimeUnit;
+
+import java.nio.CharBuffer;
 
 import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.CUID;
@@ -28,7 +29,20 @@ import com.addthis.hydra.data.query.QueryException;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
-import org.eclipse.jetty.server.Request;
+import org.apache.commons.io.output.StringBuilderWriter;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.util.CharsetUtil;
 
 public class LegacyHandler {
 
@@ -38,19 +52,36 @@ public class LegacyHandler {
             CacheBuilder.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
 
     public static Query handleQuery(Query query, KVPairs kv,
-            HttpServletRequest request, HttpServletResponse response) throws Exception {
+            HttpRequest request, ChannelHandlerContext ctx) throws IOException, QueryException {
 
         String async = kv.getValue("async");
         if (async == null) {
             return query;
         } else if (async.equals("new")) {
+            String cbf = kv.getValue("cbfunc");
+            String cba = kv.getValue("cbfunc-arg");
+            StringBuilderWriter writer = new StringBuilderWriter(50);
+            HttpResponse response = HttpUtils.startResponse(writer, cbf, cba);
             String asyncUuid = genAsyncUuid();
             asyncCache.put(asyncUuid, query);
             if (query.isTraced()) {
                 Query.emitTrace("async create " + asyncUuid + " from " + query);
             }
-            response.getWriter().write("{\"id\":\"" + asyncUuid + "\"}");
-            ((Request) request).setHandled(true);
+            writer.write("{\"id\":\"" + asyncUuid + "\"}");
+            HttpUtils.endResponse(writer, cbf);
+            ByteBuf textResponse = ByteBufUtil.encodeString(ctx.alloc(),
+                    CharBuffer.wrap(writer.getBuilder()), CharsetUtil.UTF_8);
+            HttpContent content = new DefaultHttpContent(textResponse);
+            response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, textResponse.readableBytes());
+            if (HttpHeaders.isKeepAlive(request)) {
+                response.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+            }
+            ctx.write(response);
+            ctx.write(content);
+            ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+            if (!HttpHeaders.isKeepAlive(request)) {
+                lastContentFuture.addListener(ChannelFutureListener.CLOSE);
+            }
             return null;
         } else {
             Query asyncQuery = asyncCache.getIfPresent(async);

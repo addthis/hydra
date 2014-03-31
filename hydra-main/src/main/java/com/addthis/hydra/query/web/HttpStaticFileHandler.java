@@ -19,9 +19,6 @@ package com.addthis.hydra.query.web;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-
-import java.net.URLDecoder;
 
 import java.util.Date;
 import java.util.Locale;
@@ -66,6 +63,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.QueryStringDecoder;
 
 /**
  * A simple handler that serves incoming HTTP requests to send their respective
@@ -131,15 +129,20 @@ public class HttpStaticFileHandler extends SimpleChannelInboundHandler<FullHttpR
             return;
         }
         // since we are using send file, we must remove the compression unit or it will donk out
-        ctx.pipeline().remove("compressor");
+        ChannelHandler compressor = ctx.pipeline().get("compressor");
+        if (compressor != null) {
+            ctx.pipeline().remove("compressor");
+        }
 
         if (request.getMethod() != GET) {
             sendError(ctx, METHOD_NOT_ALLOWED);
             return;
         }
 
-        final String uri = request.getUri();
-        final String path = sanitizeUri(uri);
+        QueryStringDecoder urlDecoder = new QueryStringDecoder(request.getUri());
+        String target = urlDecoder.path();
+
+        final String path = sanitizeUri(target);
         if (path == null) {
             sendError(ctx, FORBIDDEN);
             return;
@@ -214,6 +217,9 @@ public class HttpStaticFileHandler extends SimpleChannelInboundHandler<FullHttpR
             lastContentFuture.addListener(ChannelFutureListener.CLOSE);
         } else {
             ctx.pipeline().remove(this);
+            if (compressor != null) {
+                ctx.pipeline().addBefore("query", "compressor", compressor);
+            }
         }
     }
 
@@ -228,16 +234,6 @@ public class HttpStaticFileHandler extends SimpleChannelInboundHandler<FullHttpR
     private static final Pattern INSECURE_URI = Pattern.compile(".*[<>&\"].*");
 
     private static String sanitizeUri(String uri) {
-        // Decode the path.
-        try {
-            uri = URLDecoder.decode(uri, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            try {
-                uri = URLDecoder.decode(uri, "ISO-8859-1");
-            } catch (UnsupportedEncodingException e1) {
-                throw new Error();
-            }
-        }
 
         if (!uri.startsWith("/")) {
             return null;

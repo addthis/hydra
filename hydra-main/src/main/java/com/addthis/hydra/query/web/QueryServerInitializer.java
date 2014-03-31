@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
@@ -29,10 +28,10 @@ public class QueryServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private static final Logger log = LoggerFactory.getLogger(QueryServerInitializer.class);
 
-    private final QueryHandler queryHandler;
+    private final HttpQueryHandler httpQueryHandler;
 
-    public QueryServerInitializer(QueryHandler queryHandler) {
-        this.queryHandler = queryHandler;
+    public QueryServerInitializer(HttpQueryHandler httpQueryHandler) {
+        this.httpQueryHandler = httpQueryHandler;
     }
 
     @Override
@@ -44,8 +43,8 @@ public class QueryServerInitializer extends ChannelInitializer<SocketChannel> {
         pipeline.addLast("aggregator", new HttpObjectAggregator(163840));
         pipeline.addLast("encoder", new HttpResponseEncoder());
         // compression is neat, but a little buggy
-        pipeline.addLast("compressor", new HttpContentCompressor());
-        pipeline.addLast("query", queryHandler);
+//        pipeline.addLast("compressor", new HttpContentCompressor());
+        pipeline.addLast("query", httpQueryHandler);
 
     }
 }

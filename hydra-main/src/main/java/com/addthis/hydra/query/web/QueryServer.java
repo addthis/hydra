@@ -19,7 +19,6 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.hydra.data.query.channel.QueryChannelServer;
 import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.hydra.query.QueryTracker;
-import com.addthis.hydra.util.MetricsServletMaker;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,7 +29,6 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.NCSARequestLog;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
-import org.eclipse.jetty.servlet.ServletHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,7 +59,7 @@ public class QueryServer {
      */
 //    private final Server htmlQueryServer;
 
-    private final QueryHandler queryHandler;
+    private final HttpQueryHandler httpQueryHandler;
     private final QueryServerInitializer queryServerInitializer;
     private final int webPort;
 
@@ -85,9 +83,8 @@ public class QueryServer {
 
         QueryTracker queryTracker = new QueryTracker();
         MeshQueryMaster meshQueryMaster = new MeshQueryMaster(queryTracker);
-        ServletHandler metricsHandler = MetricsServletMaker.makeHandler();
-        queryHandler = new QueryHandler(this, queryTracker, meshQueryMaster, metricsHandler);
-        queryServerInitializer = new QueryServerInitializer(queryHandler);
+        httpQueryHandler = new HttpQueryHandler(this, queryTracker, meshQueryMaster);
+        queryServerInitializer = new QueryServerInitializer(httpQueryHandler);
 
         queryChannelServer = new QueryChannelServer(queryPort, meshQueryMaster);
         queryChannelServer.start();
