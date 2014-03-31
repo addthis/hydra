@@ -14,27 +14,18 @@
 package com.addthis.hydra.query.web;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
-import java.io.PrintWriter;
+
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 import java.util.Enumeration;
-import java.util.List;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.bundle.channel.DataChannelError;
-import com.addthis.bundle.channel.DataChannelOutput;
-import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
-import com.addthis.bundle.core.list.ListBundle;
-import com.addthis.bundle.core.list.ListBundleFormat;
-import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.source.ErrorHandlingQuerySource;
@@ -58,11 +49,11 @@ public final class QueryServlet {
 
     private static final Logger log = LoggerFactory.getLogger(QueryServlet.class);
 
-    private static final int maxQueryTime = Parameter.intValue("qmaster.maxQueryTime", 24 * 60 * 60); // one day
+    static final int maxQueryTime = Parameter.intValue("qmaster.maxQueryTime", 24 * 60 * 60); // one day
 
-    private static final char hex[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+    static final char hex[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
-    private static final Timer queryTimes = Metrics.newTimer(QueryServlet.class, "queryTime", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
+    static final Timer queryTimes = Metrics.newTimer(QueryServlet.class, "queryTime", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
 
     private QueryServlet() {
     }
@@ -146,14 +137,15 @@ public final class QueryServlet {
         handleQuery(querySource, query, kv, request, ctx);
     }
 
-    /** */
     public static void handleQuery(QuerySource querySource, Query query, KVPairs kv, HttpRequest request,
             ChannelHandlerContext ctx) throws Exception {
-        HttpServletResponse response = null; //quiet compiler
         query.setParameterIfNotYetSet("hosts", kv.getValue("hosts"));
         query.setParameterIfNotYetSet("gate", kv.getValue("gate"));
         query.setParameterIfNotYetSet("originalrequest", kv.getValue("originalrequest"));
-//        query.setParameterIfNotYetSet("remoteip", request.getRemoteAddr());
+        SocketAddress remoteIP = ctx.channel().remoteAddress();
+        if (remoteIP instanceof InetSocketAddress) { // only log implementations with known methods
+            query.setParameterIfNotYetSet("remoteip", ((InetSocketAddress) remoteIP).getAddress().getHostAddress());
+        }
         query.setParameterIfNotYetSet("parallel", kv.getValue("parallel"));
         query.setParameterIfNotYetSet("allowPartial", kv.getValue("allowPartial"));
         query.setParameterIfNotYetSet("dsortcompression", kv.getValue("dsortcompression"));
@@ -249,265 +241,6 @@ public final class QueryServlet {
     private static void handleError(QuerySource source, Query query) {
         if (source instanceof ErrorHandlingQuerySource) {
             ((ErrorHandlingQuerySource) source).handleError(query);
-        }
-    }
-
-    /**
-     * parent of all streaming response classes
-     */
-    private abstract static class ServletConsumer implements DataChannelOutput {
-
-        HttpServletResponse response;
-        PrintWriter writer;
-        final Semaphore gate = new Semaphore(1);
-        final AtomicBoolean done = new AtomicBoolean(false);
-        final ListBundleFormat format = new ListBundleFormat();
-        final long startTime;
-        boolean error = false;
-
-        ServletConsumer(HttpServletResponse response) throws IOException, InterruptedException {
-            this.response = response;
-            this.writer = response.getWriter();
-            startTime = System.currentTimeMillis();
-            gate.acquire();
-        }
-
-        void setDone() {
-            if (done.compareAndSet(false, true)) {
-                gate.release();
-            }
-        }
-
-        void waitDone() throws InterruptedException, IOException {
-            waitDone(maxQueryTime);
-        }
-
-        void waitDone(final int waitInSeconds) throws InterruptedException, IOException {
-            if (!done.get()) {
-                try {
-                    gate.acquire();
-                } finally {
-                    setDone();
-                }
-            }
-        }
-
-        @Override
-        public void sourceError(DataChannelError ex) {
-            try {
-                response.getWriter().write(ex.getMessage());
-                response.setStatus(500);
-                error = true;
-                log.error("", ex);
-            } catch (IOException e) {
-                log.warn("", "Exception sending error: " + e);
-            } finally {
-                setDone();
-            }
-        }
-
-        @Override
-        public Bundle createBundle() {
-            return new ListBundle(format);
-        }
-
-        protected boolean isError() {
-            return error;
-        }
-    }
-
-    /** */
-    private static class OutputJson extends ServletConsumer {
-
-        int rows = 0;
-        private String jsonp;
-
-        OutputJson(HttpServletResponse response, String jsonp, String jargs) throws IOException, InterruptedException {
-            super(response);
-            this.jsonp = jsonp;
-            response.setContentType("application/json; charset=utf-8");
-            if (jsonp != null) {
-                writer.write(jsonp);
-                writer.write("(");
-                if (jargs != null) {
-                    writer.write(jargs);
-                    writer.write(",");
-                }
-            }
-            writer.write("[");
-        }
-
-        @Override
-        public synchronized void send(Bundle row) {
-            if (rows++ > 0) {
-                writer.write(",");
-            }
-            writer.write("[");
-            int count = 0;
-            for (BundleField field : row.getFormat()) {
-                ValueObject o = row.getValue(field);
-                if (count++ > 0) {
-                    writer.write(",");
-                }
-                if (o == null) {
-                    continue;
-                }
-                ValueObject.TYPE type = o.getObjectType();
-                if (type == ValueObject.TYPE.CUSTOM) {
-                    o = o.asCustom().asSimple();
-                    type = o.getObjectType();
-                }
-                switch (type) {
-                    case INT:
-                    case FLOAT:
-                        writer.write(o.toString());
-                        break;
-                    case STRING:
-                        writer.write('"');
-                        writer.write(jsonEncode(o.toString()));
-                        writer.write('"');
-                        break;
-                    default:
-                        break;
-                }
-            }
-            writer.write("]");
-        }
-
-        @Override
-        public void send(List<Bundle> bundles) {
-            if (bundles != null && !bundles.isEmpty()) {
-                for (Bundle bundle : bundles) {
-                    send(bundle);
-                }
-            }
-        }
-
-        @Override
-        public void sendComplete() {
-            writer.write("]");
-            if (jsonp != null) {
-                writer.write(");");
-            }
-            queryTimes.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
-            setDone();
-        }
-    }
-
-    /** */
-    private static class OutputDelimited extends ServletConsumer {
-
-        String delimiter;
-
-        OutputDelimited(HttpServletResponse response, String filename, String delimiter) throws IOException, InterruptedException {
-            super(response);
-            this.delimiter = delimiter;
-            response.setContentType("application/csv; charset=utf-8");
-            response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
-        }
-
-        public static OutputDelimited create(HttpServletResponse response, String filename, String format) throws IOException, InterruptedException {
-            String delimiter;
-            switch (format) {
-                case "tsv":
-                    delimiter = "\t";
-                    break;
-                case "csv":
-                    delimiter = ",";
-                    break;
-                case "psv":
-                    delimiter = "|";
-                    break;
-                default:
-                    return null;
-            }
-            if (!filename.toLowerCase().endsWith("." + format)) {
-                filename = filename.concat("." + format);
-            }
-            return new OutputDelimited(response, filename, delimiter);
-        }
-
-        @Override
-        public synchronized void send(Bundle row) {
-            int count = 0;
-            for (BundleField field : row.getFormat()) {
-                ValueObject o = row.getValue(field);
-                if (count++ > 0) {
-                    writer.write(delimiter);
-                }
-                if (o != null) {
-                    ValueObject.TYPE type = o.getObjectType();
-                    if (type == ValueObject.TYPE.CUSTOM) {
-                        o = o.asCustom().asSimple();
-                        type = o.getObjectType();
-                    }
-                    switch (type) {
-                        case INT:
-                        case FLOAT:
-                            writer.write(o.toString());
-                            break;
-                        case STRING:
-                            writer.write('"');
-                            writer.write(o.toString().replace('"', '\'').replace('\n', ' ').replace('\r', ' '));
-                            writer.write('"');
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-            writer.write("\n");
-        }
-
-        @Override
-        public void send(List<Bundle> bundles) {
-            if (bundles != null && !bundles.isEmpty()) {
-                for (Bundle bundle : bundles) {
-                    send(bundle);
-                }
-            }
-        }
-
-        @Override
-        public void sendComplete() {
-            queryTimes.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
-            setDone();
-        }
-    }
-
-    /** */
-    private static class OutputHTML extends ServletConsumer {
-
-        OutputHTML(HttpServletResponse response) throws IOException, InterruptedException {
-            super(response);
-            response.setContentType("text/html; charset=utf-8");
-            writer.write("<table border=1 cellpadding=1 cellspacing=0>\n");
-        }
-
-        @Override
-        public synchronized void send(Bundle row) {
-            writer.write("<tr>");
-            for (BundleField field : row.getFormat()) {
-                ValueObject o = row.getValue(field);
-                writer.write("<td>" + o + "</td>");
-            }
-            writer.write("</tr>\n");
-        }
-
-        @Override
-        public void send(List<Bundle> bundles) {
-            if (bundles != null && !bundles.isEmpty()) {
-                for (Bundle bundle : bundles) {
-                    send(bundle);
-                }
-            }
-        }
-
-        @Override
-        public void sendComplete() {
-            writer.write("</table>");
-            queryTimes.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
-            setDone();
         }
     }
 }
