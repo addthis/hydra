@@ -131,9 +131,9 @@ public class MeshMessageProducer implements MessageProducer {
                         ByteArrayOutputStream bos = new ByteArrayOutputStream();
                         synchronized (Queue.this) {
                             int fetch = Math.max(0, Math.min(size(), Integer.parseInt(options.get("fetch"))));
-                            if (debug && fetch > 0) log.info("encoding {} objects", fetch);
+                            if (debug) log.info("encoding {} objects", fetch);
+                            Bytes.writeInt(fetch, bos);
                             if (fetch > 0) {
-                                Bytes.writeInt(fetch, bos);
                                 ObjectOutputStream oos = new ObjectOutputStream(bos);
                                 while (size() > 0 && fetch-- > 0) {
                                     oos.writeObject(removeFirst());
