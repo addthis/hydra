@@ -157,8 +157,6 @@ public class Minion extends AbstractHandler implements MessageListener, ZkSessio
     private static final DateTimeFormatter timeFormat = DateTimeFormat.forPattern("yyMMdd-HHmmss");
     private static final String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
     private static final String batchBrokerPort = Parameter.value("batch.brokerPort", "5672");
-    private static final int mqReconnectDelay = Parameter.intValue("mq.reconnect.delay", 10000);
-    private static final int mqReconnectTries = Parameter.intValue("mq.reconnect.tries", 10);
     private static final int sendStatusRetries = Parameter.intValue("send.status.retries", 5);
     private static final int sendStatusRetryDelay = Parameter.intValue("send.status.delay", 5000);
     private static final long hostMetricUpdaterInterval = Parameter.longValue("minion.host.metric.interval", 30 * 1000);
