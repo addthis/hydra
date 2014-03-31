@@ -778,7 +778,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             minionStateLock.unlock();
         }
         status.setQueued(queued.toArray(new JobKey[queued.size()]));
-        status.setMeanActiveTasks(activeTaskHistogram.mean());
+        status.setMeanActiveTasks(activeTaskHistogram.mean() / (maxActiveTasks > 0 ? maxActiveTasks : 1));
         status.setMinionTypes(minionTypes);
         status.setUpdated();
         return status;
