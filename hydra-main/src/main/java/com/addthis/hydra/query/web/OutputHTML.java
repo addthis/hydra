@@ -14,7 +14,6 @@
 
 package com.addthis.hydra.query.web;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.bundle.core.Bundle;
@@ -39,21 +38,13 @@ class OutputHTML extends AbstractHttpOutput {
 
     @Override
     public synchronized void send(Bundle row) {
+        super.send(row);
         ctx.write("<tr>");
         for (BundleField field : row.getFormat()) {
             ValueObject o = row.getValue(field);
             ctx.write("<td>" + o + "</td>");
         }
         ctx.write("</tr>\n");
-    }
-
-    @Override
-    public void send(List<Bundle> bundles) {
-        if (bundles != null && !bundles.isEmpty()) {
-            for (Bundle bundle : bundles) {
-                send(bundle);
-            }
-        }
     }
 
     @Override

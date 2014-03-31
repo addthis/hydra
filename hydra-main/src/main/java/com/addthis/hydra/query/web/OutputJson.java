@@ -14,7 +14,6 @@
 
 package com.addthis.hydra.query.web;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.bundle.core.Bundle;
@@ -56,6 +55,7 @@ class OutputJson extends AbstractHttpOutput {
 
     @Override
     public synchronized void send(Bundle row) {
+        super.send(row);
         if (rows++ > 0) {
             ctx.write(",");
         }
@@ -89,15 +89,6 @@ class OutputJson extends AbstractHttpOutput {
             }
         }
         ctx.write("]");
-    }
-
-    @Override
-    public void send(List<Bundle> bundles) {
-        if (bundles != null && !bundles.isEmpty()) {
-            for (Bundle bundle : bundles) {
-                send(bundle);
-            }
-        }
     }
 
     @Override

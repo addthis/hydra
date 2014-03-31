@@ -14,6 +14,8 @@
 
 package com.addthis.hydra.query.web;
 
+import java.util.List;
+
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.bundle.core.Bundle;
@@ -49,6 +51,8 @@ abstract class AbstractHttpOutput implements DataChannelOutput {
     protected final long startTime;
     protected final ChannelHandlerContext ctx;
 
+    protected boolean writeStarted = false;
+
     AbstractHttpOutput(ChannelHandlerContext ctx) {
         this.ctx = ctx;
         HttpHeaders.setTransferEncodingChunked(response);
@@ -56,8 +60,25 @@ abstract class AbstractHttpOutput implements DataChannelOutput {
         startTime = System.currentTimeMillis();
     }
 
-    public void writeStart() {
+    protected void writeStart() {
         ctx.write(response);
+    }
+
+    @Override
+    public synchronized void send(Bundle bundle) {
+        if (!writeStarted) {
+            writeStart();
+            writeStarted = true;
+        }
+    }
+
+    @Override
+    public void send(List<Bundle> bundles) {
+        if (bundles != null && !bundles.isEmpty()) {
+            for (Bundle bundle : bundles) {
+                send(bundle);
+            }
+        }
     }
 
     @Override

@@ -14,7 +14,6 @@
 
 package com.addthis.hydra.query.web;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.bundle.core.Bundle;
@@ -58,6 +57,7 @@ class OutputDelimited extends AbstractHttpOutput {
 
     @Override
     public synchronized void send(Bundle row) {
+        super.send(row);
         int count = 0;
         for (BundleField field : row.getFormat()) {
             ValueObject o = row.getValue(field);
@@ -86,15 +86,6 @@ class OutputDelimited extends AbstractHttpOutput {
             }
         }
         ctx.write("\n");
-    }
-
-    @Override
-    public void send(List<Bundle> bundles) {
-        if (bundles != null && !bundles.isEmpty()) {
-            for (Bundle bundle : bundles) {
-                send(bundle);
-            }
-        }
     }
 
     @Override

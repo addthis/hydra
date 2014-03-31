@@ -129,7 +129,6 @@ public final class HttpQueryCallHandler {
                     break;
             }
             if (consumer != null) {
-                consumer.writeStart();
                 querySource.query(query, consumer); // TODO: use MQM and Outputs as Pipeline Handlers
             } else {
                 sendError(ctx, new HttpResponseStatus(400, "Invalid format"));
