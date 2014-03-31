@@ -10,6 +10,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * This class includes modified code from the following source:
+ *
+ * Metrics
+ * Copyright 2010-2013 Coda Hale and Yammer, Inc.
+ * This product includes software developed by Coda Hale and Yammer, Inc.
  */
 
 package com.yammer.metrics.reporting;
