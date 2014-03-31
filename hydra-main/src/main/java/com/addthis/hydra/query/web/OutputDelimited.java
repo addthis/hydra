@@ -14,11 +14,10 @@
 
 package com.addthis.hydra.query.web;
 
-import java.util.concurrent.TimeUnit;
-
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
+import com.addthis.hydra.data.query.QueryException;
 
 import static com.addthis.hydra.query.web.HttpUtils.setContentTypeHeader;
 import io.netty.channel.ChannelHandlerContext;
@@ -27,14 +26,14 @@ class OutputDelimited extends AbstractHttpOutput {
 
     String delimiter;
 
-    OutputDelimited(ChannelHandlerContext ctx, String filename, String delimiter) {
-        super(ctx);
+    OutputDelimited(String filename, String delimiter) {
+        super();
         this.delimiter = delimiter;
         setContentTypeHeader(response, "application/csv; charset=utf-8");
         response.headers().set("Content-Disposition", "attachment; filename=\"" + filename + "\"");
     }
 
-    public static OutputDelimited create(ChannelHandlerContext ctx, String filename, String format) {
+    public static OutputDelimited create(String filename, String format) {
         String delimiter;
         switch (format) {
             case "tsv":
@@ -47,17 +46,16 @@ class OutputDelimited extends AbstractHttpOutput {
                 delimiter = "|";
                 break;
             default:
-                return null;
+                throw new QueryException("Invalid format");
         }
         if (!filename.toLowerCase().endsWith("." + format)) {
             filename = filename.concat("." + format);
         }
-        return new OutputDelimited(ctx, filename, delimiter);
+        return new OutputDelimited(filename, delimiter);
     }
 
-    @Override
-    public synchronized void send(Bundle row) {
-        super.send(row);
+    public void send(ChannelHandlerContext ctx, Bundle row) {
+        super.send(ctx, row);
         int count = 0;
         for (BundleField field : row.getFormat()) {
             ValueObject o = row.getValue(field);
@@ -86,11 +84,5 @@ class OutputDelimited extends AbstractHttpOutput {
             }
         }
         ctx.write("\n");
-    }
-
-    @Override
-    public void sendComplete() {
-        HttpQueryCallHandler.queryTimes.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
-        super.sendComplete();
     }
 }

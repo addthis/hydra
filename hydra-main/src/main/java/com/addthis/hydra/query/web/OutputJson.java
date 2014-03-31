@@ -14,8 +14,6 @@
 
 package com.addthis.hydra.query.web;
 
-import java.util.concurrent.TimeUnit;
-
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
@@ -32,16 +30,16 @@ class OutputJson extends AbstractHttpOutput {
     private final String jsonp;
     private final String jargs;
 
-    OutputJson(ChannelHandlerContext ctx, String jsonp, String jargs) {
-        super(ctx);
+    OutputJson(String jsonp, String jargs) {
+        super();
         this.jsonp = jsonp;
         this.jargs = jargs;
         setContentTypeHeader(response, "application/json; charset=utf-8");
     }
 
     @Override
-    public void writeStart() {
-        super.writeStart();
+    public void writeStart(ChannelHandlerContext ctx) {
+        super.writeStart(ctx);
         if (jsonp != null) {
             ctx.write(jsonp);
             ctx.write("(");
@@ -54,8 +52,8 @@ class OutputJson extends AbstractHttpOutput {
     }
 
     @Override
-    public synchronized void send(Bundle row) {
-        super.send(row);
+    public void send(ChannelHandlerContext ctx, Bundle row) {
+        super.send(ctx, row);
         if (rows++ > 0) {
             ctx.write(",");
         }
@@ -92,13 +90,12 @@ class OutputJson extends AbstractHttpOutput {
     }
 
     @Override
-    public void sendComplete() {
+    public void sendComplete(ChannelHandlerContext ctx) {
         ctx.write("]");
         if (jsonp != null) {
             ctx.write(");");
         }
-        HttpQueryCallHandler.queryTimes.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
-        super.sendComplete();
+        super.sendComplete(ctx);
     }
 
     /* convert string to json valid format */

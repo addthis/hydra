@@ -14,8 +14,6 @@
 
 package com.addthis.hydra.query.web;
 
-import java.util.concurrent.TimeUnit;
-
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
@@ -25,20 +23,20 @@ import io.netty.channel.ChannelHandlerContext;
 
 class OutputHTML extends AbstractHttpOutput {
 
-    OutputHTML(ChannelHandlerContext ctx) {
-        super(ctx);
+    OutputHTML() {
+        super();
         setContentTypeHeader(response, "text/html; charset=utf-8");
     }
 
     @Override
-    public void writeStart() {
-        super.writeStart();
+    public void writeStart(ChannelHandlerContext ctx) {
+        super.writeStart(ctx);
         ctx.write("<table border=1 cellpadding=1 cellspacing=0>\n");
     }
 
     @Override
-    public synchronized void send(Bundle row) {
-        super.send(row);
+    public void send(ChannelHandlerContext ctx, Bundle row) {
+        super.send(ctx, row);
         ctx.write("<tr>");
         for (BundleField field : row.getFormat()) {
             ValueObject o = row.getValue(field);
@@ -48,9 +46,8 @@ class OutputHTML extends AbstractHttpOutput {
     }
 
     @Override
-    public void sendComplete() {
+    public void sendComplete(ChannelHandlerContext ctx) {
         ctx.write("</table>");
-        HttpQueryCallHandler.queryTimes.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
-        super.sendComplete();
+        super.sendComplete(ctx);
     }
 }

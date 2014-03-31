@@ -116,7 +116,7 @@ public class HttpUtils {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, FOUND);
         response.headers().set(LOCATION, newUri);
 
-        // Close the connection as soon as the error message is sent.
+        // Close the connection as soon as the redirect message is sent.
         ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 

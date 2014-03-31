@@ -27,6 +27,7 @@ import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.source.ErrorHandlingQuerySource;
 import com.addthis.hydra.data.query.source.QuerySource;
+import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.hydra.util.StringMapHelper;
 
 import com.yammer.metrics.Metrics;
@@ -39,10 +40,14 @@ import static com.addthis.hydra.query.web.HttpUtils.sendError;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.string.StringEncoder;
+import io.netty.util.CharsetUtil;
 
 public final class HttpQueryCallHandler {
 
     private static final Logger log = LoggerFactory.getLogger(HttpQueryCallHandler.class);
+
+    private static final StringEncoder stringer = new StringEncoder(CharsetUtil.UTF_8);
 
     static final int maxQueryTime = Parameter.intValue("qmaster.maxQueryTime", 24 * 60 * 60); // one day
 
@@ -54,7 +59,7 @@ public final class HttpQueryCallHandler {
     /**
      * special handler for query
      */
-    public static void handleQuery(QuerySource querySource, KVPairs kv, HttpRequest request,
+    public static void handleQuery(MeshQueryMaster querySource, KVPairs kv, HttpRequest request,
             ChannelHandlerContext ctx) throws Exception {
         String job = kv.getValue("job");
         String path = kv.getValue("path", kv.getValue("q", ""));
@@ -63,7 +68,7 @@ public final class HttpQueryCallHandler {
         handleQuery(querySource, query, kv, request, ctx);
     }
 
-    public static void handleQuery(QuerySource querySource, Query query, KVPairs kv, HttpRequest request,
+    public static void handleQuery(MeshQueryMaster querySource, Query query, KVPairs kv, HttpRequest request,
             ChannelHandlerContext ctx) throws Exception {
         query.setParameterIfNotYetSet("hosts", kv.getValue("hosts"));
         query.setParameterIfNotYetSet("gate", kv.getValue("gate"));
@@ -116,23 +121,20 @@ public final class HttpQueryCallHandler {
                 sendError(ctx, new HttpResponseStatus(500, "missing job"));
                 return;
             }
-            AbstractHttpOutput consumer = null;
+            ctx.pipeline().addLast("stringer", stringer);
             switch (format) {
                 case "json":
-                    consumer = new OutputJson(ctx, jsonp, jargs);
+                    ctx.pipeline().addLast("format", new OutputJson(jsonp, jargs));
                     break;
                 case "html":
-                    consumer = new OutputHTML(ctx);
+                    ctx.pipeline().addLast("format", new OutputHTML());
                     break;
                 default:
-                    consumer = OutputDelimited.create(ctx, filename, format);
+                    ctx.pipeline().addLast("format", OutputDelimited.create(filename, format));
                     break;
             }
-            if (consumer != null) {
-                querySource.query(query, consumer); // TODO: use MQM and Outputs as Pipeline Handlers
-            } else {
-                sendError(ctx, new HttpResponseStatus(400, "Invalid format"));
-            }
+            ctx.pipeline().addLast("mqm", querySource);
+            ctx.fireChannelRead(query);
         } catch (IOException | QueryException e) {
             sendError(ctx, new HttpResponseStatus(500, "General/Query Error " + e.toString()));
             handleError(querySource, query);
