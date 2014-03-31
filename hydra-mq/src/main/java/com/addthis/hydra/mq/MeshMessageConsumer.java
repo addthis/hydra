@@ -16,6 +16,7 @@ package com.addthis.hydra.mq;
 
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Parameter;
+import com.addthis.basis.util.Strings;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
 import com.addthis.meshy.service.message.MessageFileProvider;
@@ -33,6 +34,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class MeshMessageConsumer implements MessageConsumer {
 
@@ -51,7 +53,7 @@ public class MeshMessageConsumer implements MessageConsumer {
     private final IntervalTimer scanner;
     private final IntervalTimer poller;
 
-    private LinkedList<FileReference> fileSources = new LinkedList<>();
+    private volatile LinkedList<FileReference> fileSources = new LinkedList<>();
     private MessageFileProvider provider;
     private String findPaths[];
 
@@ -82,18 +84,28 @@ public class MeshMessageConsumer implements MessageConsumer {
         return this;
     }
 
+    private final AtomicInteger scans = new AtomicInteger(0);
+
     private void scan() {
+        if (!scans.compareAndSet(0, 1)) {
+            log.info("scan kicked while scan still running");
+            return;
+        }
         final LinkedList<FileReference> newSources = new LinkedList<>();
         try {
+            if (debug) log.info("scanning : "+ Strings.join(findPaths, ", "));
             mesh.listFiles(findPaths, new MeshyClient.ListCallback() {
                 @Override
                 public void receiveReference(FileReference ref) {
+                    if (debug) log.info("new source : "+ ref);
                     newSources.add(ref);
                 }
 
                 @Override
                 public void receiveReferenceComplete() {
                     fileSources = newSources;
+                    if (debug) log.info("new sources : "+ fileSources);
+                    scans.set(0);
                     poller.bump();
                 }
             });
@@ -121,7 +133,11 @@ public class MeshMessageConsumer implements MessageConsumer {
                 if (message == null) break;
                 if (debug) log.info("recv ref={} msg={} targets={}", fileRef.name, message, listeners.size());
                 for (MessageListener listener : listeners) {
-                    listener.onMessage(message);
+                    try {
+                        listener.onMessage(message);
+                    } catch (Exception ex) {
+                        log.warn("listener error", ex);
+                    }
                 }
             }
         } catch (EOFException e) {
@@ -130,7 +146,7 @@ public class MeshMessageConsumer implements MessageConsumer {
             // on shutdown
             log.info("shutting down? message={}", e.getMessage());
         } catch (Exception ex) {
-            log.warn("", ex);
+            log.warn("poll error", ex);
         }
     }
 
@@ -198,9 +214,20 @@ public class MeshMessageConsumer implements MessageConsumer {
         }
 
         public void run() {
+            if (debug) log.info("started with timeout "+timeout);
+            try {
+                loop();
+            } finally {
+                log.info("exited");
+            }
+        }
+
+        public void loop() {
             while (true) {
                 try {
+                    if (debug) log.info("task start");
                     task();
+                    if (debug) log.info("task end");
                 } catch (Exception ex) {
                     log.warn("", ex);
                 }
