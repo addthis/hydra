@@ -55,6 +55,8 @@ public class HostState implements HostMessage {
     @Codec.Set(codable = true)
     private int availableTaskSlots;
     @Codec.Set(codable = true)
+    private int maxTaskSlots;
+    @Codec.Set(codable = true)
     private JobKey running[];
     @Codec.Set(codable = true)
     private JobKey replicating[];
@@ -418,6 +420,14 @@ public class HostState implements HostMessage {
 
     public void setIncompleteReplicas(JobKey[] incompleteReplicas) {
         this.incompleteReplicas = incompleteReplicas;
+    }
+
+    public int getMaxTaskSlots() {
+        return maxTaskSlots;
+    }
+
+    public void setMaxTaskSlots(int maxTaskSlots) {
+        this.maxTaskSlots = maxTaskSlots;
     }
 
     @Override

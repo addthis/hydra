@@ -3173,7 +3173,7 @@ public class Spawn implements Codec.Codable {
             try {
                 if (taskQueuesByPriority.tryLock()) {
                     success = true;
-                    boolean kicked = kickOnExistingHosts(job, task, config, 0L, true, ignoreQuiesce);
+                    boolean kicked = kickOnExistingHosts(job, task, config, 0L, true);
                     if (!kicked && !inQueue) {
                         addToTaskQueue(task.getJobKey(), ignoreQuiesce, false);
                     }
@@ -3391,10 +3391,9 @@ public class Spawn implements Codec.Codable {
      * @param config        Config for job
      * @param timeOnQueue   Time that the task has been on the queue
      * @param allowSwap     Whether to allow swapping to replica hosts
-     * @param ignoreQuiesce Whether any kicks that occur can ignore Spawn's quiesce state
      * @return True if some host had the capacity to run the task and the task was sent there; false otherwise
      */
-    public boolean kickOnExistingHosts(Job job, JobTask task, String config, long timeOnQueue, boolean allowSwap, boolean ignoreQuiesce) {
+    public boolean kickOnExistingHosts(Job job, JobTask task, String config, long timeOnQueue, boolean allowSwap) {
         if (!jobTaskCanKick(job, task)) {
             return false;
         }
@@ -3411,7 +3410,7 @@ public class Spawn implements Codec.Codable {
                 }
             }
         }
-        HostState bestHost = findHostWithAvailableSlot(task, possibleHosts, false);
+        HostState bestHost = findHostWithAvailableSlot(task, timeOnQueue, possibleHosts, false);
         if (bestHost != null) {
             String bestHostUuid = bestHost.getHostUuid();
             if (task.getHostUUID().equals(bestHostUuid)) {
@@ -3454,11 +3453,12 @@ public class Spawn implements Codec.Codable {
      * Select a host that can run a task
      *
      * @param task         The task being moved
+     * @param timeOnQueue  How long the task has been on the queue
      * @param hosts        A collection of hosts
      * @param forMigration Whether the host in question is being used for migration
      * @return A suitable host that has an available task slot, if one exists; otherwise, null
      */
-    private HostState findHostWithAvailableSlot(JobTask task, List<HostState> hosts, boolean forMigration) {
+    private HostState findHostWithAvailableSlot(JobTask task, long timeOnQueue, List<HostState> hosts, boolean forMigration) {
         if (hosts == null) {
             return null;
         }
@@ -3470,6 +3470,10 @@ public class Spawn implements Codec.Codable {
             }
             if (forMigration && !taskQueuesByPriority.shouldMigrateTaskToHost(task, host.getHostUuid())) {
                 // Not a valid migration target
+                continue;
+            }
+            if (isNewTask(task) && !taskQueuesByPriority.shouldKickNewTaskOnHost(timeOnQueue, host)) {
+                // Not a valid target for new tasks
                 continue;
             }
             if (host.canMirrorTasks() && !host.isReadOnly() && balancer.canReceiveNewTasks(host, false) &&
@@ -3495,7 +3499,7 @@ public class Spawn implements Codec.Codable {
                 !quiesce &&  // If spawn is not quiesced,
                 taskQueuesByPriority.checkSizeAgeForMigration(task.getByteCount(), timeOnQueue) &&
                 // and the task is small enough that migration is sensible
-                (target = findHostWithAvailableSlot(task, listHostStatus(job.getMinionType()), true)) != null)
+                (target = findHostWithAvailableSlot(task, timeOnQueue, listHostStatus(job.getMinionType()), true)) != null)
         // and there is a host with available capacity that can run the job,
         {
             // Migrate the task to the target host and kick it on completion
@@ -3605,7 +3609,7 @@ public class Spawn implements Codec.Codable {
                     }
                     continue;
                 } else {
-                    kicked = kickOnExistingHosts(job, task, null, now - key.getCreationTime(), true, key.getIgnoreQuiesce());
+                    kicked = kickOnExistingHosts(job, task, null, now - key.getCreationTime(), true);
                 }
                 if (kicked) {
                     log.info("[task.queue] removing kicked task " + task.getJobKey());

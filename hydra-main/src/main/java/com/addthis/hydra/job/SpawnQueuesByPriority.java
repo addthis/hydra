@@ -47,6 +47,8 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     private static final int SPAWN_QUEUE_KICK_DELAY = Parameter.intValue("spawn.queue.kick.delay", 20_000);
     private static final int SPAWN_QUEUE_SWAP_DELAY = Parameter.intValue("spawn.queue.swap.delay", 20_000);
     private static final int SPAWN_QUEUE_AVAIL_REFRESH = Parameter.intValue("spawn.queue.avail.refresh", 60_000);
+    private static final int SPAWN_QUEUE_NEW_TASK_LAST_SLOT_DELAY = Parameter.intValue("spawn.queue.new.task.last.slot.delay", 90_000); // New tasks can't take the last slot of a host unless they wait this long
+
     private long lastAvailSlotsUpdate = 0;
 
     private static final boolean ENABLE_TASK_MIGRATION = Parameter.boolValue("task.migration.enable", true); // Whether tasks can migrate at all
@@ -309,5 +311,19 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
 
     public void setStoppedJob(boolean stopped) {
         stoppedJob.set(stopped);
+    }
+
+    public boolean shouldKickNewTaskOnHost(long timeOnQueue, HostState host) {
+        synchronized (hostAvailSlots) {
+            if (hostAvailSlots.containsKey(host.getHostUuid()) && hostAvailSlots.get(host.getHostUuid()) <= 1) {
+                if (host.getMaxTaskSlots() == 1) {
+                    // If a host has only one slot to begin with, allow tasks to kick there.
+                    return true;
+                }
+                // Otherwise, don't let new tasks take the last slot for a set period
+                return timeOnQueue > SPAWN_QUEUE_NEW_TASK_LAST_SLOT_DELAY;
+            }
+            return true;
+        }
     }
 }
