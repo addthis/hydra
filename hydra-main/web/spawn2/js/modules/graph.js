@@ -218,7 +218,10 @@ function(
                     return "rotate(" + (d.x - 90) + ")translate(" + d.y + ")";
                 });
             node.append("circle")
-                .attr("r", 4.5);
+                .attr("r", 4.5)
+                .attr("style", function(d) {
+                    return "stroke: " + d.color;
+                });
             node.append("text")
                 .attr("dy", ".31em")
                 .attr("text-anchor", function(d) {
@@ -270,7 +273,7 @@ function(
             this.jobId=opts.jobId;
         },
         url:function(){
-            return "/job/dependencies/sinks?id="+this.jobId;
+            return "/job/dependencies/connected?id="+this.jobId;
         },
         parse:function(data){
             var nodes = {};
@@ -286,19 +289,33 @@ function(
                     edges[edge.source].push(edge.sink);
                 }
             });
-            var graph = this.buildGraph(this.jobId,nodes,edges);
+            var graph = this.buildGraph(nodes,edges);
             return graph;
         },
-        buildGraph:function(nodeId,nodes,edges){
+        buildGraph:function(nodes, edges){
+            // poor man's topological sort
+            var result = _.reduce(
+                _.flatten(_.values(edges)),
+                function(nodeList, child){
+                    return _.without(nodeList, child);
+                },
+                _.keys(nodes)
+            );
+            var root = _.first(result);
+
+            return this.buildGraphHelp(root, nodes, edges);
+        },
+        buildGraphHelp:function(nodeId,nodes,edges){
             var childrenIds = edges[nodeId];
             var childrenNodes = [],self=this;
             _.each(childrenIds,function(child){
-                var childNode = self.buildGraph(child,nodes,edges);
+                var childNode = self.buildGraphHelp(child,nodes,edges);
                 childrenNodes.push(childNode);
             });
             return {
                 name:nodeId.substring(0,10),
                 children: childrenNodes,
+                color: nodeId === this.jobId ? "green" : "blue",
                 size:1
             };
         }
