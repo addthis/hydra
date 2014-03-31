@@ -124,6 +124,7 @@ public class MeshMessageConsumer implements MessageConsumer {
         HashMap<String,String> options = new HashMap<String,String>();
         options.put("fetch","100");
         try {
+            if (debug) log.info("polling ref={} options={}", fileRef, options);
             InputStream in = mesh.readFile(fileRef,options);
             int fetch = Bytes.readInt(in);
             if (debug) log.info("recv {} items ref={}", fetch, fileRef.name);
