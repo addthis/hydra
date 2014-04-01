@@ -47,6 +47,7 @@ public class SpawnMesh implements MessageListener {
     private static final String meshHost = Parameter.value("mesh.host", "localhost");
     private static final int meshPort = Parameter.intValue("mesh.port", 0);
     private static final int meshRetryTimeout = Parameter.intValue("mesh.retry.timeout", 5000);
+    private static boolean meshQueue = Parameter.boolValue("queue.mesh", false);
 
     private final Spawn spawn;
     private final String meshPrefix;
@@ -59,6 +60,7 @@ public class SpawnMesh implements MessageListener {
         this.spawn = spawn;
         this.meshPrefix = "/spawn/" + spawn.getUuid();
         if (meshPort == 0) {
+            if (!meshQueue) return;
             throw new RuntimeException("invalid mesh port 0");
         }
         meshClient = new MeshyClientConnector(meshHost, meshPort, 1000, meshRetryTimeout) {
