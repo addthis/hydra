@@ -124,13 +124,13 @@ public final class HttpQueryCallHandler {
             ctx.pipeline().addLast("stringer", stringer);
             switch (format) {
                 case "json":
-                    ctx.pipeline().addLast("format", new OutputJson(jsonp, jargs));
+                    ctx.pipeline().addLast("format", new JsonBundleEncoder(jsonp, jargs));
                     break;
                 case "html":
-                    ctx.pipeline().addLast("format", new OutputHTML());
+                    ctx.pipeline().addLast("format", new HtmlBundleEncoder());
                     break;
                 default:
-                    ctx.pipeline().addLast("format", OutputDelimited.create(filename, format));
+                    ctx.pipeline().addLast("format", DelimitedBundleEncoder.create(filename, format));
                     break;
             }
             ctx.pipeline().addLast("mqm", querySource);

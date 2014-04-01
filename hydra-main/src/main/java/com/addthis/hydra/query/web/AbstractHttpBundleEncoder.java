@@ -34,16 +34,16 @@ import io.netty.handler.codec.http.HttpVersion;
 /**
  * parent of all streaming response classes
  */
-abstract class AbstractHttpOutput extends ChannelOutboundHandlerAdapter {
+abstract class AbstractHttpBundleEncoder extends ChannelOutboundHandlerAdapter {
 
-    private static final Logger log = LoggerFactory.getLogger(AbstractHttpOutput.class);
+    private static final Logger log = LoggerFactory.getLogger(AbstractHttpBundleEncoder.class);
 
     protected final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
     protected final long startTime;
 
     protected boolean writeStarted = false;
 
-    AbstractHttpOutput() {
+    AbstractHttpBundleEncoder() {
         HttpHeaders.setTransferEncodingChunked(response);
         startTime = System.currentTimeMillis();
     }

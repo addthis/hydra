@@ -22,18 +22,18 @@ import com.addthis.hydra.data.query.QueryException;
 import static com.addthis.hydra.query.web.HttpUtils.setContentTypeHeader;
 import io.netty.channel.ChannelHandlerContext;
 
-class OutputDelimited extends AbstractHttpOutput {
+class DelimitedBundleEncoder extends AbstractHttpBundleEncoder {
 
     String delimiter;
 
-    OutputDelimited(String filename, String delimiter) {
+    DelimitedBundleEncoder(String filename, String delimiter) {
         super();
         this.delimiter = delimiter;
         setContentTypeHeader(response, "application/csv; charset=utf-8");
         response.headers().set("Content-Disposition", "attachment; filename=\"" + filename + "\"");
     }
 
-    public static OutputDelimited create(String filename, String format) {
+    public static DelimitedBundleEncoder create(String filename, String format) {
         String delimiter;
         switch (format) {
             case "tsv":
@@ -51,7 +51,7 @@ class OutputDelimited extends AbstractHttpOutput {
         if (!filename.toLowerCase().endsWith("." + format)) {
             filename = filename.concat("." + format);
         }
-        return new OutputDelimited(filename, delimiter);
+        return new DelimitedBundleEncoder(filename, delimiter);
     }
 
     @Override

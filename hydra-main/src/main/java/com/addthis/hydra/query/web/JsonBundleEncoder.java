@@ -23,14 +23,14 @@ import com.google.common.annotations.VisibleForTesting;
 import static com.addthis.hydra.query.web.HttpUtils.setContentTypeHeader;
 import io.netty.channel.ChannelHandlerContext;
 
-class OutputJson extends AbstractHttpOutput {
+class JsonBundleEncoder extends AbstractHttpBundleEncoder {
 
     static final char[] hex = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
     int rows = 0;
     private final String jsonp;
     private final String jargs;
 
-    OutputJson(String jsonp, String jargs) {
+    JsonBundleEncoder(String jsonp, String jargs) {
         super();
         this.jsonp = jsonp;
         this.jargs = jargs;

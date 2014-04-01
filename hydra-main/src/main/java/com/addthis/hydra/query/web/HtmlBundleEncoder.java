@@ -21,9 +21,9 @@ import com.addthis.bundle.value.ValueObject;
 import static com.addthis.hydra.query.web.HttpUtils.setContentTypeHeader;
 import io.netty.channel.ChannelHandlerContext;
 
-class OutputHTML extends AbstractHttpOutput {
+class HtmlBundleEncoder extends AbstractHttpBundleEncoder {
 
-    OutputHTML() {
+    HtmlBundleEncoder() {
         super();
         setContentTypeHeader(response, "text/html; charset=utf-8");
     }

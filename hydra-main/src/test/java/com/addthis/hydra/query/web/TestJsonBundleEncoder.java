@@ -13,16 +13,14 @@
  */
 package com.addthis.hydra.query.web;
 
-import com.addthis.hydra.query.web.OutputJson;
-
 import org.junit.Test;
 
-public class TestJsonOutput {
+public class TestJsonBundleEncoder {
 
     @Test
     public void encode() {
         String s1 = "abc\"def\'ghi\\jkl\nmno\tpqr";
-        String e1 = OutputJson.jsonEncode(s1);
+        String e1 = JsonBundleEncoder.jsonEncode(s1);
         System.out.println("s1 = " + s1);
         System.out.println("e1 = " + e1);
     }
