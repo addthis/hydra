@@ -31,7 +31,7 @@ public class SpawnQueuesByPriorityTest {
         // If only available host has no slots, should return null
         assertEquals("should return null", null, spawnQueuesByPriority.findBestHostToRunTask(Arrays.asList(noSlots), true));
         // Simulate a task kicking on the twoSlots host. Then we should choose the oneSlot host with the lowest meanActive value.
-        spawnQueuesByPriority.markHostKick(twoSlots.getHostUuid(), false);
+        spawnQueuesByPriority.markHostKick(twoSlots.getHostUuid());
         assertEquals("after kick, should return less active host", oneSlotLowMeanActive, spawnQueuesByPriority.findBestHostToRunTask(allHosts, true));
     }
 
@@ -56,6 +56,7 @@ public class SpawnQueuesByPriorityTest {
         }
         long maxTaskBytesToMigrate = SpawnQueuesByPriority.getTaskMigrationMaxBytes();
         long limitGrowthInterval = SpawnQueuesByPriority.getTaskMigrationLimitGrowthInterval();
+        // Check that small tasks can migrate soon after being put on the queue, but large tasks have to wait.
         assertTrue("should allow small task to migrate immediately", spawnQueuesByPriority.checkSizeAgeForMigration(0, 0));
         assertTrue("should not allow large task to migrate, even after waiting", !spawnQueuesByPriority.checkSizeAgeForMigration(2 * maxTaskBytesToMigrate, 2 * limitGrowthInterval));
         assertTrue("should not allow medium task to migrate immediately", !spawnQueuesByPriority.checkSizeAgeForMigration(maxTaskBytesToMigrate / 2, 0));
@@ -63,7 +64,8 @@ public class SpawnQueuesByPriorityTest {
         for (String hostName : Arrays.asList("a", "b", "c", "d")) {
             spawnQueuesByPriority.markHostAvailable(hostName);
         }
-        spawnQueuesByPriority.markMigrationBetweenHosts("a", "b"); // Simulate a migration from host a to host b
+        // Simulate a migration from host a to host b. Make sure that neither a nor b can perform a migration again for a time interval
+        spawnQueuesByPriority.markMigrationBetweenHosts("a", "b");
         JobTask task = new JobTask("a", 0, 0);
         task.setByteCount(1);
         assertTrue("should not allow migration from same host immediately", !spawnQueuesByPriority.shouldMigrateTaskToHost(task, "c"));

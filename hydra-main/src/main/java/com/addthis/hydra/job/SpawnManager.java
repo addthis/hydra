@@ -565,7 +565,7 @@ public class SpawnManager {
                 String target = kv.getValue("target", spawn.getTask(id, nodeid).getReplicas().get(0).getHostUUID());
                 boolean kickOnComplete = kv.getValue("kick", "0").equals("1");
                 emitLogLineForAction(kv, "job swap on " + id + " to " + target);
-                boolean success = spawn.swapTask(id, nodeid, target, kickOnComplete);
+                boolean success = spawn.swapTask(spawn.getTask(id, nodeid), target, kickOnComplete);
                 String jobKey = id + "/" + nodeid;
                 String message = success ? "performed swap on " + jobKey : "couldn't swap " + jobKey + "; check spawn log for details";
                 link.sendShortReply(200, "OK", message);

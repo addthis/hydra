@@ -1039,26 +1039,24 @@ public class Spawn implements Codec.Codable {
     /**
      * Promote a task to live on one of its replica hosts, demoting the existing live to a replica.
      *
-     * @param jobUUID        job ID
-     * @param node           task #
+     * @param task           The task to modify
      * @param replicaHostID  The host holding the replica that should be promoted
      * @param kickOnComplete Whether to kick the task after the move is complete
      * @return true on success
      */
-    public boolean swapTask(String jobUUID, int node, String replicaHostID, boolean kickOnComplete) {
-        JobTask task = getTask(jobUUID, node);
+    public boolean swapTask(JobTask task, String replicaHostID, boolean kickOnComplete) {
         if (task == null) {
-            log.warn("[task.swap] received null task for " + jobUUID);
+            log.warn("[task.swap] received null task");
             return false;
         }
         if (!checkHostStatesForSwap(task.getJobKey(), task.getHostUUID(), replicaHostID, true)) {
-            log.warn("[swap.task.stopped] failed; exiting");
+            log.warn("[swap.task.stopped] failed for " + task.getJobKey() + "; exiting");
             return false;
         }
         Job job;
         jobLock.lock();
         try {
-            job = getJob(jobUUID);
+            job = getJob(task.getJobUUID());
             task.replaceReplica(replicaHostID, task.getHostUUID());
             task.setHostUUID(replicaHostID);
             queueJobTaskUpdateEvent(job);
@@ -1221,7 +1219,7 @@ public class Spawn implements Codec.Codable {
                     List<JobTaskReplica> replicasToModify = targetHost.isReadOnly() ? task.getReadOnlyReplicas() : task.getReplicas();
                     removeReplicasForHost(sourceHostID, replicasToModify);
                     replicasToModify.add(new JobTaskReplica(targetHostID, task.getJobUUID(), task.getRunCount(), 0l));
-                    swapTask(task.getJobUUID(), task.getTaskID(), sourceHostID, false);
+                    swapTask(task, sourceHostID, false);
                     jobsNeedingUpdate.add(task.getJobUUID());
                 } else {
                     HostState liveHost = getHostState(task.getHostUUID());
@@ -1556,25 +1554,6 @@ public class Spawn implements Codec.Codable {
             return targetHostUUID + "&&&" + taskKey;
         }
 
-        private void startReplicate() throws Exception {
-            ReplicaTarget[] target = new ReplicaTarget[]{
-                    new ReplicaTarget(
-                            targetHostUUID,
-                            targetHost.getHost(),
-                            targetHost.getUser(),
-                            targetHost.getPath(),
-                            task.getReplicationFactor())
-            };
-            job.setSubmitCommand(getCommand(job.getCommand()));
-            JobCommand jobcmd = job.getSubmitCommand();
-            CommandTaskReplicate replicate = new CommandTaskReplicate(
-                    task.getHostUUID(), task.getJobUUID(), task.getTaskID(), target, Strings.join(jobcmd.getCommand(), " "), choreWatcherKey(), true);
-            replicate.setRebalanceSource(sourceHostUUID);
-            replicate.setRebalanceTarget(targetHostUUID);
-            spawn.sendControlMessage(replicate);
-            log.warn("[task.mover] replicating job/task " + task.getJobKey() + " from " + sourceHostUUID + " onto host " + targetHostUUID);
-        }
-
         public boolean execute(boolean allowQueuedTasks) {
             targetHost = spawn.getHostState(targetHostUUID);
             if (taskKey == null || !spawn.checkStatusForMove(targetHostUUID) || !spawn.checkStatusForMove(sourceHostUUID)) {
@@ -1594,6 +1573,7 @@ public class Spawn implements Codec.Codable {
             }
             if (!task.getHostUUID().equals(sourceHostUUID) && !task.hasReplicaOnHost(sourceHostUUID)) {
                 log.warn("[task.mover] failed because the task does not have a copy on the specified source: " + taskKey);
+                return false;
             }
             if (task.getAllTaskHosts().contains(targetHostUUID) || targetHost.hasLive(taskKey)) {
                 log.warn("[task.mover] cannot move onto a host with an existing version of task: " + taskKey);
@@ -1603,17 +1583,44 @@ public class Spawn implements Codec.Codable {
                 log.warn("[task.mover] couldn't set task states; terminating for: " + taskKey);
                 return false;
             }
+            // Swap to the lightest host to run the rsync operation, assuming swapping is allowed for this job.
+            HostState lightestExistingHost = taskQueuesByPriority.findBestHostToRunTask(getHostStatesHousingTask(task, !job.getDontAutoBalanceMe()),false);
+            if (lightestExistingHost != null && !lightestExistingHost.getHostUuid().equals(task.getHostUUID())) {
+                swapTask(task, lightestExistingHost.getHostUuid(), false);
+            }
             try {
                 task.setRebalanceSource(sourceHostUUID);
                 task.setRebalanceTarget(targetHostUUID);
                 startReplicate();
+                taskQueuesByPriority.markHostKick(task.getHostUUID());
+                queueJobTaskUpdateEvent(job);
                 return true;
             } catch (Exception ex) {
                 log.warn("[task.mover] exception during replicate initiation; terminating for task: " + taskKey, ex);
                 task.setErrorCode(JobTaskErrorCode.EXIT_REPLICATE_FAILURE);
                 task.setState(JobTaskState.ERROR);
+                queueJobTaskUpdateEvent(job);
                 return false;
             }
+        }
+
+        private void startReplicate() throws Exception {
+            ReplicaTarget[] target = new ReplicaTarget[]{
+                    new ReplicaTarget(
+                            targetHostUUID,
+                            targetHost.getHost(),
+                            targetHost.getUser(),
+                            targetHost.getPath(),
+                            task.getReplicationFactor())
+            };
+            job.setSubmitCommand(getCommand(job.getCommand()));
+            JobCommand jobcmd = job.getSubmitCommand();
+            CommandTaskReplicate replicate = new CommandTaskReplicate(
+                    task.getHostUUID(), task.getJobUUID(), task.getTaskID(), target, Strings.join(jobcmd.getCommand(), " "), choreWatcherKey(), true);
+            replicate.setRebalanceSource(sourceHostUUID);
+            replicate.setRebalanceTarget(targetHostUUID);
+            spawn.sendControlMessage(replicate);
+            log.warn("[task.mover] replicating job/task " + task.getJobKey() + " from " + sourceHostUUID + " onto host " + targetHostUUID);
         }
 
         @Override
@@ -3398,28 +3405,22 @@ public class Spawn implements Codec.Codable {
             return false;
         }
         List<HostState> possibleHosts = new ArrayList<>();
-        possibleHosts.add(getHostState(task.getHostUUID()));
         if (allowSwap && isNewTask(task)) {
             possibleHosts.addAll(listHostStatus(job.getMinionType()));
         }
-        else if (allowSwap && !job.getDontAutoBalanceMe() && task.getReplicas() != null) {
-            for (JobTaskReplica replica : task.getReplicas()) {
-                HostState possibleHost = getHostState(replica.getHostUUID());
-                if (possibleHost != null && possibleHost.hasLive(task.getJobKey())) {
-                    possibleHosts.add(possibleHost);
-                }
-            }
+        else {
+            possibleHosts.addAll(getHostStatesHousingTask(task, allowSwap));
         }
         HostState bestHost = findHostWithAvailableSlot(task, timeOnQueue, possibleHosts, false);
         if (bestHost != null) {
             String bestHostUuid = bestHost.getHostUuid();
             if (task.getHostUUID().equals(bestHostUuid)) {
-                taskQueuesByPriority.markHostKick(bestHostUuid, false);
+                taskQueuesByPriority.markHostKick(bestHostUuid);
                 scheduleTask(job, task, config);
                 log.info("[taskQueuesByPriority] sending " + task.getJobKey() + " to " + bestHostUuid);
                 return true;
-            } else if (swapTask(task.getJobUUID(), task.getTaskID(), bestHostUuid, true)) {
-                taskQueuesByPriority.markHostKick(bestHostUuid, true);
+            } else if (swapTask(task, bestHostUuid, true)) {
+                taskQueuesByPriority.markHostKick(bestHostUuid);
                 log.info("[taskQueuesByPriority] swapping " + task.getJobKey() + " onto " + bestHostUuid);
                 return true;
             }
@@ -3447,6 +3448,23 @@ public class Spawn implements Codec.Codable {
             return false;
         }
         return true;
+    }
+
+    private List<HostState> getHostStatesHousingTask(JobTask task, boolean allowReplicas) {
+        List<HostState> rv = new ArrayList<>();
+        HostState liveHost = getHostState(task.getHostUUID());
+        if (liveHost != null) {
+            rv.add(liveHost);
+        }
+        if (allowReplicas && task.getReplicas() != null) {
+            for (JobTaskReplica replica : task.getReplicas()) {
+                HostState replicaHost = replica.getHostUUID() != null ? getHostState(replica.getHostUUID()) : null;
+                if (replicaHost != null && replicaHost.hasLive(task.getJobKey())) {
+                    rv.add(replicaHost);
+                }
+            }
+        }
+        return rv;
     }
 
     /**
@@ -3505,7 +3523,7 @@ public class Spawn implements Codec.Codable {
             // Migrate the task to the target host and kick it on completion
             log.warn("Migrating " + task.getJobKey() + " to " + target.getHostUuid());
             taskQueuesByPriority.markMigrationBetweenHosts(task.getHostUUID(), target.getHostUuid());
-            taskQueuesByPriority.markHostKick(target.getHostUuid(), true);
+            taskQueuesByPriority.markHostKick(target.getHostUuid());
             TaskMover tm = new TaskMover(this, task.getJobKey(), target.getHostUuid(), task.getHostUUID(), true);
             tm.setMigration(true);
             tm.execute(true);
@@ -3609,7 +3627,7 @@ public class Spawn implements Codec.Codable {
                     }
                     continue;
                 } else {
-                    kicked = kickOnExistingHosts(job, task, null, now - key.getCreationTime(), true);
+                    kicked = kickOnExistingHosts(job, task, null, now - key.getCreationTime(), !job.getDontAutoBalanceMe());
                 }
                 if (kicked) {
                     log.info("[task.queue] removing kicked task " + task.getJobKey());
