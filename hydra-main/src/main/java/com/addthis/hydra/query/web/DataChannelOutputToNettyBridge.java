@@ -47,7 +47,7 @@ public class DataChannelOutputToNettyBridge implements DataChannelOutput {
 
     @Override
     public void send(Bundle bundle) {
-        log.info("Writing bundle to pipeline {}", bundle);
+        log.trace("Writing bundle to pipeline {}", bundle);
         ctx.write(bundle);
     }
 
@@ -62,7 +62,7 @@ public class DataChannelOutputToNettyBridge implements DataChannelOutput {
 
     @Override
     public void sourceError(DataChannelError ex) {
-        log.info("Writing exception to pipeline", ex);
+        log.trace("Writing exception to pipeline", ex);
         ctx.write(ex);
     }
 
@@ -73,7 +73,7 @@ public class DataChannelOutputToNettyBridge implements DataChannelOutput {
 
     @Override
     public void sendComplete() { // TODO: keep alive logic
-        log.info("Writing sendComplete to pipeline");
+        log.trace("Writing sendComplete to pipeline");
         ctx.write(SEND_COMPLETE);
         ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
         lastContentFuture.addListener(ChannelFutureListener.CLOSE);
