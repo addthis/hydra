@@ -43,11 +43,9 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     private static Logger log = LoggerFactory.getLogger(SpawnQueuesByPriority.class);
     private final Lock queueLock = new ReentrantLock();
 
-    /* Internal maps used to record outgoing task kicks that will not immediately be visible in the HostState */
-    private final HashMap<String, Long> hostKickTimes = new HashMap<>();
+    /* Internal map used to record outgoing task kicks that will not immediately be visible in the HostState */
     private final HashMap<String, Integer> hostAvailSlots = new HashMap<>();
 
-    private static final int SPAWN_QUEUE_KICK_DELAY = Parameter.intValue("spawn.queue.kick.delay", 20_000); // After sending a batch of tasks to a host, wait before sending additional tasks there
     private static final int SPAWN_QUEUE_AVAIL_REFRESH = Parameter.intValue("spawn.queue.avail.refresh", 60_000); // Periodically refresh hostAvailSlots to the actual availableSlots count
     private static final int SPAWN_QUEUE_NEW_TASK_LAST_SLOT_DELAY = Parameter.intValue("spawn.queue.new.task.last.slot.delay", 90_000); // New tasks can't take the last slot of a host unless they wait this long
 
@@ -189,7 +187,7 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     }
 
     /**
-     * Update the available host slots from the list, but only actually update on a periodic timer
+     * Update the available slots for each host if it has been sufficiently long since the last update.
      *
      * @param hosts The hosts to input
      */
@@ -202,18 +200,13 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
             for (HostState host : hosts) {
                 String hostID = host.getHostUuid();
                 if (hostID != null) {
-                    synchronized (hostKickTimes) {
-                        if (!hostKickTimes.containsKey(hostID) || hostKickTimes.get(hostID) < JitterClock.globalTime()) {
-                            hostAvailSlots.put(hostID, host.getAvailableTaskSlots());
-                        }
-                    }
+                    hostAvailSlots.put(hostID, host.getAvailableTaskSlots());
                 }
             }
-            lastAvailSlotsUpdate = JitterClock.globalTime();
-            if (log.isTraceEnabled()) {
-                log.trace("[SpawnQueuesByPriority] Host Avail Slots: " + hostAvailSlots);
-                log.trace("[SpawnQueuesByPriority] Host Kick Times: " + hostKickTimes);
-            }
+        }
+        lastAvailSlotsUpdate = JitterClock.globalTime();
+        if (log.isTraceEnabled()) {
+            log.trace("[SpawnQueuesByPriority] Host Avail Slots: " + hostAvailSlots);
         }
     }
 
@@ -238,14 +231,6 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
         synchronized (hostAvailSlots) {
             int curr = hostAvailSlots.containsKey(hostID) ? hostAvailSlots.get(hostID) : 0;
             hostAvailSlots.put(hostID, Math.max(curr - 1, 0));
-        }
-        synchronized (hostKickTimes) {
-            long nextKickTime = JitterClock.globalTime() + SPAWN_QUEUE_KICK_DELAY;
-            if (hostKickTimes.containsKey(hostID)) {
-                hostKickTimes.put(hostID, Math.max(hostKickTimes.get(hostID), nextKickTime));
-            } else {
-                hostKickTimes.put(hostID, nextKickTime);
-            }
         }
     }
 

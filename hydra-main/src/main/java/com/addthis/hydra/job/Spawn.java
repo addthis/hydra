@@ -742,17 +742,14 @@ public class Spawn implements Codec.Codable {
      */
     public Map<ScheduledBackupType, SortedSet<Long>> getJobBackups(String jobUUID, int nodeId) throws IOException, ParseException {
         Map<ScheduledBackupType, SortedSet<Long>> fileDates = new HashMap<ScheduledBackupType, SortedSet<Long>>();
-        for (ScheduledBackupType backupType : ScheduledBackupType.getBackupTypes().values()) {    //ignore types with symlink (like gold)
-            //if(backupType.getSymlinkName()==null)
-            //{
+        for (ScheduledBackupType backupType : ScheduledBackupType.getBackupTypes().values()) {
             final String typePrefix = "*/" + jobUUID + "/" + ((nodeId < 0) ? "*" : Integer.toString(nodeId)) + "/" + backupType.getPrefix() + "*";
-            List<FileReference> files = new ArrayList<FileReference>(spawnMesh.getClient().listFiles(new String[]{typePrefix}));//meshyClient.listFiles(new String[] {typePrefix}));
+            List<FileReference> files = new ArrayList<FileReference>(spawnMesh.getClient().listFiles(new String[]{typePrefix}));
             fileDates.put(backupType, new TreeSet<Long>(Collections.reverseOrder()));
             for (FileReference file : files) {
                 String filename = file.name.split("/")[4];
                 fileDates.get(backupType).add(backupType.parseDateFromName(filename).getTime());
             }
-            //}
         }
         return fileDates;
     }
@@ -3494,8 +3491,7 @@ public class Spawn implements Codec.Codable {
                 // Not a valid target for new tasks
                 continue;
             }
-            if (host.canMirrorTasks() && !host.isReadOnly() && balancer.canReceiveNewTasks(host, false) &&
-                taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid())) {
+            if (host.canMirrorTasks() && !host.isReadOnly() && taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid())) {
                 filteredHosts.add(host);
             }
         }
