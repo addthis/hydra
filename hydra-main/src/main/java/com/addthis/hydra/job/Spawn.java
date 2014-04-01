@@ -1575,6 +1575,10 @@ public class Spawn implements Codec.Codable {
                 log.warn("[task.mover] cannot move onto a host with an existing version of task: " + taskKey);
                 return false;
             }
+            if (!targetHost.getMinionTypes().contains(job.getMinionType())) {
+                log.warn("[task.mover] cannot move onto a host that lacks the appropriate minion type: " + taskKey);
+                return false;
+            }
             if (!spawn.prepareTaskStatesForRebalance(job, task, allowQueuedTasks, isMigration)) {
                 log.warn("[task.mover] couldn't set task states; terminating for: " + taskKey);
                 return false;
