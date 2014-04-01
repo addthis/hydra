@@ -31,7 +31,7 @@ public class SpawnQueuesByPriorityTest {
         // If only available host has no slots, should return null
         assertEquals("should return null", null, spawnQueuesByPriority.findBestHostToRunTask(Arrays.asList(noSlots), true));
         // Simulate a task kicking on the twoSlots host. Then we should choose the oneSlot host with the lowest meanActive value.
-        spawnQueuesByPriority.markHostKick(twoSlots.getHostUuid());
+        spawnQueuesByPriority.markHostTaskActive(twoSlots.getHostUuid());
         assertEquals("after kick, should return less active host", oneSlotLowMeanActive, spawnQueuesByPriority.findBestHostToRunTask(allHosts, true));
     }
 

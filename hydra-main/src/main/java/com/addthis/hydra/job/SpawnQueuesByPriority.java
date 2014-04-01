@@ -230,11 +230,11 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     }
 
     /**
-     * Inform the queue that a task is being sent to a host
+     * Inform the queue that a task command is being sent to a host
      *  @param hostID  The host UUID to update
      *
      */
-    public void markHostKick(String hostID) {
+    public void markHostTaskActive(String hostID) {
         synchronized (hostAvailSlots) {
             int curr = hostAvailSlots.containsKey(hostID) ? hostAvailSlots.get(hostID) : 0;
             hostAvailSlots.put(hostID, Math.max(curr - 1, 0));

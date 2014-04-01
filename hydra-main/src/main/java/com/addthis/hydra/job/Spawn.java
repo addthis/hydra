@@ -1019,10 +1019,9 @@ public class Spawn implements Codec.Codable {
      *
      * @param jobUUID     The ID of the job
      * @param tasksToMove The number of tasks to move. If <= 0, use the default.
-     * @param autobalance Whether the reallocation was triggered by autobalance logic, in which case smaller limits are used.
      * @return a list of move assignments that were attempted
      */
-    public List<JobTaskMoveAssignment> reallocateJob(String jobUUID, int tasksToMove, boolean readonly, boolean autobalance) {
+    public List<JobTaskMoveAssignment> reallocateJob(String jobUUID, int tasksToMove, boolean readonly) {
         Job job;
         if (jobUUID == null || (job = getJob(jobUUID)) == null) {
             throw new NullPointerException("invalid job uuid");
@@ -1285,7 +1284,7 @@ public class Spawn implements Codec.Codable {
                 return new RebalanceOutcome(jobUUID, null, Strings.join(allMismatches.toArray(), "\n"), null);
             } else {
                 // If all tasks had all expected directories, consider moving some tasks to better hosts
-                return new RebalanceOutcome(jobUUID, null, null, Strings.join(reallocateJob(jobUUID, tasksToMove, false, false).toArray(), "\n"));
+                return new RebalanceOutcome(jobUUID, null, null, Strings.join(reallocateJob(jobUUID, tasksToMove, false).toArray(), "\n"));
             }
         } catch (Exception ex) {
             log.warn("[job.rebalance] exception during rebalance for " + jobUUID, ex);
@@ -1592,7 +1591,7 @@ public class Spawn implements Codec.Codable {
                 task.setRebalanceSource(sourceHostUUID);
                 task.setRebalanceTarget(targetHostUUID);
                 startReplicate();
-                taskQueuesByPriority.markHostKick(task.getHostUUID());
+                taskQueuesByPriority.markHostTaskActive(task.getHostUUID());
                 queueJobTaskUpdateEvent(job);
                 return true;
             } catch (Exception ex) {
@@ -1793,6 +1792,7 @@ public class Spawn implements Codec.Codable {
         String command = (jobcmd != null && jobcmd.getCommand() != null) ? Strings.join(jobcmd.getCommand(), " ") : null;
         spawnMQ.sendControlMessage(new CommandTaskReplicate(task.getHostUUID(), task.getJobUUID(), task.getTaskID(), getTaskReplicaTargets(task, newReplicas), command, null, false));
         log.warn("[replica.add] " + task.getJobUUID() + "/" + task.getTaskID() + " to " + targetHosts);
+        taskQueuesByPriority.markHostTaskActive(task.getHostUUID());
         return newReplicas;
     }
 
@@ -3415,12 +3415,12 @@ public class Spawn implements Codec.Codable {
         if (bestHost != null) {
             String bestHostUuid = bestHost.getHostUuid();
             if (task.getHostUUID().equals(bestHostUuid)) {
-                taskQueuesByPriority.markHostKick(bestHostUuid);
+                taskQueuesByPriority.markHostTaskActive(bestHostUuid);
                 scheduleTask(job, task, config);
                 log.info("[taskQueuesByPriority] sending " + task.getJobKey() + " to " + bestHostUuid);
                 return true;
             } else if (swapTask(task, bestHostUuid, true)) {
-                taskQueuesByPriority.markHostKick(bestHostUuid);
+                taskQueuesByPriority.markHostTaskActive(bestHostUuid);
                 log.info("[taskQueuesByPriority] swapping " + task.getJobKey() + " onto " + bestHostUuid);
                 return true;
             }
@@ -3523,7 +3523,7 @@ public class Spawn implements Codec.Codable {
             // Migrate the task to the target host and kick it on completion
             log.warn("Migrating " + task.getJobKey() + " to " + target.getHostUuid());
             taskQueuesByPriority.markMigrationBetweenHosts(task.getHostUUID(), target.getHostUuid());
-            taskQueuesByPriority.markHostKick(target.getHostUuid());
+            taskQueuesByPriority.markHostTaskActive(target.getHostUuid());
             TaskMover tm = new TaskMover(this, task.getJobKey(), target.getHostUuid(), task.getHostUUID(), true);
             tm.setMigration(true);
             tm.execute(true);
