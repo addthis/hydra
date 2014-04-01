@@ -134,6 +134,8 @@ import jsr166e.ConcurrentHashMapV8;
 public class Spawn implements Codec.Codable {
 
     private static Logger log = LoggerFactory.getLogger(Spawn.class);
+    private static boolean meshQueue = Parameter.boolValue("queue.mesh", false);
+    private static boolean enableSpawn2 = Parameter.boolValue("spawn.v2.enable", true);
     private static String httpHost = Parameter.value("spawn.localhost");
     private static String clusterName = Parameter.value("cluster.name", "localhost");
     private static String queryHttpHost = Parameter.value("spawn.queryhost");
@@ -187,7 +189,7 @@ public class Spawn implements Codec.Codable {
                 new File(args.length > 0 ? args[0] : "etc"),
                 new File(args.length > 1 ? args[1] : "web")
         );
-        new SpawnService(spawn).start();
+        if (enableSpawn2) new SpawnService(spawn).start();
     }
 
     private final File dataDir;
@@ -329,9 +331,10 @@ public class Spawn implements Codec.Codable {
             }
         });
         // connect to message broker or fail
-
+        // connect to mesh
+        this.spawnMesh = new SpawnMesh(this);
         log.info("[init] connecting to message queue");
-        this.spawnMQ = new SpawnMQImpl(zkClient, this);
+        this.spawnMQ = meshQueue ? new SpawnMQImplMesh(zkClient, this) : new SpawnMQImpl(zkClient, this);
         this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
         this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
         this.aliasBiMap = new AliasBiMap(spawnDataStore);
@@ -380,8 +383,6 @@ public class Spawn implements Codec.Codable {
                 }
             }
         });
-        // connect to mesh
-        this.spawnMesh = new SpawnMesh(this);
         balancer.startAutobalanceTask();
         balancer.startTaskSizePolling();
         if (ENABLE_JOB_STORE) {
@@ -443,6 +444,7 @@ public class Spawn implements Codec.Codable {
     }
 
     public MeshyClient getMeshyClient() {
+        spawnMesh.waitLinkUp();
         return spawnMesh.getClient();
     }
 
