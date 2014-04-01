@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 /**
  * wrapper around ExternalPagedStore
  */
-public class PageDB<V extends Codec.Codable> implements IPageDB<DBKey, V> {
+public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
 
     private static final Logger log = LoggerFactory.getLogger(PageDB.class);
 
@@ -54,7 +54,7 @@ public class PageDB<V extends Codec.Codable> implements IPageDB<DBKey, V> {
     private final DBKeyCoder<V> keyCoder;
     private final HashSet<DR> openRanges = new HashSet<>();
 
-    public static class Builder<V extends Codec.Codable> {
+    public static class Builder<V extends Codec.BytesCodable> {
 
         // Required parameters
         protected final File dir;
@@ -138,7 +138,7 @@ public class PageDB<V extends Codec.Codable> implements IPageDB<DBKey, V> {
 
     @Override
     public V get(DBKey key) {
-        return eps.getValue(key);
+            return eps.getValue(key);
     }
 
     @Override

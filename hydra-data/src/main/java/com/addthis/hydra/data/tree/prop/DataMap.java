@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.data.tree.prop;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -30,6 +31,10 @@ import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
+import com.addthis.hydra.store.util.Varint;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.SuperCodable {
 
@@ -75,6 +80,13 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
         }
     }
 
+    public DataMap() {
+    }
+
+    public DataMap(int size) {
+        this.size = size;
+    }
+
     @Override
     public void postDecode() {
         for (int i = 0; i < keys.length; i++) {
@@ -102,7 +114,7 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
 
     private BundleField keyAccess;
     private BundleField valAccess;
-    private HotMap<String, ValueObject> map = new HotMap<String, ValueObject>(new HashMap());
+    private HotMap<String, ValueObject> map = new HotMap<>(new HashMap());
 
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, DataMap.Config conf) {
@@ -113,19 +125,23 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
         ValueObject key = state.getBundle().getValue(keyAccess);
         ValueObject val = state.getBundle().getValue(valAccess);
         if (key != null) {
-            synchronized (map) {
-                if (val == null) {
-                    map.remove(key.toString());
-                } else {
-                    map.put(key.toString(), val);
-                    if (map.size() > size) {
-                        map.removeEldest();
-                    }
-                }
-            }
+            put(key.toString(), val);
             return true;
         } else {
             return false;
+        }
+    }
+
+    public void put(String key, ValueObject val) {
+        synchronized (map) {
+            if (val == null) {
+                map.remove(key);
+            } else {
+                map.put(key, val);
+                if (map.size() > size) {
+                    map.removeEldest();
+                }
+            }
         }
     }
 
@@ -166,5 +182,61 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
             }
         }
         return list;
+    }
+
+    @Override
+    public byte[] bytesEncode() {
+        ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
+        try {
+        synchronized (map) {
+            preEncode();
+            Varint.writeUnsignedVarInt(keys.length, buf);
+            for (String key : keys) {
+                writeString(buf, key);
+            }
+            for (String val : vals) {
+                writeString(buf, val);
+            }
+        }
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+        byte[] encodedBytes = new byte[buf.readableBytes()];
+        buf.readBytes(encodedBytes);
+        buf.release();
+        return encodedBytes;
+    }
+
+    private void writeString(ByteBuf buf, String str) throws UnsupportedEncodingException {
+        byte[] keyBytes = str.getBytes("UTF-8");
+        Varint.writeUnsignedVarInt(keyBytes.length, buf);
+        buf.writeBytes(keyBytes);
+    }
+
+    @Override
+    public void bytesDecode(byte[] b) {
+        ByteBuf buf = Unpooled.wrappedBuffer(b);
+        int length = Varint.readUnsignedVarInt(buf);
+        keys = new String[length];
+        vals = new String[length];
+        try {
+            for (int i = 0; i < length; i++) {
+                keys[i] = readString(buf);
+            }
+            for (int i = 0; i < length; i++) {
+                vals[i] = readString(buf);
+            }
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+        buf.release();
+        postDecode();
+    }
+
+    private String readString(ByteBuf buf) throws UnsupportedEncodingException {
+        int kl = Varint.readUnsignedVarInt(buf);
+        byte[] kb = new byte[kl];
+        buf.readBytes(kb);
+        return new String(kb, "UTF-8");
     }
 }

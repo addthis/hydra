@@ -14,12 +14,18 @@
 package com.addthis.hydra.task.source;
 
 import com.addthis.codec.Codec;
+import com.addthis.hydra.store.util.Varint;
 import com.addthis.hydra.task.stream.StreamFile;
 
 import com.google.common.base.Objects;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
+
+import java.io.IOException;
 
 /** */
-public class SimpleMark implements Codec.Codable {
+public class SimpleMark implements Codec.Codable, Codec.BytesCodable {
 
     @Codec.Set(codable = true)
     private String val;
@@ -81,5 +87,31 @@ public class SimpleMark implements Codec.Codable {
     }
 
     public void setError(int error) {
+    }
+
+    @Override
+    public byte[] bytesEncode() {
+        ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer();
+        byte[] valBytes = val.getBytes();
+        Varint.writeUnsignedVarInt(valBytes.length, buffer);
+        buffer.writeBytes(valBytes);
+        Varint.writeUnsignedVarLong(index, buffer);
+        buffer.writeByte(end ? 0 : 1);
+        byte[] retBytes = new byte[buffer.readableBytes()];
+        buffer.readBytes(retBytes);
+        buffer.release();
+        return retBytes;
+    }
+
+    @Override
+    public void bytesDecode(byte[] b) {
+        ByteBuf buffer = Unpooled.wrappedBuffer(b);
+        int valLength = Varint.readUnsignedVarInt(buffer);
+        byte[] valBytes = new byte[valLength];
+        buffer.readBytes(valBytes);
+        val = new String(valBytes);
+        index = Varint.readUnsignedVarLong(buffer);
+        end = buffer.readByte() == 1;
+        buffer.release();
     }
 }

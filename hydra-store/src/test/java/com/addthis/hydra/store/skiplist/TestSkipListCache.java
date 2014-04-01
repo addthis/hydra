@@ -27,6 +27,7 @@ import java.util.concurrent.CyclicBarrier;
 import com.addthis.basis.test.SlowTest;
 import com.addthis.basis.util.Files;
 
+import com.addthis.hydra.store.DBIntValue;
 import com.addthis.hydra.store.kv.ConcurrentByteStoreBDB;
 import com.addthis.hydra.store.kv.ExternalPagedStore.ByteStore;
 
@@ -75,11 +76,11 @@ public class TestSkipListCache {
         final List<Integer> values;
         final int[] threadId;
         final int myId;
-        final SkipListCache<Integer, Integer> cache;
+        final SkipListCache<Integer, DBIntValue> cache;
         int counter;
 
         public InsertionThread(CyclicBarrier barrier, List<Integer> values,
-                int[] threadId, int id, SkipListCache<Integer, Integer> cache) {
+                int[] threadId, int id, SkipListCache<Integer, DBIntValue> cache) {
             super("InsertionThread" + id);
             this.barrier = barrier;
             this.values = values;
@@ -96,7 +97,7 @@ public class TestSkipListCache {
                 for (int i = 0; i < threadId.length; i++) {
                     if (threadId[i] == myId) {
                         Integer val = values.get(i);
-                        cache.put(val, threadId.length - val);
+                        cache.put(val, new DBIntValue(threadId.length - val));
                         counter++;
                     }
 
@@ -117,7 +118,7 @@ public class TestSkipListCache {
         try {
             directory = makeTemporaryDirectory();
             ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
-            SkipListCache<Integer, Integer> cache =
+            SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 25, 0).build();
             assertEquals(null, cache.get(Integer.MIN_VALUE));
             assertEquals(null, cache.get(0));
@@ -143,15 +144,15 @@ public class TestSkipListCache {
         try {
             directory = makeTemporaryDirectory();
             ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
-            SkipListCache<Integer, Integer> cache =
+            SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 25, 0).build();
 
             for (int i = 0; i < 10000; i++) {
-                assertEquals(null, cache.put(i, 10000 - i));
+                assertEquals(null, cache.put(i, new DBIntValue(10000 - i)));
             }
 
             for (int i = 0; i < 10000; i++) {
-                assertEquals(new Integer(10000 - i), cache.get(i));
+                assertEquals(new Integer(10000 - i), cache.get(i).getVal());
             }
 
             consistentWaitShutdown(cache);
@@ -212,11 +213,11 @@ public class TestSkipListCache {
         try {
             directory = makeTemporaryDirectory();
             ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
-            SkipListCache<Integer, Integer> cache =
+            SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 25, 0).build();
 
             for (int i = 0; i < elements; i++) {
-                assertEquals(null, cache.put(i, elements - i));
+                assertEquals(null, cache.put(i, new DBIntValue(elements - i)));
             }
 
             cache.removeValues(startKey, endKey, inclusive);
@@ -227,7 +228,7 @@ public class TestSkipListCache {
                      (!inclusive && i < endKey))) {
                     assertNull(cache.get(i));
                 } else {
-                    assertEquals(new Integer(elements - i), cache.get(i));
+                    assertEquals(new Integer(elements - i), cache.get(i).getVal());
                 }
             }
 
@@ -260,7 +261,7 @@ public class TestSkipListCache {
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             int[] threadId = new int[numElements];
             InsertionThread[] threads = new InsertionThread[numThreads];
-            SkipListCache<Integer, Integer> cache =
+            SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, pageSize, maxPages).build();
 
             if (maxPages == 0) {
@@ -291,7 +292,7 @@ public class TestSkipListCache {
             }
 
             for (int i = 0; i < numElements; i++) {
-                assertEquals(new Integer(numElements - i), cache.get(i));
+                assertEquals(new Integer(numElements - i), cache.get(i).getVal());
             }
 
             cache.waitForPageEviction();
@@ -328,7 +329,7 @@ public class TestSkipListCache {
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             int[] threadId = new int[numElements];
             InsertionThread[] threads = new InsertionThread[numThreads];
-            SkipListCache<Integer, Integer> cache =
+            SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, pageSize, maxPages).build();
 
             if (maxPages == 0) {
@@ -359,7 +360,7 @@ public class TestSkipListCache {
             }
 
             for (int i = 0; i < numElements; i++) {
-                assertEquals(new Integer(numElements - i), cache.get(i));
+                assertEquals(new Integer(numElements - i), cache.get(i).getVal());
             }
 
             assertEquals(new Integer(0), cache.getFirstKey());
@@ -396,7 +397,7 @@ public class TestSkipListCache {
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             int[] threadId = new int[numElements];
             InsertionThread[] threads = new InsertionThread[numThreads];
-            SkipListCache<Integer, Integer> cache =
+            SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, pageSize, maxPages).build();
 
             if (maxPages == 0) {
@@ -426,13 +427,13 @@ public class TestSkipListCache {
                 assertEquals(numElements / numThreads, threads[i].counter);
             }
 
-            Iterator<Map.Entry<Integer, Integer>> iterator = cache.range(0, true);
+            Iterator<Map.Entry<Integer, DBIntValue>> iterator = cache.range(0, true);
 
             for (int i = 0; i < numElements; i++) {
                 assertTrue(iterator.hasNext());
-                Map.Entry<Integer, Integer> entry = iterator.next();
+                Map.Entry<Integer, DBIntValue> entry = iterator.next();
                 assertEquals(new Integer(i), entry.getKey());
-                assertEquals(new Integer(numElements - i), entry.getValue());
+                assertEquals(new Integer(numElements - i), entry.getValue().getVal());
             }
 
             assertFalse(iterator.hasNext());
@@ -442,9 +443,9 @@ public class TestSkipListCache {
 
             for (int i = 1; i < numElements; i++) {
                 assertTrue(iterator.hasNext());
-                Map.Entry<Integer, Integer> entry = iterator.next();
+                Map.Entry<Integer, DBIntValue> entry = iterator.next();
                 assertEquals(new Integer(i), entry.getKey());
-                assertEquals(new Integer(numElements - i), entry.getValue());
+                assertEquals(new Integer(numElements - i), entry.getValue().getVal());
             }
 
             assertFalse(iterator.hasNext());
@@ -484,7 +485,7 @@ public class TestSkipListCache {
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             int[] threadId = new int[numElements];
             InsertionThread[] threads = new InsertionThread[numThreads];
-            SkipListCache<Integer, Integer> cache =
+            SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, pageSize, maxPages).build();
 
             if (maxPages == 0) {
@@ -515,7 +516,7 @@ public class TestSkipListCache {
             }
 
             for (int i = 0; i < numElements; i++) {
-                assertEquals(new Integer(numElements - i), cache.get(i));
+                assertEquals(new Integer(numElements - i), cache.get(i).getVal());
             }
 
             assertEquals(new Integer(numElements - 1), cache.getLastKey());
@@ -553,7 +554,7 @@ public class TestSkipListCache {
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             int[] threadId = new int[numElements];
             InsertionThread[] threads = new InsertionThread[numThreads];
-            SkipListCache<Integer, Integer> cache =
+            SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, pageSize, Integer.MAX_VALUE).build();
 
             for (int i = 0; i < numElements; i++) {
@@ -580,7 +581,7 @@ public class TestSkipListCache {
             }
 
             for (int i = 0; i < numElements; i++) {
-                assertEquals(new Integer(numElements - i), cache.get(i));
+                assertEquals(new Integer(numElements - i), cache.get(i).getVal());
             }
 
             consistentWaitShutdown(cache);
@@ -618,7 +619,7 @@ public class TestSkipListCache {
             directory = makeTemporaryDirectory();
             ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
 
-            SkipListCache<Integer, Integer> cache =
+            SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 8, 50).build();
 
             for (int i = 0; i < numElements; i++) {
@@ -645,7 +646,7 @@ public class TestSkipListCache {
             }
 
             for (int i = 0; i < numElements; i++) {
-                Integer value = cache.getValue(i);
+                Integer value = cache.getValue(i).getVal();
                 assertNotNull(value);
                 assertEquals(new Integer(numElements - i), value);
             }
@@ -685,7 +686,7 @@ public class TestSkipListCache {
             directory = makeTemporaryDirectory();
             ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
 
-            SkipListCache<Integer, Integer> cache =
+            SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 8, 0).build();
 
             cache.setOverrideDefaultMaxPages();
@@ -714,7 +715,7 @@ public class TestSkipListCache {
             }
 
             for (int i = 0; i < numElements; i++) {
-                assertEquals(new Integer(numElements - i), cache.get(i));
+                assertEquals(new Integer(numElements - i), cache.get(i).getVal());
             }
 
             cache.waitForPageEviction();
@@ -744,16 +745,16 @@ public class TestSkipListCache {
             directory = makeTemporaryDirectory();
             ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
 
-            SkipListCache<Integer, Integer> cache =
+            SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 8, Integer.MAX_VALUE).build();
 
 
             for (int i = 0; i < numElements; i++) {
-                cache.put(i, numElements - i);
+                cache.put(i, new DBIntValue(numElements - i));
             }
 
             for (int i = 0; i < numElements; i++) {
-                assertEquals(new Integer(numElements - i), cache.get(i));
+                assertEquals(new Integer(numElements - i), cache.get(i).getVal());
             }
 
             consistentWaitShutdown(cache);
@@ -766,7 +767,7 @@ public class TestSkipListCache {
             cache = new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 8, Integer.MAX_VALUE).build();
 
             for (int i = 0; i < numElements; i++) {
-                assertEquals(new Integer(numElements - i), cache.get(i));
+                assertEquals(new Integer(numElements - i), cache.get(i).getVal());
             }
 
             Thread.sleep(100);
