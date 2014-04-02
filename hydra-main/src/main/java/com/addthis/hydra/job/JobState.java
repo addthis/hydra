@@ -42,7 +42,7 @@ public enum JobState {
         transitions.put(DEGRADED, EnumSet.of(IDLE));
         transitions.put(ERROR, EnumSet.of(IDLE));
         transitions.put(UNKNOWN, EnumSet.of(IDLE));
-        transitions.put(REBALANCE, EnumSet.of(IDLE, SCHEDULED, ERROR));
+        transitions.put(REBALANCE, EnumSet.of(IDLE, RUNNING, SCHEDULED, ERROR));
     }
 
     private JobState(int value) {
