@@ -831,7 +831,7 @@ public class SpawnBalancer implements Codec.Codable {
             }
             HostState newHost = spawn.getHostState(newHostID);
             JobKey jobKey = assignment.getJobKey();
-            if (newHost.hasLive(jobKey) || !canReceiveNewTasks(newHost, assignment.isFromReplica())) {
+            if (newHost == null || newHost.hasLive(jobKey) || !canReceiveNewTasks(newHost, assignment.isFromReplica())) {
                 log.warn("[spawn.balancer] decided not to move task onto " + newHostID + " because it cannot receive the new task");
                 continue;
             }
