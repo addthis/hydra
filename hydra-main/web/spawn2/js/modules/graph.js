@@ -222,7 +222,11 @@ function(
                 .attr("style", function(d) {
                     return "stroke: " + d.color;
                 });
-            node.append("text")
+            var anchor = node.append("a")
+                .attr("xlink:href", function(d) {
+                    return "#jobs/" + d.jobId + "/conf"
+                });
+            anchor.append("text")
                 .attr("dy", ".31em")
                 .attr("text-anchor", function(d) {
                     return "start";
@@ -314,6 +318,7 @@ function(
             });
             return {
                 name:nodeId.substring(0,10),
+                jobId:nodeId,
                 children: childrenNodes,
                 color: nodeId === this.jobId ? "green" : "blue",
                 size:1
