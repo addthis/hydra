@@ -395,6 +395,9 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
      * selection.
      */
     private MeshyStreamFile selectMeshHost(List<MeshyStreamFile> sourceCandidates) {
+        if ((sourceCandidates == null) || sourceCandidates.isEmpty()) {
+            return null;
+        }
         if (sourceCandidates.size() == 1) {
             return sourceCandidates.get(0);
         }
