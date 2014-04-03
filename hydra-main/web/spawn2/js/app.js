@@ -61,11 +61,6 @@ function(
             $("div.navbar ul.nav.navbar-nav li a").parent().removeClass("active");
             $("div.navbar ul.nav.navbar-nav li a[href*='"+link+"']").parent().addClass("active");
             $("div.navbar ul.nav.navbar-nav li a[href*='"+link+"']").closest("li.dropdown-toggle").addClass("active");
-            //Delete active models
-            /*_.each(this.activeModels,function(modelName){
-                self[modelName]=undefined;
-            });
-            this.activeModels=(_.isUndefined(activeModels)?[]:activeModels);*/
             activeModels=activeModels || [];
             _.each(activeModels,function(modelName){
                 self[modelName]=undefined;
