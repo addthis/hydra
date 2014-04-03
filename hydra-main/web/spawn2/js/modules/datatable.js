@@ -15,18 +15,14 @@ define([
     "jquery",
     "backbone",
     "jquery.dataTable",
-    //"dataTable.scroller",
-    //"jquery.resize",
     "jquery.cookie"
 ],
 function(){
     $.fn.dataTableExt.sErrMode = 'throw';
     $.fn.dataTableExt.oApi.fnStandingRedraw = function(oSettings) {
         if(oSettings.oFeatures.bServerSide === false){
-            //var before = oSettings._iDisplayStart;
             oSettings.oApi._fnReDraw(oSettings);
             // iDisplayStart has been reset to zero - so lets change it back
-            //oSettings._iDisplayStart = before;
             oSettings.oApi._fnCalculateEnd(oSettings);
         }
         // draw the 'current' page
@@ -743,6 +739,7 @@ function(){
             }
             else{
                 this.resize();
+                this.adjustWidth();
                 this.redrawTable();
             }
             return this;

@@ -62,6 +62,7 @@ function(
             var self=this;
             var data = this.toJSON();
             data.label=data.name;
+            data.owner=$.cookie("username").username;
             return $.ajax({
                 url: "/macro/save",
                 type: "POST",
