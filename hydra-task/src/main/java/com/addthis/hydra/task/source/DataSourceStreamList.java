@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.addthis.basis.io.IOWrap;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.Bundle;
@@ -41,13 +42,22 @@ import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.hydra.task.stream.StreamFile;
 import com.addthis.hydra.task.stream.StreamFileSource;
 import com.addthis.hydra.task.stream.StreamSourceHashed;
+import com.addthis.hydra.task.stream.StreamSourceMeshy;
 
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-import org.slf4j.Logger;
+import com.ning.compress.lzf.LZFInputStream;
 
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xerial.snappy.SnappyInputStream;
+
+import lzma.sdk.lzma.Decoder;
+import lzma.streams.LzmaInputStream;
+
 /**
  * Iterates over a source list and returns them as a continuous stream.
  */
@@ -432,6 +442,9 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
                 InputStream is = null;
                 try {
                     is = streamFile.getInputStream();
+                    if (streamFile instanceof StreamSourceMeshy.MeshyStreamFile) {
+                        is = wrapCompressedStream(is, streamFile.name());
+                    }
                 } catch (IOException e) {
                     exiting = true;
                     log.warn("Error getting input stream for stream file: " + streamFile, e);
@@ -460,6 +473,22 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
                 queuedSourceInitTasks.decrementAndGet();
             }
         }
+
+        private InputStream wrapCompressedStream(InputStream in, String name) throws IOException {
+            if (name.endsWith(".gz")) {
+                in = IOWrap.gz(in, 4096);
+            } else if (name.endsWith(".lzf")) {
+                in = new LZFInputStream(in);
+            } else if (name.endsWith(".snappy")) {
+                in = new SnappyInputStream(in);
+            } else if (name.endsWith(".bz2")) {
+                in = new BZip2CompressorInputStream(in, true);
+            } else if (name.endsWith(".lzma")) {
+                in = new LzmaInputStream(in, new Decoder());
+            }
+            return in;
+        }
+
     }
 
     /**

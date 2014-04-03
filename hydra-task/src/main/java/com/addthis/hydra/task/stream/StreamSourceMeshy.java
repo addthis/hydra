@@ -530,7 +530,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
     }
 
     /** */
-    class MeshyStreamFile implements StreamFile {
+    public class MeshyStreamFile implements StreamFile {
 
         private final FileReference meshFile;
         private final DateTime date;
