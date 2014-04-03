@@ -40,6 +40,12 @@
       <groupId>com.addthis</groupId>
       <artifactId>meshy</artifactId>
       <version>${hydra.dep.meshy.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.addthis</groupId>
+          <artifactId>basis</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <!-- end clearspring -->
     <!-- 3rd party -->
