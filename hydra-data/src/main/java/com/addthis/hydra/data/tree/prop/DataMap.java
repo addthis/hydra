@@ -206,7 +206,6 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
         } finally {
             buf.release();
         }
-        buf.release();
         return encodedBytes;
     }
 
@@ -236,7 +235,6 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
         } finally {
             buf.release();
         }
-        buf.release();
         postDecode();
     }
 
