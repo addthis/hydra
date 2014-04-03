@@ -35,11 +35,23 @@
       <groupId>com.addthis</groupId>
       <artifactId>bundle</artifactId>
       <version>${hydra.dep.bundle.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.addthis</groupId>
+          <artifactId>basis</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.addthis</groupId>
       <artifactId>meshy</artifactId>
       <version>${hydra.dep.meshy.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.addthis</groupId>
+          <artifactId>basis</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.addthis</groupId>

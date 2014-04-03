@@ -29,6 +29,12 @@
       <groupId>com.addthis</groupId>
       <artifactId>bark</artifactId>
       <version>${hydra.dep.bark.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.addthis</groupId>
+          <artifactId>basis</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <!-- end clearspring -->
     <!-- 3rd party -->

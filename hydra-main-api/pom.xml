@@ -31,6 +31,12 @@
       <groupId>com.addthis</groupId>
       <artifactId>codec</artifactId>
       <version>${hydra.dep.codec.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.addthis</groupId>
+          <artifactId>basis</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.yammer.metrics</groupId>
