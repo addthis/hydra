@@ -930,9 +930,10 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
     private void loadFromExternalStore() {
         byte[] encodedFirstKey = externalStore.firstKey();
         Page<K, V> leftSentinel = Page.generateEmptyPage(this, negInf, KeyCoder.ENCODE_TYPE.SPARSE);
-        ByteBufOutputStream byteBufOutputStream = new ByteBufOutputStream(PooledByteBufAllocator.DEFAULT.buffer());
+        ByteBufOutputStream byteBufOutputStream = null;
         try {
             if (encodedFirstKey == null) {
+                byteBufOutputStream = new ByteBufOutputStream(PooledByteBufAllocator.DEFAULT.buffer());
                 leftSentinel.initialize();
                 byte[] encodeKey = keyCoder.keyEncode(negInf);
                 byte[] encodePage = leftSentinel.encode(byteBufOutputStream);
@@ -945,6 +946,7 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
                     leftSentinel.decode(page);
                     updateMemoryEstimate(leftSentinel.getMemoryEstimate());
                 } else {
+                    byteBufOutputStream = new ByteBufOutputStream(PooledByteBufAllocator.DEFAULT.buffer());
                     leftSentinel.initialize();
                     leftSentinel.nextFirstKey = firstKey;
 
@@ -963,7 +965,9 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
                 }
             }
         } finally {
-            byteBufOutputStream.buffer().release();
+            if (byteBufOutputStream != null) {
+                byteBufOutputStream.buffer().release();
+            }
         }
         cache.put(negInf, leftSentinel);
         cacheSize.getAndIncrement();
