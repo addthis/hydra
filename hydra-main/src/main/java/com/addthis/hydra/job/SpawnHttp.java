@@ -36,6 +36,7 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.hydra.util.MetricsServletMaker;
+import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
 import org.apache.commons.lang3.CharEncoding;
@@ -133,6 +134,24 @@ public class SpawnHttp extends AbstractHandler {
             return null;
         }
 
+        public JSONObject json() { return new JSONObject(); }
+
+        public JSONObject json(String k, String v) {
+            try {
+                return new JSONObject().put(k, v);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+
+        public JSONObject json(String k, boolean v) {
+            try {
+                return new JSONObject().put(k, v);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+
         public static void require(boolean test, String msg) throws Exception {
             if (!test) {
                 throw new Exception("test failed with '" + msg + "'");
@@ -206,21 +225,31 @@ public class SpawnHttp extends AbstractHandler {
             return params;
         }
 
+        public void sendJSON(int code, String topic, JSONArray a) {
+            setResponseContentType("application/json; charset=utf-8");
+            sendShortReply(code, topic, a.toString());
+        }
+
+        public void sendJSON(int code, String topic, JSONObject o) {
+            setResponseContentType("application/json; charset=utf-8");
+            sendShortReply(code, topic, o.toString());
+        }
+
         public void sendShortReply(int code, String topic, String message) {
             KVPairs kv = getRequestValues();
-            String cbf = kv.getValue("cbfunc");
+            String cbf = kv.getValue("cbfunc", kv.getValue("callback"));
             String cbv = kv.getValue("cbfunc-arg");
-            if (cbf != null) {
-                if (message == null || message.length() == 0) {
-                    message = "null";
-                } else if (!(message.startsWith("{") || message.startsWith("["))) {
-                    message = "{message:'"+message+"'}";
-                }
-                message = Strings.cat(cbf,"(",message,",\"",topic,"\"");
-                if (cbv != null) message = Strings.cat(message,",",cbv);
-                message = Strings.cat(message,");");
-            }
             try {
+                if (cbf != null) {
+                    if (message == null || message.length() == 0) {
+                        message = "null";
+                    } else if (!(message.startsWith("{") || message.startsWith("["))) {
+                        message = new JSONObject().put("message", message).toString();
+                    }
+                    message = Strings.cat(cbf,"(",message,",\"",topic,"\"");
+                    if (cbv != null) message = Strings.cat(message,",",cbv);
+                    message = Strings.cat(message,");");
+                }
                 response.setStatus(code);
                 response.setHeader("Content-Type", "application/javascript");
                 response.setHeader("topic", topic);

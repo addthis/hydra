@@ -135,9 +135,9 @@ public class SpawnManager {
                             spawn.updateJob(job);
                         }
                     }
-                    link.sendShortReply(200, "OK", "{success:true}");
+                    link.sendJSON(200, "OK", json("success",true));
                 } else {
-                    link.sendShortReply(400, "Error", "{error:'missing jobs parameter'}");
+                    link.sendJSON(400, "Error", json("error","missing jobs parameter"));
                 }
             }
         });
@@ -186,7 +186,7 @@ public class SpawnManager {
                     int numQueued = spawn.getTaskQueuedCount();
                     ret.put("spawnqueuesize", numQueued);
                 }
-                link.sendShortReply(200, "OK", ret.toString(4));
+                link.sendJSON(200, "OK", ret);
             }
         });
         /** ajax call to minion - for log watching */
@@ -218,8 +218,8 @@ public class SpawnManager {
                     JobMacro macro = spawn.getMacro(key);
                     list.put(key, macro.toJSON());
                 }
-                link.setResponseContentType("application/json; charset=utf-8");
-                link.sendShortReply(200, "OK", list.toString(4));
+//                link.setResponseContentType("application/json; charset=utf-8");
+                link.sendJSON(200, "OK", list);
             }
         });
         server.mapService("/macro.get", new HTTPService() {
@@ -228,10 +228,10 @@ public class SpawnManager {
                 String label = link.getRequestValues().getValue("label", "");
                 JobMacro macro = spawn.getMacro(label);
                 if (macro != null) {
-                    link.setResponseContentType("application/json; charset=utf-8");
-                    link.sendShortReply(200, "OK", macro.toJSON().toString());
+//                    link.setResponseContentType("application/json; charset=utf-8");
+                    link.sendJSON(200, "OK", macro.toJSON());
                 } else {
-                    link.sendShortReply(400, "OK", "{error:'no such macro'}");
+                    link.sendJSON(400, "OK", json("error","no such macro"));
                 }
             }
         });
@@ -249,16 +249,16 @@ public class SpawnManager {
                 require(owner != null, "missing owner");
                 require(macro != null, "missing macro");
                 spawn.putMacro(label, new JobMacro(owner, description, macro), true);
-                link.sendShortReply(200, "OK", "{success:true}");
+                link.sendJSON(200, "OK", json("success",true));
             }
         });
         server.mapService("/macro.delete", new HTTPService() {
             @Override
             public void httpService(HTTPLink link) throws Exception {
                 if (spawn.deleteMacro(link.getRequestValues().getValue("label", ""))) {
-                    link.sendShortReply(200, "OK", "{success:true}");
+                    link.sendJSON(200, "OK", json("success",true));
                 } else {
-                    link.sendShortReply(500, "ERROR", "{error:'macro delete failed'}");
+                    link.sendJSON(500, "ERROR", json("error","macro delete failed"));
                 }
             }
         });
@@ -270,8 +270,8 @@ public class SpawnManager {
                 for (String key : spawn.listCommands()) {
                     list.put(key, spawn.getCommand(key).toJSON());
                 }
-                link.setResponseContentType("application/json; charset=utf-8");
-                link.sendShortReply(200, "OK", list.toString(4));
+//                link.setResponseContentType("application/json; charset=utf-8");
+                link.sendJSON(200, "OK", list);
             }
         });
         /** url called via ajax to add or update a command */
@@ -320,8 +320,8 @@ public class SpawnManager {
                         list.put(spawn.getHostStateUpdateEvent(host));
                     }
                 }
-                link.setResponseContentType("application/json; charset=utf-8");
-                link.sendShortReply(200, "OK", list.toString(4));
+//                link.setResponseContentType("application/json; charset=utf-8");
+                link.sendJSON(200, "OK", list);
             }
         });
         /** lists avialable hosts */
@@ -335,8 +335,8 @@ public class SpawnManager {
                         list.put(host);
                     }
                 }
-                link.setResponseContentType("application/json; charset=utf-8");
-                link.sendShortReply(200, "OK", list.toString(4));
+//                link.setResponseContentType("application/json; charset=utf-8");
+                link.sendJSON(200, "OK", list);
             }
         });
 
@@ -367,8 +367,8 @@ public class SpawnManager {
             public void httpService(HTTPLink link) throws Exception {
                 String uuids = link.getRequestValues().getValue("uuids");
                 boolean deadFs = link.getRequestValues().getIntValue("deadFs", 1) == 1;
-                link.setResponseContentType("application/json; charset=utf-8");
-                link.sendShortReply(200, "OK", spawn.getHostFailWorker().getInfoForHostFailure(uuids, deadFs).toString());
+//                link.setResponseContentType("application/json; charset=utf-8");
+                link.sendJSON(200, "OK", spawn.getHostFailWorker().getInfoForHostFailure(uuids, deadFs));
             }
         });
         /** force refresh of host status */
@@ -416,10 +416,10 @@ public class SpawnManager {
             public void httpService(HTTPLink link) throws Exception {
                 String id = link.getRequestValues().getValue("id", "");
                 if ("".equals(id)) {
-                    link.sendShortReply(404, "Expansion Error", "{error:'unable to expand job, job id must be non null and not empty'}");
+                    link.sendShortReply(404, "Expansion Error", "{'error':'unable to expand job, job id must be non null and not empty'}");
                 } else {
                     String expandedJobConfig = spawn.expandJob(id);
-                    link.setResponseContentType("application/octet-stream");
+//                    link.setResponseContentType("application/octet-stream");
                     link.sendShortReply(200, "expanded_job", "attachment; filename=expanded_job.json", expandedJobConfig);
                 }
             }
@@ -432,11 +432,11 @@ public class SpawnManager {
                 String id = kv.getValue("id", "");
                 emitLogLineForAction(kv, "job synchronize on " + id);
                 if (spawn.synchronizeJobState(id)) {
-                    link.setResponseContentType("application/json; charset=utf-8");
-                    link.sendShortReply(200, "OK", "{id:'" + id + "',action:'synchronized'}");
+//                    link.setResponseContentType("application/json; charset=utf-8");
+                    link.sendJSON(200, "OK", json().put("id",id).put("action","synchronized"));
                 } else {
                     log.warn("[job.synchronize] " + id + " unable to synchronize job");
-                    link.sendShortReply(404, "Synchronize Error", "{error:'unable to synchronize job, check spawn log file for more details'}");
+                    link.sendJSON(404, "Synchronize Error", json("error","unable to synchronize job, check spawn log file for more details"));
                 }
             }
         });
@@ -449,24 +449,21 @@ public class SpawnManager {
                 Job job = spawn.getJob(id);
 
                 if (job != null && !job.getState().equals(JobState.IDLE)) {
-                    link.sendShortReply(500, "ERROR", "A non IDLE job cannot be deleted");
+                    link.sendJSON(500, "ERROR", json("error","A non-IDLE job cannot be deleted"));
                 } else {
                     emitLogLineForAction(kv, "job delete on " + id);
                     Spawn.DeleteStatus status = spawn.deleteJob(id);
                     switch (status) {
                         case SUCCESS:
-                            String callback = kv.getValue("callback", "");
-                            String msg = "{id:'" + id + "',action:'deleted'}";
-                            link.setResponseContentType("application/json; charset=utf-8");
-                            link.sendShortReply(200, "OK", callback != null ? callback + "(" + msg + ");" : msg);
+                            link.sendJSON(200, "OK", json("id",id).put("action","deleted"));
                             break;
                         case JOB_MISSING:
                             log.warn("[job.delete] " + id + " missing job");
-                            link.sendShortReply(404, "Invalid ID", "{error:'no such job'}");
+                            link.sendJSON(404, "Invalid ID", json("error","no such job"));
                             break;
                         case JOB_DO_NOT_DELETE:
                             log.warn("[job.delete] " + id + " do not delete parameter");
-                            link.sendShortReply(304, "Invalid ID", "{error:'job has do not delete parameter enabled'}");
+                            link.sendJSON(304, "Invalid ID", json("error","job has do no delete parameter enabled"));
                             break;
                     }
                 }
@@ -488,13 +485,10 @@ public class SpawnManager {
                 } else {
                     emitLogLineForAction(kv, "job delete on " + id);
                     if (spawn.deleteTask(id, host, node, isReplica)) {
-                        String callback = kv.getValue("callback", "");
-                        String msg = "{id:'" + id + "/" + node + "',action:'deleted'}";
-                        link.setResponseContentType("application/json; charset=utf-8");
-                        link.sendShortReply(200, "OK", callback != null ? callback + "(" + msg + ");" : msg);
+                        link.sendJSON(200, "OK", json("id",id+"/"+node).put("action","deleted"));
                     } else {
                         log.warn("[job.deleteTask] " + id + " missing job");
-                        link.sendShortReply(404, "Invalid ID", "{error:'no such job'}");
+                        link.sendJSON(404, "Invalid ID", json("error","no such job"));
                     }
                 }
             }
@@ -507,7 +501,7 @@ public class SpawnManager {
                 String id = kv.getValue("id", "");
                 IJob job = spawn.getJob(id);
                 if (job == null) {
-                    link.sendShortReply(404, "Invalid ID", "{error:'no such job'}");
+                    link.sendJSON(404, "Invalid ID", json("error","no such job"));
                     return;
                 }
                 boolean cancelRekick = kv.getValue("cancel", "0").equals("1");
@@ -534,7 +528,7 @@ public class SpawnManager {
                         spawn.stopTask(id, nodeid);
                     }
                 }
-                link.sendShortReply(200, "OK", "{id:'" + job.getId() + "',action:'stopped'}");
+                link.sendJSON(200, "OK", json("id",job.getId()).put("action","stopped"));
             }
         });
         /**
@@ -553,7 +547,7 @@ public class SpawnManager {
                 int nodeid = kv.getIntValue("node", -1);
                 // broadcast to all hosts if no node specified
                 spawn.revertJobOrTask(job.getId(), nodeid, type, rev, time);
-                link.sendShortReply(200, "OK", "{id:'" + job.getId() + "',action:'reverted'}");
+                link.sendJSON(200, "OK", json("id",job.getId()).put("action","reverted"));
             }
         });
         server.mapService("/task.swap", new HTTPService() {
@@ -574,23 +568,19 @@ public class SpawnManager {
         server.mapService("/task.queue.list", new HTTPService() {
             @Override
             public void httpService(HTTPLink link) throws Exception {
-                link.setResponseContentType("application/json; charset=utf-8");
-                link.sendShortReply(200, "OK", spawn.getTaskQueueAsJSONArray().toString());
+                link.sendJSON(200, "OK", spawn.getTaskQueueAsJSONArray());
             }
         });
         server.mapService("/task.queue.size", new HTTPService() {
             @Override
             public void httpService(HTTPLink link) throws Exception {
-                int numQueued = spawn.getTaskQueuedCount();
-                JSONObject json = new JSONObject("{'size':" + Integer.toString(numQueued) + "}");
-                link.sendShortReply(200, "OK", json.toString());
+                link.sendJSON(200, "OK", json().put("size", spawn.getTaskQueuedCount()));
             }
         });
         server.mapService("/job.list", new HTTPService() {
             @Override
             public void httpService(HTTPLink link) throws Exception {
                 KVPairs kv = link.getRequestValues();
-                String jsonp = kv.getValue("callback");
                 HashSet<String> ids = csvListToSet(kv.getValue("id"));
                 String owner = kv.getValue("owner");
                 JSONArray a = new JSONArray();
@@ -599,8 +589,7 @@ public class SpawnManager {
                         a.put(job.toJSON().put("config", ""));
                     }
                 }
-                link.setResponseContentType("application/json; charset=utf-8");
-                link.sendShortReply(200, "OK", jsonp != null ? jsonp + "(" + a + ")" : a.toString(4));
+                link.sendJSON(200, "OK", a);
             }
         });
         /**
@@ -616,9 +605,9 @@ public class SpawnManager {
                     spawn.buildDependencyFlowGraph(g, job.getId());
                     FlowGraph.DisplayFlowNode root = g.build(job.getId());
                     JSONObject json = root.toJSON();
-                    link.sendShortReply(200, "OK", json.toString());
+                    link.sendJSON(200, "OK", json);
                 } else {
-                    link.sendShortReply(200, "OK", "{\"flow_id\":\"" + kv.getValue("id", "") + "\" , \"dependencies\":{}}");
+                    link.sendJSON(200, "OK", json("flow_id",kv.getValue("id", "")).put("dependencies",json()));
                 }
             }
         });
@@ -640,10 +629,9 @@ public class SpawnManager {
                             return;
                         }
                     }
-                    link.setResponseContentType("application/json; charset=utf-8");
-                    link.sendShortReply(200, "OK", jsonp != null ? jsonp + "(" + jobobj + ")" : jobobj.toString(4));
+                    link.sendJSON(200, "OK", jobobj);
                 } else {
-                    link.sendShortReply(400, "No Job", "{error:'no such job'}");
+                    link.sendJSON(400, "No Job", json("error","no such job"));
                 }
             }
         });
@@ -657,7 +645,7 @@ public class SpawnManager {
                 if (job != null) {
                     link.sendShortReply(200, "OK", spawn.checkTaskDirText(id, node));
                 } else {
-                    link.sendShortReply(400, "No Job", "{error:'no such job'}");
+                    link.sendJSON(400, "No Job", json("error","no such job"));
                 }
             }
         });
@@ -671,7 +659,7 @@ public class SpawnManager {
                 if (job != null) {
                     link.sendShortReply(200, "OK", spawn.fixTaskDir(id, node, false, false));
                 } else {
-                    link.sendShortReply(400, "No Job", "{error:'no such job'}");
+                    link.sendJSON(400, "No Job", json("error","no such job"));
                 }
             }
         });
@@ -683,8 +671,8 @@ public class SpawnManager {
                 try {
                     jobset(link);
                 } catch (Exception ex) {
-                    link.sendShortReply(500, "Error", "{error:'"+ex.getMessage()+"'}");
-                    log.trace("500 error", ex);
+                    link.sendJSON(500, "Error", json("error",ex.getMessage()));
+                    log.trace("500 Error", ex);
                 }
             }
 
@@ -728,9 +716,9 @@ public class SpawnManager {
                     } else {
                         updateJobFromCall(link, spawn);
                     }
-                    link.sendShortReply(200, "OK", job.toJSON().toString(4));
+                    link.sendJSON(200, "OK", job.toJSON());
                 } else {
-                    link.sendShortReply(400, "No Job", "{error:'no such job'}");
+                    link.sendJSON(400, "No Job", json("error","no such job"));
                 }
             }
         });
@@ -766,11 +754,10 @@ public class SpawnManager {
                             }
                         }
                     }
-                    link.sendShortReply(200, "OK", "{updated:true}");
+                    link.sendJSON(200, "OK", json("updated",true));
                 } catch (Exception ex) {
-                    log.warn("[job.submit] error :: " + ex);
-                    ex.printStackTrace();
-                    link.sendShortReply(500, "Server Error", "{error:'"+ex.getMessage()+"'}");
+                    link.sendJSON(500, "Error", json("error",ex.getMessage()));
+                    log.trace("[job.submit] Error", ex);
                 }
             }
         });
@@ -779,8 +766,7 @@ public class SpawnManager {
             @Override
             public void httpService(HTTPLink link) throws Exception {
                 updateJobFromCall(link, spawn);
-                link.setResponseContentType("application/json; charset=utf-8");
-                link.sendShortReply(200, "OK", "{updated:true}");
+                link.sendJSON(200, "OK", json("updated",true));
             }
         });
         /** url for creating a job */
@@ -879,10 +865,10 @@ public class SpawnManager {
                     Map<String, List<String>> aliases = spawn.getAliases();
                     StringWriter sw = new StringWriter();
                     mapper.writeValue(sw, aliases);
-                    link.sendShortReply(200, "ok", sw.toString());
+                    link.sendShortReply(200, "OK", sw.toString());
                 } catch (Exception e) {
                     e.printStackTrace();
-                    link.sendShortReply(500, "oh no", e.toString());
+                    link.sendShortReply(500, "Error", e.toString());
                 }
             }
         });
@@ -892,16 +878,16 @@ public class SpawnManager {
                 KVPairs kv = link.getRequestValues();
                 if (!kv.hasKey("alias") || !kv.hasKey("jobs")) {
                     // fix code
-                    link.sendShortReply(500, "oh no", "must supply alias and jobs");
+                    link.sendShortReply(500, "Error", "must supply alias and jobs");
                     return;
                 }
                 try {
                     List<String> jobs = Lists.newArrayList(Splitter.on(',').split(kv.getValue("jobs")));
                     spawn.addAlias(kv.getValue("alias"), jobs);
-                    link.sendShortReply(200, "ok", "{success:true}");
+                    link.sendJSON(200, "OK", json("success",true));
                 } catch (Exception e) {
-                    e.printStackTrace();
-                    link.sendShortReply(500, "oh no", "{error:'"+e+"'}");
+                    link.sendJSON(500, "Error", json("error",e.getMessage()));
+                    log.trace("500 Error", e);
                 }
             }
         });
@@ -910,16 +896,15 @@ public class SpawnManager {
             public void httpService(HTTPLink link) throws Exception {
                 KVPairs kv = link.getRequestValues();
                 if (!kv.hasKey("alias")) {
-                    // fix code
-                    link.sendShortReply(500, "oh no", "must supply alias");
+                    link.sendJSON(500, "Error", json("error","missing alias"));
                     return;
                 }
                 try {
                     spawn.deleteAlias(kv.getValue("alias"));
-                    link.sendShortReply(200, "ok", "{success:true}");
+                    link.sendJSON(200, "OK", json("success",true));
                 } catch (Exception e) {
-                    e.printStackTrace();
-                    link.sendShortReply(500, "oh no", "{error:'"+e+"'}");
+                    link.sendJSON(500, "Error", json("error",e.getMessage()));
+                    log.trace("500 Error", e);
                 }
             }
         });
@@ -933,9 +918,10 @@ public class SpawnManager {
                     for (String i : list) {
                         arr.put(i);
                     }
-                    link.sendShortReply(200, "OK", arr.toString());
+                    link.sendJSON(200, "OK", arr);
                 } catch (Exception e) {
-                    link.sendShortReply(500, "Server Error", new JSONObject().put("error", e.getMessage()).toString());
+                    link.sendJSON(500, "Error", json("error",e.getMessage()));
+                    log.trace("500 Error", e);
                 }
             }
         });
@@ -948,7 +934,7 @@ public class SpawnManager {
                     String reply = CodecJSON.encodeString(o, 1);
                     link.sendShortReply(200, "OK", reply != null && reply.length() > 0 ? reply : "");
                 } catch (Exception e) {
-                    link.sendShortReply(500, "Server Error", new JSONObject().put("error", e.getMessage()).toString());
+                    link.sendJSON(500, "Error", json("error",e.getMessage()));
                 }
             }
         });
@@ -962,9 +948,9 @@ public class SpawnManager {
                     for (FileReference file : list) {
                         arr.put(new JSONObject().put("uuid", file.getHostUUID()).put("name", file.name).put("size", file.size).put("date", file.lastModified));
                     }
-                    link.sendShortReply(200, "OK", arr.toString());
+                    link.sendJSON(200, "OK", arr);
                 } catch (Exception e) {
-                    link.sendShortReply(500, "Server Error", new JSONObject().put("error", e.getMessage()).toString());
+                    link.sendJSON(500, "Error", json("error",e.getMessage()));
                 }
             }
         });
@@ -991,9 +977,9 @@ public class SpawnManager {
                 String hosts = kv.getValue("hosts");
                 try {
                     spawn.toggleHosts(hosts, false);
-                    link.sendShortReply(200, "ok", "{success:true}");
+                    link.sendJSON(200, "OK", json("success",true));
                 } catch (Exception e) {
-                    link.sendShortReply(500, "Server Error", new JSONObject().put("error", e.getMessage()).toString());
+                    link.sendJSON(500, "Error", json("error",e.getMessage()));
                 }
             }
         });
@@ -1005,9 +991,9 @@ public class SpawnManager {
                 String hosts = kv.getValue("hosts");
                 try {
                     spawn.toggleHosts(hosts, true);
-                    link.sendShortReply(200, "ok", "disabled");
+                    link.sendJSON(200, "OK", json("success",true));
                 } catch (Exception e) {
-                    link.sendShortReply(500, "Server Error", new JSONObject().put("error", e.getMessage()).toString());
+                    link.sendJSON(500, "Error", json("error",e.getMessage()));
                 }
             }
         });
@@ -1022,9 +1008,9 @@ public class SpawnManager {
                     String sourceHostUUID = kv.getValue("source");
                     boolean isReplica = kv.hasKey("rep") ? kv.getValue("rep").equals("1") : true;
                     spawn.deleteTask(job, sourceHostUUID, node, isReplica);
-                    link.sendShortReply(200, "ok", "{success:true}");
+                    link.sendJSON(200, "OK", json("success",true));
                 } catch (Exception e) {
-                    link.sendShortReply(500, "Server Error", new JSONObject().put("error", e.getMessage()).toString());
+                    link.sendJSON(500, "Error", json("error",e.getMessage()));
                 }
             }
         });
@@ -1041,9 +1027,9 @@ public class SpawnManager {
                     KVPairs kv = link.getRequestValues();
                     String job = kv.getValue("id");
                     int node = Integer.parseInt(kv.getValue("node"));
-                    link.sendShortReply(200, "ok", Long.toString(spawn.getTaskTrueSize(job, node)));
+                    link.sendJSON(200, "OK", json("taskSize",Long.toString(spawn.getTaskTrueSize(job, node))));
                 } catch (Exception e) {
-                    link.sendShortReply(500, "Server Error", new JSONObject().put("error", e.getMessage()).toString());
+                    link.sendJSON(500, "Error", json("error",e.getMessage()));
                 }
             }
         });
@@ -1066,10 +1052,10 @@ public class SpawnManager {
                 for (KVPair p : kv) {
                     ret.put(p.getKey(), p.getValue());
                 }
-                link.sendShortReply(200, "OK", ret.toString(1));
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                link.sendShortReply(500, "Server Error", new JSONObject().put("error", ex.getMessage()).toString());
+                link.sendJSON(200, "OK", ret);
+            } catch (Exception e) {
+                link.sendJSON(500, "Error", json("error",e.getMessage()));
+                log.trace("500 Error", e);
             }
         }
 
