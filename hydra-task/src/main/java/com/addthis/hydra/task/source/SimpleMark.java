@@ -19,10 +19,9 @@ import com.addthis.hydra.task.stream.StreamFile;
 
 import com.google.common.base.Objects;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
-import java.io.IOException;
 
 /** */
 public class SimpleMark implements Codec.Codable, Codec.BytesCodable {
@@ -91,27 +90,34 @@ public class SimpleMark implements Codec.Codable, Codec.BytesCodable {
 
     @Override
     public byte[] bytesEncode() {
-        ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer();
-        byte[] valBytes = val.getBytes();
-        Varint.writeUnsignedVarInt(valBytes.length, buffer);
-        buffer.writeBytes(valBytes);
-        Varint.writeUnsignedVarLong(index, buffer);
-        buffer.writeByte(end ? 0 : 1);
-        byte[] retBytes = new byte[buffer.readableBytes()];
-        buffer.readBytes(retBytes);
-        buffer.release();
+        byte[] retBytes = null;
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
+        try {
+            byte[] valBytes = val.getBytes();
+            Varint.writeUnsignedVarInt(valBytes.length, buffer);
+            buffer.writeBytes(valBytes);
+            Varint.writeUnsignedVarLong(index, buffer);
+            buffer.writeByte(end ? 0 : 1);
+            retBytes = new byte[buffer.readableBytes()];
+            buffer.readBytes(retBytes);
+        } finally {
+            buffer.release();
+        }
         return retBytes;
     }
 
     @Override
     public void bytesDecode(byte[] b) {
         ByteBuf buffer = Unpooled.wrappedBuffer(b);
-        int valLength = Varint.readUnsignedVarInt(buffer);
-        byte[] valBytes = new byte[valLength];
-        buffer.readBytes(valBytes);
-        val = new String(valBytes);
-        index = Varint.readUnsignedVarLong(buffer);
-        end = buffer.readByte() == 1;
-        buffer.release();
+        try {
+            int valLength = Varint.readUnsignedVarInt(buffer);
+            byte[] valBytes = new byte[valLength];
+            buffer.readBytes(valBytes);
+            val = new String(valBytes);
+            index = Varint.readUnsignedVarLong(buffer);
+            end = buffer.readByte() == 1;
+        } finally {
+            buffer.release();
+        }
     }
 }

@@ -27,7 +27,6 @@ import com.ning.compress.lzf.LZFInputStream;
 import com.ning.compress.lzf.LZFOutputStream;
 import com.yammer.metrics.core.Histogram;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
@@ -282,8 +281,9 @@ final class Page<K, V extends Codec.BytesCodable> {
 
     public void decode(byte[] page) {
         parent.numPagesDecoded.getAndIncrement();
+        ByteBuf buffer = Unpooled.wrappedBuffer(page);
         try {
-            InputStream in = new ByteBufInputStream(Unpooled.wrappedBuffer(page));
+            InputStream in = new ByteBufInputStream(buffer);
             int flags = in.read() & 0xff;
             int gztype = flags & 0x0f;
             boolean isSparse = (flags & FLAGS_IS_SPARSE) != 0;
@@ -386,6 +386,8 @@ final class Page<K, V extends Codec.BytesCodable> {
             throw ex;
         } catch (Exception ex) {
             throw new RuntimeException(ex);
+        } finally {
+            buffer.release();
         }
     }
 

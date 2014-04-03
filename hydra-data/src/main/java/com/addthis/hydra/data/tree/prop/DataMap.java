@@ -33,7 +33,7 @@ import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.store.util.Varint;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
 public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.SuperCodable {
@@ -186,23 +186,26 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
 
     @Override
     public byte[] bytesEncode() {
-        ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
+        byte[] encodedBytes = null;
+        ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer();
         try {
-        synchronized (map) {
-            preEncode();
-            Varint.writeUnsignedVarInt(keys.length, buf);
-            for (String key : keys) {
-                writeString(buf, key);
+            synchronized (map) {
+                preEncode();
+                Varint.writeUnsignedVarInt(keys.length, buf);
+                for (String key : keys) {
+                    writeString(buf, key);
+                }
+                for (String val : vals) {
+                    writeString(buf, val);
+                }
             }
-            for (String val : vals) {
-                writeString(buf, val);
-            }
-        }
+            encodedBytes = new byte[buf.readableBytes()];
+            buf.readBytes(encodedBytes);
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
+        } finally {
+            buf.release();
         }
-        byte[] encodedBytes = new byte[buf.readableBytes()];
-        buf.readBytes(encodedBytes);
         buf.release();
         return encodedBytes;
     }
@@ -216,18 +219,22 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
     @Override
     public void bytesDecode(byte[] b) {
         ByteBuf buf = Unpooled.wrappedBuffer(b);
-        int length = Varint.readUnsignedVarInt(buf);
-        keys = new String[length];
-        vals = new String[length];
         try {
-            for (int i = 0; i < length; i++) {
-                keys[i] = readString(buf);
+            int length = Varint.readUnsignedVarInt(buf);
+            keys = new String[length];
+            vals = new String[length];
+            try {
+                for (int i = 0; i < length; i++) {
+                    keys[i] = readString(buf);
+                }
+                for (int i = 0; i < length; i++) {
+                    vals[i] = readString(buf);
+                }
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException(e);
             }
-            for (int i = 0; i < length; i++) {
-                vals[i] = readString(buf);
-            }
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
+        } finally {
+            buf.release();
         }
         buf.release();
         postDecode();

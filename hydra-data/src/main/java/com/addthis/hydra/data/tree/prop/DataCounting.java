@@ -46,7 +46,7 @@ import com.clearspring.analytics.stream.cardinality.ICardinality;
 import com.clearspring.analytics.stream.cardinality.LinearCounting;
 import com.clearspring.analytics.stream.cardinality.LogLog;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
 public class DataCounting extends TreeNodeData<DataCounting.Config> implements Codec.SuperCodable {
@@ -365,23 +365,29 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements C
     @Override
     public byte[] bytesEncode() {
         preEncode();
-        ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer();
-        Varint.writeUnsignedVarInt(ver, buffer);
-        Varint.writeUnsignedVarInt(M.length, buffer);
-        buffer.writeBytes(M);
-        byte[] bytes = new byte[buffer.readableBytes()];
-        buffer.readBytes(bytes);
-        buffer.release();
-        return bytes;
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
+        try {
+            Varint.writeUnsignedVarInt(ver, buffer);
+            Varint.writeUnsignedVarInt(M.length, buffer);
+            buffer.writeBytes(M);
+            byte[] bytes = new byte[buffer.readableBytes()];
+            buffer.readBytes(bytes);
+            return bytes;
+        } finally {
+            buffer.release();
+        }
     }
 
     @Override
     public void bytesDecode(byte[] b) {
         ByteBuf buffer = Unpooled.wrappedBuffer(b);
-        ver = Varint.readUnsignedVarInt(buffer);
-        M = new byte[Varint.readUnsignedVarInt(buffer)];
-        buffer.readBytes(M);
-        buffer.release();
+        try {
+            ver = Varint.readUnsignedVarInt(buffer);
+            M = new byte[Varint.readUnsignedVarInt(buffer)];
+            buffer.readBytes(M);
+        } finally {
+            buffer.release();
+        }
         postDecode();
     }
 

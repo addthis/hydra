@@ -25,7 +25,7 @@ import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.store.util.Varint;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
 public class DataTime extends TreeNodeData<DataTime.Config> {
@@ -115,22 +115,29 @@ public class DataTime extends TreeNodeData<DataTime.Config> {
 
     @Override
     public byte[] bytesEncode() {
-        ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
-        long delta = last - first;
-        Varint.writeUnsignedVarLong(first, byteBuf);
-        Varint.writeUnsignedVarLong(delta, byteBuf);
-        byte[] encodedBytes = new byte[byteBuf.readableBytes()];
-        byteBuf.readBytes(encodedBytes);
-        byteBuf.release();
+        byte[] encodedBytes = null;
+        ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.buffer();
+        try {
+            long delta = last - first;
+            Varint.writeUnsignedVarLong(first, byteBuf);
+            Varint.writeUnsignedVarLong(delta, byteBuf);
+            encodedBytes = new byte[byteBuf.readableBytes()];
+            byteBuf.readBytes(encodedBytes);
+        } finally {
+            byteBuf.release();
+        }
         return encodedBytes;
     }
 
     @Override
     public void bytesDecode(byte[] b) {
         ByteBuf byteBuf = Unpooled.wrappedBuffer(b);
-        first = Varint.readUnsignedVarLong(byteBuf);
-        last = first + Varint.readUnsignedVarLong(byteBuf);
-        byteBuf.release();
+        try {
+            first = Varint.readUnsignedVarLong(byteBuf);
+            last = first + Varint.readUnsignedVarLong(byteBuf);
+        } finally {
+            byteBuf.release();
+        }
     }
 
     public void setFirst(long first) {

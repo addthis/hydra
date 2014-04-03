@@ -29,7 +29,7 @@ import com.addthis.codec.Codec;
 import com.addthis.hydra.store.util.Varint;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import jsr166e.ConcurrentHashMapV8;
 
@@ -294,8 +294,8 @@ public final class ConcurrentKeyTopper implements Codec.SuperCodable, Codec.Byte
         if (map.size() == 0) {
             return EMPTY;
         }
-        ByteBuf byteBuf = ByteBufAllocator.DEFAULT.buffer();
         byte[] retBytes = null;
+        ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.buffer();
         try {
             Varint.writeUnsignedVarInt(map.size(), byteBuf);
             for (Map.Entry<String, Long> mapEntry : map.entrySet()) {
@@ -323,24 +323,28 @@ public final class ConcurrentKeyTopper implements Codec.SuperCodable, Codec.Byte
     @Override
     public void bytesDecode(byte[] b) {
         ByteBuf byteBuf = Unpooled.wrappedBuffer(b);
-        int mapSize = Varint.readUnsignedVarInt(byteBuf);
-        int i = 0;
         try {
-            if (mapSize > 0) {
-                map = new ConcurrentHashMapV8<>(mapSize + 16, 0.75f, 4);
-                for (i = 0; i < mapSize; i++) {
-                    int keyLength = Varint.readUnsignedVarInt(byteBuf);
-                    byte[] keybytes = new byte[keyLength];
-                    byteBuf.readBytes(keybytes);
-                    String k = new String(keybytes, "UTF-8");
-                    long value = Varint.readUnsignedVarLong(byteBuf);
-                    map.put(k, value);
+            int mapSize = Varint.readUnsignedVarInt(byteBuf);
+            int i;
+            try {
+                if (mapSize > 0) {
+                    map = new ConcurrentHashMapV8<>(mapSize + 16, 0.75f, 4);
+                    for (i = 0; i < mapSize; i++) {
+                        int keyLength = Varint.readUnsignedVarInt(byteBuf);
+                        byte[] keybytes = new byte[keyLength];
+                        byteBuf.readBytes(keybytes);
+                        String k = new String(keybytes, "UTF-8");
+                        long value = Varint.readUnsignedVarLong(byteBuf);
+                        map.put(k, value);
+                    }
+                } else {
+                    map = new ConcurrentHashMapV8<>(16, 0.75f, 4);
                 }
-            } else {
-                map = new ConcurrentHashMapV8<>(16, 0.75f, 4);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } finally {
+            byteBuf.release();
         }
         postDecode();
 
