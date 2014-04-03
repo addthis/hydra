@@ -53,6 +53,8 @@ import com.addthis.hydra.job.mq.StatusTaskPort;
 import com.addthis.hydra.job.mq.StatusTaskReplica;
 import com.addthis.hydra.job.mq.StatusTaskReplicate;
 import com.addthis.hydra.job.mq.StatusTaskRevert;
+import com.addthis.hydra.mq.MeshMessageConsumer;
+import com.addthis.hydra.mq.MeshMessageProducer;
 import com.addthis.hydra.mq.MessageConsumer;
 import com.addthis.hydra.mq.MessageListener;
 import com.addthis.hydra.mq.MessageProducer;
@@ -63,6 +65,9 @@ import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
 import com.addthis.maljson.JSONObject;
+
+import com.addthis.meshy.MeshyClient;
+import com.addthis.meshy.MeshyClientConnector;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.rabbitmq.client.AMQP;
@@ -84,6 +89,7 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.servlet.ServletHandler;
+import org.eclipse.jetty.util.BlockingArrayQueue;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
@@ -127,11 +133,14 @@ import java.util.concurrent.locks.ReentrantLock;
 public class Minion extends AbstractHandler implements MessageListener, Codec.Codable {
 
     private static Logger log = LoggerFactory.getLogger(Minion.class);
+    private static boolean meshQueue = Parameter.boolValue("queue.mesh", false);
+    private static final String meshHost = Parameter.value("mesh.host", "localhost");
+    private static final int meshPort = Parameter.intValue("mesh.port", 5000);
+    private static final int meshRetryTimeout = Parameter.intValue("mesh.retry.timeout", 5000);
     private static int webPort = Parameter.intValue("minion.web.port", 5051);
     private static int minJobPort = Parameter.intValue("minion.job.baseport", 0);
     private static int maxJobPort = Parameter.intValue("minion.job.maxport", 0);
     private static ReentrantLock capacityLock = new ReentrantLock();
-    private final java.util.Set<String> activeTaskKeys;
     private static String dataDir = System.getProperty("minion.data.dir", "minion");
     private static String group = System.getProperty("minion.group", "none");
     private static String localHost = System.getProperty("minion.localhost");
@@ -162,6 +171,9 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
     private static String echoWithDate_cmd = "echo `date '+%y/%m/%d %H:%M:%S'` ";
 
     public static final String MINION_ZK_PATH = "/minion/";
+    private static final String defaultMinionType = Parameter.value("minion.type", "default");
+
+    private final java.util.Set<String> activeTaskKeys;
     private final AtomicBoolean shutdown = new AtomicBoolean(false);
     private final ExecutorService messageTaskExecutorService = MoreExecutors.getExitingExecutorService(
             new ThreadPoolExecutor(4, 4, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
@@ -176,13 +188,10 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
     private Timer fileStatsTimer;
     private Counter sendStatusFailCount;
     private Counter sendStatusFailAfterRetriesCount;
-
     private final int replicateCommandDelaySeconds = Parameter.intValue("replicate.cmd.delay.seconds", 0);
     private final int backupCommandDelaySeconds = Parameter.intValue("backup.cmd.delay.seconds", 0);
-
     private boolean useMacFriendlyPSCommands = false;
-
-    private static final String defaultMinionType = "default";
+    private MeshyClientConnector mesh;
 
     // detect fl-cow in sys env and apple for copy command
     {
@@ -359,6 +368,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
     }
 
     QueueingConsumer batchJobConsumer;
+    private BlockingArrayQueue<HostMessage> queuedHostMessages;
     private MessageConsumer batchControlConsumer;
     private MessageProducer queryControlProducer;
     private MessageProducer zkBatchControlProducer;
@@ -370,22 +380,61 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
     private void connectToMQ() throws Exception {
         String[] routingKeys = new String[]{uuid, HostMessage.ALL_HOSTS};
         zkBatchControlProducer = new ZKMessageProducer(getZkClient());
-        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, Integer.valueOf(batchBrokerPort));
-        queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerHost, Integer.valueOf(batchBrokerPort));
+        if (meshQueue) {
+            log.info("Queueing via Mesh");
+            final AtomicBoolean up = new AtomicBoolean(false);
+            mesh = new MeshyClientConnector(meshHost, meshPort, 1000, meshRetryTimeout) {
+                @Override
+                public void linkUp(MeshyClient client) {
+                    log.info("connected to mesh on {}", client.toString());
+                    up.set(true);
+                    synchronized (this) { this.notify(); }
+                }
 
-        com.rabbitmq.client.ConnectionFactory factory = new com.rabbitmq.client.ConnectionFactory();
-        factory.setHost(batchBrokerHost);
-        factory.setPort(Integer.valueOf(batchBrokerPort));
-        com.rabbitmq.client.Connection connection = factory.newConnection();
-        channel = connection.createChannel();
-        channel.exchangeDeclare("CSBatchJob", "direct");
-        AMQP.Queue.DeclareOk result = channel.queueDeclare(uuid + ".batchJob", true, false, false, null);
-        String queueName = result.getQueue();
-        channel.queueBind(queueName, "CSBatchJob", uuid);
-        channel.queueBind(queueName, "CSBatchJob", HostMessage.ALL_HOSTS);
-        batchJobConsumer = new QueueingConsumer(channel);
-        channel.basicConsume(queueName, false, batchJobConsumer);
-        batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", uuid + ".batchControl", this, routingKeys);
+                @Override
+                public void linkDown(MeshyClient client) {
+                    log.info("disconnected from mesh on {}", client.toString());
+                }
+            };
+            while (!up.get()) {
+                synchronized (mesh) {
+                    mesh.wait(1000);
+                }
+            }
+            batchControlProducer = new MeshMessageProducer(mesh.getClient(), "CSBatchControl");
+            queryControlProducer = new MeshMessageProducer(mesh.getClient(), "CSBatchQuery");
+            queuedHostMessages = new BlockingArrayQueue<>();
+            MeshMessageConsumer jobConsumer = new MeshMessageConsumer(mesh.getClient(), "CSBatchJob", uuid);
+            jobConsumer.addRoutingKey(HostMessage.ALL_HOSTS);
+            jobConsumer.addMessageListener(new MessageListener() {
+                @Override
+                public void onMessage(Serializable message) {
+                    try {
+                        queuedHostMessages.put((HostMessage) message);
+                    } catch (InterruptedException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            });
+            batchControlConsumer = new MeshMessageConsumer(mesh.getClient(), "CSBatchControl", uuid).addRoutingKey(HostMessage.ALL_HOSTS);
+            batchControlConsumer.addMessageListener(this);
+        } else {
+            batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, Integer.valueOf(batchBrokerPort));
+            queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerHost, Integer.valueOf(batchBrokerPort));
+            com.rabbitmq.client.ConnectionFactory factory = new com.rabbitmq.client.ConnectionFactory();
+            factory.setHost(batchBrokerHost);
+            factory.setPort(Integer.valueOf(batchBrokerPort));
+            com.rabbitmq.client.Connection connection = factory.newConnection();
+            channel = connection.createChannel();
+            channel.exchangeDeclare("CSBatchJob", "direct");
+            AMQP.Queue.DeclareOk result = channel.queueDeclare(uuid + ".batchJob", true, false, false, null);
+            String queueName = result.getQueue();
+            channel.queueBind(queueName, "CSBatchJob", uuid);
+            channel.queueBind(queueName, "CSBatchJob", HostMessage.ALL_HOSTS);
+            batchJobConsumer = new QueueingConsumer(channel);
+            channel.basicConsume(queueName, false, batchJobConsumer);
+            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", uuid + ".batchControl", this, routingKeys);
+        }
     }
 
     /**
@@ -729,7 +778,8 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             minionStateLock.unlock();
         }
         status.setQueued(queued.toArray(new JobKey[queued.size()]));
-        status.setMeanActiveTasks(activeTaskHistogram.mean());
+        status.setMeanActiveTasks(activeTaskHistogram.mean() / (maxActiveTasks > 0 ? maxActiveTasks : 1));
+        status.setMaxTaskSlots(maxActiveTasks);
         status.setMinionTypes(minionTypes);
         status.setUpdated();
         return status;
@@ -914,6 +964,23 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
 
         public void run() {
             while (!done) {
+                if (meshQueue) {
+                    try {
+                        HostMessage hostMessage = queuedHostMessages.take();
+                        if (hostMessage.getMessageType() != CoreMessage.TYPE.CMD_TASK_KICK) {
+                            log.warn("[task.runner] unknown command type : " + hostMessage.getMessageType());
+                            continue;
+                        }
+                        CommandTaskKick kick = (CommandTaskKick) hostMessage;
+                        insertJobKickMessage(kick);
+                        kickNextJob();
+                    } catch (InterruptedException e) {
+                        // ignore
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    continue;
+                }
                 QueueingConsumer.Delivery delivery = null;
                 try {
                     delivery = batchJobConsumer.nextDelivery();
@@ -1923,7 +1990,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                       "until [ $try -ge $retries ]; do\n" +
                       "\tif [ \"$try\" -ge \"1\" ]; then echo starting retry $try; sleep $retryDelaySeconds; fi\n" +
                       "\ttry=$((try+1)); eval $cmd; exitCode=$?\n" +
-                      "\tif [ \"$exitCode\" == \"0\" ] || [ \"$exitCode\" == \"127\" ] || [ \"$exitCode\" == \"137\"]; then return $exitCode; fi\n" +
+                      "\tif [ \"$exitCode\" == \"0\" ] || [ \"$exitCode\" == \"127\" ] || [ \"$exitCode\" == \"137\" ]; then return $exitCode; fi\n" +
                       "done\n" +
                       "echo \"Command failed after $retries retries: $cmd\"; exit $exitCode\n" +
                       "}\n");
@@ -2491,8 +2558,8 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             int lines = kv.getIntValue("lines", 10);
             boolean out = kv.getValue("out", "1").equals("1");
             JobTask job = tasks.get(jobName);
-            File log = (out ? job.logOut : job.logErr);
             if (job != null) {
+                File log = (out ? job.logOut : job.logErr);
                 JSONObject logJson = job.readLogLines(log, offset, lines);
                 //for JSONP support
                 if (kv.hasKey("callback")) {

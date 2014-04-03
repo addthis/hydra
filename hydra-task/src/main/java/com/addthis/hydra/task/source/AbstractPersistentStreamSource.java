@@ -143,7 +143,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
 
     protected final LinkedList<DateTime> dates = new LinkedList<>();
     protected DateTimeFormatter formatter;
-    protected boolean moreData;
+    protected volatile boolean moreData;
     private File stateDir;
     protected File autoResumeFile;
     private final AtomicBoolean running = new AtomicBoolean(true);

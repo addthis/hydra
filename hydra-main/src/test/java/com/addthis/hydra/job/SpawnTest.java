@@ -13,9 +13,6 @@
  */
 package com.addthis.hydra.job;
 
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Map;
 
 import com.addthis.basis.test.SlowTest;
@@ -129,46 +126,6 @@ public class SpawnTest extends ZkStartUtil {
         params = JobExpand.macroFindParameters(jobConfig);
         output = JobExpand.macroTemplateParams(jobConfig, params.values());
         assertEquals("foo ", output);
-    }
-
-    @Test
-    public void queueTest() {
-        SpawnQueuesByPriority q = new SpawnQueuesByPriority();
-        JobKey key1 = new JobKey("job", 0);
-        q.addTaskToQueue(0, key1, false, false);
-        JobKey key2 = new JobKey("job", 1);
-        q.addTaskToQueue(0, key2, false, false);
-        JobKey headKey = new JobKey("job", 2);
-        q.addTaskToQueue(0, headKey, false, true);
-        JobKey highPriKey = new JobKey("job2", 10);
-        q.addTaskToQueue(1, highPriKey, false, false);
-        Iterator<JobKey> expected = Arrays.asList(highPriKey, headKey, key1, key2).iterator();
-        assertEquals("should get expected number of pri=1 tasks", 1, q.getTaskQueuedCount(1));
-        assertEquals("should get expected number of pri=0 tasks", 3, q.getTaskQueuedCount(0));
-        for (LinkedList<SpawnQueueItem> keyList : q.values()) {
-            for (SpawnQueueItem item : keyList) {
-                assertEquals("should get keys in expected order", item.getJobKey(), expected.next().getJobKey());
-            }
-        }
-        long maxTaskBytesToMigrate = SpawnQueuesByPriority.getTaskMigrationMaxBytes();
-        long limitGrowthInterval = SpawnQueuesByPriority.getTaskMigrationLimitGrowthInterval();
-        assertTrue("should allow small task to migrate immediately", q.checkSizeAgeForMigration(0, 0));
-        assertTrue("should not allow large task to migrate, even after waiting", !q.checkSizeAgeForMigration(2 * maxTaskBytesToMigrate, 2 * limitGrowthInterval));
-        assertTrue("should not allow medium task to migrate immediately", !q.checkSizeAgeForMigration(maxTaskBytesToMigrate / 2, 0));
-        assertTrue("should allow medium task after waiting", q.checkSizeAgeForMigration(maxTaskBytesToMigrate / 2, limitGrowthInterval));
-        for (String hostName : Arrays.asList("a", "b", "c", "d")) {
-            q.markHostAvailable(hostName);
-        }
-        q.markMigrationBetweenHosts("a", "b"); // Simulate a migration from host a to host b
-        JobTask task = new JobTask("a", 0, 0);
-        task.setByteCount(1);
-        assertTrue("should not allow migration from same host immediately", !q.shouldMigrateTaskToHost(task, "c"));
-        JobTask task2 = new JobTask("c", 0, 0);
-        task2.setByteCount(1);
-        assertTrue("should not allow migration to same host immediately", !q.shouldMigrateTaskToHost(task2, "b"));
-        JobTask task3 = new JobTask("d", 0, 0);
-        task3.setByteCount(1);
-        assertTrue("should allow migration between distinct hosts", q.shouldMigrateTaskToHost(task3, "c"));
     }
 
     private HostState createHostState(String hostUUID) throws Exception {

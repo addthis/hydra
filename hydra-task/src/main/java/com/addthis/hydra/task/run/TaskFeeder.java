@@ -20,6 +20,7 @@ import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -63,9 +64,8 @@ public final class TaskFeeder extends Thread {
     private static final DecimalFormat timeFormat = new DecimalFormat("#,###.00");
     private static final DecimalFormat countFormat = new DecimalFormat("#,###");
     private static final int QUEUE_DEPTH = Parameter.intValue("task.queue.depth", 100);
-    private static final int QUEUE_ABS_MAX = Parameter.intValue("task.queue.absmax", 2500);
+    private static final int stealThreshold = Parameter.intValue("task.queue.worksteal.threshold", 50);
     private static final boolean shouldSteal = Parameter.boolValue("task.worksteal", false);
-    private static final int stealPollMS = Parameter.intValue("task.worksteal.stealPollMS", 10);
     private static final boolean interruptOnExit = Parameter.boolValue("task.exit.interrupt", false);
 
     private boolean exiting = !Parameter.boolValue("task.feed", true);
@@ -76,23 +76,17 @@ public final class TaskFeeder extends Thread {
     private TaskDataSource source;
     private final TaskRunTarget task;
     private final int readers;
-    private final int minQueue;
-    private final int maxQueue;
 
     private final Thread threads[];
     private final BlockingQueue<Bundle> queues[];
     private volatile boolean queuesInit;
-    private final AtomicInteger queueItems = new AtomicInteger(0);
     private final AtomicBoolean errored = new AtomicBoolean(false);
     private final AtomicBoolean closed = new AtomicBoolean(false);
-    private final AtomicBoolean throttled = new AtomicBoolean(false);
     private final AtomicInteger processed = new AtomicInteger(0);
     private final AtomicLong totalReads = new AtomicLong(0);
     private final AtomicLong currentStreamReads = new AtomicLong(0);
     private final AtomicInteger threadsRunning = new AtomicInteger(0);
 
-    private final Gauge queueItemsGuage;
-    private final Meter throttleRateMeter;
     private final Meter stealAttemptMeter;
     private final Meter stealSuccessMeter;
     private final Histogram modHistrogram;
@@ -100,13 +94,6 @@ public final class TaskFeeder extends Thread {
     public TaskFeeder(TaskRunTarget task, int feeders) {
         super("SourceReader");
 
-        queueItemsGuage = Metrics.newGauge(getClass(), "queueItems", new Gauge<Integer>() {
-            @Override
-            public Integer value() {
-                return queueItems.get();
-            }
-        });
-        throttleRateMeter = Metrics.newMeter(getClass(), "throttleRate", "throttles", TimeUnit.SECONDS);
         stealAttemptMeter = Metrics.newMeter(getClass(), "stealAttemptRate", "steals", TimeUnit.SECONDS);
         stealSuccessMeter = Metrics.newMeter(getClass(), "stealSuccessRate", "steals", TimeUnit.SECONDS);
         modHistrogram = Metrics.newHistogram(getClass(), "mod");
@@ -114,19 +101,17 @@ public final class TaskFeeder extends Thread {
         this.source = task.getSource();
         this.task = task;
         this.readers = feeders;
-        this.maxQueue = Math.max(Math.min(readers * 2, QUEUE_ABS_MAX), 100);
-        this.minQueue = maxQueue / 2;
 
         log.info("starting " + feeders + " thread(s) for src=" + source);
 
         shardField = source.getShardField();
         threads = new Thread[feeders];
-        queues = new ArrayBlockingQueue[feeders];
+        queues = new LinkedBlockingQueue[feeders];
 
         threadsRunning.set(threads.length);
         for (int i = 0; i < threads.length; i++) {
             final int processorID = i;
-            queues[i] = new ArrayBlockingQueue<Bundle>(QUEUE_DEPTH);
+            queues[i] = new LinkedBlockingQueue<>(QUEUE_DEPTH);
             threads[i] = new Thread(this, "MapProcessor #" + i) {
                 @Override
                 public void run() {
@@ -169,16 +154,6 @@ public final class TaskFeeder extends Thread {
     private void pushQueue(int queueNum, Bundle item) throws InterruptedException {
         BlockingQueue<Bundle> queue = queues[queueNum];
         queue.put(item);
-        if (queueItems.incrementAndGet() >= maxQueue) {
-            while (queueItems.get() >= maxQueue) {
-                throttled.set(true);
-                throttleRateMeter.mark();
-                synchronized (queueItems) {
-                    queueItems.wait(1000);
-                }
-                throttled.set(false);
-            }
-        }
     }
 
     private Bundle popQueue(int queueNum) throws InterruptedException {
@@ -198,11 +173,6 @@ public final class TaskFeeder extends Thread {
             item = queue.take();
         }
 
-        if (queueItems.decrementAndGet() < minQueue && throttled.get()) {
-            synchronized (queueItems) {
-                queueItems.notify();
-            }
-        }
         return item == TERM_BUNDLE ? null : item;
     }
 
@@ -211,18 +181,15 @@ public final class TaskFeeder extends Thread {
             return null;
         }
         int stealQ = 0;
-        int maxSize = -1;
+        Bundle item = null;
         for (int i = 0; i < queues.length; i++) {
-            if (queues[i].size() == QUEUE_DEPTH) {
-                stealQ = i;
-                break;
-            }
-            if (maxSize < queues[i].size()) {
-                maxSize = queues[i].size();
-                stealQ = i;
+            if (queues[i].size() >= stealThreshold) {
+                item = queues[stealQ].poll();
+                if (item != null) {
+                    break;
+                }
             }
         }
-        Bundle item = queues[stealQ].poll(stealPollMS, TimeUnit.MILLISECONDS);
         if (item == TERM_BUNDLE) {
             queues[stealQ].put(item);
             return null;
@@ -405,7 +372,7 @@ public final class TaskFeeder extends Thread {
 
             @Override
             public void run() {
-                LinkedList<long[]> oomer = new LinkedList<long[]>();
+                LinkedList<long[]> oomer = new LinkedList<>();
                 try {
                     log.warn("[oomer] starting in " + oomAfter + " ms");
                     Thread.sleep(oomAfter);

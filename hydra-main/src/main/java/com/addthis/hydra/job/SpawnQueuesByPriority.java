@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.job;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -41,11 +42,13 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
 
     private static Logger log = LoggerFactory.getLogger(SpawnQueuesByPriority.class);
     private final Lock queueLock = new ReentrantLock();
-    private final HashMap<String, Long> hostKickTimes = new HashMap<>();
+
+    /* Internal map used to record outgoing task kicks that will not immediately be visible in the HostState */
     private final HashMap<String, Integer> hostAvailSlots = new HashMap<>();
-    private static final int SPAWN_QUEUE_KICK_DELAY = Parameter.intValue("spawn.queue.kick.delay", 20_000);
-    private static final int SPAWN_QUEUE_SWAP_DELAY = Parameter.intValue("spawn.queue.swap.delay", 20_000);
-    private static final int SPAWN_QUEUE_AVAIL_REFRESH = Parameter.intValue("spawn.queue.avail.refresh", 60_000);
+
+    private static final int SPAWN_QUEUE_AVAIL_REFRESH = Parameter.intValue("spawn.queue.avail.refresh", 60_000); // Periodically refresh hostAvailSlots to the actual availableSlots count
+    private static final int SPAWN_QUEUE_NEW_TASK_LAST_SLOT_DELAY = Parameter.intValue("spawn.queue.new.task.last.slot.delay", 90_000); // New tasks can't take the last slot of a host unless they wait this long
+
     private long lastAvailSlotsUpdate = 0;
 
     private static final boolean ENABLE_TASK_MIGRATION = Parameter.boolValue("task.migration.enable", true); // Whether tasks can migrate at all
@@ -55,6 +58,21 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     private static final long TASK_MIGRATION_INTERVAL_PER_HOST = Parameter.longValue("task.migration.interval", 240_000); // Only migrate a task to a particular host once per interval
     private final Cache<String, Boolean> migrateHosts; // Use cache ttl to mark hosts that have recently performed or received a migration
     private final AtomicBoolean stoppedJob = new AtomicBoolean(false); // When tasks are stopped, track this behavior so that the queue can be modified as soon as possible
+
+    /* This comparator should only be used within a block that is synchronized on hostAvailSlots.
+    It does not internally synchronize to save a bunch of extra lock operations.*/
+    private final Comparator<HostState> hostStateComparator = new Comparator<HostState>() {
+        @Override
+        public int compare(HostState o1, HostState o2) {
+            int hostAvailSlots1 = hostAvailSlots.containsKey(o1.getHostUuid()) ? hostAvailSlots.get(o1.getHostUuid()) : 0;
+            int hostAvailSlots2 = hostAvailSlots.containsKey(o2.getHostUuid()) ? hostAvailSlots.get(o2.getHostUuid()) : 0;
+            if (hostAvailSlots1 != hostAvailSlots2) {
+                return Integer.compare(-hostAvailSlots1, -hostAvailSlots2); // Return hosts with large number of slots first
+            } else {
+                return Double.compare(o1.getMeanActiveTasks(), o2.getMeanActiveTasks()); // Return hosts with small meanActiveTask value first
+            }
+        }
+    };
 
     public SpawnQueuesByPriority() {
         super(new Comparator<Integer>() {
@@ -148,7 +166,28 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     }
 
     /**
-     * Update the available host slots from the list, but only actually update on a periodic timer
+     * Out of a list of possible hosts to run a task, find the best one.
+     * @param inputHosts The legal hosts for a task
+     * @param requireAvailableSlot Whether to require at least one available slot
+     * @return One of the hosts, if one with free slots is found; null otherwise
+     */
+    public HostState findBestHostToRunTask(List<HostState> inputHosts, boolean requireAvailableSlot) {
+        if (inputHosts == null || inputHosts.isEmpty()) {
+            return null;
+        }
+        synchronized (hostAvailSlots) {
+            HostState bestHost = Collections.min(inputHosts, hostStateComparator);
+            if (bestHost != null) {
+                if (!requireAvailableSlot || hostAvailSlots.containsKey(bestHost.getHostUuid()) && hostAvailSlots.get(bestHost.getHostUuid()) > 0) {
+                    return bestHost;
+                }
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Update the available slots for each host if it has been sufficiently long since the last update.
      *
      * @param hosts The hosts to input
      */
@@ -161,18 +200,13 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
             for (HostState host : hosts) {
                 String hostID = host.getHostUuid();
                 if (hostID != null) {
-                    synchronized (hostKickTimes) {
-                        if (!hostKickTimes.containsKey(hostID) || hostKickTimes.get(hostID) < JitterClock.globalTime()) {
-                            hostAvailSlots.put(hostID, host.getAvailableTaskSlots());
-                        }
-                    }
+                    hostAvailSlots.put(hostID, host.getAvailableTaskSlots());
                 }
             }
-            lastAvailSlotsUpdate = JitterClock.globalTime();
-            if (log.isTraceEnabled()) {
-                log.trace("[SpawnQueuesByPriority] Host Avail Slots: " + hostAvailSlots);
-                log.trace("[SpawnQueuesByPriority] Host Kick Times: " + hostKickTimes);
-            }
+        }
+        lastAvailSlotsUpdate = JitterClock.globalTime();
+        if (log.isTraceEnabled()) {
+            log.trace("[SpawnQueuesByPriority] Host Avail Slots: " + hostAvailSlots);
         }
     }
 
@@ -189,23 +223,14 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     }
 
     /**
-     * Inform the queue that a task is being sent to a host
+     * Inform the queue that a task command is being sent to a host
+     *  @param hostID  The host UUID to update
      *
-     * @param hostID  The host UUID to update
-     * @param wasSwap Whether the sent task had to be swapped first. Swap tasks are given a longer time to appear.
      */
-    public void markHostKick(String hostID, boolean wasSwap) {
+    public void markHostTaskActive(String hostID) {
         synchronized (hostAvailSlots) {
             int curr = hostAvailSlots.containsKey(hostID) ? hostAvailSlots.get(hostID) : 0;
             hostAvailSlots.put(hostID, Math.max(curr - 1, 0));
-        }
-        synchronized (hostKickTimes) {
-            long nextKickTime = JitterClock.globalTime() + (wasSwap ? SPAWN_QUEUE_SWAP_DELAY : SPAWN_QUEUE_KICK_DELAY);
-            if (hostKickTimes.containsKey(hostID)) {
-                hostKickTimes.put(hostID, Math.max(hostKickTimes.get(hostID), nextKickTime));
-            } else {
-                hostKickTimes.put(hostID, nextKickTime);
-            }
         }
     }
 
@@ -272,5 +297,19 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
 
     public void setStoppedJob(boolean stopped) {
         stoppedJob.set(stopped);
+    }
+
+    public boolean shouldKickNewTaskOnHost(long timeOnQueue, HostState host) {
+        synchronized (hostAvailSlots) {
+            if (hostAvailSlots.containsKey(host.getHostUuid()) && hostAvailSlots.get(host.getHostUuid()) <= 1) {
+                if (host.getMaxTaskSlots() == 1) {
+                    // If a host has only one slot to begin with, allow tasks to kick there.
+                    return true;
+                }
+                // Otherwise, don't let new tasks take the last slot for a set period
+                return timeOnQueue > SPAWN_QUEUE_NEW_TASK_LAST_SLOT_DELAY;
+            }
+            return true;
+        }
     }
 }
