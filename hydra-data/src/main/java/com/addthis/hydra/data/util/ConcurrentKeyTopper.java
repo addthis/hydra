@@ -26,7 +26,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import com.addthis.basis.util.MemoryCounter;
 
 import com.addthis.codec.Codec;
-import com.addthis.hydra.store.util.Varint;
+import com.addthis.basis.util.Varint;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;

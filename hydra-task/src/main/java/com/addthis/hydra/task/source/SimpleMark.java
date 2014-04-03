@@ -14,7 +14,7 @@
 package com.addthis.hydra.task.source;
 
 import com.addthis.codec.Codec;
-import com.addthis.hydra.store.util.Varint;
+import com.addthis.basis.util.Varint;
 import com.addthis.hydra.task.stream.StreamFile;
 
 import com.google.common.base.Objects;

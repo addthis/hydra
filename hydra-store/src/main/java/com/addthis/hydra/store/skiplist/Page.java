@@ -19,7 +19,7 @@ import com.addthis.basis.util.MemoryCounter;
 import com.addthis.basis.util.Parameter;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.store.kv.KeyCoder;
-import com.addthis.hydra.store.util.Varint;
+import com.addthis.basis.util.Varint;
 import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.DeflaterOutputStream;
 import com.jcraft.jzlib.InflaterInputStream;

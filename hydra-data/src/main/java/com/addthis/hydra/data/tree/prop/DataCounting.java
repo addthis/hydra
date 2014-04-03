@@ -36,7 +36,7 @@ import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 
-import com.addthis.hydra.store.util.Varint;
+import com.addthis.basis.util.Varint;
 import com.clearspring.analytics.stream.cardinality.AdaptiveCounting;
 import com.clearspring.analytics.stream.cardinality.CardinalityMergeException;
 import com.clearspring.analytics.stream.cardinality.CountThenEstimate;

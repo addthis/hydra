@@ -1,8 +1,8 @@
 package com.addthis.hydra.data.tree;
 
+import com.addthis.basis.util.Varint;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecBin2;
-import com.addthis.hydra.store.util.Varint;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;

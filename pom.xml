@@ -56,7 +56,7 @@
 
     <!-- hydra addthis projects dependency versions -->
     <hydra.dep.bark.version>2.1.0</hydra.dep.bark.version>
-    <hydra.dep.basis.version>2.2.0</hydra.dep.basis.version>
+    <hydra.dep.basis.version>2.2.2-SNAPSHOT</hydra.dep.basis.version>
     <hydra.dep.bundle.version>2.2.4</hydra.dep.bundle.version>
     <hydra.dep.codec.version>2.0.3</hydra.dep.codec.version>
     <hydra.dep.meshy.version>2.1.2</hydra.dep.meshy.version>

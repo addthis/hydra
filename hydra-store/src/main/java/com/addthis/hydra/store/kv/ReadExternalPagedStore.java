@@ -36,7 +36,7 @@ import com.addthis.hydra.store.db.ReadDBKeyCoder;
 import com.addthis.hydra.store.kv.ExternalPagedStore.ByteStore;
 import com.addthis.hydra.store.kv.metrics.ExternalPagedStoreMetrics;
 
-import com.addthis.hydra.store.util.Varint;
+import com.addthis.basis.util.Varint;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
