@@ -232,7 +232,7 @@ public class HostFailWorker {
             if (fileSystemDead) {
                 // File system is dead. Relocate all tasks ASAP.
                 markHostDead(failedHostUuid);
-                spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.listHostStatus(host.getMinionTypes()), failedHostUuid);
+                spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.listHostStatus(null), failedHostUuid);
             } else {
                 int tasksToMove = maxMovingTasks - countRebalancingTasks();
                 if (tasksToMove <= 0) {

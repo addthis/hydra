@@ -1028,8 +1028,7 @@ public class Spawn implements Codec.Codable {
             return null;
         }
         List<JobTaskMoveAssignment> assignments = balancer.getAssignmentsForJobReallocation(job, tasksToMove, getLiveHostsByReadOnlyStatus(job.getMinionType(), readonly));
-        executeReallocationAssignments(assignments, false);
-        return assignments;
+        return executeReallocationAssignments(assignments, false);
     }
 
     /**
@@ -1171,9 +1170,8 @@ public class Spawn implements Codec.Codable {
         HostState host = monitored.get(hostUUID);
         boolean readOnly = host.isReadOnly();
         log.warn("[job.reallocate] starting reallocation for host: " + hostUUID + " host is " + (readOnly ? "" : "not") + " a read only host");
-        List<JobTaskMoveAssignment> assignments = balancer.getAssignmentsToBalanceHost(host, getLiveHostsByReadOnlyStatus(host.getMinionTypes(), host.isReadOnly()));
-        executeReallocationAssignments(assignments, false);
-        return new RebalanceOutcome(hostUUID, null, null, Strings.join(assignments.toArray(), "\n"));
+        List<JobTaskMoveAssignment> assignments = balancer.getAssignmentsToBalanceHost(host, getLiveHostsByReadOnlyStatus(null, host.isReadOnly()));
+        return new RebalanceOutcome(hostUUID, null, null, Strings.join(executeReallocationAssignments(assignments, false).toArray(), "\n"));
     }
 
     /**
@@ -1183,10 +1181,10 @@ public class Spawn implements Codec.Codable {
      * @param limitToAvailableSlots Whether movements should honor their host's availableTaskSlots count
      * @return The number of tasks that were actually moved
      */
-    public int executeReallocationAssignments(List<JobTaskMoveAssignment> assignments, boolean limitToAvailableSlots) {
-        int numExecuted = 0;
+    public List<JobTaskMoveAssignment> executeReallocationAssignments(List<JobTaskMoveAssignment> assignments, boolean limitToAvailableSlots) {
+        List<JobTaskMoveAssignment> executedAssignments = new ArrayList<>();
         if (assignments == null) {
-            return numExecuted;
+            return executedAssignments;
         }
         HashSet<String> jobsNeedingUpdate = new HashSet<>();
         HashSet<String> hostsAlreadyMovingTasks = new HashSet<>();
@@ -1195,6 +1193,7 @@ public class Spawn implements Codec.Codable {
                 log.warn("[job.reallocate] deleting " + assignment.getJobKey() + " off " + assignment.getSourceUUID());
                 deleteTask(assignment.getJobKey().getJobUuid(), assignment.getSourceUUID(), assignment.getJobKey().getNodeNumber(), false);
                 deleteTask(assignment.getJobKey().getJobUuid(), assignment.getSourceUUID(), assignment.getJobKey().getNodeNumber(), true);
+                executedAssignments.add(assignment);
             } else {
                 String sourceHostID = assignment.getSourceUUID();
                 String targetHostID = assignment.getTargetUUID();
@@ -1217,6 +1216,7 @@ public class Spawn implements Codec.Codable {
                     replicasToModify.add(new JobTaskReplica(targetHostID, task.getJobUUID(), task.getRunCount(), 0l));
                     swapTask(task, sourceHostID, false);
                     jobsNeedingUpdate.add(task.getJobUUID());
+                    executedAssignments.addAll(assignments);
                 } else {
                     HostState liveHost = getHostState(task.getHostUUID());
                     if (limitToAvailableSlots && liveHost != null && (liveHost.getAvailableTaskSlots() == 0 || hostsAlreadyMovingTasks.contains(task.getHostUUID()))) {
@@ -1227,7 +1227,7 @@ public class Spawn implements Codec.Codable {
                     log.warn("[job.reallocate] replicating task " + key + " onto " + targetHostID + " as " + (assignment.isFromReplica() ? "replica" : "live"));
                     TaskMover tm = new TaskMover(this, key, targetHostID, sourceHostID, false);
                     tm.execute(false);
-                    numExecuted++;
+                    executedAssignments.add(assignment);
                 }
             }
         }
@@ -1238,7 +1238,7 @@ public class Spawn implements Codec.Codable {
                 log.warn("WARNING: failed to update job " + jobUUID + ": " + ex, ex);
             }
         }
-        return numExecuted;
+        return executedAssignments;
     }
 
     /**

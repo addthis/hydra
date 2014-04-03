@@ -171,7 +171,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
     private static String echoWithDate_cmd = "echo `date '+%y/%m/%d %H:%M:%S'` ";
 
     public static final String MINION_ZK_PATH = "/minion/";
-    private static final String defaultMinionType = "default";
+    private static final String defaultMinionType = Parameter.value("minion.type", "default");
 
     private final java.util.Set<String> activeTaskKeys;
     private final AtomicBoolean shutdown = new AtomicBoolean(false);
