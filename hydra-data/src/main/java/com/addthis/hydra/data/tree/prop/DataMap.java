@@ -94,15 +94,23 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
         }
     }
 
+    /**
+     * The temporary variables are used because it is possible
+     * for concurrent serialization threads to be encoding the object.
+     * The tree node that contains this data attachment is protected
+     * by a reader lock for the encoding process.
+     */
     @Override
     public void preEncode() {
-        keys = new String[map.size()];
-        vals = new String[map.size()];
+        String[] newKeys = new String[map.size()];
+        String[] newVals = new String[map.size()];
         int pos = 0;
         for (Entry<String, ValueObject> next : map) {
-            keys[pos] = next.getKey();
-            vals[pos++] = next.getValue().toString();
+            newKeys[pos] = next.getKey();
+            newVals[pos++] = next.getValue().toString();
         }
+        keys = newKeys;
+        vals = newVals;
     }
 
     @Codec.Set(codable = true, required = true)
