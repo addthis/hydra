@@ -218,7 +218,6 @@ public class SpawnManager {
                     JobMacro macro = spawn.getMacro(key);
                     list.put(key, macro.toJSON());
                 }
-//                link.setResponseContentType("application/json; charset=utf-8");
                 link.sendJSON(200, "OK", list);
             }
         });
@@ -228,7 +227,6 @@ public class SpawnManager {
                 String label = link.getRequestValues().getValue("label", "");
                 JobMacro macro = spawn.getMacro(label);
                 if (macro != null) {
-//                    link.setResponseContentType("application/json; charset=utf-8");
                     link.sendJSON(200, "OK", macro.toJSON());
                 } else {
                     link.sendJSON(400, "OK", json("error","no such macro"));
@@ -270,7 +268,6 @@ public class SpawnManager {
                 for (String key : spawn.listCommands()) {
                     list.put(key, spawn.getCommand(key).toJSON());
                 }
-//                link.setResponseContentType("application/json; charset=utf-8");
                 link.sendJSON(200, "OK", list);
             }
         });
@@ -320,7 +317,6 @@ public class SpawnManager {
                         list.put(spawn.getHostStateUpdateEvent(host));
                     }
                 }
-//                link.setResponseContentType("application/json; charset=utf-8");
                 link.sendJSON(200, "OK", list);
             }
         });
@@ -335,7 +331,6 @@ public class SpawnManager {
                         list.put(host);
                     }
                 }
-//                link.setResponseContentType("application/json; charset=utf-8");
                 link.sendJSON(200, "OK", list);
             }
         });
@@ -367,7 +362,6 @@ public class SpawnManager {
             public void httpService(HTTPLink link) throws Exception {
                 String uuids = link.getRequestValues().getValue("uuids");
                 boolean deadFs = link.getRequestValues().getIntValue("deadFs", 1) == 1;
-//                link.setResponseContentType("application/json; charset=utf-8");
                 link.sendJSON(200, "OK", spawn.getHostFailWorker().getInfoForHostFailure(uuids, deadFs));
             }
         });
@@ -419,7 +413,6 @@ public class SpawnManager {
                     link.sendShortReply(404, "Expansion Error", "{'error':'unable to expand job, job id must be non null and not empty'}");
                 } else {
                     String expandedJobConfig = spawn.expandJob(id);
-//                    link.setResponseContentType("application/octet-stream");
                     link.sendShortReply(200, "expanded_job", "attachment; filename=expanded_job.json", expandedJobConfig);
                 }
             }
@@ -432,7 +425,6 @@ public class SpawnManager {
                 String id = kv.getValue("id", "");
                 emitLogLineForAction(kv, "job synchronize on " + id);
                 if (spawn.synchronizeJobState(id)) {
-//                    link.setResponseContentType("application/json; charset=utf-8");
                     link.sendJSON(200, "OK", json().put("id",id).put("action","synchronized"));
                 } else {
                     log.warn("[job.synchronize] " + id + " unable to synchronize job");
