@@ -278,7 +278,7 @@ public class Spawn implements Codec.Codable {
         if (useZk) {
             log.info("[init] starting zkclient, config manager, and listening for minions");
             this.zkClient = zkClient;
-            this.spawnDataStore = DataStoreUtil.makeSpawnDataStore(zkClient);
+            this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
             this.jobConfigManager = new JobConfigManager(this.spawnDataStore);
             this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
             this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
@@ -297,7 +297,7 @@ public class Spawn implements Codec.Codable {
                                     SpawnFormattedLogger.createFileBasedLogger(new File(SPAWN_STRUCTURED_LOG_DIR)) :
                                     SpawnFormattedLogger.createNullLogger();
         this.zkClient = ZkUtil.makeStandardClient();
-        this.spawnDataStore = DataStoreUtil.makeSpawnDataStore(zkClient);
+        this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
         File statefile = new File(dataDir, stateFilePath);
         if (statefile.exists() && statefile.isFile()) {
             codec.decode(this, Files.read(statefile));

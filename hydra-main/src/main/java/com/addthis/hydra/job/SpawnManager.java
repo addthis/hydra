@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import com.addthis.bark.StringSerializer;
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.net.HttpUtil;
@@ -35,6 +34,7 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
+import com.addthis.bark.StringSerializer;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.Spawn.ClientEvent;
 import com.addthis.hydra.job.Spawn.ClientEventListener;
@@ -42,6 +42,7 @@ import com.addthis.hydra.job.Spawn.Settings;
 import com.addthis.hydra.job.SpawnHttp.HTTPLink;
 import com.addthis.hydra.job.SpawnHttp.HTTPService;
 import com.addthis.hydra.job.mq.HostState;
+import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.service.file.FileReference;
@@ -51,7 +52,6 @@ import com.google.common.collect.Lists;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class SpawnManager {
 
@@ -1021,6 +1021,28 @@ public class SpawnManager {
                     link.sendJSON(200, "OK", json("taskSize",Long.toString(spawn.getTaskTrueSize(job, node))));
                 } catch (Exception e) {
                     link.sendJSON(500, "Error", json("error",e.getMessage()));
+                }
+            }
+        });
+        server.mapService("/datastore.cutover", new HTTPService() {
+            @Override
+            public void httpService(HTTPLink link) throws Exception {
+                try {
+                    if (!spawn.getSettings().getQuiesced()) {
+                        link.sendShortReply(500, "Server Error", new JSONObject().put("error", "Spawn is not quiesced").toString());
+                    }
+                    KVPairs kv = link.getRequestValues();
+                    DataStoreUtil.DataStoreType srcType = DataStoreUtil.DataStoreType.valueOf(kv.getValue("src"));
+                    DataStoreUtil.DataStoreType tarType = DataStoreUtil.DataStoreType.valueOf(kv.getValue("tar"));
+                    boolean checkAllWrites = kv.getIntValue("checkAll", 1) == 1;
+                    if (srcType != null || tarType != null) {
+                        DataStoreUtil.cutoverBetweenDataStore(DataStoreUtil.makeSpawnDataStore(srcType), DataStoreUtil.makeSpawnDataStore(tarType), checkAllWrites);
+                        link.sendJSON(200, "OK", json("success", "transfer complete"));
+                    } else {
+                        link.sendJSON(500, "Error", json("error", "Please specify a source and target datastore"));
+                    }
+                } catch (Exception e) {
+                    link.sendShortReply(500, "Server Error", new JSONObject().put("error", e.getMessage()).toString());
                 }
             }
         });
