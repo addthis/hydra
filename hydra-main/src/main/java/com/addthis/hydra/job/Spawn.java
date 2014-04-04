@@ -239,8 +239,7 @@ public class Spawn implements Codec.Codable {
                 }
             }
             int up = minionMembers == null ? 0 : minionMembers.getMemberSetSize();
-            int dead = deadMinionMembers == null ? 0 : deadMinionMembers.getMemberSetSize();
-            return total - up - dead;
+            return total - up;
         }
     });
 
