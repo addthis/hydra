@@ -368,6 +368,10 @@ public class SpawnBalancer implements Codec.Codable {
                 JobTaskItem nextTaskItem = itemIterator.next();
                 long trueSizeBytes = taskSizer.estimateTrueSize(nextTaskItem.getTask());
                 JobKey jobKey = nextTaskItem.getTask().getJobKey();
+                Job job = spawn.getJob(jobKey);
+                if (job == null || !pullHostState.getMinionTypes().contains(job.getMinionType())) {
+                    continue;
+                }
                 // Reject the move if the target host is heavily loaded, already has a copy of the task, or the task is too large
                 if (isExtremeHost(pullHost, true, true) || pullHostState.hasLive(jobKey) || (maxBytesToMove > 0 && trueSizeBytes > maxBytesToMove)) {
                     if (log.isDebugEnabled()) {
@@ -397,20 +401,27 @@ public class SpawnBalancer implements Codec.Codable {
             return rv;
         }
         if (isExtremeHost(pullHost, false, true)) {
-            numToMove = Math.max(1, numToMove /= 2); // Move fewer tasks onto a host if it's already doing a lot of work
+            numToMove = Math.max(1, numToMove / 2); // Move fewer tasks onto a host if it's already doing a lot of work
+        }
+        HostState pullHostState = spawn.getHostState(pullHost);
+        if (pullHostState == null) {
+            return rv;
         }
         while (otherHosts.hasNext() && rv.size() < numToMove && tasksByHost.get(pullHost).size() < maxPerHost) {
             String pushHost = otherHosts.next();
             if (pushHost == null || pushHost.equals(pullHost)) {
                 continue;
             }
-            HostState pullHostState = spawn.getHostState(pullHost);
             List<JobTaskItem> pushHostItems = new ArrayList<>(tasksByHost.get(pushHost));
             if (pushHostItems.size() < maxPerHost) {
                 break;
             }
             for (JobTaskItem item : pushHostItems) {
                 JobKey jobKey = item.getTask().getJobKey();
+                Job job = spawn.getJob(jobKey);
+                if (job == null || !pullHostState.getMinionTypes().contains(job.getMinionType())) {
+                    continue;
+                }
                 long trueSizeBytes = taskSizer.estimateTrueSize(item.getTask());
                 if (pullHostState.hasLive(item.getTask().getJobKey()) || (maxBytesToMove > 0 && trueSizeBytes > maxBytesToMove)) {
                     continue;
@@ -831,7 +842,7 @@ public class SpawnBalancer implements Codec.Codable {
             }
             HostState newHost = spawn.getHostState(newHostID);
             JobKey jobKey = assignment.getJobKey();
-            if (newHost.hasLive(jobKey) || !canReceiveNewTasks(newHost, assignment.isFromReplica())) {
+            if (newHost == null || newHost.hasLive(jobKey) || !canReceiveNewTasks(newHost, assignment.isFromReplica())) {
                 log.warn("[spawn.balancer] decided not to move task onto " + newHostID + " because it cannot receive the new task");
                 continue;
             }
@@ -1285,12 +1296,7 @@ public class SpawnBalancer implements Codec.Codable {
         @Override
         public void run() {
             if (JitterClock.globalTime() - lastAggregateStatUpdateTime > AGGREGATE_STAT_UPDATE_INTERVAL) {
-                for (String minionType : spawn.listMinionTypes()) {
-                    /* Score the minions within a given type only against minions at the same type.
-                    Since disk space can vary wildly between different minion types (e.g. ssd vs. non-ssd),
-                    it doesn't make sense to compare different minion types. */
-                    updateAggregateStatistics(spawn.listHostStatus(minionType));
-                }
+                updateAggregateStatistics(spawn.listHostStatus(null));
             }
         }
     }

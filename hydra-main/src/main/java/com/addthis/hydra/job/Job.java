@@ -699,7 +699,7 @@ public final class Job implements IJob, Codable {
             }
             if (t.getState() == JobTaskState.REBALANCE) {
                 reb = true;
-            } else if (t.isRunning() && this.state != JobState.REBALANCE.getValue()) {
+            } else if (t.isRunning()) {
                 run = true;
             } else if (t.getState() == JobTaskState.ALLOCATED || t.getState() == JobTaskState.QUEUED) {
                 sched = true;

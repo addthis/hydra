@@ -18,31 +18,31 @@
     <tr class="row">
         <td width="30%">Maximum Run Time</td>
         <td width="70%">
-            <input name="maxRunTime" class="form-control trackable" style="margin:0px;" type="number" value="<%=job.maxRunTime%>"></input>
+            <input name="maxRunTime" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.maxRunTime%>"></input>
         </td>
     </tr>
     <tr class="row">
         <td width="30%">Run Interval</td>
         <td width="70%">
-            <input name="rekickTimeout" class="form-control trackable" style="margin:0px;" type="number" value="<%=job.rekickTimeout%>"></input>
+            <input name="rekickTimeout" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.rekickTimeout%>"></input>
         </td>
     </tr>
     <tr class="row">
         <td width="30%">Job Priority</td>
         <td width="70%">
-            <input name="priority" class="form-control trackable" style="margin:0px;" type="number" value="<%=job.priority%>"></input>
+            <input name="priority" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.priority%>"></input>
         </td>
     </tr>
     <tr class="row">
         <td width="30%">Minion Type</td>
         <td width="70%">
-            <input name="minionType" type='text' class="form-control trackable" style="margin:0px;" type="text" value="<%=job.minionType%>" <%=(_.isUndefined(job.id)? '' : 'disabled')%> ></input>
+            <input name="minionType" type='text' class="form-control trackable" style="margin:0px;" type="text" value="<%-job.minionType%>" <%-(_.isUndefined(job.id)? '' : 'disabled')%> ></input>
         </td>
     </tr>
     <tr class="row">
         <td width="30%">Max Simultaneous Running Tasks</td>
         <td width="70%">
-            <input name="maxSimulRunning" class="form-control trackable" style="margin:0px;" type="number" value="<%=job.maxSimulRunning%>"></input>
+            <input name="maxSimulRunning" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.maxSimulRunning%>"></input>
         </td>
     </tr>
     <tr class="row">
@@ -51,31 +51,31 @@
     <tr class="row">
         <td width="30%">Hourly Backups</td>
         <td width="70%">
-            <input name="hourlyBackups" class="form-control trackable" style="margin:0px;" type="number" value="<%=job.hourlyBackups%>"></input>
+            <input name="hourlyBackups" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.hourlyBackups%>"></input>
         </td>
     </tr>
     <tr class="row">
         <td width="30%">Daily Backups</td>
         <td width="70%">
-            <input name="dailyBackups" class="form-control trackable" style="margin:0px;" type="number" value="<%=job.dailyBackups%>"></input>
+            <input name="dailyBackups" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.dailyBackups%>"></input>
         </td>
     </tr>
     <tr class="row">
         <td width="30%">Weekly Backups</td>
         <td width="70%">
-            <input name="weeklyBackups" class="form-control trackable" style="margin:0px;" type="number" value="<%=job.weeklyBackups%>"></input>
+            <input name="weeklyBackups" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.weeklyBackups%>"></input>
         </td>
     </tr>
     <tr class="row">
         <td width="30%">Monthly Backups</td>
         <td width="70%">
-            <input name="monthlyBackups" class="form-control trackable" style="margin:0px;" type="number" value="<%=job.monthlyBackups%>"></input>
+            <input name="monthlyBackups" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.monthlyBackups%>"></input>
         </td>
     </tr>
     <tr class="row">
         <td width="30%">Retries</td>
         <td width="70%">
-            <input name="retries" class="form-control trackable" style="margin:0px;" type="number" value="<%=job.retries%>"></input>
+            <input name="retries" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.retries%>"></input>
         </td>
     </tr>
     <tr class="row">
@@ -84,22 +84,22 @@
     <tr class="row">
         <td width="30%">Number of Replicas</td>
         <td width="70%">
-            <input name="replicas" class="form-control trackable" style="margin:0px;" type="number" value="<%=job.replicas%>"></input>
+            <input name="replicas" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.replicas%>"></input>
         </td>
     </tr>
     <tr class="row">
         <td width="30%">Read Only Replicas</td>
         <td width="70%">
-            <input name="readOnlyReplicas" class="form-control trackable" style="margin:0px;" type="number" value="<%=job.readOnlyReplicas%>"></input>
+            <input name="readOnlyReplicas" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.readOnlyReplicas%>"></input>
         </td>
     </tr>
     <tr class="row">
         <td width="30%">Do not delete</td>
-        <td width="70%"><input name="dontDeleteMe" class="trackable" type="checkbox" <%=(job.dontDeleteMe?"checked='true'":"")%>></td>
+        <td width="70%"><input name="dontDeleteMe" class="trackable" type="checkbox" <%-(job.dontDeleteMe?"checked='true'":"")%>></td>
     </tr>
     <tr class="row">
         <td width="30%">Do not automatically balance data</td>
-        <td width="70%"><input name="dontAutoBalanceMe" class="trackable" type="checkbox" <%=(job.dontAutoBalanceMe?"checked='true'":"")%>></td>
+        <td width="70%"><input name="dontAutoBalanceMe" class="trackable" type="checkbox" <%-(job.dontAutoBalanceMe?"checked='true'":"")%>></td>
     </tr>
     <tr class="row">
         <th colspan="2">Query Settings</th>
@@ -107,19 +107,19 @@
     <tr class="row">
         <td width="30%">Query Trace Level</td>
         <td width="70%">
-            <input name="qc_queryTraceLevel" class="form-control trackable" style="margin:0px;" type="number" value="<%=job.qc_queryTraceLevel%>"></input>
+            <input name="qc_queryTraceLevel" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.qc_queryTraceLevel%>"></input>
         </td>
     </tr>
     <tr class="row">
         <td width="30%">Consecutive Failure Threshold</td>
         <td width="70%">
-            <input name="qc_consecutiveFailureThreshold" class="form-control trackable" style="margin:0px;" type="number" value="<%=job.qc_consecutiveFailureThreshold%>"></input>
+            <input name="qc_consecutiveFailureThreshold" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.qc_consecutiveFailureThreshold%>"></input>
         </td>
     </tr>
     <tr class="row">
         <td width="30%">Enable querying on this job</td>
         <td width="70%">
-            <input name="qc_canQuery" type="checkbox" class="trackable" <%=(job.qc_canQuery?"checked='true'":"")%>>
+            <input name="qc_canQuery" type="checkbox" class="trackable" <%-(job.qc_canQuery?"checked='true'":"")%>>
         </td>
     </tr>
     <tr class="row">
@@ -128,13 +128,13 @@
     <tr class="row">
         <td width="30%">On Success..</td>
         <td width="70%">
-            <input name="ondone" class="form-control trackable" style="margin:0px;" type="text" value="<%=job.ondone%>"></input>
+            <input name="ondone" class="form-control trackable" style="margin:0px;" type="text" value="<%-job.ondone%>"></input>
         </td>
     </tr>
     <tr class="row">
         <td width="30%">On Error..</td>
         <td width="70%">
-            <input name="onerror" class="form-control trackable" style="margin:0px;" type="text" value="<%=job.onerror%>"></input>
+            <input name="onerror" class="form-control trackable" style="margin:0px;" type="text" value="<%-job.onerror%>"></input>
         </td>
     </tr>
 </table>

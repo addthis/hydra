@@ -30,6 +30,11 @@
       <artifactId>bark</artifactId>
       <version>${hydra.dep.bark.version}</version>
     </dependency>
+    <dependency>
+      <groupId>com.addthis</groupId>
+      <artifactId>meshy</artifactId>
+      <version>${hydra.dep.meshy.version}</version>
+    </dependency>
     <!-- end clearspring -->
     <!-- 3rd party -->
     <dependency>

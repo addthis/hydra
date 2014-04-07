@@ -14,14 +14,10 @@
 <div>
     <ul class="breadcrumb pull-left" style="display: inline; background-color: transparent;margin:0px;padding-top:0px;padding-bottom:0px;padding-left:4px;">
         <li>
-            <a href="#jobs/<%=task.jobUuid%>/quick">All Tasks</a>
+            <a href="#jobs/<%-task.jobUuid%>/quick">All Tasks</a>
         </li>
         <li class="active">
-            <%=task.node%>
-            <!--(<%=task.host%>)
-            -
-            <span class="label <%=task.stateLabel%>"><%=task.stateText%></span>
-            -->
+            <%-task.node%>
         </li>
     </ul>
 </div>

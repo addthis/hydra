@@ -12,19 +12,19 @@
     limitations under the License.
 -->
 <div class="" style="min-height:0px;">
-    <a id="hideParamLink" data-hide="<%=(hidden?'1':'0')%>" class="pull-left" style="cursor:pointer;">
-        <%=(hidden?"Show":"Hide")%> Parameters (<%=parameters.length%>)
+    <a id="hideParamLink" data-hide="<%-(hidden?'1':'0')%>" class="pull-left" style="cursor:pointer;">
+        <%-(hidden?"Show":"Hide")%> Parameters (<%-parameters.length%>)
     </a>
     <a id="validateLink" class="pull-right" style="margin-right:12px;cursor:pointer;">
         Validate Source
     </a>
 </div>
 <br/>
-<div id="paramBox" class="span12 form" style="min-height:0px;display:<%=(hidden?'none':'inline')%>;">
+<div id="paramBox" class="span12 form" style="min-height:0px;display:<%-(hidden?'none':'inline')%>;">
     <%_.each(parameters,function(param,index){%>
         <div class="span3 form-group" style="margin-left:0px;display:inline-block;margin-bottom:0px;">
-            <label style="margin-bottom:0px;"><%=param.name%></label>
-            <input type="text" data-index="<%=index%>" class="span10 form-control" name="<%=param.name%>" value="<%=param.value%>" placeholder="<%=param.defaultValue%>">
+            <label style="margin-bottom:0px;"><%-param.name%></label>
+            <input type="text" data-index="<%-index%>" class="span10 form-control" name="<%-param.name%>" value="<%-param.value%>" placeholder="<%-param.defaultValue%>">
         </div>
     <%})%>
 </div>

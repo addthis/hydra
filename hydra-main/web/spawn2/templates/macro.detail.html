@@ -19,16 +19,16 @@
             </a>
         </li>
         <li class="active">
-            <%=macro.name%>
+            <%-macro.name%>
         </li>
     </ul>
     <span style="margin-left:10px;">
         <strong>Owner:</strong>
-        <%=macro.owner%>
+        <%-macro.owner%>
     </span>
     <span style="margin-left:10px;">
         <strong>Last Modified:</strong>
-        <%=util.convertToDateTimeText(macro.modified)%>
+        <%-util.convertToDateTimeText(macro.modified)%>
     </span>
     <div class="job-detail-actions pull-right">
         <%if(!_.isEmpty(name)){%>
@@ -45,11 +45,11 @@
     <div class="form form-inline" role="form">
         <div class="form-group" style="width:20%;display:inline-block;">
             <label class="sr-only" for="name" style="margin-bottom:0px;">Name</label>
-            <input value="<%=macro.name%>" type="text" class="form-control" id="name" name="name" placeholder="Enter name">
+            <input value="<%-macro.name%>" type="text" class="form-control" id="name" name="name" placeholder="Enter name">
         </div>
         <div class="form-group" style="width:79%;display:inline-block;">
             <label class="sr-only" for="description" style="margin-bottom:0px;">Description</label>
-            <input value="<%=macro.description%>" type="text" class="form-control" id="description" name="description" placeholder="Enter description">
+            <input value="<%-macro.description%>" type="text" class="form-control" id="description" name="description" placeholder="Enter description">
         </div>
     </div>
 </div>

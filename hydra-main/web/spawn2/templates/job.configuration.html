@@ -11,35 +11,34 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<!--job configuration for <%=job.id%>-->
 <div class="form form-inline" role="form">
     <%if(!_.isUndefined(job.id)){%>
         <div class="form-group" style="width:79%;display:inline-block;">
             <label class="sr-only" for="description" style="margin-bottom:0px;">Description</label>
-            <input value="<%=job.description%>" type="text" class="form-control" id="description" name='description' placeholder="Enter description">
+            <input value="<%-job.description%>" type="text" class="form-control" id="description" name='description' placeholder="Enter description">
         </div>
         <div class="form-group" style="width:20%;display:inline-block;">
             <label class="sr-only" for="command" style="margin-bottom:0px;">Command</label>
             <select id="command" class="form-control">
                 <%_.each(commands,function(command){%>
-                    <option value="<%=command.name%>"><%=command.name%></option>
+                    <option value="<%-command.name%>"><%-command.name%></option>
                 <%})%>
             </select>
         </div>
     <%}else{%>
         <div class="form-group" style="width:64%;display:inline-block;">
             <label class="sr-only" for="description" style="margin-bottom:0px;">Description</label>
-            <input value="<%=job.description%>" type="text" class="form-control" id="description"  name='description'  placeholder="Enter description">
+            <input value="<%-job.description%>" type="text" class="form-control" id="description"  name='description'  placeholder="Enter description">
         </div>
         <div class="form-group" style="width:15%;display:inline-block;">
             <label class="sr-only" for="nodes" style="margin-bottom:0px;">Nodes</label>
-            <input value="<%=job.nodes%>" type="text" class="form-control" id="nodes" name="nodes" placeholder="Enter node count..">
+            <input value="<%-job.nodes%>" type="text" class="form-control" id="nodes" name="nodes" placeholder="Enter node count..">
         </div>
         <div class="form-group" style="width:20%;display:inline-block;">
             <label class="sr-only" for="command" style="margin-bottom:0px;">Command</label>
             <select id="command" class="form-control">
                 <%_.each(commands,function(command){%>
-                <option value="<%=command.name%>"><%=command.name%></option>
+                <option value="<%-command.name%>"><%-command.name%></option>
                 <%})%>
             </select>
         </div>

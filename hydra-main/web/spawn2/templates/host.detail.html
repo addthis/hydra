@@ -19,7 +19,7 @@
             </a>
         </li>
         <li class="active">
-            <%=host.uuid%>
+            <%-host.uuid%>
         </li>
     </ul>
     <div class="job-detail-actions pull-right">
@@ -29,19 +29,19 @@
         <button class="btn btn-default btn-small" style="margin-left:8px;">
             Save
         </button>-->
-        <a href="http://collins-iad.clearspring.local:9000/asset/<%=host.uuid%>" target="_blank"  class='btn btn-default btn-small' style="margin-left:8px">
+        <a href="http://collins-iad.clearspring.local:9000/asset/<%-host.uuid%>" target="_blank"  class='btn btn-default btn-small' style="margin-left:8px">
             Collins
         </a>
     </div>
 </div>
 <ul class="nav nav-tabs nav-justified" style="margin-left: 0px; margin-bottom: 0px;">
     <li id="tasksTab">
-        <a href="#hosts/<%=host.uuid%>/tasks">
+        <a href="#hosts/<%-host.uuid%>/tasks">
             Tasks
         </a>
     </li>
     <li id="confTab">
-        <a href="#hosts/<%=host.uuid%>/ganglia">
+        <a href="#hosts/<%-host.uuid%>/ganglia">
             Ganglia
         </a>
     </li>

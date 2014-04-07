@@ -37,6 +37,7 @@ import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 import com.yammer.dropwizard.auth.Authenticator;
 
+import com.yammer.metrics.reporting.MetricsServlet;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -120,6 +121,7 @@ public class SpawnService {
         ServletContainer servletContainer = new ServletContainer(config);
         ServletHolder sh = new ServletHolder(servletContainer);
 
+        handler.addServlet(new ServletHolder(new MetricsServlet()), "/metrics");
         handler.addServlet(sh, "/*");
 
 

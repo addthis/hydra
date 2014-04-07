@@ -17,7 +17,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -28,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.addthis.basis.io.IOWrap;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
@@ -56,15 +56,21 @@ import com.addthis.hydra.task.stream.StreamSourceHashed;
 import com.google.common.base.Objects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import com.ning.compress.lzf.LZFInputStream;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Timer;
 
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.FileUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xerial.snappy.SnappyInputStream;
+
+import lzma.sdk.lzma.Decoder;
+import lzma.streams.LzmaInputStream;
 
 /**
  * Abstract implementation of TaskDataSource
@@ -270,7 +276,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     private boolean useLegacyStreamPath = false;
 
     private StreamFileSource source;
-    private final Object nextSourceLock = new Object();
 
     public AbstractStreamFileDataSource() {
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -382,7 +387,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        queue = new ArrayBlockingQueue<>(buffer);
+        queue = new LinkedBlockingQueue<>(buffer);
 
         if (workers == 0) {
             log.error("Either we failed to find any meshy sources or workers was set to 0. Shutting down.");
@@ -475,11 +480,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                     mark = new Mark().set(stateValue, 0);
                 }
                 log.debug("mark.open {} / {}", mark, stream);
-                opening.inc();
-                input = stream.getInputStream(); //blocks waiting for network
-                opening.dec();
-                bundleizer = format.createBundleizer(input, AbstractStreamFileDataSource.this);
                 openNew.inc();
+                opening.inc();
+                input = stream.getInputStream();
             } else {
                 if (mark.getValue().equals(stateValue) && mark.isEnd()) {
                     log.debug("mark.skip {} / {}", mark, stream);
@@ -496,10 +499,20 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                     }
                 }
                 opening.inc();
-                input = stream.getInputStream(); //blocks waiting for network
+                input = stream.getInputStream();
+            }
+            reading.inc();
+        }
+
+        void maybeFinishInit() throws IOException {
+            if (bundleizer == null) {
+                input = wrapCompressedStream(input, stream.name()); // blocks waiting for network (if compressed)
                 opening.dec();
                 bundleizer = format.createBundleizer(input, AbstractStreamFileDataSource.this);
                 long read = mark.getIndex();
+                if (read == 0) {
+                    return;
+                }
                 int bundlesSkipped = 0;
                 skipping.inc();
                 while (read > 0) {
@@ -529,8 +542,23 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 globalBundleSkip.inc(bundlesSkipped);
                 log.debug("mark.indx {} / {}", mark, stream);
             }
-            reading.inc();
         }
+
+        private InputStream wrapCompressedStream(InputStream in, String name) throws IOException {
+            if (name.endsWith(".gz")) {
+                in = IOWrap.gz(in, 4096);
+            } else if (name.endsWith(".lzf")) {
+                in = new LZFInputStream(in);
+            } else if (name.endsWith(".snappy")) {
+                in = new SnappyInputStream(in);
+            } else if (name.endsWith(".bz2")) {
+                in = new BZip2CompressorInputStream(in, true);
+            } else if (name.endsWith(".lzma")) {
+                in = new LzmaInputStream(in, new Decoder());
+            }
+            return in;
+        }
+
 
         void close() throws IOException {
             if (!closed) {
@@ -548,6 +576,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 log.debug("next {} / {} CLOSED returns null", mark, stream);
                 return null;
             }
+            maybeFinishInit();
             Bundle next = null;
             try {
                 next = bundleizer.next();
@@ -571,15 +600,11 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     }
 
     private Wrap nextWrappedSource() throws IOException {
-        StreamFile stream;
-        synchronized (nextSourceLock) {
-            stream = source.nextSource();
-        }
+        StreamFile stream = source.nextSource();
         if (stream == null) {
             return null;
         }
         return new Wrap(stream);
-
     }
 
     private boolean multiFill(Wrap wrap, int fillCount) throws Exception {
