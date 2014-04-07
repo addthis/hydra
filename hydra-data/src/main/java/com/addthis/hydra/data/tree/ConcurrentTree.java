@@ -354,8 +354,9 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                     return node; // (1)
                 }
             } else {// (2)
+                DBKey dbkey = key.dbkey();
                 reportCacheMiss();
-                node = source.get(key.dbkey());
+                node = source.get(dbkey);
 
                 if (node == null) {
                     meter.inc(METERTREE.SOURCE_MISS);
@@ -363,9 +364,9 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 }
 
                 if (node.isDeleted()) {
-                    source.remove(key.dbkey());
+                    source.remove(dbkey);
                 } else {
-                    node.initIfDecoded(this, key.dbkey(), key.name);
+                    node.initIfDecoded(this, dbkey, key.name);
 
                     ConcurrentTreeNode prev = cache.putIfAbsent(key, node);
                     if (prev == null) {
@@ -395,14 +396,15 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                     return node;
                 }
             } else {
+                DBKey dbkey = key.dbkey();
                 reportCacheMiss();
-                node = source.get(key.dbkey());
+                node = source.get(dbkey);
 
                 if (node != null) {
                     if (node.isDeleted()) {
-                        source.remove(key.dbkey());
+                        source.remove(dbkey);
                     } else {
-                        node.initIfDecoded(this, key.dbkey(), key.name);
+                        node.initIfDecoded(this, dbkey, key.name);
                         ConcurrentTreeNode prev = cache.putIfAbsent(key, node);
                         if (prev == null) {
                             node.reactivate();
@@ -414,7 +416,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 } else { // create a new node
                     if (newNode == null) {
                         newNode = new ConcurrentTreeNode();
-                        newNode.init(this, key.dbkey(), key.name);
+                        newNode.init(this, dbkey, key.name);
                         newNode.tryLease();
                         newNode.markChanged();
                         if (creator != null) {
@@ -428,7 +430,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                          * because our iterators traverse this data
                          * structure to search for nodes.
                          */
-                        source.put(key.dbkey(), node);
+                        source.put(dbkey, node);
                         parent.updateNodeCount(1);
                         return node;
                     }
