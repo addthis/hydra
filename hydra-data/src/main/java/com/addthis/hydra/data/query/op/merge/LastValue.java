@@ -12,8 +12,19 @@
  * limitations under the License.
  */
 
-package com.addthis.hydra.data.query.op;
+package com.addthis.hydra.data.query.op.merge;
 
-enum MergeOp {
-    KEY, SUM, AVG, IGNORE, UCOUNT, MIN, MAX, DIFF, PACK, COUNTDOWN, JOIN, LAST
+import com.addthis.bundle.value.ValueObject;
+
+public class LastValue extends AbstractMergedValue<ValueObject> {
+
+    @Override
+    protected void doMerge(ValueObject nextValue) {
+        value = nextValue;
+    }
+
+    @Override
+    protected ValueObject convert(ValueObject nextValue) {
+        return nextValue;
+    }
 }

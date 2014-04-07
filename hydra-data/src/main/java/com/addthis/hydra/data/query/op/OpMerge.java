@@ -21,12 +21,11 @@ import java.util.List;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
-import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
-import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractQueryOp;
+import com.addthis.hydra.data.query.op.merge.BundleMapConf;
 import com.addthis.hydra.data.query.QueryOp;
 import com.addthis.hydra.data.query.QueryStatusObserver;
 
@@ -76,34 +75,34 @@ import com.addthis.hydra.data.query.QueryStatusObserver;
  */
 public class OpMerge extends AbstractQueryOp {
 
-    //  private MergeOp op[];
+    //  private MergeOpEnums op[];
     private BundleField mergeField;
     private boolean mergeCount;
     private int countdown;
     private String join[];
     private int cols;
     private final ListBundleFormat format = new ListBundleFormat();
-    private final BundleMapConf<MergeOp> conf[];
+    private final BundleMapConf<MergeOpEnums> conf[];
     private final HashMap<String, MergedRow> resultTable = new HashMap<>();
     private final QueryStatusObserver queryStatusObserver;
 
     public OpMerge(String args, QueryStatusObserver queryStatusObserver) {
         this.queryStatusObserver = queryStatusObserver;
-        ArrayList<BundleMapConf<MergeOp>> conf = new ArrayList<>(args.length());
+        ArrayList<BundleMapConf<MergeOpEnums>> conf = new ArrayList<>(args.length());
 
-        MergeOp lastOp = null;
+        MergeOpEnums lastOp = null;
         StringBuilder newJoin = null;
         boolean wasnum = false;
         for (int i = 0; i < args.length(); i++) {
             char ch = args.charAt(i);
             boolean isnum = (ch >= '0' && ch <= '9');
-            MergeOp op = null;
-            MergeOp nextOp = null;
+            MergeOpEnums op = null;
+            MergeOpEnums nextOp = null;
             if (isnum) {
                 countdown *= 10;
                 countdown += (ch - '0');
             } else if (wasnum) {
-                nextOp = MergeOp.COUNTDOWN;
+                nextOp = MergeOpEnums.COUNTDOWN;
             }
             wasnum = isnum;
             boolean advance = true;
@@ -116,19 +115,19 @@ public class OpMerge extends AbstractQueryOp {
                     break;
                 // average
                 case 'a':
-                    op = MergeOp.AVG;
+                    op = MergeOpEnums.AVG;
                     break;
                 // diff/subtract value
                 case 'd':
-                    op = MergeOp.DIFF;
+                    op = MergeOpEnums.DIFF;
                     break;
                 // ignore/drop
                 case 'i':
-                    op = MergeOp.IGNORE;
+                    op = MergeOpEnums.IGNORE;
                     break;
                 // last value
                 case 'l':
-                    op = MergeOp.LAST;
+                    op = MergeOpEnums.LAST;
                     break;
                 // string join
                 case 'j':
@@ -136,35 +135,35 @@ public class OpMerge extends AbstractQueryOp {
                         join = new String[args.length()];
                     }
                     join[cols] = ",";
-                    op = MergeOp.JOIN;
+                    op = MergeOpEnums.JOIN;
                     break;
                 // part of compound key
                 case 'k':
-                    op = MergeOp.KEY;
+                    op = MergeOpEnums.KEY;
                     break;
                 // max value
                 case 'M':
-                    op = MergeOp.MAX;
+                    op = MergeOpEnums.MAX;
                     break;
                 // min value
                 case 'm':
-                    op = MergeOp.MIN;
+                    op = MergeOpEnums.MIN;
                     break;
                 // pack repeating values
                 case 'p':
-                    op = MergeOp.PACK;
+                    op = MergeOpEnums.PACK;
                     break;
                 // sum
                 case 's':
-                    op = MergeOp.SUM;
+                    op = MergeOpEnums.SUM;
                     break;
                 // add merged row count
                 case 'u':
-                    op = MergeOp.UCOUNT;
+                    op = MergeOpEnums.UCOUNT;
                     mergeCount = true;
                     break;
                 default:
-                    if (lastOp == MergeOp.JOIN) {
+                    if (lastOp == MergeOpEnums.JOIN) {
                         if (newJoin == null) {
                             newJoin = new StringBuilder();
                         }
@@ -185,7 +184,7 @@ public class OpMerge extends AbstractQueryOp {
             if (nextOp != null) {
                 addBundleMapConf(conf, nextOp);
             }
-            if (lastOp == MergeOp.JOIN && newJoin != null) {
+            if (lastOp == MergeOpEnums.JOIN && newJoin != null) {
                 join[cols - 1] = newJoin.toString();
                 newJoin = null;
             }
@@ -197,8 +196,8 @@ public class OpMerge extends AbstractQueryOp {
         this.conf = conf.toArray(new BundleMapConf[conf.size()]);
     }
 
-    private void addBundleMapConf(ArrayList<BundleMapConf<MergeOp>> conf, MergeOp op) {
-        BundleMapConf<MergeOp> next = new BundleMapConf<>();
+    private void addBundleMapConf(ArrayList<BundleMapConf<MergeOpEnums>> conf, MergeOpEnums op) {
+        BundleMapConf<MergeOpEnums> next = new BundleMapConf<>();
         next.setOp(op);
         conf.add(next);
     }
@@ -218,16 +217,16 @@ public class OpMerge extends AbstractQueryOp {
             if (i >= conf.length) {
                 break;
             }
-            BundleMapConf<MergeOp> mc = conf[i++];
+            BundleMapConf<MergeOpEnums> mc = conf[i++];
             if (mc == null) {
                 continue;
             }
-            if (mc.getFrom() == null && !(mc.getOp().equals(MergeOp.IGNORE) || mc.getOp().equals(MergeOp.UCOUNT))) {
+            if (mc.getFrom() == null && !(mc.getOp().equals(MergeOpEnums.IGNORE) || mc.getOp().equals(MergeOpEnums.UCOUNT))) {
                 mc.setFrom(bundleField);
                 // TODO only clone field name for non-int names, otherwise create 'next' column # as name
                 mc.setTo(format.getField(bundleField.getName()));
             }
-            if (mc.getOp() == MergeOp.KEY) {
+            if (mc.getOp() == MergeOpEnums.KEY) {
                 ValueObject lval = bundle.getValue(bundleField);
                 key = key.concat(lval == null ? "" : lval.toString());
             }
@@ -237,13 +236,13 @@ public class OpMerge extends AbstractQueryOp {
         }
         MergedRow merge = resultTable.get(key);
         if (merge == null) {
-            merge = new MergedRow();
+            merge = new MergedRow(this, conf, mergeCount, join, format, mergeField);
             resultTable.put(key, merge);
         }
         for (BundleField field : bundle) {
             ValueObject lval = bundle.getValue(field);
             if (i < conf.length) {
-                BundleMapConf<MergeOp> mc = conf[i++];
+                BundleMapConf<MergeOpEnums> mc = conf[i++];
                 if (mc == null || mc.getOp() == null) {
                     continue;
                 }
@@ -286,98 +285,7 @@ public class OpMerge extends AbstractQueryOp {
         }
     }
 
-    private ValueNumber num(ValueObject o) {
+    static ValueNumber num(ValueObject o) {
         return OpGather.num(o);
-    }
-
-
-    private class MergedRow {
-
-        MergedRow() {
-            mergedRow = new ValueObject[conf.length];
-        }
-
-        ValueObject mergedRow[];
-        int merged;
-
-        void merge(Bundle row) {
-            int i = -1;
-            for (BundleField field : row) {
-                ValueObject lval = row.getValue(field);
-                i++;
-                if (i >= mergedRow.length) {
-                    break;
-                }
-                if (mergedRow[i] == null) {
-                    mergedRow[i] = lval;
-                    continue;
-                }
-                if (lval == null) {
-                    continue;
-                }
-                BundleMapConf<MergeOp> mc = conf[i];
-                if (mc == null) {
-                    continue;
-                }
-                switch (mc.getOp()) {
-                    case JOIN:
-                        mergedRow[i] = ValueFactory.create(mergedRow[i].toString().concat(join[i]).concat(lval.toString()));
-                        break;
-                    case LAST:
-                    case KEY:
-                        mergedRow[i] = lval;
-                        break;
-                    case SUM:
-                    case AVG:
-                        mergedRow[i] = num(mergedRow[i]).sum(num(lval));
-                        break;
-                    case MAX:
-                        mergedRow[i] = num(mergedRow[i]).max(num(lval));
-                        break;
-                    case MIN:
-                        mergedRow[i] = num(mergedRow[i]).min(num(lval));
-                        break;
-                    case DIFF:
-                        mergedRow[i] = num(mergedRow[i]).diff(num(lval));
-                        break;
-                }
-            }
-            merged++;
-        }
-
-        private Bundle emit() {
-            Bundle nl = new ListBundle(format);
-            int i = 0;
-            for (ValueObject lval : mergedRow) {
-                if (i >= conf.length) {
-                    break;
-                }
-                BundleMapConf<MergeOp> mc = conf[i++];
-                if (mc == null) {
-                    continue;
-                }
-                switch (mc.getOp()) {
-                    case LAST:
-                    case JOIN:
-                    case KEY:
-                    case SUM:
-                    case DIFF:
-                    case MAX:
-                    case MIN:
-                        nl.setValue(mc.getTo(), lval);
-                        break;
-                    case AVG:
-                        nl.setValue(mc.getTo(), lval != null ? num(lval).avg(merged) : null);
-                        break;
-                }
-            }
-            if (mergeCount) {
-                nl.setValue(mergeField, ValueFactory.create(merged));
-            }
-            mergedRow = new ValueObject[conf.length];
-            merged = 0;
-            return nl;
-        }
-
     }
 }

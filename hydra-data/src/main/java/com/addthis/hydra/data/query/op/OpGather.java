@@ -13,7 +13,6 @@
  */
 package com.addthis.hydra.data.query.op;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 import java.util.ArrayList;
@@ -22,30 +21,36 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.MemoryCounter;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
-import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
-import com.addthis.bundle.io.DataChannelCodec;
 import com.addthis.bundle.util.ValueUtil;
-import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractQueryOp;
+import com.addthis.hydra.data.query.op.merge.AverageValue;
+import com.addthis.hydra.data.query.op.merge.BundleMapConf;
 import com.addthis.hydra.data.query.DiskBackedMap;
 import com.addthis.hydra.data.query.QueryOp;
 import com.addthis.hydra.data.query.QueryStatusObserver;
+import com.addthis.hydra.data.query.op.MergedRowFactory;
+import com.addthis.hydra.data.query.op.merge.DiffValue;
+import com.addthis.hydra.data.query.op.merge.JoinedValue;
+import com.addthis.hydra.data.query.op.merge.KeyValue;
+import com.addthis.hydra.data.query.op.merge.LastValue;
+import com.addthis.hydra.data.query.op.merge.MaxValue;
+import com.addthis.hydra.data.query.op.merge.MergedValue;
+import com.addthis.hydra.data.query.op.merge.MinValue;
+import com.addthis.hydra.data.query.op.merge.NumMergesValue;
+import com.addthis.hydra.data.query.op.merge.SumValue;
 import com.addthis.hydra.data.util.KeyTopper;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Meter;
-
-import org.apache.commons.lang3.ArrayUtils;
 
 /**
  * <p>This query operation <span class="hydra-summary">merges arbitrary rows</span>.
@@ -102,14 +107,13 @@ public class OpGather extends AbstractQueryOp {
 
     private Map<String, MergedRow> resultTable = new HashMap<>();
     private final ListBundleFormat format = new ListBundleFormat();
-    private final BundleMapConf<MergeOp> conf[];
+    private final BundleMapConf<MergedValue> conf[];
 
     private final long tipMem;
     private final long tipRow;
     private long totalMem;
 
-    private BundleField mergeField;
-    private boolean mergeCount;
+    private BundleMapConf<MergedValue> mergeCountValue;
     private KeyTopper topper;
     private int topSize;
     private int topColumn = -1;
@@ -130,8 +134,9 @@ public class OpGather extends AbstractQueryOp {
         this.tipRow = tipRow;
         totalMem = 0;
 
-        ArrayList<BundleMapConf<MergeOp>> conf = new ArrayList<>(args.length());
+        ArrayList<BundleMapConf<MergedValue>> conf = new ArrayList<>(args.length());
 
+        boolean mergeCount = false;
         for (int i = 0; i < args.length(); i++) {
             char ch = args.charAt(i);
             boolean isnum = (ch >= '0' && ch <= '9');
@@ -140,7 +145,7 @@ public class OpGather extends AbstractQueryOp {
                 topSize += (ch - '0');
                 continue;
             }
-            MergeOp op = null;
+            MergedValue op = null;
             // TODO add max/min
             switch (ch) {
                 case ',':
@@ -152,44 +157,44 @@ public class OpGather extends AbstractQueryOp {
                     continue;
                     // average
                 case 'a':
-                    op = MergeOp.AVG;
+                    op = new AverageValue();
                     break;
                 // diff/subtract value
                 case 'd':
-                    op = MergeOp.DIFF;
+                    op = new DiffValue();
                     break;
                 // ignore/drop
                 case 'i':
-//                  op = MergeOp.IGNORE;
+//                  op = MergeOpEnums.IGNORE;
 //                  conf.add(null);
 //                  continue;
                     break;
                 case 'j':
-                    op = MergeOp.JOIN;
+                    op = new JoinedValue();
                     break;
                 // last value
                 case 'l':
-                    op = MergeOp.LAST;
+                    op = new LastValue();
                     break;
                 // part of compound key
                 case 'k':
-                    op = MergeOp.KEY;
+                    op = new KeyValue();
                     break;
                 // max value
                 case 'M':
-                    op = MergeOp.MAX;
+                    op = new MaxValue();
                     break;
                 // min value
                 case 'm':
-                    op = MergeOp.MIN;
+                    op = new MinValue();
                     break;
-                // pack repeating values
-                case 'p':
-                    op = MergeOp.PACK;
-                    break;
+                // pack repeating values -- seems to have been gone a while
+//                case 'p':
+//                    op = MergeOpEnums.PACK;
+//                    break;
                 // sum
                 case 's':
-                    op = MergeOp.SUM;
+                    op = new SumValue();
                     break;
                 // add merged row count
                 case 'u':
@@ -197,12 +202,17 @@ public class OpGather extends AbstractQueryOp {
                     continue;
             }
             if (op != null) {
-                BundleMapConf<MergeOp> next = new BundleMapConf<>();
+                BundleMapConf<MergedValue> next = new BundleMapConf<>();
                 next.setOp(op);
                 conf.add(next);
             } else {
                 conf.add(null);
             }
+        }
+        if (mergeCount) {
+            mergeCountValue = new BundleMapConf<>();
+            mergeCountValue.setOp(new NumMergesValue());
+            conf.add(mergeCountValue);
         }
         this.conf = conf.toArray(new BundleMapConf[conf.size()]);
     }
@@ -223,7 +233,7 @@ public class OpGather extends AbstractQueryOp {
             if (i == topColumn) {
                 topField = field;
             }
-            BundleMapConf<MergeOp> mc = conf[i++];
+            BundleMapConf<MergedValue> mc = conf[i++];
             if (mc == null) {
                 continue;
             }
@@ -232,17 +242,19 @@ public class OpGather extends AbstractQueryOp {
                 // TODO only clone field name for non-int names, otherwise create 'next' column # as name
                 mc.setTo(format.getField(field.getName()));
             }
-            if (mc != null && mc.getOp() == MergeOp.KEY) {
+            if (mc.getOp().isKey()) {
                 ValueObject lval = row.getValue(field);
                 key = key.concat(lval == null ? "" : lval.toString());
             }
         }
-        if (mergeCount && mergeField == null) {
-            mergeField = format.createNewField("merge_");
+        if (mergeCountValue != null) {
+            if (mergeCountValue.getTo() == null) {
+                mergeCountValue.setTo(format.createNewField("merge_"));
+            }
         }
         MergedRow merge = resultTable.get(key);
         if (merge == null) {
-            merge = new MergedRow();
+            merge = new MergedRow(this);
             resultTable.put(key, merge);
 
             if (!tippedToDisk) {
@@ -298,7 +310,7 @@ public class OpGather extends AbstractQueryOp {
                 }
 
                 Map<String, MergedRow> diskMap = new DiskBackedMap<>(tmpDir + "/" + UUID.randomUUID(),
-                        new MergedRowFactory(), memToUse);
+                        new MergedRowFactory(this), memToUse);
 
                 diskMap.putAll(resultTable);
                 resultTable = diskMap;
@@ -326,138 +338,5 @@ public class OpGather extends AbstractQueryOp {
         }
 
         super.close();
-    }
-
-    private class MergedRow implements DiskBackedMap.DiskObject {
-
-        MergedRow() {
-            mergedRow = new ValueObject[conf.length];
-        }
-
-        ValueObject mergedRow[];
-        int merged;
-
-        void merge(Bundle row) {
-            int i = -1;
-            for (BundleField field : row.getFormat()) {
-                ValueObject lval = row.getValue(field);
-                i++;
-                if (i >= mergedRow.length) {
-                    break;
-                }
-                if (mergedRow[i] == null) {
-                    mergedRow[i] = lval;
-                    continue;
-                }
-                if (lval == null) {
-                    continue;
-                }
-                BundleMapConf<MergeOp> mc = conf[i];
-                if (mc == null) {
-                    continue;
-                }
-                switch (mc.getOp()) {
-                    case LAST:
-                    case KEY:
-                        mergedRow[i] = lval;
-                        break;
-                    case SUM:
-                    case AVG:
-                        mergedRow[i] = num(mergedRow[i]).sum(num(lval));
-                        break;
-                    case MAX:
-                        mergedRow[i] = num(mergedRow[i]).max(num(lval));
-                        break;
-                    case MIN:
-                        mergedRow[i] = num(mergedRow[i]).min(num(lval));
-                        break;
-                    case DIFF:
-                        mergedRow[i] = num(mergedRow[i]).diff(num(lval));
-                        break;
-                    case JOIN:
-                        mergedRow[i] = ValueFactory.create(mergedRow[i].toString().concat(",").concat(lval.toString()));
-                        break;
-                }
-            }
-            merged++;
-        }
-
-        private Bundle emit() {
-            Bundle nl = new ListBundle(format);
-            int i = 0;
-            for (ValueObject lval : mergedRow) {
-                if (i >= conf.length) {
-                    break;
-                }
-                BundleMapConf<MergeOp> mc = conf[i++];
-                if (mc == null) {
-                    continue;
-                }
-                switch (mc.getOp()) {
-                    case LAST:
-                    case KEY:
-                    case SUM:
-                    case DIFF:
-                    case MAX:
-                    case MIN:
-                        nl.setValue(mc.getTo(), lval);
-                        break;
-                    case AVG:
-                        nl.setValue(mc.getTo(), lval != null ? num(lval).avg(merged) : null);
-                        break;
-                    case JOIN:
-                        nl.setValue(mc.getTo(), lval);
-                        break;
-                }
-            }
-            if (mergeCount) {
-                nl.setValue(mergeField, ValueFactory.create(merged));
-            }
-            mergedRow = new ValueObject[conf.length];
-            return nl;
-        }
-
-        @Override
-        public byte[] toBytes() {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            byte[] result;
-            try {
-                bos.write(Bytes.toBytes(merged));
-                ListBundleFormat format = new ListBundleFormat();
-                ListBundle listBundle = new ListBundle(format);
-                for (int i = 0; i != conf.length; i++) {
-                    listBundle.setValue(format.getField("" + i), mergedRow[i]);
-                }
-                bos.write(DataChannelCodec.encodeBundle(listBundle));
-                result = bos.toByteArray();
-                bos.close();
-
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-
-            return result;
-        }
-    }
-
-    private class MergedRowFactory implements DiskBackedMap.DiskObjectFactory {
-
-        @Override
-        public DiskBackedMap.DiskObject fromBytes(byte[] bytes) {
-            MergedRow mergedRow = new MergedRow();
-            mergedRow.merged = Bytes.toInt(ArrayUtils.subarray(bytes, 0, Integer.SIZE / 8));
-            ListBundleFormat format = new ListBundleFormat();
-            ListBundle listBundle = new ListBundle(format);
-            try {
-                DataChannelCodec.decodeBundle(listBundle, ArrayUtils.subarray(bytes, Integer.SIZE / 8, bytes.length));
-                for (int i = 0; i != conf.length; i++) {
-                    mergedRow.mergedRow[i] = listBundle.getValue(format.getField("" + i));
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-
-            return mergedRow;
-        }
     }
 }
