@@ -97,7 +97,7 @@ public class SimpleMark implements Codec.Codable, Codec.BytesCodable {
             Varint.writeUnsignedVarInt(valBytes.length, buffer);
             buffer.writeBytes(valBytes);
             Varint.writeUnsignedVarLong(index, buffer);
-            buffer.writeByte(end ? 0 : 1);
+            buffer.writeByte(end ? 1 : 0);
             retBytes = new byte[buffer.readableBytes()];
             buffer.readBytes(retBytes);
         } finally {

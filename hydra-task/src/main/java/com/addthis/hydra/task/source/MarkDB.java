@@ -19,10 +19,16 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.TreeMap;
 
+import com.addthis.basis.util.Varint;
+
 import com.addthis.codec.Codec;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IReadWeighable;
 import com.addthis.hydra.store.db.ReadPageDB;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 
 public class MarkDB {
@@ -80,13 +86,37 @@ public class MarkDB {
 
         @Override
         public byte[] bytesEncode(long version) {
-            return new byte[0];
+            byte[] retBytes = null;
+            ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
+            try {
+                byte[] valBytes = val.getBytes();
+                Varint.writeUnsignedVarInt(valBytes.length, buffer);
+                buffer.writeBytes(valBytes);
+                Varint.writeUnsignedVarLong(index, buffer);
+                buffer.writeByte(end ? 1 : 0);
+                retBytes = new byte[buffer.readableBytes()];
+                buffer.readBytes(retBytes);
+            } finally {
+                buffer.release();
+            }
+            return retBytes;
         }
 
         @Override
         public void bytesDecode(byte[] b, long version) {
-
+            ByteBuf buffer = Unpooled.wrappedBuffer(b);
+            try {
+                int valLength = Varint.readUnsignedVarInt(buffer);
+                byte[] valBytes = new byte[valLength];
+                buffer.readBytes(valBytes);
+                val = new String(valBytes);
+                index = Varint.readUnsignedVarLong(buffer);
+                end = (buffer.readByte() == 1);
+            } finally {
+                buffer.release();
+            }
         }
+
     }
 
     public static final class Mark implements Codec.Codable, Codec.BytesCodable, IReadWeighable {
@@ -110,12 +140,38 @@ public class MarkDB {
 
         @Override
         public byte[] bytesEncode(long version) {
-            return new byte[0];
+            byte[] retBytes = null;
+            ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
+            try {
+                byte[] valBytes = value.getBytes();
+                Varint.writeUnsignedVarInt(valBytes.length, buffer);
+                buffer.writeBytes(valBytes);
+                Varint.writeUnsignedVarLong(index, buffer);
+                buffer.writeByte(end ? 1 : 0);
+                Varint.writeUnsignedVarInt(error, buffer);
+                retBytes = new byte[buffer.readableBytes()];
+                buffer.readBytes(retBytes);
+            } finally {
+                buffer.release();
+            }
+            return retBytes;
         }
 
         @Override
         public void bytesDecode(byte[] b, long version) {
-
+            ByteBuf buffer = Unpooled.wrappedBuffer(b);
+            try {
+                int valLength = Varint.readUnsignedVarInt(buffer);
+                byte[] valBytes = new byte[valLength];
+                buffer.readBytes(valBytes);
+                value = new String(valBytes);
+                index = Varint.readUnsignedVarLong(buffer);
+                end = (buffer.readByte() == 1);
+                error = Varint.readUnsignedVarInt(buffer);
+            } finally {
+                buffer.release();
+            }
         }
+
     }
 }

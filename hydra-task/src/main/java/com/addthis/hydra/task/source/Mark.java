@@ -13,9 +13,15 @@
  */
 package com.addthis.hydra.task.source;
 
+import com.addthis.basis.util.Varint;
+
 import com.addthis.codec.Codec;
 
 import com.google.common.base.Objects;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 /**
  * file mark record
@@ -41,5 +47,40 @@ public final class Mark extends SimpleMark {
 
     public void setError(int error) {
         this.error = error;
+    }
+
+    @Override
+    public byte[] bytesEncode(long version) {
+        byte[] retBytes = null;
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
+        try {
+            byte[] valBytes = getValue().getBytes();
+            Varint.writeUnsignedVarInt(valBytes.length, buffer);
+            buffer.writeBytes(valBytes);
+            Varint.writeUnsignedVarLong(getIndex(), buffer);
+            buffer.writeByte(isEnd() ? 1 : 0);
+            Varint.writeUnsignedVarInt(error, buffer);
+            retBytes = new byte[buffer.readableBytes()];
+            buffer.readBytes(retBytes);
+        } finally {
+            buffer.release();
+        }
+        return retBytes;
+    }
+
+    @Override
+    public void bytesDecode(byte[] b, long version) {
+        ByteBuf buffer = Unpooled.wrappedBuffer(b);
+        try {
+            int valLength = Varint.readUnsignedVarInt(buffer);
+            byte[] valBytes = new byte[valLength];
+            buffer.readBytes(valBytes);
+            setValue(new String(valBytes));
+            setIndex(Varint.readUnsignedVarLong(buffer));
+            setEnd(buffer.readByte() == 1);
+            setError(Varint.readUnsignedVarInt(buffer));
+        } finally {
+            buffer.release();
+        }
     }
 }
