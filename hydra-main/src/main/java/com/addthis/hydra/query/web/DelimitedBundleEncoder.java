@@ -29,8 +29,8 @@ class DelimitedBundleEncoder extends AbstractHttpBundleEncoder {
     DelimitedBundleEncoder(String filename, String delimiter) {
         super();
         this.delimiter = delimiter;
-        setContentTypeHeader(response, "application/csv; charset=utf-8");
-        response.headers().set("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        setContentTypeHeader(responseStart, "application/csv; charset=utf-8");
+        responseStart.headers().set("Content-Disposition", "attachment; filename=\"" + filename + "\"");
     }
 
     public static DelimitedBundleEncoder create(String filename, String format) {
@@ -57,11 +57,12 @@ class DelimitedBundleEncoder extends AbstractHttpBundleEncoder {
     @Override
     public void send(ChannelHandlerContext ctx, Bundle row) {
         super.send(ctx, row);
+        StringBuilder stringBuilder = new StringBuilder(row.getFormat().getFieldCount() * 12 + 1);
         int count = 0;
         for (BundleField field : row.getFormat()) {
             ValueObject o = row.getValue(field);
             if (count++ > 0) {
-                ctx.write(delimiter);
+                stringBuilder.append(delimiter);
             }
             if (o != null) {
                 ValueObject.TYPE type = o.getObjectType();
@@ -75,15 +76,16 @@ class DelimitedBundleEncoder extends AbstractHttpBundleEncoder {
                         ctx.write(o.toString());
                         break;
                     case STRING:
-                        ctx.write("\"");
-                        ctx.write(o.toString().replace('"', '\'').replace('\n', ' ').replace('\r', ' '));
-                        ctx.write("\"");
+                        stringBuilder.append("\"");
+                        stringBuilder.append(o.toString().replace('"', '\'').replace('\n', ' ').replace('\r', ' '));
+                        stringBuilder.append("\"");
                         break;
                     default:
                         break;
                 }
             }
         }
-        ctx.write("\n");
+        stringBuilder.append("\n");
+        ctx.writeAndFlush(stringBuilder.toString());
     }
 }

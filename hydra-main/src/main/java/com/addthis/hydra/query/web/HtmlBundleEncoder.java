@@ -25,7 +25,7 @@ class HtmlBundleEncoder extends AbstractHttpBundleEncoder {
 
     HtmlBundleEncoder() {
         super();
-        setContentTypeHeader(response, "text/html; charset=utf-8");
+        setContentTypeHeader(responseStart, "text/html; charset=utf-8");
     }
 
     @Override
@@ -37,12 +37,14 @@ class HtmlBundleEncoder extends AbstractHttpBundleEncoder {
     @Override
     public void send(ChannelHandlerContext ctx, Bundle row) {
         super.send(ctx, row);
-        ctx.write("<tr>");
+        StringBuilder stringBuilder = new StringBuilder(row.getFormat().getFieldCount() * 20 + 6);
+        stringBuilder.append("<tr>");
         for (BundleField field : row.getFormat()) {
             ValueObject o = row.getValue(field);
-            ctx.write("<td>" + o + "</td>");
+            stringBuilder.append("<td>").append(o).append("</td>");
         }
-        ctx.write("</tr>\n");
+        stringBuilder.append("</tr>\n");
+        ctx.writeAndFlush(stringBuilder.toString());
     }
 
     @Override

@@ -34,35 +34,38 @@ class JsonBundleEncoder extends AbstractHttpBundleEncoder {
         super();
         this.jsonp = jsonp;
         this.jargs = jargs;
-        setContentTypeHeader(response, "application/json; charset=utf-8");
+        setContentTypeHeader(responseStart, "application/json; charset=utf-8");
     }
 
     @Override
     public void writeStart(ChannelHandlerContext ctx) {
         super.writeStart(ctx);
+        StringBuilder stringBuilder = new StringBuilder(3);
         if (jsonp != null) {
-            ctx.write(jsonp);
-            ctx.write("(");
+            stringBuilder.append(jsonp);
+            stringBuilder.append('(');
             if (jargs != null) {
-                ctx.write(jargs);
-                ctx.write(",");
+                stringBuilder.append(jargs);
+                stringBuilder.append(',');
             }
         }
-        ctx.write("[");
+        stringBuilder.append('[');
+        ctx.write(stringBuilder.toString());
     }
 
     @Override
     public void send(ChannelHandlerContext ctx, Bundle row) {
         super.send(ctx, row);
+        StringBuilder stringBuilder = new StringBuilder(row.getFormat().getFieldCount() * 13 + 3);
         if (rows++ > 0) {
-            ctx.write(",");
+            stringBuilder.append(',');
         }
-        ctx.write("[");
+        stringBuilder.append('[');
         int count = 0;
         for (BundleField field : row.getFormat()) {
             ValueObject o = row.getValue(field);
             if (count++ > 0) {
-                ctx.write(",");
+                stringBuilder.append(',');
             }
             if (o == null) {
                 continue;
@@ -75,18 +78,19 @@ class JsonBundleEncoder extends AbstractHttpBundleEncoder {
             switch (type) {
                 case INT:
                 case FLOAT:
-                    ctx.write(o.toString());
+                    stringBuilder.append(o.toString());
                     break;
                 case STRING:
-                    ctx.write("\"");
-                    ctx.write(jsonEncode(o.toString()));
-                    ctx.write("\"");
+                    stringBuilder.append('"');
+                    stringBuilder.append(jsonEncode(o.toString()));
+                    stringBuilder.append('"');
                     break;
                 default:
                     break;
             }
         }
-        ctx.write("]");
+        stringBuilder.append(']');
+        ctx.writeAndFlush(stringBuilder.toString());
     }
 
     @Override

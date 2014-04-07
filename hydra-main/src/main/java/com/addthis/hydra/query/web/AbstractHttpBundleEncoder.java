@@ -38,18 +38,18 @@ abstract class AbstractHttpBundleEncoder extends ChannelOutboundHandlerAdapter {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractHttpBundleEncoder.class);
 
-    protected final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    protected final HttpResponse responseStart = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
     protected final long startTime;
 
     protected boolean writeStarted = false;
 
     AbstractHttpBundleEncoder() {
-        HttpHeaders.setTransferEncodingChunked(response);
+        HttpHeaders.setTransferEncodingChunked(responseStart);
         startTime = System.currentTimeMillis();
     }
 
     protected void writeStart(ChannelHandlerContext ctx) {
-        ctx.write(response);
+        ctx.write(responseStart);
     }
 
     @Override
@@ -65,7 +65,7 @@ abstract class AbstractHttpBundleEncoder extends ChannelOutboundHandlerAdapter {
         }
     }
 
-    public void send(ChannelHandlerContext ctx, Bundle bundle) {
+    public void send(ChannelHandlerContext ctx, Bundle row) {
         if (!writeStarted) {
             writeStart(ctx);
             writeStarted = true;
