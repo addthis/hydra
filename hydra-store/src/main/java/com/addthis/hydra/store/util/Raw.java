@@ -201,12 +201,12 @@ public final class Raw implements Comparable<Raw>, Codec.BytesCodable {
     }
 
     @Override
-    public byte[] bytesEncode() {
+    public byte[] bytesEncode(long version) {
         return toBytes();
     }
 
     @Override
-    public void bytesDecode(byte[] b) {
+    public void bytesDecode(byte[] b, long version) {
         this.raw = b;
     }
 }

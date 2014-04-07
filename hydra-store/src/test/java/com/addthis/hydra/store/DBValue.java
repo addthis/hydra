@@ -15,12 +15,12 @@ public class DBValue implements Codec.BytesCodable {
     }
 
     @Override
-    public byte[] bytesEncode() {
+    public byte[] bytesEncode(long version) {
         return val.getBytes();
     }
 
     @Override
-    public void bytesDecode(byte[] b) {
+    public void bytesDecode(byte[] b, long version) {
         val = new String(b);
     }
 

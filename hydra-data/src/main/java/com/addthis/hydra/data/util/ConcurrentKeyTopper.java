@@ -289,7 +289,7 @@ public final class ConcurrentKeyTopper implements Codec.SuperCodable, Codec.Byte
     }
 
     @Override
-    public byte[] bytesEncode() {
+    public byte[] bytesEncode(long version) {
         preEncode();
         if (map.size() == 0) {
             return EMPTY;
@@ -321,7 +321,7 @@ public final class ConcurrentKeyTopper implements Codec.SuperCodable, Codec.Byte
     }
 
     @Override
-    public void bytesDecode(byte[] b) {
+    public void bytesDecode(byte[] b, long version) {
         ByteBuf byteBuf = Unpooled.wrappedBuffer(b);
         try {
             int mapSize = Varint.readUnsignedVarInt(byteBuf);

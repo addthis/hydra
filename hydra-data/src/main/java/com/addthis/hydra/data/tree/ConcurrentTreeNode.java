@@ -100,23 +100,10 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
 
     private AtomicBoolean decoded = new AtomicBoolean(false);
     private AtomicBoolean initOnce = new AtomicBoolean(false);
-    private Object initLock = new Object();
+    private final Object initLock = new Object();
 
     protected String name;
     protected DBKey dbkey;
-
-    public ConcurrentTreeNode getTempClone() {
-        ConcurrentTreeNode tn = new ConcurrentTreeNode();
-        tn.name = name;
-        tn.hits = hits;
-        tn.nodes = nodes;
-        tn.nodedb = nodedb;
-        tn.bits = bits;
-        tn.data = data;
-        tn.tree = tree;
-        tn.dbkey = dbkey;
-        return tn;
-    }
 
     public String toString() {
         return "TN[k=" + dbkey + ",db=" + nodedb + ",n#=" + nodes + ",h#=" + hits +

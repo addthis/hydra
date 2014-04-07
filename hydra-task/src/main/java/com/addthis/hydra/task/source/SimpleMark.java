@@ -89,7 +89,7 @@ public class SimpleMark implements Codec.Codable, Codec.BytesCodable {
     }
 
     @Override
-    public byte[] bytesEncode() {
+    public byte[] bytesEncode(long version) {
         byte[] retBytes = null;
         ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
         try {
@@ -107,7 +107,7 @@ public class SimpleMark implements Codec.Codable, Codec.BytesCodable {
     }
 
     @Override
-    public void bytesDecode(byte[] b) {
+    public void bytesDecode(byte[] b, long version) {
         ByteBuf buffer = Unpooled.wrappedBuffer(b);
         try {
             int valLength = Varint.readUnsignedVarInt(buffer);

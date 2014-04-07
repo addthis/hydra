@@ -135,7 +135,7 @@ public abstract class TreeNodeData<C extends TreeDataParameters<?>> implements C
     }
 
     @Override
-    public byte[] bytesEncode() {
+    public byte[] bytesEncode(long version) {
         try {
             return codec.encode(this);
         } catch (Exception e) {
@@ -144,7 +144,7 @@ public abstract class TreeNodeData<C extends TreeDataParameters<?>> implements C
     }
 
     @Override
-    public void bytesDecode(byte[] b) {
+    public void bytesDecode(byte[] b, long version) {
         try {
             codec.decode(this, b);
         } catch (Exception e) {

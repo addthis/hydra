@@ -75,16 +75,16 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
     private static final boolean collectMetrics = Parameter.boolValue("eps.debug.collect", false);
 
     private static final Logger log = LoggerFactory.getLogger(ExternalPagedStore.class);
-    private static final int gzlevel = Parameter.intValue("eps.gz.level", 1);
-    private static final int gztype = Parameter.intValue("eps.gz.type", 1);
-    private static final int gzbuf = Parameter.intValue("eps.gz.buffer", 1024);
+    protected static final int gzlevel = Parameter.intValue("eps.gz.level", 1);
+    protected static final int gztype = Parameter.intValue("eps.gz.type", 1);
+    protected static final int gzbuf = Parameter.intValue("eps.gz.buffer", 1024);
     private static final int defaultMaxPages = Parameter.intValue("eps.cache.pages", 50);
     private static final int defaultMaxPageEntries = Parameter.intValue("eps.cache.page.entries", 50);
     private static final int defaultEstimateInterval = Parameter.intValue("eps.mem.estimate.interval", 0);
     private static final int memEstimationStrategy = Parameter.intValue("eps.mem.estimate.method", 1);
     private static final int estimateRollMin = Parameter.intValue("eps.mem.estimate.roll.min", 1000);
     private static final int estimateRollFactor = Parameter.intValue("eps.mem.estimate.roll.factor", 100);
-    private static final int estimateMissingFactor = Parameter.intValue("eps.mem.estimate.missing.factor", 8);
+    protected static final int estimateMissingFactor = Parameter.intValue("eps.mem.estimate.missing.factor", 8);
     private static final boolean trackEncodingByteUsage = Parameter.boolValue("eps.cache.track.encoding", false);
     private static final boolean fixNextFirstKey = Parameter.boolValue("eps.repair.nextfirstkey", false);
 
@@ -100,8 +100,8 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
 
     private final ExternalPagedStoreMetrics metrics;
 
-    private static final int FLAGS_HAS_ESTIMATES = 1 << 4;
-    private static final int FLAGS_IS_SPARSE = 1 << 5;
+    protected static final int FLAGS_HAS_ESTIMATES = 1 << 4;
+    protected static final int FLAGS_IS_SPARSE = 1 << 5;
 
     private static final AtomicInteger scopeGenerator = new AtomicInteger();
 
@@ -131,7 +131,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
     final Histogram numberKeysPerPage = trackEncodingByteUsage ?
                                         Metrics.newHistogram(getClass(), "numberKeysPerPage", scope) :
                                         null;
-    private final KeyCoder<K, V> keyCoder;
+    protected final KeyCoder<K, V> keyCoder;
 
     /** */
     public static interface ByteStore {
@@ -207,7 +207,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
     }
 
     private final int mem_treepage = (int) MemoryCounter.estimateSize(new TreePage(null));
-    private final int mem_entry = (int) MemoryCounter.estimateSize(new PageValue((V) null, KeyCoder.ENCODE_TYPE.SPARSE)) + 16;
+    private final int mem_entry = (int) MemoryCounter.estimateSize(new PageValue((V) null, KeyCoder.EncodeType.SPARSE)) + 16;
     private final boolean checkKeyRange = Parameter.boolValue("eps.keys.debug", false);
     private final AtomicLong estimateCounter = new AtomicLong(0);
     private final AtomicLong memoryEstimate;
@@ -218,13 +218,13 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
     private final AtomicInteger released = new AtomicInteger(0);
     private final AtomicInteger leased = new AtomicInteger(0);
     private final AtomicInteger sampled = new AtomicInteger(0);
-    private final AtomicLong numPagesEncoded = new AtomicLong();
-    private final AtomicLong numPagesDecoded = new AtomicLong();
+    protected final AtomicLong numPagesEncoded = new AtomicLong();
+    protected final AtomicLong numPagesDecoded = new AtomicLong();
     private final AtomicLong numPagesSplit = new AtomicLong();
     private final AtomicBoolean empty;
     private final ByteStore pages;
     private long softTotalMem;
-    private long maxTotalMem;
+    protected long maxTotalMem;
     private long maxPageMem;
     private int estimateInterval;
     private int maxPageSize;
@@ -307,7 +307,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
         memoryEstimate.addAndGet(delta);
     }
 
-    private final void updateHistogram(Histogram histogram, int value) {
+    protected final void updateHistogram(Histogram histogram, int value) {
         /**
          *  The JIT compiler should be smart enough to eliminate this code
          *  when {@link ExternalPagedStore.trackEncodingByteUsage} is false.
@@ -317,7 +317,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
         }
     }
 
-    private byte[] pageEncode(TreePage page) {
+    protected byte[] pageEncode(TreePage page) {
         numPagesEncoded.getAndIncrement();
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -359,8 +359,16 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
 
 
             for (Entry<K, PageValue> e : page.map.entrySet()) {
-                byte[] nextKey = keyCoder.keyEncode(e.getKey());
-                byte[] nextValue = e.getValue().raw();
+                K key = e.getKey();
+                PageValue pageValue = e.getValue();
+                byte[] nextKey = keyCoder.keyEncode(key);
+                byte[] nextValue;
+                if (pageValue.encodeType != KeyCoder.EncodeType.SPARSE) {
+                    pageValue.value();
+                    nextValue = pageValue.raw(KeyCoder.EncodeType.SPARSE);
+                } else {
+                    nextValue = pageValue.raw();
+                }
 
                 updateHistogram(encodeKeySize, nextKey.length);
                 updateHistogram(encodeValueSize, nextValue.length);
@@ -399,7 +407,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
         }
     }
 
-    private TreePage pageDecode(byte[] page) {
+    protected TreePage pageDecode(byte[] page) {
         numPagesDecoded.getAndIncrement();
         try {
             InputStream in = new ByteArrayInputStream(page);
@@ -440,7 +448,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
                     byte vb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
                     bytes += kb.length + vb.length;
                     K key = keyCoder.keyDecode(kb);
-                    decode.map.put(key, new PageValue(vb, KeyCoder.ENCODE_TYPE.SPARSE));
+                    decode.map.put(key, new PageValue(vb, KeyCoder.EncodeType.SPARSE));
                 }
 
                 if (decode != null && maxTotalMem > 0) {
@@ -463,7 +471,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
                     byte vb[] = Bytes.readBytes(in);
                     bytes += kb.length + vb.length;
                     K key = keyCoder.keyDecode(kb);
-                    decode.map.put(key, new PageValue(vb, KeyCoder.ENCODE_TYPE.LEGACY));
+                    decode.map.put(key, new PageValue(vb, KeyCoder.EncodeType.LEGACY));
                 }
                 if (maxTotalMem > 0) {
                     if (hasEstimates) {
@@ -487,18 +495,18 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
     /**
      * wrapper to allow deferred decoding
      */
-    private final class PageValue {
+    protected final class PageValue {
 
         private V value;
         private byte[] raw;
-        private KeyCoder.ENCODE_TYPE encodeType;
+        private KeyCoder.EncodeType encodeType;
 
-        PageValue(V value, KeyCoder.ENCODE_TYPE encodeType) {
+        PageValue(V value, KeyCoder.EncodeType encodeType) {
             this.value = value;
             this.encodeType = encodeType;
         }
 
-        PageValue(byte[] raw, KeyCoder.ENCODE_TYPE encodeType) {
+        PageValue(byte[] raw, KeyCoder.EncodeType encodeType) {
             this.raw = raw;
             this.encodeType = encodeType;
         }
@@ -522,17 +530,24 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
             }
             return raw;
         }
+
+        public byte[] raw(KeyCoder.EncodeType encodeType) {
+            if (raw == null) {
+                raw = keyCoder.valueEncode(value, encodeType);
+            }
+            return raw;
+        }
     }
 
     /** */
-    private final class TreePage implements KeyValuePage<K, V>, Comparator<K> {
+    protected final class TreePage implements KeyValuePage<K, V>, Comparator<K> {
 
         private final AtomicInteger pins = new AtomicInteger(0);
         private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-        private final TreeMap<K, PageValue> map;
+        protected final TreeMap<K, PageValue> map;
         private final K firstKey;
-        private int estimateTotal;
-        private int estimates;
+        protected int estimateTotal;
+        protected int estimates;
         private int avgEntrySize;
         private K nextFirstKey;
         private volatile boolean dirty;
@@ -586,7 +601,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
             }
         }
 
-        private void setAverage(int total, int count) {
+        protected void setAverage(int total, int count) {
             avgEntrySize = count > 0 ? total / count : 0;
             estimates = count;
             estimateTotal = total;
@@ -722,7 +737,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
             checkKey(key);
             try {
                 int memest = estimatedMem();
-                PageValue newVal = new PageValue(val, KeyCoder.ENCODE_TYPE.SPARSE);
+                PageValue newVal = new PageValue(val, KeyCoder.EncodeType.SPARSE);
                 PageValue old = map.put(key, newVal);
                 /** for memory estimation, the replacement gets 2x weighting */
                 if (old == null) {
@@ -764,7 +779,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
             checkKey(key);
             try {
                 int memest = estimatedMem();
-                PageValue newVal = new PageValue(val, KeyCoder.ENCODE_TYPE.SPARSE);
+                PageValue newVal = new PageValue(val, KeyCoder.EncodeType.SPARSE);
                 /** for memory estimation, the replacement gets 2x weighting */
                 if (map.put(key, newVal) == null) {
                     totalKeys.incrementAndGet();
@@ -903,7 +918,7 @@ public class ExternalPagedStore<K extends Comparable<K>, V extends Codec.BytesCo
 
                 @Override
                 public V setValue(V value) {
-                    PageValue old = entry.setValue(new PageValue(value, KeyCoder.ENCODE_TYPE.SPARSE));
+                    PageValue old = entry.setValue(new PageValue(value, KeyCoder.EncodeType.SPARSE));
                     return old != null ? old.value() : null;
                 }
             };

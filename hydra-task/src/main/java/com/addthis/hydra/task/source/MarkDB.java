@@ -79,12 +79,12 @@ public class MarkDB {
         }
 
         @Override
-        public byte[] bytesEncode() {
+        public byte[] bytesEncode(long version) {
             return new byte[0];
         }
 
         @Override
-        public void bytesDecode(byte[] b) {
+        public void bytesDecode(byte[] b, long version) {
 
         }
     }
@@ -109,12 +109,12 @@ public class MarkDB {
         }
 
         @Override
-        public byte[] bytesEncode() {
+        public byte[] bytesEncode(long version) {
             return new byte[0];
         }
 
         @Override
-        public void bytesDecode(byte[] b) {
+        public void bytesDecode(byte[] b, long version) {
 
         }
     }

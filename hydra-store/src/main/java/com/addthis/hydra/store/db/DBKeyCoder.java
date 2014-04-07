@@ -28,6 +28,8 @@ class DBKeyCoder<V extends Codec.BytesCodable> implements KeyCoder<DBKey, V> {
     protected final Codec codec;
     protected final Class<? extends V> clazz;
 
+    private static final byte[] zero = new byte[0];
+
     public DBKeyCoder(Class<? extends V> clazz) {
         this(new CodecBin2(), clazz);
     }
@@ -48,13 +50,17 @@ class DBKeyCoder<V extends Codec.BytesCodable> implements KeyCoder<DBKey, V> {
     }
 
     @Override
-    public byte[] valueEncode(V value, ENCODE_TYPE encodeType) {
+    public byte[] valueEncode(V value, EncodeType encodeType) {
         try {
             switch (encodeType) {
                 case LEGACY:
                     return codec.encode(value);
                 case SPARSE:
-                    return value.bytesEncode();
+                    if (value == null) {
+                        return zero;
+                    } else {
+                        return value.bytesEncode(encodeType.ordinal());
+                    }
                 default:
                     throw new RuntimeException("UNKNOWN ENCODING TYPE: " + encodeType);
             }
@@ -69,16 +75,20 @@ class DBKeyCoder<V extends Codec.BytesCodable> implements KeyCoder<DBKey, V> {
     }
 
     @Override
-    public V valueDecode(byte[] value, ENCODE_TYPE encodeType) {
+    public V valueDecode(byte[] value, EncodeType encodeType) {
 
         try {
             switch (encodeType) {
                 case LEGACY:
                     return codec.decode(clazz.newInstance(), value);
                 case SPARSE:
-                    V v = clazz.newInstance();
-                    v.bytesDecode(value);
-                    return v;
+                    if (value.length > 0) {
+                        V v = clazz.newInstance();
+                        v.bytesDecode(value, encodeType.ordinal());
+                        return v;
+                    } else {
+                        return null;
+                    }
                 default:
                     throw new RuntimeException("UNKNOWN ENCODING TYPE: " + encodeType);
             }

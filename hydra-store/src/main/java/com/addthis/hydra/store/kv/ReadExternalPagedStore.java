@@ -225,7 +225,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                     byte kb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
                     byte vb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
                     K key = keyCoder.keyDecode(kb);
-                    decode.map.put(key, new PageValue(vb, KeyCoder.ENCODE_TYPE.SPARSE));
+                    decode.map.put(key, new PageValue(vb, KeyCoder.EncodeType.SPARSE));
                 }
 
             } else {
@@ -240,7 +240,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                     byte kb[] = Bytes.readBytes(in);
                     byte vb[] = Bytes.readBytes(in);
                     K key = keyCoder.keyDecode(kb);
-                    decode.map.put(key, new PageValue(vb, KeyCoder.ENCODE_TYPE.LEGACY));
+                    decode.map.put(key, new PageValue(vb, KeyCoder.EncodeType.LEGACY));
                 }
                 //ignoring memory data
                 in.close();
@@ -269,9 +269,9 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         private V value;
         private byte[] raw;
         private volatile V realValue;
-        private KeyCoder.ENCODE_TYPE encodeType;
+        private KeyCoder.EncodeType encodeType;
 
-        PageValue(byte[] raw, KeyCoder.ENCODE_TYPE encodeType) {
+        PageValue(byte[] raw, KeyCoder.EncodeType encodeType) {
             this.raw = raw;
             this.encodeType = encodeType;
         }

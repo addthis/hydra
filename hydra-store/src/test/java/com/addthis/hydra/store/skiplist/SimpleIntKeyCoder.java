@@ -17,7 +17,6 @@ import com.addthis.basis.util.Bytes;
 
 import com.addthis.hydra.store.DBIntValue;
 import com.addthis.hydra.store.kv.KeyCoder;
-import com.sleepycat.je.tree.dupConvert.DBIN;
 
 
 public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
@@ -33,8 +32,8 @@ public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
     }
 
     @Override
-    public byte[] valueEncode(DBIntValue value, ENCODE_TYPE encodeType) {
-        return value.bytesEncode();
+    public byte[] valueEncode(DBIntValue value, EncodeType encodeType) {
+        return value.bytesEncode(encodeType.ordinal());
     }
 
     @Override
@@ -43,9 +42,9 @@ public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
     }
 
     @Override
-    public DBIntValue valueDecode(byte[] value, ENCODE_TYPE encodeType) {
+    public DBIntValue valueDecode(byte[] value, EncodeType encodeType) {
         DBIntValue dbIntValue = new DBIntValue();
-        dbIntValue.bytesDecode(value);
+        dbIntValue.bytesDecode(value, encodeType.ordinal());
         return dbIntValue;
     }
 

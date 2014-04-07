@@ -93,12 +93,12 @@ public class PageDBTest {
         }
 
         @Override
-        public byte[] bytesEncode() {
+        public byte[] bytesEncode(long version) {
             return value.getBytes();
         }
 
         @Override
-        public void bytesDecode(byte[] b) {
+        public void bytesDecode(byte[] b, long version) {
             value = new String(b);
         }
     }

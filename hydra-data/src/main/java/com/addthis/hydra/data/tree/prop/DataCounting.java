@@ -363,7 +363,7 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements C
     }
 
     @Override
-    public byte[] bytesEncode() {
+    public byte[] bytesEncode(long version) {
         preEncode();
         ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
         try {
@@ -379,7 +379,7 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements C
     }
 
     @Override
-    public void bytesDecode(byte[] b) {
+    public void bytesDecode(byte[] b, long version) {
         ByteBuf buffer = Unpooled.wrappedBuffer(b);
         try {
             ver = Varint.readUnsignedVarInt(buffer);

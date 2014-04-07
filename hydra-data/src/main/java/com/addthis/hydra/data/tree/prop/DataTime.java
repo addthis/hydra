@@ -114,7 +114,7 @@ public class DataTime extends TreeNodeData<DataTime.Config> {
     }
 
     @Override
-    public byte[] bytesEncode() {
+    public byte[] bytesEncode(long version) {
         byte[] encodedBytes = null;
         ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.buffer();
         try {
@@ -130,7 +130,7 @@ public class DataTime extends TreeNodeData<DataTime.Config> {
     }
 
     @Override
-    public void bytesDecode(byte[] b) {
+    public void bytesDecode(byte[] b, long version) {
         ByteBuf byteBuf = Unpooled.wrappedBuffer(b);
         try {
             first = Varint.readUnsignedVarLong(byteBuf);

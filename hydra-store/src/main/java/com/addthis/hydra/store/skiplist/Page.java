@@ -44,7 +44,7 @@ import java.util.ArrayList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.zip.GZIPInputStream;
 
-final class Page<K, V extends Codec.BytesCodable> {
+public class Page<K, V extends Codec.BytesCodable> {
 
     static final int gzlevel = Parameter.intValue("eps.gz.level", 1);
     static final int gztype = Parameter.intValue("eps.gz.type", 1);
@@ -102,14 +102,14 @@ final class Page<K, V extends Codec.BytesCodable> {
     private int memoryEstimate;
 
     @GuardedBy("lock")
-    private KeyCoder.ENCODE_TYPE encodeType;
+    private KeyCoder.EncodeType encodeType;
 
-    private static final int FLAGS_IS_SPARSE = 1 << 5;
-    private static final int FLAGS_HAS_ESTIMATES = 1 << 4;
+    protected static final int FLAGS_IS_SPARSE = 1 << 5;
+    protected static final int FLAGS_HAS_ESTIMATES = 1 << 4;
 
-    private final KeyCoder<K, V> keyCoder;
+    protected final KeyCoder<K, V> keyCoder;
 
-    private Page(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, KeyCoder.ENCODE_TYPE encodeType) {
+    protected Page(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, KeyCoder.EncodeType encodeType) {
         this.parent = cache;
         this.keyCoder = parent != null ? parent.keyCoder : null;
         this.firstKey = firstKey;
@@ -120,9 +120,9 @@ final class Page<K, V extends Codec.BytesCodable> {
         this.encodeType = encodeType;
     }
 
-    public Page(SkipListCache<K, V> cache, K firstKey,
+    protected Page(SkipListCache<K, V> cache, K firstKey,
             K nextFirstKey, int size, ArrayList<K> keys, ArrayList<V> values,
-            ArrayList<byte[]> rawValues, KeyCoder.ENCODE_TYPE encodeType) {
+            ArrayList<byte[]> rawValues, KeyCoder.EncodeType encodeType) {
         assert (keys != null);
         assert (values != null);
         assert (rawValues != null);
@@ -145,28 +145,6 @@ final class Page<K, V extends Codec.BytesCodable> {
         this.encodeType = encodeType;
     }
 
-    public static <K, V extends Codec.BytesCodable> Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
-            K firstKey, K nextFirstKey, KeyCoder.ENCODE_TYPE encodeType) {
-        return new Page<>(cache, firstKey, nextFirstKey, encodeType);
-    }
-
-    public static <K, V extends Codec.BytesCodable> Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
-            K firstKey, KeyCoder.ENCODE_TYPE encodeType) {
-        return new Page<>(cache, firstKey, null, encodeType);
-    }
-
-    public static <K, V extends Codec.BytesCodable> Page<K, V> measureMemoryEmptyPage() {
-        return new Page<>(null, null, null, KeyCoder.ENCODE_TYPE.SPARSE);
-    }
-
-    public static <K, V extends Codec.BytesCodable> Page<K, V> generateSiblingPage(SkipListCache<K, V> cache,
-                                                                                   K firstKey, K nextFirstKey,
-                                                                                   int size, ArrayList<K> keys,
-                                                                                   ArrayList<V> values,
-                                                                                   ArrayList<byte[]> rawValues, KeyCoder.ENCODE_TYPE encodeType) {
-        return new Page<>(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
-    }
-
     /**
      * Generate a blank page.
      */
@@ -178,7 +156,7 @@ final class Page<K, V extends Codec.BytesCodable> {
         timeStamp = SkipListCache.generateTimestamp();
     }
 
-    private final void updateHistogram(Histogram histogram, int value, boolean record) {
+    protected final void updateHistogram(Histogram histogram, int value, boolean record) {
         /**
          *  The JIT compiler should be smart enough to eliminate this code
          *  when {@link SkipListCache.trackEncodingByteUsage} is false.
@@ -234,8 +212,9 @@ final class Page<K, V extends Codec.BytesCodable> {
                 byte[] keyEncoded = keyCoder.keyEncode(keys.get(i));
                 byte[] rawVal = rawValues.get(i);
 
-                if (rawVal == null) {
-                    rawVal = keyCoder.valueEncode(values.get(i), encodeType);
+                if (rawVal == null || encodeType != KeyCoder.EncodeType.SPARSE) {
+                    fetchValue(i);
+                    rawVal = keyCoder.valueEncode(values.get(i), KeyCoder.EncodeType.SPARSE);
                 }
 
                 updateHistogram(metrics.encodeKeySize, keyEncoded.length, record);
@@ -279,7 +258,7 @@ final class Page<K, V extends Codec.BytesCodable> {
     }
 
 
-    public void decode(byte[] page) {
+    public void  decode(byte[] page) {
         parent.numPagesDecoded.getAndIncrement();
         ByteBuf buffer = Unpooled.wrappedBuffer(page);
         try {
@@ -306,7 +285,7 @@ final class Page<K, V extends Codec.BytesCodable> {
             K firstKey;
             byte[] nextFirstKey;
             if (isSparse) {
-                encodeType = KeyCoder.ENCODE_TYPE.SPARSE;
+                encodeType = KeyCoder.EncodeType.SPARSE;
                 DataInputStream dis = new DataInputStream(in);
                 int entries = Varint.readUnsignedVarInt(dis);
 
@@ -343,7 +322,7 @@ final class Page<K, V extends Codec.BytesCodable> {
                     setAverage(bytes * estimateMissingFactor, entries);
                 }
             } else {
-                encodeType = KeyCoder.ENCODE_TYPE.LEGACY;
+                encodeType = KeyCoder.EncodeType.LEGACY;
                 int entries = (int) Bytes.readLength(in);
 
                 firstKey = keyCoder.keyDecode(Bytes.readBytes(in));
@@ -569,8 +548,26 @@ final class Page<K, V extends Codec.BytesCodable> {
         return state.isTransient();
     }
 
-    public KeyCoder.ENCODE_TYPE getEncodeType() {
+    public KeyCoder.EncodeType getEncodeType() {
         return encodeType;
+    }
+
+    public static class DefaultPageFactory<K, V extends Codec.BytesCodable> extends PageFactory<K,V> {
+
+        public static final DefaultPageFactory singleton = new DefaultPageFactory();
+
+        private DefaultPageFactory() {}
+
+        @Override
+        public Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, KeyCoder.EncodeType encodeType) {
+            return new Page(cache, firstKey, nextFirstKey, encodeType);
+        }
+
+        @Override
+        public Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, int size, ArrayList<K> keys,
+                ArrayList<V> values, ArrayList<byte[]> rawValues, KeyCoder.EncodeType encodeType) {
+            return new Page(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
+        }
     }
 }
 

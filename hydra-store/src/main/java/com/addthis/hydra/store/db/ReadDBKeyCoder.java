@@ -28,7 +28,7 @@ public class ReadDBKeyCoder<V extends IReadWeighable & Codec.BytesCodable> exten
     }
 
     @Override
-    public V valueDecode(byte[] value, ENCODE_TYPE encodeType) {
+    public V valueDecode(byte[] value, EncodeType encodeType) {
         V val = super.valueDecode(value, encodeType);
         val.setWeight(value.length);
         return val;

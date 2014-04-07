@@ -29,6 +29,7 @@ import com.addthis.basis.util.Files;
 import com.addthis.hydra.store.db.IPageDB.Range;
 import com.addthis.hydra.store.kv.CachedPagedStore;
 import com.addthis.hydra.store.kv.ExternalPagedStore;
+import com.addthis.hydra.store.skiplist.Page;
 import com.addthis.hydra.store.util.Raw;
 
 import org.junit.After;
@@ -118,7 +119,7 @@ public class TestPagedDB {
         switch (type) {
             case PageDB:
                 db = new PageDB<>(dir, Raw.class, PageDB.defaultDbName,
-                        pagesize, pagecache, keyValueStoreType, false);
+                        pagesize, pagecache, keyValueStoreType, false, Page.DefaultPageFactory.singleton);
                 break;
         }
         dbToDir.put(db, dir);

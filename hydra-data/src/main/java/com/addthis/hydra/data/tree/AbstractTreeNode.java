@@ -27,7 +27,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
 
 
     @Override
-    public byte[] bytesEncode() {
+    public byte[] bytesEncode(long version) {
         preEncode();
         if (!encodeLock()) {
             throw new RuntimeException("Unable to acquire encoding lock");
@@ -49,7 +49,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
                     byte[] classNameBytes = classInfo.getBytes(Charset.forName("UTF-8"));
                     Varint.writeUnsignedVarInt(classNameBytes.length, b);
                     b.writeBytes(classNameBytes);
-                    byte[] bytes = entry.getValue().bytesEncode();
+                    byte[] bytes = entry.getValue().bytesEncode(version);
                     Varint.writeUnsignedVarInt(bytes.length, b);
                     b.writeBytes(bytes);
                 }
@@ -72,7 +72,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
     }
 
     @Override
-    public void bytesDecode(byte[] b) {
+    public void bytesDecode(byte[] b, long version) {
         ByteBuf buf = Unpooled.wrappedBuffer(b);
         try {
             hits = Varint.readUnsignedVarLong(buf);
@@ -90,7 +90,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
                     String className = new String(buf.readBytes(cl).array(), Charset.forName("UTF-8"));
                     TreeNodeData tn = (TreeNodeData) CodecBin2.getClassFieldMap(TreeNodeData.class).getClass(className).newInstance();
                     int vl = Varint.readUnsignedVarInt(buf);
-                    tn.bytesDecode(buf.readBytes(vl).array());
+                    tn.bytesDecode(buf.readBytes(vl).array(), version);
                     dataMap.put(key, tn);
                 }
                 data = dataMap;

@@ -336,7 +336,7 @@ public class ReadTreeNode extends AbstractTreeNode implements IReadWeighable {
     }
 
     @Override
-    public byte[] bytesEncode() {
+    public byte[] bytesEncode(long version) {
         throw new UnsupportedOperationException("ReadTreeNode cannot be encoded");
     }
 }

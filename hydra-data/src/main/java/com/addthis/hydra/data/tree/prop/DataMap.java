@@ -193,7 +193,7 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
     }
 
     @Override
-    public byte[] bytesEncode() {
+    public byte[] bytesEncode(long version) {
         byte[] encodedBytes = null;
         ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer();
         try {
@@ -224,7 +224,7 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
     }
 
     @Override
-    public void bytesDecode(byte[] b) {
+    public void bytesDecode(byte[] b, long version) {
         ByteBuf buf = Unpooled.wrappedBuffer(b);
         try {
             int length = Varint.readUnsignedVarInt(buf);

@@ -278,11 +278,11 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
     }
 
     @Override
-    public byte[] bytesEncode() {
+    public byte[] bytesEncode(long version) {
         byte[] bytes = null;
         ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer();
         try {
-            byte[] topBytes = top.bytesEncode();
+            byte[] topBytes = top.bytesEncode(version);
             Varint.writeUnsignedVarInt(topBytes.length, buf);
             buf.writeBytes(topBytes);
             Varint.writeUnsignedVarInt(size, buf);
@@ -295,7 +295,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
     }
 
     @Override
-    public void bytesDecode(byte[] b) {
+    public void bytesDecode(byte[] b, long version) {
         top = new ConcurrentKeyTopper();
         ByteBuf buf = Unpooled.wrappedBuffer(b);
         try {
@@ -303,7 +303,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
             if (topBytesLength > 0) {
                 byte[] topBytes = new byte[topBytesLength];
                 buf.readBytes(topBytes);
-                top.bytesDecode(topBytes);
+                top.bytesDecode(topBytes, version);
             } else {
                 top.init();
             }
