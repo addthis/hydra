@@ -460,7 +460,7 @@ public class DiskBackedList<K> implements List<K> {
     /**
      * perform sort based on object comparisons
      */
-    public void sort(final Comparator<K> comp) {
+    public void sort(final Comparator<? super K> comp) {
         long starttime = System.currentTimeMillis();
         dumbSort(comp);
         long stoptime = System.currentTimeMillis() - starttime;

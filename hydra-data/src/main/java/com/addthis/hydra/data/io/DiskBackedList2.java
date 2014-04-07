@@ -401,59 +401,59 @@ public class DiskBackedList2<K> implements List<K> {
      * Sort the collection of elements using a standard external sort algorithm: sort each chunk of elements, then
      * merge the chunks into a new list, then switch to the new list.
      */
-    public void sort(final Comparator<K> comp) throws IOException {
-//        if (currentChunk != null)
-//        {
-//            currentChunk.saveToFile();
-////            loadChunkFully(currentChunk.index);
-//        }
+    @Override
+    public void sort(final Comparator<? super K> comp) {
         // Sort each chunk. Done if there is only one chunk.
-        sortEachChunk(comp);
-        if (chunks.size() <= 1) {
-            return;
-        }
-        Comparator<Pair<K, Integer>> pairComp = new Comparator<Pair<K, Integer>>() {
-            @Override
-            public int compare(Pair<K, Integer> e1, Pair<K, Integer> e2) {
-                return comp.compare(e1.getLeft(), e2.getLeft());
+        try {
+            sortEachChunk(comp);
+            if (chunks.size() <= 1) {
+                return;
             }
-        };
-        // This heap stores the lowest remaining value from each chunk
-        PriorityQueue<Pair<K, Integer>> heap = new PriorityQueue<Pair<K, Integer>>(chunks.size(), pairComp);
-        ArrayList<Iterator> iterators = new ArrayList<Iterator>(chunks.size());
+            Comparator<Pair<K, Integer>> pairComp = new Comparator<Pair<K, Integer>>() {
+                @Override
+                public int compare(Pair<K, Integer> e1, Pair<K, Integer> e2) {
+                    return comp.compare(e1.getLeft(), e2.getLeft());
+                }
+            };
+            // This heap stores the lowest remaining value from each chunk
+            PriorityQueue<Pair<K, Integer>> heap = new PriorityQueue<Pair<K, Integer>>(chunks.size(), pairComp);
+            ArrayList<Iterator> iterators = new ArrayList<Iterator>(chunks.size());
 
-        // Initialize the heap with one value per chunk
-        close();
-        for (int i = 0; i < chunks.size(); i++) {
-            Iterator<K> it = chunks.get(i).getChunkIterator();
-            iterators.add(i, it);
-            if (it.hasNext()) {
-                K elt = it.next();
-                if (elt != null) {
-                    heap.add(Pair.of(elt, i));
+            // Initialize the heap with one value per chunk
+            close();
+            for (int i = 0; i < chunks.size(); i++) {
+                Iterator<K> it = chunks.get(i).getChunkIterator();
+                iterators.add(i, it);
+                if (it.hasNext()) {
+                    K elt = it.next();
+                    if (elt != null) {
+                        heap.add(Pair.of(elt, i));
+                    }
                 }
             }
-        }
-        // Make a new disk backed list to store sorted values.
-        // When the number of chunks is large, the size of the output buffer needs to shrink to make up for the extra mem usage
-        long storageMaxChunkSize = maxChunkSizeBytes / (1 + chunks.size() / 20);
-        DiskBackedList2<K> storage = new DiskBackedList2<K>(codec, storageMaxChunkSize, directory);
+            // Make a new disk backed list to store sorted values.
+            // When the number of chunks is large, the size of the output buffer needs to shrink to make up for the extra mem usage
+            long storageMaxChunkSize = maxChunkSizeBytes / (1 + chunks.size() / 20);
+            DiskBackedList2<K> storage = new DiskBackedList2<K>(codec, storageMaxChunkSize, directory);
 
-        // Repeatedly pull the smallest element from the heap
-        while (!heap.isEmpty()) {
-            Pair<K, Integer> leastElt = heap.poll();
-            storage.add(leastElt.getLeft());
-            @SuppressWarnings({"unchecked"})
-            Iterator<K> polledIterator = iterators.get(leastElt.getRight());
-            if (polledIterator.hasNext()) {
-                heap.add(Pair.of(polledIterator.next(), leastElt.getRight()));
+            // Repeatedly pull the smallest element from the heap
+            while (!heap.isEmpty()) {
+                Pair<K, Integer> leastElt = heap.poll();
+                storage.add(leastElt.getLeft());
+                @SuppressWarnings({"unchecked"})
+                Iterator<K> polledIterator = iterators.get(leastElt.getRight());
+                if (polledIterator.hasNext()) {
+                    heap.add(Pair.of(polledIterator.next(), leastElt.getRight()));
+                }
             }
-        }
 
-        // Switch to the storage dbl's chunks
-        storage.close();
-        chunks = storage.getChunks();
-        currentChunk = null;
+            // Switch to the storage dbl's chunks
+            storage.close();
+            chunks = storage.getChunks();
+            currentChunk = null;
+        } catch (IOException e) {
+            throw new RuntimeException("IOException during sort", e);
+        }
     }
 
     // This function is used to switch to the sorted values after a sort
@@ -461,7 +461,7 @@ public class DiskBackedList2<K> implements List<K> {
         return chunks;
     }
 
-    private void sortEachChunk(final Comparator<K> comp) throws IOException {
+    private void sortEachChunk(final Comparator<? super K> comp) throws IOException {
         int startChunkIndex = currentChunk != null ? currentChunk.getIndex() : 0;
         int numChunks = chunks.size();
         for (int i = 0; i < numChunks; i++) {

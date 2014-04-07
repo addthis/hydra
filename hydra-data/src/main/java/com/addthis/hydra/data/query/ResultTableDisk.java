@@ -95,17 +95,12 @@ public class ResultTableDisk extends ResultTable implements ItemCodec<Bundle> {
 
     @Override
     public void sort(final Comparator<Bundle> comp) {
-        try {
-            diskList.sort(new Comparator<Bundle>() {
-                @Override
-                public int compare(Bundle o1, Bundle o2) {
-                    return comp.compare(o1, o2);
-                }
-            });
-        } catch (IOException io) {
-            System.err.println("io exception during sort");
-        }
-
+        diskList.sort(new Comparator<Bundle>() {
+            @Override
+            public int compare(Bundle o1, Bundle o2) {
+                return comp.compare(o1, o2);
+            }
+        });
     }
 
     @Override

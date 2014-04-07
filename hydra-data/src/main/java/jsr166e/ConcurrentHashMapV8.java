@@ -36,10 +36,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.Spliterator;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 import com.addthis.basis.util.MemoryCounter;
 
@@ -178,7 +180,7 @@ public class ConcurrentHashMapV8<K,V> extends AbstractMap<K,V>
 	 * This interface provides a subset of the functionality of JDK8
 	 * java.util.Spliterator.
 	 */
-	public static interface ConcurrentHashMapSpliterator<T> {
+	public static interface ConcurrentHashMapSpliterator<T> extends Spliterator<T> {
 		/**
 		 * If possible, returns a new spliterator covering
 		 * approximately one half of the elements, which will not be
@@ -191,11 +193,6 @@ public class ConcurrentHashMapV8<K,V> extends AbstractMap<K,V>
 		 * this Spliterator.
 		 */
 		long estimateSize();
-
-		/** Applies the action to each untraversed element */
-		void forEachRemaining(Action<? super T> action);
-		/** If an element remains, applies the action and returns true. */
-		boolean tryAdvance(Action<? super T> action);
 	}
 
 	// Sams
@@ -3333,20 +3330,20 @@ public class ConcurrentHashMapV8<K,V> extends AbstractMap<K,V>
 							f, est >>>= 1);
 		}
 
-		public void forEachRemaining(Action<? super K> action) {
-			if (action == null) throw new NullPointerException();
-			for (Node<K,V> p; (p = advance()) != null;)
-				action.apply(p.key);
-		}
+        @Override
+        public boolean tryAdvance(Consumer<? super K> action) {
+            if (action == null) throw new NullPointerException();
+            Node<K,V> p;
+            if ((p = advance()) == null)
+                return false;
+            action.accept(p.key);
+            return false;
+        }
 
-		public boolean tryAdvance(Action<? super K> action) {
-			if (action == null) throw new NullPointerException();
-			Node<K,V> p;
-			if ((p = advance()) == null)
-				return false;
-			action.apply(p.key);
-			return true;
-		}
+        @Override
+        public int characteristics() {
+            return 0;
+        }
 
 		public long estimateSize() { return est; }
 
@@ -3368,20 +3365,20 @@ public class ConcurrentHashMapV8<K,V> extends AbstractMap<K,V>
 							f, est >>>= 1);
 		}
 
-		public void forEachRemaining(Action<? super V> action) {
-			if (action == null) throw new NullPointerException();
-			for (Node<K,V> p; (p = advance()) != null;)
-				action.apply(p.val);
-		}
+        @Override
+        public boolean tryAdvance(Consumer<? super V> action) {
+            if (action == null) throw new NullPointerException();
+            Node<K,V> p;
+            if ((p = advance()) == null)
+                return false;
+            action.accept(p.val);
+            return true;
+        }
 
-		public boolean tryAdvance(Action<? super V> action) {
-			if (action == null) throw new NullPointerException();
-			Node<K,V> p;
-			if ((p = advance()) == null)
-				return false;
-			action.apply(p.val);
-			return true;
-		}
+        @Override
+        public int characteristics() {
+            return 0;
+        }
 
 		public long estimateSize() { return est; }
 
@@ -3405,20 +3402,20 @@ public class ConcurrentHashMapV8<K,V> extends AbstractMap<K,V>
 							f, est >>>= 1, map);
 		}
 
-		public void forEachRemaining(Action<? super Map.Entry<K,V>> action) {
-			if (action == null) throw new NullPointerException();
-			for (Node<K,V> p; (p = advance()) != null; )
-				action.apply(new MapEntry<K,V>(p.key, p.val, map));
-		}
+        @Override
+        public int characteristics() {
+            return 0;
+        }
 
-		public boolean tryAdvance(Action<? super Map.Entry<K,V>> action) {
-			if (action == null) throw new NullPointerException();
-			Node<K,V> p;
-			if ((p = advance()) == null)
-				return false;
-			action.apply(new MapEntry<K,V>(p.key, p.val, map));
-			return true;
-		}
+        @Override
+        public boolean tryAdvance(Consumer<? super Map.Entry<K,V>> action) {
+            if (action == null) throw new NullPointerException();
+            Node<K,V> p;
+            if ((p = advance()) == null)
+                return false;
+            action.accept(new MapEntry<K,V>(p.key, p.val, map));
+            return true;
+        }
 
 		public long estimateSize() { return est; }
 

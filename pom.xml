@@ -47,6 +47,8 @@
 
 
   <properties>
+    <dep.plugin.jacoco.version>0.7.0.201403182114</dep.plugin.jacoco.version>
+    <project.build.targetJdk>1.8</project.build.targetJdk>
     <!-- surefire junit properties -->
     <hydra.test.excluded.groups>com.addthis.basis.test.SlowTest,com.addthis.hydra.common.test.LocalStackTest</hydra.test.excluded.groups>
     <!-- These should be set to the default values specified in the surefire plugin.
