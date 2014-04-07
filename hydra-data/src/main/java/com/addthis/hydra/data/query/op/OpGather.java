@@ -95,10 +95,6 @@ import org.apache.commons.lang3.ArrayUtils;
  */
 public class OpGather extends AbstractQueryOp {
 
-    private enum MergeOp {
-        KEY, SUM, AVG, MIN, MAX, PACK, LAST, DIFF, JOIN
-    }
-
     public static ValueNumber num(ValueObject o) {
         ValueNumber num = ValueUtil.asNumberOrParseLong(o, 10);
         return num != null ? num : ZERO;

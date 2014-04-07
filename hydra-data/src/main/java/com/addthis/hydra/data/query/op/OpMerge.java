@@ -76,10 +76,6 @@ import com.addthis.hydra.data.query.QueryStatusObserver;
  */
 public class OpMerge extends AbstractQueryOp {
 
-    private enum MergeOp {
-        KEY, SUM, AVG, IGNORE, UCOUNT, MIN, MAX, DIFF, PACK, COUNTDOWN, JOIN, LAST
-    }
-
     //  private MergeOp op[];
     private BundleField mergeField;
     private boolean mergeCount;
