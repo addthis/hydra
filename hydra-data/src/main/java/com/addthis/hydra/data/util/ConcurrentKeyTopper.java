@@ -301,7 +301,7 @@ public final class ConcurrentKeyTopper implements Codec.SuperCodable, Codec.Byte
             for (Map.Entry<String, Long> mapEntry : map.entrySet()) {
                 String key = mapEntry.getKey();
                 if (key == null) {
-                    key = "MISSING_KEY";
+                    throw new IllegalStateException("ConcurrentKeyTopper decoded null key");
                 }
                 byte[] keyBytes = key.getBytes("UTF-8");
                 Varint.writeUnsignedVarInt(keyBytes.length, byteBuf);
