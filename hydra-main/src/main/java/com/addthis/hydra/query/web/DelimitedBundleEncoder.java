@@ -73,7 +73,7 @@ class DelimitedBundleEncoder extends AbstractHttpBundleEncoder {
                 switch (type) {
                     case INT:
                     case FLOAT:
-                        ctx.write(o.toString());
+                        stringBuilder.append(o.toString());
                         break;
                     case STRING:
                         stringBuilder.append("\"");
