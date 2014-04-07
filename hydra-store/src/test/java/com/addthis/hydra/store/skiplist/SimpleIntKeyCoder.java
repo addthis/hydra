@@ -15,10 +15,11 @@ package com.addthis.hydra.store.skiplist;
 
 import com.addthis.basis.util.Bytes;
 
+import com.addthis.hydra.store.DBIntValue;
 import com.addthis.hydra.store.kv.KeyCoder;
 
 
-public class SimpleIntKeyCoder implements KeyCoder<Integer, Integer> {
+public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
 
     @Override
     public Integer negInfinity() {
@@ -31,18 +32,20 @@ public class SimpleIntKeyCoder implements KeyCoder<Integer, Integer> {
     }
 
     @Override
-    public byte[] valueEncode(Integer value) {
-        return keyEncode(value);
+    public byte[] valueEncode(DBIntValue value, EncodeType encodeType) {
+        return value.bytesEncode(encodeType.ordinal());
     }
 
     @Override
     public Integer keyDecode(byte[] key) {
-        return key.length > 0 ? (Bytes.toInt(key) ^ Integer.MIN_VALUE) : null;
+        return (key != null && key.length > 0) ? (Bytes.toInt(key) ^ Integer.MIN_VALUE) : null;
     }
 
     @Override
-    public Integer valueDecode(byte[] value) {
-        return keyDecode(value);
+    public DBIntValue valueDecode(byte[] value, EncodeType encodeType) {
+        DBIntValue dbIntValue = new DBIntValue();
+        dbIntValue.bytesDecode(value, encodeType.ordinal());
+        return dbIntValue;
     }
 
     @Override

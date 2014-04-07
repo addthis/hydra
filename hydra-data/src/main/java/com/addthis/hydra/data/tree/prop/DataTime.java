@@ -23,6 +23,10 @@ import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
+import com.addthis.basis.util.Varint;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 public class DataTime extends TreeNodeData<DataTime.Config> {
 
@@ -107,5 +111,40 @@ public class DataTime extends TreeNodeData<DataTime.Config> {
         } else {
             return null;
         }
+    }
+
+    @Override
+    public byte[] bytesEncode(long version) {
+        byte[] encodedBytes = null;
+        ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.buffer();
+        try {
+            long delta = last - first;
+            Varint.writeUnsignedVarLong(first, byteBuf);
+            Varint.writeUnsignedVarLong(delta, byteBuf);
+            encodedBytes = new byte[byteBuf.readableBytes()];
+            byteBuf.readBytes(encodedBytes);
+        } finally {
+            byteBuf.release();
+        }
+        return encodedBytes;
+    }
+
+    @Override
+    public void bytesDecode(byte[] b, long version) {
+        ByteBuf byteBuf = Unpooled.wrappedBuffer(b);
+        try {
+            first = Varint.readUnsignedVarLong(byteBuf);
+            last = first + Varint.readUnsignedVarLong(byteBuf);
+        } finally {
+            byteBuf.release();
+        }
+    }
+
+    public void setFirst(long first) {
+        this.first = first;
+    }
+
+    public void setLast(long last) {
+        this.last = last;
     }
 }

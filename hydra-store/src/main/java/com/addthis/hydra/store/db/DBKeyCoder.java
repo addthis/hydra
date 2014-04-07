@@ -23,10 +23,12 @@ import com.google.common.base.Objects;
 
 /**
  */
-class DBKeyCoder<V extends Codec.Codable> implements KeyCoder<DBKey, V> {
+class DBKeyCoder<V extends Codec.BytesCodable> implements KeyCoder<DBKey, V> {
 
     protected final Codec codec;
     protected final Class<? extends V> clazz;
+
+    private static final byte[] zero = new byte[0];
 
     public DBKeyCoder(Class<? extends V> clazz) {
         this(new CodecBin2(), clazz);
@@ -48,9 +50,20 @@ class DBKeyCoder<V extends Codec.Codable> implements KeyCoder<DBKey, V> {
     }
 
     @Override
-    public byte[] valueEncode(V value) {
+    public byte[] valueEncode(V value, EncodeType encodeType) {
         try {
-            return codec.encode(value);
+            switch (encodeType) {
+                case LEGACY:
+                    return codec.encode(value);
+                case SPARSE:
+                    if (value == null) {
+                        return zero;
+                    } else {
+                        return value.bytesEncode(encodeType.ordinal());
+                    }
+                default:
+                    throw new RuntimeException("UNKNOWN ENCODING TYPE: " + encodeType);
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -58,13 +71,27 @@ class DBKeyCoder<V extends Codec.Codable> implements KeyCoder<DBKey, V> {
 
     @Override
     public DBKey keyDecode(byte[] key) {
-        return key.length > 0 ? new DBKey(key) : null;
+        return (key != null && key.length > 0) ? new DBKey(key) : null;
     }
 
     @Override
-    public V valueDecode(byte[] value) {
+    public V valueDecode(byte[] value, EncodeType encodeType) {
+
         try {
-            return codec.decode(clazz, value);
+            switch (encodeType) {
+                case LEGACY:
+                    return codec.decode(clazz.newInstance(), value);
+                case SPARSE:
+                    if (value.length > 0) {
+                        V v = clazz.newInstance();
+                        v.bytesDecode(value, encodeType.ordinal());
+                        return v;
+                    } else {
+                        return null;
+                    }
+                default:
+                    throw new RuntimeException("UNKNOWN ENCODING TYPE: " + encodeType);
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

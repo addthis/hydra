@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.data.tree.prop;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -30,6 +31,10 @@ import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
+import com.addthis.basis.util.Varint;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.SuperCodable {
 
@@ -75,6 +80,13 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
         }
     }
 
+    public DataMap() {
+    }
+
+    public DataMap(int size) {
+        this.size = size;
+    }
+
     @Override
     public void postDecode() {
         for (int i = 0; i < keys.length; i++) {
@@ -82,15 +94,23 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
         }
     }
 
+    /**
+     * The temporary variables are used because it is possible
+     * for concurrent serialization threads to be encoding the object.
+     * The tree node that contains this data attachment is protected
+     * by a reader lock for the encoding process.
+     */
     @Override
     public void preEncode() {
-        keys = new String[map.size()];
-        vals = new String[map.size()];
+        String[] newKeys = new String[map.size()];
+        String[] newVals = new String[map.size()];
         int pos = 0;
         for (Entry<String, ValueObject> next : map) {
-            keys[pos] = next.getKey();
-            vals[pos++] = next.getValue().toString();
+            newKeys[pos] = next.getKey();
+            newVals[pos++] = next.getValue().toString();
         }
+        keys = newKeys;
+        vals = newVals;
     }
 
     @Codec.Set(codable = true, required = true)
@@ -102,7 +122,7 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
 
     private BundleField keyAccess;
     private BundleField valAccess;
-    private HotMap<String, ValueObject> map = new HotMap<String, ValueObject>(new HashMap());
+    private HotMap<String, ValueObject> map = new HotMap<>(new HashMap());
 
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, DataMap.Config conf) {
@@ -113,19 +133,23 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
         ValueObject key = state.getBundle().getValue(keyAccess);
         ValueObject val = state.getBundle().getValue(valAccess);
         if (key != null) {
-            synchronized (map) {
-                if (val == null) {
-                    map.remove(key.toString());
-                } else {
-                    map.put(key.toString(), val);
-                    if (map.size() > size) {
-                        map.removeEldest();
-                    }
-                }
-            }
+            put(key.toString(), val);
             return true;
         } else {
             return false;
+        }
+    }
+
+    public void put(String key, ValueObject val) {
+        synchronized (map) {
+            if (val == null) {
+                map.remove(key);
+            } else {
+                map.put(key, val);
+                if (map.size() > size) {
+                    map.removeEldest();
+                }
+            }
         }
     }
 
@@ -166,5 +190,66 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
             }
         }
         return list;
+    }
+
+    @Override
+    public byte[] bytesEncode(long version) {
+        byte[] encodedBytes = null;
+        ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer();
+        try {
+            synchronized (map) {
+                preEncode();
+                Varint.writeUnsignedVarInt(keys.length, buf);
+                for (String key : keys) {
+                    writeString(buf, key);
+                }
+                for (String val : vals) {
+                    writeString(buf, val);
+                }
+            }
+            encodedBytes = new byte[buf.readableBytes()];
+            buf.readBytes(encodedBytes);
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        } finally {
+            buf.release();
+        }
+        return encodedBytes;
+    }
+
+    private void writeString(ByteBuf buf, String str) throws UnsupportedEncodingException {
+        byte[] keyBytes = str.getBytes("UTF-8");
+        Varint.writeUnsignedVarInt(keyBytes.length, buf);
+        buf.writeBytes(keyBytes);
+    }
+
+    @Override
+    public void bytesDecode(byte[] b, long version) {
+        ByteBuf buf = Unpooled.wrappedBuffer(b);
+        try {
+            int length = Varint.readUnsignedVarInt(buf);
+            keys = new String[length];
+            vals = new String[length];
+            try {
+                for (int i = 0; i < length; i++) {
+                    keys[i] = readString(buf);
+                }
+                for (int i = 0; i < length; i++) {
+                    vals[i] = readString(buf);
+                }
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException(e);
+            }
+        } finally {
+            buf.release();
+        }
+        postDecode();
+    }
+
+    private String readString(ByteBuf buf) throws UnsupportedEncodingException {
+        int kl = Varint.readUnsignedVarInt(buf);
+        byte[] kb = new byte[kl];
+        buf.readBytes(kb);
+        return new String(kb, "UTF-8");
     }
 }

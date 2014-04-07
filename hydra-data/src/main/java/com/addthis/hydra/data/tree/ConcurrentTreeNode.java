@@ -13,6 +13,11 @@
  */
 package com.addthis.hydra.data.tree;
 
+import com.addthis.basis.util.ClosableIterator;
+import com.addthis.basis.util.MemoryCounter.Mem;
+import com.addthis.hydra.store.db.DBKey;
+import com.addthis.hydra.store.db.IPageDB.Range;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -25,13 +30,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import com.addthis.basis.util.ClosableIterator;
-import com.addthis.basis.util.MemoryCounter.Mem;
-
-import com.addthis.codec.Codec;
-import com.addthis.hydra.store.db.DBKey;
-import com.addthis.hydra.store.db.IPageDB.Range;
 
 
 /**
@@ -49,7 +47,7 @@ import com.addthis.hydra.store.db.IPageDB.Range;
  * deleting nodes is a higher priority operation that modifying nodes).
  *
  */
-public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Codec.ConcurrentCodable {
+public class ConcurrentTreeNode extends AbstractTreeNode {
 
     public static final int ALIAS = 1 << 1;
 
@@ -91,18 +89,6 @@ public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Cod
         this.name = name;
     }
 
-    @Codec.Set(codable = true)
-    protected long hits;
-    @Codec.Set(codable = true)
-    protected int nodes;
-    @Codec.Set(codable = true)
-    private volatile Integer nodedb;
-    @Codec.Set(codable = true)
-    private int bits;
-    @SuppressWarnings("unchecked")
-    @Codec.Set(codable = true)
-    private HashMap<String, TreeNodeData> data;
-
     @Mem(estimate = false, size = 64)
     private ConcurrentTree tree;
     @Mem(estimate = false, size = 64)
@@ -114,23 +100,10 @@ public class ConcurrentTreeNode implements DataTreeNode, Codec.SuperCodable, Cod
 
     private AtomicBoolean decoded = new AtomicBoolean(false);
     private AtomicBoolean initOnce = new AtomicBoolean(false);
-    private Object initLock = new Object();
+    private final Object initLock = new Object();
 
     protected String name;
     protected DBKey dbkey;
-
-    public ConcurrentTreeNode getTempClone() {
-        ConcurrentTreeNode tn = new ConcurrentTreeNode();
-        tn.name = name;
-        tn.hits = hits;
-        tn.nodes = nodes;
-        tn.nodedb = nodedb;
-        tn.bits = bits;
-        tn.data = data;
-        tn.tree = tree;
-        tn.dbkey = dbkey;
-        return tn;
-    }
 
     public String toString() {
         return "TN[k=" + dbkey + ",db=" + nodedb + ",n#=" + nodes + ",h#=" + hits +

@@ -76,7 +76,8 @@ public class DiskBackedMap<T extends DiskBackedMap.DiskObject> implements Map<St
         }
 
         try {
-            db = new PageDB(diskStoragePathFile, CodableDiskObject.class, "DiskBackedMap.db", 1000, 1000, 1, false);
+            db = new PageDB.Builder<>(diskStoragePathFile, CodableDiskObject.class, 1000, 1000)
+                    .dbname("DiskBackedMap.db").kvStoreType(1).build();
             db.setCacheMem(cacheSize);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -179,7 +180,7 @@ public class DiskBackedMap<T extends DiskBackedMap.DiskObject> implements Map<St
 
     // funky non-static class to maintain compatibility with
     // DiskObject interface
-    public class CodableDiskObject implements Codec.SuperCodable {
+    public class CodableDiskObject implements Codec.SuperCodable, Codec.BytesCodable {
 
         private DiskObject d;
 
@@ -205,6 +206,18 @@ public class DiskBackedMap<T extends DiskBackedMap.DiskObject> implements Map<St
         @Override
         public void preEncode() {
             bytes = d.toBytes();
+        }
+
+        @Override
+        public byte[] bytesEncode(long version) {
+            preEncode();
+            return bytes;
+        }
+
+        @Override
+        public void bytesDecode(byte[] b, long version) {
+            bytes = b;
+            postDecode();
         }
     }
 }

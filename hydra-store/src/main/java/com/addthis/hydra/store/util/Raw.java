@@ -18,7 +18,7 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.codec.Codec;
 
 
-public final class Raw implements Comparable<Raw>, Codec.Codable {
+public final class Raw implements Comparable<Raw>, Codec.BytesCodable {
 
     private static boolean padprintable = System.getProperty("abyss.raw.padprintable", "0").equals("1");
     private static boolean longcompare = System.getProperty("abyss.raw.longcompare", "0").equals("1");
@@ -198,5 +198,15 @@ public final class Raw implements Comparable<Raw>, Codec.Codable {
                     ((data[off + 6] & 0xffL) << 8) | ((data[off + 7] & 0xffL)));
         }
         return l;
+    }
+
+    @Override
+    public byte[] bytesEncode(long version) {
+        return toBytes();
+    }
+
+    @Override
+    public void bytesDecode(byte[] b, long version) {
+        this.raw = b;
     }
 }

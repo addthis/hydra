@@ -23,6 +23,7 @@ import java.util.TreeMap;
 import com.addthis.basis.test.SlowTest;
 import com.addthis.basis.util.Files;
 
+import com.addthis.hydra.store.DBValue;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -86,10 +87,10 @@ public class TestKeyValueStore {
     /**
      * simple insert, iterate test of sorting with initial empty store
      */
-    private void insertIterateTest(KeyValueStore<String, String> store) {
+    private void insertIterateTest(KeyValueStore<String, DBValue> store) {
         for (int i = 0; i < source.length; i++) {
             if (log.isDebugEnabled()) log.debug("iit.ins i=" + i + " source=" + source[i][0] + "," + source[i][1]);
-            Assert.assertEquals(null, store.getPutValue(source[i][0], source[i][1]));
+            Assert.assertEquals(null, store.getPutValue(source[i][0], new DBValue(source[i][1])));
         }
         iterateTest(store);
     }
@@ -97,18 +98,18 @@ public class TestKeyValueStore {
     /**
      * insert MUST run first
      */
-    private void iterateTest(KeyValueStore<String, String> store) {
+    private void iterateTest(KeyValueStore<String, DBValue> store) {
         for (int start = 0; start < sorted.length - 1; start++) {
             if (log.isDebugEnabled()) log.debug("iit.rat | start=" + start);
             int pos = start;
-            Iterator<Entry<String, String>> i = store.range(sorted[start][0], true);
+            Iterator<Entry<String, DBValue>> i = store.range(sorted[start][0], true);
             while (i.hasNext()) {
-                Entry<String, String> e = i.next();
+                Entry<String, DBValue> e = i.next();
                 String row[] = sorted[pos++];
                 if (log.isDebugEnabled()) log.debug("iit.tst | e=" + e + " row=" + row[0] + "," + row[1] + " pos=" + pos);
                 Assert.assertEquals(row[0], e.getKey());
-                Assert.assertEquals(row[1], e.getValue());
-                Assert.assertEquals(e.getKey(), e.getValue());
+                Assert.assertEquals(row[1], e.getValue().getVal());
+                Assert.assertEquals(e.getKey(), e.getValue().getVal());
             }
         }
     }
@@ -116,10 +117,10 @@ public class TestKeyValueStore {
     /**
      * insert, delete odd, iterate test with initial empty store
      */
-    private void insertDeleteOddIterateTest(KeyValueStore<String, String> store) {
+    private void insertDeleteOddIterateTest(KeyValueStore<String, DBValue> store) {
         for (int i = 0; i < source.length; i++) {
             if (log.isDebugEnabled()) log.debug("idoit.ins i=" + i + " source=" + source[i][0] + "," + source[i][1]);
-            Assert.assertEquals(null, store.getPutValue(source[i][0], source[i][1]));
+            Assert.assertEquals(null, store.getPutValue(source[i][0], new DBValue(source[i][1])));
         }
         for (int i = 1; i < sorted.length; i += 2) {
             if (log.isDebugEnabled()) log.debug("idoit.del i=" + i + " sorted=" + sorted[i][0] + "," + sorted[i][1]);
@@ -127,19 +128,19 @@ public class TestKeyValueStore {
             Assert.assertTrue(store.getValue(sorted[i][0]) == null);
         }
         int pos = 0;
-        Iterator<Entry<String, String>> i = store.range("000", true);
+        Iterator<Entry<String, DBValue>> i = store.range("000", true);
         while (i.hasNext()) {
-            Entry<String, String> e = i.next();
+            Entry<String, DBValue> e = i.next();
             String row[] = sorted[pos];
             if (log.isDebugEnabled()) log.debug("idoit | e=" + e + " row=" + row[0] + "," + row[1] + " pos=" + pos);
             Assert.assertEquals(row[0], e.getKey());
-            Assert.assertEquals(row[1], e.getValue());
-            Assert.assertEquals(e.getKey(), e.getValue());
+            Assert.assertEquals(row[1], e.getValue().getVal());
+            Assert.assertEquals(e.getKey(), e.getValue().getVal());
             pos += 2;
         }
     }
 
-    private void rangeCompare(String msg, Iterator<Entry<String, String>> r1, Iterator<Entry<String, String>> r2) {
+    private void rangeCompare(String msg, Iterator<Entry<String, DBValue>> r1, Iterator<Entry<String, DBValue>> r2) {
         int iter = 0;
         while (r1.hasNext()) {
             String r1k = r1.next().getKey();
@@ -151,16 +152,16 @@ public class TestKeyValueStore {
         }
     }
 
-    private void randomInsertRangeRead(KeyValueStore<String, String> store) {
-        TreeMap<String, String> map = new TreeMap<String, String>();
+    private void randomInsertRangeRead(KeyValueStore<String, DBValue> store) {
+        TreeMap<String, DBValue> map = new TreeMap<>();
         Random rand = new Random(1000);
         // random insert
         if (log.isDebugEnabled()) log.debug("inserting 1000 random");
         for (int i = 0; i < 1000; i++) {
             String k = Long.toHexString(rand.nextLong());
-            String ovm = map.put(k, k);
-            String ovs = store.getPutValue(k, k);
-            Assert.assertEquals("i=" + i, ovm, ovs);
+            DBValue ovm = map.put(k, new DBValue(k));
+            DBValue ovs = store.getPutValue(k, new DBValue(k));
+            Assert.assertEquals("i=" + i, ovm.getVal(), ovs.getVal());
         }
         // all range test
         if (log.isDebugEnabled()) log.debug("range compare");
@@ -169,8 +170,8 @@ public class TestKeyValueStore {
         if (log.isDebugEnabled()) log.debug("random range compare");
         for (int i = 0; i < 1000; i++) {
             String k = Long.toHexString(rand.nextLong());
-            Iterator<Entry<String, String>> mi = map.tailMap(k).entrySet().iterator();
-            Iterator<Entry<String, String>> si = store.range(k, true);
+            Iterator<Entry<String, DBValue>> mi = map.tailMap(k).entrySet().iterator();
+            Iterator<Entry<String, DBValue>> si = store.range(k, true);
             rangeCompare("i=" + i + ",k=" + k, mi, si);
         }
     }
@@ -179,7 +180,7 @@ public class TestKeyValueStore {
     public void externalPagedStore1() {
         File temp = new File("test.bdb.temp");
         // test 1
-        ExternalPagedStore<String, String> eps = new ExternalPagedStore<>(new SimpleStringKeyCoder(),
+        ExternalPagedStore<String, DBValue> eps = new ExternalPagedStore<>(new SimpleStringKeyCoder(),
                 new ByteStoreBDB(temp, "test", false), 3, 3);
         insertIterateTest(eps);
         eps.close();
@@ -193,7 +194,7 @@ public class TestKeyValueStore {
     @Test
     public void externalPagedStore2() {
         File temp = new File("test.bdb.temp");
-        ExternalPagedStore<String, String> eps = new ExternalPagedStore<>(new SimpleStringKeyCoder(),
+        ExternalPagedStore<String, DBValue> eps = new ExternalPagedStore<>(new SimpleStringKeyCoder(),
                 new ByteStoreBDB(temp, "test", false), 3, 3);
         insertDeleteOddIterateTest(eps);
         eps.close();
@@ -203,7 +204,7 @@ public class TestKeyValueStore {
     @Test
     public void externalPagedStore3() {
         File temp = new File("test.bdb.temp");
-        ExternalPagedStore<String, String> eps = new ExternalPagedStore<>(new SimpleStringKeyCoder(),
+        ExternalPagedStore<String, DBValue> eps = new ExternalPagedStore<>(new SimpleStringKeyCoder(),
                 new ByteStoreBDB(temp, "test", false), 3, 3);
         randomInsertRangeRead(eps);
         eps.close();

@@ -48,6 +48,8 @@ import com.addthis.hydra.store.db.IPageDB;
 import com.addthis.hydra.store.db.IPageDB.Range;
 import com.addthis.hydra.store.db.PageDB;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
+import com.addthis.hydra.store.skiplist.Page;
+import com.addthis.hydra.store.skiplist.PageFactory;
 import com.addthis.hydra.store.skiplist.SkipListCache;
 import com.addthis.hydra.store.util.MeterFileLogger;
 import com.addthis.hydra.store.util.MeterFileLogger.MeterDataSource;
@@ -155,6 +157,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         protected int cleanQSize = TreeCommonParameters.cleanQMax;
         protected int maxCache = TreeCommonParameters.maxCacheSize;
         protected int maxPageSize = TreeCommonParameters.maxPageSize;
+        protected PageFactory pageFactory = Page.DefaultPageFactory.singleton;
 
         public Builder(File root, boolean readonly) {
             this.root = root;
@@ -186,16 +189,22 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             return this;
         }
 
+        public Builder pageFactory(PageFactory factory) {
+            pageFactory = factory;
+            return this;
+        }
+
         public ConcurrentTree build() throws Exception {
             return new ConcurrentTree(root, readonly,
-                    numDeletionThreads, kvStoreType, cleanQSize, maxCache, maxPageSize);
+                    numDeletionThreads, kvStoreType, cleanQSize,
+                    maxCache, maxPageSize, pageFactory);
         }
 
     }
 
     private ConcurrentTree(File root, boolean readonly,
             int numDeletionThreads, int kvStoreType,
-            int cleanQSize, int maxCacheSize, int maxPageSize) throws Exception {
+            int cleanQSize, int maxCacheSize, int maxPageSize, PageFactory factory) throws Exception {
         //Only attempt mkdirs if we are not readonly. Theoretically should not be needed, but guarding here
         // prevent logic leak created by transient file detection issues. Regardless, while in readonly, we should
         // certainly not be attempting to create directories.
@@ -219,7 +228,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             logger = null;
         }
         source = new PageDB.Builder<>(root, ConcurrentTreeNode.class, maxPageSize, maxCacheSize)
-                .readonly(readonly).kvStoreType(kvStoreType).build();
+                .readonly(readonly).kvStoreType(kvStoreType).pageFactory(factory).build();
         source.setCacheMem(TreeCommonParameters.maxCacheMem);
         source.setPageMem(TreeCommonParameters.maxPageMem);
         source.setMemSampleInterval(TreeCommonParameters.memSample);
@@ -271,7 +280,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     public ConcurrentTree(File root, boolean readonly) throws Exception {
         this(root, readonly, defaultNumDeletionThreads,
                 defaultKeyValueStoreType, TreeCommonParameters.cleanQMax,
-                TreeCommonParameters.maxCacheSize, TreeCommonParameters.maxPageSize);
+                TreeCommonParameters.maxCacheSize, TreeCommonParameters.maxPageSize,
+                Page.DefaultPageFactory.singleton);
     }
 
     private class CacheMediator implements EvictionMediator<CacheKey, ConcurrentTreeNode> {
@@ -323,7 +333,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             return null;
         }
         CacheKey key = new CacheKey(nodedb, child);
-        DBKey dbkey = key.dbkey();
 
         /**
          * (1) First check the cache for the (key, value) pair. If the value
@@ -345,6 +354,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                     return node; // (1)
                 }
             } else {// (2)
+                DBKey dbkey = key.dbkey();
                 reportCacheMiss();
                 node = source.get(dbkey);
 
@@ -374,7 +384,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             final DataTreeNodeInitializer creator) {
         parent.requireNodeDB();
         CacheKey key = new CacheKey(parent.nodeDB(), child);
-        DBKey dbkey = key.dbkey();
         ConcurrentTreeNode newNode = null;
 
         while (true) {
@@ -387,6 +396,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                     return node;
                 }
             } else {
+                DBKey dbkey = key.dbkey();
                 reportCacheMiss();
                 node = source.get(dbkey);
 

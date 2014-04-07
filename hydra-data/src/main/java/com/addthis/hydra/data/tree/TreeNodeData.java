@@ -20,6 +20,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.codec.Codec.ClassMap;
 import com.addthis.codec.Codec.ClassMapFactory;
+import com.addthis.codec.CodecBin2;
 import com.addthis.hydra.common.plugins.PluginReader;
 
 /**
@@ -28,7 +29,7 @@ import com.addthis.hydra.common.plugins.PluginReader;
  * in the 'data' field of PathElements.
  */
 @Codec.Set(classMapFactory = TreeNodeData.CMAP.class)
-public abstract class TreeNodeData<C extends TreeDataParameters<?>> implements Codec.Codable, DataTreeNodeActor {
+public abstract class TreeNodeData<C extends TreeDataParameters<?>> implements Codec.BytesCodable, DataTreeNodeActor {
 
     static final ClassMap cmap = new ClassMap() {
         @Override
@@ -53,6 +54,8 @@ public abstract class TreeNodeData<C extends TreeDataParameters<?>> implements C
         PluginReader.registerPlugin("-treedataparameters.classmap", cmap, TreeDataParameters.class);
         PluginReader.registerPlugin("-treenodedata.classmap", cmap, TreeNodeData.class);
     }
+
+    private final CodecBin2 codec = new CodecBin2();
 
     /**
      * called from PathValue.processNodeUpdates() -> PathValue.processChild() -> TreeNode.updateChildData() -> this.
@@ -129,5 +132,23 @@ public abstract class TreeNodeData<C extends TreeDataParameters<?>> implements C
     @Override
     public ValueObject onValueQuery(String option) {
         return getValue(option);
+    }
+
+    @Override
+    public byte[] bytesEncode(long version) {
+        try {
+            return codec.encode(this);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void bytesDecode(byte[] b, long version) {
+        try {
+            codec.decode(this, b);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

@@ -16,15 +16,17 @@ package com.addthis.hydra.store.kv;
 
 public interface KeyCoder<K, V> {
 
+    enum EncodeType {LEGACY, SPARSE}
+
     K negInfinity();
 
     byte[] keyEncode(K key);
 
-    byte[] valueEncode(V value);
+    byte[] valueEncode(V value, EncodeType encodeType);
 
     K keyDecode(byte[] key);
 
-    V valueDecode(byte[] value);
+    V valueDecode(byte[] value, EncodeType encodeType);
 
     /**
      * throws a NullPointerException if the input is null.

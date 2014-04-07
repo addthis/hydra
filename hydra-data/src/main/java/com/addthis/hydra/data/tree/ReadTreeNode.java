@@ -13,26 +13,23 @@
  */
 package com.addthis.hydra.data.tree;
 
-import java.util.HashMap;
+import com.addthis.basis.util.ClosableIterator;
+import com.addthis.basis.util.MemoryCounter.Mem;
+import com.addthis.hydra.store.db.DBKey;
+import com.addthis.hydra.store.db.IPageDB.Range;
+import com.addthis.hydra.store.db.IReadWeighable;
+
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
-
-import com.addthis.basis.util.ClosableIterator;
-import com.addthis.basis.util.MemoryCounter.Mem;
-
-import com.addthis.codec.Codec;
-import com.addthis.hydra.store.db.DBKey;
-import com.addthis.hydra.store.db.IPageDB.Range;
-import com.addthis.hydra.store.db.IReadWeighable;
 
 
 /**
  *         <p/>
  *         read only tree node that plays nice with ReadTree
  */
-public class ReadTreeNode implements DataTreeNode, Codec.SuperCodable, Codec.ConcurrentCodable, IReadWeighable {
+public class ReadTreeNode extends AbstractTreeNode implements IReadWeighable {
 
     /**
      * required for Codable. must be followed by an init() call.
@@ -56,24 +53,6 @@ public class ReadTreeNode implements DataTreeNode, Codec.SuperCodable, Codec.Con
         this.tree = tree;
         this.name = name;
     }
-
-    //number of times node would have been created in a tree-job; the 'counter'
-    @Codec.Set(codable = true)
-    protected long hits;
-    //number of child nodes
-    @Codec.Set(codable = true)
-    protected int nodes;
-    //assigned when the node first becomes a parent (aww). Used by child nodes for DB lookups
-    @Codec.Set(codable = true)
-    private Integer nodedb;
-    //this would be unused in the read-only version, but since we have to keep this field for serialization
-    // purposes, we steal this field to hold the original length of the serialized byte array
-    @Codec.Set(codable = true)
-    private int bits;
-    //the node's data-attachments -- including intrinsics
-    @SuppressWarnings("unchecked")
-    @Codec.Set(codable = true)
-    private HashMap<String, TreeNodeData> data;
 
     //reference to the transient (in memory) tree object -- not serialized
     @Mem(estimate = false, size = 64)
@@ -354,5 +333,10 @@ public class ReadTreeNode implements DataTreeNode, Codec.SuperCodable, Codec.Con
     @Override
     public void setCounter(long val) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public byte[] bytesEncode(long version) {
+        throw new UnsupportedOperationException("ReadTreeNode cannot be encoded");
     }
 }

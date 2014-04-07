@@ -57,7 +57,7 @@ import org.slf4j.LoggerFactory;
 /**
  * TODO re-add support for bloom filters
  */
-public final class Tree implements DataTree, MeterDataSource {
+public class Tree implements DataTree, MeterDataSource {
 
     private static final Logger log = LoggerFactory.getLogger(Tree.class);
     private static final long sluggishOpen = Parameter.longValue("hydra.tree.open.slowwarn", 500);
@@ -111,6 +111,11 @@ public final class Tree implements DataTree, MeterDataSource {
         }
     }
 
+    protected IPageDB<DBKey, TreeNode> generatePageDB(File root, boolean readonly) throws IOException {
+        return new PageDB<>(root, TreeNode.class, TreeCommonParameters.maxPageSize,
+                TreeCommonParameters.maxCacheSize, readonly);
+    }
+
     private synchronized void _init() throws Exception {
         long start = System.currentTimeMillis();
         if (source != null) {
@@ -130,8 +135,7 @@ public final class Tree implements DataTree, MeterDataSource {
         if (TreeCommonParameters.meterLogging > 0 && meterLoggerEnabled) {
             logger = new MeterFileLogger(this, root, "tree-metrics", TreeCommonParameters.meterLogging, 100000);
         }
-        source = new PageDB<>(root, TreeNode.class, TreeCommonParameters.maxPageSize,
-                TreeCommonParameters.maxCacheSize, readonly);
+        source = generatePageDB(root, readonly);
         source.setCacheMem(TreeCommonParameters.maxCacheMem);
         source.setPageMem(TreeCommonParameters.maxPageMem);
         source.setMemSampleInterval(TreeCommonParameters.memSample);

@@ -36,6 +36,7 @@ import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 
+import com.addthis.basis.util.Varint;
 import com.clearspring.analytics.stream.cardinality.AdaptiveCounting;
 import com.clearspring.analytics.stream.cardinality.CardinalityMergeException;
 import com.clearspring.analytics.stream.cardinality.CountThenEstimate;
@@ -44,6 +45,9 @@ import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
 import com.clearspring.analytics.stream.cardinality.ICardinality;
 import com.clearspring.analytics.stream.cardinality.LinearCounting;
 import com.clearspring.analytics.stream.cardinality.LogLog;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 public class DataCounting extends TreeNodeData<DataCounting.Config> implements Codec.SuperCodable {
 
@@ -358,6 +362,34 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements C
         }
     }
 
+    @Override
+    public byte[] bytesEncode(long version) {
+        preEncode();
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
+        try {
+            Varint.writeUnsignedVarInt(ver, buffer);
+            Varint.writeUnsignedVarInt(M.length, buffer);
+            buffer.writeBytes(M);
+            byte[] bytes = new byte[buffer.readableBytes()];
+            buffer.readBytes(bytes);
+            return bytes;
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Override
+    public void bytesDecode(byte[] b, long version) {
+        ByteBuf buffer = Unpooled.wrappedBuffer(b);
+        try {
+            ver = Varint.readUnsignedVarInt(buffer);
+            M = new byte[Varint.readUnsignedVarInt(buffer)];
+            buffer.readBytes(M);
+        } finally {
+            buffer.release();
+        }
+        postDecode();
+    }
 
     public static final class LCValue implements ValueCustom, ValueNumber {
 
