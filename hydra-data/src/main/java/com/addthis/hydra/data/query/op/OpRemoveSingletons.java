@@ -25,11 +25,11 @@ import com.addthis.bundle.table.DataTableFactory;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractTableOp;
-
 import com.addthis.hydra.data.query.QueryStatusObserver;
-import org.slf4j.Logger;
 
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * <p>This query operation <span class="hydra-summary">removes (key, value) pairs
  * that are observed once</span>.
@@ -53,7 +53,7 @@ public class OpRemoveSingletons extends AbstractTableOp {
             String[] opt = args.split(":");
             keyColumn = opt.length >= 1 ? Integer.parseInt(opt[0]) : 0;
             valColumn = opt.length >= 2 ? Integer.parseInt(opt[1]) : 1;
-        } catch (Exception ex)  {
+        } catch (Exception ex) {
             log.warn("", ex);
         }
     }

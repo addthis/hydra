@@ -29,8 +29,8 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.hydra.data.query.AbstractTableOp;
 import com.addthis.hydra.data.query.QueryOpProcessor;
-
 import com.addthis.hydra.data.query.QueryStatusObserver;
+
 import com.google.common.base.Objects;
 
 /**

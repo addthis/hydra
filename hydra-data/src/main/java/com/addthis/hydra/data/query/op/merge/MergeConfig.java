@@ -32,75 +32,75 @@ public class MergeConfig {
     public final MergedValue[] conf;
 
     public MergeConfig(CharSequence args) {
-            ArrayList<MergedValue> conf = new ArrayList<>(args.length());
+        ArrayList<MergedValue> conf = new ArrayList<>(args.length());
 
-            boolean mergeCount = false;
-            for (int i = 0; i < args.length(); i++) {
-                char ch = args.charAt(i);
-                boolean isnum = (ch >= '0' && ch <= '9');
-                if (isnum) {
-                    numericArg *= 10;
-                    numericArg += (ch - '0');
+        boolean mergeCount = false;
+        for (int i = 0; i < args.length(); i++) {
+            char ch = args.charAt(i);
+            boolean isnum = (ch >= '0' && ch <= '9');
+            if (isnum) {
+                numericArg *= 10;
+                numericArg += (ch - '0');
+                continue;
+            }
+            MergedValue op = null;
+            switch (ch) {
+                case ',':
                     continue;
-                }
-                MergedValue op = null;
-                switch (ch) {
-                    case ',':
-                        continue;
-                        // next col is top
-                    case 't':
-                        topColumn = conf.size();
-                        topper = new KeyTopper().init();
-                        continue;
-                        // average
-                    case 'a':
-                        op = new AverageValue();
-                        break;
-                    // diff/subtract value
-                    case 'd':
-                        op = new DiffValue();
-                        break;
-                    // ignore/drop
-                    case 'i':
+                    // next col is top
+                case 't':
+                    topColumn = conf.size();
+                    topper = new KeyTopper().init();
+                    continue;
+                    // average
+                case 'a':
+                    op = new AverageValue();
+                    break;
+                // diff/subtract value
+                case 'd':
+                    op = new DiffValue();
+                    break;
+                // ignore/drop
+                case 'i':
 //                  op = MergeOpEnums.IGNORE;
 //                  conf.add(null);
 //                  continue;
-                        break;
-                    case 'j':
-                        op = new JoinedValue();
-                        break;
-                    // last value
-                    case 'l':
-                        op = new LastValue();
-                        break;
-                    // part of compound key
-                    case 'k':
-                        op = new KeyValue();
-                        break;
-                    // max value
-                    case 'M':
-                        op = new MaxValue();
-                        break;
-                    // min value
-                    case 'm':
-                        op = new MinValue();
-                        break;
-                    // sum
-                    case 's':
-                        op = new SumValue();
-                        break;
-                    // add merged row count
-                    case 'u':
-                        mergeCount = true;
-                        continue;
-                }
-                conf.add(op);
+                    break;
+                case 'j':
+                    op = new JoinedValue();
+                    break;
+                // last value
+                case 'l':
+                    op = new LastValue();
+                    break;
+                // part of compound key
+                case 'k':
+                    op = new KeyValue();
+                    break;
+                // max value
+                case 'M':
+                    op = new MaxValue();
+                    break;
+                // min value
+                case 'm':
+                    op = new MinValue();
+                    break;
+                // sum
+                case 's':
+                    op = new SumValue();
+                    break;
+                // add merged row count
+                case 'u':
+                    mergeCount = true;
+                    continue;
             }
-            if (mergeCount) {
-                mergeCountValue = new NumMergesValue();
-                conf.add(mergeCountValue);
-            }
-            this.conf = conf.toArray(new MergedValue[conf.size()]);
+            conf.add(op);
+        }
+        if (mergeCount) {
+            mergeCountValue = new NumMergesValue();
+            conf.add(mergeCountValue);
+        }
+        this.conf = conf.toArray(new MergedValue[conf.size()]);
     }
 
     public String handleBindAndGetKey(Bundle row, ListBundleFormat format) {

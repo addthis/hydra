@@ -21,8 +21,8 @@ import com.addthis.hydra.data.query.AbstractQueryOp;
 import com.addthis.hydra.data.query.QueryStatusObserver;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
+
 /**
  * <p>This query operation <span class="hydra-summary">limits the number of rows that are generated</span>.
  * <p/>
