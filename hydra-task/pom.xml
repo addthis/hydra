@@ -62,23 +62,11 @@
       <groupId>com.addthis</groupId>
       <artifactId>meshy</artifactId>
       <version>${hydra.dep.meshy.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.addthis</groupId>
-          <artifactId>basis</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.addthis</groupId>
       <artifactId>bark</artifactId>
       <version>${hydra.dep.bark.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.addthis</groupId>
-          <artifactId>basis</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <!-- end at os deps -->
     <!-- 3rd party deps -->
@@ -120,12 +108,6 @@
       <groupId>com.addthis</groupId>
       <artifactId>codec</artifactId>
       <version>${hydra.dep.codec.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.addthis</groupId>
-          <artifactId>basis</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <!-- end test deps -->
   </dependencies>

@@ -36,12 +36,6 @@
       <groupId>com.addthis</groupId>
       <artifactId>codec</artifactId>
       <version>${hydra.dep.codec.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.addthis</groupId>
-          <artifactId>basis</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <!-- end addthis deps -->
 
