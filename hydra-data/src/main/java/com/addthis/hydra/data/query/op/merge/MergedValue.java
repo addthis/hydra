@@ -14,14 +14,24 @@
 
 package com.addthis.hydra.data.query.op.merge;
 
-import com.addthis.bundle.value.ValueObject;
+import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.BundleField;
+import com.addthis.hydra.data.query.op.MergedRow;
 
 public interface MergedValue {
 
-    public void merge(ValueObject nextValue);
+    public void merge(Bundle nextBundle, MergedRow mergedRow);
 
-    public ValueObject emit();
+    public void emit(MergedRow mergedRow);
 
     public boolean isKey();
+
+    public BundleField getFrom();
+
+    public BundleField getTo();
+
+    public void setFrom(BundleField from);
+
+    public void setTo(BundleField to);
 
 }

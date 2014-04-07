@@ -23,35 +23,33 @@ import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.io.DataChannelCodec;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.DiskBackedMap;
-import com.addthis.hydra.data.query.op.merge.BundleMapConf;
 import com.addthis.hydra.data.query.op.merge.MergedValue;
 
 import org.apache.commons.lang3.ArrayUtils;
 
 public class MergedRowFactory implements DiskBackedMap.DiskObjectFactory {
 
-    private final BundleMapConf<MergedValue> conf[];
+    private final MergedValue[] conf;
     private final ListBundleFormat format;
 
-    MergedRowFactory(BundleMapConf<MergedValue>[] conf, ListBundleFormat format) {
+    MergedRowFactory(MergedValue[] conf, ListBundleFormat format) {
         this.conf = conf;
         this.format = format;
     }
 
     @Override
     public DiskBackedMap.DiskObject fromBytes(byte[] bytes) {
-        MergedRow mergedRow = new MergedRow(conf, format);
+        MergedRow mergedRow = new MergedRow(conf, new ListBundle(format));
         mergedRow.numMergedRows = Bytes.toInt(ArrayUtils.subarray(bytes, 0, Integer.SIZE / 8));
         ListBundleFormat format = new ListBundleFormat();
         ListBundle listBundle = new ListBundle(format);
         try {
             DataChannelCodec.decodeBundle(listBundle, ArrayUtils.subarray(bytes, Integer.SIZE / 8, bytes.length));
             int i = 0;
-            for (BundleMapConf<MergedValue> map : conf) {
-                if () // TODO : recreate ops that need merge count?
+            for (MergedValue map : conf) {
                 ValueObject value = listBundle.getValue(format.getField("" + i));
                 i += 1;
-                map.getOp().merge(value);
+                mergedRow.setValue(map.getTo(), value);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

@@ -15,27 +15,12 @@
 package com.addthis.hydra.data.query.op.merge;
 
 import com.addthis.bundle.value.ValueNumber;
+import com.addthis.hydra.data.query.op.MergedRow;
 
 public class AverageValue extends SumValue {
 
-    private int count;
-
-    public AverageValue(int count) {
-        this.count = count;
-    }
-
-    public AverageValue() {
-        this(1); // the first value does not hit doEmit
-    }
-
     @Override
-    public ValueNumber doEmit() {
-        return value.avg(count);
-    }
-
-    @Override
-    public void doMerge(ValueNumber nextValue) {
-        super.doMerge(nextValue);
-        count += 1;
+    public ValueNumber doEmit(ValueNumber value, MergedRow mergedRow) {
+        return value.avg(mergedRow.getMergedCount());
     }
 }

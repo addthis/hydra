@@ -19,7 +19,7 @@ import com.addthis.bundle.value.ValueNumber;
 public class MinValue extends AbstractMergedNumber {
 
     @Override
-    public void doMerge(ValueNumber nextValue) {
-        value = value.min(nextValue);
+    public ValueNumber doMerge(ValueNumber nextValue, ValueNumber value) {
+        return value.min(nextValue);
     }
 }

@@ -19,8 +19,8 @@ import com.addthis.bundle.value.ValueObject;
 public class LastValue extends AbstractMergedValue<ValueObject> {
 
     @Override
-    protected void doMerge(ValueObject nextValue) {
-        value = nextValue;
+    protected ValueObject doMerge(ValueObject nextValue, ValueObject value) {
+        return nextValue;
     }
 
     @Override

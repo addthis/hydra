@@ -15,19 +15,14 @@ package com.addthis.hydra.data.query.op;
 
 import java.io.IOException;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
-import com.addthis.bundle.value.ValueNumber;
-import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractQueryOp;
-import com.addthis.hydra.data.query.op.merge.BundleMapConf;
 import com.addthis.hydra.data.query.QueryOp;
 import com.addthis.hydra.data.query.QueryStatusObserver;
+import com.addthis.hydra.data.query.op.merge.MergeConfig;
+import com.addthis.hydra.data.query.op.merge.MergedValue;
 
 
 /**
@@ -75,134 +70,22 @@ import com.addthis.hydra.data.query.QueryStatusObserver;
  */
 public class OpMerge extends AbstractQueryOp {
 
-    //  private MergeOpEnums op[];
-    private BundleField mergeField;
-    private boolean mergeCount;
-    private int countdown;
-    private String join[];
-    private int cols;
+    private final MergeConfig mergeConfig;
+    private final int countdown;
+    private final MergedValue[] conf;
     private final ListBundleFormat format = new ListBundleFormat();
-    private final BundleMapConf<MergeOpEnums> conf[];
-    private final HashMap<String, MergedRow> resultTable = new HashMap<>();
     private final QueryStatusObserver queryStatusObserver;
 
     public OpMerge(String args, QueryStatusObserver queryStatusObserver) {
         this.queryStatusObserver = queryStatusObserver;
-        ArrayList<BundleMapConf<MergeOpEnums>> conf = new ArrayList<>(args.length());
 
-        MergeOpEnums lastOp = null;
-        StringBuilder newJoin = null;
-        boolean wasnum = false;
-        for (int i = 0; i < args.length(); i++) {
-            char ch = args.charAt(i);
-            boolean isnum = (ch >= '0' && ch <= '9');
-            MergeOpEnums op = null;
-            MergeOpEnums nextOp = null;
-            if (isnum) {
-                countdown *= 10;
-                countdown += (ch - '0');
-            } else if (wasnum) {
-                nextOp = MergeOpEnums.COUNTDOWN;
-            }
-            wasnum = isnum;
-            boolean advance = true;
-            // TODO add max/min
-
-            switch (ch) {
-                // skip comma prettifiers
-                case ',':
-                    advance = false;
-                    break;
-                // average
-                case 'a':
-                    op = MergeOpEnums.AVG;
-                    break;
-                // diff/subtract value
-                case 'd':
-                    op = MergeOpEnums.DIFF;
-                    break;
-                // ignore/drop
-                case 'i':
-                    op = MergeOpEnums.IGNORE;
-                    break;
-                // last value
-                case 'l':
-                    op = MergeOpEnums.LAST;
-                    break;
-                // string join
-                case 'j':
-                    if (join == null) {
-                        join = new String[args.length()];
-                    }
-                    join[cols] = ",";
-                    op = MergeOpEnums.JOIN;
-                    break;
-                // part of compound key
-                case 'k':
-                    op = MergeOpEnums.KEY;
-                    break;
-                // max value
-                case 'M':
-                    op = MergeOpEnums.MAX;
-                    break;
-                // min value
-                case 'm':
-                    op = MergeOpEnums.MIN;
-                    break;
-                // pack repeating values
-                case 'p':
-                    op = MergeOpEnums.PACK;
-                    break;
-                // sum
-                case 's':
-                    op = MergeOpEnums.SUM;
-                    break;
-                // add merged row count
-                case 'u':
-                    op = MergeOpEnums.UCOUNT;
-                    mergeCount = true;
-                    break;
-                default:
-                    if (lastOp == MergeOpEnums.JOIN) {
-                        if (newJoin == null) {
-                            newJoin = new StringBuilder();
-                        }
-                        newJoin.append(ch);
-                    }
-                    if (i != args.length() - 1) {
-                        continue;
-                    } else {
-                        advance = false;
-                        break;
-                    }
-            }
-            if (op != null) {
-                addBundleMapConf(conf, op);
-            } else {
-                conf.add(null);
-            }
-            if (nextOp != null) {
-                addBundleMapConf(conf, nextOp);
-            }
-            if (lastOp == MergeOpEnums.JOIN && newJoin != null) {
-                join[cols - 1] = newJoin.toString();
-                newJoin = null;
-            }
-            if (advance) {
-                lastOp = op;
-                cols++;
-            }
-        }
-        this.conf = conf.toArray(new BundleMapConf[conf.size()]);
-    }
-
-    private void addBundleMapConf(ArrayList<BundleMapConf<MergeOpEnums>> conf, MergeOpEnums op) {
-        BundleMapConf<MergeOpEnums> next = new BundleMapConf<>();
-        next.setOp(op);
-        conf.add(next);
+        mergeConfig = new MergeConfig(args);
+        countdown = mergeConfig.numericArg;
+        conf = mergeConfig.conf;
     }
 
     String lastkey = null;
+    MergedRow lastRow = null;
     int rows = 0;
 
     @Override
@@ -210,82 +93,45 @@ public class OpMerge extends AbstractQueryOp {
         if (queryStatusObserver.queryCompleted) {
             return;
         }
+        String key = mergeConfig.handleBindAndGetKey(bundle, format);
 
-        String key = "";
-        int i = 0;
-        for (BundleField bundleField : bundle) {
-            if (i >= conf.length) {
-                break;
-            }
-            BundleMapConf<MergeOpEnums> mc = conf[i++];
-            if (mc == null) {
-                continue;
-            }
-            if (mc.getFrom() == null && !(mc.getOp().equals(MergeOpEnums.IGNORE) || mc.getOp().equals(MergeOpEnums.UCOUNT))) {
-                mc.setFrom(bundleField);
-                // TODO only clone field name for non-int names, otherwise create 'next' column # as name
-                mc.setTo(format.getField(bundleField.getName()));
-            }
-            if (mc.getOp() == MergeOpEnums.KEY) {
-                ValueObject lval = bundle.getValue(bundleField);
-                key = key.concat(lval == null ? "" : lval.toString());
-            }
-        }
-        if (mergeCount && mergeField == null) {
-            mergeField = format.createNewField("merge_");
-        }
-        MergedRow merge = resultTable.get(key);
-        if (merge == null) {
-            merge = new MergedRow(this, conf, mergeCount, join, format, mergeField);
-            resultTable.put(key, merge);
-        }
-        for (BundleField field : bundle) {
-            ValueObject lval = bundle.getValue(field);
-            if (i < conf.length) {
-                BundleMapConf<MergeOpEnums> mc = conf[i++];
-                if (mc == null || mc.getOp() == null) {
-                    continue;
-                }
-                switch (mc.getOp()) {
-                    case KEY:
-                        key = key.concat(lval == null ? "" : lval.toString());
-                        break;
-                }
-            }
-        }
-        if (rows++ == 0) {
+        if (key.equals(lastkey)) {
+            lastRow.merge(bundle);
+        } else {
+            maybeSendLastRow();
+            lastRow = new MergedRow(conf, new ListBundle(format));
+            lastRow.merge(bundle);
             lastkey = key;
         }
-        merge.merge(bundle);
-        if (!lastkey.equals(key) || (countdown > 0 && merge.merged >= countdown)) {
-            getNext().send(resultTable.remove(lastkey).emit());
-            lastkey = key;
+
+        if (countdown > 0 && lastRow.getMergedCount() >= countdown) {
+            maybeSendLastRow();
         }
+    }
+
+    private boolean maybeSendLastRow() {
+        if (lastRow != null) {
+            getNext().send(lastRow.emit());
+            lastRow = null;
+            lastkey = null;
+            return true;
+        }
+        return false;
     }
 
     @Override
     public void sendComplete() {
         QueryOp next = getNext();
         if (!queryStatusObserver.queryCompleted) {
-            List<Bundle> bundleList = new ArrayList<>();
-            for (MergedRow mergedRow : resultTable.values()) {
-                bundleList.add(mergedRow.emit());
-            }
-            next.send(bundleList);
+            maybeSendLastRow();
         }
-        resultTable.clear();
         next.sendComplete();
     }
 
     @Override
     public void close() throws IOException {
-        resultTable.clear();
         if (getNext() != null) {
             getNext().close();
         }
-    }
-
-    static ValueNumber num(ValueObject o) {
-        return OpGather.num(o);
     }
 }

@@ -19,7 +19,7 @@ import com.addthis.bundle.value.ValueNumber;
 public class DiffValue extends AbstractMergedNumber {
 
     @Override
-    public void doMerge(ValueNumber nextValue) {
-        value = value.diff(nextValue);
+    public ValueNumber doMerge(ValueNumber nextValue, ValueNumber value) {
+        return value.diff(nextValue);
     }
 }

@@ -19,7 +19,7 @@ import com.addthis.bundle.value.ValueNumber;
 public class SumValue extends AbstractMergedNumber {
 
     @Override
-    public void doMerge(ValueNumber nextValue) {
-        value = value.sum(nextValue);
+    public ValueNumber doMerge(ValueNumber nextValue, ValueNumber value) {
+        return value.sum(nextValue);
     }
 }

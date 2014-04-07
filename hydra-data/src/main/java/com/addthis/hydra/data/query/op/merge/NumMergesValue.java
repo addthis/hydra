@@ -14,29 +14,27 @@
 
 package com.addthis.hydra.data.query.op.merge;
 
+import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueNumber;
+import com.addthis.bundle.value.ValueObject;
+import com.addthis.hydra.data.query.op.MergedRow;
 
 public class NumMergesValue extends AbstractMergedNumber {
 
-    private int count;
-
-    public NumMergesValue(int count) {
-        super(true);
-        this.count = count;
-    }
-
-    public NumMergesValue() {
-        this(1);
+    @Override
+    public void merge(Bundle nextBundle, MergedRow mergedRow) {
     }
 
     @Override
-    protected void doMerge(ValueNumber nextValue) {
-        count += 1;
+    protected ValueNumber doMerge(ValueNumber nextValue, ValueNumber value) {
+        throw new UnsupportedOperationException(
+                "This method should not be called. Merge(Bundle, MergedRow) should no-op");
     }
 
     @Override
-    protected ValueNumber doEmit() {
-        return ValueFactory.create(count);
+    public void emit(MergedRow mergedRow) { // skip nul checks
+        ValueObject value = ValueFactory.create(mergedRow.getMergedCount());
+        mergedRow.setValue(to, value);
     }
 }

@@ -14,40 +14,42 @@
 
 package com.addthis.hydra.data.query.op.merge;
 
-import javax.annotation.Nullable;
-
+import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
+import com.addthis.hydra.data.query.op.MergedRow;
 
 public abstract class AbstractMergedValue<T extends ValueObject> implements MergedValue {
 
-    protected T value = null;
-    private final boolean acceptNull;
+    protected BundleField from;
+    protected BundleField to;
 
-    public AbstractMergedValue(boolean acceptNull) {
-        this.acceptNull = acceptNull;
-    }
-
-    public AbstractMergedValue() {
-        this(false);
-    }
-
-    @Override @Nullable
-    public ValueObject emit() {
-        if (value == null) {
-            return null;
-        } else {
-            return doEmit();
+    @Override
+    public void emit(MergedRow mergedRow) {
+        ValueObject value = mergedRow.getValue(to);
+        if (value != null) {
+            value = doEmit(convert(value), mergedRow);
+            mergedRow.setValue(to, value);
         }
     }
 
     @Override
-    public void merge(ValueObject nextValue) {
-        if ((nextValue != null) || acceptNull) {
-            if (value == null) {
-                value = convert(nextValue);
-            } else {
-                doMerge(convert(nextValue));
-            }
+    public void merge(Bundle nextBundle, MergedRow mergedRow) {
+        ValueObject nextValue = nextBundle.getValue(from);
+        if (nextValue == null) {
+            return;
+        }
+        ValueObject value = mergedRow.getValue(to);
+        ValueObject mergedValue = merge(nextValue, value);
+        mergedRow.setValue(to, mergedValue);
+    }
+
+    protected ValueObject merge(ValueObject nextValue, ValueObject value) {
+        T nextValueT = convert(nextValue);
+        if (value == null) {
+            return nextValueT;
+        } else {
+            return doMerge(nextValueT, convert(value));
         }
     }
 
@@ -56,11 +58,31 @@ public abstract class AbstractMergedValue<T extends ValueObject> implements Merg
         return false;
     }
 
-    protected abstract void doMerge(T nextValue);
+    protected abstract T doMerge(T nextValue, T value);
 
     protected abstract T convert(ValueObject nextValue);
 
-    protected T doEmit() {
+    protected T doEmit(T value, MergedRow mergedRow) {
         return value;
+    }
+
+    @Override
+    public BundleField getFrom() {
+        return from;
+    }
+
+    @Override
+    public void setFrom(BundleField from) {
+        this.from = from;
+    }
+
+    @Override
+    public BundleField getTo() {
+        return to;
+    }
+
+    @Override
+    public void setTo(BundleField to) {
+        this.to = to;
     }
 }

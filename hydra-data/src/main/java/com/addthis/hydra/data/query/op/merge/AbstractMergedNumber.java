@@ -21,14 +21,6 @@ import com.addthis.hydra.data.query.AbstractQueryOp;
 
 public abstract class AbstractMergedNumber extends AbstractMergedValue<ValueNumber> {
 
-    public AbstractMergedNumber(boolean acceptNull) {
-        super(acceptNull);
-    }
-
-    public AbstractMergedNumber() {
-        super();
-    }
-
     @Override
     protected ValueNumber convert(ValueObject nextValue) {
         ValueNumber num = ValueUtil.asNumberOrParseLong(nextValue, 10);

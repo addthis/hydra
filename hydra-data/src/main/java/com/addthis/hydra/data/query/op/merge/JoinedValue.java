@@ -14,24 +14,22 @@
 
 package com.addthis.hydra.data.query.op.merge;
 
-import java.util.ArrayList;
-
+import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.bundle.value.ValueString;
+import com.addthis.hydra.data.query.op.MergedRow;
 
 import com.google.common.base.Joiner;
 
-public class JoinedValue extends AbstractMergedValue<ValueString> {
+public class JoinedValue extends AbstractMergedValue<ValueObject> {
 
     private static final Joiner DEFAULT_JOINER = Joiner.on(',');
 
     private final Joiner joiner;
-    private final ArrayList<String> values;
 
     public JoinedValue(Joiner joiner) {
         this.joiner = joiner;
-        this.values = new ArrayList<>(5);
     }
 
     public JoinedValue(String seperator) {
@@ -43,24 +41,24 @@ public class JoinedValue extends AbstractMergedValue<ValueString> {
     }
 
     @Override
-    protected void doMerge(ValueString nextValue) {
-        if (values.isEmpty()) {
-            values.add(value.toString());
-        }
-        values.add(nextValue.toString());
+    protected ValueObject doMerge(ValueObject nextValue, ValueObject value) {
+        ValueArray values = ValueUtil.asArray(value);
+        values.add(nextValue);
+        return values;
     }
 
     @Override
-    protected ValueString convert(ValueObject nextValue) {
-        return nextValue.asString();
-    }
-
-    @Override
-    protected ValueString doEmit() {
-        if (values.isEmpty()) {
-            return value;
+    protected ValueObject convert(ValueObject nextValue) {
+        if (nextValue.getObjectType() != ValueObject.TYPE.ARRAY) {
+            return nextValue.asString();
         } else {
-            return ValueFactory.create(joiner.join(values));
+            return nextValue;
         }
+    }
+
+    @Override
+    protected ValueObject doEmit(ValueObject value, MergedRow mergedRow) {
+        ValueArray values = ValueUtil.asArray(value);
+        return ValueFactory.create(joiner.join(values));
     }
 }

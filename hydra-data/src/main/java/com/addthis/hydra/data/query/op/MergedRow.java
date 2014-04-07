@@ -17,50 +17,55 @@ package com.addthis.hydra.data.query.op;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
+import java.util.Iterator;
+
 import com.addthis.basis.util.Bytes;
 
 import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.BundleException;
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.io.DataChannelCodec;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.DiskBackedMap;
-import com.addthis.hydra.data.query.op.merge.BundleMapConf;
 import com.addthis.hydra.data.query.op.merge.MergedValue;
 
-class MergedRow implements DiskBackedMap.DiskObject {
+public class MergedRow implements DiskBackedMap.DiskObject, Bundle {
 
-    private final BundleMapConf<MergedValue> conf[];
-    private final ListBundleFormat format;
+    private final MergedValue[] conf;
+    private final Bundle mergedBundle;
 
     int numMergedRows = 0;
 
-    MergedRow(BundleMapConf<MergedValue>[] conf, ListBundleFormat format) {
+    MergedRow(MergedValue[] conf, Bundle backingBundle) {
         this.conf = conf;
-        this.format = format;
+        this.mergedBundle = backingBundle;
     }
 
     void merge(Bundle row) {
         numMergedRows += 1;
-        for (BundleMapConf<MergedValue> map : conf) {
+        for (MergedValue map : conf) {
             if (map == null) {
                 continue;
             }
-            ValueObject lval = row.getValue(map.getFrom());
-            map.getOp().merge(lval);
+            map.merge(row, this);
         }
     }
 
     Bundle emit() {
-        Bundle nl = new ListBundle(format);
-        for (BundleMapConf<MergedValue> map : conf) {
+        for (MergedValue map : conf) {
             if (map == null) {
                 continue;
             }
-            nl.setValue(map.getTo(), map.getOp().emit());
+            map.emit(this);
         }
-        return nl;
+        return mergedBundle;
+    }
+
+    public int getMergedCount() {
+        return numMergedRows;
     }
 
     @Override
@@ -71,14 +76,15 @@ class MergedRow implements DiskBackedMap.DiskObject {
             bos.write(Bytes.toBytes(numMergedRows));
             ListBundleFormat format = new ListBundleFormat();
             ListBundle listBundle = new ListBundle(format);
+            emit();
             int i = 0;
-            for (BundleMapConf<MergedValue> map : conf) {
+            for (MergedValue map : conf) {
                 if (map == null) {
                     continue;
                 }
                 BundleField toField = format.getField("" + i);
                 i += 1;
-                listBundle.setValue(toField, map.getOp().emit());
+                listBundle.setValue(toField, getValue(map.getTo()));
             }
             bos.write(DataChannelCodec.encodeBundle(listBundle));
             result = bos.toByteArray();
@@ -87,5 +93,40 @@ class MergedRow implements DiskBackedMap.DiskObject {
             throw new RuntimeException(e);
         }
         return result;
+    }
+
+    @Override
+    public ValueObject getValue(BundleField field) throws BundleException {
+        return mergedBundle.getValue(field);
+    }
+
+    @Override
+    public void setValue(BundleField field, ValueObject value) throws BundleException {
+        mergedBundle.setValue(field, value);
+    }
+
+    @Override
+    public void removeValue(BundleField field) throws BundleException {
+        mergedBundle.removeValue(field);
+    }
+
+    @Override
+    public BundleFormat getFormat() {
+        return mergedBundle.getFormat();
+    }
+
+    @Override
+    public int getCount() {
+        return mergedBundle.getCount();
+    }
+
+    @Override
+    public Bundle createBundle() {
+        return mergedBundle.createBundle();
+    }
+
+    @Override
+    public Iterator<BundleField> iterator() {
+        return mergedBundle.iterator();
     }
 }

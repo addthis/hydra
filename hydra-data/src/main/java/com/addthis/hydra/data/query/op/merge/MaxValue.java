@@ -19,7 +19,7 @@ import com.addthis.bundle.value.ValueNumber;
 public class MaxValue extends AbstractMergedNumber {
 
     @Override
-    protected void doMerge(ValueNumber nextValue) {
-        value = value.min(nextValue);
+    protected ValueNumber doMerge(ValueNumber nextValue, ValueNumber value) {
+        return value.max(nextValue);
     }
 }

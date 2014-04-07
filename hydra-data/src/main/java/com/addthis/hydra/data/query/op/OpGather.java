@@ -15,7 +15,6 @@ package com.addthis.hydra.data.query.op;
 
 import java.io.IOException;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -27,26 +26,17 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractQueryOp;
-import com.addthis.hydra.data.query.op.merge.AverageValue;
-import com.addthis.hydra.data.query.op.merge.BundleMapConf;
 import com.addthis.hydra.data.query.DiskBackedMap;
 import com.addthis.hydra.data.query.QueryOp;
 import com.addthis.hydra.data.query.QueryStatusObserver;
-import com.addthis.hydra.data.query.op.MergedRowFactory;
-import com.addthis.hydra.data.query.op.merge.DiffValue;
-import com.addthis.hydra.data.query.op.merge.JoinedValue;
-import com.addthis.hydra.data.query.op.merge.KeyValue;
-import com.addthis.hydra.data.query.op.merge.LastValue;
-import com.addthis.hydra.data.query.op.merge.MaxValue;
+import com.addthis.hydra.data.query.op.merge.MergeConfig;
 import com.addthis.hydra.data.query.op.merge.MergedValue;
-import com.addthis.hydra.data.query.op.merge.MinValue;
-import com.addthis.hydra.data.query.op.merge.NumMergesValue;
-import com.addthis.hydra.data.query.op.merge.SumValue;
 import com.addthis.hydra.data.util.KeyTopper;
 
 import com.yammer.metrics.Metrics;
@@ -107,16 +97,16 @@ public class OpGather extends AbstractQueryOp {
 
     private Map<String, MergedRow> resultTable = new HashMap<>();
     private final ListBundleFormat format = new ListBundleFormat();
-    private final BundleMapConf<MergedValue> conf[];
+    private final MergedValue[] conf;
 
     private final long tipMem;
     private final long tipRow;
     private long totalMem;
 
-    private BundleMapConf<MergedValue> mergeCountValue;
-    private KeyTopper topper;
-    private int topSize;
-    private int topColumn = -1;
+    private final MergeConfig mergeConfig;
+    private final KeyTopper topper;
+    private final int topSize;
+    private final int topColumn;
 
     private boolean tippedToDisk = false;
     private boolean tipToDisk = Parameter.boolValue("opgather.tiptodisk", false);
@@ -134,87 +124,11 @@ public class OpGather extends AbstractQueryOp {
         this.tipRow = tipRow;
         totalMem = 0;
 
-        ArrayList<BundleMapConf<MergedValue>> conf = new ArrayList<>(args.length());
-
-        boolean mergeCount = false;
-        for (int i = 0; i < args.length(); i++) {
-            char ch = args.charAt(i);
-            boolean isnum = (ch >= '0' && ch <= '9');
-            if (isnum) {
-                topSize *= 10;
-                topSize += (ch - '0');
-                continue;
-            }
-            MergedValue op = null;
-            // TODO add max/min
-            switch (ch) {
-                case ',':
-                    continue;
-                    // next col is top
-                case 't':
-                    topColumn = conf.size();
-                    topper = new KeyTopper().init();
-                    continue;
-                    // average
-                case 'a':
-                    op = new AverageValue();
-                    break;
-                // diff/subtract value
-                case 'd':
-                    op = new DiffValue();
-                    break;
-                // ignore/drop
-                case 'i':
-//                  op = MergeOpEnums.IGNORE;
-//                  conf.add(null);
-//                  continue;
-                    break;
-                case 'j':
-                    op = new JoinedValue();
-                    break;
-                // last value
-                case 'l':
-                    op = new LastValue();
-                    break;
-                // part of compound key
-                case 'k':
-                    op = new KeyValue();
-                    break;
-                // max value
-                case 'M':
-                    op = new MaxValue();
-                    break;
-                // min value
-                case 'm':
-                    op = new MinValue();
-                    break;
-                // pack repeating values -- seems to have been gone a while
-//                case 'p':
-//                    op = MergeOpEnums.PACK;
-//                    break;
-                // sum
-                case 's':
-                    op = new SumValue();
-                    break;
-                // add merged row count
-                case 'u':
-                    mergeCount = true;
-                    continue;
-            }
-            if (op != null) {
-                BundleMapConf<MergedValue> next = new BundleMapConf<>();
-                next.setOp(op);
-                conf.add(next);
-            } else {
-                conf.add(null);
-            }
-        }
-        if (mergeCount) {
-            mergeCountValue = new BundleMapConf<>();
-            mergeCountValue.setOp(new NumMergesValue());
-            conf.add(mergeCountValue);
-        }
-        this.conf = conf.toArray(new BundleMapConf[conf.size()]);
+        mergeConfig = new MergeConfig(args);
+        topColumn = mergeConfig.topColumn;
+        topper = mergeConfig.topper;
+        topSize = mergeConfig.numericArg;
+        conf = mergeConfig.conf;
     }
 
     @Override
@@ -222,39 +136,10 @@ public class OpGather extends AbstractQueryOp {
         if (queryStatusObserver.queryCompleted) {
             return;
         }
-        String key = "";
-        int i = 0;
-        /* compute key for new line and fill from/to if not set */
-        BundleField topField = null;
-        for (BundleField field : row.getFormat()) {
-            if (i >= conf.length) {
-                break;
-            }
-            if (i == topColumn) {
-                topField = field;
-            }
-            BundleMapConf<MergedValue> mc = conf[i++];
-            if (mc == null) {
-                continue;
-            }
-            if (mc.getFrom() == null) {
-                mc.setFrom(field);
-                // TODO only clone field name for non-int names, otherwise create 'next' column # as name
-                mc.setTo(format.getField(field.getName()));
-            }
-            if (mc.getOp().isKey()) {
-                ValueObject lval = row.getValue(field);
-                key = key.concat(lval == null ? "" : lval.toString());
-            }
-        }
-        if (mergeCountValue != null) {
-            if (mergeCountValue.getTo() == null) {
-                mergeCountValue.setTo(format.createNewField("merge_"));
-            }
-        }
+        String key = mergeConfig.handleBindAndGetKey(row, format);
         MergedRow merge = resultTable.get(key);
         if (merge == null) {
-            merge = new MergedRow(this);
+            merge = new MergedRow(conf, new ListBundle(format));
             resultTable.put(key, merge);
 
             if (!tippedToDisk) {
@@ -273,18 +158,21 @@ public class OpGather extends AbstractQueryOp {
             totalMem += MemoryCounter.estimateSize(merge);
         }
 
-        if (topField != null) {
-            ValueNumber num = num(merge.mergedRow[topColumn]);
-            if (num == null) {
-                return;
-            }
-            String drop = topper.update(key, num.asLong().getLong(), topSize);
-            if (drop != null) {
-                if (!tippedToDisk) {
-                    totalMem -= MemoryCounter.estimateSize(resultTable.get(drop));
+        if (topColumn >= 0) {
+            BundleField topColumnTo = conf[topColumn].getTo();
+            if (topColumnTo != null) {
+                ValueNumber num = num(merge.getValue(topColumnTo));
+                if (num == null) {
+                    return;
                 }
+                String drop = topper.update(key, num.asLong().getLong(), topSize);
+                if (drop != null) {
+                    if (!tippedToDisk) {
+                        totalMem -= MemoryCounter.estimateSize(resultTable.get(drop));
+                    }
 
-                resultTable.remove(drop);
+                    resultTable.remove(drop);
+                }
             }
         }
 
@@ -310,7 +198,7 @@ public class OpGather extends AbstractQueryOp {
                 }
 
                 Map<String, MergedRow> diskMap = new DiskBackedMap<>(tmpDir + "/" + UUID.randomUUID(),
-                        new MergedRowFactory(this), memToUse);
+                        new MergedRowFactory(conf, format), memToUse);
 
                 diskMap.putAll(resultTable);
                 resultTable = diskMap;
