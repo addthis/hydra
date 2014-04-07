@@ -53,6 +53,7 @@
          They can be assigned new values by a submodule that needs non-default values. -->
     <hydra.test.useSystemClassLoader>true</hydra.test.useSystemClassLoader>
     <hydra.test.useManifestOnlyJar>false</hydra.test.useManifestOnlyJar>
+    <enforcer.fail>true</enforcer.fail>
 
     <!-- hydra addthis projects dependency versions -->
     <hydra.dep.bark.version>2.1.3</hydra.dep.bark.version>
@@ -101,7 +102,7 @@
               <rules>
                 <DependencyConvergence />
               </rules>
-              <fail>true</fail>
+              <fail>${enforcer.fail}</fail>
             </configuration>
           </plugin>
           <plugin>
