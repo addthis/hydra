@@ -95,11 +95,11 @@ class JsonBundleEncoder extends AbstractHttpBundleEncoder {
 
     @Override
     public void sendComplete(ChannelHandlerContext ctx) {
+        super.sendComplete(ctx);
         ctx.write("]");
         if (jsonp != null) {
             ctx.write(");");
         }
-        super.sendComplete(ctx);
     }
 
     /* convert string to json valid format */

@@ -117,8 +117,10 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
         QueryStringDecoder urlDecoder = new QueryStringDecoder(request.getUri());
         String target = urlDecoder.path();
         if (request.getMethod() == HttpMethod.POST) {
-            log.trace("POST Method handling triggered");
-            urlDecoder = new QueryStringDecoder(request.content().toString(CharsetUtil.UTF_8));
+            log.trace("POST Method handling triggered for {}", request);
+            String postBody = request.content().toString(CharsetUtil.UTF_8);
+            log.trace("POST body {}", postBody);
+            urlDecoder = new QueryStringDecoder(postBody, false);
         }
         log.trace("target uri {}", target);
         KVPairs kv = new KVPairs();

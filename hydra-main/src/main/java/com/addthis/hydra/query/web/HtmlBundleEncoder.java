@@ -49,7 +49,7 @@ class HtmlBundleEncoder extends AbstractHttpBundleEncoder {
 
     @Override
     public void sendComplete(ChannelHandlerContext ctx) {
-        ctx.write("</table>");
         super.sendComplete(ctx);
+        ctx.write("</table>");
     }
 }

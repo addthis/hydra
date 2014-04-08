@@ -65,14 +65,19 @@ abstract class AbstractHttpBundleEncoder extends ChannelOutboundHandlerAdapter {
         }
     }
 
-    public void send(ChannelHandlerContext ctx, Bundle row) {
+    private void maybeWriteStart(ChannelHandlerContext ctx) {
         if (!writeStarted) {
             writeStart(ctx);
             writeStarted = true;
         }
     }
 
+    public void send(ChannelHandlerContext ctx, Bundle row) {
+        maybeWriteStart(ctx);
+    }
+
     public void sendComplete(ChannelHandlerContext ctx) {
+        maybeWriteStart(ctx);
         HttpQueryCallHandler.queryTimes.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
     }
 
