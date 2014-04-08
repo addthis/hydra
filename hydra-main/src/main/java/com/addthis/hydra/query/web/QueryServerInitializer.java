@@ -37,7 +37,7 @@ public class QueryServerInitializer extends ChannelInitializer<SocketChannel> {
     @Override
     protected void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
-        log.info("New socket connection {}", ch);
+        log.trace("New socket connection {}", ch);
 
         pipeline.addLast("decoder", new HttpRequestDecoder(163840,163840,163840));
         pipeline.addLast("aggregator", new HttpObjectAggregator(163840));
