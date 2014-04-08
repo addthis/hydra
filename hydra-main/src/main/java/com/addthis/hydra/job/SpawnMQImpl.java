@@ -22,6 +22,8 @@ import com.addthis.hydra.mq.MessageProducer;
 import com.addthis.hydra.mq.RabbitMessageConsumer;
 import com.addthis.hydra.mq.RabbitMessageProducer;
 import com.addthis.hydra.mq.ZkMessageConsumer;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ShutdownListener;
 import com.rabbitmq.client.ShutdownSignalException;
@@ -33,9 +35,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 public class SpawnMQImpl implements SpawnMQ {
 
+    public static final int RABBIT_RECONNECT_INTERVAL_MS = 5000;
     private static Logger log = LoggerFactory.getLogger(SpawnMQImpl.class);
 
     private MessageProducer batchJobProducer;
@@ -51,6 +58,11 @@ public class SpawnMQImpl implements SpawnMQ {
     private boolean connected;
     private final CuratorFramework zkClient;
 
+    private final ExecutorService connectionExecutorService = MoreExecutors
+            .getExitingExecutorService(new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<Runnable>(),
+                    new ThreadFactoryBuilder().setNameFormat("rabbitMQConnectionService-%d").build()));
+
     private final AtomicInteger inHandler = new AtomicInteger(0);
     private Gauge<Integer> heartbeat = Metrics.newGauge(SpawnMQImpl.class, "heartbeat", new Gauge<Integer>() {
         @Override
@@ -65,26 +77,64 @@ public class SpawnMQImpl implements SpawnMQ {
     }
 
     @Override
-    public void connectToMQ(String hostUUID) throws Exception {
-        batchJobProducer = new RabbitMessageProducer("CSBatchJob", "localhost");
-        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, Integer.valueOf(batchBrokerPort));
-
-        com.rabbitmq.client.ConnectionFactory factory = new com.rabbitmq.client.ConnectionFactory();
-        factory.setHost(batchBrokerHost);
-        factory.setPort(Integer.valueOf(batchBrokerPort));
-        com.rabbitmq.client.Connection connection = factory.newConnection();
-        connection.addShutdownListener(new ShutdownListener() {
-            @Override
-            public void shutdownCompleted(ShutdownSignalException e) {
-                connected = false;
-                log.warn("rabbit heartbeat failed");
-            }
-        });
-        channel = connection.createChannel();
-
+    public void connectToMQ(String hostUUID) {
         hostStatusConsumer = new ZkMessageConsumer<>(zkClient, "/minion", this, HostState.class);
-        batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", hostUUID + ".batchControl", this, "SPAWN");
-        this.connected = true;
+        connectionExecutorService.execute(new RabbitConnectionService(this, hostUUID));
+    }
+
+    private class RabbitConnectionService extends Thread {
+        private final String hostUUID;
+        private final SpawnMQImpl _this;
+
+        private RabbitConnectionService(SpawnMQImpl _this, String hostUUID) {
+            this._this = _this;
+            this.hostUUID = hostUUID;
+            this.setDaemon(true);
+        }
+
+        @Override
+        public void run() {
+            connect();
+        }
+
+        public void connect() {
+            synchronized (this) {
+                if (!connected) {
+                    batchJobProducer = new RabbitMessageProducer("CSBatchJob", "localhost");
+                    batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, Integer.valueOf(batchBrokerPort));
+                    com.rabbitmq.client.ConnectionFactory factory = new com.rabbitmq.client.ConnectionFactory();
+                    factory.setHost(batchBrokerHost);
+                    factory.setPort(Integer.valueOf(batchBrokerPort));
+                    try {
+                        com.rabbitmq.client.Connection connection = factory.newConnection();
+                        connection.addShutdownListener(new ShutdownListener() {
+                            @Override
+                            public void shutdownCompleted(ShutdownSignalException e) {
+                                connected = false;
+                                log.warn("rabbit shutdown message received: " + e.getReason() + " will attempt to reconnect");
+                                scheduleReconnect();
+                            }
+                        });
+                        channel = connection.createChannel();
+                        batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", hostUUID + ".batchControl", _this, "SPAWN");
+                        connected = true;
+                    } catch (IOException e) {
+                        log.error("Exception connection to broker: " + batchBrokerHost + ":" + batchBrokerPort, e);
+                        scheduleReconnect();
+                    }
+                }
+            }
+        }
+
+        private void scheduleReconnect() {
+            try {
+                Thread.sleep(RABBIT_RECONNECT_INTERVAL_MS);
+                connect();
+            } catch (InterruptedException e) {
+                // do nothing
+            }
+
+        }
     }
 
     /**

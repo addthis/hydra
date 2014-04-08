@@ -70,6 +70,7 @@ import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.MeshyClientConnector;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AlreadyClosedException;
 import com.rabbitmq.client.Channel;
@@ -181,6 +182,10 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
     // wait on a lengthy revert / delete / etc.
     private final ExecutorService promoteDemoteTaskExecutorService = MoreExecutors.getExitingExecutorService(
             new ThreadPoolExecutor(4, 4, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
+    private final ExecutorService connectionExecutorService = MoreExecutors
+            .getExitingExecutorService(new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<Runnable>(),
+                    new ThreadFactoryBuilder().setNameFormat("rabbitMQConnectionService-%d").build()));
     private Lock minionStateLock = new ReentrantLock();
     @Codec.Set(codable = true)
     private MinionTaskDeleter minionTaskDeleter;
@@ -378,7 +383,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
     private ZkGroupMembership minionGroupMembership;
 
     private void connectToMQ() throws Exception {
-        String[] routingKeys = new String[]{uuid, HostMessage.ALL_HOSTS};
         zkBatchControlProducer = new ZKMessageProducer(getZkClient());
         if (meshQueue) {
             log.info("Queueing via Mesh");
@@ -419,11 +423,30 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             batchControlConsumer = new MeshMessageConsumer(mesh.getClient(), "CSBatchControl", uuid).addRoutingKey(HostMessage.ALL_HOSTS);
             batchControlConsumer.addMessageListener(this);
         } else {
-            batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, Integer.valueOf(batchBrokerPort));
-            queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerHost, Integer.valueOf(batchBrokerPort));
-            com.rabbitmq.client.ConnectionFactory factory = new com.rabbitmq.client.ConnectionFactory();
-            factory.setHost(batchBrokerHost);
-            factory.setPort(Integer.valueOf(batchBrokerPort));
+            if (!connectToRabbitMQ()) {
+                scheduleReconnect();
+            }
+        }
+    }
+
+    private void scheduleReconnect() {
+        try {
+            Thread.sleep(SpawnMQImpl.RABBIT_RECONNECT_INTERVAL_MS);
+            connectToRabbitMQ();
+        } catch (InterruptedException e) {
+            // do nothing
+        }
+
+    }
+
+    private synchronized boolean connectToRabbitMQ() {
+        String[] routingKeys = new String[]{uuid, HostMessage.ALL_HOSTS};
+        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, Integer.valueOf(batchBrokerPort));
+        queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerHost, Integer.valueOf(batchBrokerPort));
+        com.rabbitmq.client.ConnectionFactory factory = new com.rabbitmq.client.ConnectionFactory();
+        factory.setHost(batchBrokerHost);
+        factory.setPort(Integer.valueOf(batchBrokerPort));
+        try {
             com.rabbitmq.client.Connection connection = factory.newConnection();
             channel = connection.createChannel();
             channel.exchangeDeclare("CSBatchJob", "direct");
@@ -434,6 +457,10 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             batchJobConsumer = new QueueingConsumer(channel);
             channel.basicConsume(queueName, false, batchJobConsumer);
             batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", uuid + ".batchControl", this, routingKeys);
+            return true;
+        } catch (IOException e) {
+            log.error("Error connecting to rabbitmq " + batchBrokerHost + ":" + batchBrokerPort, e);
+            return false;
         }
     }
 
@@ -999,7 +1026,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                     shutdown();
                 } catch (ShutdownSignalException shutdownException) {
                     log.warn("Received unexpected shutdown exception from rabbitMQ");
-                    shutdown();
+                    scheduleReconnect();
                 } catch (Throwable ex) {
                     try {
                         channel.basicNack(delivery.getEnvelope().getDeliveryTag(), false, true);
