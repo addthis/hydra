@@ -133,7 +133,8 @@ public class Tree implements DataTree, MeterDataSource {
         }
         // create meter logging thread
         if (TreeCommonParameters.meterLogging > 0 && meterLoggerEnabled) {
-            logger = new MeterFileLogger(this, root, "tree-metrics", TreeCommonParameters.meterLogging, 100000);
+            logger = new MeterFileLogger(this, root, "tree-metrics",
+                    TreeCommonParameters.meterLogging, TreeCommonParameters.meterLogLines);
         }
         source = generatePageDB(root, readonly);
         source.setCacheMem(TreeCommonParameters.maxCacheMem);

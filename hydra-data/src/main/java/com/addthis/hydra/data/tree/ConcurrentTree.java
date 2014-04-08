@@ -82,6 +82,10 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     @Configuration.Parameter
     static int deletionThreadSleepMillis = Parameter.intValue("hydra.tree.clean.interval", 10);
 
+    // number of nodes in between trash removal logging messages
+    @Configuration.Parameter
+    static int deletionLogInterval = Parameter.intValue("hydra.tree.clean.logging", 100000);
+
     static final boolean trashDebug = Parameter.boolValue("hydra.tree.trash.debug", false);
 
     private static final AtomicInteger scopeGenerator = new AtomicInteger();
@@ -223,7 +227,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
         // create meter logging thread
         if (TreeCommonParameters.meterLogging > 0 && meterLoggerEnabled) {
-            logger = new MeterFileLogger(this, root, "tree-metrics", TreeCommonParameters.meterLogging, 100000);
+            logger = new MeterFileLogger(this, root, "tree-metrics",
+                    TreeCommonParameters.meterLogging, TreeCommonParameters.meterLogLines);
         } else {
             logger = null;
         }
@@ -826,19 +831,27 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     /**
      * Recursively delete all the children of the input node.
+     * Use a non-negative value for the counter parameter to
+     * tally the nodes that have been deleted. Use a negative
+     * value to disable logging of the number of deleted nodes.
      *
-     * @param rootNode
+     * @param rootNode root of the subtree to delete
+     * @param counter if non-negative then tally the nodes that have been deleted
      */
-    void deleteSubTree(ConcurrentTreeNode rootNode) {
+    long deleteSubTree(ConcurrentTreeNode rootNode, long counter) {
         int nodeDB = rootNode.nodeDB();
         Range<DBKey, ConcurrentTreeNode> range = fetchNodeRange(nodeDB);
         try {
             while (range.hasNext()) {
+                // do not emit logging when counter is negative
+                if ((counter >= 0) && (++counter % deletionLogInterval == 0)) {
+                    log.info("Deleted " + counter + " nodes from the tree.");
+                }
                 Map.Entry<DBKey, ConcurrentTreeNode> entry = range.next();
                 ConcurrentTreeNode next = entry.getValue();
 
                 if (next.hasNodes() && !next.isAlias()) {
-                    deleteSubTree(next);
+                    counter = deleteSubTree(next, counter);
                 }
                 String name = entry.getKey().rawKey().toString();
                 CacheKey key = new CacheKey(nodeDB, name);
@@ -854,6 +867,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             range.close();
         }
         source.remove(new DBKey(nodeDB), new DBKey(nodeDB + 1), false);
+        return counter;
     }
 
     private Map.Entry<DBKey, ConcurrentTreeNode> nextTrashNode() {
@@ -903,7 +917,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         while (range.hasNext()) {
             Map.Entry<DBKey, ConcurrentTreeNode> entry = range.next();
             ConcurrentTreeNode node = entry.getValue();
-            deleteSubTree(node);
+            deleteSubTree(node, 0);
             treeTrashNode.incrementCounter();
         }
 
@@ -922,7 +936,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                     entry = nextTrashNode();
                     if (entry != null) {
                         ConcurrentTreeNode node = entry.getValue();
-                        deleteSubTree(node);
+                        deleteSubTree(node, -1);
                         ConcurrentTreeNode prev = source.remove(entry.getKey());
                         if (prev != null) {
                             treeTrashNode.incrementCounter();

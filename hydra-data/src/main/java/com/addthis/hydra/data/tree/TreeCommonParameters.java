@@ -28,6 +28,7 @@ public class TreeCommonParameters {
     static int maxPageMem = Parameter.intValue("hydra.tree.page.maxMem", 0);
     static int memSample = Parameter.intValue("hydra.tree.mem.sample", 0);
     static int meterLogging = Parameter.intValue("hydra.tree.meterlog", 0);
+    static int meterLogLines = Parameter.intValue("hydra.tree.loglines", 100000);
     static int cacheShards = Parameter.intValue("hydra.tree.shards", Runtime.getRuntime().availableProcessors() * 8);
     static long trashInterval = Parameter.longValue("hydra.tree.trash.interval", 0);
     static long trashMaxTime = Parameter.intValue("hydra.tree.trash.maxtime", 0);
