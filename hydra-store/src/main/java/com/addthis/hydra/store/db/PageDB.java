@@ -223,6 +223,7 @@ public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
      */
     @Override
     public int close(boolean cleanLog, CloseOperation operation) {
+        int status;
         try {
             synchronized (openRanges) {
                 if (openRanges.size() > 0) {
@@ -233,9 +234,9 @@ public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
                 }
             }
         } finally {
-            int status = eps.close(cleanLog, operation);
-            return status;
+            status = eps.close(cleanLog, operation);
         }
+        return status;
     }
 
     @Override
