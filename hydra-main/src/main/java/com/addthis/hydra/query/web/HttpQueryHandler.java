@@ -58,6 +58,7 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
@@ -115,6 +116,10 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
         }
         QueryStringDecoder urlDecoder = new QueryStringDecoder(request.getUri());
         String target = urlDecoder.path();
+        if (request.getMethod() == HttpMethod.POST) {
+            log.trace("POST Method handling triggered");
+            urlDecoder = new QueryStringDecoder(request.content().toString(CharsetUtil.UTF_8));
+        }
         log.trace("target uri {}", target);
         KVPairs kv = new KVPairs();
         for (Map.Entry<String, List<String>> entry : urlDecoder.parameters().entrySet()) {
