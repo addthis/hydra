@@ -2994,9 +2994,9 @@ public class Spawn implements Codec.Codable {
                         case SCHEDULED:
                             jobscheduled++;
                             break;
-                    }
-                    if (job.getState() == JobState.ERROR) {
-                        joberrored++;
+                        case ERROR:
+                            joberrored++;
+                            break;
                     }
                 }
             } finally {

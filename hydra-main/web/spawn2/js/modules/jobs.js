@@ -1740,7 +1740,7 @@ function(
                 })
             };
             var detail = this.$el.find("div#detailContainer");
-            detail.append(this.views.table.$el);
+            detail.html(this.views.table.$el);
             this.views.table.render();
             this.$el.find("ul.nav.nav-tabs li#tasksTab").addClass("active");
             return this;
@@ -1835,7 +1835,7 @@ function(
                 "width":detail.width(),
                 "height":detail.height()
             });
-            detail.append(this.views.graph.$el);
+            detail.html(this.views.graph.$el);
             this.$el.find("ul.nav.nav-tabs li#depTab").addClass("active");
             return this;
         },
@@ -1878,7 +1878,7 @@ function(
                 right:0,
                 left:0
             });
-            detail.append(this.views.editor.$el);
+            detail.html(this.views.editor.$el);
             this.$el.find("ul.nav.nav-tabs li#expTab").addClass("active");
             return this;
         },
@@ -2026,7 +2026,7 @@ function(
                 heightBuffer:80,
                 columnFilterIndex:1,
                 id:this.id,
-                emptyMessage:" "
+                emptyMessage:"No commits"
             }]);
         }
     });
@@ -2050,7 +2050,7 @@ function(
             };
             if(!dontAppend){
                 var detail = this.$el.find("div#detailContainer");
-                detail.append(this.views.table.$el);
+                detail.html(this.views.table.$el);
                 this.views.table.render();
             }
             this.$el.find("ul.nav.nav-tabs li#historyTab").addClass("active");
