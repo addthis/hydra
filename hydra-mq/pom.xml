@@ -59,6 +59,11 @@
               </exclusion>
           </exclusions>
       </dependency>
+    <dependency>
+      <groupId>net.jodah</groupId>
+      <artifactId>lyra</artifactId>
+      <version>0.4.0</version>
+    </dependency>
     <!-- end 3rd party -->
   </dependencies>
 </project>
