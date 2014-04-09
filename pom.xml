@@ -47,15 +47,14 @@
 
 
   <properties>
-    <!-- skip enforcer in default builds -->
-    <maven.enforcer.skip>true</maven.enforcer.skip>
     <!-- surefire junit properties -->
     <hydra.test.excluded.groups>com.addthis.basis.test.SlowTest,com.addthis.hydra.common.test.LocalStackTest</hydra.test.excluded.groups>
     <!-- These should be set to the default values specified in the surefire plugin.
          They can be assigned new values by a submodule that needs non-default values. -->
     <hydra.test.useSystemClassLoader>true</hydra.test.useSystemClassLoader>
     <hydra.test.useManifestOnlyJar>false</hydra.test.useManifestOnlyJar>
-    <enforcer.fail>true</enforcer.fail>
+    <!-- enforcer plugin must be explicitly enabled with -Denforcer.skip=false -->
+    <enforcer.skip>true</enforcer.skip>
 
     <!-- hydra addthis projects dependency versions -->
     <hydra.dep.bark.version>2.1.3</hydra.dep.bark.version>
@@ -82,6 +81,23 @@
     <hydra.dep.sleepycat.je.version>5.0.73</hydra.dep.sleepycat.je.version>
   </properties>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>1.3.1</version>
+        <configuration>
+          <rules>
+            <DependencyConvergence />
+          </rules>
+          <fail>true</fail>
+          <skip>${enforcer.skip}</skip>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
   <!--
       There is some duplication in the following profiles.
       This is a solution to the problem of specifying the <groups> configuration
@@ -96,17 +112,6 @@
       </activation>
       <build>
         <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-enforcer-plugin</artifactId>
-            <version>1.3.1</version>
-            <configuration>
-              <rules>
-                <DependencyConvergence />
-              </rules>
-              <fail>${enforcer.fail}</fail>
-            </configuration>
-          </plugin>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
