@@ -90,7 +90,7 @@ import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.query.AliasBiMap;
-import com.addthis.hydra.query.WebSocketManager;
+import com.addthis.hydra.util.WebSocketManager;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.hydra.util.SettableGauge;

@@ -31,7 +31,7 @@ import com.addthis.hydra.job.spawn.resources.ListenResource;
 import com.addthis.hydra.job.spawn.resources.MacroResource;
 import com.addthis.hydra.job.spawn.resources.SpawnConfig;
 import com.addthis.hydra.job.spawn.resources.TaskResource;
-import com.addthis.hydra.query.WebSocketManager;
+import com.addthis.hydra.util.WebSocketManager;
 
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.spi.container.servlet.ServletContainer;

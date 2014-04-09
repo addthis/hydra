@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.query;
 
+import com.addthis.hydra.query.web.QueryServer;
+
 /**
  * command-line/jar entry-point to start either query master or worker.
  */
