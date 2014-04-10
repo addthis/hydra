@@ -144,34 +144,4 @@ public abstract class AbstractQueryOp implements QueryOp {
         return key;
     }
 
-    public class BundleMapConf<K extends Enum> {
-
-        private K op;
-        private BundleField from;
-        private BundleField to;
-
-        public K getOp() {
-            return op;
-        }
-
-        public void setOp(K op) {
-            this.op = op;
-        }
-
-        public BundleField getFrom() {
-            return from;
-        }
-
-        public void setFrom(BundleField from) {
-            this.from = from;
-        }
-
-        public BundleField getTo() {
-            return to;
-        }
-
-        public void setTo(BundleField to) {
-            this.to = to;
-        }
-    }
 }

@@ -60,7 +60,7 @@ public class OpTitle extends AbstractQueryOp {
         if (sentTitle.compareAndSet(false, true)) {
             Bundle title = row.createBundle();
             if (header.size() > 0) {
-                for (Iterator<ValueObject> iter = header.iterator(); iter.hasNext();) {
+                for (Iterator<ValueObject> iter = header.iterator(); iter.hasNext(); ) {
                     getSourceColumnBinder(row).appendColumn(title, iter.next());
                 }
             } else {

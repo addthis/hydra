@@ -15,6 +15,7 @@ package com.addthis.hydra.data.query.op;
 
 
 import com.addthis.basis.util.Strings;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
@@ -57,9 +58,9 @@ public class OpDateFormat extends AbstractRowOp {
         try {
             String opt[] = args.split(":");
             if (opt.length >= 2) {
-                String cval[] = Strings.splitArray(opt[0],",");
+                String cval[] = Strings.splitArray(opt[0], ",");
                 incols = new int[cval.length];
-                for (int i=0; i<cval.length; i++) {
+                for (int i = 0; i < cval.length; i++) {
                     incols[i] = Integer.parseInt(cval[i]);
                 }
                 outcol = opt.length > 2 ? Integer.parseInt(opt[3]) : incols[0];
@@ -92,7 +93,7 @@ public class OpDateFormat extends AbstractRowOp {
         BundleColumnBinder binder = getSourceColumnBinder(row);
         // concatenate columns
         StringBuffer buf = new StringBuffer();
-        for (int i=0; i<incols.length; i++) {
+        for (int i = 0; i < incols.length; i++) {
             String s = ValueUtil.asNativeString(binder.getColumn(row, incols[i]));
             if (s != null) {
                 buf.append(s);

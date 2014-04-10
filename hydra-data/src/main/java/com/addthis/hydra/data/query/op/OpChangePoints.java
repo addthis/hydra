@@ -31,8 +31,8 @@ import com.addthis.hydra.data.util.ChangePoint;
 import com.addthis.hydra.data.util.FindChangePoints;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
+
 /**
  * Detect significant changes within a column of a DataTable.
  */
@@ -60,7 +60,7 @@ public class OpChangePoints extends AbstractTableOp {
             windowSize = opt.length >= 7 ? Integer.parseInt(opt[6]) : 5;
             log.info("Initiated changepoints with parameters " +
                      Strings.join(new Object[]{valColumn, minChange, minRatio, minZScore, inactiveThreshold}, ","));
-        } catch (Exception ex)  {
+        } catch (Exception ex) {
             log.error("", ex);
         }
     }
