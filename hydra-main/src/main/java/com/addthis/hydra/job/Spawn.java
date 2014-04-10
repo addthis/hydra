@@ -673,7 +673,7 @@ public class Spawn implements Codec.Codable {
         try {
             spawnMQ.sendControlMessage(new HostState(HostMessage.ALL_HOSTS));
         } catch (Exception e) {
-            log.warn("unable to request host state update: " + e);
+            log.warn("unable to request host state update: ", e);
         }
     }
 

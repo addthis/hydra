@@ -20,7 +20,6 @@ import java.io.Serializable;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,10 +52,7 @@ public class RabbitMessageProducer implements MessageProducer {
     }
 
     public void open() throws IOException {
-        ConnectionFactory connectionFactory = new ConnectionFactory();
-        connectionFactory.setHost(brokerHost);
-        connectionFactory.setPort(brokerPort);
-        connection = connectionFactory.newConnection();
+        connection = RabbitMQUtil.createConnection(brokerHost, brokerPort);
         channel = connection.createChannel();
         channel.exchangeDeclare(exchangeName, "direct");
         log.info("[rabbit.producer] connection established.");
