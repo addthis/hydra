@@ -14,6 +14,8 @@
 
 package com.addthis.hydra.data.query.source;
 
+import javax.annotation.concurrent.GuardedBy;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
@@ -102,39 +104,45 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
             eof = true;
             return null;
         }
-        if (data == null && out.size() > 0) {
-            emitChunks();
+        if (data == null) {
+            synchronized (out) {
+                if (out.size() > 0) {
+                    emitChunks();
+                }
+            }
             data = queue.poll();
         }
         return data;
     }
 
+    /**
+     * Must only be called while synchronized on out
+     */
+    @GuardedBy("out")
     private void emitChunks() {
-        synchronized (out) {
-            byte[] bytes = out.toByteArray();
-            out.reset();
-            try {
-                int length = bytes.length;
-                if (length > 0) {
-                    for (int i = 0; i < 100; i++) //Try adding to queue 100 times
-                    {
-                        if (queue.offer(bytes, 1000L, TimeUnit.MILLISECONDS)) {
-                            if (i > 10) {
-                                log.warn("Managed to add to output queue on the {} attempt", i);
-                            }
-                            return;
-                        }
-                        if (isClosed()) {
-                            log.info("Unable to emit chunks due to closed channel");
-                            break;
-                        }
+        if (out.size() == 0) {  // this should never be true
+            return;
+        }
+        byte[] bytes = out.toByteArray();
+        out.reset();
+        try {
+            for (int i = 0; i < 100; i++) //Try adding to queue 100 times
+            {
+                if (queue.offer(bytes, 1000L, TimeUnit.MILLISECONDS)) {
+                    if (i > 10) {
+                        log.warn("Managed to add to output queue on the {} attempt", i);
                     }
-                    throw new DataChannelError("Output queue oversized for 100 attempts");
+                    return;
                 }
-            } catch (InterruptedException e) {
-                log.warn("Interrupted while putting bytes onto output buffer");
-                throw new DataChannelError("interrupted", e);
+                if (isClosed()) {
+                    log.info("Unable to emit chunks due to closed channel");
+                    break;
+                }
             }
+            throw new DataChannelError("Output queue oversized for 100 attempts");
+        } catch (InterruptedException e) {
+            log.warn("Interrupted while putting bytes onto output buffer");
+            throw new DataChannelError("interrupted", e);
         }
     }
 
