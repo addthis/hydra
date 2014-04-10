@@ -116,11 +116,9 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
             try {
                 int length = bytes.length;
                 if (length > 0) {
-                    byte[] chunk = new byte[length];
-                    System.arraycopy(bytes, 0, chunk, 0, length);
                     for (int i = 0; i < 100; i++) //Try adding to queue 100 times
                     {
-                        if (queue.offer(chunk, 1000L, TimeUnit.MILLISECONDS)) {
+                        if (queue.offer(bytes, 1000L, TimeUnit.MILLISECONDS)) {
                             if (i > 10) {
                                 log.warn("Managed to add to output queue on the {} attempt", i);
                             }
