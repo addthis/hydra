@@ -72,12 +72,12 @@ public class SpawnManager {
                 try {
                     ClientEvent nextEvent = listener.events.poll(timeout, TimeUnit.MILLISECONDS);
                     if (nextEvent != null) {
-                        link.sendShortReply(200, nextEvent.topic(), nextEvent.message().toString(1));
+                        link.sendJSON(200, nextEvent.topic(), nextEvent.message());
                     } else {
-                        link.sendShortReply(200, "queue.empty", "{}");
+                        link.sendJSON(200, "queue.empty", json());
                     }
                 } catch (InterruptedException ex) {
-                    link.sendShortReply(200, "queue.empty", "{}");
+                    link.sendJSON(200, "queue.empty", json());
                 } catch (Exception ex)  {
                     log.warn("", ex);
                     link.sendShortReply(500, "Internal Error", ex.getMessage());
@@ -107,12 +107,12 @@ public class SpawnManager {
                                 break;
                             }
                         }
-                        link.sendShortReply(200, "event.batch", payload.toString());
+                        link.sendJSON(200, "event.batch", payload);
                     } else {
-                        link.sendShortReply(200, "queue.empty", "{}");
+                        link.sendJSON(200, "queue.empty", json());
                     }
                 } catch (InterruptedException ex) {
-                    link.sendShortReply(200, "queue.empty", "{}");
+                    link.sendJSON(200, "queue.empty", json());
                 } catch (Exception ex)  {
                     log.warn("", ex);
                     link.sendShortReply(500, "Internal Error", ex.getMessage());
@@ -137,7 +137,7 @@ public class SpawnManager {
                     }
                     link.sendJSON(200, "OK", json("success",true));
                 } else {
-                    link.sendJSON(400, "Error", json("error","missing jobs parameter"));
+                    link.sendJSON(200, "Error", json("error","missing jobs parameter"));
                 }
             }
         });
@@ -229,7 +229,7 @@ public class SpawnManager {
                 if (macro != null) {
                     link.sendJSON(200, "OK", macro.toJSON());
                 } else {
-                    link.sendJSON(400, "OK", json("error","no such macro"));
+                    link.sendJSON(200, "Error", json("error","no such macro"));
                 }
             }
         });
@@ -256,7 +256,7 @@ public class SpawnManager {
                 if (spawn.deleteMacro(link.getRequestValues().getValue("label", ""))) {
                     link.sendJSON(200, "OK", json("success",true));
                 } else {
-                    link.sendJSON(500, "ERROR", json("error","macro delete failed"));
+                    link.sendJSON(200, "Error", json("error","macro delete failed"));
                 }
             }
         });
@@ -410,7 +410,7 @@ public class SpawnManager {
             public void httpService(HTTPLink link) throws Exception {
                 String id = link.getRequestValues().getValue("id", "");
                 if ("".equals(id)) {
-                    link.sendShortReply(404, "Expansion Error", "{'error':'unable to expand job, job id must be non null and not empty'}");
+                    link.sendShortReply(404, "Error", "{'error':'invalid job id'}");
                 } else {
                     String expandedJobConfig = spawn.expandJob(id);
                     link.sendShortReply(200, "expanded_job", "attachment; filename=expanded_job.json", expandedJobConfig);
@@ -428,7 +428,7 @@ public class SpawnManager {
                     link.sendJSON(200, "OK", json().put("id",id).put("action","synchronized"));
                 } else {
                     log.warn("[job.synchronize] " + id + " unable to synchronize job");
-                    link.sendJSON(404, "Synchronize Error", json("error","unable to synchronize job, check spawn log file for more details"));
+                    link.sendJSON(200, "Error", json("error","unable to synchronize job. see spawn log file for details"));
                 }
             }
         });
@@ -439,7 +439,6 @@ public class SpawnManager {
                 KVPairs kv = link.getRequestValues();
                 String id = kv.getValue("id", "");
                 Job job = spawn.getJob(id);
-
                 if (job != null && !job.getState().equals(JobState.IDLE)) {
                     link.sendJSON(500, "ERROR", json("error","A non-IDLE job cannot be deleted"));
                 } else {
@@ -451,11 +450,11 @@ public class SpawnManager {
                             break;
                         case JOB_MISSING:
                             log.warn("[job.delete] " + id + " missing job");
-                            link.sendJSON(404, "Invalid ID", json("error","no such job"));
+                            link.sendJSON(200, "Error", json("error","invalid job id"));
                             break;
                         case JOB_DO_NOT_DELETE:
                             log.warn("[job.delete] " + id + " do not delete parameter");
-                            link.sendJSON(304, "Invalid ID", json("error","job has do no delete parameter enabled"));
+                            link.sendJSON(200, "Error", json("error","job deletion disabled"));
                             break;
                     }
                 }
@@ -473,14 +472,14 @@ public class SpawnManager {
                 Job job = spawn.getJob(id);
 
                 if (job != null && !job.getState().equals(JobState.IDLE)) {
-                    link.sendShortReply(500, "ERROR", "A non IDLE job cannot be deleted");
+                    link.sendJSON(200, "Error", json("error","unable to delete non-idle job"));
                 } else {
                     emitLogLineForAction(kv, "job delete on " + id);
                     if (spawn.deleteTask(id, host, node, isReplica)) {
                         link.sendJSON(200, "OK", json("id",id+"/"+node).put("action","deleted"));
                     } else {
                         log.warn("[job.deleteTask] " + id + " missing job");
-                        link.sendJSON(404, "Invalid ID", json("error","no such job"));
+                        link.sendJSON(200, "Error", json("error","invalid job id"));
                     }
                 }
             }
@@ -493,7 +492,7 @@ public class SpawnManager {
                 String id = kv.getValue("id", "");
                 IJob job = spawn.getJob(id);
                 if (job == null) {
-                    link.sendJSON(404, "Invalid ID", json("error","no such job"));
+                    link.sendJSON(200, "Error", json("error","invalid job id"));
                     return;
                 }
                 boolean cancelRekick = kv.getValue("cancel", "0").equals("1");
@@ -623,7 +622,7 @@ public class SpawnManager {
                     }
                     link.sendJSON(200, "OK", jobobj);
                 } else {
-                    link.sendJSON(400, "No Job", json("error","no such job"));
+                    link.sendJSON(200, "Error", json("error","invalid job id"));
                 }
             }
         });
@@ -637,7 +636,7 @@ public class SpawnManager {
                 if (job != null) {
                     link.sendShortReply(200, "OK", spawn.checkTaskDirText(id, node));
                 } else {
-                    link.sendJSON(400, "No Job", json("error","no such job"));
+                    link.sendJSON(200, "Error", json("error","invalid job id"));
                 }
             }
         });
@@ -651,7 +650,7 @@ public class SpawnManager {
                 if (job != null) {
                     link.sendShortReply(200, "OK", spawn.fixTaskDir(id, node, false, false));
                 } else {
-                    link.sendJSON(400, "No Job", json("error","no such job"));
+                    link.sendJSON(200, "Error", json("error","invalid job id"));
                 }
             }
         });
@@ -710,7 +709,7 @@ public class SpawnManager {
                     }
                     link.sendJSON(200, "OK", job.toJSON());
                 } else {
-                    link.sendJSON(400, "No Job", json("error","no such job"));
+                    link.sendJSON(200, "Error", json("error","invalid job id"));
                 }
             }
         });
@@ -860,7 +859,7 @@ public class SpawnManager {
                     link.sendShortReply(200, "OK", sw.toString());
                 } catch (Exception e) {
                     e.printStackTrace();
-                    link.sendShortReply(500, "Error", e.toString());
+                    link.sendJSON(500, "Error", json("error",e.getMessage()));
                 }
             }
         });
@@ -870,7 +869,7 @@ public class SpawnManager {
                 KVPairs kv = link.getRequestValues();
                 if (!kv.hasKey("alias") || !kv.hasKey("jobs")) {
                     // fix code
-                    link.sendShortReply(500, "Error", "must supply alias and jobs");
+                    link.sendJSON(200, "Error", json("error","missing alias or job list"));
                     return;
                 }
                 try {

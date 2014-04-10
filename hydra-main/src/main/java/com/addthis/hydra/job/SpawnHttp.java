@@ -90,10 +90,10 @@ public class SpawnHttp extends AbstractHandler {
                 for (KVPair p : kv) {
                     ret.put(p.getKey(), p.getValue());
                 }
-                link.sendShortReply(200, "OK", ret.toString(1));
+                link.sendJSON(200, "OK", ret);
             } catch (Exception ex) {
                 ex.printStackTrace();
-                link.sendShortReply(500, "Server Error", new JSONObject().put("error", ex.getMessage()).toString());
+                link.sendJSON(500, "Error", json("error", ex.getMessage()));
             }
         }
     }
@@ -260,6 +260,7 @@ public class SpawnHttp extends AbstractHandler {
             }
         }
 
+        /* used to send file content responses (downloads) */
         public void sendShortReply(int code, String topic, String contentType, String message) {
             try {
                 response.setStatus(code);
