@@ -108,7 +108,6 @@ function(
             else{
                 data.status="enabled";
             }
-            data.bytes = data.bytes || "";
             data.maxRunTime = data.maxRunTime || "";
             data.rekickTimeout = data.rekickTimeout || "";
             data.nodes = (_.isArray(data.nodes)?data.nodes.length: data.nodes);
@@ -143,7 +142,7 @@ function(
             maxRunTime:"",
             rekickTimeout:"",
             nodes:"",
-            bytes:"",
+            bytes:0,
             parameters:[],
             alerts:[],
             command:'default-task',
@@ -513,9 +512,11 @@ function(
         handleJobUpdate:function(data){
             //console.log("Detected job change:"+data.id);
             var job = this.get(data.id);
+            var attr = job.attr;
+            _.extend(job, Model.prototype.parse(data));
             if(!_.isUndefined(job)){
                 job.set(
-                    Model.prototype.parse(data)
+                    job
                 );
             }
             else{
