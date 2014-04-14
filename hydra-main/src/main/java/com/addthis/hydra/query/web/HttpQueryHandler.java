@@ -109,6 +109,14 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
         messageReceived(ctx, request); // redirect to more sensible netty5 naming scheme
     }
 
+    private void decodeParameters(QueryStringDecoder urlDecoder, KVPairs kv) {
+        for (Map.Entry<String, List<String>> entry : urlDecoder.parameters().entrySet()) {
+            String k = entry.getKey();
+            String v = entry.getValue().get(0); // ignore duplicates
+            kv.add(k, v);
+        }
+    }
+
     protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
         if (!request.getDecoderResult().isSuccess()) {
             sendError(ctx, HttpResponseStatus.BAD_REQUEST);
@@ -124,10 +132,22 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
         }
         log.trace("target uri {}", target);
         KVPairs kv = new KVPairs();
-        for (Map.Entry<String, List<String>> entry : urlDecoder.parameters().entrySet()) {
-            String k = entry.getKey();
-            String v = entry.getValue().get(0); // ignore duplicates
-            kv.add(k, v);
+        /**
+         * The "/query/google/submit" endpoint needs to unpack the
+         * "state" parameter into KV pairs.
+         */
+        if (target.equals("/query/google/submit")) {
+            String state = urlDecoder.parameters().get("state").get(0);
+            QueryStringDecoder newDecoder = new QueryStringDecoder(state, false);
+            decodeParameters(newDecoder, kv);
+            if (urlDecoder.parameters().containsKey("code")) {
+                kv.add(GoogleDriveAuthentication.authtoken, urlDecoder.parameters().get("code").get(0));
+            }
+            if (urlDecoder.parameters().containsKey("error")) {
+                kv.add(GoogleDriveAuthentication.autherror, urlDecoder.parameters().get("error").get(0));
+            }
+        } else {
+            decodeParameters(urlDecoder, kv);
         }
         log.trace("kv pairs {}", kv);
         switch (target) {
@@ -142,6 +162,15 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 // TODO jsonp enable
                 QueryServer.rawQueryCalls.inc();
                 HttpQueryCallHandler.handleQuery(meshQueryMaster, kv, request, ctx);
+                break;
+            case "/query/google/authorization":
+                GoogleDriveAuthentication.gdriveAuthorization(kv, ctx);
+                break;
+            case "/query/google/submit":
+                boolean success = GoogleDriveAuthentication.gdriveAccessToken(kv, ctx);
+                if (success) {
+                    HttpQueryCallHandler.handleQuery(meshQueryMaster, kv, request, ctx);
+                }
                 break;
             default:
                 fastHandle(ctx, request, target, kv);
