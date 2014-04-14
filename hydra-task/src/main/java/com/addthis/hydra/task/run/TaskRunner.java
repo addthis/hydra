@@ -24,7 +24,6 @@ import java.net.URLClassLoader;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.addthis.bark.ZkUtil;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
@@ -42,7 +41,7 @@ import com.addthis.maljson.JSONObject;
  */
 public class TaskRunner {
 
-    private static final int defaultThreads = Parameter.intValue("task.threads",
+    static final int defaultThreads = Parameter.intValue("task.threads",
             Math.max(1, Runtime.getRuntime().availableProcessors()-1));
 
     /**
@@ -54,16 +53,29 @@ public class TaskRunner {
             System.out.println("usage: run <config> <nodes> <node> [jobid] [threads]");
             return;
         }
+        String fileName = args[0];
+        int nodeCount = Integer.parseInt(args[1]);
+        int thisNode = Integer.parseInt(args[2]);
+        String jobId = (args.length > 3) ? args[3] : null;
+        int commandLineThreads = (args.length > 4) ? Integer.parseInt(args[4]) : defaultThreads;
 
-        String json = subAt(Bytes.toString(Files.read(new File(args[0]))));
+        String configString = loadStringFromFile(fileName);
+
+        runTask(configString, nodeCount, thisNode, jobId, commandLineThreads);
+    }
+
+    public static void runTask(String configString, int nodeCount, int thisNode,
+            String jobId, int commandLineThreads) throws Exception {
+
+        String json = subAt(configString);
         JSONObject jo = new JSONObject(json);
         preload(jo);
 
         initClasses(jo);
         final TaskRunnable task = CodecJSON.decodeObject(TaskRunnable.class, jo);
-        TaskRunConfig config = new TaskRunConfig(Integer.parseInt(args[2]),
-                Integer.parseInt(args[1]), args.length > 3 ? args[3] : null);
-        config.setThreadCount(jo.optInt("taskthreads", args.length > 4 ? Integer.parseInt(args[4]) : defaultThreads));
+        TaskRunConfig config = new TaskRunConfig(thisNode,
+                nodeCount, jobId);
+        config.setThreadCount(jo.optInt("taskthreads", commandLineThreads));
         task.init(config);
         task.exec();
 
@@ -73,6 +85,11 @@ public class TaskRunner {
                 task.waitExit();
             }
         });
+
+    }
+
+    public static String loadStringFromFile(String fileName) throws IOException {
+        return Bytes.toString(Files.read(new File(fileName)));
     }
 
     public static TaskRunnable loadConfig(File config) throws Exception {
