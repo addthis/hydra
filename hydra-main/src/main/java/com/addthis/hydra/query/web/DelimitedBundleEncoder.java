@@ -54,9 +54,7 @@ class DelimitedBundleEncoder extends AbstractHttpBundleEncoder {
         return new DelimitedBundleEncoder(filename, delimiter);
     }
 
-    @Override
-    public void send(ChannelHandlerContext ctx, Bundle row) {
-        super.send(ctx, row);
+    public static String buildRow(Bundle row, String delimiter) {
         StringBuilder stringBuilder = new StringBuilder(row.getFormat().getFieldCount() * 12 + 1);
         int count = 0;
         for (BundleField field : row.getFormat()) {
@@ -86,6 +84,12 @@ class DelimitedBundleEncoder extends AbstractHttpBundleEncoder {
             }
         }
         stringBuilder.append("\n");
-        ctx.writeAndFlush(stringBuilder.toString());
+        return stringBuilder.toString();
+    }
+
+    @Override
+    public void send(ChannelHandlerContext ctx, Bundle row) {
+        super.send(ctx, row);
+        ctx.writeAndFlush(buildRow(row, delimiter));
     }
 }

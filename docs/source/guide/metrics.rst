@@ -13,9 +13,9 @@
 
 .. _metrics:
 
-#########
+#######
 Metrics
-#########
+#######
 
 Hydra uses Coda Hale's `Metrics <http://metrics.codahale.com/>`_ library.
 

@@ -175,7 +175,7 @@ function navToQuery(src,exec) {
         queryToFields({query:navp + '/('+maxnav+')+:+count,+nodes,+mem',rops:'gather=ksaa',ops:'gather=ksaau;sort=0:s:a;title=key,count,nodes,mem,merge'});
     }
     if (exec) {
-        doFormQuery();
+        doFormQuery('json');
     }
     return false;
 }
@@ -231,6 +231,18 @@ function queryCSV() {
     return false;
 }
 
+function queryGoogleDrive() {
+    var q = fieldsToQuery();
+    do {
+       var filename = window.prompt("Enter filename with .csv extension: ","query.csv");
+    } while(!/\.csv$/.test(filename))
+    q.other = $('qother').value;
+    q.name = filename
+    q.format = 'gdrive';
+    doQuery(q, renderFormQueryResults, true);
+    return false;
+}
+
 /* save input fields as query */
 function querySave() {
     queries.push(fieldsToQuery());
@@ -251,7 +263,7 @@ function querySet(i,exec) {
     var q = queries[i];
     queryToFields(q);
     window.localStorage['lastQuery'] = packQuery([['path',q.query],['ops',q.ops],['rops',q.rops],['format','json'],['filename',q.name],$('qother').value]);
-    if (exec) doFormQuery();
+    if (exec) doFormQuery('json');
     return false;
 }
 
@@ -274,7 +286,7 @@ function submitQuery(val,event,json) {
     storeValue("qother",$('qother').value);
     // only trigger query on a return/enter keypress
     switch (window.event ? window.event.keyCode : event ? event.which : 0) {
-        case 13: doFormQuery(); return false;
+        case 13: doFormQuery('json'); return false;
     }
 }
 
@@ -437,17 +449,25 @@ function packKV(k,v) {
 
 /* perform actual AJAX query */
 function doQuery(query, callback, cacheBust) {
-    var params = [['path',query.query],['ops',query.ops],['rops',query.rops],['format','json'],["job",jobid],["sender","spawn"],query.other];
+    var params = [['path',query.query],['ops',query.ops],['rops',query.rops],
+        ['format',query.format],['job',jobid],['filename',query.name],
+        ['sender','spawn'],query.other];
     if (cacheBust) {
         params.push(['nocache','1']);
     }
-    new Ajax.Request('/query/call', { method: 'get',  parameters: packQuery(params), onComplete: callback });
+    if (query.format == 'gdrive') {
+        window.open('/query/google/authorization?' + packQuery(params), 'Google Drive', 'width = 500, height = 500')
+    } else {
+        new Ajax.Request('/query/call', { method: 'get',  parameters: packQuery(params), onComplete: callback });
+    }
     return false;
 }
 
 /* cancel running query */
 function killLiveQuery(uuid) {
-    new Ajax.Request('/query/cancel?uuid='+uuid, { method: 'get', onComplete: function(rpc) { alert(rpc.responseText); queriesRescan(); } });
+    new Ajax.Request('/query/cancel?uuid='+uuid, { method: 'get', onComplete: function(rpc) {
+        alert(rpc.responseText); queriesRescan();
+    }});
 }
 
 /* render queries live on QueryMaster */
@@ -483,10 +503,11 @@ function renderCacheList(list,div,kill) {
 }
 
 /* do query with UI wrappings */
-function doFormQuery() {
+function doFormQuery(format) {
     $('queryinfo').innerHTML = busyimg;
     var q = fieldsToQuery();
     q.other = $('qother').value;
+    q.format = format;
     doQuery(q, renderFormQueryResults, true);
     document.location.hash = '#'+esc(esc(Object.toQueryString(q)));
     return false;
@@ -551,8 +572,12 @@ function treeNavStack() {
     $('treenav').innerHTML = navt;
     navp = navstack.length > 1 ? navstack.slice(1).join("/") : "";
     $('nodelist').innerHTML = busyimg;
-    doQuery({query:navp + '/('+maxnav+')+:+count,+nodes,+mem',ops:'gather=ksaau;sort=0:s:a',other:$('qother').value},renderNavQuery,true);
-    if (navstack.length > 0 && fetchValue('raw') == '1') doQuery({query:navp+':+json',other:$('qother').value}, navNodeRaw, true);
+    doQuery( {query : navp + '/('+maxnav+')+:+count,+nodes,+mem',
+              ops : 'gather=ksaau;sort=0:s:a',
+              other : $('qother').value,
+              format : 'json'}, renderNavQuery, true);
+    if (navstack.length > 0 && fetchValue('raw') == '1') doQuery({ query : navp+':+json',
+        other : $('qother').value, format : 'json' }, navNodeRaw, true);
 }
 
 /* pop nav stack */
@@ -638,6 +663,7 @@ function renderLineGraph(rpc) {
 function graphIt(type) {
     var q = fieldsToQuery();
     q.other = $('qother').value;
+    q.format = 'json';
     if (type == 'line') {
         doQuery(q, renderLineGraph, true);
     }
@@ -686,7 +712,7 @@ function init() {
     $('qother').value = hkv.qother || fetchValue('qother', '');
     
     if ($('query').value) {
-        doFormQuery();
+        doFormQuery('json');
     }
     
     treeNavStack();
@@ -702,6 +728,7 @@ window.QM = {
     monitorsRescan : monitorsRescan,
     queryCodec : queryCodec,
     queryRaw : queryRaw,
+    queryGoogleDrive : queryGoogleDrive,
     queryCSV : queryCSV,
     querySave : querySave,
     querySet : querySet,
