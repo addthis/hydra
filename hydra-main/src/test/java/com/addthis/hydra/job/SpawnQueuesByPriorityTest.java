@@ -75,7 +75,7 @@ public class SpawnQueuesByPriorityTest {
         assertTrue("should not allow medium task to migrate immediately", !spawnQueuesByPriority.checkSizeAgeForMigration(maxTaskBytesToMigrate / 2, 0));
         assertTrue("should allow medium task after waiting", spawnQueuesByPriority.checkSizeAgeForMigration(maxTaskBytesToMigrate / 2, limitGrowthInterval));
         for (String hostName : Arrays.asList("a", "b", "c", "d")) {
-            spawnQueuesByPriority.markHostAvailable(hostName);
+            spawnQueuesByPriority.incrementHostAvailableSlots(hostName);
         }
         // Simulate a migration from host a to host b. Make sure that neither a nor b can perform a migration again for a time interval
         spawnQueuesByPriority.markMigrationBetweenHosts("a", "b");

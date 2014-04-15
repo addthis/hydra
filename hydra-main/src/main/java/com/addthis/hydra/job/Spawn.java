@@ -51,8 +51,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import java.text.ParseException;
 
-import com.addthis.bark.StringSerializer;
-import com.addthis.bark.ZkUtil;
 import com.addthis.basis.net.HttpUtil;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
@@ -61,6 +59,8 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
+import com.addthis.bark.StringSerializer;
+import com.addthis.bark.ZkUtil;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
@@ -90,10 +90,10 @@ import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.query.AliasBiMap;
-import com.addthis.hydra.util.WebSocketManager;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.hydra.util.SettableGauge;
+import com.addthis.hydra.util.WebSocketManager;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
@@ -113,6 +113,7 @@ import com.yammer.metrics.core.Meter;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
+
 import org.codehaus.jackson.map.ObjectMapper;
 import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
@@ -141,8 +142,8 @@ public class Spawn implements Codec.Codable {
     private static String queryHttpHost = Parameter.value("spawn.queryhost");
     private static int webPort = Parameter.intValue("spawn.http.port", 5050);
     private static int requestHeaderBufferSize = Parameter.intValue("spawn.http.bufsize", 8192);
-    private static int hostStatusRequestInterval = Parameter.intValue("spawn.status.interval", 10000);
-    private static int queueKickInterval = Parameter.intValue("spawn.queue.kick.interval", 6000);
+    private static int hostStatusRequestInterval = Parameter.intValue("spawn.status.interval", 5000);
+    private static int queueKickInterval = Parameter.intValue("spawn.queue.kick.interval", 3000);
     private static String debugOverride = Parameter.value("spawn.debug");
     private static final boolean useStructuredLogger = Parameter.boolValue("spawn.logger.bundle.enable",
             clusterName.equals("localhost")); // default to true if-and-only-if we are running local stack
@@ -2328,6 +2329,7 @@ public class Spawn implements Codec.Codable {
                 HostState oldState = getHostState(state.getHostUuid());
                 if (oldState == null) {
                     log.warn("[host.status] from unmonitored " + state.getHostUuid() + " = " + state.getHost() + ":" + state.getPort());
+                    taskQueuesByPriority.updateHostAvailSlots(state);
                 }
                 boolean hostEnabled = true;
                 synchronized (disabledHosts) {
@@ -2458,8 +2460,7 @@ public class Spawn implements Codec.Codable {
                 StatusTaskEnd update = (StatusTaskEnd) core;
                 log.info("[task.end] :: " + update.getJobUuid() + "/" + update.getNodeID() + " exit=" + update.getExitCode());
                 tasksCompletedPerHour.mark();
-                taskQueuesByPriority.markHostAvailable(update.getHostUuid());
-                try {
+                                try {
                     job = getJob(update.getJobUuid());
                     if (job == null) {
                         log.warn("[task.end] on dead job " + update.getJobKey() + " from " + update.getHostUuid());
@@ -2469,6 +2470,9 @@ public class Spawn implements Codec.Codable {
                     if (task.getHostUUID() != null && !task.getHostUUID().equals(update.getHostUuid())) {
                         log.warn("[task.end] received from incorrect host " + update.getHostUuid());
                         break;
+                    }
+                    if (task.isRunning()) {
+                        taskQueuesByPriority.incrementHostAvailableSlots(update.getHostUuid());
                     }
                     handleStatusTaskEnd(job, task, update);
                 } catch (Exception ex) {

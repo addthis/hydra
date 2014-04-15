@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,7 +35,6 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueueItem>> {
 
@@ -46,7 +44,7 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
     /* Internal map used to record outgoing task kicks that will not immediately be visible in the HostState */
     private final HashMap<String, Integer> hostAvailSlots = new HashMap<>();
 
-    private static final int SPAWN_QUEUE_AVAIL_REFRESH = Parameter.intValue("spawn.queue.avail.refresh", 60_000); // Periodically refresh hostAvailSlots to the actual availableSlots count
+    private static final int SPAWN_QUEUE_AVAIL_REFRESH = Parameter.intValue("spawn.queue.avail.refresh", 20_000); // Periodically refresh hostAvailSlots to the actual availableSlots count
     private static final int SPAWN_QUEUE_NEW_TASK_LAST_SLOT_DELAY = Parameter.intValue("spawn.queue.new.task.last.slot.delay", 90_000); // New tasks can't take the last slot of a host unless they wait this long
 
     private long lastAvailSlotsUpdate = 0;
@@ -152,7 +150,7 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
      *
      * @param hostID The host UUID to update
      */
-    public void markHostAvailable(String hostID) {
+    public void incrementHostAvailableSlots(String hostID) {
         if (hostID == null) {
             return;
         }
@@ -198,15 +196,22 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
             }
             hostAvailSlots.clear();
             for (HostState host : hosts) {
-                String hostID = host.getHostUuid();
-                if (hostID != null) {
-                    hostAvailSlots.put(hostID, host.getAvailableTaskSlots());
-                }
+                updateHostAvailSlots(host);
             }
         }
         lastAvailSlotsUpdate = JitterClock.globalTime();
         if (log.isTraceEnabled()) {
             log.trace("[SpawnQueuesByPriority] Host Avail Slots: " + hostAvailSlots);
+        }
+    }
+
+    public void updateHostAvailSlots(HostState host) {
+        if (host == null) {
+            return;
+        }
+        String hostID = host.getHostUuid();
+        if (hostID != null) {
+            hostAvailSlots.put(hostID, host.getAvailableTaskSlots());
         }
     }
 
