@@ -11,18 +11,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.addthis.hydra.store.kv;
 
-/**
- * object that refers to a page and prevents it from being evited
- * until all pins are released
- */
-public interface PagePin {
+public interface PageEntry {
 
-    /**
-     * must be called exactly once for each pin acquired
-     *
-     * @throws IllegalStateException if called more than once
-     */
-    public void release() throws IllegalStateException;
+    public byte[] key();
+
+    public byte[] value();
+
 }

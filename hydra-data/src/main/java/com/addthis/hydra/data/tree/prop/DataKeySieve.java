@@ -15,10 +15,10 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
+import com.addthis.hydra.data.tree.ConcurrentTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
-import com.addthis.hydra.data.tree.TreeNode;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.TreeNodeDataDeferredOperation;
 import com.addthis.hydra.store.util.SeenFilterBasic;
@@ -229,7 +229,7 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
     /**
      * phantom node created for reporting
      */
-    private class MyTreeNode extends TreeNode {
+    private class MyTreeNode extends ConcurrentTreeNode {
 
         MyTreeNode(String name, long hits) {
             this.name = name;

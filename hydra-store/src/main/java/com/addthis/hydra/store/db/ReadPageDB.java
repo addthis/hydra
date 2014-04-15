@@ -25,8 +25,8 @@ import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecBin2;
+import com.addthis.hydra.store.kv.ByteStore;
 import com.addthis.hydra.store.kv.ByteStoreBDB;
-import com.addthis.hydra.store.kv.ExternalPagedStore.ByteStore;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
 import com.addthis.hydra.store.kv.ReadExternalPagedStore;
 

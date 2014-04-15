@@ -52,98 +52,11 @@ public class TestTreeSerializationVersions {
     }
 
     @Test
-    public void testTreeUpgradePath() throws Exception {
-        File dir = makeTemporaryDirectory();
-        try {
-            int count = 1000;
-            Tree tree = new LegacyTree(dir, false, true);
-            TreeNode root = tree.getRootNode();
-            /**
-             * write count nodes that have a time data attachment. Use the legacy page encoding.
-             */
-            for (int i = 0; i < count; i++) {
-                TreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
-                assertNotNull(node);
-                assertEquals(Integer.toString(i), node.getName());
-                DataTime attachment = new DataTime();
-                attachment.setFirst(i);
-                attachment.setLast(i + count);
-                node.createMap().put("time", attachment);
-                node.markChanged();
-                node.release();
-            }
-            tree.close(false, close);
-            tree = new Tree(dir, false, true);
-            /**
-             * Sanity check. Read the count notes and look for the data attachment.
-             */
-            for (int i = 0; i < count; i++) {
-                TreeNode node = tree.getNode(root, Integer.toString(i), true);
-                assertNotNull(node);
-                assertEquals(1, node.getLeaseCount());
-                assertEquals(Integer.toString(i), node.getName());
-                Map<String, TreeNodeData> attachments = node.getDataMap();
-                assertNotNull(attachments);
-                assertTrue(attachments.containsKey("time"));
-                DataTime attachment = (DataTime) attachments.get("time");
-                assertEquals(i, attachment.first());
-                assertEquals(i + count, attachment.last());
-                node.release();
-            }
-            tree.close(false, close);
-            tree = new Tree(dir, false, true);
-            /**
-             * Only on even nodes update the data attachment.
-             * Use the new page encoding.
-             */
-            for (int i = 0; i < count; i += 2) {
-                TreeNode node = tree.getNode(root, Integer.toString(i), true);
-                assertNotNull("i = " + i, node);
-                assertEquals(Integer.toString(i), node.getName());
-                node.setCounter(1);
-                DataTime attachment = new DataTime();
-                attachment.setFirst(2 * i);
-                attachment.setLast(2 * i + count);
-                node.createMap().put("time", attachment);
-                node.markChanged();
-                node.release();
-            }
-            tree.close(false, close);
-            tree = new Tree(dir, false, true);
-            /**
-             * Read all the nodes and verify that the data attachments are correct.
-             */
-            for (int i = 0; i < count; i++) {
-                TreeNode node = tree.getNode(root, Integer.toString(i), true);
-                assertNotNull(node);
-                assertEquals(1, node.getLeaseCount());
-                assertEquals(Integer.toString(i), node.getName());
-                Map<String, TreeNodeData> attachments = node.getDataMap();
-                assertNotNull(attachments);
-                assertTrue(attachments.containsKey("time"));
-                DataTime attachment = (DataTime) attachments.get("time");
-                if (i % 2 == 0) {
-                    assertEquals(2 * i, attachment.first());
-                    assertEquals(2 * i + count, attachment.last());
-                } else {
-                    assertEquals(i, attachment.first());
-                    assertEquals(i + count, attachment.last());
-                }
-                node.release();
-            }
-        } finally {
-            if (dir != null) {
-                Files.deleteDir(dir);
-            }
-        }
-    }
-
-    @Test
     public void testConcurrentTreeUpgradePath() throws Exception {
         File dir = makeTemporaryDirectory();
         try {
             int count = 1000;
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).kvStoreType(1).
+            ConcurrentTree tree = new ConcurrentTree.Builder(dir).
                     pageFactory(LegacyPage.LegacyPageFactory.singleton).build();
             ConcurrentTreeNode root = tree.getRootNode();
             /**
@@ -161,7 +74,7 @@ public class TestTreeSerializationVersions {
                 node.release();
             }
             tree.close(false, close);
-            tree = new ConcurrentTree.Builder(dir, false).kvStoreType(1).
+            tree = new ConcurrentTree.Builder(dir).
                     pageFactory(Page.DefaultPageFactory.singleton).build();
             /**
              * Sanity check. Read the count notes and look for the data attachment.
@@ -180,7 +93,7 @@ public class TestTreeSerializationVersions {
                 node.release();
             }
             tree.close(false, close);
-            tree = new ConcurrentTree.Builder(dir, false).kvStoreType(1).
+            tree = new ConcurrentTree.Builder(dir).
                     pageFactory(Page.DefaultPageFactory.singleton).build();
             /**
              * Only on even nodes update the data attachment.
@@ -199,7 +112,7 @@ public class TestTreeSerializationVersions {
                 node.release();
             }
             tree.close(false, close);
-            tree = new ConcurrentTree.Builder(dir, false).kvStoreType(1).
+            tree = new ConcurrentTree.Builder(dir).
                     pageFactory(Page.DefaultPageFactory.singleton).build();
             /**
              * Read all the nodes and verify that the data attachments are correct.

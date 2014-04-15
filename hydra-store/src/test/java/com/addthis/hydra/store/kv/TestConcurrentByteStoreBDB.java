@@ -35,7 +35,7 @@ public class TestConcurrentByteStoreBDB {
         File tempDir = null;
         try {
             tempDir = Files.createTempDir();
-            ConcurrentByteStoreBDB store = new ConcurrentByteStoreBDB(tempDir, "test", false);
+            ConcurrentByteStoreBDB store = new ConcurrentByteStoreBDB(tempDir, "test");
             for (int i = 0; i < 10; i++) {
                 byte[] key = createBytes(i);
                 byte[] value = createBytes(10 - i);
@@ -65,7 +65,7 @@ public class TestConcurrentByteStoreBDB {
         File tempDir = null;
         try {
             tempDir = Files.createTempDir();
-            ConcurrentByteStoreBDB store = new ConcurrentByteStoreBDB(tempDir, "test", false);
+            ConcurrentByteStoreBDB store = new ConcurrentByteStoreBDB(tempDir, "test");
             for (int i = 1; i < 10; i++) {
                 byte[] key = createBytes(i);
                 byte[] value = createBytes(10 - i);

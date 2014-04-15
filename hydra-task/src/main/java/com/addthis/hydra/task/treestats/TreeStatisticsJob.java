@@ -152,7 +152,7 @@ public class TreeStatisticsJob extends TaskRunnable implements Runnable {
             inputTree = new ReadTree(inputFile, true);
 
             outputTree = new ConcurrentTree(
-                    com.addthis.basis.util.Files.initDirectory(outputFile), false);
+                    com.addthis.basis.util.Files.initDirectory(outputFile));
 
             TreeStatistics statistics = new TreeStatistics(inputTree, outputTree,
                     sampleRate, children, terminating);

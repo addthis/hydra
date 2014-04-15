@@ -14,7 +14,7 @@ public class TreeIntegrity {
         if (args.length > 1 && args[1].equals("repair")) {
             ConcurrentTree tree = null;
             try {
-                tree = new ConcurrentTree(root, false);
+                tree = new ConcurrentTree(root);
                 tree.repairIntegrity();
             } catch (Exception ex) {
                 log.error(ex.toString());

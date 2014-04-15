@@ -17,14 +17,13 @@ import java.util.NoSuchElementException;
 
 import com.addthis.basis.util.ClosableIterator;
 
+import com.addthis.hydra.data.tree.ConcurrentTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNode;
-import com.addthis.hydra.data.tree.TreeNode;
-
 
 /**
  * phantom node created for reporting
  */
-public final class VirtualTreeNode extends TreeNode {
+public final class VirtualTreeNode extends ConcurrentTreeNode {
 
     public VirtualTreeNode(final String name, final long hits) {
         this(name, hits, null);
@@ -72,7 +71,7 @@ public final class VirtualTreeNode extends TreeNode {
     }
 
     @Override
-    public TreeNode getNode(String name) {
+    public ConcurrentTreeNode getNode(String name) {
         if (children == null || children.length == 0) {
             return null;
         }

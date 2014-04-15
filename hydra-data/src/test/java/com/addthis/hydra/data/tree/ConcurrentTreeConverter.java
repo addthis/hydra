@@ -32,7 +32,7 @@ public class ConcurrentTreeConverter {
     public ConcurrentTreeConverter(File readRoot, File writeRoot, int maxNodes) throws Exception {
         long mark = System.currentTimeMillis();
         ReadTree readTree = new ReadTree(readRoot);
-        ConcurrentTree writeTree = new ConcurrentTree(writeRoot, false);
+        ConcurrentTree writeTree = new ConcurrentTree(writeRoot);
         long openTime = System.currentTimeMillis() - mark;
         long testTime = 0;
         try {

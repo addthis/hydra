@@ -51,7 +51,7 @@ public class SourceTracker {
         File dirFile = Files.initDirectory(dir);
         try {
             lockDir = new RandomAccessFile(new File(dirFile, "tracker.lock"), "rw").getChannel().lock();
-            db = new PageDB<SimpleMark>(dirFile, SimpleMark.class, 100, 100);
+            db = new PageDB<>(dirFile, SimpleMark.class, 100, 100);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

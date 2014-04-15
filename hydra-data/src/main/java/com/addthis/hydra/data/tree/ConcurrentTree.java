@@ -71,9 +71,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     private static final Logger log = LoggerFactory.getLogger(ConcurrentTree.class);
 
-    @Configuration.Parameter
-    static int defaultKeyValueStoreType = Parameter.intValue("hydra.tree.concurrent.kvstore.type", 1);
-
     // number of background deletion threads
     @Configuration.Parameter
     static int defaultNumDeletionThreads = Parameter.intValue("hydra.tree.clean.threads", 1);
@@ -106,7 +103,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     private final ConcurrentTreeNode treeTrashNode;
     private final AtomicInteger nextDBID;
     private final AtomicBoolean closed = new AtomicBoolean(false);
-    private final boolean readonly;
     private final Meter<METERTREE> meter;
     private final MeterFileLogger logger;
     private final AtomicDouble cacheHitRate = new AtomicDouble(0.0);
@@ -153,28 +149,20 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
         // Required parameters
         protected final File root;
-        protected final boolean readonly;
 
         // Optional parameters - initialized to default values;
         protected int numDeletionThreads = defaultNumDeletionThreads;
-        protected int kvStoreType = defaultKeyValueStoreType;
         protected int cleanQSize = TreeCommonParameters.cleanQMax;
         protected int maxCache = TreeCommonParameters.maxCacheSize;
         protected int maxPageSize = TreeCommonParameters.maxPageSize;
         protected PageFactory pageFactory = Page.DefaultPageFactory.singleton;
 
-        public Builder(File root, boolean readonly) {
+        public Builder(File root) {
             this.root = root;
-            this.readonly = readonly;
         }
 
         public Builder numDeletionThreads(int val) {
             numDeletionThreads = val;
-            return this;
-        }
-
-        public Builder kvStoreType(int val) {
-            kvStoreType = val;
             return this;
         }
 
@@ -199,24 +187,21 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         }
 
         public ConcurrentTree build() throws Exception {
-            return new ConcurrentTree(root, readonly,
-                    numDeletionThreads, kvStoreType, cleanQSize,
+            return new ConcurrentTree(root, numDeletionThreads, cleanQSize,
                     maxCache, maxPageSize, pageFactory);
         }
 
     }
 
-    private ConcurrentTree(File root, boolean readonly,
-            int numDeletionThreads, int kvStoreType,
-            int cleanQSize, int maxCacheSize, int maxPageSize, PageFactory factory) throws Exception {
+    private ConcurrentTree(File root, int numDeletionThreads, int cleanQSize, int maxCacheSize,
+            int maxPageSize, PageFactory factory) throws Exception {
         //Only attempt mkdirs if we are not readonly. Theoretically should not be needed, but guarding here
         // prevent logic leak created by transient file detection issues. Regardless, while in readonly, we should
         // certainly not be attempting to create directories.
-        if (!(root.isDirectory() || (!readonly && root.mkdirs()))) {
+        if (!root.isDirectory() && !root.mkdirs()) {
             throw new IOException("Unable to open or create root directory '" + root + "'");
         }
         this.root = root;
-        this.readonly = readonly;
         long start = System.currentTimeMillis();
 
         // setup metering
@@ -233,7 +218,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             logger = null;
         }
         source = new PageDB.Builder<>(root, ConcurrentTreeNode.class, maxPageSize, maxCacheSize)
-                .readonly(readonly).kvStoreType(kvStoreType).pageFactory(factory).build();
+                .pageFactory(factory).build();
         source.setCacheMem(TreeCommonParameters.maxCacheMem);
         source.setPageMem(TreeCommonParameters.maxPageMem);
         source.setMemSampleInterval(TreeCommonParameters.memSample);
@@ -253,26 +238,17 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
         // get tree root
         ConcurrentTreeNode dummyRoot = ConcurrentTreeNode.getTreeRoot(this);
-        if (isReadOnly()) {
-            treeRootNode = dummyRoot.getNode("root");
-            if (treeRootNode == null) {
-                throw new RuntimeException("missing root in readonly tree");
-            }
-            treeTrashNode = null;
-            deletionThreadPool = null;
-        } else {
-            treeRootNode = (ConcurrentTreeNode) dummyRoot.getOrCreateEditableNode("root");
-            treeTrashNode = (ConcurrentTreeNode) dummyRoot.getOrCreateEditableNode("trash");
-            treeTrashNode.requireNodeDB();
-            deletionThreadPool = Executors.newScheduledThreadPool(numDeletionThreads,
-                    new NamedThreadFactory(scope + "-deletion-", true));
+        treeRootNode = (ConcurrentTreeNode) dummyRoot.getOrCreateEditableNode("root");
+        treeTrashNode = (ConcurrentTreeNode) dummyRoot.getOrCreateEditableNode("trash");
+        treeTrashNode.requireNodeDB();
+        deletionThreadPool = Executors.newScheduledThreadPool(numDeletionThreads,
+                new NamedThreadFactory(scope + "-deletion-", true));
 
-            for (int i = 0; i < numDeletionThreads; i++) {
-                deletionThreadPool.scheduleAtFixedRate(new BackgroundDeletionTask(),
-                        i,
-                        deletionThreadSleepMillis,
-                        TimeUnit.MILLISECONDS);
-            }
+        for (int i = 0; i < numDeletionThreads; i++) {
+            deletionThreadPool.scheduleAtFixedRate(new BackgroundDeletionTask(),
+                    i,
+                    deletionThreadSleepMillis,
+                    TimeUnit.MILLISECONDS);
         }
 
         long openTime = System.currentTimeMillis() - start;
@@ -282,9 +258,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                  + " openms=" + openTime);
     }
 
-    public ConcurrentTree(File root, boolean readonly) throws Exception {
-        this(root, readonly, defaultNumDeletionThreads,
-                defaultKeyValueStoreType, TreeCommonParameters.cleanQMax,
+    public ConcurrentTree(File root) throws Exception {
+        this(root, defaultNumDeletionThreads, TreeCommonParameters.cleanQMax,
                 TreeCommonParameters.maxCacheSize, TreeCommonParameters.maxPageSize,
                 Page.DefaultPageFactory.singleton);
     }
@@ -316,10 +291,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     public void meter(METERTREE meterval) {
         meter.inc(meterval);
-    }
-
-    public boolean isReadOnly() {
-        return readonly;
     }
 
     protected int getNextNodeDB() {
@@ -540,9 +511,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     @Override
     public void sync() throws IOException {
-        if (isReadOnly()) {
-            return;
-        }
         log.debug("[sync] start");
         for (ConcurrentTreeNode node : cache.values()) {
             if (!node.isDeleted() && node.isChanged()) {
@@ -586,28 +554,26 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         if (log.isDebugEnabled()) {
             log.debug("closing " + this);
         }
-        if (!isReadOnly()) {
-            try {
-                waitOnDeletions();
-            } catch (Exception e) {
-                log.warn("", e);
+        try {
+            waitOnDeletions();
+        } catch (Exception e) {
+            log.warn("", e);
+        }
+        if (treeRootNode != null) {
+            treeRootNode.markChanged();
+            treeRootNode.release();
+            if (treeRootNode.getLeaseCount() != 0) {
+                log.warn("invalid root state on shutdown : " + treeRootNode);
             }
-            if (treeRootNode != null) {
-                treeRootNode.markChanged();
-                treeRootNode.release();
-                if (treeRootNode.getLeaseCount() != 0) {
-                    log.warn("invalid root state on shutdown : " + treeRootNode);
-                }
-            }
-            if (treeTrashNode != null) {
-                treeTrashNode.markChanged();
-                treeTrashNode.release();
-            }
-            try {
-                sync();
-            } catch (Exception e) {
-                log.warn("", e);
-            }
+        }
+        if (treeTrashNode != null) {
+            treeTrashNode.markChanged();
+            treeTrashNode.release();
+        }
+        try {
+            sync();
+        } catch (Exception e) {
+            log.warn("", e);
         }
         if (source != null) {
             try {

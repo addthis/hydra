@@ -28,7 +28,6 @@ import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.DataTreeNode;
-import com.addthis.hydra.data.tree.TreeNode;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
@@ -242,18 +241,6 @@ public class QueryElement implements Codec.SuperCodable {
         }
         fvlist.commit();
         return updates;
-    }
-
-    /**
-     * phantom node created for reporting
-     */
-    private static class PhantomNode extends TreeNode {
-
-        PhantomNode(String name, long hits, int nodes) {
-            this.name = name;
-            this.hits = hits;
-            this.nodes = nodes;
-        }
     }
 
     // preset 'hasdata' instead of computing it each time

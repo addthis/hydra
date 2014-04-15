@@ -636,7 +636,7 @@ public class TreeStatistics {
         File writeRoot = new File(args[1]);
 
         ReadTree readTree = new ReadTree(readRoot, true);
-        ConcurrentTree writeTree = new ConcurrentTree(writeRoot, false);
+        ConcurrentTree writeTree = new ConcurrentTree(writeRoot);
 
         TreeStatistics statistics = new TreeStatistics(readTree, writeTree);
 

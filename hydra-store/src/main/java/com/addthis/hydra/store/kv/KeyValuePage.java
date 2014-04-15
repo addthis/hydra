@@ -21,27 +21,4 @@ public interface KeyValuePage<K, V extends Codec.BytesCodable> extends KeyValueS
      * @return first key of next page or null if last page
      */
     public K getNextFirstKey();
-
-    /**
-     * @param key key to test for
-     * @return true if the page contains the request key or could uniquely store the key without overlapping other pages
-     */
-    public boolean mayContainKey(K key);
-
-    /**
-     * return a handle that prevents a page from being evicted
-     */
-    public PagePin pin();
-
-    /**
-     * @return true if there are held page pins that are un-released
-     */
-    public boolean isPinned();
-
-    /**
-     * perform internal work that could invalidate page contents (like splitting)
-     *
-     * @return true if page changed during validation which means a refetch is required
-     */
-    public boolean reValidate();
 }
