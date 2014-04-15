@@ -112,7 +112,7 @@ EOF
 
 export LOG4J_CFG=$(pwd)/etc/log4j.properties
 export HYDRA_CONF=$(pwd)/../hydra-uber
-export HYDRA_EXEC=${HYDRA_CONF}/target/hydra-uber-*exec*jar
+export HYDRA_EXEC=`ls -t ${HYDRA_CONF}/target/hydra-uber-*exec*jar | head -n 1`
 export LOG4J_PROPERTIES="-Dlog4j.defaultInitOverride=true -Dlog4j.configuration=${LOG4J_CFG}"
 export MQ_MASTER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Deps.mem.debug=10000 -Dbatch.brokerHost=localhost -Dbatch.brokerPort=5672 -Dcs.je.cacheSize=256M -Dcs.je.cacheShared=1 -Dcs.je.deferredWrite=1 -Dzk.servers=localhost:2181 -Dstreamserver.read.timeout=60000 -Djava.net.preferIPv4Stack=true -Dganglia.enable=false -Dqmaster.mesh.peers=localhost -Dmeshy.senders=1 -Dmeshy.stream.prefetch=false -Dqmaster.mesh.peer.port=5101"
 export MQ_WORKER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Dmesh.local.handlers=com.addthis.hydra.data.query.source.MeshQuerySource -Dmeshy.stream.prefetch=true -Dmeshy.senders=1"
