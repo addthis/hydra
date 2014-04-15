@@ -14,6 +14,8 @@
 
 package com.addthis.hydra.query.web;
 
+import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.IOException;
 
@@ -71,6 +73,7 @@ public class GoogleDriveAuthentication {
 
     private static final String gdriveClientId = Parameter.value("qmaster.export.gdrive.clientId");
     private static final String gdriveClientSecret = Parameter.value("qmaster.export.gdrive.clientSecret");
+    private static final boolean gdriveEnabled = Parameter.boolValue("qmaster.export.gdrive.enable", true);
 
     static final String autherror = "autherror";
     static final String authtoken = "authtoken";
@@ -78,7 +81,10 @@ public class GoogleDriveAuthentication {
 
     private static final Logger log = LoggerFactory.getLogger(GoogleDriveAuthentication.class);
 
-    private static void closeResource(Closeable resource) {
+    /**
+     * If a resource a non-null then close the resource. Catch any IOExceptions and log them.
+     */
+    private static void closeResource(@Nullable Closeable resource) {
         try {
             if (resource != null) {
                 resource.close();
@@ -90,10 +96,6 @@ public class GoogleDriveAuthentication {
 
     /**
      * Send an HTML formatted error message.
-     *
-     * @param ctx
-     * @param message
-     * @throws java.io.IOException
      */
     private static void sendErrorMessage(ChannelHandlerContext ctx, String message) throws IOException {
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
@@ -130,6 +132,10 @@ public class GoogleDriveAuthentication {
         } else if (gdriveClientSecret == null) {
             sendErrorMessage(ctx, "The system property \"qmaster.export.gdrive.clientSecret\"" +
                                   " is null.");
+            return;
+        } else if (!gdriveEnabled) {
+            sendErrorMessage(ctx, "The system property \"qmaster.export.gdrive.enable\"" +
+                                  " is false.");
             return;
         }
         QueryStringEncoder encoder = new QueryStringEncoder("");
