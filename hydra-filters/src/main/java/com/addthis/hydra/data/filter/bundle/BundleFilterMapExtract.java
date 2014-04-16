@@ -34,7 +34,10 @@ import org.slf4j.LoggerFactory;
  * in the ValueMap, optionally a {@link ValueFilter ValueFilter} to perform on the value
  * associated with the key, and optionally a bundle field name that is assigned the value.
  * If the bundle field name is not specified, then the name of the ValueMap key is used
- * as the field of the bundle.
+ * as the field of the bundle.  Extracted "from" fields that do not exist in the map are
+ * ignored.  This filter returns true unless the "field" argument doesn't reference a
+ * valid ValueMap.
+ *
  * <p/>
  * <p>See {@link XMap} for an explanation on using indirection to retrieve keys.</p>
  * <p/>
