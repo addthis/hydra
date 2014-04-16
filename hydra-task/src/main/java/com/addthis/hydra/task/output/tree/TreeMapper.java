@@ -70,7 +70,6 @@ import com.addthis.hydra.data.query.source.QueryHandle;
 import com.addthis.hydra.data.query.source.QuerySource;
 import com.addthis.hydra.data.tree.ConcurrentTree;
 import com.addthis.hydra.data.tree.DataTree;
-import com.addthis.hydra.data.tree.Tree;
 import com.addthis.hydra.data.tree.TreeCommonParameters;
 import com.addthis.hydra.data.util.TimeField;
 import com.addthis.hydra.store.db.CloseOperation;
@@ -134,14 +133,6 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
     private static enum ValidateMode {
         ALL, POST, NONE
     }
-
-    /**
-     * Set to 0 to use the original tree implementation.
-     * Set to 1 to use the ConcurrentTree + skiplist implementation.
-     * Default is either "mapper.tree.type" or 0.
-     */
-    @Codec.Set(codable = true)
-    private int treeType = Parameter.intValue("mapper.tree.type", 0);
 
     /**
      * Default is either "mapper.http" configuration value or true.
@@ -445,17 +436,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
         log.info("[init] host=" + localhost + " port=" + port + " target=" + root + " job=" + config.jobId);
 
         Path treePath = Paths.get(runConfig.dir, "data");
-        switch (treeType) {
-            case 0:
-                tree = new Tree(Files.initDirectory(treePath.toFile()), false, true);
-                break;
-            case 1:
-                tree = new ConcurrentTree(Files.initDirectory(treePath.toFile()), false);
-                break;
-            default:
-                throw new IllegalStateException("Illegal value " + treeType +
-                                                " for configuration parameter \"treeType\"");
-        }
+        tree = new ConcurrentTree(Files.initDirectory(treePath.toFile()));
         bench = new Bench(EnumSet.allOf(BENCH.class), 1000);
 
         if (enableHttp) {

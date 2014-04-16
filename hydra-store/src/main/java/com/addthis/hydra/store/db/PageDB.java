@@ -29,10 +29,8 @@ import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.Codec;
-import com.addthis.hydra.store.kv.ByteStoreBDB;
+import com.addthis.hydra.store.kv.ByteStore;
 import com.addthis.hydra.store.kv.ConcurrentByteStoreBDB;
-import com.addthis.hydra.store.kv.ExternalPagedStore;
-import com.addthis.hydra.store.kv.ExternalPagedStore.ByteStore;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
 import com.addthis.hydra.store.skiplist.Page;
 import com.addthis.hydra.store.skiplist.PageFactory;
@@ -49,9 +47,7 @@ public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
     private static final Logger log = LoggerFactory.getLogger(PageDB.class);
 
     static final String defaultDbName = Parameter.value("pagedb.dbname", "db.key");
-    static final int defaultKeyValueStoreType = Parameter.intValue("pagedb.kvstore.type", 0);
 
-    private final boolean readonly;
     private final PagedKeyValueStore<DBKey, V> eps;
     private final DBKeyCoder<V> keyCoder;
     private final HashSet<DR> openRanges = new HashSet<>();
@@ -65,26 +61,14 @@ public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
         protected final int maxPages;
 
         // Optional parameters - initialized to default values;
-        protected int kvStoreType = defaultKeyValueStoreType;
         protected String dbname = defaultDbName;
         protected PageFactory pageFactory = Page.DefaultPageFactory.singleton;
-        protected boolean readonly = false;
 
         public Builder(File dir, Class<? extends V> clazz, int maxPageSize, int maxPages) {
             this.dir = dir;
             this.clazz = clazz;
             this.maxPageSize = maxPageSize;
             this.maxPages = maxPages;
-        }
-
-        public Builder kvStoreType(int value) {
-            this.kvStoreType = value;
-            return this;
-        }
-
-        public Builder readonly(boolean value) {
-            this.readonly = value;
-            return this;
         }
 
         public Builder dbname(String value) {
@@ -98,55 +82,28 @@ public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
         }
 
         public PageDB<V> build() throws IOException {
-            return new PageDB<>(dir, clazz, dbname, maxPageSize, maxPages, kvStoreType, readonly, pageFactory);
+            return new PageDB<>(dir, clazz, dbname, maxPageSize, maxPages, pageFactory);
         }
 
     }
 
-    protected PageDB(boolean readonly, PagedKeyValueStore<DBKey, V> eps, DBKeyCoder<V> keyCoder) {
-        this.readonly = readonly;
+    protected PageDB(PagedKeyValueStore<DBKey, V> eps, DBKeyCoder<V> keyCoder) {
         this.eps = eps;
         this.keyCoder = keyCoder;
     }
 
     public PageDB(File dir, Class<? extends V> clazz, int maxPageSize, int maxPages) throws IOException {
-        this(dir, clazz, defaultDbName, maxPageSize, maxPages,
-                defaultKeyValueStoreType, false, Page.DefaultPageFactory.singleton);
-    }
-
-    public PageDB(File dir, Class<? extends V> clazz, int maxPageSize, int maxPages, boolean readonly) throws IOException {
-        this(dir, clazz, defaultDbName, maxPageSize, maxPages,
-                defaultKeyValueStoreType, readonly, Page.DefaultPageFactory.singleton);
+        this(dir, clazz, defaultDbName, maxPageSize, maxPages, Page.DefaultPageFactory.singleton);
     }
 
     public PageDB(File dir, Class<? extends V> clazz, String dbname, int maxPageSize,
-            int maxPages, boolean readonly) throws IOException {
-        this(dir, clazz, dbname, maxPageSize, maxPages, defaultKeyValueStoreType,
-                readonly, Page.DefaultPageFactory.singleton);
-    }
-
-    public PageDB(File dir, Class<? extends V> clazz, String dbname, int maxPageSize,
-            int maxPages, int keyValueStoreType, boolean readonly, PageFactory factory) throws IOException {
+            int maxPages, PageFactory factory) throws IOException {
         ByteStore store;
-        this.readonly = readonly;
         this.keyCoder = new DBKeyCoder<>(clazz);
-        switch (keyValueStoreType) {
-            case 0:
-                store = new ByteStoreBDB(dir, dbname, readonly);
-                this.eps = new ExternalPagedStore<>(keyCoder, store, maxPageSize, maxPages);
-                break;
-            case 1:
-                store = new ConcurrentByteStoreBDB(dir, dbname, readonly);
-                this.eps =  new SkipListCache.Builder<>(keyCoder, store, maxPageSize, maxPages).
-                        pageFactory(factory).build();
-                break;
-            default:
-                throw new IllegalStateException("Illegal value " + keyValueStoreType +
-                                                " for configuration parameter \"pagedb.kvstore.type\"");
-        }
-        if (!readonly) {
-            Files.write(new File(dir, "db.type"), Bytes.toBytes(getClass().getName()), false);
-        }
+        store = new ConcurrentByteStoreBDB(dir, dbname);
+        this.eps =  new SkipListCache.Builder<>(keyCoder, store, maxPageSize, maxPages).
+        pageFactory(factory).build();
+        Files.write(new File(dir, "db.type"), Bytes.toBytes(getClass().getName()), false);
     }
 
     @Override
@@ -161,25 +118,16 @@ public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
 
     @Override
     public V put(DBKey key, V value) {
-        if (readonly) {
-            throw new RuntimeException("cannot modify. readonly.");
-        }
         return eps.getPutValue(key, value);
     }
 
     @Override
     public V remove(DBKey key) {
-        if (readonly) {
-            throw new RuntimeException("cannot modify. readonly.");
-        }
         return eps.getRemoveValue(key);
     }
 
     @Override
     public void remove(DBKey from, DBKey to, boolean inclusive) {
-        if (readonly) {
-            throw new RuntimeException("cannot modify. readonly.");
-        }
         eps.removeValues(from, to, inclusive);
     }
 

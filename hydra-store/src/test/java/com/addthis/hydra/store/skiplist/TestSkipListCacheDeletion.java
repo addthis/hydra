@@ -25,8 +25,8 @@ import com.addthis.basis.test.SlowTest;
 import com.addthis.basis.util.Files;
 
 import com.addthis.hydra.store.DBIntValue;
+import com.addthis.hydra.store.kv.ByteStore;
 import com.addthis.hydra.store.kv.ConcurrentByteStoreBDB;
-import com.addthis.hydra.store.kv.ExternalPagedStore.ByteStore;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -156,7 +156,7 @@ public class TestSkipListCacheDeletion {
 
         try {
             directory = makeTemporaryDirectory();
-            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
+            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
 
             ArrayList<Integer> values = new ArrayList<>(numElements);
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);

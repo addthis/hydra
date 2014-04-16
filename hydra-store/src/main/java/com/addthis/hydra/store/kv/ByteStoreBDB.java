@@ -26,8 +26,6 @@ import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Files;
 
 import com.addthis.hydra.store.db.SettingsJE;
-import com.addthis.hydra.store.kv.ExternalPagedStore.ByteStore;
-import com.addthis.hydra.store.kv.ExternalPagedStore.PageEntry;
 import com.addthis.hydra.store.util.JEUtil;
 
 import com.sleepycat.je.CacheMode;

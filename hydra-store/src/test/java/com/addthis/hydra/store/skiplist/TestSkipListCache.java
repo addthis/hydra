@@ -28,8 +28,8 @@ import com.addthis.basis.test.SlowTest;
 import com.addthis.basis.util.Files;
 
 import com.addthis.hydra.store.DBIntValue;
+import com.addthis.hydra.store.kv.ByteStore;
 import com.addthis.hydra.store.kv.ConcurrentByteStoreBDB;
-import com.addthis.hydra.store.kv.ExternalPagedStore.ByteStore;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -117,7 +117,7 @@ public class TestSkipListCache {
 
         try {
             directory = makeTemporaryDirectory();
-            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
+            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
             SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 25, 0).build();
             assertEquals(null, cache.get(Integer.MIN_VALUE));
@@ -143,7 +143,7 @@ public class TestSkipListCache {
 
         try {
             directory = makeTemporaryDirectory();
-            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
+            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
             SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 25, 0).build();
 
@@ -212,7 +212,7 @@ public class TestSkipListCache {
 
         try {
             directory = makeTemporaryDirectory();
-            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
+            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
             SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 25, 0).build();
 
@@ -255,7 +255,7 @@ public class TestSkipListCache {
 
         try {
             directory = makeTemporaryDirectory();
-            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
+            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
 
             ArrayList<Integer> values = new ArrayList<>(numElements);
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
@@ -323,7 +323,7 @@ public class TestSkipListCache {
 
         try {
             directory = makeTemporaryDirectory();
-            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
+            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
 
             ArrayList<Integer> values = new ArrayList<>(numElements);
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
@@ -391,7 +391,7 @@ public class TestSkipListCache {
 
         try {
             directory = makeTemporaryDirectory();
-            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
+            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
 
             ArrayList<Integer> values = new ArrayList<>(numElements);
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
@@ -479,7 +479,7 @@ public class TestSkipListCache {
 
         try {
             directory = makeTemporaryDirectory();
-            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
+            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
 
             ArrayList<Integer> values = new ArrayList<>(numElements);
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
@@ -548,7 +548,7 @@ public class TestSkipListCache {
 
         try {
             directory = makeTemporaryDirectory();
-            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
+            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
 
             ArrayList<Integer> values = new ArrayList<>(numElements);
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
@@ -617,7 +617,7 @@ public class TestSkipListCache {
             Thread[] threads = new Thread[numThreads];
 
             directory = makeTemporaryDirectory();
-            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
+            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
 
             SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 8, 50).build();
@@ -684,7 +684,7 @@ public class TestSkipListCache {
             Thread[] threads = new Thread[numThreads];
 
             directory = makeTemporaryDirectory();
-            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
+            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
 
             SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 8, 0).build();
@@ -743,7 +743,7 @@ public class TestSkipListCache {
 
         try {
             directory = makeTemporaryDirectory();
-            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
+            ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
 
             SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 8, Integer.MAX_VALUE).build();
@@ -762,7 +762,7 @@ public class TestSkipListCache {
             assertEquals(0, cache.getNumPagesInMemory());
             assertEquals(0, cache.getMemoryEstimate());
 
-            externalStore = new ConcurrentByteStoreBDB(directory, "db", false);
+            externalStore = new ConcurrentByteStoreBDB(directory, "db");
 
             cache = new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 8, Integer.MAX_VALUE).build();
 

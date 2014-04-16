@@ -166,7 +166,7 @@ public class TestConcurrentTree {
         log.info("testGetOrCreateOneThread");
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).kvStoreType(1).build();
+            ConcurrentTree tree = new ConcurrentTree.Builder(dir).build();
             ConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < 1000; i++) {
                 ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
@@ -194,7 +194,7 @@ public class TestConcurrentTree {
         log.info("testRecursiveDeleteOneThread");
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).kvStoreType(1).build();
+            ConcurrentTree tree = new ConcurrentTree.Builder(dir).build();
             ConcurrentTreeNode root = tree.getRootNode();
             ConcurrentTreeNode parent = tree.getOrCreateNode(root, "hello", null);
             for (int i = 0; i < (TreeCommonParameters.cleanQMax << 1); i++) {
@@ -228,8 +228,8 @@ public class TestConcurrentTree {
         log.info("testRecursiveDeleteMultiThreads");
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).
-                    numDeletionThreads(8).kvStoreType(1).build();
+            ConcurrentTree tree = new ConcurrentTree.Builder(dir).
+                    numDeletionThreads(8).build();
             ConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < fastNumThreads; i++) {
                 ConcurrentTreeNode parent = tree.getOrCreateNode(root, Integer.toString(i), null);
@@ -283,7 +283,7 @@ public class TestConcurrentTree {
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             ArrayList<Integer> threadId = new ArrayList<>(numElements);
             InsertionThread[] threads = new InsertionThread[numThreads];
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).kvStoreType(1).build();
+            ConcurrentTree tree = new ConcurrentTree.Builder(dir).build();
             ConcurrentTreeNode root = tree.getRootNode();
 
             for (int i = 0; i < numElements; i++) {
@@ -339,8 +339,8 @@ public class TestConcurrentTree {
     private void testDeleteOneThread(int numDeletionThreads) throws Exception {
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir, false)
-                    .numDeletionThreads(numDeletionThreads).kvStoreType(1).build();
+            ConcurrentTree tree = new ConcurrentTree.Builder(dir)
+                    .numDeletionThreads(numDeletionThreads).build();
             ConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < 1000; i++) {
                 ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
@@ -408,8 +408,8 @@ public class TestConcurrentTree {
         log.info("testIterateAndDelete {} {}", numThreads, numElements);
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir, false).numDeletionThreads(numThreads).
-                    maxPageSize(5).maxCacheSize(500).kvStoreType(1).build();
+            ConcurrentTree tree = new ConcurrentTree.Builder(dir).numDeletionThreads(numThreads).
+                    maxPageSize(5).maxCacheSize(500).build();
             ConcurrentTreeNode root = tree.getRootNode();
 
             for (int i = 0; i < numElements; i++) {
@@ -457,8 +457,8 @@ public class TestConcurrentTree {
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             ArrayList<Integer> threadId = new ArrayList<>(numElements);
             DeletionThread[] threads = new DeletionThread[numThreads];
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir, false)
-                    .numDeletionThreads(numDeletionThreads).kvStoreType(1).build();
+            ConcurrentTree tree = new ConcurrentTree.Builder(dir)
+                    .numDeletionThreads(numDeletionThreads).build();
             ConcurrentTreeNode root = tree.getRootNode();
 
             for (int i = 0; i < numElements; i++) {

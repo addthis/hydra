@@ -37,7 +37,7 @@ import org.apache.avro.io.EncoderFactory;
 import org.junit.Before;
 import org.junit.Test;
 
-import static junit.framework.Assert.assertNotNull;
+import static org.junit.Assert.assertNotNull;
 
 public class DataSourceAvroTest {
 

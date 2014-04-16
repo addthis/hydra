@@ -27,8 +27,6 @@ import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Files;
 
 import com.addthis.hydra.store.db.SettingsJE;
-import com.addthis.hydra.store.kv.ExternalPagedStore.ByteStore;
-import com.addthis.hydra.store.kv.ExternalPagedStore.PageEntry;
 import com.addthis.hydra.store.util.JEUtil;
 
 import com.sleepycat.je.CheckpointConfig;
@@ -69,26 +67,20 @@ public class ConcurrentByteStoreBDB implements ByteStore {
     private final LockMode lockMode = LockMode.DEFAULT;
     private final CursorConfig cursorConfig = CursorConfig.DEFAULT;
     private final OperationStatus opSuccess = OperationStatus.SUCCESS;
-    private final boolean readonly;
 
-    public ConcurrentByteStoreBDB(File dir, String dbname, boolean ro) {
+    public ConcurrentByteStoreBDB(File dir, String dbname) {
         this.dir = Files.initDirectory(dir);
-        this.readonly = ro;
         settings = new SettingsJE();
         EnvironmentConfig bdb_eco = new EnvironmentConfig();
-        bdb_eco.setReadOnly(ro);
-        bdb_eco.setAllowCreate(!ro);
+        bdb_eco.setReadOnly(false);
+        bdb_eco.setAllowCreate(true);
         bdb_eco.setTransactional(false);
         bdb_eco.setLockTimeout(2, TimeUnit.MINUTES);
-//          bdb_eco.setDurability(Durability.COMMIT_NO_SYNC);
-        if (ro) {
-            bdb_eco.setConfigParam(EnvironmentConfig.ENV_RUN_CLEANER, "false");    // Disable log cleaner thread
-        }
         JEUtil.mergeSystemProperties(bdb_eco);
         SettingsJE.updateEnvironmentConfig(settings, bdb_eco);
         bdb_env = new Environment(dir, bdb_eco);
         bdb_cfg = new DatabaseConfig();
-        bdb_cfg.setReadOnly(ro);
+        bdb_cfg.setReadOnly(false);
         bdb_cfg.setAllowCreate(true);
         bdb_cfg.setDeferredWrite(true);
         SettingsJE.updateDatabaseConfig(settings, bdb_cfg);
@@ -106,7 +98,7 @@ public class ConcurrentByteStoreBDB implements ByteStore {
 
     @Override
     public boolean isReadOnly() {
-        return readonly;
+        return false;
     }
 
     @Override

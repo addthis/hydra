@@ -33,7 +33,6 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.store.db.IReadWeighable;
 import com.addthis.hydra.store.db.ReadDBKeyCoder;
-import com.addthis.hydra.store.kv.ExternalPagedStore.ByteStore;
 import com.addthis.hydra.store.kv.metrics.ExternalPagedStoreMetrics;
 
 import com.addthis.basis.util.Varint;
@@ -328,11 +327,6 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
             return "tp[" + map.size() + "," + firstKey + "," + nextFirstKey + "]";
         }
 
-        @Override
-        public boolean reValidate() {
-            return false;
-        }
-
         void checkKey(K key) {
             if (!checkKeyRange) {
                 return;
@@ -407,13 +401,6 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         }
 
         @Override
-        public boolean mayContainKey(K key) {
-            K first = firstKey;
-            K last = getNextFirstKey();
-            return first.compareTo(key) <= 0 && (last == null || key.compareTo(last) < 0);
-        }
-
-        @Override
         public K getNextFirstKey() {
             return nextFirstKey;
         }
@@ -426,16 +413,6 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         @Override
         public int compare(K o1, K o2) {
             return compareKeys(o1, o2);
-        }
-
-        @Override
-        public PagePin pin() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isPinned() {
-            throw new UnsupportedOperationException();
         }
     }
 
@@ -536,7 +513,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
 
         private KeyValuePage<K, V> nextPage;
         private KeyValuePage<K, V> page;
-        private ClosableIterator<ExternalPagedStore.PageEntry> keyIterator;
+        private ClosableIterator<PageEntry> keyIterator;
         private final int sampleRate;
         private final K start;
         private final boolean inclusive;
