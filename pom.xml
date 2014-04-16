@@ -62,7 +62,7 @@
     <hydra.dep.bundle.version>2.2.5</hydra.dep.bundle.version>
     <hydra.dep.codec.version>2.0.5</hydra.dep.codec.version>
     <hydra.dep.meshy.version>2.1.4</hydra.dep.meshy.version>
-    <hydra.dep.muxy.version>2.0.6</hydra.dep.muxy.version>
+    <hydra.dep.muxy.version>2.0.8</hydra.dep.muxy.version>
     <hydra.dep.maljson.version>0.1.1</hydra.dep.maljson.version>
     <hydra.dep.streamlib.version>2.6.0-rc0</hydra.dep.streamlib.version>
     <!-- hydra addthis external dependency versions -->
