@@ -34,37 +34,44 @@ public class HoconRunner {
     static final boolean keepComments = Parameter.boolValue("task.hocon.keepComments", false);
     static final boolean debugComments = Parameter.boolValue("task.hocon.debugComments", false);
 
-    /**
-     * @param args
-     * @throws Exception
-     */
     public static void main(String args[]) throws Exception {
         if (args.length < 1) {
             System.out.println("usage: hocon <config> <nodes> <node> [jobid] [threads]");
             return;
         }
         String fileName = args[0];
+        String configString = TaskRunner.loadStringFromFile(fileName);
         if (args.length < 2) {
-            loadHoconAndPrintVarious(fileName);
-            return;
+            loadHoconAndPrintVarious(configString);
+        } else {
+            runTask(configString, args);
         }
-        int nodeCount = Integer.parseInt(args[1]);
-        int thisNode = Integer.parseInt(args[2]);
-        String jobId = (args.length > 3) ? args[3] : null;
-        int commandLineThreads = (args.length > 4) ? Integer.parseInt(args[4]) : TaskRunner.defaultThreads;
-
-        String configString = loadHoconAndPrintJson(fileName);
-
-        TaskRunner.runTask(configString, nodeCount, thisNode, jobId, commandLineThreads);
     }
 
-    public static String loadHoconAndPrintJson(String fileName) {
-        Config config = ConfigFactory.parseFile(new File(fileName));
+    static void runTask(String config, String[] args) throws Exception {
+        String json = loadHoconAndPrintJson(config);
+        JsonRunner.runTask(json, args);
+    }
+
+    /**
+     * Convert a hocon formatted string into a json formatted string.
+     *
+     * @param configString hocon formatted string.
+     * @return json formatted string
+     */
+    static String loadHoconAndPrintJson(String configString) {
+        Config config = ConfigFactory.parseString(configString);
         return config.resolve().root().render(ConfigRenderOptions.concise());
     }
 
-    public static void loadHoconAndPrintVarious(String fileName) {
-        Config config = ConfigFactory.parseFile(new File(fileName));
+    /**
+     * Convert a hocon formatted string into a json formatted string
+     * and print the json string to standard output.
+     *
+     * @param configString hocon formatted string.
+     */
+    static void loadHoconAndPrintVarious(String configString) {
+        Config config = ConfigFactory.parseString(configString);
         if (resolvePrint) {
             config = config.resolve();
         }
@@ -72,7 +79,7 @@ public class HoconRunner {
                 .setComments(keepComments)
                 .setOriginComments(debugComments)
                 .setJson(toJson);
-        String configString = config.root().render(renderOptions);
-        System.out.println(configString);
+        String outputString = config.root().render(renderOptions);
+        System.out.println(outputString);
     }
 }

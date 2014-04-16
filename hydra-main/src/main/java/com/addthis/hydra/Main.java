@@ -31,7 +31,7 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.hydra.common.plugins.DynamicLoader;
 import com.addthis.hydra.common.plugins.PluginReader;
-import com.addthis.hydra.task.run.TaskRunner;
+import com.addthis.hydra.task.run.JsonRunner;
 import com.addthis.maljson.JSONObject;
 import com.addthis.metrics.reporter.config.ReporterConfig;
 
@@ -100,7 +100,7 @@ public class Main {
                      */
                     case "validate":
                         try {
-                            TaskRunner.loadConfig(new File(args[1]));
+                            JsonRunner.loadConfig(new File(args[1]));
                             System.out.println("task config is valid");
                         } catch (Exception ex) {
                             ex.printStackTrace();

@@ -64,8 +64,8 @@ import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.JobAlert;
 import com.addthis.hydra.job.spawn.JobAlertRunner;
 import com.addthis.hydra.job.spawn.jersey.User;
+import com.addthis.hydra.task.run.JsonRunner;
 import com.addthis.hydra.task.run.TaskRunnable;
-import com.addthis.hydra.task.run.TaskRunner;
 import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONException;
@@ -988,7 +988,7 @@ public class JobsResource {
             return validateCreateError(ex.getMessage(), lineErrors, lineColumns, "postExpansionError");
         }
         try {
-            TaskRunner.initClasses(jobJSON);
+            JsonRunner.initClasses(jobJSON);
             jobJSON.remove("classes");
             List<CodecExceptionLineNumber> warnings = new ArrayList<>();
             CodecJSON.decodeObject(TaskRunnable.class, jobJSON, warnings);

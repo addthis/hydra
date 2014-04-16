@@ -24,7 +24,7 @@ import com.addthis.basis.util.Files;
 import org.slf4j.Logger;
 
 import org.slf4j.LoggerFactory;
-public class TaskReplacementFile implements TaskRunner.TaskStringReplacement {
+public class TaskReplacementFile implements JsonRunner.TaskStringReplacement {
 
     private static final Logger log = LoggerFactory.getLogger(TaskReplacementFile.class);
 
