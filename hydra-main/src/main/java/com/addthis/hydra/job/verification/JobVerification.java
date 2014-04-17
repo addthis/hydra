@@ -19,8 +19,8 @@ import java.util.Scanner;
 
 import com.addthis.codec.CodecExceptionLineNumber;
 import com.addthis.codec.CodecJSON;
+import com.addthis.hydra.task.run.JsonRunner;
 import com.addthis.hydra.task.run.TaskRunnable;
-import com.addthis.hydra.task.run.TaskRunner;
 import com.addthis.maljson.JSONObject;
 
 public class JobVerification {
@@ -40,7 +40,7 @@ public class JobVerification {
         List<CodecExceptionLineNumber> exceptions = new ArrayList<>();
         try {
             JSONObject jo = new JSONObject(input);
-            TaskRunner.initClasses(jo);
+            JsonRunner.initClasses(jo);
             jo.remove("classes");
             CodecJSON.decodeObject(TaskRunnable.class, jo, exceptions);
         } catch (Exception ex) {
