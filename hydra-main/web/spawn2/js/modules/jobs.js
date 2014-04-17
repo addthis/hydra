@@ -131,6 +131,7 @@ function(
                 data.qc_consecutiveFailureThreshold=100;
             }
             data.queryConfig=undefined;
+            data.aliases=[];
             return data;
         },
         defaults:{

@@ -21,6 +21,11 @@
         <li class="active">
             <%-(_.isUndefined(job.id)?'new':job.id)%>
         </li>
+        <%if(!_.isEmpty(job.aliases)) {%>
+        <li>
+            (<%-job.aliases%>)
+        </li>
+        <%}%>
     </ul>
     <%if(!_.isUndefined(job.id)){%>
         <div id="stateTextBox" class="label <%-job.stateLabel%>" style="margin-right:10px;">

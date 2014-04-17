@@ -723,6 +723,13 @@ function(
                 app.job.isClone=false;
                 app.job.cloneId="";
                 app.job.fetch();
+                app.job.set("aliases", _.map(
+                    _.filter(app.aliasCollection.models, function(alias) {
+                        return _.contains(alias.get("jobs"), jobId);
+                    }),
+                    function(alias){
+                        return alias.get("name");
+                }));
             }
             if(_.isUndefined(app.configModel) || !_.isEqual(app.configModel.get("jobUuid"),jobId)){
                 app.configModel = new Jobs.ConfigModel({
