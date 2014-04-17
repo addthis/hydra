@@ -4,6 +4,7 @@
 "mqworker", com.addthis.hydra.query.MeshQueryWorker
 "qutil", com.addthis.hydra.query.util.QueryChannelUtil
 "task", com.addthis.hydra.task.run.TaskRunner
+"hocon", com.addthis.hydra.task.run.HoconRunner
 "fmux", com.addthis.muxy.Main
 "cliquery", com.addthis.hydra.data.query.CLIQuery
 "printbundles", com.addthis.hydra.task.util.BundleStreamPeeker
