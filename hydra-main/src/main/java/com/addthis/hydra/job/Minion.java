@@ -2699,9 +2699,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                     } else {
                         log.warn("[task.stop] " + task.getName() + " wasn't terminated because task was running and the stop specified only-if-queued");
                     }
-                } else if (task.kick != null && task.kick.getRunCount() != stop.getRunCount()) {
-                    log.warn("[task.stop] " + task.getName() + " before exec count @ " + task.kick.getRunCount() + " != " + stop.getRunCount());
-                    task.sendEndStatus(0);
                 } else if (stop.force()) {
                     log.warn("[task.stop] " + task.getName() + " force stop unmatched");
                     if (!task.jobDone.getParentFile().exists()) {
