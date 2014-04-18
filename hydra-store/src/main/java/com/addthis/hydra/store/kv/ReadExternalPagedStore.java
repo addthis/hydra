@@ -246,9 +246,9 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                 if (log.isDebugEnabled()) {
                     log.debug("decoded " + decode);
                 }
-                decode.originalByteSize = page.length;
             }
 
+            decode.originalByteSize = page.length;
             return decode;
         } catch (RuntimeException ex) {
             throw ex;

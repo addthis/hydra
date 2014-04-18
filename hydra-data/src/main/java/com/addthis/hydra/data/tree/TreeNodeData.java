@@ -55,7 +55,7 @@ public abstract class TreeNodeData<C extends TreeDataParameters<?>> implements C
         PluginReader.registerPlugin("-treenodedata.classmap", cmap, TreeNodeData.class);
     }
 
-    private final CodecBin2 codec = new CodecBin2();
+    private static final CodecBin2 codec = new CodecBin2();
 
     /**
      * called from PathValue.processNodeUpdates() -> PathValue.processChild() -> TreeNode.updateChildData() -> this.
