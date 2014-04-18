@@ -26,12 +26,13 @@ import com.google.common.base.Objects;
 class DBKeyCoder<V extends Codec.BytesCodable> implements KeyCoder<DBKey, V> {
 
     protected final Codec codec;
+    protected final static CodecBin2 codecBin2 = new CodecBin2();
     protected final Class<? extends V> clazz;
 
     private static final byte[] zero = new byte[0];
 
     public DBKeyCoder(Class<? extends V> clazz) {
-        this(new CodecBin2(), clazz);
+        this(codecBin2, clazz);
     }
 
     public DBKeyCoder(Codec codec, Class<? extends V> clazz) {

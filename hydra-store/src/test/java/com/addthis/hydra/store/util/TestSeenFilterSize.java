@@ -34,7 +34,7 @@ public class TestSeenFilterSize {
     private static final Codec codecJSON = new CodecJSON();
 
     @Test
-    public void stfu() {
+    public void noop() {
     }
 
     // http://piotrga.wordpress.com/2009/06/08/howto-compress-or-decompress-byte-array-in-java/

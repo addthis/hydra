@@ -44,6 +44,7 @@ public class QueryChannel<SEND extends Codec.Codable, RECV extends Codec.Codable
 
     private final Class<? extends RECV> recvClass;
     private final Codec codec;
+    private final static CodecBin2 codecBin2 = new CodecBin2();
     private final InputStream recv;
 
     private String label;
@@ -53,21 +54,21 @@ public class QueryChannel<SEND extends Codec.Codable, RECV extends Codec.Codable
     private Lock sendLock = new ReentrantLock();
 
     public QueryChannel(Socket socket, Class<? extends RECV> recvClass) throws IOException {
-        this(socket.getInputStream(), recvClass, socket.getOutputStream(), new CodecBin2(), 0);
+        this(socket.getInputStream(), recvClass, socket.getOutputStream(), codecBin2, 0);
         this.label = socket.toString() + " :: ";
     }
 
     public QueryChannel(Socket socket, Class<? extends RECV> recvClass, int flags) throws IOException {
-        this(socket.getInputStream(), recvClass, socket.getOutputStream(), new CodecBin2(), flags);
+        this(socket.getInputStream(), recvClass, socket.getOutputStream(), codecBin2, flags);
         this.label = socket.toString() + " :: ";
     }
 
     private QueryChannel(InputStream in, Class<? extends RECV> recvClass, OutputStream out) throws IOException {
-        this(in, recvClass, out, new CodecBin2(), 0);
+        this(in, recvClass, out, codecBin2, 0);
     }
 
     private QueryChannel(InputStream in, Class<? extends RECV> recvClass, OutputStream out, int flags) throws IOException {
-        this(in, recvClass, out, new CodecBin2(), flags);
+        this(in, recvClass, out, codecBin2, flags);
     }
 
     private QueryChannel(InputStream recv, Class<? extends RECV> recvClass, OutputStream send, Codec codec, int flags) throws IOException {

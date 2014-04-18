@@ -47,7 +47,7 @@ public class ReadPageDB<V extends IReadWeighable & Codec.BytesCodable> implement
     private static final Logger log = LoggerFactory.getLogger(ReadPageDB.class);
     static final String defaultDbName = Parameter.value("pagedb.dbname", "db.key");
 
-    private final Codec codec = new CodecBin2();
+    private final static Codec codec = new CodecBin2();
     private final Class<? extends V> clazz;
     private final ReadExternalPagedStore<DBKey, V> eps;
 
