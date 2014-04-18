@@ -14,6 +14,7 @@
 
 package com.addthis.hydra.query.web;
 
+import io.netty.channel.DefaultMessageSizeEstimator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +39,9 @@ public class QueryServerInitializer extends ChannelInitializer<SocketChannel> {
     protected void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
         log.trace("New socket connection {}", ch);
-
+        ch.config().setMessageSizeEstimator(new DefaultMessageSizeEstimator(200));
+        ch.config().setWriteBufferHighWaterMark(100000000);
+        ch.config().setWriteBufferLowWaterMark(50000000);
         pipeline.addLast("decoder", new HttpRequestDecoder(163840,163840,163840));
         pipeline.addLast("aggregator", new HttpObjectAggregator(163840));
         pipeline.addLast("encoder", new HttpResponseEncoder());
