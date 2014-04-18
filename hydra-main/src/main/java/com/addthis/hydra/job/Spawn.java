@@ -40,7 +40,9 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -144,6 +146,11 @@ public class Spawn implements Codec.Codable {
     private static int requestHeaderBufferSize = Parameter.intValue("spawn.http.bufsize", 8192);
     private static int hostStatusRequestInterval = Parameter.intValue("spawn.status.interval", 5000);
     private static int queueKickInterval = Parameter.intValue("spawn.queue.kick.interval", 3000);
+    private static int backgroundThreads = Parameter.intValue("spawn.background.threads", 4);
+    private static int backgroundQueueSize = Parameter.intValue("spawn.background.queuesize", 1000);
+    private static final ExecutorService backgroundService = MoreExecutors.getExitingExecutorService(
+            new ThreadPoolExecutor(backgroundThreads, backgroundThreads, 0L, TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<Runnable>(backgroundQueueSize)), 100, TimeUnit.MILLISECONDS);
     private static String debugOverride = Parameter.value("spawn.debug");
     private static final boolean useStructuredLogger = Parameter.boolValue("spawn.logger.bundle.enable",
             clusterName.equals("localhost")); // default to true if-and-only-if we are running local stack
@@ -2566,7 +2573,8 @@ public class Spawn implements Codec.Codable {
             try {
                 quietBackgroundPost(state + " " + job.getId(), url, codec.encode(job));
             } catch (Exception e) {
-                log.warn("", e);
+                // FIXME send this to an email address specified by a system property
+                log.error("", e);
             }
         } else if (url.startsWith("kick://")) {
             Map<String, List<String>> aliasMap = getAliases();
@@ -2629,16 +2637,43 @@ public class Spawn implements Codec.Codable {
         balancer.requestJobSizeUpdate(job.getId(), 0);
     }
 
-    private void quietBackgroundPost(String threadName, final String url, final byte[] post) {
-        new Thread(threadName) {
-            public void run() {
-                try {
-                    HttpUtil.httpPost(url, "javascript/text", post, 60000);
-                } catch (Exception ex) {
-                    log.warn("", ex);
+
+    private static class BackgroundPost implements Runnable {
+
+        private final String taskName;
+        private final String url;
+        private final byte[] post;
+
+        BackgroundPost(String taskName, String url, byte[] post) {
+            this.taskName = taskName;
+            this.url = url;
+            this.post = post;
+        }
+
+        @Override
+        public void run() {
+            try {
+                HttpUtil.httpPost(url, "javascript/text", post, 60000);
+            } catch (IOException ex) {
+                // FIXME send this to an email address specified by a system property
+                log.error("IOException when attempting to contact \"" +
+                          url + "\" in background task \"" + taskName + "\"", ex);
+                Throwable cause = ex.getCause();
+                if (cause != null) {
+                    log.error("Caused by ", cause);
                 }
             }
-        }.start();
+        }
+    }
+
+    private void quietBackgroundPost(String taskName, String url, byte[] post) {
+        BackgroundPost task = new BackgroundPost(taskName, url, post);
+        try {
+            backgroundService.submit(task);
+        } catch (RejectedExecutionException ex) {
+            // FIXME send this to an email address specified by a system property
+            log.error("Unable to submit task \"" + taskName + "\" for execution", ex);
+        }
     }
 
     /**
