@@ -17,6 +17,7 @@ package com.addthis.hydra.query.web;
 import java.util.List;
 
 import com.addthis.basis.util.Backoff;
+
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.bundle.core.Bundle;
@@ -52,19 +53,15 @@ public class DataChannelOutputToNettyBridge implements DataChannelOutput {
     public void send(Bundle bundle) {
         log.trace("Writing bundle to pipeline {}", bundle);
         int attempts = 0;
-        while (true) {
-            if (ctx.channel().isActive() && ctx.channel().isWritable()) {
-                ctx.write(bundle);
-                break;
-            } else {
+        while (!ctx.channel().isWritable() && ctx.channel().isActive()) {
+            if (attempts++ > 1000) {
                 try {
-                    if (attempts++ > 1000) {
-                        backoff.sleep();
-                    }
+                    backoff.sleep();
                 } catch (InterruptedException ignored) {
                 }
             }
         }
+        ctx.write(bundle);
     }
 
     @Override
