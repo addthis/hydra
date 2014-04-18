@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.DefaultMessageSizeEstimator;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -99,6 +100,10 @@ public class QueryServer {
         ServerBootstrap b = new ServerBootstrap();
         b.option(ChannelOption.SO_BACKLOG, 1024);
         b.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+        b.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+        b.childOption(ChannelOption.MESSAGE_SIZE_ESTIMATOR, new DefaultMessageSizeEstimator(200));
+        b.childOption(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 100000000);
+        b.childOption(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 50000000);
         b.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(queryServerInitializer);
