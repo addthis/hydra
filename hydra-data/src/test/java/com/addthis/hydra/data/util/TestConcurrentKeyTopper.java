@@ -32,6 +32,38 @@ import static org.junit.Assert.fail;
 public class TestConcurrentKeyTopper {
 
     @Test
+    public void testEmptyBytesEncoding() {
+        ConcurrentKeyTopper topper1 = new ConcurrentKeyTopper();
+        topper1.init();
+        assertEquals(0, topper1.size());
+        byte[] serialized = topper1.bytesEncode(0);
+        assertEquals(0, serialized.length);
+        ConcurrentKeyTopper topper2 = new ConcurrentKeyTopper();
+        topper2.bytesDecode(serialized, 0);
+        assertEquals(0, topper2.size());
+    }
+
+    @Test
+    public void testNonEmptyBytesEncoding() {
+        ConcurrentKeyTopper topper1 = new ConcurrentKeyTopper();
+        topper1.init();
+        topper1.increment("a", 1, 5);
+        topper1.increment("b", 2, 5);
+        topper1.increment("c", 3, 5);
+        topper1.increment("d", 4, 5);
+        assertEquals(4, topper1.size());
+        byte[] serialized = topper1.bytesEncode(0);
+        ConcurrentKeyTopper topper2 = new ConcurrentKeyTopper();
+        topper2.bytesDecode(serialized, 0);
+        assertEquals(4, topper2.size());
+        assertEquals(new Long(1), topper2.get("a"));
+        assertEquals(new Long(2), topper2.get("b"));
+        assertEquals(new Long(3), topper2.get("c"));
+        assertEquals(new Long(4), topper2.get("d"));
+    }
+
+
+    @Test
     public void testIncrementNoEviction() {
         ConcurrentKeyTopper topper = new ConcurrentKeyTopper();
 

@@ -322,6 +322,10 @@ public final class ConcurrentKeyTopper implements Codec.SuperCodable, Codec.Byte
 
     @Override
     public void bytesDecode(byte[] b, long version) {
+        if (b.length == 0) {
+            map = new ConcurrentHashMapV8<>(16, 0.75f, 4);
+            return;
+        }
         ByteBuf byteBuf = Unpooled.wrappedBuffer(b);
         try {
             int mapSize = Varint.readUnsignedVarInt(byteBuf);
