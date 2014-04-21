@@ -178,6 +178,21 @@
       <version>${hydra.dep.sleepycat.je.version}</version>
       <scope>provided</scope>
     </dependency>
+     <dependency>
+      <groupId>org.drizzle.jdbc</groupId>
+      <artifactId>drizzle-jdbc</artifactId>
+      <version>1.2</version>
+    </dependency>
+    <dependency>
+      <groupId>postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>9.1-902.jdbc4</version>
+    </dependency>
+    <dependency>
+      <groupId>com.mchange</groupId>
+      <artifactId>c3p0</artifactId>
+      <version>0.9.2.1</version>
+    </dependency>                
     <!-- end 3rd party deps -->
     <!-- test deps -->
     <!-- end test deps -->

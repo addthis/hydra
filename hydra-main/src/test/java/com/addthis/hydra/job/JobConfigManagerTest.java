@@ -13,20 +13,23 @@
  */
 package com.addthis.hydra.job;
 
-import com.addthis.bark.ZkStartUtil;
+import java.util.List;
+import java.util.Map;
+
 import com.addthis.basis.test.SlowTest;
+
+import com.addthis.bark.ZkStartUtil;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
+
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
+
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.util.List;
-import java.util.Map;
 
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PATH;
 import static org.junit.Assert.assertEquals;
@@ -41,9 +44,9 @@ public class JobConfigManagerTest extends ZkStartUtil {
     private JobConfigManager jobConfigManager;
     private SpawnDataStore spawnDataStore;
 
-    private JobConfigManager getJobConfigManager() {
+    private JobConfigManager getJobConfigManager() throws Exception {
         if (spawnDataStore == null) {
-            spawnDataStore = DataStoreUtil.makeSpawnDataStore(zkClient);
+            spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();
         }
         if (jobConfigManager == null) {
             jobConfigManager = new JobConfigManager(spawnDataStore);

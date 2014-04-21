@@ -166,7 +166,7 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> implemen
         }
 
         if (enableZooKeeper) {
-            spawnDataStore = DataStoreUtil.makeSpawnDataStore();
+            spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();
             this.jobConfigManager = new JobConfigManager(spawnDataStore);
             this.jobFailureDetector = new JobFailureDetector(failureExpireMinutes);
             this.queryConfigWatcher = new QueryConfigWatcher(spawnDataStore);

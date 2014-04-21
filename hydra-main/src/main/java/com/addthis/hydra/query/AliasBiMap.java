@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.query;
 
+import javax.annotation.concurrent.ThreadSafe;
+
 import java.io.IOException;
 import java.io.StringWriter;
 
@@ -35,8 +37,6 @@ import com.google.common.annotations.VisibleForTesting;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.concurrent.ThreadSafe;
 
 
 @ThreadSafe
@@ -61,8 +61,8 @@ public class AliasBiMap {
 
     private AvailableCache<String> mapCache;
 
-    public AliasBiMap() {
-        this(DataStoreUtil.makeSpawnDataStore());
+    public AliasBiMap() throws Exception {
+        this(DataStoreUtil.makeCanonicalSpawnDataStore());
         loadCurrentValues();
     }
 

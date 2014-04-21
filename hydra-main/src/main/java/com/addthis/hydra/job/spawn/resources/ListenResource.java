@@ -39,6 +39,7 @@ import com.addthis.hydra.job.SpawnBalancerConfig;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.entities.TopicEvent;
 import com.addthis.hydra.job.spawn.jersey.User;
+import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
@@ -48,7 +49,6 @@ import com.sun.jersey.api.core.HttpContext;
 import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 @Path("/update")
 public class ListenResource {
@@ -246,6 +246,28 @@ public class ListenResource {
         } catch (Exception ex) {
             //ex.printStackTrace();
             return Response.serverError().entity("Error loading git properties file. This is possibly because maven git plugin was not used for build.").build();
+        }
+    }
+
+    @GET
+    @Path("/datastore.cutover")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response datastoreCutover(@QueryParam("src") String src, @QueryParam("tar") String tar, @QueryParam("checkAll") int checkAll) {
+        try {
+            if (!spawn.getSettings().getQuiesced()) {
+                return Response.serverError().entity("Spawn must be quiesced to cut over stored data.").build();
+            }
+            DataStoreUtil.DataStoreType srcType = DataStoreUtil.DataStoreType.valueOf(src);
+            DataStoreUtil.DataStoreType tarType = DataStoreUtil.DataStoreType.valueOf(tar);
+            boolean checkAllWrites = (checkAll == 1);
+            if (srcType != null || tarType != null) {
+                DataStoreUtil.cutoverBetweenDataStore(DataStoreUtil.makeSpawnDataStore(srcType), DataStoreUtil.makeSpawnDataStore(tarType), checkAllWrites);
+                return Response.ok("Cut over successfully.").build();
+            } else {
+                return Response.serverError().entity("Source/target not specified.").build();
+            }
+        } catch (Exception e) {
+            return Response.serverError().entity("Error cutting over data store: " + e).build();
         }
     }
 

@@ -21,22 +21,11 @@ import java.util.Arrays;
 import com.addthis.basis.util.Files;
 
 import com.addthis.bark.ZkStartUtil;
-import com.addthis.hydra.job.Job;
-import com.addthis.hydra.job.JobCommand;
-import com.addthis.hydra.job.JobConfigManager;
-import com.addthis.hydra.job.Spawn;
-import com.addthis.hydra.job.SpawnBalancerConfig;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.RetryNTimes;
-import org.apache.curator.test.InstanceSpec;
-import org.apache.curator.test.TestingServer;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_COMMAND_PATH;
@@ -53,9 +42,9 @@ public class SpawnStateTest extends ZkStartUtil {
         try {
             logDir = Files.createTempDir();
             System.setProperty("SPAWN_LOG_DIR", logDir.getCanonicalPath());
-            SpawnDataStore spawnDataStore = DataStoreUtil.makeSpawnDataStore(zkClient);
+            SpawnDataStore spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();
             spawnDataStore.delete(SPAWN_COMMON_COMMAND_PATH); // Clear out command path
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
