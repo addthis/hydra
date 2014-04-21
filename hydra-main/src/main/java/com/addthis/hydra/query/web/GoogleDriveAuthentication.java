@@ -74,10 +74,12 @@ public class GoogleDriveAuthentication {
     private static final String gdriveClientId = Parameter.value("qmaster.export.gdrive.clientId");
     private static final String gdriveClientSecret = Parameter.value("qmaster.export.gdrive.clientSecret");
     private static final boolean gdriveEnabled = Parameter.boolValue("qmaster.export.gdrive.enable", true);
+    private static final String gdriveDomain = Parameter.value("qmaster.export.domain.suffix");
 
     static final String autherror = "autherror";
     static final String authtoken = "authtoken";
 
+    private static final String hostname = System.getenv("HOSTNAME");
 
     private static final Logger log = LoggerFactory.getLogger(GoogleDriveAuthentication.class);
 
@@ -116,6 +118,27 @@ public class GoogleDriveAuthentication {
     }
 
     /**
+     * (1) If we cannot determine the hostname then return "localhost".
+     * (2) If the result returned from the HOSTNAME environment variable
+     * is a fully qualified name and the "qmaster.export.domain.suffix"
+     * system property has been set then rewrite the hostname.
+     * (3) Otherwise return the value from the HOSTNAME environment variable.
+     *
+     * @return hostname
+     */
+    private static String generateTargetHostName() {
+        if (hostname == null) {
+            return "localhost";
+        }
+        int index = hostname.indexOf('.');
+        if (index >= 0 && gdriveDomain != null) {
+            return hostname.substring(0, index + 1) + gdriveDomain;
+        } else {
+            return hostname;
+        }
+    }
+
+    /**
      * Obtain a Google authorization token. This token is worthless by itself. It
      * is an intermediate step to obtain an access token. We need to do these two
      * steps because...reasons.
@@ -151,7 +174,7 @@ public class GoogleDriveAuthentication {
                 .setPath("/o/oauth2/auth")
                 .setParameter("scope", "https://www.googleapis.com/auth/drive.file")
                 .setParameter("state", state)
-                .setParameter("redirect_uri", "http://localhost:2222/query/google/submit")
+                .setParameter("redirect_uri", "http://" + generateTargetHostName() + ":2222/query/google/submit")
                 .setParameter("response_type", "code")
                 .setParameter("client_id", gdriveClientId)
                 .build();
@@ -190,7 +213,7 @@ public class GoogleDriveAuthentication {
             httpPost.setHeader(HttpHeaders.Names.CONTENT_TYPE, URLEncodedUtils.CONTENT_TYPE);
             Set<NameValuePair> parameters = new HashSet<>();
             // Why is this redirect_uri required??? It appeared to be unused by the protocol.
-            parameters.add(new BasicNameValuePair("redirect_uri", "http://localhost:2222/query/google/submit"));
+            parameters.add(new BasicNameValuePair("redirect_uri", "http://" + generateTargetHostName() + ":2222/query/google/submit"));
             parameters.add(new BasicNameValuePair("code", code));
             parameters.add(new BasicNameValuePair("client_id", gdriveClientId));
             parameters.add(new BasicNameValuePair("client_secret", gdriveClientSecret));
@@ -221,6 +244,5 @@ public class GoogleDriveAuthentication {
             closeResource(httpClient);
         }
     }
-
 
 }
