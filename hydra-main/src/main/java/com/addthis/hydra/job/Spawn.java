@@ -16,6 +16,9 @@ package com.addthis.hydra.job;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.Writer;
 
 import java.net.InetAddress;
 
@@ -40,12 +43,15 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -92,6 +98,7 @@ import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.query.AliasBiMap;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
+import com.addthis.hydra.util.EmailUtil;
 import com.addthis.hydra.util.SettableGauge;
 import com.addthis.hydra.util.WebSocketManager;
 import com.addthis.maljson.JSONArray;
@@ -134,16 +141,26 @@ import jsr166e.ConcurrentHashMapV8;
  */
 public class Spawn implements Codec.Codable {
 
-    private static Logger log = LoggerFactory.getLogger(Spawn.class);
-    private static boolean meshQueue = Parameter.boolValue("queue.mesh", false);
-    private static boolean enableSpawn2 = Parameter.boolValue("spawn.v2.enable", true);
-    private static String httpHost = Parameter.value("spawn.localhost");
-    private static String clusterName = Parameter.value("cluster.name", "localhost");
-    private static String queryHttpHost = Parameter.value("spawn.queryhost");
-    private static int webPort = Parameter.intValue("spawn.http.port", 5050);
-    private static int requestHeaderBufferSize = Parameter.intValue("spawn.http.bufsize", 8192);
-    private static int hostStatusRequestInterval = Parameter.intValue("spawn.status.interval", 5000);
-    private static int queueKickInterval = Parameter.intValue("spawn.queue.kick.interval", 3000);
+    private static final Logger log = LoggerFactory.getLogger(Spawn.class);
+    private static final boolean meshQueue = Parameter.boolValue("queue.mesh", false);
+    private static final boolean enableSpawn2 = Parameter.boolValue("spawn.v2.enable", true);
+    private static final String httpHost = Parameter.value("spawn.localhost");
+    private static final String clusterName = Parameter.value("cluster.name", "localhost");
+    private static final String queryHttpHost = Parameter.value("spawn.queryhost");
+    private static final int webPort = Parameter.intValue("spawn.http.port", 5050);
+    private static final int requestHeaderBufferSize = Parameter.intValue("spawn.http.bufsize", 8192);
+    private static final int hostStatusRequestInterval = Parameter.intValue("spawn.status.interval", 5000);
+    private static final int queueKickInterval = Parameter.intValue("spawn.queue.kick.interval", 3000);
+    private static final int backgroundThreads = Parameter.intValue("spawn.background.threads", 4);
+    private static final int backgroundQueueSize = Parameter.intValue("spawn.background.queuesize", 1000);
+    private static final int backgroundEmailMinute = Parameter.intValue("spawn.background.notification.interval.minutes", 60);
+    private static final String backgroundEmailAddress = Parameter.value("spawn.background.notification.address");
+    private static final long MILLISECONDS_PER_MINUTE = (1000 * 60);
+    private static final AtomicLong emailLastFired = new AtomicLong();
+
+    private static final ExecutorService backgroundService = MoreExecutors.getExitingExecutorService(
+            new ThreadPoolExecutor(backgroundThreads, backgroundThreads, 0L, TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<Runnable>(backgroundQueueSize)), 100, TimeUnit.MILLISECONDS);
     private static String debugOverride = Parameter.value("spawn.debug");
     private static final boolean useStructuredLogger = Parameter.boolValue("spawn.logger.bundle.enable",
             clusterName.equals("localhost")); // default to true if-and-only-if we are running local stack
@@ -2558,15 +2575,41 @@ public class Spawn implements Codec.Codable {
         }
     }
 
+    private static void emailNotification(String jobId, String state, Exception e) {
+        if (backgroundEmailAddress != null) {
+            long currentTime = System.currentTimeMillis();
+            long lastTime = emailLastFired.get();
+            if (((currentTime - lastTime) / MILLISECONDS_PER_MINUTE) > backgroundEmailMinute) {
+                String subject = "Background operation failed -" + clusterName + "- {" + jobId + "}";
+                Writer stringWriter = new StringWriter();
+                PrintWriter printWriter = new PrintWriter(stringWriter);
+                printWriter.append("The operation for job \"");
+                printWriter.append(jobId);
+                printWriter.append("\" in state ");
+                printWriter.append(state);
+                printWriter.append(" throw an exception ");
+                e.printStackTrace(printWriter);
+                if (e.getCause() != null) {
+                    printWriter.append(" caused by ");
+                    e.getCause().printStackTrace(printWriter);
+                }
+                printWriter.flush();
+                EmailUtil.email(backgroundEmailAddress, subject, stringWriter.toString());
+                emailLastFired.set(currentTime);
+            }
+        }
+    }
+
     private void doOnState(Job job, String url, String state) {
         if (Strings.isEmpty(url)) {
             return;
         }
         if (url.startsWith("http://")) {
             try {
-                quietBackgroundPost(state + " " + job.getId(), url, codec.encode(job));
+                quietBackgroundPost(job.getId(), state, url, codec.encode(job));
             } catch (Exception e) {
-                log.warn("", e);
+                log.error("", e);
+                emailNotification(job.getId(), state, e);
             }
         } else if (url.startsWith("kick://")) {
             Map<String, List<String>> aliasMap = getAliases();
@@ -2629,16 +2672,45 @@ public class Spawn implements Codec.Codable {
         balancer.requestJobSizeUpdate(job.getId(), 0);
     }
 
-    private void quietBackgroundPost(String threadName, final String url, final byte[] post) {
-        new Thread(threadName) {
-            public void run() {
-                try {
-                    HttpUtil.httpPost(url, "javascript/text", post, 60000);
-                } catch (Exception ex) {
-                    log.warn("", ex);
+
+    private static class BackgroundPost implements Runnable {
+
+        private final String jobId;
+        private final String state;
+        private final String url;
+        private final byte[] post;
+
+        BackgroundPost(String jobId, String state, String url, byte[] post) {
+            this.jobId = jobId;
+            this.state = state;
+            this.url = url;
+            this.post = post;
+        }
+
+        @Override
+        public void run() {
+            try {
+                HttpUtil.httpPost(url, "javascript/text", post, 60000);
+            } catch (IOException ex) {
+                log.error("IOException when attempting to contact \"" +
+                          url + "\" in background task \"" + jobId + " " + state + "\"", ex);
+                Throwable cause = ex.getCause();
+                if (cause != null) {
+                    log.error("Caused by ", cause);
                 }
+                emailNotification(jobId, state, ex);
             }
-        }.start();
+        }
+    }
+
+    private void quietBackgroundPost(String jobId, String state, String url, byte[] post) {
+        BackgroundPost task = new BackgroundPost(jobId, state, url, post);
+        try {
+            backgroundService.submit(task);
+        } catch (RejectedExecutionException ex) {
+            log.error("Unable to submit task \"" + jobId + " " + state + "\" for execution", ex);
+            emailNotification(jobId, state, ex);
+        }
     }
 
     /**
