@@ -147,8 +147,8 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     }
 
     /**
-     * The implementation of {@link com.addthis.hydra.data.tree.TreeNode#requireEditable()}
-     * allows the editing of deleted nodes. So we're going to continue to support that behavior.
+     * The legacy implementation of requireEditable() allows the editing
+     * of deleted nodes. So we're going to continue to support that behavior.
      */
     void requireEditable() {
         int count = leases.get();
