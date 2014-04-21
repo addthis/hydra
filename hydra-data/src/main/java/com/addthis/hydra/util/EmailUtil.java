@@ -18,6 +18,7 @@ import java.io.OutputStreamWriter;
 import org.slf4j.Logger;
 
 import org.slf4j.LoggerFactory;
+
 /**
  * simple util to send emails
  */
