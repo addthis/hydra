@@ -38,6 +38,9 @@ import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.ning.compress.lzf.LZFDecoder;
 import com.ning.compress.lzf.LZFEncoder;
 import com.ning.compress.lzf.LZFException;
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Timer;
+import com.yammer.metrics.core.TimerContext;
 
 /**
  * An abstract class for storing spawn data in a jdbc-compatible database. Implementations differ primarily in their
@@ -58,6 +61,9 @@ public abstract class JdbcDataStore implements SpawnDataStore {
     /* Configuration parameters for the jdbc connection pool. */
     private static final int minPoolSize = Parameter.intValue("sql.datastore.minpoolsize", 10);
     private static final int maxPoolSize = Parameter.intValue("sql.datastore.maxpoolsize", 20);
+
+    private static final Timer insertTimer = Metrics.newTimer(JdbcDataStore.class, "insertTime");
+    private static final Timer getTimer = Metrics.newTimer(JdbcDataStore.class, "getTime");
 
     protected final String tableName;
     private final ComboPooledDataSource cpds;
@@ -114,13 +120,22 @@ public abstract class JdbcDataStore implements SpawnDataStore {
      */
     protected abstract void runInsert(String path, String value, String childId) throws SQLException;
 
+    private ResultSet executeAndTimeQuery(PreparedStatement preparedStatement) throws SQLException {
+        TimerContext timerContext = getTimer.time();
+        try {
+            return preparedStatement.executeQuery();
+        } finally {
+            timerContext.stop();
+        }
+    }
+
     @Override
     public String get(String path) {
         try (Connection connection = getConnection()){
             PreparedStatement preparedStatement = connection.prepareStatement("select " + valueKey + " from " + tableName + " where " + pathKey + "=? and " + childKey + "=?");
             preparedStatement.setString(1, path);
             preparedStatement.setString(2, blankChildId);
-            return getSingleResult(preparedStatement.executeQuery());
+            return getSingleResult(executeAndTimeQuery(preparedStatement));
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -152,7 +167,7 @@ public abstract class JdbcDataStore implements SpawnDataStore {
                 preparedStatement.setString(j++, path);
             }
             preparedStatement.setString(j, blankChildId);
-            ResultSet resultSet = preparedStatement.executeQuery();
+            ResultSet resultSet = executeAndTimeQuery(preparedStatement);
             resultSet.next();
             do {
                 Blob blob =  resultSet.getBlob(valueKey);
@@ -170,7 +185,12 @@ public abstract class JdbcDataStore implements SpawnDataStore {
         if (path.length() > maxPathLength || (childId != null && childId.length() > maxPathLength)) {
             throw new IllegalArgumentException("Input path longer than max of " + maxPathLength);
         }
-        runInsert(path, value, childId);
+        TimerContext timerContext = insertTimer.time();
+        try {
+            runInsert(path, value, childId);
+        } finally {
+            timerContext.stop();
+        }
     }
 
     @Override
@@ -253,7 +273,7 @@ public abstract class JdbcDataStore implements SpawnDataStore {
             PreparedStatement preparedStatement = connection.prepareStatement("select " + valueKey + " from " + tableName + " where " + pathKey + "=? and " + childKey + "=?");
             preparedStatement.setString(1, parent);
             preparedStatement.setString(2, childId);
-            return getSingleResult(preparedStatement.executeQuery());
+            return getSingleResult(executeAndTimeQuery(preparedStatement));
         }
     }
 
@@ -286,7 +306,7 @@ public abstract class JdbcDataStore implements SpawnDataStore {
     }
 
     protected ResultSet getResultsForQuery(PreparedStatement preparedStatement) throws SQLException {
-        ResultSet resultSet = preparedStatement.executeQuery();
+        ResultSet resultSet = executeAndTimeQuery(preparedStatement);
         boolean foundRows = resultSet.next();
         if (!foundRows) {
             return null;
