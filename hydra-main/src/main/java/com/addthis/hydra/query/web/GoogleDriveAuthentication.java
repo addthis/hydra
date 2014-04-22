@@ -127,15 +127,18 @@ public class GoogleDriveAuthentication {
      * @return hostname
      */
     private static String generateTargetHostName() {
+        String result;
         if (hostname == null) {
-            return "localhost";
-        }
-        int index = hostname.indexOf('.');
-        if (index >= 0 && gdriveDomain != null) {
-            return hostname.substring(0, index + 1) + gdriveDomain;
+            result = "localhost";
         } else {
-            return hostname;
+            int index = hostname.indexOf('.');
+            if (index >= 0 && gdriveDomain != null) {
+                result = hostname.substring(0, index) + gdriveDomain;
+            } else {
+                result = hostname;
+            }
         }
+        return result;
     }
 
     /**
