@@ -29,6 +29,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
+/**
+ * @user-reference
+ */
 public final class TimeField implements Codec.SuperCodable {
 
     private final Logger log = LoggerFactory.getLogger(TimeField.class);
@@ -60,10 +63,28 @@ public final class TimeField implements Codec.SuperCodable {
         return timeZone;
     }
 
+    /**
+     * Field within the bundle to interpret as a time value.
+     * This field is required.
+     */
     @Codec.Set(codable = true, required = true)
     private String field;
+
+    /**
+     * Format for a time value. Specify "native"
+     * for unix milliseconds in base 10 format.
+     * Specify "unixmillis:NN" for unix milliseconds
+     * in base NN format. Otherwise interpret the
+     * value as a
+     * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html">DateTimeFormat</a>.
+     * This field is required.
+     */
     @Codec.Set(codable = true, required = true)
     private String format;
+
+    /**
+     * Optionally specify the timezone. Default is null.
+     */
     @Codec.Set(codable = true)
     private String timeZone;
 
