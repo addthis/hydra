@@ -79,7 +79,6 @@ public class OpChangePoints extends AbstractTableOp {
         Long[] data = new Long[result.size()];
         BundleField[] fields = new BundleColumnBinder(result.get(0)).getFields();
         BundleField timeField = fields[timeColumn];
-        BundleField valField = fields[valColumn];
         for (int i = 0; i < result.size(); i++) {
             data[i] = result.get(i).getValue(fields[valColumn]).asLong().getLong();
         }
