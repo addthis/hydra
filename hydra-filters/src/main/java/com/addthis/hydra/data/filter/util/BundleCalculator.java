@@ -20,6 +20,9 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import java.text.NumberFormat;
+import java.text.ParseException;
+
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.Bundle;
@@ -173,6 +176,33 @@ public class BundleCalculator {
         }
     }
 
+    /**
+     * If the value object contains one or more "," characters then attempt
+     * to parse it as an array. Otherwise assume the input is a number.
+     */
+    private void insertNumbers(LinkedList<ValueNumber> stack, ValueObject input) {
+        try {
+            String targetString = input.asString().toString();
+            if (targetString.indexOf(',') >= 0) {
+                String[] targets = targetString.split(",");
+                for (int i = 0; i < targets.length; i++) {
+                    Number number = NumberFormat.getInstance().parse(targets[i]);
+                    if (number instanceof Long) {
+                        stack.push(ValueFactory.create(number.longValue()));
+                    } else if (number instanceof Double) {
+                        stack.push(ValueFactory.create(number.doubleValue()));
+                    } else {
+                        throw new IllegalStateException(number + " is neither Long nor Double");
+                    }
+                }
+            } else {
+                stack.push(input.asNumber());
+            }
+        } catch (ParseException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
     public Bundle calculate(Bundle line) {
         LinkedList<ValueNumber> stack = new LinkedList<ValueNumber>();
         long maxcol = line.getCount() - 1;
@@ -228,12 +258,16 @@ public class BundleCalculator {
                 case OP_VAL:
                     stack.push(op.val.asNumber());
                     break;
-                case OP_COLVAL:
-                    stack.push(getSourceColumnBinder(line).getColumn(line, (int) op.val.asLong().getLong()).asNumber());
+                case OP_COLVAL: {
+                    ValueObject target = getSourceColumnBinder(line).getColumn(line, (int) op.val.asLong().getLong());
+                    insertNumbers(stack, target);
                     break;
-                case OP_COLNAMEVAL:
-                    stack.push(line.getValue(line.getFormat().getField(op.val.toString())).asNumber());
+                }
+                case OP_COLNAMEVAL: {
+                    ValueObject target = line.getValue(line.getFormat().getField(op.val.toString()));
+                    insertNumbers(stack, target);
                     break;
+                }
                 case OP_DUP:
                     stack.push(stack.peek());
                     break;
