@@ -107,12 +107,12 @@ public class FindChangePoints implements Codec.Codable {
     }
 
     private static List<ChangePoint> findAndSmoothOverPeaks(Long[] data, int minChange, double minZscore, int width) {
-        ArrayList<ChangePoint> rvList = new ArrayList<ChangePoint>();
+        ArrayList<ChangePoint> rvList = new ArrayList<>();
         for (int i = 0; i < data.length; i++) {
             int leftEndpoint = Math.max(0, i - width);
             int rightEndpoint = Math.min(i + width, data.length);
             Long[] neighborhood = Arrays.copyOfRange(data, leftEndpoint, rightEndpoint);
-            Long[] neighborhoodWithout = (Long[]) ArrayUtils.addAll(Arrays.copyOfRange(data, leftEndpoint, i), Arrays.copyOfRange(data, i + 1, rightEndpoint));
+            Long[] neighborhoodWithout = ArrayUtils.addAll(Arrays.copyOfRange(data, leftEndpoint, i), Arrays.copyOfRange(data, i + 1, rightEndpoint));
             if (sd(neighborhood) > minZscore * sd(neighborhoodWithout)) {
                 double change = data[i] - mean(neighborhoodWithout);
                 if (Math.abs(change) > minChange) {
