@@ -32,6 +32,7 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
+import com.addthis.bundle.value.ValueString;
 
 import com.google.common.primitives.Doubles;
 
@@ -246,18 +247,26 @@ public class BundleCalculator {
      */
     private void insertNumbers(LinkedList<ValueNumber> stack, ValueObject input) {
         try {
-            String targetString = input.asString().toString();
-            if (targetString.indexOf(',') >= 0) {
-                String[] targets = targetString.split(",");
-                for (int i = 0; i < targets.length; i++) {
-                    Number number = NumberFormat.getInstance().parse(targets[i]);
-                    if (number instanceof Long) {
-                        stack.push(ValueFactory.create(number.longValue()));
-                    } else if (number instanceof Double) {
-                        stack.push(ValueFactory.create(number.doubleValue()));
-                    } else {
-                        throw new IllegalStateException(number + " is neither Long nor Double");
+            /**
+             *  When all custom value types implement the asString() method correctly
+             *  then the (input instanceof ValueString) test can be removed.
+             **/
+            if (input instanceof ValueString) {
+                String targetString = input.asString().toString();
+                if (targetString.indexOf(',') >= 0) {
+                    String[] targets = targetString.split(",");
+                    for (int i = 0; i < targets.length; i++) {
+                        Number number = NumberFormat.getInstance().parse(targets[i]);
+                        if (number instanceof Long) {
+                            stack.push(ValueFactory.create(number.longValue()));
+                        } else if (number instanceof Double) {
+                            stack.push(ValueFactory.create(number.doubleValue()));
+                        } else {
+                            throw new IllegalStateException(number + " is neither Long nor Double");
+                        }
                     }
+                } else {
+                    stack.push(input.asNumber());
                 }
             } else {
                 stack.push(input.asNumber());
