@@ -83,94 +83,152 @@ public class BundleCalculator {
         String op[] = Strings.splitArray(args, ",");
         ops = new ArrayList<>(op.length);
         for (String o : op) {
-            if (o.equals("+") || o.equals("add")) {
-                ops.add(new MathOp(Operation.OP_ADD, null));
-            } else if (o.equals("-") || o.equals("sub")) {
-                ops.add(new MathOp(Operation.OP_SUB, null));
-            } else if (o.equals("*") || o.equals("mult") || o.equals("prod")) {
-                ops.add(new MathOp(Operation.OP_MULT, null));
-            } else if (o.equals("dmult") || o.equals("dprod")) {
-                ops.add(new MathOp(Operation.OP_DMULT, null));
-            } else if (o.equals("/") || o.equals("div")) {
-                ops.add(new MathOp(Operation.OP_DIV, null));
-            } else if (o.equals("ddiv")) {
-                ops.add(new MathOp(Operation.OP_DDIV, null));
-            } else if (o.equals("log")) {
-                ops.add(new MathOp(Operation.OP_LOG, null));
-            } else if (o.equals("%") || o.equals("rem")) {
-                ops.add(new MathOp(Operation.OP_REM, null));
-            } else if (o.equals("=") || o.equals("s") || o.equals("set")) {
-                ops.add(new MathOp(Operation.OP_SET, null));
-            } else if (o.equals("x") || o.equals("swap")) {
-                ops.add(new MathOp(Operation.OP_SWAP, null));
-            } else if (o.equals("d") || o.equals("dup")) {
-                ops.add(new MathOp(Operation.OP_DUP, null));
-            } else if (o.equals(">") || o.equals("gt")) {
-                ops.add(new MathOp(Operation.OP_GT, null));
-            } else if (o.equals(">=") || o.equals("gteq")) {
-                ops.add(new MathOp(Operation.OP_GT_EQ, null));
-            } else if (o.equals("<") || o.equals("lt")) {
-                ops.add(new MathOp(Operation.OP_LT, null));
-            } else if (o.equals("<=") || o.equals("lteq")) {
-                ops.add(new MathOp(Operation.OP_LT_EQ, null));
-            } else if (o.equals("eq")) {
-                ops.add(new MathOp(Operation.OP_EQ, null));
-            } else if (o.equals("toi") || o.equals("toint")) {
-                ops.add(new MathOp(Operation.OP_TOINT, null));
-            } else if (o.equals("tof") || o.equals("tofloat")) {
-                ops.add(new MathOp(Operation.OP_TOFLOAT, null));
-            } else if (o.equals("out") || o.equals("shiftout")) {
-                ops.add(new MathOp(Operation.OP_SHIFTOUT, null));
-            } else if (o.equals("sqrt")) {
-                ops.add(new MathOp(Operation.OP_SQRT, null));
-            } else if (o.equals("diverr")) {
-                diverr = true;
-            } else if (o.equals(">>") || o.equals("dgt")) {
-                ops.add(new MathOp(Operation.OP_DGT, null));
-            } else if (o.equals(">>=") || o.equals("dgteq")) {
-                ops.add(new MathOp(Operation.OP_DGT_EQ, null));
-            } else if (o.equals("<<") || o.equals("dlt")) {
-                ops.add(new MathOp(Operation.OP_DLT, null));
-            } else if (o.equals("<<=") || o.equals("dlteq")) {
-                ops.add(new MathOp(Operation.OP_DLT_EQ, null));
-            } else if (o.equals("==") || o.equals("deq")) {
-                ops.add(new MathOp(Operation.OP_DEQ, null));
-            } else if (o.equals("min")) {
-                ops.add(new MathOp(Operation.OP_MIN, null));
-            } else if (o.equals("max")) {
-                ops.add(new MathOp(Operation.OP_MAX, null));
-            } else if (o.equals("minif")) {
-                ops.add(new MathOp(Operation.OP_MINIF, null));
-            } else if (o.equals("maxif")) {
-                ops.add(new MathOp(Operation.OP_MAXIF, null));
-            } else if (o.equals("abs")) {
-                ops.add(new MathOp(Operation.OP_ABS, null));
-            } else if (o.equals("mean")) {
-                ops.add(new MathOp(Operation.OP_MEAN, null));
-            } else if (o.equals("variance")) {
-                ops.add(new MathOp(Operation.OP_VARIANCE, null));
-            } else {
-                if (o.startsWith("c")) {
-                    String cols[] = Strings.splitArray(o.substring(1), ":");
-                    for (String col : cols) {
-                        ops.add(new MathOp(Operation.OP_COLVAL, ValueFactory.create(col)));
-                    }
-                } else if (o.startsWith("C")) {
-                    String cols[] = Strings.splitArray(o.substring(1), ":");
-                    for (String col : cols) {
-                        ops.add(new MathOp(Operation.OP_COLNAMEVAL, ValueFactory.create(col)));
-                    }
-                } else if (o.startsWith("n")) {
-                    String nums[] = Strings.splitArray(o.substring(1), ":");
-                    for (String num : nums) {
-                        if (num.indexOf(".") >= 0) {
-                            ops.add(new MathOp(Operation.OP_VAL, ValueFactory.create(Double.parseDouble(num))));
-                        } else {
-                            ops.add(new MathOp(Operation.OP_VAL, ValueFactory.create(Long.parseLong(num))));
+            switch (o) {
+                case "+":
+                case "add":
+                    ops.add(new MathOp(Operation.OP_ADD, null));
+                    break;
+                case "-":
+                case "sub":
+                    ops.add(new MathOp(Operation.OP_SUB, null));
+                    break;
+                case "*":
+                case "mult":
+                case "prod":
+                    ops.add(new MathOp(Operation.OP_MULT, null));
+                    break;
+                case "dmult":
+                case "dprod":
+                    ops.add(new MathOp(Operation.OP_DMULT, null));
+                    break;
+                case "/":
+                case "div":
+                    ops.add(new MathOp(Operation.OP_DIV, null));
+                    break;
+                case "ddiv":
+                    ops.add(new MathOp(Operation.OP_DDIV, null));
+                    break;
+                case "log":
+                    ops.add(new MathOp(Operation.OP_LOG, null));
+                    break;
+                case "%":
+                case "rem":
+                    ops.add(new MathOp(Operation.OP_REM, null));
+                    break;
+                case "=":
+                case "s":
+                case "set":
+                    ops.add(new MathOp(Operation.OP_SET, null));
+                    break;
+                case "x":
+                case "swap":
+                    ops.add(new MathOp(Operation.OP_SWAP, null));
+                    break;
+                case "d":
+                case "dup":
+                    ops.add(new MathOp(Operation.OP_DUP, null));
+                    break;
+                case ">":
+                case "gt":
+                    ops.add(new MathOp(Operation.OP_GT, null));
+                    break;
+                case ">=":
+                case "gteq":
+                    ops.add(new MathOp(Operation.OP_GT_EQ, null));
+                    break;
+                case "<":
+                case "lt":
+                    ops.add(new MathOp(Operation.OP_LT, null));
+                    break;
+                case "<=":
+                case "lteq":
+                    ops.add(new MathOp(Operation.OP_LT_EQ, null));
+                    break;
+                case "eq":
+                    ops.add(new MathOp(Operation.OP_EQ, null));
+                    break;
+                case "toi":
+                case "toint":
+                    ops.add(new MathOp(Operation.OP_TOINT, null));
+                    break;
+                case "tof":
+                case "tofloat":
+                    ops.add(new MathOp(Operation.OP_TOFLOAT, null));
+                    break;
+                case "out":
+                case "shiftout":
+                    ops.add(new MathOp(Operation.OP_SHIFTOUT, null));
+                    break;
+                case "sqrt":
+                    ops.add(new MathOp(Operation.OP_SQRT, null));
+                    break;
+                case "diverr":
+                    diverr = true;
+                    break;
+                case ">>":
+                case "dgt":
+                    ops.add(new MathOp(Operation.OP_DGT, null));
+                    break;
+                case ">>=":
+                case "dgteq":
+                    ops.add(new MathOp(Operation.OP_DGT_EQ, null));
+                    break;
+                case "<<":
+                case "dlt":
+                    ops.add(new MathOp(Operation.OP_DLT, null));
+                    break;
+                case "<<=":
+                case "dlteq":
+                    ops.add(new MathOp(Operation.OP_DLT_EQ, null));
+                    break;
+                case "==":
+                case "deq":
+                    ops.add(new MathOp(Operation.OP_DEQ, null));
+                    break;
+                case "min":
+                    ops.add(new MathOp(Operation.OP_MIN, null));
+                    break;
+                case "max":
+                    ops.add(new MathOp(Operation.OP_MAX, null));
+                    break;
+                case "minif":
+                    ops.add(new MathOp(Operation.OP_MINIF, null));
+                    break;
+                case "maxif":
+                    ops.add(new MathOp(Operation.OP_MAXIF, null));
+                    break;
+                case "abs":
+                    ops.add(new MathOp(Operation.OP_ABS, null));
+                    break;
+                case "mean":
+                    ops.add(new MathOp(Operation.OP_MEAN, null));
+                    break;
+                case "variance":
+                    ops.add(new MathOp(Operation.OP_VARIANCE, null));
+                    break;
+                default: {
+                    if (o.startsWith("c")) {
+                        String cols[] = Strings.splitArray(o.substring(1), ":");
+                        for (String col : cols) {
+                            ops.add(new MathOp(Operation.OP_COLVAL, ValueFactory.create(col)));
                         }
+                    } else if (o.startsWith("C")) {
+                        String cols[] = Strings.splitArray(o.substring(1), ":");
+                        for (String col : cols) {
+                            ops.add(new MathOp(Operation.OP_COLNAMEVAL, ValueFactory.create(col)));
+                        }
+                    } else if (o.startsWith("n")) {
+                        String nums[] = Strings.splitArray(o.substring(1), ":");
+                        for (String num : nums) {
+                            if (num.indexOf(".") >= 0) {
+                                ops.add(new MathOp(Operation.OP_VAL, ValueFactory.create(Double.parseDouble(num))));
+                            } else {
+                                ops.add(new MathOp(Operation.OP_VAL, ValueFactory.create(Long.parseLong(num))));
+                            }
+                        }
+                    } else if (o.startsWith("v")) {
+                        ops.add(new MathOp(Operation.OP_VAL, ValueFactory.create(o.substring(1))));
                     }
-                } else if (o.startsWith("v")) {
-                    ops.add(new MathOp(Operation.OP_VAL, ValueFactory.create(o.substring(1))));
                 }
             }
         }
