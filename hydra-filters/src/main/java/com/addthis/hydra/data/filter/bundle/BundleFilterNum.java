@@ -271,6 +271,15 @@ import com.addthis.hydra.data.filter.util.BundleCalculator;
  * <td>push the value X onto the stack</td>
  * <td>1</td>
  * </tr>
+ * <tr>
+ * <td>"vector"</td>
+ * <td>0</td>
+ * <td>modifies the behavior of the next operation.<br>
+ * Next operation pops all elements off the stack<br>
+ * and pushes a single value onto the stack. Available<br>
+ * for "+", "mult", "dmult", "min", and "max".
+ * <td>0</td>
+ * </tr>
  * </table>
  * <p>Examples:</p>
  * <pre>

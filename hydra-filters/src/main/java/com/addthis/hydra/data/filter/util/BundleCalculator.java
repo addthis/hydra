@@ -37,6 +37,8 @@ import com.google.common.primitives.Doubles;
 
 public class BundleCalculator {
 
+    private static final BundleCalculatorVector vector = BundleCalculatorVector.getSingleton();
+
     private static enum Operation {
         OP_ADD,
         OP_SUB,
@@ -72,7 +74,8 @@ public class BundleCalculator {
         OP_MINIF,
         OP_MAXIF,
         OP_ABS,
-        OP_COLNAMEVAL
+        OP_COLNAMEVAL,
+        OP_VECTOR
     }
 
     private List<MathOp> ops;
@@ -206,6 +209,9 @@ public class BundleCalculator {
                 case "variance":
                     ops.add(new MathOp(Operation.OP_VARIANCE, null));
                     break;
+                case "vector":
+                    ops.add(new MathOp(Operation.OP_VECTOR, null));
+                    break;
                 default: {
                     if (o.startsWith("c")) {
                         String cols[] = Strings.splitArray(o.substring(1), ":");
@@ -265,21 +271,58 @@ public class BundleCalculator {
         LinkedList<ValueNumber> stack = new LinkedList<ValueNumber>();
         long maxcol = line.getCount() - 1;
         for (MathOp op : ops) {
+            ValueNumber v1, v2;
             switch (op.type) {
                 case OP_ADD:
-                    stack.push(stack.pop().sum(stack.pop()));
+                    v1 = stack.pop();
+                    if (v1 == vector) {
+                        v1 = stack.pop();
+                        while (!stack.isEmpty()) {
+                            v1 = v1.sum(stack.pop());
+                        }
+                        stack.push(v1);
+                    } else {
+                        v2 = stack.pop();
+                        stack.push(v1.sum(v2));
+                    }
                     break;
                 case OP_SUB:
-                    ValueNumber v1 = stack.pop();
-                    ValueNumber v2 = stack.pop();
+                    v1 = stack.pop();
+                    v2 = stack.pop();
                     stack.push(v2.diff(v1));
                     break;
-                case OP_MULT:
-                    stack.push(ValueFactory.create(stack.pop().asLong().getLong() * stack.pop().asLong().getLong()));
+                case OP_MULT: {
+                    v1 = stack.pop();
+                    if (v1 == vector) {
+                        v1 = stack.pop();
+                        long mult = v1.asLong().getLong();
+                        while (!stack.isEmpty()) {
+                            mult *= stack.pop().asLong().getLong();
+                        }
+                        stack.push(ValueFactory.create(mult));
+                    } else {
+                        v2 = stack.pop();
+                        long mult = v1.asLong().getLong() * v2.asLong().getLong();
+                        stack.push(ValueFactory.create(mult));
+                    }
                     break;
-                case OP_DMULT:
-                    stack.push(ValueFactory.create(stack.pop().asDouble().getDouble() * stack.pop().asDouble().getDouble()));
+                }
+                case OP_DMULT:  {
+                    v1 = stack.pop();
+                    if (v1 == vector) {
+                        v1 = stack.pop();
+                        double mult = v1.asDouble().getDouble();
+                        while (!stack.isEmpty()) {
+                            mult *= stack.pop().asDouble().getDouble();
+                        }
+                        stack.push(ValueFactory.create(mult));
+                    } else {
+                        v2 = stack.pop();
+                        double mult = v1.asDouble().getDouble() * v2.asDouble().getDouble();
+                        stack.push(ValueFactory.create(mult));
+                    }
                     break;
+                }
                 case OP_DIV:
                     v1 = stack.pop();
                     v2 = stack.pop();
@@ -425,13 +468,29 @@ public class BundleCalculator {
                     break;
                 case OP_MIN:
                     v1 = stack.pop();
-                    v2 = stack.pop();
-                    stack.push(v1.min(v2));
+                    if (v1 == vector) {
+                        v1 = stack.pop();
+                        while (!stack.isEmpty()) {
+                            v1 = v1.min(stack.pop());
+                        }
+                        stack.push(v1);
+                    } else {
+                        v2 = stack.pop();
+                        stack.push(v1.min(v2));
+                    }
                     break;
                 case OP_MAX:
                     v1 = stack.pop();
-                    v2 = stack.pop();
-                    stack.push(v1.max(v2));
+                    if (v1 == vector) {
+                        v1 = stack.pop();
+                        while (!stack.isEmpty()) {
+                            v1 = v1.max(stack.pop());
+                        }
+                        stack.push(v1);
+                    } else {
+                        v2 = stack.pop();
+                        stack.push(v1.max(v2));
+                    }
                     break;
                 case OP_MINIF:
                     v1 = stack.pop();
@@ -479,6 +538,9 @@ public class BundleCalculator {
 
                     break;
                 }
+                case OP_VECTOR:
+                    stack.push(vector);
+                    break;
                 case OP_ABS:
                     v1 = stack.pop();
                     stack.push(ValueFactory.create(Math.abs(v1.asDouble().getDouble())));
