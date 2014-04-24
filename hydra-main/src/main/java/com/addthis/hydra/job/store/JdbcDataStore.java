@@ -89,7 +89,7 @@ public abstract class JdbcDataStore implements SpawnDataStore {
 
     protected Connection getConnection() throws SQLException {
         Connection conn = cpds.getConnection();
-        conn.setAutoCommit(false);
+        conn.setAutoCommit(this.useAutoCommit());
         return conn;
     }
 
@@ -105,7 +105,9 @@ public abstract class JdbcDataStore implements SpawnDataStore {
                                          + childKey + " VARCHAR(" + maxPathLength + "), "
                                          + "PRIMARY KEY (" + pathKey + ", " + childKey + "))"
             ).execute();
-            connection.commit();
+            if (!useAutoCommit()) {
+                connection.commit();
+            }
         }
     }
 
@@ -119,6 +121,8 @@ public abstract class JdbcDataStore implements SpawnDataStore {
      * @throws SQLException
      */
     protected abstract void runInsert(String path, String value, String childId) throws SQLException;
+
+    protected abstract boolean useAutoCommit();
 
     private ResultSet executeAndTimeQuery(PreparedStatement preparedStatement) throws SQLException {
         TimerContext timerContext = getTimer.time();
@@ -286,7 +290,9 @@ public abstract class JdbcDataStore implements SpawnDataStore {
             preparedStatement.setString(1, parent);
             preparedStatement.setString(2, childId);
             preparedStatement.execute();
-            connection.commit();
+            if (!useAutoCommit()) {
+                connection.commit();
+            }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -299,7 +305,9 @@ public abstract class JdbcDataStore implements SpawnDataStore {
             PreparedStatement preparedStatement = connection.prepareStatement(deleteTemplate);
             preparedStatement.setString(1, path);
             preparedStatement.execute();
-            connection.commit();
+            if (!useAutoCommit()) {
+                connection.commit();
+            }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

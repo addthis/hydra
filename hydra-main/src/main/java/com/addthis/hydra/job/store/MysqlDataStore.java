@@ -21,8 +21,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import com.addthis.basis.util.Parameter;
+
 public class MysqlDataStore extends JdbcDataStore {
     private static final String description = "mysql";
+    private static final boolean useAutoCommit = Parameter.boolValue("spawn.sql.mysqlautocommit", true);
     private final String insertTemplate;
 
     public MysqlDataStore(String host, int port, String dbName, String tableName, Properties properties) throws Exception {
@@ -44,9 +47,16 @@ public class MysqlDataStore extends JdbcDataStore {
             preparedStatement.setBlob(2, valueToBlob(value));
             preparedStatement.setString(3, childId != null ? childId : blankChildId);
             preparedStatement.execute();
-            connection.commit();
+            if (!useAutoCommit()) {
+                connection.commit();
+            }
         }
 
+    }
+
+    @Override
+    protected boolean useAutoCommit() {
+        return useAutoCommit;
     }
 
     @Override

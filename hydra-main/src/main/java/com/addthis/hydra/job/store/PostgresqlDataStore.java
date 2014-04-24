@@ -74,6 +74,12 @@ public class PostgresqlDataStore extends JdbcDataStore {
     }
 
     @Override
+    protected boolean useAutoCommit() {
+        // Postgres does not support using autocommit with BLOB objects.
+        return false;
+    }
+
+    @Override
     public String getDescription() {
         return description;
     }
