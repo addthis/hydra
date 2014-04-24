@@ -35,6 +35,7 @@ class JsonBundleEncoder extends AbstractHttpBundleEncoder {
         this.jsonp = jsonp;
         this.jargs = jargs;
         setContentTypeHeader(responseStart, "application/json; charset=utf-8");
+        responseStart.headers().set("Access-Control-Allow-Origin", "*");
     }
 
     @Override

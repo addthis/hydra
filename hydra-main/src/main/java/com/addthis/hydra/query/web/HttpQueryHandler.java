@@ -186,6 +186,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
         boolean jsonp = cbf != null;
         StringBuilderWriter writer = new StringBuilderWriter(50);
         HttpResponse response = HttpUtils.startResponse(writer, cbf, cba);
+        response.headers().add("Access-Control-Allow-Origin", "*");
 
         switch (target) {
             case "/metrics":
