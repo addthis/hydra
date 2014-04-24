@@ -45,6 +45,45 @@ public class TestBundleFilterNum extends TestBundleFilter {
     }
 
     @Test
+    public void testVectorOps() {
+        BundleFilterNum bfn = new BundleFilterNum().setDefine("n1,n2,n3,n4,vector,*,v0,set");
+        Bundle bundle = new ListBundle();
+        bundle.setValue(bundle.getFormat().getField("c0"), ValueFactory.create(0));
+        bfn.filter(bundle);
+        assertEquals("24", bundle.getValue(bundle.getFormat().getField("c0")).toString());
+
+        bfn = new BundleFilterNum().setDefine("n1,n2,n3,n4,vector,+,v0,set");
+        bundle = new ListBundle();
+        bundle.setValue(bundle.getFormat().getField("c0"), ValueFactory.create(0));
+        bfn.filter(bundle);
+        assertEquals("10", bundle.getValue(bundle.getFormat().getField("c0")).toString());
+
+        bfn = new BundleFilterNum().setDefine("n1,n2,n3,n4,vector,min,v0,set");
+        bundle = new ListBundle();
+        bundle.setValue(bundle.getFormat().getField("c0"), ValueFactory.create(0));
+        bfn.filter(bundle);
+        assertEquals("1", bundle.getValue(bundle.getFormat().getField("c0")).toString());
+
+        bfn = new BundleFilterNum().setDefine("n1,n2,n3,n4,vector,max,v0,set");
+        bundle = new ListBundle();
+        bundle.setValue(bundle.getFormat().getField("c0"), ValueFactory.create(0));
+        bfn.filter(bundle);
+        assertEquals("4", bundle.getValue(bundle.getFormat().getField("c0")).toString());
+
+    }
+
+
+    @Test
+    public void testInsertArray() {
+        BundleFilterNum bfn = new BundleFilterNum().setDefine("c0,mean,v1,set");
+        Bundle bundle = new ListBundle();
+        bundle.setValue(bundle.getFormat().getField("c0"), ValueFactory.create("1,2,3,4,5"));
+        bundle.setValue(bundle.getFormat().getField("c1"), ValueFactory.create(0.0));
+        bfn.filter(bundle);
+        assertEquals(ValueFactory.create(3.0), bundle.getValue(bundle.getFormat().getField("c1")));
+    }
+
+    @Test
     public void testMean() {
         BundleFilterNum bfn = new BundleFilterNum().setDefine("n2:3:5:7:11:13:17:19,mean,v0,set");
         Bundle bundle = new ListBundle();
