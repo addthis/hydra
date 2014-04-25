@@ -30,7 +30,8 @@ import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.ReadTreeNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
-import com.addthis.hydra.data.util.ConcurrentKeyTopper;
+import com.addthis.hydra.data.util.KeyTopper;
+
 import com.addthis.basis.util.Varint;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -139,14 +140,14 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
         public DataKeyTop newInstance() {
             DataKeyTop dataKeyTop = new DataKeyTop();
             dataKeyTop.size = size;
-            dataKeyTop.top = new ConcurrentKeyTopper().init(size);
+            dataKeyTop.top = new KeyTopper();
             dataKeyTop.filter = filter;
             return dataKeyTop;
         }
     }
 
     @Codec.Set(codable = true, required = true)
-    private ConcurrentKeyTopper top;
+    private KeyTopper top;
     @Codec.Set(codable = true, required = true)
     private int size;
 
@@ -230,7 +231,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
         if (key != null && key.startsWith("=")) {
             key = key.substring(1);
             if (key.equals("hit") || key.equals("node")) {
-                ConcurrentKeyTopper map = top;
+                KeyTopper map = top;
                 Entry<String, Long>[] top = map.getSortedEntries();
                 ArrayList<DataTreeNode> ret = new ArrayList<>(top.length);
                 for (Entry<String, Long> e : top) {
@@ -296,7 +297,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
 
     @Override
     public void bytesDecode(byte[] b, long version) {
-        top = new ConcurrentKeyTopper();
+        top = new KeyTopper();
         ByteBuf buf = Unpooled.wrappedBuffer(b);
         try {
             int topBytesLength = Varint.readUnsignedVarInt(buf);
@@ -304,8 +305,6 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
                 byte[] topBytes = new byte[topBytesLength];
                 buf.readBytes(topBytes);
                 top.bytesDecode(topBytes, version);
-            } else {
-                top.init();
             }
             size = Varint.readUnsignedVarInt(buf);
         } finally {

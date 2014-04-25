@@ -68,7 +68,7 @@ public class DataLimitTop extends TreeNodeData<DataLimitTop.Config> implements C
             DataLimitTop dc = new DataLimitTop();
             dc.size = size;
             dc.test = test;
-            dc.top = new KeyTopper().init().setLossy(true);
+            dc.top = new KeyTopper();
             return dc;
         }
     }
