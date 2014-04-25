@@ -78,7 +78,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Cod
      *
      * <pre>"$" operations support the following commands in the format $+{attachment}={command}:
      *  cdf(x) : the number of values that are less than or equal to the given a cdf evaluated at x
-     *  quantile(x) : the value of the digest for quatile x (x must be between 0 and 1)
+     *  quantile(x) : the value of the digest for quantile x (x must be between 0 and 1)
      * </pre>
      *
      * @user-reference
