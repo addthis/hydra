@@ -14,6 +14,7 @@
 
 package com.addthis.hydra.query.web;
 
+import com.addthis.basis.util.Parameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +29,11 @@ public class QueryServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private static final Logger log = LoggerFactory.getLogger(QueryServerInitializer.class);
 
+    private static final int maxInitialLineLength = Parameter.intValue("queryServerInitializer.maxInitialLineLength", 327680);
+    private static final int maxHeaderSize = Parameter.intValue("queryServerInitializer.maxHeaderSize", 327680);
+    private static final int maxChunkSize = Parameter.intValue("queryServerInitializer.maxChunkSize", 327680);
+    private static final int maxContentLength = Parameter.intValue("queryServerInitializer.maxChunkSize", 327680);
+
     private final HttpQueryHandler httpQueryHandler;
 
     public QueryServerInitializer(HttpQueryHandler httpQueryHandler) {
@@ -38,8 +44,8 @@ public class QueryServerInitializer extends ChannelInitializer<SocketChannel> {
     protected void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
         log.trace("New socket connection {}", ch);
-        pipeline.addLast("decoder", new HttpRequestDecoder(163840,163840,163840));
-        pipeline.addLast("aggregator", new HttpObjectAggregator(163840));
+        pipeline.addLast("decoder", new HttpRequestDecoder(maxInitialLineLength,maxHeaderSize,maxChunkSize));
+        pipeline.addLast("aggregator", new HttpObjectAggregator(maxContentLength));
         pipeline.addLast("encoder", new HttpResponseEncoder());
         // compression is neat, but a little buggy
 //        pipeline.addLast("compressor", new HttpContentCompressor());
