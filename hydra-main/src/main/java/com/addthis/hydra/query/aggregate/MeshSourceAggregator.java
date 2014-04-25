@@ -36,6 +36,7 @@ import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.source.QueryHandle;
+import com.addthis.hydra.data.query.source.QuerySource;
 import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.hydra.query.util.QueryData;
 
@@ -48,7 +49,7 @@ import com.yammer.metrics.core.Counter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MeshSourceAggregator implements com.addthis.hydra.data.query.source.QuerySource {
+public class MeshSourceAggregator implements QuerySource {
 
     static final Logger log = LoggerFactory.getLogger(MeshSourceAggregator.class);
 
