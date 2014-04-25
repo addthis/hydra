@@ -14,23 +14,39 @@
 
 package com.addthis.hydra.query.web;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import java.nio.CharBuffer;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.QueryException;
 
 import static com.addthis.hydra.query.web.HttpUtils.setContentTypeHeader;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.util.CharsetUtil;
 
 class DelimitedBundleEncoder extends AbstractHttpBundleEncoder {
 
     String delimiter;
+
+    List<Bundle> sendBuffer = new ArrayList<>(1000);
 
     DelimitedBundleEncoder(String filename, String delimiter) {
         super();
         this.delimiter = delimiter;
         setContentTypeHeader(responseStart, "application/csv; charset=utf-8");
         responseStart.headers().set("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+    }
+
+    private static ByteBuf encodeString(ByteBufAllocator alloc, CharSequence msg) {
+        return ByteBufUtil.encodeString(alloc, CharBuffer.wrap(msg), CharsetUtil.UTF_8);
     }
 
     public static DelimitedBundleEncoder create(String filename, String format) {
@@ -54,8 +70,22 @@ class DelimitedBundleEncoder extends AbstractHttpBundleEncoder {
         return new DelimitedBundleEncoder(filename, delimiter);
     }
 
+    public static String buildRows(List<Bundle> rows, String delimiter) {
+        int rowEstimate = (rows.get(0).getFormat().getFieldCount() * 12) + 1;
+        StringBuilder stringBuilder = new StringBuilder(rowEstimate * rows.size());
+        for (Bundle row : rows) {
+            buildRow(row, delimiter, stringBuilder);
+        }
+        return stringBuilder.toString();
+    }
+
     public static String buildRow(Bundle row, String delimiter) {
         StringBuilder stringBuilder = new StringBuilder(row.getFormat().getFieldCount() * 12 + 1);
+        buildRow(row, delimiter, stringBuilder);
+        return stringBuilder.toString();
+    }
+
+    public static void buildRow(Bundle row, String delimiter, StringBuilder stringBuilder) {
         int count = 0;
         for (BundleField field : row.getFormat()) {
             ValueObject o = row.getValue(field);
@@ -84,12 +114,33 @@ class DelimitedBundleEncoder extends AbstractHttpBundleEncoder {
             }
         }
         stringBuilder.append("\n");
-        return stringBuilder.toString();
+    }
+
+    @Override
+    public void batchSend(ChannelHandlerContext ctx, List<Bundle> rows) {
+        super.batchSend(ctx, rows);
+        String batchString = buildRows(rows, delimiter);
+        ByteBuf msg = encodeString(ctx.alloc(), batchString);
+        ctx.writeAndFlush(new DefaultHttpContent(msg), ctx.voidPromise());
+    }
+
+    @Override
+    public void sendComplete(ChannelHandlerContext ctx) {
+        super.sendComplete(ctx);
+        if (!sendBuffer.isEmpty()) {
+            batchSend(ctx, sendBuffer);
+        }
+        sendBuffer.clear();
     }
 
     @Override
     public void send(ChannelHandlerContext ctx, Bundle row) {
-        super.send(ctx, row);
-        ctx.writeAndFlush(buildRow(row, delimiter));
+        // don't call super here because our internal batching means batchSend will call it later
+//        super.send(ctx, row);
+        sendBuffer.add(row);
+        if (sendBuffer.size() == 1000) {
+            batchSend(ctx, sendBuffer);
+            sendBuffer.clear();
+        }
     }
 }

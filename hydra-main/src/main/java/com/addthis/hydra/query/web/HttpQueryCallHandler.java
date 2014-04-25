@@ -42,6 +42,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 public final class HttpQueryCallHandler {
 
@@ -121,7 +122,7 @@ public final class HttpQueryCallHandler {
                 sendError(ctx, new HttpResponseStatus(500, "missing job"));
                 return;
             }
-            ctx.pipeline().addLast("stringer", stringer);
+            ctx.pipeline().addLast(ImmediateEventExecutor.INSTANCE, "stringer", stringer);
             switch (format) {
                 case "json":
                     ctx.pipeline().addLast("format", new JsonBundleEncoder(jsonp, jargs));
@@ -133,7 +134,7 @@ public final class HttpQueryCallHandler {
                     ctx.pipeline().addLast("format", GoogleDriveBundleEncoder.create(filename, gdriveAccessToken));
                     break;
                 default:
-                    ctx.pipeline().addLast("format", DelimitedBundleEncoder.create(filename, format));
+                    ctx.pipeline().addLast(ImmediateEventExecutor.INSTANCE, "format", DelimitedBundleEncoder.create(filename, format));
                     break;
             }
             ctx.pipeline().addLast("mqm", querySource);

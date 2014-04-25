@@ -44,7 +44,7 @@ class HtmlBundleEncoder extends AbstractHttpBundleEncoder {
             stringBuilder.append("<td>").append(o).append("</td>");
         }
         stringBuilder.append("</tr>\n");
-        ctx.writeAndFlush(stringBuilder.toString());
+        ctx.writeAndFlush(stringBuilder.toString(), ctx.voidPromise());
     }
 
     @Override

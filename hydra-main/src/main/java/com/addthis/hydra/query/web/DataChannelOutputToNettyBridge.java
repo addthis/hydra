@@ -61,7 +61,7 @@ public class DataChannelOutputToNettyBridge implements DataChannelOutput {
                 }
             }
         }
-        ctx.write(bundle);
+        ctx.write(bundle, ctx.voidPromise());
     }
 
     @Override

@@ -14,6 +14,7 @@
 
 package com.addthis.hydra.query.web;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.bundle.core.Bundle;
@@ -70,6 +71,10 @@ abstract class AbstractHttpBundleEncoder extends ChannelOutboundHandlerAdapter {
             writeStart(ctx);
             writeStarted = true;
         }
+    }
+
+    public void batchSend(ChannelHandlerContext ctx, List<Bundle> rows) {
+        maybeWriteStart(ctx);
     }
 
     public void send(ChannelHandlerContext ctx, Bundle row) {

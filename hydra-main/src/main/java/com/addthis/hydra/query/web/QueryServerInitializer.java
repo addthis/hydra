@@ -42,7 +42,7 @@ public class QueryServerInitializer extends ChannelInitializer<SocketChannel> {
         pipeline.addLast("aggregator", new HttpObjectAggregator(163840));
         pipeline.addLast("encoder", new HttpResponseEncoder());
         // compression is neat, but a little buggy
-//        pipeline.addLast("compressor", new HttpContentCompressor());
+//        pipeline.addLast(ImmediateEventExecutor.INSTANCE, "compressor", new HttpContentCompressor());
         pipeline.addLast("query", httpQueryHandler);
 
     }

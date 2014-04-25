@@ -90,7 +90,7 @@ class JsonBundleEncoder extends AbstractHttpBundleEncoder {
             }
         }
         stringBuilder.append(']');
-        ctx.writeAndFlush(stringBuilder.toString());
+        ctx.writeAndFlush(stringBuilder.toString(), ctx.voidPromise());
     }
 
     @Override
