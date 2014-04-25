@@ -32,7 +32,7 @@ public class QueryServerInitializer extends ChannelInitializer<SocketChannel> {
     private static final int maxInitialLineLength = Parameter.intValue("queryServerInitializer.maxInitialLineLength", 327680);
     private static final int maxHeaderSize = Parameter.intValue("queryServerInitializer.maxHeaderSize", 327680);
     private static final int maxChunkSize = Parameter.intValue("queryServerInitializer.maxChunkSize", 327680);
-    private static final int maxContentLength = Parameter.intValue("queryServerInitializer.maxChunkSize", 327680);
+    private static final int maxContentLength = Parameter.intValue("queryServerInitializer.maxContentSize", 3276800);
 
     private final HttpQueryHandler httpQueryHandler;
 
