@@ -23,7 +23,7 @@ import java.util.Set;
 
 import com.addthis.basis.util.Files;
 
-import com.addthis.hydra.query.util.MeshSourceAggregator;
+import com.addthis.hydra.query.aggregate.MeshSourceAggregator;
 import com.addthis.hydra.query.util.QueryData;
 import com.addthis.meshy.service.file.FileReference;
 

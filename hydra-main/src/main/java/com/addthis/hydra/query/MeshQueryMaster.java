@@ -46,7 +46,7 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobConfigManager;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
-import com.addthis.hydra.query.util.MeshSourceAggregator;
+import com.addthis.hydra.query.aggregate.MeshSourceAggregator;
 import com.addthis.hydra.query.util.QueryData;
 import com.addthis.hydra.query.web.DataChannelOutputToNettyBridge;
 import com.addthis.meshy.MeshyServer;
