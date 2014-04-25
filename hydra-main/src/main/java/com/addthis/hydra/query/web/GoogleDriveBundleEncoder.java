@@ -64,7 +64,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
-class GoogleDriveBundleEncoder extends AbstractHttpBundleEncoder {
+class GoogleDriveBundleEncoder extends AbstractBufferingHttpBundleEncoder {
 
     private static final Logger log = LoggerFactory.getLogger(GoogleDriveBundleEncoder.class);
 
@@ -138,7 +138,7 @@ class GoogleDriveBundleEncoder extends AbstractHttpBundleEncoder {
     }
 
     private GoogleDriveBundleEncoder(String filename, String accessToken) throws IOException {
-        super();
+        super(50, 1); // aggressively flush updates on stream progress
         this.filename = filename;
         this.accessToken = accessToken;
         this.httpClient = HttpClients.createDefault();
@@ -156,18 +156,21 @@ class GoogleDriveBundleEncoder extends AbstractHttpBundleEncoder {
     }
 
     @Override
-    public void writeStart(ChannelHandlerContext ctx) {
-        super.writeStart(ctx);
-        ctx.writeAndFlush("Begin sending rows to Google drive.<br>");
+    protected void appendResponseStartToString(StringBuilder sendBuffer) {
+        sendBuffer.append("Begin sending rows to Google drive.<br>");
+    }
+
+    @Override
+    public void appendBundleToString(Bundle row, StringBuilder sendBuffer) {
+        if (++count % bundlePrintInterval == 0) {
+            sendBuffer.append("Sending row " + count + " to Google drive.<br>");
+        }
     }
 
     @Override
     public void send(ChannelHandlerContext ctx, Bundle row) {
         super.send(ctx, row);
         printStream.print(DelimitedBundleEncoder.buildRow(row, ","));
-        if (++count % bundlePrintInterval == 0) {
-            ctx.writeAndFlush("Sending row " + count + " to Google drive.<br>");
-        }
     }
 
     /**
@@ -186,7 +189,7 @@ class GoogleDriveBundleEncoder extends AbstractHttpBundleEncoder {
     /**
      * Send an HTML formatted error message.
      */
-    private void writeErrorMessage(ChannelHandlerContext ctx,
+    private static void writeErrorMessage(ChannelHandlerContext ctx,
             CloseableHttpResponse httpResponse, String message, String body) {
         ctx.write(message);
         ctx.write(httpResponse.getStatusLine().getReasonPhrase());

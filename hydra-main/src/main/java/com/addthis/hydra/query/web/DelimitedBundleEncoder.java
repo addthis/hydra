@@ -20,9 +20,8 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.QueryException;
 
 import static com.addthis.hydra.query.web.HttpUtils.setContentTypeHeader;
-import io.netty.channel.ChannelHandlerContext;
 
-class DelimitedBundleEncoder extends AbstractHttpBundleEncoder {
+class DelimitedBundleEncoder extends AbstractBufferingHttpBundleEncoder {
 
     String delimiter;
 
@@ -57,6 +56,11 @@ class DelimitedBundleEncoder extends AbstractHttpBundleEncoder {
 
     public static String buildRow(Bundle row, String delimiter) {
         StringBuilder stringBuilder = new StringBuilder(row.getFormat().getFieldCount() * 12 + 1);
+        buildRow(row, delimiter, stringBuilder);
+        return stringBuilder.toString();
+    }
+
+    public static void buildRow(Bundle row, String delimiter, StringBuilder stringBuilder) {
         int count = 0;
         for (BundleField field : row.getFormat()) {
             ValueObject o = row.getValue(field);
@@ -85,12 +89,10 @@ class DelimitedBundleEncoder extends AbstractHttpBundleEncoder {
             }
         }
         stringBuilder.append("\n");
-        return stringBuilder.toString();
     }
 
     @Override
-    public void send(ChannelHandlerContext ctx, Bundle row) {
-        super.send(ctx, row);
-        ctx.writeAndFlush(buildRow(row, delimiter));
+    public void appendBundleToString(Bundle row, StringBuilder stringBuilder) {
+        buildRow(row, delimiter, stringBuilder);
     }
 }

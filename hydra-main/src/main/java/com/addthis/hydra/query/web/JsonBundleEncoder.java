@@ -21,12 +21,10 @@ import com.addthis.bundle.value.ValueObject;
 import com.google.common.annotations.VisibleForTesting;
 
 import static com.addthis.hydra.query.web.HttpUtils.setContentTypeHeader;
-import io.netty.channel.ChannelHandlerContext;
 
-class JsonBundleEncoder extends AbstractHttpBundleEncoder {
+class JsonBundleEncoder extends AbstractBufferingHttpBundleEncoder {
 
     static final char[] hex = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
-    int rows = 0;
     private final String jsonp;
     private final String jargs;
 
@@ -39,34 +37,32 @@ class JsonBundleEncoder extends AbstractHttpBundleEncoder {
     }
 
     @Override
-    public void writeStart(ChannelHandlerContext ctx) {
-        super.writeStart(ctx);
-        StringBuilder stringBuilder = new StringBuilder(3);
+    public void appendResponseStartToString(StringBuilder sendBuffer) {
         if (jsonp != null) {
-            stringBuilder.append(jsonp);
-            stringBuilder.append('(');
+            sendBuffer.append(jsonp);
+            sendBuffer.append('(');
             if (jargs != null) {
-                stringBuilder.append(jargs);
-                stringBuilder.append(',');
+                sendBuffer.append(jargs);
+                sendBuffer.append(',');
             }
         }
-        stringBuilder.append('[');
-        ctx.write(stringBuilder.toString());
+        sendBuffer.append('[');
     }
 
     @Override
-    public void send(ChannelHandlerContext ctx, Bundle row) {
-        super.send(ctx, row);
-        StringBuilder stringBuilder = new StringBuilder(row.getFormat().getFieldCount() * 13 + 3);
-        if (rows++ > 0) {
-            stringBuilder.append(',');
-        }
-        stringBuilder.append('[');
+    public void appendBundleToString(Bundle row, StringBuilder sendBuffer) {
+        sendBuffer.append(',');
+        appendInitialBundleToString(row, sendBuffer);
+    }
+
+    @Override
+    protected void appendInitialBundleToString(Bundle firstRow, StringBuilder sendBuffer) {
+        sendBuffer.append('[');
         int count = 0;
-        for (BundleField field : row.getFormat()) {
-            ValueObject o = row.getValue(field);
+        for (BundleField field : firstRow.getFormat()) {
+            ValueObject o = firstRow.getValue(field);
             if (count++ > 0) {
-                stringBuilder.append(',');
+                sendBuffer.append(',');
             }
             if (o == null) {
                 continue;
@@ -79,34 +75,32 @@ class JsonBundleEncoder extends AbstractHttpBundleEncoder {
             switch (type) {
                 case INT:
                 case FLOAT:
-                    stringBuilder.append(o.toString());
+                    sendBuffer.append(o.toString());
                     break;
                 case STRING:
-                    stringBuilder.append('"');
-                    stringBuilder.append(jsonEncode(o.toString()));
-                    stringBuilder.append('"');
+                    sendBuffer.append('"');
+                    sendBuffer.append(jsonEncode(o.toString()));
+                    sendBuffer.append('"');
                     break;
                 default:
                     break;
             }
         }
-        stringBuilder.append(']');
-        ctx.writeAndFlush(stringBuilder.toString());
+        sendBuffer.append(']');
     }
 
     @Override
-    public void sendComplete(ChannelHandlerContext ctx) {
-        super.sendComplete(ctx);
-        ctx.write("]");
+    protected void appendResponseEndToString(StringBuilder sendBuffer) {
+        sendBuffer.append("]");
         if (jsonp != null) {
-            ctx.write(");");
+            sendBuffer.append(");");
         }
     }
 
     /* convert string to json valid format */
     @VisibleForTesting
     static String jsonEncode(String s) {
-        char ca[] = s.toCharArray();
+        char[] ca = s.toCharArray();
         int alt = 0;
         for (int i = 0; i < ca.length; i++) {
             if (ca[i] < 48 || ca[i] > 90) {
@@ -142,7 +136,7 @@ class JsonBundleEncoder extends AbstractHttpBundleEncoder {
                         if (c < 32 || c > 255) {
                             sb.append("\\u");
                             long v = c;
-                            char cb[] = new char[4];
+                            char[] cb = new char[4];
                             for (int j = 0; j < 4; j++) {
                                 cb[3 - j] = hex[(int) (v & 0xf)];
                                 v >>= 4;
