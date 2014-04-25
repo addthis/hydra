@@ -30,6 +30,7 @@ class DelimitedBundleEncoder extends AbstractHttpBundleEncoder {
         super();
         this.delimiter = delimiter;
         setContentTypeHeader(responseStart, "application/csv; charset=utf-8");
+        responseStart.headers().set("Access-Control-Allow-Origin", "*");
         responseStart.headers().set("Content-Disposition", "attachment; filename=\"" + filename + "\"");
     }
 

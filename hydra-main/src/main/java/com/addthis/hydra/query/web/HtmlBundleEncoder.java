@@ -26,6 +26,7 @@ class HtmlBundleEncoder extends AbstractHttpBundleEncoder {
     HtmlBundleEncoder() {
         super();
         setContentTypeHeader(responseStart, "text/html; charset=utf-8");
+        responseStart.headers().set("Access-Control-Allow-Origin", "*");
     }
 
     @Override
