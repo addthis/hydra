@@ -19,9 +19,8 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
 
 import static com.addthis.hydra.query.web.HttpUtils.setContentTypeHeader;
-import io.netty.channel.ChannelHandlerContext;
 
-class HtmlBundleEncoder extends AbstractHttpBundleEncoder {
+class HtmlBundleEncoder extends AbstractBufferingHttpBundleEncoder {
 
     HtmlBundleEncoder() {
         super();
@@ -29,27 +28,22 @@ class HtmlBundleEncoder extends AbstractHttpBundleEncoder {
     }
 
     @Override
-    public void writeStart(ChannelHandlerContext ctx) {
-        super.writeStart(ctx);
-        ctx.write("<table border=1 cellpadding=1 cellspacing=0>\n");
+    protected void appendResponseStartToString(StringBuilder sendBuffer) {
+        sendBuffer.append("<table border=1 cellpadding=1 cellspacing=0>\n");
     }
 
     @Override
-    public void send(ChannelHandlerContext ctx, Bundle row) {
-        super.send(ctx, row);
-        StringBuilder stringBuilder = new StringBuilder(row.getFormat().getFieldCount() * 20 + 6);
+    public void appendBundleToString(Bundle row, StringBuilder stringBuilder) {
         stringBuilder.append("<tr>");
         for (BundleField field : row.getFormat()) {
             ValueObject o = row.getValue(field);
             stringBuilder.append("<td>").append(o).append("</td>");
         }
         stringBuilder.append("</tr>\n");
-        ctx.writeAndFlush(stringBuilder.toString(), ctx.voidPromise());
     }
 
     @Override
-    public void sendComplete(ChannelHandlerContext ctx) {
-        super.sendComplete(ctx);
-        ctx.write("</table>");
+    protected void appendResponseEndToString(StringBuilder sendBuffer) {
+        sendBuffer.append("</table>");
     }
 }
