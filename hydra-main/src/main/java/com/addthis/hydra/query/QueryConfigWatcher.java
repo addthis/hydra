@@ -16,18 +16,14 @@ package com.addthis.hydra.query;
 import javax.annotation.concurrent.ThreadSafe;
 
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.bark.StringSerializer;
+import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.JobQueryConfig;
 import com.addthis.hydra.job.store.AvailableCache;
 import com.addthis.hydra.job.store.SpawnDataStore;
-
-import com.google.common.util.concurrent.MoreExecutors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +37,8 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PA
  */
 public class QueryConfigWatcher {
 
+    private static final CodecJSON codec = new CodecJSON();
+
     /* How long job config data can live in the cache before being refreshed */
     private static final long queryConfigRefreshMillis = Parameter.longValue("query.config.refresh.millis", 15000);
     /* How many jobIds should be stored in the cache */
@@ -53,9 +51,6 @@ public class QueryConfigWatcher {
 
     /* A LoadingCache used to save configs fetched from the SpawnDataStore */
     private final AvailableCache<JobQueryConfig> configCache;
-
-    /* An Executor that will run the background updates to the configCache */
-    final ExecutorService executor = MoreExecutors.getExitingExecutorService(new ThreadPoolExecutor(2, 2, 1000L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
 
     public QueryConfigWatcher(SpawnDataStore spawnDataStore) {
         this.spawnDataStore = spawnDataStore;
@@ -103,7 +98,17 @@ public class QueryConfigWatcher {
     private JobQueryConfig fetchJobQueryConfig(String jobId) {
         JobQueryConfig jobQueryConfig = new JobQueryConfig();
         String jobConfigPath = SPAWN_JOB_CONFIG_PATH + "/" + jobId + "/queryconfig";
-        return spawnDataStore.loadCodable(jobConfigPath, jobQueryConfig) ? jobQueryConfig : null;
+        String raw = spawnDataStore.get(jobConfigPath);
+        if (raw == null) {
+            return null;
+        }
+        try {
+            codec.decode(jobQueryConfig, StringSerializer.deserialize(raw.getBytes()).getBytes());
+            return jobQueryConfig;
+        } catch (Exception e) {
+            log.warn("Failed to decode query config", e);
+            return null;
+        }
     }
 
     /**

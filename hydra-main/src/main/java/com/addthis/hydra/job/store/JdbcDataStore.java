@@ -29,10 +29,7 @@ import java.sql.SQLException;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecExceptionLineNumber;
 import com.addthis.codec.CodecJSON;
-import com.addthis.maljson.JSONException;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.ning.compress.lzf.LZFDecoder;
@@ -42,12 +39,15 @@ import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
 
+import org.slf4j.Logger;
+
 /**
  * An abstract class for storing spawn data in a jdbc-compatible database. Implementations differ primarily in their
  * data table setup and in their implementation of the 'upsert' operation.
  */
 public abstract class JdbcDataStore implements SpawnDataStore {
     private static final CodecJSON codecJSON = new CodecJSON();
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(JdbcDataStore.class);
 
     /* Column names. In the standard implementations, path and child are VARCHAR(200) and value is a BLOB or TEXT. */
     protected static final String pathKey = "path";
@@ -219,22 +219,6 @@ public abstract class JdbcDataStore implements SpawnDataStore {
     public void putAsChild(String parent, String childId, String value) throws Exception {
         checkValidChildId(childId);
         insert(parent, value, childId);
-    }
-
-    @Override
-    public <T extends Codec.Codable> boolean loadCodable(String path, T shell) {
-        String val = get(path);
-        if (val == null) {
-            return false;
-        }
-        try {
-            codecJSON.decode(shell, path.getBytes());
-            return true;
-        } catch (CodecExceptionLineNumber codecExceptionLineNumber) {
-            return false;
-        } catch (JSONException e) {
-            return false;
-        }
     }
 
     protected Blob getValueBlobFromResultSet(ResultSet resultSet) throws SQLException {

@@ -16,8 +16,6 @@ package com.addthis.hydra.job.store;
 import java.util.List;
 import java.util.Map;
 
-import com.addthis.codec.Codec;
-
 /**
  * This interface describes methods for storing key/value data within various storage solutions
  */
@@ -64,16 +62,6 @@ public interface SpawnDataStore {
      * @throws Exception If there is a problem writing to the path
      */
     public abstract void putAsChild(String parent, String childId, String value) throws Exception;
-
-    /**
-     * Load the value of a path into a Codable object
-     *
-     * @param path  The location to read from
-     * @param shell A Shell codable to deserialize onto
-     * @param <T>   The particular type of Codable
-     * @return True if the value was successfully loaded
-     */
-    public abstract <T extends Codec.Codable> boolean loadCodable(String path, T shell);
 
     /**
      * Get the value of a certain child of a certain path
