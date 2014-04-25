@@ -16,8 +16,6 @@ package com.addthis.hydra.query.aggregate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -39,6 +37,7 @@ import com.addthis.hydra.data.query.source.QueryHandle;
 import com.addthis.hydra.data.query.source.QuerySource;
 import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.hydra.query.util.QueryData;
+import com.addthis.hydra.query.web.DataChannelOutputToNettyBridge;
 
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -49,7 +48,10 @@ import com.yammer.metrics.core.Counter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MeshSourceAggregator implements QuerySource {
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+
+public class MeshSourceAggregator extends SimpleChannelInboundHandler<Query> implements QuerySource {
 
     static final Logger log = LoggerFactory.getLogger(MeshSourceAggregator.class);
 
@@ -132,6 +134,21 @@ public class MeshSourceAggregator implements QuerySource {
     }
 
     @Override
+    protected void channelRead0(ChannelHandlerContext ctx, Query msg) throws Exception {
+        messageReceived(ctx, msg); // redirect to more sensible netty5 naming scheme
+    }
+
+    protected void messageReceived(ChannelHandlerContext ctx, Query msg) throws Exception {
+        DataChannelOutput consumer = new DataChannelOutputToNettyBridge(ctx);
+        try {
+            query(msg, consumer); // ignore query handle
+        } catch (Exception ex) {
+//            handleError(msg);
+            consumer.sourceError(new QueryException(ex));
+        }
+    }
+
+    @Override
     public QueryHandle query(Query query, DataChannelOutput consumer) throws QueryException {
         try {
             final String queryParallel = query.getParameter("parallel");
@@ -149,7 +166,7 @@ public class MeshSourceAggregator implements QuerySource {
                             requestQueryData(queryData, query);
                         }
                     } else {
-                        QueryData chosenQueryData = allocateQueryTaskLegacy(taskPerHostCount, entry.getValue(), hostMap);
+                        QueryData chosenQueryData = TaskAllocator.allocateQueryTaskLegacy(taskPerHostCount, entry.getValue(), hostMap);
                         entry.getValue().remove(chosenQueryData);
                         requestQueryData(chosenQueryData, query);
                     }
@@ -181,78 +198,4 @@ public class MeshSourceAggregator implements QuerySource {
     public boolean isClosed() {
         return false;
     }
-
-
-    /**
-     * Allocate the query task to the best available host.  Currently we only try
-     * to evenly distribute the queries amongst available hosts.  For example if hosts
-     * 1 and 2 both have data for task a but host 1 already has a query task assigned
-     * to it for a different task then we will pick host 2.
-     *
-     * @param queryPerHostCountMap - map of number of queries assigned to each host
-     * @param queryDataSet         - the available queryData objects for the task being assigned
-     * @param hostMap              - the map of host ids to a boolean describing whether the host is read only.
-     */
-    public static QueryData allocateQueryTaskLegacy(Map<String, Integer> queryPerHostCountMap,
-            Set<QueryData> queryDataSet, Map<String, Boolean> hostMap) {
-        if (queryDataSet == null || queryDataSet.size() == 0) {
-            throw new RuntimeException("fileReferenceWrapper list cannot be empty");
-        }
-        SortedSet<QueryData> hostList = new TreeSet<>();
-        int taskId = -1;
-        for (QueryData queryData : queryDataSet) {
-            taskId = queryData.taskId;
-            String host = queryData.hostEntryInfo.getHostName();
-            // initialize map
-            if (queryPerHostCountMap.get(host) == null) {
-                queryPerHostCountMap.put(host, 0);
-            }
-            hostList.add(queryData);
-        }
-
-        if (log.isTraceEnabled()) {
-            log.trace("hostList size for task: " + taskId + " was " + hostList.size());
-        }
-
-        int minNumberAssigned = -1;
-        QueryData bestQueryData = null;
-        boolean readOnlyHostSelected = false;
-        for (QueryData queryData : hostList) {
-            String host = queryData.hostEntryInfo.getHostName();
-            int numberAssigned = queryPerHostCountMap.get(host);
-            if (log.isTraceEnabled()) {
-                log.trace("host: " + host + " currently has: " + numberAssigned + " assigned");
-            }
-            boolean readOnlyHost = hostMap.containsKey(host) && hostMap.get(host);
-            if (log.isTraceEnabled()) {
-                log.trace(host + " readOnly:" + readOnlyHost);
-            }
-            // if we haven't picked any host
-            // or if the host we are evaluating is a readOnly host
-            // or if the current number of sub queries assigned to this host is less than the least loaded host we have found so far
-            if (minNumberAssigned < 0 || (readOnlyHost && prioritiseReadOnlyWorkers) || numberAssigned < minNumberAssigned) {
-                // we only update the 'best' variable if one of two conditions is met:
-                // 1 - we have not already selected a read only host
-                // 2- we have selected a read only host AND the new host is read only and it has fewer sub-queries assigned to it
-                if (!readOnlyHostSelected || (readOnlyHost && numberAssigned < minNumberAssigned)) {
-                    minNumberAssigned = numberAssigned;
-                    bestQueryData = queryData;
-                    if (readOnlyHost) {
-                        readOnlyHostSelected = true;
-                    }
-                }
-            }
-        }
-        // bestWrapper should never be null here
-        if (bestQueryData == null) {
-            throw new QueryException("Unable to select best query data");
-        }
-        if (log.isTraceEnabled()) {
-            log.trace("selected host: " + bestQueryData.hostEntryInfo.getHostName() + " as best host for task: " + bestQueryData.taskId);
-        }
-        queryPerHostCountMap.put(bestQueryData.hostEntryInfo.getHostName(), (queryPerHostCountMap.get(bestQueryData.hostEntryInfo.getHostName()) + 1));
-        return bestQueryData;
-    }
-
-
 }

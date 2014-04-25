@@ -23,7 +23,7 @@ import java.util.Set;
 
 import com.addthis.basis.util.Files;
 
-import com.addthis.hydra.query.aggregate.MeshSourceAggregator;
+import com.addthis.hydra.query.aggregate.TaskAllocator;
 import com.addthis.hydra.query.util.QueryData;
 import com.addthis.meshy.service.file.FileReference;
 
@@ -187,7 +187,7 @@ public class MeshQueryMasterTest {
         HashSet<QueryData> queryDataSet = new HashSet<QueryData>();
         queryDataSet.add(new QueryData(null, fileReference1, null, "jobid", 0));
         queryDataSet.add(new QueryData(null, fileReference2, null, "jobid", 0));
-        QueryData bestQueryData = MeshSourceAggregator.allocateQueryTaskLegacy(queryTaskCountMap, queryDataSet, readOnlyHostMap);
+        QueryData bestQueryData = TaskAllocator.allocateQueryTaskLegacy(queryTaskCountMap, queryDataSet, readOnlyHostMap);
         assertEquals(bestQueryData.hostEntryInfo.getHostName(), fileReference2.getHostUUID());
     }
 
