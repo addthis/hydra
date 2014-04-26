@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.query;
+package com.addthis.hydra.query.metrics;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -79,7 +79,7 @@ public class HostMetricTurnaroundTime implements HostMetric {
                 Long deltaTime = myMetadataTracker.getHostDeltaTime(queryID, hostName);
                 if (deltaTime == null && !myMetadataTracker.isRusher(queryID, hostName)) {
                     // That's not a rusher and didn't finish then it is a straggler
-                    scores.put(hostName, HostMetric.STRAGGLER);
+                    scores.put(hostName, STRAGGLER);
                     continue;
                 }
 
@@ -114,7 +114,7 @@ public class HostMetricTurnaroundTime implements HostMetric {
         for (Map.Entry<Long, String> e : hostsDeltaTime.entries()) {
             if (e.getKey() > stdDevsAway) {
                 keysToDelete.add(e.getKey());
-                scores.put(e.getValue(), HostMetric.SLOW_HOST);
+                scores.put(e.getValue(), SLOW_HOST);
                 if (log.isTraceEnabled()) {
                     log.trace("Marking host:" + e.getValue() + " as slow");
                 }

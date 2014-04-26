@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.query;
+package com.addthis.hydra.query.metrics;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -80,7 +80,7 @@ public class HostMetricRowsPerSecond implements HostMetric {
                     }
 
                     // That's not a rusher, then it is a straggler
-                    scores.put(hostName, HostMetric.STRAGGLER);
+                    scores.put(hostName, STRAGGLER);
                     continue;
                 }
 
@@ -119,7 +119,7 @@ public class HostMetricRowsPerSecond implements HostMetric {
         for (Map.Entry<Double, String> e : hostTimePerLine.entries()) {
             if (e.getKey() > stdDevsAway) {
                 keysToDelete.add(e.getKey());
-                scores.put(e.getValue(), HostMetric.SLOW_HOST);
+                scores.put(e.getValue(), SLOW_HOST);
             }
         }
 

@@ -30,7 +30,8 @@ import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.query.MeshQueryMaster;
-import com.addthis.hydra.query.QueryTracker;
+import com.addthis.hydra.query.tracker.QueryEntryInfo;
+import com.addthis.hydra.query.tracker.QueryTracker;
 import com.addthis.hydra.query.util.HostEntryInfo;
 import com.addthis.hydra.util.MetricsServletShim;
 import com.addthis.maljson.JSONArray;
@@ -109,7 +110,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
         messageReceived(ctx, request); // redirect to more sensible netty5 naming scheme
     }
 
-    private void decodeParameters(QueryStringDecoder urlDecoder, KVPairs kv) {
+    private static void decodeParameters(QueryStringDecoder urlDecoder, KVPairs kv) {
         for (Map.Entry<String, List<String>> entry : urlDecoder.parameters().entrySet()) {
             String k = entry.getKey();
             String v = entry.getValue().get(0); // ignore duplicates
@@ -194,14 +195,14 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 break;
             case "/query/list":
                 writer.write("[\n");
-                for (QueryTracker.QueryEntryInfo stat : tracker.getRunning()) {
+                for (QueryEntryInfo stat : tracker.getRunning()) {
                     writer.write(CodecJSON.encodeString(stat).concat(",\n"));
                 }
                 writer.write("]");
                 break;
             case "/completed/list":
                 writer.write("[\n");
-                for (QueryTracker.QueryEntryInfo stat : tracker.getCompleted()) {
+                for (QueryEntryInfo stat : tracker.getCompleted()) {
                     writer.write(CodecJSON.encodeString(stat).concat(",\n"));
                 }
                 writer.write("]");
@@ -238,7 +239,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             }
             case "/v2/queries/finished.list": {
                 JSONArray runningEntries = new JSONArray();
-                for (QueryTracker.QueryEntryInfo entryInfo : tracker.getCompleted()) {
+                for (QueryEntryInfo entryInfo : tracker.getCompleted()) {
                     JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
                     //TODO: replace this with some high level summary
                     entryJSON.put("hostInfoSet", "");
@@ -249,7 +250,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             }
             case "/v2/queries/running.list": {
                 JSONArray runningEntries = new JSONArray();
-                for (QueryTracker.QueryEntryInfo entryInfo : tracker.getRunning()) {
+                for (QueryEntryInfo entryInfo : tracker.getRunning()) {
                     JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
                     //TODO: replace this with some high level summary
                     entryJSON.put("hostInfoSet", "");
@@ -260,19 +261,19 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             }
             case "/v2/queries/list":
                 JSONArray queries = new JSONArray();
-                for (QueryTracker.QueryEntryInfo entryInfo : tracker.getCompleted()) {
+                for (QueryEntryInfo entryInfo : tracker.getCompleted()) {
                     JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
                     entryJSON.put("hostEntries", entryInfo.hostInfoSet.size());
                     entryJSON.put("state", 0);
                     queries.put(entryJSON);
                 }
-                for (QueryTracker.QueryEntryInfo entryInfo : tracker.getQueued()) {
+                for (QueryEntryInfo entryInfo : tracker.getQueued()) {
                     JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
                     entryJSON.put("hostEntries", entryInfo.hostInfoSet.size());
                     entryJSON.put("state", 2);
                     queries.put(entryJSON);
                 }
-                for (QueryTracker.QueryEntryInfo entryInfo : tracker.getRunning()) {
+                for (QueryEntryInfo entryInfo : tracker.getRunning()) {
                     JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
                     entryJSON.put("hostEntries", entryInfo.hostInfoSet.size());
                     entryJSON.put("state", 3);
@@ -354,10 +355,6 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 writer.write(swriter.toString());
                 break;
             }
-            case "/v2/hosts/list":
-                String hosts = meshQueryMaster.getMeshHostJSON();
-                writer.write(hosts);
-                break;
             default:
                 // forward to static file server
                 ctx.pipeline().addLast(staticFileHandler);

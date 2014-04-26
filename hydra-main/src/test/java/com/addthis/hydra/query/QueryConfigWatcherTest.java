@@ -62,8 +62,6 @@ public class QueryConfigWatcherTest extends ZkStartUtil {
 
         assertEquals(false, qcw.shouldTrace("j1"));
         assertEquals(true, qcw.shouldTrace("j2"));
-
-        assertEquals(100, qcw.consecutiveFailureThreshold("j1"));
     }
 
 

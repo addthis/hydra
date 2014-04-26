@@ -18,7 +18,7 @@ import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.data.query.channel.QueryChannelServer;
 import com.addthis.hydra.query.MeshQueryMaster;
-import com.addthis.hydra.query.QueryTracker;
+import com.addthis.hydra.query.tracker.QueryTracker;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;

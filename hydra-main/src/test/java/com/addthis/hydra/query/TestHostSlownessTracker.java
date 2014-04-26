@@ -25,6 +25,10 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.addthis.hydra.query.metrics.HostMetadataTracker;
+import com.addthis.hydra.query.metrics.HostMetricTurnaroundTime;
+import com.addthis.hydra.query.metrics.HostSlownessTracker;
+
 import static org.junit.Assert.fail;
 
 public class TestHostSlownessTracker {

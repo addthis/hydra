@@ -16,18 +16,12 @@ package com.addthis.hydra.query;
 import javax.annotation.concurrent.ThreadSafe;
 
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.job.JobQueryConfig;
 import com.addthis.hydra.job.store.AvailableCache;
 import com.addthis.hydra.job.store.SpawnDataStore;
-
-import com.google.common.util.concurrent.MoreExecutors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,9 +47,6 @@ public class QueryConfigWatcher {
 
     /* A LoadingCache used to save configs fetched from the SpawnDataStore */
     private final AvailableCache<JobQueryConfig> configCache;
-
-    /* An Executor that will run the background updates to the configCache */
-    final ExecutorService executor = MoreExecutors.getExitingExecutorService(new ThreadPoolExecutor(2, 2, 1000L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
 
     public QueryConfigWatcher(SpawnDataStore spawnDataStore) {
         this.spawnDataStore = spawnDataStore;
@@ -137,17 +128,6 @@ public class QueryConfigWatcher {
     public boolean shouldTrace(String jobID) {
         JobQueryConfig jqc = getJobQueryConfig(jobID);
         return jqc != null && jqc.getQueryTraceLevel() > 0;
-    }
-
-    /**
-     * Fetch the consecutiveFailureThreshold for a jobId
-     *
-     * @param jobID The jobId to check
-     * @return The specified consecutiveFailureThreshold, or -1 if no data was found
-     */
-    public int consecutiveFailureThreshold(String jobID) {
-        JobQueryConfig jqc = getJobQueryConfig(jobID);
-        return jqc != null ? jqc.getConsecutiveFailureThreshold() : -1;
     }
 
 }
