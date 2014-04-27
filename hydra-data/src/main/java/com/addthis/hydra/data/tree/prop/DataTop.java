@@ -129,10 +129,10 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codec.Codab
         public DataTop newInstance() {
             DataTop dt = new DataTop();
             if (hit > 0) {
-                dt.topHit = new KeyTopper();
+                dt.topHit = new KeyTopper().init().setLossy(lossy);
             }
             if (node > 0) {
-                dt.topNode = new KeyTopper();
+                dt.topNode = new KeyTopper().init().setLossy(lossy);
             }
             if (recent > 0) {
                 dt.recent = new Recent();

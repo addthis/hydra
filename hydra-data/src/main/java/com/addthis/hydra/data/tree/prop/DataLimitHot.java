@@ -51,7 +51,9 @@ public class DataLimitHot extends TreeNodeData<DataLimitHot.Config> {
         public DataLimitHot newInstance() {
             DataLimitHot dc = new DataLimitHot();
             dc.size = size;
-            dc.top = new KeyTopper();
+            dc.top = new KeyTopper().init();
+            dc.top.setLossy(true);
+            dc.size = size;
             return dc;
         }
     }
