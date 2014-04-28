@@ -172,9 +172,12 @@ public abstract class JdbcDataStore implements SpawnDataStore {
             }
             preparedStatement.setString(j, blankChildId);
             ResultSet resultSet = executeAndTimeQuery(preparedStatement);
-            resultSet.next();
+            boolean foundRows = resultSet.next();
+            if (!foundRows) {
+                return null;
+            }
             do {
-                Blob blob =  resultSet.getBlob(valueKey);
+                Blob blob = getValueBlobFromResultSet(resultSet);
                 if (blob != null) {
                     rv.put(resultSet.getString(pathKey), blobToValue(blob));
                 }

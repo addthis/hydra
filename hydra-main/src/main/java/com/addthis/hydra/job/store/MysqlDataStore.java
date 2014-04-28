@@ -62,9 +62,9 @@ public class MysqlDataStore extends JdbcDataStore {
     @Override
     protected Blob getValueBlobFromResultSet(ResultSet resultSet) throws SQLException {
         try {
-            // Drizzle throws an NPE for the null blob.
+            // Drizzle throws exceptions for the null blob.
             return resultSet.getBlob(valueKey);
-        } catch (NullPointerException npe) {
+        } catch (NullPointerException | IndexOutOfBoundsException e) {
             return null;
         }
 

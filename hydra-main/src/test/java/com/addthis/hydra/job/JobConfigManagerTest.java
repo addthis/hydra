@@ -18,6 +18,7 @@ import java.util.Map;
 
 import com.addthis.basis.test.SlowTest;
 
+import com.addthis.bark.StringSerializer;
 import com.addthis.bark.ZkStartUtil;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
@@ -28,6 +29,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 
+import org.junit.After;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -43,6 +45,13 @@ public class JobConfigManagerTest extends ZkStartUtil {
     private static final Codec codec = new CodecJSON();
     private JobConfigManager jobConfigManager;
     private SpawnDataStore spawnDataStore;
+
+    @After
+    public void cleanup() throws Exception {
+        if (spawnDataStore != null) {
+            spawnDataStore.close();
+        }
+    }
 
     private JobConfigManager getJobConfigManager() throws Exception {
         if (spawnDataStore == null) {
@@ -61,7 +70,7 @@ public class JobConfigManagerTest extends ZkStartUtil {
         IJob job = new ZnodeJob(id);
         job.setQueryConfig(new JobQueryConfig());
         jcm.addJob(job);
-        assertNotNull(spawnDataStore.get(SPAWN_JOB_CONFIG_PATH + "/foo"));
+        assertNotNull(spawnDataStore.getChild(SPAWN_JOB_CONFIG_PATH, id));
         assertNotNull(spawnDataStore.get(SPAWN_JOB_CONFIG_PATH + "/foo/config"));
         assertNotNull(spawnDataStore.get(SPAWN_JOB_CONFIG_PATH + "/foo/queryconfig"));
     }
@@ -72,8 +81,9 @@ public class JobConfigManagerTest extends ZkStartUtil {
         String id = "foo";
         IJob job = new ZnodeJob(id);
         jcm.addJob(job);
-        assertNotNull(spawnDataStore.get(SPAWN_JOB_CONFIG_PATH + "/foo/queryconfig"));
-        JobQueryConfig jqc = codec.decode(JobQueryConfig.class, zkClient.getData().forPath(SPAWN_JOB_CONFIG_PATH + "/foo/queryconfig"));
+        String raw = spawnDataStore.get(SPAWN_JOB_CONFIG_PATH + "/foo/queryconfig");
+        assertNotNull(raw);
+        JobQueryConfig jqc = codec.decode(JobQueryConfig.class, StringSerializer.deserialize(raw.getBytes()).getBytes());
         assertEquals(jqc, new JobQueryConfig());
     }
 
@@ -111,9 +121,9 @@ public class JobConfigManagerTest extends ZkStartUtil {
         IJob job = new ZnodeJob(id);
         job.setQueryConfig(new JobQueryConfig());
         jcm.addJob(job);
-        assertNotNull(spawnDataStore.get(SPAWN_JOB_CONFIG_PATH + "/foo"));
+        assertNotNull(spawnDataStore.getChild(SPAWN_JOB_CONFIG_PATH, id));
         jcm.deleteJob(job.getId());
-        assertNull(spawnDataStore.get(SPAWN_JOB_CONFIG_PATH + "/foo"));
+        assertNull(spawnDataStore.getChild(SPAWN_JOB_CONFIG_PATH, "foo"));
     }
 
 
@@ -125,6 +135,7 @@ public class JobConfigManagerTest extends ZkStartUtil {
         job.setQueryConfig(new JobQueryConfig());
         jcm.addJob(job);
         IJob jobBack = jcm.getJob("bar");
+        assertNotNull(jobBack);
         assertEquals(job.getId(), jobBack.getId());
         assertEquals(job.getQueryConfig(), jobBack.getQueryConfig());
         assertEquals(job.getCopyOfTasks(), jobBack.getCopyOfTasks());
@@ -136,7 +147,7 @@ public class JobConfigManagerTest extends ZkStartUtil {
         JobConfigManager jcm = getJobConfigManager();
         IJob job = new ZnodeJob("foo");
         jcm.addJob(job);
-        IJob jobBack = jcm.getJob("bar");
+        IJob jobBack = jcm.getJob("noexist");
         assertNull(jobBack);
     }
 
