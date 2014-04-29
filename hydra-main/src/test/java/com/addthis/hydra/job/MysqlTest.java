@@ -34,6 +34,7 @@ public class MysqlTest {
         String tableName = "newTable";
         MysqlInsertPickLastDataStore ds = new MysqlInsertPickLastDataStore("jdbc:mysql:thin://localhost:3306/test", tableName, properties, false);
         cleanupTestDataStore(ds);
+        correctnessTestDataStore(ds);
 
         perfTest(ds);
         ds.close();

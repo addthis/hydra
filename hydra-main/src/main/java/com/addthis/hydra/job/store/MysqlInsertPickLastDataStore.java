@@ -63,12 +63,12 @@ public class MysqlInsertPickLastDataStore implements SpawnDataStore {
         cpds.setProperties(properties);
         this.tableName = tableName;
         runStartupCommand();
-        queryTemplate = "SELECT " + valueKey + " FROM " + tableName + " WHERE " + pathKey + "=? AND " + childKey + "=? ORDER BY " +idKey + " DESC LIMIT 1";
-        insertTemplate = "INSERT INTO " + tableName + "(" + pathKey + "," + valueKey + "," + childKey + ") VALUES(?,?,?)";
-        deleteTemplate = "DELETE FROM " + tableName + " WHERE " + pathKey + "=? AND " + childKey + "=?";
-        getChildNamesTemplate = "SELECT DISTINCT " + childKey  + " FROM " + tableName + " WHERE " + pathKey + "=? AND " + childKey + "!=?";
+        queryTemplate = String.format("SELECT %s FROM %s WHERE %s=? AND %s=? ORDER BY %s DESC LIMIT 1", valueKey, tableName, pathKey, childKey, idKey);
+        insertTemplate = String.format("INSERT INTO %s (%s,%s,%s) VALUES(?,?,?)", tableName, pathKey, valueKey, childKey);
+        deleteTemplate = String.format("DELETE FROM %s WHERE %s=? AND %s=?", tableName, pathKey, childKey);
+        getChildNamesTemplate = String.format("SELECT DISTINCT %s FROM %s WHERE %s=? AND %s!=?", childKey, tableName, pathKey, childKey);
         getChildrenTemplate = "SELECT " + childKey +"," + valueKey  + " FROM " + tableName + " WHERE " + pathKey + "=? AND " + childKey + "!=? ORDER BY " + idKey; // SUPER HACKY. BASICALLY SO THE PUT COMMANDS WILL PUT THE MOST UP-TO-DATE THING IN LAST. THIS BLOWS!!!!!!!!
-        cleanupTemplate = "DELETE v FROM " + tableName + " AS v INNER JOIN " + tableName + " AS v2 ON (v." + pathKey+ ",v." + childKey + ") = (v2." + pathKey + ",v2." + childKey + ") AND v."+idKey + " < v2." + idKey; // v and v2 are dummy values; basically, delete all but the latest value for any (parent, child) combination. Not necessary for correctness, but should be run periodically to clean up data storage.
+        cleanupTemplate = String.format("DELETE v FROM %s AS v INNER JOIN %s AS v2 ON (v.%s,v.%s) = (v2.%s,v2.%s) AND v.%s < v2.%s", tableName, tableName, pathKey, childKey, pathKey, childKey, idKey, idKey); // v and v2 are dummy values; basically, delete all but the latest value for any (parent, child) combination. Not necessary for correctness, but should be run periodically to clean up data storage.
         if (autoCleanup) {
             new Timer("mysqldatastore_cleanup").scheduleAtFixedRate(new TimerTask() {
                 @Override
