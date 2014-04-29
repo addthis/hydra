@@ -35,7 +35,6 @@ public class MysqlTest {
         MysqlInsertPickLastDataStore ds = new MysqlInsertPickLastDataStore("jdbc:mysql:thin://localhost:3306/test", tableName, properties, false);
         cleanupTestDataStore(ds);
         correctnessTestDataStore(ds);
-
         perfTest(ds);
         ds.close();
     }
@@ -58,12 +57,12 @@ public class MysqlTest {
         int versions = 50;
         for (int i=0; i<versions; i++) {
             ds.put("key", "ver" + i);
-
         }
         System.out.println(ds.countRows() + " rows");
         ds.cleanUp();
         System.out.println(ds.countRows() + " rows");
         assertEquals(ds.get("key"), "ver" + (versions - 1));
+        ds.delete("key");
     }
 
     private static String bigJson = "";
