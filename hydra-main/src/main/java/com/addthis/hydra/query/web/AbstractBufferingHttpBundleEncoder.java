@@ -146,7 +146,7 @@ abstract class AbstractBufferingHttpBundleEncoder extends ChannelOutboundHandler
 
     protected void flushStringBuilder(ChannelHandlerContext ctx) {
         if (sendBuffer.length() > 0) {
-            ByteBuf msg = encodeString(ctx.alloc(), sendBuffer.toString());
+            ByteBuf msg = encodeString(ctx.alloc(), sendBuffer);
             sendBuffer.setLength(0);
             ctx.writeAndFlush(new DefaultHttpContent(msg), ctx.voidPromise());
         }
