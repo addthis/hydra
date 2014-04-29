@@ -99,7 +99,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
      * <p>Query Path Examples:</p>
      * <pre>
      *     /shard-counter/+130101$+top_ips=k1,k2,k3,k4,k5
-     *     /shard-counter/+130101/+%top_ipss==hit
+     *     /shard-counter/+130101/+%top_ips==hit
      * </pre>
      *
      * @user-reference

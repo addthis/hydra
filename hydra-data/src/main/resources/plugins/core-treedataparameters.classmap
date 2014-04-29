@@ -12,6 +12,7 @@
 "limit.recent", com.addthis.hydra.data.tree.prop.DataLimitRecent$Config
 "limit.top", com.addthis.hydra.data.tree.prop.DataLimitTop$Config
 "map", com.addthis.hydra.data.tree.prop.DataMap$Config
+"reservoir", com.addthis.hydra.data.tree.prop.DataReservoir$Config
 "seen", com.addthis.hydra.data.tree.prop.DataSeen$Config
 "sum", com.addthis.hydra.data.tree.prop.DataSum$Config
 "sumf", com.addthis.hydra.data.tree.prop.DataSumFloat$Config
