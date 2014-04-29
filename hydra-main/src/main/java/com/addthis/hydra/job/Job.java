@@ -24,10 +24,13 @@ import java.util.Set;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.basis.util.RollingLog;
 import com.addthis.codec.Codec;
 import com.addthis.codec.Codec.Codable;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.spawn.JobAlert;
+import com.addthis.hydra.util.LogUtil;
+import com.addthis.hydra.util.StringMapHelper;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.collect.ImmutableList;
@@ -927,5 +930,29 @@ public final class Job implements IJob, Codable {
         Long canonicalTime = getCanonicalTime();
         return isEnabled() && canonicalTime != null && getRunCount() > 0 && getRekickTimeout() != null &&
                getRekickTimeout() > 0 && clock - canonicalTime >= (getRekickTimeout() * 60000L);
+    }
+
+    /**
+     * Log a job event to a rolling log file
+     */
+    public static void logJobEvent(Job job, JobEvent event, RollingLog eventLog) {
+        LogUtil.log(eventLog, log, new StringMapHelper()
+                        .put("event", event)
+                        .put("time", System.currentTimeMillis())
+                        .put("jobid", job.getId())
+                        .put("creator", job.getCreator())
+                        .put("owner", job.getOwner())
+                        .put("createTime", job.getCreateTime())
+                        .put("priority", job.getPriority())
+                        .put("replicas", job.getReplicas())
+                        .put("runCount", job.getRunCount())
+                        .put("state", job.getState())
+                        .put("taskCount", job.getTaskCount())
+                        .put("avgTaskSize", job.calcAverageTaskSizeBytes())
+                        .put("hasMoreData", job.hadMoreData())
+                        .put("startTime", job.getStartTime())
+                        .put("endTime", job.getEndTime())
+                        .put("submitTime", job.getSubmitTime())
+                        .put("command", job.getCommand()));
     }
 }

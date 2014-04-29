@@ -47,6 +47,7 @@ import com.addthis.hydra.data.query.source.QueryHandle;
 import com.addthis.hydra.data.query.source.QuerySource;
 import com.addthis.hydra.query.util.HostEntryInfo;
 import com.addthis.hydra.query.util.QueryData;
+import com.addthis.hydra.util.LogUtil;
 import com.addthis.hydra.util.StringMapHelper;
 
 import com.google.common.cache.Cache;
@@ -72,7 +73,6 @@ public class QueryTracker {
     private static final boolean eventLogCompress = Parameter.boolValue("qmaster.eventlog.compress", true);
     private static final int logMaxAge = Parameter.intValue("qmaster.log.maxAge", 60 * 60 * 1000);
     private static final int logMaxSize = Parameter.intValue("qmaster.log.maxSize", 100 * 1024 * 1024);
-    private static SimpleDateFormat format = new SimpleDateFormat("yyMMdd-HHmmss.SSS");
 
     private final RollingLog eventLog;
 
@@ -181,15 +181,6 @@ public class QueryTracker {
         return cancelRunning(key, "Canceled by end user");
     }
 
-    private void log(StringMapHelper output) {
-        if (eventLog == null) {
-            log.warn(output.toLog() + "----> EventLog was null redirecting to stdout");
-        } else {
-            String msg = Strings.cat("<", format.format(new Date()), ".", this.toString(), ">");
-            output.add("timestamp", msg);
-            eventLog.writeLine(output.createKVPairs().toString());
-        }
-    }
 
     public QueryHandle runAndTrackQuery(QuerySource source, Collection<QueryData> queryDataCollection,
             Query query, QueryOpProcessor consumer, String[] opsLog) throws QueryException {
@@ -367,7 +358,7 @@ public class QueryTracker {
                 }
 
                 if (error != null) {
-                    log(new StringMapHelper()
+                    LogUtil.log(eventLog, log, new StringMapHelper()
                             .put("type", "query.error")
                             .put("query.path", query.getPaths()[0])
                             .put("query.ops", Arrays.toString(opsLog))
@@ -398,7 +389,7 @@ public class QueryTracker {
                         .put("query.id", query.uuid())
                         .put("lines", lines)
                         .put("sender", query.getParameter("sender"));
-                log(queryLine);
+                LogUtil.log(eventLog, log, queryLine);
             } catch (Exception e) {
                 log.warn("Error while doing record keeping for a query.", e);
             }

@@ -13,60 +13,15 @@
  */
 package com.addthis.hydra.job;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.Writer;
-
-import java.net.InetAddress;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
-import java.text.ParseException;
-
+import com.addthis.bark.StringSerializer;
+import com.addthis.bark.ZkUtil;
 import com.addthis.basis.net.HttpUtil;
-import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
+import com.addthis.basis.util.RollingLog;
 import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
-
-import com.addthis.bark.StringSerializer;
-import com.addthis.bark.ZkUtil;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
@@ -99,41 +54,72 @@ import com.addthis.hydra.query.AliasBiMap;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.hydra.util.EmailUtil;
+import com.addthis.hydra.util.LogUtil;
 import com.addthis.hydra.util.SettableGauge;
+import com.addthis.hydra.util.StringMapHelper;
 import com.addthis.hydra.util.WebSocketManager;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Gauge;
 import com.yammer.metrics.core.Meter;
-
+import jsr166e.ConcurrentHashMapV8;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
-
 import org.codehaus.jackson.map.ObjectMapper;
 import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_UP_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_COMMAND_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_MACRO_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
-import jsr166e.ConcurrentHashMapV8;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.net.InetAddress;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.*;
 
 /**
  * manages minions running on remote notes. runs master http server to
@@ -201,6 +187,11 @@ public class Spawn implements Codec.Codable {
         }
     });
     private final HostFailWorker hostFailWorker;
+    private final RollingLog eventLog;
+    private static final boolean eventLogCompress = Parameter.boolValue("spawn.eventlog.compress", true);
+    private static final int logMaxAge = Parameter.intValue("spawn.event.log.maxAge", 60 * 60 * 1000);
+    private static final int logMaxSize = Parameter.intValue("spawn.event.log.maxSize", 100 * 1024 * 1024);
+    private static final String logDir = Parameter.value("spawn.event.log.dir", "log");
 
     public static void main(String args[]) throws Exception {
         Spawn spawn = new Spawn(
@@ -227,8 +218,6 @@ public class Spawn implements Codec.Codable {
     private boolean quiesce;
     @Codec.Set(codable = true)
     private final HashSet<String> disabledHosts = new HashSet<>();
-    private int choreCleanerInterval = Parameter.intValue("spawn.chore.interval", 10000);
-    private static final int CHORE_TTL = Parameter.intValue("spawn.chore.ttl", 60 * 60 * 24 * 1000);
     private static final int TASK_QUEUE_DRAIN_INTERVAL = Parameter.intValue("task.queue.drain.interval", 500);
     private static final boolean ENABLE_JOB_STORE = Parameter.boolValue("job.store.enable", true);
     private static final boolean ENABLE_JOB_FIXDIRS_ONCOMPLETE = Parameter.boolValue("job.fixdirs.oncomplete", true);
@@ -303,6 +292,7 @@ public class Spawn implements Codec.Codable {
         this.hostFailWorker = new HostFailWorker(this);
         this.balancer = new SpawnBalancer(this);
         this.spawnMesh = new SpawnMesh(this);
+        this.eventLog = new RollingLog(new File(logDir, "events-jobs"), "job", eventLogCompress, logMaxSize, logMaxAge);
     }
 
     private Spawn(File dataDir, File webDir) throws Exception {
@@ -405,6 +395,7 @@ public class Spawn implements Codec.Codable {
         if (ENABLE_JOB_STORE) {
             jobStore = new JobStore(new File(dataDir, "jobstore"));
         }
+        this.eventLog = new RollingLog(new File(logDir, "events-jobs"), "job", eventLogCompress, logMaxSize, logMaxAge);
     }
 
     private void writeState() {
@@ -670,16 +661,6 @@ public class Spawn implements Codec.Codable {
             }
             return allMinions;
         }
-    }
-
-    public Set<String> listMinionTypes() {
-        Set<String> rv = new HashSet<>();
-        synchronized (monitored) {
-            for (HostState minion : monitored.values()) {
-                rv.add(minion.getMinionTypes());
-            }
-        }
-        return rv;
     }
 
     public Collection<String> listAvailableHostIds() {
@@ -1437,9 +1418,9 @@ public class Spawn implements Codec.Codable {
             }
             StringBuilder sb = new StringBuilder();
             List<JobTask> tasks = node < 0 ? new ArrayList<>(job.getCopyOfTasksSorted()) : Arrays.asList(job.getTask(node));
-            sb.append("Directory check for job " + job.getId() + "\n");
+            sb.append("Directory check for job ").append(job.getId()).append("\n");
             for (JobTask task : tasks) {
-                sb.append("Task " + task.getTaskID() + ": " + matchTaskToDirectories(task, true) + "\n");
+                sb.append("Task ").append(task.getTaskID()).append(": ").append(matchTaskToDirectories(task, true)).append("\n");
             }
             return sb.toString();
         } finally {
@@ -1926,6 +1907,7 @@ public class Spawn implements Codec.Codable {
             if (jobStore != null) {
                 jobStore.delete(jobUUID);
             }
+            Job.logJobEvent(job, JobEvent.DELETE, eventLog);
             return DeleteStatus.SUCCESS;
         } finally {
             jobLock.unlock();
@@ -1995,6 +1977,7 @@ public class Spawn implements Codec.Codable {
         require(job.isEnabled(), "job disabled");
         require(scheduleJob(job, isManualKick), "unable to schedule job");
         sendJobUpdateEvent(job);
+        Job.logJobEvent(job, JobEvent.START, eventLog);
     }
 
     public String expandJob(String jobUUID) throws Exception {
@@ -2041,6 +2024,7 @@ public class Spawn implements Codec.Codable {
             stopTask(jobUUID, task.getTaskID());
         }
         job.setHadMoreData(false);
+        Job.logJobEvent(job, JobEvent.STOP, eventLog);
     }
 
     public void killJob(String jobUUID) throws Exception {
@@ -2051,6 +2035,7 @@ public class Spawn implements Codec.Codable {
                 if (taskQueuesByPriority.tryLock()) {
                     success = true;
                     Job job = getJob(jobUUID);
+                    Job.logJobEvent(job, JobEvent.KILL, eventLog);
                     require(job != null, "job not found");
                     for (JobTask task : job.getCopyOfTasks()) {
                         if (task.getState() == JobTaskState.QUEUED) {
@@ -2196,6 +2181,7 @@ public class Spawn implements Codec.Codable {
         if (taskID == -1) {
             // Revert entire job
             Job job = getJob(jobUUID);
+            Job.logJobEvent(job, JobEvent.REVERT, eventLog);
             int numTasks = job.getTaskCount();
             for (int i = 0; i < numTasks; i++) {
                 log.warn("[task.revert] " + jobUUID + "/" + i);
@@ -2669,6 +2655,7 @@ public class Spawn implements Codec.Codable {
                 doOnState(job, job.getOnErrorURL(), "onError");
             }
         }
+        Job.logJobEvent(job, JobEvent.FINISH, eventLog);
         balancer.requestJobSizeUpdate(job.getId(), 0);
     }
 
@@ -2712,38 +2699,6 @@ public class Spawn implements Codec.Codable {
             emailNotification(jobId, state, ex);
         }
     }
-
-    /**
-     * simpler wrapper for Runtime.exec() with logging
-     */
-    private int exec(String cmd[]) throws InterruptedException, IOException {
-        if (debug("-exec-")) {
-            log.info("[exec.cmd] " + Strings.join(cmd, " "));
-        }
-        Process proc = Runtime.getRuntime().exec(cmd);
-        InputStream in = proc.getInputStream();
-        String buf = Bytes.toString(Bytes.readFully(in));
-        if (debug("-exec-") && buf.length() > 0) {
-            String lines[] = Strings.splitArray(buf, "\n");
-            for (String line : lines) {
-                log.info("[exec.out] " + line);
-            }
-        }
-        in = proc.getErrorStream();
-        buf = Bytes.toString(Bytes.readFully(in));
-        if (debug("-exec-") && buf.length() > 0) {
-            String lines[] = Strings.splitArray(buf, "\n");
-            for (String line : lines) {
-                log.info("[exec.err] " + line);
-            }
-        }
-        int exit = proc.waitFor();
-        if (debug("-exec-")) {
-            log.info("[exec.exit] " + exit);
-        }
-        return exit;
-    }
-
 
     /**
      * debug output, can be disabled by policy
@@ -3280,6 +3235,7 @@ public class Spawn implements Codec.Codable {
         job.setEndTime(null);
         job.setHadMoreData(false);
         job.incrementRunCount();
+        Job.logJobEvent(job, JobEvent.SCHEDULED, eventLog);
         log.info("[job.schedule] assigning " + job.getId() + " with " + job.getCopyOfTasks().size() + " tasks");
         jobsStartedPerHour.mark();
         for (JobTask task : job.getCopyOfTasks()) {
@@ -3931,7 +3887,7 @@ public class Spawn implements Codec.Codable {
         final ConcurrentMap<String, JobMacro> macros = new ConcurrentHashMapV8<>();
         final ConcurrentMap<String, JobCommand> commands = new ConcurrentHashMapV8<>();
         final ConcurrentMap<String, Job> jobs = new ConcurrentHashMapV8<>();
-        final DirectedGraph<String> jobDependencies = new DirectedGraph();
+        final DirectedGraph<String> jobDependencies = new DirectedGraph<>();
         SpawnBalancerConfig balancerConfig = new SpawnBalancerConfig();
     }
 
