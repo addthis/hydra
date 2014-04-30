@@ -330,6 +330,8 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
             return makeDefaultNodes(raw);
         } else if (targetEpoch >= minEpoch + reservoir.length) {
             return makeDefaultNodes(raw);
+        } else if (numObservations > (reservoir.length - 1)) {
+            return makeDefaultNodes(raw);
         }
 
         int count = 0;

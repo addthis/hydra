@@ -86,7 +86,7 @@ public class DataReservoirTest {
     }
 
     @Test
-    public void testGetNodesMissingInput() {
+    public void testGetNodesBadInput() {
         DataReservoir reservoir = new DataReservoir();
         reservoir.updateReservoir(1, 4, 4);
         reservoir.updateReservoir(2, 4, 12);
@@ -98,6 +98,10 @@ public class DataReservoirTest {
         assertEquals(0, result.size());
         result = reservoir.getNodes(null, "sigma=2.0~obs=3");
         assertEquals(0, result.size());
+        result = reservoir.getNodes(null, "epoch=4~sigma=2.0~obs=4");
+        assertEquals(0, result.size());
+        result = reservoir.getNodes(null, "epoch=4~sigma=2.0~obs=3");
+        assertEquals(1, result.size());
     }
 
     @Test
