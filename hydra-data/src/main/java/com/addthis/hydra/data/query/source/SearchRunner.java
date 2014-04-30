@@ -129,7 +129,7 @@ class SearchRunner implements Runnable {
         MeshQuerySource.queueTimes.update(creationTime - startTime, TimeUnit.MILLISECONDS);
         query = CodecJSON.decodeString(new Query(), options.get("query"));
         // Parse the query and return a reference to the last QueryOpProcessor.
-        queryOpProcessor = query.getProcessor(bridge, bridge.queryStatusObserver);
+        queryOpProcessor = query.newProcessor(bridge, bridge.queryStatusObserver);
     }
 
     /**

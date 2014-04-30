@@ -16,7 +16,6 @@ package com.addthis.hydra.query.web;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.data.query.channel.QueryChannelServer;
 import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.hydra.query.tracker.QueryTracker;
 
@@ -53,7 +52,7 @@ public class QueryServer {
     /**
      * server that listens for query requests using java protocol
      */
-    private final QueryChannelServer queryChannelServer;
+//    private final QueryChannelServer queryChannelServer;
 
     private final HttpQueryHandler httpQueryHandler;
     private final QueryServerInitializer queryServerInitializer;
@@ -62,7 +61,7 @@ public class QueryServer {
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         if (args.length > 0 && (args[0].equals("--help") || args[0].equals("-h"))) {
             System.out.println("usage: qmaster");
         }
@@ -82,8 +81,8 @@ public class QueryServer {
         httpQueryHandler = new HttpQueryHandler(this, queryTracker, meshQueryMaster);
         queryServerInitializer = new QueryServerInitializer(httpQueryHandler);
 
-        queryChannelServer = new QueryChannelServer(queryPort, meshQueryMaster);
-        queryChannelServer.start();
+//        queryChannelServer = new QueryChannelServer(queryPort, meshQueryMaster);
+//        queryChannelServer.start();
 
         log.info("[init] query port={}, web port={}", queryPort, webPort);
 
@@ -112,7 +111,7 @@ public class QueryServer {
 
     protected void shutdown() {
         try {
-            queryChannelServer.close();
+//            queryChannelServer.close();
             if (bossGroup != null) {
                 bossGroup.shutdownGracefully();
             }

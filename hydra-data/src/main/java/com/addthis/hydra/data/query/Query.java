@@ -219,7 +219,7 @@ public class Query implements Codec.Codable {
         return list.toArray(new QueryElement[list.size()]);
     }
 
-    public QueryOpProcessor getProcessor(DataChannelOutput output, QueryStatusObserver queryStatusObserver) {
+    public QueryOpProcessor newProcessor(DataChannelOutput output, QueryStatusObserver queryStatusObserver) {
         QueryOpProcessor rp = new QueryOpProcessor(output, ops, queryStatusObserver);
         for (QueryOp op : appendops) {
             rp.appendOp(op);

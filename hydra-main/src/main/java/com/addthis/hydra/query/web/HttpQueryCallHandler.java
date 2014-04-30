@@ -145,7 +145,7 @@ public final class HttpQueryCallHandler {
             ctx.fireChannelRead(query);
         } catch (IOException | QueryException e) {
             sendError(ctx, new HttpResponseStatus(500, "General/Query Error " + e.toString()));
-            handleError(querySource, query);
+//            handleError(querySource, query);
         }
     }
 

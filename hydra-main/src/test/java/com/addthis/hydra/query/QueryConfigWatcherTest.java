@@ -22,6 +22,7 @@ import com.addthis.hydra.job.JobQueryConfig;
 import com.addthis.hydra.job.ZnodeJob;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.job.store.ZookeeperDataStore;
+import com.addthis.hydra.query.zookeeper.QueryConfigWatcher;
 
 import org.junit.Before;
 import org.junit.Test;

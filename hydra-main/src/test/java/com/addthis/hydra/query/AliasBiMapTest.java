@@ -16,7 +16,7 @@ package com.addthis.hydra.query;
 import com.addthis.basis.test.SlowTest;
 
 import com.addthis.bark.ZkStartUtil;
-import com.addthis.hydra.query.AliasBiMap;
+import com.addthis.hydra.query.zookeeper.AliasBiMap;
 
 import com.google.common.collect.ImmutableList;
 

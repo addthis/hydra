@@ -19,7 +19,7 @@ import java.util.Properties;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.query.AliasBiMap;
+import com.addthis.hydra.query.zookeeper.AliasBiMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
