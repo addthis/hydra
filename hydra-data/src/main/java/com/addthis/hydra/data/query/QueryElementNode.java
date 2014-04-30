@@ -154,9 +154,13 @@ public class QueryElementNode implements Codec.Codable {
                 }
                 continue;
             }
-            if (component.startsWith("@")) {
-                path = Strings.splitArray(Bytes.urldecode(component.substring(1)), "/");
+            if (component.startsWith("@@")) {
+                path = Strings.splitArray(Bytes.urldecode(component.substring(2)), "/");
                 continue;
+            } else if (component.startsWith("@")) {
+                component = component.substring(1);
+                mode = MODE.MATCH;
+                rangeStrict = true;
             }
             component = Bytes.urldecode(component);
             if (component.length() > 0) {
