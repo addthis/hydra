@@ -73,9 +73,9 @@
       <version>1.7.2</version>
     </dependency>
     <dependency>
-      <groupId>org.arabidopsis.ahocorasick</groupId>
-      <artifactId>ahocorasick</artifactId>
-      <version>1.4.09-13-13</version>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-analyzers</artifactId>
+      <version>3.6.2</version>
     </dependency>
   </dependencies>
 </project>
