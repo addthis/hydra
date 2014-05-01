@@ -7,8 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import java.sql.Blob;
 import java.sql.Connection;
@@ -35,25 +33,23 @@ public class MysqlInsertPickLastDataStore implements SpawnDataStore {
     /* Configuration parameters for the jdbc connection pool. */
     private static final int minPoolSize = Parameter.intValue("sql.datastore.minpoolsize", 10);
     private static final int maxPoolSize = Parameter.intValue("sql.datastore.maxpoolsize", 20);
-    /* How frequently to clean up duplicate values for the same key */
-    private static final int cleanupFrequencySeconds = Parameter.intValue("sql.datastore.cleanupseconds", 30);
 
-    /* Column names. In the standard implementations, path and child are VARCHAR(200) and value is a BLOB or TEXT. */
+    /* Column names. In the standard implementations, path and child are VARCHAR(200) and value is a BLOB. */
     protected static final String pathKey = "path";
     protected static final String valueKey = "val";
     protected static final String childKey = "child";
     protected static final String idKey = "id";
     /* The simulated 'child' value used to store data about the parent. */
     protected static final String blankChildId = "_root";
+    /* Various command templates. Since they include the non-static table name, they cannot be static. */
     private final String queryTemplate;
     private final String insertTemplate;
     private final String deleteTemplate;
     private final String getChildNamesTemplate;
     private final String getChildrenTemplate;
     private final String tableName;
-    private final String cleanupTemplate;
 
-    public MysqlInsertPickLastDataStore(String jdbcUrl, String tableName, Properties properties, boolean autoCleanup) throws Exception {
+    public MysqlInsertPickLastDataStore(String jdbcUrl, String tableName, Properties properties) throws Exception {
         cpds = new ComboPooledDataSource();
         cpds.setDriverClass("org.drizzle.jdbc.DrizzleDriver");
         cpds.setJdbcUrl(jdbcUrl);
@@ -64,32 +60,11 @@ public class MysqlInsertPickLastDataStore implements SpawnDataStore {
         this.tableName = tableName;
         runStartupCommand();
         queryTemplate = String.format("SELECT %s FROM %s WHERE %s=? AND %s=? ORDER BY %s DESC LIMIT 1", valueKey, tableName, pathKey, childKey, idKey);
-        insertTemplate = String.format("INSERT INTO %s (%s,%s,%s) VALUES(?,?,?)", tableName, pathKey, valueKey, childKey);
+        insertTemplate = String.format("REPLACE INTO %s (%s,%s,%s) VALUES(?,?,?)", tableName, pathKey, valueKey, childKey);
         deleteTemplate = String.format("DELETE FROM %s WHERE %s=? AND %s=?", tableName, pathKey, childKey);
         getChildNamesTemplate = String.format("SELECT DISTINCT %s FROM %s WHERE %s=? AND %s!=?", childKey, tableName, pathKey, childKey);
         getChildrenTemplate = String.format("select %s,%s from %s b where %s=? and %s!=? and %s in (select max(%s) from %s b1 where b.%s = b1.%s group by %s)",
                 childKey, valueKey, tableName, pathKey, childKey, idKey, idKey, tableName, childKey, childKey, childKey);
-        cleanupTemplate = String.format("DELETE v FROM %s AS v INNER JOIN %s AS v2 ON (v.%s,v.%s) = (v2.%s,v2.%s) AND v.%s < v2.%s", tableName, tableName, pathKey, childKey, pathKey, childKey, idKey, idKey); // v and v2 are dummy values; basically, delete all but the latest value for any (parent, child) combination. Not necessary for correctness, but should be run periodically to clean up data storage.
-        if (autoCleanup) {
-            new Timer("mysqldatastore_cleanup").scheduleAtFixedRate(new TimerTask() {
-                @Override
-                public void run() {
-                    try {
-                        cleanUp();
-                    } catch (SQLException e) {
-                        log.warn("Failed to perform mysql cleanup", e);
-                    }
-                }
-            }, cleanupFrequencySeconds, cleanupFrequencySeconds);
-
-        }
-
-    }
-
-    public void cleanUp() throws SQLException {
-        try (Connection connection = getConnection()) {
-            connection.prepareStatement(cleanupTemplate).execute();
-        }
     }
 
     public int countRows() throws SQLException {
@@ -109,6 +84,7 @@ public class MysqlInsertPickLastDataStore implements SpawnDataStore {
                                         + childKey + " VARCHAR(" + maxPathLength + "), "
                                         + "PRIMARY KEY (" + idKey + "))"
             ).execute();
+            connection.prepareStatement("ALTER TABLE " + tableName + " ADD UNIQUE(" + pathKey + "," + childKey + ")").execute();
         }
     }
 

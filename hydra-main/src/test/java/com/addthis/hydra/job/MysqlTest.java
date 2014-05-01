@@ -31,11 +31,33 @@ public class MysqlTest {
         Properties properties = new Properties();
         properties.setProperty("user", user);
         properties.setProperty("password", password);
-        String tableName = "newTable";
-        MysqlInsertPickLastDataStore ds = new MysqlInsertPickLastDataStore("jdbc:mysql:thin://localhost:3306/test", tableName, properties, false);
+        String tableName = "newTable2";
+        MysqlInsertPickLastDataStore ds = new MysqlInsertPickLastDataStore("jdbc:mysql:thin://localhost:3306/test", tableName, properties);
         cleanupTestDataStore(ds);
         correctnessTestDataStore(ds);
         perfTest(ds);
+        ds.close();
+    }
+
+    @Test
+    public void cleanupPerfTest() throws Exception {
+        Properties properties = new Properties();
+        properties.setProperty("user", user);
+        properties.setProperty("password", password);
+        String tableName = "newTable2";
+        MysqlInsertPickLastDataStore ds = new MysqlInsertPickLastDataStore("jdbc:mysql:thin://localhost:3306/test", tableName, properties);
+        int numberKeys = 1000;
+        int valsPerKey = 2;
+
+        long writeStart = System.currentTimeMillis();
+        for (int i=0; i<valsPerKey; i++) {
+            for (int j=0; j<numberKeys; j++) {
+                ds.put("k" + j, "v" + i);
+            }
+        }
+        System.out.println(System.currentTimeMillis() - writeStart);
+        System.out.println(ds.countRows() + " rows");
+
         ds.close();
     }
 
@@ -44,8 +66,8 @@ public class MysqlTest {
         Properties properties = new Properties();
         properties.setProperty("user", user);
         properties.setProperty("password", password);
-        String tableName = "newTable";
-        MysqlInsertPickLastDataStore ds = new MysqlInsertPickLastDataStore("jdbc:mysql:thin://localhost:3306/test", tableName, properties, false);
+        String tableName = "newTable2";
+        MysqlInsertPickLastDataStore ds = new MysqlInsertPickLastDataStore("jdbc:mysql:thin://localhost:3306/test", tableName, properties);
         for (int i=0; i<30; i++) {
             ds.putAsChild("a", "b", "ver" + (30-i));
             ds.putAsChild("a", "c", (30-i) + "ver");
@@ -59,7 +81,6 @@ public class MysqlTest {
             ds.put("key", "ver" + i);
         }
         System.out.println(ds.countRows() + " rows");
-        ds.cleanUp();
         System.out.println(ds.countRows() + " rows");
         assertEquals(ds.get("key"), "ver" + (versions - 1));
         ds.delete("key");
@@ -79,7 +100,7 @@ public class MysqlTest {
         properties.setProperty("user", "spawn");
         properties.setProperty("password", "rPmuq3sPfK9Ob0BY");
         MysqlDataStore ds1 = new MysqlDataStore("ldm15f", 3306, "spawndatastore", "perftest2", properties);
-        MysqlInsertPickLastDataStore ds2 = new MysqlInsertPickLastDataStore("jdbc:mysql:thin://ldm15f:3306/spawndatastore", "test", properties, false);
+        MysqlInsertPickLastDataStore ds2 = new MysqlInsertPickLastDataStore("jdbc:mysql:thin://ldm15f:3306/spawndatastore", "test", properties);
         for (int i=0; i<4; i++) {
             perfTest(ds1);
             perfTest(ds2);
