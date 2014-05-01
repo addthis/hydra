@@ -2822,26 +2822,33 @@ public class Spawn implements Codec.Codable {
      * Adds the task.queue.size event to be sent to clientListeners on next batch.listen update
      */
     public void sendTaskQueueUpdateEvent() {
-        taskQueuesByPriority.lock();
         try {
             int numQueued = 0;
             int numQueuedWaitingOnError = 0;
-            for (LinkedList<? extends JobKey> queue : taskQueuesByPriority.values()) {
-                numQueued += queue.size();
-                for (JobKey key : queue) {
-                    Job job = getJob(key);
-                    if ((job != null) && !job.isEnabled()) {
-                        numQueuedWaitingOnError += 1;
+            LinkedList<JobKey>[] queues = null;
+            taskQueuesByPriority.lock();
+            try {
+                //noinspection unchecked
+                queues = taskQueuesByPriority.values().toArray(new LinkedList[taskQueuesByPriority.size()]);
+
+                for (LinkedList<JobKey> queue : queues) {
+                    numQueued += queue.size();
+                    for (JobKey key : queue) {
+                        Job job = getJob(key);
+                        if (job != null && !job.isEnabled()) {
+                            numQueuedWaitingOnError += 1;
+                        }
                     }
                 }
+                lastQueueSize = numQueued;
+            } finally {
+                taskQueuesByPriority.unlock();
             }
-            lastQueueSize = numQueued;
             JSONObject json = new JSONObject("{'size':" + Integer.toString(numQueued) + ",'sizeErr':" + Integer.toString(numQueuedWaitingOnError) + "}");
             sendEventToClientListeners("task.queue.size", json);
         } catch (Exception e) {
-            log.warn("[task.queue.update] received exception while sending task queue update event (this is ok unless it happens repeatedly)", e);
-        } finally {
-            taskQueuesByPriority.unlock();
+            log.warn("[task.queue.update] received exception while sending task queue update event (this is ok unless it happens repeatedly) " + e);
+            e.printStackTrace();
         }
     }
 
@@ -3591,25 +3598,32 @@ public class Spawn implements Codec.Codable {
      * of priority, so we try priority 2 tasks before priority 1, etc.
      */
     public void kickJobsOnQueue() {
+        LinkedList[] queues = null;
         boolean success = false;
         while (!success && !shuttingDown.get()) {
             // need the job lock first
             jobLock.lock();
             try {
-                if (taskQueuesByPriority.tryLock(100, TimeUnit.MILLISECONDS)) {
+                if (taskQueuesByPriority.tryLock()) {
                     success = true;
                     taskQueuesByPriority.setStoppedJob(false);
                     taskQueuesByPriority.updateAllHostAvailSlots(listHostStatus(null));
-                    for (LinkedList<SpawnQueueItem> queue : taskQueuesByPriority.values()) {
+                    queues = taskQueuesByPriority.values().toArray(new LinkedList[taskQueuesByPriority.size()]);
+                    for (LinkedList<SpawnQueueItem> queue : queues) {
                         iterateThroughTaskQueue(queue);
                     }
                     sendTaskQueueUpdateEvent();
                 }
-            } catch (InterruptedException ignored) {
             } finally {
                 jobLock.unlock();
                 if (success) {
                     taskQueuesByPriority.unlock();
+                }
+            }
+            if (!success) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
                 }
             }
         }

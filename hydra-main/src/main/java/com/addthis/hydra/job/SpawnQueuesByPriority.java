@@ -93,10 +93,6 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
         return queueLock.tryLock();
     }
 
-    public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
-        return queueLock.tryLock(time, unit);
-    }
-
     public boolean addTaskToQueue(int priority, JobKey task, boolean canIgnoreQuiesce, boolean toHead) {
         queueLock.lock();
         try {
