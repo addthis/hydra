@@ -59,7 +59,7 @@ public class DataStoreUtil {
 
     private static final String markCutoverCompleteKey = "/spawndatastore.cutover.complete";
 
-    public static enum DataStoreType {ZK, MYSQL, POSTGRES}
+    public static enum DataStoreType {ZK, MYSQL}
 
     /**
      * Create the canonical SpawnDataStore based on the system parameters
@@ -97,8 +97,9 @@ public class DataStoreUtil {
         }
         switch (type) {
             case ZK: return new ZookeeperDataStore(null);
-            case MYSQL: return new MysqlDataStore(sqlHostName, sqlPort, sqlDbName, sqlTableName, properties);
-            case POSTGRES: return new PostgresqlDataStore(sqlHostName, sqlPort, sqlDbName, sqlTableName, properties);
+            case MYSQL:
+                String url = "jdbc:mysql:thin://" + sqlHostName + ":" + sqlPort + "/" + sqlDbName;
+                return new MysqlDataStore(url, sqlTableName, properties);
             default: throw new IllegalArgumentException("Unexpected DataStoreType " + type);
         }
     }
