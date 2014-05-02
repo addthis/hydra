@@ -58,7 +58,7 @@ public class RunTaskWorkItem extends MinionWorkItem {
         task.unmonitor();
         if (exit == 0) {
             synchronized (task) {
-                task.execReplicate(null, null, false, true);
+                task.execReplicate(null, null, false, true, false);
             }
         } else {
             task.sendEndStatus(exit);
