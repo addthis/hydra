@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import com.addthis.hydra.job.store.MysqlDataStore;
 import com.addthis.hydra.job.store.MysqlInsertPickLastDataStore;
@@ -14,6 +17,7 @@ import com.addthis.maljson.JSONObject;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.junit.Test;
 
@@ -33,57 +37,52 @@ public class MysqlTest {
         properties.setProperty("password", password);
         String tableName = "newTable2";
         MysqlInsertPickLastDataStore ds = new MysqlInsertPickLastDataStore("jdbc:mysql:thin://localhost:3306/test", tableName, properties);
-        cleanupTestDataStore(ds);
         correctnessTestDataStore(ds);
         perfTest(ds);
         ds.close();
     }
 
     @Test
-    public void cleanupPerfTest() throws Exception {
+    public void concurTest() throws Exception {
         Properties properties = new Properties();
         properties.setProperty("user", user);
         properties.setProperty("password", password);
         String tableName = "newTable2";
         MysqlInsertPickLastDataStore ds = new MysqlInsertPickLastDataStore("jdbc:mysql:thin://localhost:3306/test", tableName, properties);
-        int numberKeys = 1000;
-        int valsPerKey = 2;
+        ExecutorService exec = new ScheduledThreadPoolExecutor(40, new ThreadFactoryBuilder().build());
+        for (int i=0; i<100; i++) {
+            exec.submit(new DbRunner(ds, i/10));
+        }
+        exec.shutdown();
+        exec.awaitTermination(500, TimeUnit.SECONDS);
+        ds.close();
+    }
+    private class DbRunner implements Runnable{
+        private final SpawnDataStore ds;
+        private final int id;
 
-        long writeStart = System.currentTimeMillis();
-        for (int i=0; i<valsPerKey; i++) {
-            for (int j=0; j<numberKeys; j++) {
-                ds.put("k" + j, "v" + i);
+        private DbRunner(SpawnDataStore ds, int id) {
+            this.ds = ds;
+            this.id = id;
+        }
+
+        @Override
+        public void run() {
+            try {
+                String key = "k" + id;
+                String val = "v" + id;
+                long wait = Math.round(5000 * Math.random());
+                Thread.sleep(wait);
+                ds.put(key, val);
+                ds.putAsChild(key, "child1", val);
+                Thread.sleep(wait);
+                boolean passed = val.equals(ds.get(key)) && val.equals(ds.getChild(key, "child1"));
+                System.out.println(id + " " + (passed ? "passed" : "failed"));
+            } catch (Exception e) {
+                System.out.println("ERROR IN DBRUNNER: " + e);
+                e.printStackTrace();
             }
         }
-        System.out.println(System.currentTimeMillis() - writeStart);
-        System.out.println(ds.countRows() + " rows");
-
-        ds.close();
-    }
-
-    @Test
-    public void localTest2() throws Exception {
-        Properties properties = new Properties();
-        properties.setProperty("user", user);
-        properties.setProperty("password", password);
-        String tableName = "newTable2";
-        MysqlInsertPickLastDataStore ds = new MysqlInsertPickLastDataStore("jdbc:mysql:thin://localhost:3306/test", tableName, properties);
-        for (int i=0; i<30; i++) {
-            ds.putAsChild("a", "b", "ver" + (30-i));
-            ds.putAsChild("a", "c", (30-i) + "ver");
-        }
-        ds.close();
-    }
-
-    private void cleanupTestDataStore(MysqlInsertPickLastDataStore ds) throws Exception {
-        int versions = 50;
-        for (int i=0; i<versions; i++) {
-            ds.put("key", "ver" + i);
-        }
-        System.out.println(ds.countRows() + " rows");
-        System.out.println(ds.countRows() + " rows");
-        assertEquals(ds.get("key"), "ver" + (versions - 1));
-        ds.delete("key");
     }
 
     private static String bigJson = "";

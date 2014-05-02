@@ -58,6 +58,14 @@ public class MysqlInsertPickLastDataStore implements SpawnDataStore {
     private static final Timer queryTimer = Metrics.newTimer(MysqlInsertPickLastDataStore.class, "mysqlQueryTime");
     private static final Timer insertTimer = Metrics.newTimer(MysqlInsertPickLastDataStore.class, "mysqlInsertTime");
 
+    /**
+     * Create the data pool, initialize the connection pool, and create the table if necessary.
+      * @param jdbcUrl The URL used to connect to the database, e.g. "jdbc:mysql:thin://localhost:3306/spawndatabase"
+     *                 It is assumed that this database has been created and basic privileges have been granted to the spawn user.
+     * @param tableName The table name where data will be stored
+     * @param properties Properties for the connection pool. Should include user and password if appropriate.
+     * @throws Exception If the data store cannot be initialized.
+     */
     public MysqlInsertPickLastDataStore(String jdbcUrl, String tableName, Properties properties) throws Exception {
         cpds = new ComboPooledDataSource();
         cpds.setDriverClass(driverClass);
@@ -70,7 +78,7 @@ public class MysqlInsertPickLastDataStore implements SpawnDataStore {
         log.info("Connecting to mysql data table url={} table={} ", jdbcUrl, tableName);
         runStartupCommand();
         /* Initialize templates. Done in constructor so they can be final */
-        queryTemplate = String.format("SELECT %s FROM %s WHERE %s=? AND %s=? ORDER BY %s DESC LIMIT 1", valueKey, tableName, pathKey, childKey, idKey);
+        queryTemplate = String.format("SELECT %s FROM %s WHERE %s=? AND %s=?", valueKey, tableName, pathKey, childKey);
         insertTemplate = String.format("REPLACE INTO %s (%s,%s,%s) VALUES(?,?,?)", tableName, pathKey, valueKey, childKey);
         deleteTemplate = String.format("DELETE FROM %s WHERE %s=? AND %s=?", tableName, pathKey, childKey);
         getChildNamesTemplate = String.format("SELECT DISTINCT %s FROM %s WHERE %s=? AND %s!=?", childKey, tableName, pathKey, childKey);
@@ -78,17 +86,25 @@ public class MysqlInsertPickLastDataStore implements SpawnDataStore {
                 childKey, valueKey, tableName, pathKey, childKey, idKey, idKey, tableName, childKey, childKey, childKey);
     }
 
-    private static void checkValidKeys(String key1, String key2) {
-        checkValidKey(key1);
-        checkValidKey(key2);
-    }
-
+    /**
+     * Do basic sanity checking for a path or childId value before operating on the database.
+     * @param key The key to check
+     */
     private static void checkValidKey(String key) {
         if (key == null || blankChildId.equals(key) || key.length() > maxPathLength) {
             throw new IllegalArgumentException("Invalid row key " + key + ": must be non-null and fewer than " + maxPathLength + " characters and not internal value " + blankChildId);
         }
     }
 
+    private static void checkValidKeys(String key1, String key2) {
+        checkValidKey(key1);
+        checkValidKey(key2);
+    }
+
+    /**
+     * On startup, create the table if it doesn't exist, and enforce that path+childId combinations must be unique
+      * @throws SQLException If creating execution fails
+     */
     private void runStartupCommand() throws SQLException {
         try (Connection connection = cpds.getConnection()) {
             String cmd = String.format("CREATE TABLE IF NOT EXISTS %s ( %s INT NOT NULL AUTO_INCREMENT, " +
@@ -145,11 +161,14 @@ public class MysqlInsertPickLastDataStore implements SpawnDataStore {
     }
 
     @Override
+    /**
+     * Query the values of multiple rows using a single query, mandating that childId=blankChildId to ensure that no children are returned.
+     * Use 'WHERE path IN (s1, s2, ...)' syntax, which performs better than a series of ORs
+     */
     public Map<String, String> get(String[] paths) {
         if (paths == null) {
             return null;
         }
-        // Query rows with blank childId. Use 'WHERE path IN (s1, s2, ...)' syntax, which performs better than a series of ORs
         StringBuilder sb = new StringBuilder().append(String.format("SELECT %s,%s FROM %s WHERE %s=? AND %s IN (?", pathKey, valueKey, tableName, childKey, pathKey));
         for (int i=0; i<paths.length-1; i++) {
             sb.append(",?");
@@ -180,6 +199,13 @@ public class MysqlInsertPickLastDataStore implements SpawnDataStore {
         insert(path, blankChildId, value);
     }
 
+    /**
+     * Internal method that uses the 'replace' mysql command to insert the row if it is new, update otherwise.
+     * @param path The path to update
+     * @param childId The childId to modify
+     * @param value The value to insert
+     * @throws SQLException If the command fails
+     */
     private void insert(String path, String childId, String value)  throws SQLException {
         try (Connection connection = cpds.getConnection()) {
             PreparedStatement preparedStatement = connection.prepareStatement(insertTemplate);
@@ -190,6 +216,13 @@ public class MysqlInsertPickLastDataStore implements SpawnDataStore {
         }
     }
 
+    /**
+     * Query the value for a particular path/childId combination. Return null if no row is found.
+     * @param path The path to query
+     * @param childId The child to query
+     * @return A String if a row was found; null otherwise. If multiple rows are found, throw a RuntimeException
+     * @throws SQLException
+     */
     private String querySingleResult(String path, String childId) throws SQLException {
         try (Connection connection = cpds.getConnection()) {
             PreparedStatement preparedStatement = connection.prepareStatement(queryTemplate);
@@ -255,6 +288,9 @@ public class MysqlInsertPickLastDataStore implements SpawnDataStore {
     }
 
     @Override
+    /**
+     * Find the names of all children of a given path.
+     */
     public List<String> getChildrenNames(String path) {
         checkValidKey(path);
         try (Connection connection = cpds.getConnection()) {
@@ -280,6 +316,9 @@ public class MysqlInsertPickLastDataStore implements SpawnDataStore {
     }
 
     @Override
+    /**
+     * Get the names and values for each child of a given path.
+     */
     public Map<String, String> getAllChildren(String path) {
         checkValidKey(path);
         try (Connection connection = cpds.getConnection()) {
