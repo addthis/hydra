@@ -12,35 +12,29 @@
  * limitations under the License.
  */
 
-package com.addthis.hydra.query.tracker;
+package com.addthis.hydra.query.aggregate;
 
 import com.addthis.codec.Codec;
-import com.addthis.hydra.query.aggregate.TaskSourceInfo;
 
-public class QueryEntryInfo implements Codec.Codable {
+public class TaskSourceInfo implements Codec.Codable {
 
     @Codec.Set(codable = true)
-    public String[] paths;
+    public final boolean complete;
     @Codec.Set(codable = true)
-    public String uuid;
+    public final int lines;
     @Codec.Set(codable = true)
-    public String alias;
+    public final long endTime;
     @Codec.Set(codable = true)
-    public String sources;
-    @Codec.Set(codable = true)
-    public String remoteip;
-    @Codec.Set(codable = true)
-    public String sender;
-    @Codec.Set(codable = true)
-    public String job;
-    @Codec.Set(codable = true)
-    public String[] ops;
-    @Codec.Set(codable = true)
-    public long startTime;
-    @Codec.Set(codable = true)
-    public long runTime;
-    @Codec.Set(codable = true)
-    public long lines;
-    @Codec.Set(codable = true)
-    public TaskSourceInfo[] tasks;
+    public final TaskSourceOptionInfo[] options;
+
+    public TaskSourceInfo(QueryTaskSource taskSource) {
+        complete = taskSource.complete();
+        lines    = taskSource.lines;
+        endTime  = taskSource.endTime;
+        options  = new TaskSourceOptionInfo[taskSource.options.length];
+        for (int i = 0; i < taskSource.options.length; i++) {
+            options[i] = new TaskSourceOptionInfo(taskSource.options[i]);
+        }
+    }
+
 }

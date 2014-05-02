@@ -18,6 +18,8 @@ import java.util.Random;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.data.query.AbstractRowOp;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * <p>This query operation <span class="hydra-summary">randomly fails</span>.
@@ -31,7 +33,8 @@ public class OpRandomFail extends AbstractRowOp {
 
     private static final Random random = new Random(System.currentTimeMillis());
 
-    public OpRandomFail(String arg) {
+    public OpRandomFail(String arg, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         percent = Integer.parseInt(arg);
     }
 

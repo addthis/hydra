@@ -30,6 +30,8 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractBufferOp;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * <b>args</b>: mergekeycolumn,mergekeycolumn:foldcolumn:foldkey,foldkey:copykeycolumn,copykeycolumn
@@ -65,18 +67,19 @@ import com.addthis.hydra.data.query.AbstractBufferOp;
  */
 public class OpFold extends AbstractBufferOp implements BundleFormatted {
 
-    private final BundleField outputFields[];
+    private final BundleField[] outputFields;
     private final ListBundleFormat format;
-    private final String keycols[];
+    private final String[] keycols;
     private final String foldcol;
-    private final String foldvals[];
-    private final String copycols[];
-    private final String inputFields[];
+    private final String[] foldvals;
+    private final String[] copycols;
+    private final String[] inputFields;
     private Bundle folded;
     private String lastkey;
 
-    public OpFold(String args) {
-        String seg[] = Strings.splitArray(args, ":");
+    public OpFold(String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
+        String[] seg = Strings.splitArray(args, ":");
         keycols = Strings.splitArray(seg[0], ",");
         foldcol = seg[1];
         foldvals = Strings.splitArray(seg[2], ",");

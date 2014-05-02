@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.query;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -71,6 +73,10 @@ import com.addthis.hydra.data.query.op.OpTranspose;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.channel.ChannelProgressivePromise;
+import io.netty.channel.DefaultChannelProgressivePromise;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+
 /**
  * <pre>
  * ops=OP[;OP1;OP2;...]
@@ -84,6 +90,7 @@ import org.slf4j.LoggerFactory;
  * TODO memory limits need to be re-implemented
  * TODO see Query for other TODOs that need implementation / support here
  */
+@NotThreadSafe
 public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, QueryMemTracker, Closeable {
 
     private static final Logger log = LoggerFactory.getLogger(QueryOpProcessor.class);
@@ -152,7 +159,7 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
             opmap.put(token, this);
         }
 
-        private OPS(String tokens[]) {
+        private OPS(String[] tokens) {
             for (String token : tokens) {
                 opmap.put(token, this);
             }
@@ -166,38 +173,37 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
     private final long memTip;
     private final int rowTip;
     private final File tempDir;
-    private final QueryStatusObserver queryStatusObserver;
+    private final ChannelProgressivePromise queryPromise;
     private final ResultChannelOutput output;
     private final QueryMemTracker memTracker;
 
     private QueryOpProcessor(Builder builder) {
-        this(builder.output, builder.queryStatusObserver, builder.tempDir,
+        this(builder.output, builder.queryPromise, builder.tempDir,
                 builder.memTip, builder.rowTip, builder.memTracker, builder.ops);
     }
 
     public QueryOpProcessor(DataChannelOutput output, String[] ops) {
-        this(output, ops, new QueryStatusObserver());
+        this(new Builder(output, ops));
     }
 
-    public QueryOpProcessor(DataChannelOutput output, String[] ops, QueryStatusObserver queryStatusObserver) {
-        this(output, queryStatusObserver, new File(TMP_SORT_DIR_STRING),
-                OP_TIPMEM, OP_TIPROW, null, ops);
+    public QueryOpProcessor(DataChannelOutput output, String[] ops, ChannelProgressivePromise queryPromise) {
+        this(new Builder(output, ops).queryPromise(queryPromise));
     }
 
-    public QueryOpProcessor(DataChannelOutput output, QueryStatusObserver queryStatusObserver,
+    public QueryOpProcessor(DataChannelOutput output, ChannelProgressivePromise queryPromise,
             File tempDir, long memTip, int rowTip, QueryMemTracker memTracker, String[] ops) {
-        this.queryStatusObserver = queryStatusObserver;
+        this.queryPromise = queryPromise;
         this.tempDir = tempDir;
         this.memTip = memTip;
         this.rowTip = rowTip;
-        this.output = new ResultChannelOutput(output);
+        this.output = new ResultChannelOutput(output, queryPromise);
         this.memTracker = memTracker;
         firstOp = this.output;
         parseOps(ops);
     }
 
-    public QueryStatusObserver getQueryStatusObserver() {
-        return this.queryStatusObserver;
+    public ChannelProgressivePromise getQueryPromise() {
+        return this.queryPromise;
     }
 
     public String printOps() {
@@ -225,137 +231,137 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
                 }
                 switch (op) {
                     case AVG:
-                        appendOp(new OpRoll.AvgOpRoll(args));
+                        appendOp(new OpRoll.AvgOpRoll(args, queryPromise));
                         break;
                     case CHANGEPOINTS:
-                        appendOp(new OpChangePoints(this, args, queryStatusObserver));
+                        appendOp(new OpChangePoints(this, args, queryPromise));
                         break;
                     case COMPARE:
-                        appendOp(new OpCompare(args));
+                        appendOp(new OpCompare(args, queryPromise));
                         break;
                     case CONTAINS:
-                        appendOp(new OpContains(args));
+                        appendOp(new OpContains(args, queryPromise));
                         break;
                     case DATEF:
-                        appendOp(new OpDateFormat(args));
+                        appendOp(new OpDateFormat(args, queryPromise));
                         break;
                     case DELTA:
-                        appendOp(new OpRoll.DeltaOpRoll(args));
+                        appendOp(new OpRoll.DeltaOpRoll(args, queryPromise));
                         break;
                     case DEPIVOT:
-                        appendOp(new OpDePivot(this, args));
+                        appendOp(new OpDePivot(this, args, queryPromise));
                         break;
                     case DIFF:
-                        appendOp(new OpDiff(this, args, queryStatusObserver));
+                        appendOp(new OpDiff(this, args, queryPromise));
                         break;
                     case DISORDER:
-                        appendOp(new OpDisorder(this, args, queryStatusObserver));
+                        appendOp(new OpDisorder(this, args, queryPromise));
                         break;
                     case DSORT:
-                        appendOp(new OpDiskSort(args, TMP_SORT_DIR_STRING, queryStatusObserver));
+                        appendOp(new OpDiskSort(args, TMP_SORT_DIR_STRING, queryPromise));
                         break;
                     case FILL:
-                        appendOp(new OpFill(args));
+                        appendOp(new OpFill(args, queryPromise));
                         break;
                     case FOLD:
-                        appendOp(new OpFold(args));
+                        appendOp(new OpFold(args, queryPromise));
                         break;
                     case FREQUENCYTABLE:
-                        appendOp(new OpFrequencyTable(this, args, queryStatusObserver));
+                        appendOp(new OpFrequencyTable(this, args, queryPromise));
                         break;
                     case GATHER:
-                        appendOp(new OpGather(args, memTip, rowTip, tempDir.getPath(), queryStatusObserver));
+                        appendOp(new OpGather(args, memTip, rowTip, tempDir.getPath(), queryPromise));
                         break; // TODO move OpTop code into OpGather and delete OpTop
                     case HISTOGRAM:
-                        appendOp(new OpHistogram(args, queryStatusObserver));
+                        appendOp(new OpHistogram(args, queryPromise));
                         break;
                     case HOLTWINTERS:
-                        appendOp(new OpHoltWinters(this, args, queryStatusObserver));
+                        appendOp(new OpHoltWinters(this, args, queryPromise));
                         break;
                     case DISTRIBUTION:
-                        appendOp(new OpPercentileDistribution(this, args, queryStatusObserver));
+                        appendOp(new OpPercentileDistribution(this, args, queryPromise));
                         break;
                     case LIMIT:
-                        appendOp(new OpLimit(args, queryStatusObserver));
+                        appendOp(new OpLimit(args, queryPromise));
                         break;
                     case MAP:
-                        appendOp(new OpMap(args));
+                        appendOp(new OpMap(args, queryPromise));
                         break;
                     case RMAP:
-                        appendOp(new OpRMap(args));
+                        appendOp(new OpRMap(args, queryPromise));
                         break;
                     case MAX:
-                        appendOp(new OpRoll.MaxOpRoll(args));
+                        appendOp(new OpRoll.MaxOpRoll(args, queryPromise));
                         break;
                     case MEDIAN:
-                        appendOp(new OpMedian(this, queryStatusObserver));
+                        appendOp(new OpMedian(this, queryPromise));
                         break;
                     case MERGE:
-                        appendOp(new OpMerge(args, queryStatusObserver));
+                        appendOp(new OpMerge(args, queryPromise));
                         break;
                     case MIN:
-                        appendOp(new OpRoll.MinOpRoll(args));
+                        appendOp(new OpRoll.MinOpRoll(args, queryPromise));
                         break;
                     case NODUP:
-                        appendOp(new OpNoDup());
+                        appendOp(new OpNoDup(queryPromise));
                         break;
                     case NUMBER:
-                        appendOp(new OpNumber(args));
+                        appendOp(new OpNumber(args, queryPromise));
                         break;
                     case ORDER:
-                        appendOp(new OpOrder(args));
+                        appendOp(new OpOrder(args, queryPromise));
                         break;
                     case ORDERMAP:
-                        appendOp(new OpOrderMap(args));
+                        appendOp(new OpOrderMap(args, queryPromise));
                         break;
                     case PAD:
-                        appendOp(new OpFill(args, true));
+                        appendOp(new OpFill(args, true, queryPromise));
                         break;
                     case PERCENTRANK:
-                        appendOp(new OpPercentileRank(this, args, queryStatusObserver));
+                        appendOp(new OpPercentileRank(this, args, queryPromise));
                         break;
                     case PIVOT:
-                        appendOp(new OpPivot(this, args, queryStatusObserver));
+                        appendOp(new OpPivot(this, args, queryPromise));
                         break;
                     case RANGE:
-                        appendOp(new OpRange(this, args, queryStatusObserver));
+                        appendOp(new OpRange(this, args, queryPromise));
                         break;
                     case REVERSE:
-                        appendOp(new OpReverse(this, queryStatusObserver));
+                        appendOp(new OpReverse(this, queryPromise));
                         break;
                     case RMSING:
-                        appendOp(new OpRemoveSingletons(this, args, queryStatusObserver));
+                        appendOp(new OpRemoveSingletons(this, args, queryPromise));
                         break;
                     case RND_FAIL:
-                        appendOp(new OpRandomFail(args));
+                        appendOp(new OpRandomFail(args, queryPromise));
                         break;
                     case SEEN:
-                        appendOp(new OpSeen(this, args, queryStatusObserver));
+                        appendOp(new OpSeen(this, args, queryPromise));
                         break;
                     case SKIP:
-                        appendOp(new OpSkip(args));
+                        appendOp(new OpSkip(args, queryPromise));
                         break;
                     case SLEEP:
-                        appendOp(new OpSleep(args));
+                        appendOp(new OpSleep(args, queryPromise));
                         break;
                     case SORT:
                         // TODO: fix SORT or simplify this aliasing
-                        appendOp(new OpDiskSort(args, TMP_SORT_DIR_STRING, queryStatusObserver));
+                        appendOp(new OpDiskSort(args, TMP_SORT_DIR_STRING, queryPromise));
                         break;
                     case STRING:
-                        appendOp(new OpString(args));
+                        appendOp(new OpString(args, queryPromise));
                         break;
                     case SUM:
-                        appendOp(new OpRoll.SumOpRoll(args));
+                        appendOp(new OpRoll.SumOpRoll(args, queryPromise));
                         break;
                     case TITLE:
-                        appendOp(new OpTitle(args));
+                        appendOp(new OpTitle(args, queryPromise));
                         break;
                     case TOP:
-                        appendOp(new OpGather(args, memTip, rowTip, tempDir.getPath(), queryStatusObserver));
+                        appendOp(new OpGather(args, memTip, rowTip, tempDir.getPath(), queryPromise));
                         break;
                     case TRANSPOSE:
-                        appendOp(new OpTranspose(this, queryStatusObserver));
+                        appendOp(new OpTranspose(this, queryPromise));
                         break;
                 }
             }
@@ -386,16 +392,10 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
      * @param row
      */
     public void processRow(Bundle row) throws QueryException {
-        /**
-         * sync b/c multiple threads expected to call this in workers, maybe
-         * masters
-         */
-        synchronized (firstOp) {
-            rowsin++;
-            cellsin += row.getCount();
-            if (queryStatusObserver != null && !queryStatusObserver.queryCompleted) {
-                firstOp.send(row);
-            }
+        rowsin++;
+        cellsin += row.getCount();
+        if (queryPromise != null && !queryPromise.isDone()) {
+            firstOp.send(row);
         }
         if (OP_MAXROWS > 0 && rowsin > OP_MAXROWS) {
             throw new QueryException("query exceeded max input rows: " + OP_MAXROWS);
@@ -514,16 +514,17 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
         private final DataChannelOutput output;
         private final String[] ops;
 
+        private ChannelProgressivePromise queryPromise =
+                new DefaultChannelProgressivePromise(null, ImmediateEventExecutor.INSTANCE);
         private long memTip = OP_TIPMEM;
         private int rowTip = OP_TIPROW;
         private File tempDir = new File(TMP_SORT_DIR_STRING);
         private QueryMemTracker memTracker = null;
 
-        private QueryStatusObserver queryStatusObserver = null;
-
         public Builder(DataChannelOutput output, String... ops) {
             this.output = output;
             this.ops = ops;
+            this.queryPromise = queryPromise;
         }
 
         public Builder memTracker(QueryMemTracker memTracker) {
@@ -546,15 +547,12 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
             return this;
         }
 
-        public Builder queryStatusObserver(QueryStatusObserver queryStatusObserver) {
-            this.queryStatusObserver = queryStatusObserver;
+        public Builder queryPromise(ChannelProgressivePromise queryPromise) {
+            this.queryPromise = queryPromise;
             return this;
         }
 
         public QueryOpProcessor build() {
-            if (this.queryStatusObserver == null) {
-                queryStatusObserver(new QueryStatusObserver());
-            }
             return new QueryOpProcessor(this);
         }
     }

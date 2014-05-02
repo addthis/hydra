@@ -28,7 +28,6 @@ import com.addthis.hydra.data.query.FieldValueList;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryElement;
 import com.addthis.hydra.data.query.QueryException;
-import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.DataTreeNode;
 
@@ -37,6 +36,8 @@ import com.google.common.collect.Iterators;
 import org.slf4j.Logger;
 
 import org.slf4j.LoggerFactory;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 /**
  * wraps a Tree and provides the real work behind the query engine. keeps track
@@ -163,9 +164,9 @@ public class QueryEngine {
      *               to another QueryOpProcessor and the last will send its output to a DataChannelOutput sending bytes
      *               back to meshy, usually defined at the MQSource side of code.
      */
-    public void search(Query query, DataChannelOutput result) throws QueryException {
-        search(query, result, new QueryStatusObserver());
-    }
+//    public void search(Query query, DataChannelOutput result) throws QueryException {
+//        search(query, result, new QueryStatusObserver());
+//    }
 
     /**
      * Performs a query search, writes the results to a data channel. This function does not break the execution of the
@@ -176,20 +177,21 @@ public class QueryEngine {
      *                 a QueryOpProcessor that represents the first operator in a query, which in turn sends its output
      *                 to another QueryOpProcessor and the last will send its output to a DataChannelOutput sending bytes
      *                 back to meshy, usually defined at the MQSource side of code.
-     * @param observer A wrapper for a boolean flag that gets set to true by MQSource in case the user
+     * @param queryPromise A wrapper for a boolean flag that gets set to true by MQSource in case the user
      *                 cancels the query at the MQMaster side.
      */
-    public void search(Query query, DataChannelOutput result, QueryStatusObserver observer) throws QueryException {
+    public void search(Query query, DataChannelOutput result,
+            ChannelProgressivePromise queryPromise) throws QueryException {
         for (QueryElement[] path : query.getQueryPaths()) {
-            if (!(observer.queryCancelled || observer.queryCompleted)) {
-                search(path, result, observer);
+            if (!(queryPromise.isDone())) {
+                search(path, result, queryPromise);
             }
         }
     }
 
     /**
      * Performs a query search, writes the results to a data channel, and stops processing if the source sets
-     * queryStatusObserver.queryCancelled to true.
+     * queryPromise.queryCancelled to true.
      *
      * TODO Currently only exists to satisfy legacy PathOutput needs.  PathOutput needs updating/deprecating.
      *
@@ -200,25 +202,26 @@ public class QueryEngine {
      *               back to meshy, usually defined at the MQSource side of code.
      * @throws QueryException
      */
-    public void search(QueryElement path[], DataChannelOutput result) throws QueryException {
-        search(path, result, new QueryStatusObserver());
-    }
+//    public void search(QueryElement[] path, DataChannelOutput result) throws QueryException {
+//        search(path, result, new QueryStatusObserver());
+//    }
 
     /**
      * Performs a query search, writes the results to a data channel, and stops processing if the source sets
-     * queryStatusObserver.queryCancelled to true.
+     * queryPromise.queryCancelled to true.
      *
      * @param path     An array of QueryElement that contains a parsed query path.
      * @param result   A DataChannelOutput to which the result will be written. In practice, this will be the head of
      *                 a QueryOpProcessor that represents the first operator in a query, which in turn sends its output
      *                 to another QueryOpProcessor and the last will send its output to a DataChannelOutput sending bytes
      *                 back to meshy, usually defined at the MQSource side of code.
-     * @param observer A wrapper for a boolean flag that gets set to true by MQSource in case the user
+     * @param queryPromise A wrapper for a boolean flag that gets set to true by MQSource in case the user
      *                 cancels the query at the MQMaster side.
      * @throws QueryException
      * @see {@link Query#parseQueryPath(String)}
      */
-    private void search(QueryElement path[], DataChannelOutput result, QueryStatusObserver observer) throws QueryException {
+    public void search(QueryElement[] path, DataChannelOutput result,
+            ChannelProgressivePromise queryPromise) throws QueryException {
         init();
         Thread thread = Thread.currentThread();
         synchronized (active) {
@@ -229,7 +232,7 @@ public class QueryEngine {
         try {
             LinkedList<DataTreeNode> stack = new LinkedList<>();
             stack.push(tree);
-            tableSearch(stack, new FieldValueList(new KVBundleFormat()), path, 0, result, 0, observer);
+            tableSearch(stack, new FieldValueList(new KVBundleFormat()), path, 0, result, 0, queryPromise);
         } catch (QueryException ex) {
             if (log.isDebugEnabled()) {
                 log.debug("", ex);
@@ -248,8 +251,8 @@ public class QueryEngine {
 
     /**
      * the real worker behind queries. this iterates over TreeNodes using
-     * QueryElement definitions. This function (and the other tableSearchs it calls) will check the queryStatusObserver
-     * repeatedly to make sure that the channel to the client is still up. If the channel gets closed and queryStatusObserver.queryCancelled
+     * QueryElement definitions. This function (and the other tableSearchs it calls) will check the queryPromise
+     * repeatedly to make sure that the channel to the client is still up. If the channel gets closed and queryPromise.queryCancelled
      * was set to true, they will break and throw QueryExceptions.
      *
      * @param stack
@@ -260,17 +263,17 @@ public class QueryEngine {
      *                            call themselves increasing the path until all the query paths have been executed.
      * @param result              A DataChannelOutput to write the results to, most likely the first of a chain od QueryOpProcessor(s).
      * @param collect
-     * @param queryStatusObserver contains a boolean flag that gets set to true from MQSource in case the user hits
+     * @param queryPromise contains a boolean flag that gets set to true from MQSource in case the user hits
      *                            cancel at the MQMaster side. At this point, there is no need for us to continue
      *                            doing the query as the channel has been closed. Recursively, the functions will break
      *                            out by throwing QueryExceptions.
      * @throws QueryException
      */
-    private void tableSearch(LinkedList<DataTreeNode> stack, DataTreeNode root, FieldValueList prefix, QueryElement path[],
+    private void tableSearch(LinkedList<DataTreeNode> stack, DataTreeNode root, FieldValueList prefix, QueryElement[] path,
             int pathIndex, DataChannelOutput result, int collect,
-            QueryStatusObserver queryStatusObserver) throws QueryException {
+            ChannelProgressivePromise queryPromise) throws QueryException {
         stack.push(root);
-        tableSearch(stack, prefix, path, pathIndex, result, collect, queryStatusObserver);
+        tableSearch(stack, prefix, path, pathIndex, result, collect, queryPromise);
         stack.pop();
     }
 
@@ -287,18 +290,18 @@ public class QueryEngine {
      * @param collect
      * @throws QueryException
      */
-    private void tableSearch(LinkedList<DataTreeNode> stack, FieldValueList prefix, QueryElement path[],
-            int pathIndex, DataChannelOutput sink, int collect) throws QueryException {
-        tableSearch(stack, prefix, path, pathIndex, sink, collect, new QueryStatusObserver());
-    }
+//    private void tableSearch(LinkedList<DataTreeNode> stack, FieldValueList prefix, QueryElement[] path,
+//            int pathIndex, DataChannelOutput sink, int collect) throws QueryException {
+//        tableSearch(stack, prefix, path, pathIndex, sink, collect, new QueryStatusObserver());
+//    }
 
     /**
      * see above.
      */
-    private void tableSearch(LinkedList<DataTreeNode> stack, FieldValueList prefix, QueryElement path[],
+    private void tableSearch(LinkedList<DataTreeNode> stack, FieldValueList prefix, QueryElement[] path,
             int pathIndex, DataChannelOutput sink, int collect,
-            QueryStatusObserver queryStatusObserver) throws QueryException {
-        if (queryStatusObserver != null && queryStatusObserver.queryCancelled) {
+            ChannelProgressivePromise queryPromise) throws QueryException {
+        if (queryPromise.isDone()) {
             log.warn("Query closed during processing");
             throw new QueryException("Query closed during processing");
         }
@@ -316,7 +319,7 @@ public class QueryEngine {
         }
         if (pathIndex >= path.length) {
             log.debug("pathIndex>path.length, return root={}", root);
-            if (queryStatusObserver != null && !queryStatusObserver.queryCompleted) {
+            if (!queryPromise.isDone()) {
                 sink.send(prefix.createBundle(sink));
             }
             return;
@@ -338,7 +341,7 @@ public class QueryEngine {
                         log.warn("Query closed due to thread interruption:\n", exception);
                         throw exception;
                     }
-                    if (queryStatusObserver != null && queryStatusObserver.queryCancelled) {
+                    if (queryPromise.isDone()) {
                         if (iter instanceof ClosableIterator) {
                             ((ClosableIterator<DataTreeNode>) iter).close();
                         }
@@ -360,8 +363,8 @@ public class QueryEngine {
                         limit--;
                     }
                 }
-                if (queryStatusObserver != null && !queryStatusObserver.queryCompleted) {
-                    tableSearch(null, prefix, path, pathIndex + 1, sink, collect + count, queryStatusObserver);
+                if (!queryPromise.isDone()) {
+                    tableSearch(null, prefix, path, pathIndex + 1, sink, collect + count, queryPromise);
                 }
                 prefix.pop(count);
                 return;
@@ -373,10 +376,10 @@ public class QueryEngine {
                     log.warn("Query closed due to thread interruption", exception);
                     throw exception;
                 }
-                if (queryStatusObserver != null && queryStatusObserver.queryCompleted) {
+                if (queryPromise.isDone()) {
                     break;
                 }
-                if (queryStatusObserver.queryCancelled) {
+                if (queryPromise.isDone()) {
                     if (iter instanceof ClosableIterator) {
                         ((ClosableIterator<DataTreeNode>) iter).close();
                     }
@@ -396,8 +399,8 @@ public class QueryEngine {
                     }
                     int count = next.update(prefix, tn);
                     if (count > 0) {
-                        if (!queryStatusObserver.queryCompleted) {
-                            tableSearch(stack, tn, prefix, path, pathIndex + 1, sink, collect + count, queryStatusObserver);
+                        if (!queryPromise.isDone()) {
+                            tableSearch(stack, tn, prefix, path, pathIndex + 1, sink, collect + count, queryPromise);
                         }
                         prefix.pop(count);
                         limit--;
@@ -407,8 +410,8 @@ public class QueryEngine {
                         skip--;
                         continue;
                     }
-                    if (!queryStatusObserver.queryCompleted) {
-                        tableSearch(stack, tn, prefix, path, pathIndex + 1, sink, collect, queryStatusObserver);
+                    if (!queryPromise.isDone()) {
+                        tableSearch(stack, tn, prefix, path, pathIndex + 1, sink, collect, queryPromise);
                     }
                     limit--;
                 }

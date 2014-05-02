@@ -25,7 +25,8 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.hydra.data.query.AbstractTableOp;
-import com.addthis.hydra.data.query.QueryStatusObserver;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 
 /**
@@ -59,8 +60,8 @@ public class OpDisorder extends AbstractTableOp {
     private int secondary;
     private int frequency;
 
-    public OpDisorder(DataTableFactory tableFactory, String args, QueryStatusObserver queryStatusObserver) {
-        super(tableFactory, queryStatusObserver);
+    public OpDisorder(DataTableFactory tableFactory, String args, ChannelProgressivePromise queryPromise) {
+        super(tableFactory, queryPromise);
         String[] split = args.split(":");
         if (split.length < 2 || split.length > 3) {
             throw new IllegalArgumentException("expected disorder=p:s[:f], got " + args);
@@ -118,7 +119,7 @@ public class OpDisorder extends AbstractTableOp {
     }
 
     // data[p][s] += f
-    protected void bump(Map<String, Map<String, Long>> data, String p, String s, long f) {
+    protected static void bump(Map<String, Map<String, Long>> data, String p, String s, long f) {
         Map<String, Long> m = data.get(p);
         if (m == null) {
             data.put(p, m = new HashMap<>());

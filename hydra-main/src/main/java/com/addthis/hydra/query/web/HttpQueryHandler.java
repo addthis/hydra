@@ -30,9 +30,9 @@ import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.query.MeshQueryMaster;
+import com.addthis.hydra.query.tracker.QueryEntry;
 import com.addthis.hydra.query.tracker.QueryEntryInfo;
 import com.addthis.hydra.query.tracker.QueryTracker;
-import com.addthis.hydra.query.util.HostEntryInfo;
 import com.addthis.hydra.util.MetricsServletShim;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
@@ -208,12 +208,11 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 writer.write("]");
                 break;
             case "/host/list":
-                writer.write("[\n");
-                for (HostEntryInfo hostEntryInfo : tracker.getQueryHosts(kv.getValue("uuid"))) {
-                    writer.write("{'hostname':'" + hostEntryInfo.getHostName() + "','lines':'" + hostEntryInfo.getLines() + "','starttime':" + hostEntryInfo.getStarttime() + ", 'finished':'" + hostEntryInfo.getFinished() + "', 'endtime':" + hostEntryInfo.getEndtime() + ", 'runtime':" + hostEntryInfo.getRuntime() + "},");
-                }
-                writer.write("]");
-                break;
+                QueryEntry queryEntry = tracker.getQueryEntry(kv.getValue("uuid"));
+                DetailedStatusHandler hostDetailsHandler =
+                        new DetailedStatusHandler(writer, response, ctx, request, cbf, queryEntry);
+                hostDetailsHandler.handle();
+                return;
             case "/query/cancel":
                 if (tracker.cancelRunning(kv.getValue("uuid"))) {
                     if (jsonp) writer.write("{canceled:true,message:'");
@@ -263,19 +262,16 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 JSONArray queries = new JSONArray();
                 for (QueryEntryInfo entryInfo : tracker.getCompleted()) {
                     JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
-                    entryJSON.put("hostEntries", entryInfo.hostInfoSet.size());
                     entryJSON.put("state", 0);
                     queries.put(entryJSON);
                 }
                 for (QueryEntryInfo entryInfo : tracker.getQueued()) {
                     JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
-                    entryJSON.put("hostEntries", entryInfo.hostInfoSet.size());
                     entryJSON.put("state", 2);
                     queries.put(entryJSON);
                 }
                 for (QueryEntryInfo entryInfo : tracker.getRunning()) {
                     JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
-                    entryJSON.put("hostEntries", entryInfo.hostInfoSet.size());
                     entryJSON.put("state", 3);
                     queries.put(entryJSON);
                 }
@@ -309,23 +305,11 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 break;
             }
             case "/v2/host/list": {
-                StringWriter swriter = new StringWriter();
-                final JsonGenerator json = QueryServer.factory.createJsonGenerator(swriter);
-                json.writeStartArray();
-                for (HostEntryInfo hostEntryInfo : tracker.getQueryHosts(kv.getValue("uuid"))) {
-                    json.writeStartObject();
-                    json.writeStringField("hostname", hostEntryInfo.getHostName());
-                    json.writeNumberField("lines", hostEntryInfo.getLines());
-                    json.writeNumberField("startTime", hostEntryInfo.getStarttime());
-                    json.writeNumberField("endTime", hostEntryInfo.getEndtime());
-                    json.writeNumberField("taskId", hostEntryInfo.getTaskId());
-                    json.writeBooleanField("finished", hostEntryInfo.getFinished());
-                    json.writeEndObject();
-                }
-                json.writeEndArray();
-                json.close();
-                writer.write(swriter.toString());
-                break;
+                queryEntry = tracker.getQueryEntry(kv.getValue("uuid"));
+                hostDetailsHandler =
+                        new DetailedStatusHandler(writer, response, ctx, request, cbf, queryEntry);
+                hostDetailsHandler.handle();
+                return;
             }
             case "/v2/settings/git.properties": {
                 StringWriter swriter = new StringWriter();

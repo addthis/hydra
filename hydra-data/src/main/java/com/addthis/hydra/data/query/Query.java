@@ -32,6 +32,8 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 /**
  * Object representation of a tree query.
  */
@@ -46,9 +48,9 @@ public class Query implements Codec.Codable {
     protected static RollingLog traceLog;
 
     @Codec.Set(codable = true)
-    private String paths[];
+    private String[] paths;
     @Codec.Set(codable = true)
-    private String ops[];
+    private String[] ops;
     @Codec.Set(codable = true)
     private String job;
     @Codec.Set(codable = true)
@@ -59,27 +61,27 @@ public class Query implements Codec.Codable {
     private volatile String uuid = nextUUID();
 
     @Codec.Set(codable = false)
-    public volatile QueryStatusObserver queryStatusObserver = null;
+    public ChannelProgressivePromise queryPromise = null;
 
     private final List<QueryOp> appendops = new ArrayList<>(1);
 
     public Query() {
     }
 
-    public Query(String uuid, String job, String paths[], String ops[]) {
+    public Query(String uuid, String job, String[] paths, String[] ops) {
         this(job, paths, ops);
         if (uuid != null) {
             this.uuid = uuid;
         }
     }
 
-    public Query(String job, String paths[], String ops[]) {
+    public Query(String job, String[] paths, String[] ops) {
         setJob(job);
         setOps(ops);
         setPaths(paths);
     }
 
-    public Query(String job, String path, String ops[]) {
+    public Query(String job, String path, String[] ops) {
         this(job, new String[]{path}, ops);
     }
 
@@ -105,8 +107,8 @@ public class Query implements Codec.Codable {
         return idPrefix + ":" + queryID.incrementAndGet();
     }
 
-    public QueryStatusObserver getQueryStatusObserver() {
-        return queryStatusObserver;
+    public ChannelProgressivePromise getQueryPromise() {
+        return queryPromise;
     }
 
     public static String getPathString(QueryElement... path) {
@@ -185,7 +187,7 @@ public class Query implements Codec.Codable {
         return paths;
     }
 
-    public Query setPaths(String path[]) {
+    public Query setPaths(String[] path) {
         this.paths = path;
         return this;
     }
@@ -219,8 +221,8 @@ public class Query implements Codec.Codable {
         return list.toArray(new QueryElement[list.size()]);
     }
 
-    public QueryOpProcessor newProcessor(DataChannelOutput output, QueryStatusObserver queryStatusObserver) {
-        QueryOpProcessor rp = new QueryOpProcessor(output, ops, queryStatusObserver);
+    public QueryOpProcessor newProcessor(DataChannelOutput output, ChannelProgressivePromise opPromise) {
+        QueryOpProcessor rp = new QueryOpProcessor(output, ops, opPromise);
         for (QueryOp op : appendops) {
             rp.appendOp(op);
         }
@@ -240,7 +242,7 @@ public class Query implements Codec.Codable {
         return ops;
     }
 
-    public Query setOps(String ops[]) {
+    public Query setOps(String[] ops) {
         this.ops = ops;
         return this;
     }
@@ -251,7 +253,7 @@ public class Query implements Codec.Codable {
     public Query createPipelinedQuery() {
         Query newQuery = cloneTo(new Query());
         if (ops != null && ops.length > 0) {
-            String newops[] = new String[ops.length - 1];
+            String[] newops = new String[ops.length - 1];
             System.arraycopy(ops, 1, newops, 0, newops.length);
             newQuery.ops = newops;
             String pop = ops[0];

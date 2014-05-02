@@ -20,6 +20,8 @@ import com.addthis.basis.util.Strings;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.data.query.AbstractRowOp;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * <p>This query operation <span class="hydra-summary">sleeps for a number of milliseconds</span>.
@@ -35,8 +37,9 @@ public class OpSleep extends AbstractRowOp {
 
     private static final Random rnd = new Random(System.currentTimeMillis());
 
-    public OpSleep(String arg) {
-        String op[] = Strings.splitArray(arg, ",");
+    public OpSleep(String arg, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
+        String[] op = Strings.splitArray(arg, ",");
         sleep = Long.parseLong(op[0]);
         random = op.length > 1 ? Long.parseLong(op[1]) : 0;
     }

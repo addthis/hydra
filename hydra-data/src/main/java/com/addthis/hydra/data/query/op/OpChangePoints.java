@@ -26,12 +26,13 @@ import com.addthis.bundle.table.DataTableFactory;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.hydra.data.query.AbstractTableOp;
-import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.data.util.ChangePoint;
 import com.addthis.hydra.data.util.FindChangePoints;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 /**
  * Detect significant changes within a column of a DataTable.
@@ -47,8 +48,8 @@ public class OpChangePoints extends AbstractTableOp {
     int inactiveThreshold;
     int windowSize;
 
-    public OpChangePoints(DataTableFactory factory, String args, QueryStatusObserver queryStatusObserver) {
-        super(factory, queryStatusObserver);
+    public OpChangePoints(DataTableFactory factory, String args, ChannelProgressivePromise queryPromise) {
+        super(factory, queryPromise);
         try {
             String[] opt = args.split(":");
             timeColumn = opt.length >= 1 ? Integer.parseInt(opt[0]) : 0;

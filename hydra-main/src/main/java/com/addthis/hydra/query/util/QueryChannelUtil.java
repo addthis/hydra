@@ -51,6 +51,10 @@ import com.addthis.hydra.query.QueryEngineSource;
 import org.slf4j.Logger;
 
 import org.slf4j.LoggerFactory;
+
+import io.netty.channel.DefaultChannelProgressivePromise;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+
 /**
  * should be abstracted further to be a generic pipe for queries and results.
  * submits and handles responses from QueryChannel.
@@ -116,7 +120,7 @@ public class QueryChannelUtil {
     /**
      * @param args host=[host] port=[port] job=[job] path=[path] ops=[ops] lops=[lops] data=[datadir] [iter] [quiet] [sep=separator] [out=file] [trace] [param=val]
      */
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         runQuery(args);
     }
 
@@ -176,7 +180,7 @@ public class QueryChannelUtil {
     }
 
     /** */
-    private static void runQuery(String args[]) throws Exception {
+    private static void runQuery(String[] args) throws Exception {
         HashMap<String, String> qparam = new HashMap<>();
         String sep = null;
         boolean quiet = false;
@@ -204,7 +208,7 @@ public class QueryChannelUtil {
                 host = arg.substring(5);
             } else if (arg.startsWith("hosts=")) {
                 for (String hostport : Strings.splitArray(arg.substring(6), ",")) {
-                    String hp[] = Strings.splitArray(hostport, ":");
+                    String[] hp = Strings.splitArray(hostport, ":");
                     hosts.add(new QueryHost(hp[0], hp.length > 1 ? Integer.parseInt(hp[1]) : port));
                 }
             } else if (arg.startsWith("port=")) {
@@ -301,7 +305,8 @@ public class QueryChannelUtil {
             BlockingNullConsumer consumer = new BlockingNullConsumer();
             QueryOpProcessor proc = new QueryOpProcessor.Builder(consumer, lops.toArray(new String[lops.size()]))
                     .tempDir(tempDir).build();
-            proc.appendOp(new BundleOutputWrapper(new PrintOp(sep, out)));
+            proc.appendOp(new BundleOutputWrapper(new PrintOp(sep, out),
+                    new DefaultChannelProgressivePromise(null, ImmediateEventExecutor.INSTANCE)));
             client.query(query, proc);
             consumer.waitComplete();
             Files.deleteDir(tempDir);

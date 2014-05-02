@@ -27,6 +27,7 @@ public class QueryTaskSource {
     final QueryTaskSourceOption[] options;
 
     int lines = 0;
+    long endTime = 0;
 
     FramedDataChannelReader dataChannelReader;
 
@@ -42,7 +43,11 @@ public class QueryTaskSource {
         if (options.length == 0) {
             return true;
         }
+        if (endTime > 0) {
+            return true;
+        }
         if (oneHasResponded() && dataChannelReader.eof.get()) {
+            endTime = System.currentTimeMillis();
             return true;
         }
         return false;

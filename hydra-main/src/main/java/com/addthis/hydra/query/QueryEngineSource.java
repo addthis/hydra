@@ -31,6 +31,10 @@ import com.yammer.metrics.core.Histogram;
 import org.slf4j.Logger;
 
 import org.slf4j.LoggerFactory;
+
+import io.netty.channel.DefaultChannelProgressivePromise;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+
 /** */
 public abstract class QueryEngineSource implements QuerySource {
 
@@ -74,7 +78,8 @@ public abstract class QueryEngineSource implements QuerySource {
                 engineGate.acquire(1);
                 engineGateHistogram.update(engineGate.availablePermits());
                 engine = getEngineLease();
-                engine.search(query, consumer);
+                engine.search(query, consumer,
+                        new DefaultChannelProgressivePromise(null, ImmediateEventExecutor.INSTANCE));
                 consumer.sendComplete();
             } catch (QueryException e) {
                 log.warn("query exception " + query.uuid() + " " + e + " " + consumer);

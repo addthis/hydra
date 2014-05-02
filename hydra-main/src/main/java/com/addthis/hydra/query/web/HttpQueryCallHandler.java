@@ -69,7 +69,7 @@ public final class HttpQueryCallHandler {
         handleQuery(querySource, query, kv, request, ctx);
     }
 
-    public static void handleQuery(MeshQueryMaster querySource, Query query, KVPairs kv, HttpRequest request,
+    public static void handleQuery(MeshQueryMaster meshQueryMaster, Query query, KVPairs kv, HttpRequest request,
             ChannelHandlerContext ctx) throws Exception {
         query.setParameterIfNotYetSet("hosts", kv.getValue("hosts"));
         query.setParameterIfNotYetSet("gate", kv.getValue("gate"));
@@ -124,11 +124,11 @@ public final class HttpQueryCallHandler {
             }
             switch (format) {
                 case "json":
-                    ctx.pipeline().addLast(ImmediateEventExecutor.INSTANCE,
+                    ctx.pipeline().addLast(meshQueryMaster.executorGroup,
                             "format", new JsonBundleEncoder(jsonp, jargs));
                     break;
                 case "html":
-                    ctx.pipeline().addLast(ImmediateEventExecutor.INSTANCE,
+                    ctx.pipeline().addLast(meshQueryMaster.executorGroup,
                             "format", new HtmlBundleEncoder());
                     break;
                 case "gdrive":
@@ -137,11 +137,11 @@ public final class HttpQueryCallHandler {
                             GoogleDriveBundleEncoder.create(filename, gdriveAccessToken));
                     break;
                 default:
-                    ctx.pipeline().addLast(ImmediateEventExecutor.INSTANCE,
+                    ctx.pipeline().addLast(meshQueryMaster.executorGroup,
                             "format", DelimitedBundleEncoder.create(filename, format));
                     break;
             }
-            ctx.pipeline().addLast("mqm", querySource);
+            ctx.pipeline().addLast(meshQueryMaster.executorGroup, "mqm", meshQueryMaster);
             ctx.fireChannelRead(query);
         } catch (IOException | QueryException e) {
             sendError(ctx, new HttpResponseStatus(500, "General/Query Error " + e.toString()));

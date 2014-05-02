@@ -17,6 +17,8 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.data.filter.util.BundleCalculator;
 import com.addthis.hydra.data.query.AbstractRowOp;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * <p>This query operation <span class="hydra-summary">performs postfix (RPN) calculator
@@ -304,7 +306,8 @@ public class OpNumber extends AbstractRowOp {
     /**
      * Note: this now delegates to BundleCalculator.
      */
-    public OpNumber(String args) {
+    public OpNumber(String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         calculator = new BundleCalculator(args);
     }
 

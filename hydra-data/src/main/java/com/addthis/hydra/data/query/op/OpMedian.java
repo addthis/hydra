@@ -16,7 +16,8 @@ package com.addthis.hydra.data.query.op;
 import com.addthis.bundle.table.DataTable;
 import com.addthis.hydra.data.query.AbstractTableOp;
 import com.addthis.hydra.data.query.QueryOpProcessor;
-import com.addthis.hydra.data.query.QueryStatusObserver;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 
 /**
@@ -34,8 +35,8 @@ import com.addthis.hydra.data.query.QueryStatusObserver;
  */
 public class OpMedian extends AbstractTableOp {
 
-    public OpMedian(QueryOpProcessor processor, QueryStatusObserver queryStatusObserver) {
-        super(processor, queryStatusObserver);
+    public OpMedian(QueryOpProcessor processor, ChannelProgressivePromise queryPromise) {
+        super(processor, queryPromise);
     }
 
     @Override

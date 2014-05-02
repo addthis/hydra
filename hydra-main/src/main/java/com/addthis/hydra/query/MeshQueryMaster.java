@@ -18,7 +18,6 @@ import java.io.IOException;
 
 import java.net.InetSocketAddress;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -27,19 +26,14 @@ import java.util.concurrent.ExecutionException;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.bundle.channel.DataChannelOutput;
-import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
-import com.addthis.hydra.data.query.QueryOpProcessor;
-import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.query.aggregate.AggregateConfig;
 import com.addthis.hydra.query.aggregate.MeshSourceAggregator;
 import com.addthis.hydra.query.aggregate.QueryTaskSource;
 import com.addthis.hydra.query.aggregate.QueryTaskSourceOption;
 import com.addthis.hydra.query.tracker.QueryTracker;
 import com.addthis.hydra.query.tracker.TrackerHandler;
-import com.addthis.hydra.query.web.DataChannelOutputToNettyBridge;
 import com.addthis.hydra.query.zookeeper.ZookeeperHandler;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
@@ -89,7 +83,7 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> {
     /**
      * The executor group that queries are run in.
      */
-    private final EventExecutorGroup executorGroup =
+    public final EventExecutorGroup executorGroup =
             new DefaultEventExecutorGroup(AggregateConfig.FRAME_READER_THREADS);
 
     public MeshQueryMaster(QueryTracker tracker) throws Exception {
@@ -163,20 +157,16 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> {
     }
 
     protected void messageReceived(ChannelHandlerContext ctx, Query query) throws Exception {
-        DataChannelOutput consumer = new DataChannelOutputToNettyBridge(ctx);
         String[] opsLog = query.getOps();   // being able to log and monitor rops is kind of important
 
-        // creates query for worker and updates local query ops
+        // creates query for worker and updates local query ops (!mutates query!)
+        // TODO: fix this pipeline interface
         Query remoteQuery = query.createPipelinedQuery();
 
         if (keepy != null) {
             keepy.resolveAlias(query);
             keepy.validateJobForQuery(query);
         }
-
-        // create a processor chain based in query ops terminating in provided consumer
-        QueryOpProcessor opProcessorConsumer = query.newProcessor(consumer, new QueryStatusObserver());
-        query.queryStatusObserver = opProcessorConsumer.getQueryStatusObserver();
 
         Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap;
         try {
@@ -189,17 +179,23 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> {
             throw new QueryException("Exception getting file references: " + e.getMessage());
         }
 
+        int canonicalTasks = 0;
+
         if (keepy != null) {
-            keepy.validateTaskCount(query, fileReferenceMap);
+            canonicalTasks = keepy.validateTaskCount(query, fileReferenceMap);
+        } else {
+            for (Integer taskId : fileReferenceMap.keySet()) {
+                if (taskId > canonicalTasks) {
+                    canonicalTasks = taskId;
+                }
+            }
+            // tasks are zero indexed
+            canonicalTasks += 1;
         }
 
-        final HashMap<String, String> options = new HashMap<>();
-        options.put("query", CodecJSON.encodeString(remoteQuery));
-
-        QueryTaskSource[] sourcesByTaskID = new QueryTaskSource[fileReferenceMap.size()];
-        for (Map.Entry<Integer, Set<FileReferenceWrapper>> entry : fileReferenceMap.entrySet()) {
-            Set<FileReferenceWrapper> sourceOptions = entry.getValue();
-            int taskId = entry.getKey();
+        QueryTaskSource[] sourcesByTaskID = new QueryTaskSource[canonicalTasks];
+        for (int i = 0; i < canonicalTasks; i++) {
+            Set<FileReferenceWrapper> sourceOptions = fileReferenceMap.get(i);
             QueryTaskSourceOption[] taskSourceOptions = new QueryTaskSourceOption[sourceOptions.size()];
             int taskSourceOptionsIndex = 0;
             for (FileReferenceWrapper wrapper : sourceOptions) {
@@ -207,14 +203,13 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> {
                 taskSourceOptions[taskSourceOptionsIndex] = new QueryTaskSourceOption(queryReference);
                 taskSourceOptionsIndex += 1;
             }
-            sourcesByTaskID[taskId] = new QueryTaskSource(taskSourceOptions);
+            sourcesByTaskID[i] = new QueryTaskSource(taskSourceOptions);
         }
 
-        MeshSourceAggregator aggregator = new MeshSourceAggregator(sourcesByTaskID, meshy,
-                options, this, remoteQuery);
-        ctx.pipeline().addLast("query aggregator", aggregator);
-        TrackerHandler trackerHandler = new TrackerHandler(opProcessorConsumer, opsLog);
-        ctx.pipeline().addLast("query tracker", trackerHandler);
+        MeshSourceAggregator aggregator = new MeshSourceAggregator(sourcesByTaskID, meshy, this, remoteQuery);
+        ctx.pipeline().addLast(executorGroup, "query aggregator", aggregator);
+        TrackerHandler trackerHandler = new TrackerHandler(tracker, opsLog);
+        ctx.pipeline().addLast(executorGroup, "query tracker", trackerHandler);
         ctx.fireChannelRead(query);
     }
 

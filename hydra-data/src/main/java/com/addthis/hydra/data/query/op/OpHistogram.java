@@ -21,8 +21,9 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.hydra.data.query.AbstractRowOp;
-import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.data.util.KeyHistogram;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 
 /**
@@ -40,7 +41,7 @@ public class OpHistogram extends AbstractRowOp {
 
     private final int scale;
     private final int column;
-    private final QueryStatusObserver queryStatusObserver;
+    private final ChannelProgressivePromise queryPromise;
 
     /**
      * usage: column, scale
@@ -50,9 +51,10 @@ public class OpHistogram extends AbstractRowOp {
      *
      * @param args
      */
-    public OpHistogram(String args, QueryStatusObserver queryStatusObserver) {
-        this.queryStatusObserver = queryStatusObserver;
-        int v[] = csvToInts(args);
+    public OpHistogram(String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
+        this.queryPromise = queryPromise;
+        int[] v = csvToInts(args);
         if (v.length < 1) {
             throw new RuntimeException("missing required column");
         }
@@ -80,7 +82,7 @@ public class OpHistogram extends AbstractRowOp {
     public void sendComplete() {
         Map<Long, Long> map = histo.getSortedHistogram();
         for (Entry<Long, Long> e : map.entrySet()) {
-            if (queryStatusObserver.queryCompleted || queryStatusObserver.queryCancelled) {
+            if (queryPromise.isDone()) {
                 break;
             } else {
                 Bundle row = rowFactory.createBundle();

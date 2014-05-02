@@ -18,6 +18,8 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractRowOp;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * <p>This query operation <span class="hydra-summary">filters rows based on substring matching</span>.
@@ -51,9 +53,10 @@ public class OpContains extends AbstractRowOp {
     private int col;
     private String[] contains;
 
-    public OpContains(String args) {
+    public OpContains(String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         try {
-            String opt[] = args.split(":");
+            String[] opt = args.split(":");
             if (opt.length == 2) {
                 col = Integer.parseInt(opt[0]);
                 contains = opt[1].split(",");

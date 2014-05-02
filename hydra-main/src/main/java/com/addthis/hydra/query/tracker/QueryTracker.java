@@ -16,12 +16,11 @@ package com.addthis.hydra.query.tracker;
 import java.io.File;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -32,15 +31,11 @@ import com.addthis.basis.util.RollingLog;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.data.query.QueryException;
-import com.addthis.hydra.data.query.QueryOpProcessor;
-import com.addthis.hydra.data.query.source.QueryHandle;
-import com.addthis.hydra.query.aggregate.MeshSourceAggregator;
-import com.addthis.hydra.query.util.HostEntryInfo;
 import com.addthis.hydra.util.StringMapHelper;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
@@ -49,6 +44,8 @@ import com.yammer.metrics.core.Timer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import jsr166e.ConcurrentHashMapV8;
 
 public class QueryTracker {
 
@@ -69,11 +66,11 @@ public class QueryTracker {
     /**
      * Contains the queries that are running
      */
-     final ConcurrentMap<String, QueryEntry> running = new ConcurrentHashMap<>();
+     final ConcurrentMap<String, QueryEntry> running = new ConcurrentHashMapV8<>();
     /**
      * Contains the queries that are queued because we're getting maxed out
      */
-     final ConcurrentMap<String, QueryEntry> queued = new ConcurrentHashMap<>();
+     final ConcurrentMap<String, QueryEntry> queued = new ConcurrentHashMapV8<>();
      final Cache<String, QueryEntryInfo> recentlyCompleted;
      final Semaphore queryGate = new Semaphore(MAX_CONCURRENT_QUERIES);
 
@@ -83,13 +80,18 @@ public class QueryTracker {
      final Counter queryErrors = Metrics.newCounter(QueryTracker.class, "queryErrors");
      final Counter queuedCounter = Metrics.newCounter(QueryTracker.class, "queuedCount");
      final Counter queueTimeoutCounter = Metrics.newCounter(QueryTracker.class, "queueTimeoutCounter");
-
      final Gauge runningCount = Metrics.newGauge(QueryTracker.class, "RunningCount", new Gauge<Integer>() {
         @Override
         public Integer value() {
             return running.size();
         }
     });
+
+    /**
+     * thread pool for query timeout watcher runs. Should only need one thread.
+     */
+    private final ScheduledExecutorService timeoutWatcherService = new ScheduledThreadPoolExecutor(1,
+                    new ThreadFactoryBuilder().setNameFormat("timeoutWatcher=%d").setDaemon(true).build());
 
     public QueryTracker() {
         Query.setTraceLog(new RollingLog(new File(logDir, "events-trace"), "queryTrace", eventLogCompress, logMaxSize, logMaxAge));
@@ -98,7 +100,7 @@ public class QueryTracker {
         this.recentlyCompleted = CacheBuilder.newBuilder()
                 .maximumSize(MAX_FINISHED_CACHE_SIZE).build();
         // start timeoutWatcher
-        new TimeoutWatcher(this);
+        this.timeoutWatcherService.scheduleWithFixedDelay(new TimeoutWatcher(running), 5, 5, TimeUnit.SECONDS);
     }
 
     public int getRunningCount() {
@@ -109,7 +111,7 @@ public class QueryTracker {
     public List<QueryEntryInfo> getRunning() {
         ArrayList<QueryEntryInfo> list = new ArrayList<>(running.size());
         for (QueryEntry e : running.values()) {
-            list.add(e.toStat());
+            list.add(e.getStat());
         }
         return list;
     }
@@ -117,58 +119,45 @@ public class QueryTracker {
     public List<QueryEntryInfo> getQueued() {
         ArrayList<QueryEntryInfo> list = new ArrayList<>(queued.size());
         for (QueryEntry e : queued.values()) {
-            list.add(e.toStat());
+            list.add(e.getStat());
         }
         return list;
     }
 
     // --- end mbean ---
-    public List<HostEntryInfo> getQueryHosts() {
-        //for now, adding all host entries
-        ArrayList<HostEntryInfo> list = new ArrayList<>();
-        for (QueryEntry e : running.values()) {
-            list.addAll(getActiveHosts(e.hostInfoSet));
-        }
-        return list;
+//    public List<HostEntryInfo> getQueryHosts() {
+//        //for now, adding all host entries
+//        ArrayList<HostEntryInfo> list = new ArrayList<>();
+//        for (QueryEntry e : running.values()) {
+//            list.addAll(getActiveHosts(e.hostInfoSet));
+//        }
+//        return list;
+//    }
+
+    public QueryEntryInfo getCompletedQueryInfo(String uuid) {
+        return recentlyCompleted.asMap().get(uuid);
     }
 
-    public List<HostEntryInfo> getQueryHosts(String uuid) {
-        ArrayList<HostEntryInfo> list = new ArrayList<>();
+    public QueryEntry getQueryEntry(String uuid) {
         QueryEntry queryEntry = running.get(uuid); //first try running
-        QueryEntryInfo queryEntryInfo;
-        if (queryEntry != null) {
-            queryEntryInfo = queryEntry.toStat();
-        } else {
-            queryEntryInfo = recentlyCompleted.asMap().get(uuid); //if not running, try recentlyCompleted
-        }
-
-        if (queryEntryInfo != null) //if not running or recentlycompleted, return empty list
-        {
-            list.addAll(getActiveHosts(queryEntryInfo.hostInfoSet));
-        }
-        return list;
+        return queryEntry;
     }
 
     public List<QueryEntryInfo> getCompleted() {
         return new ArrayList<>(recentlyCompleted.asMap().values());
     }
 
-    public boolean cancelRunning(String key, String reason) {
-        if (key == null || key.isEmpty()) {
+    public boolean cancelRunning(String key) {
+        if ((key == null) || key.isEmpty()) {
             return false;
         }
         QueryEntry entry = running.get(key);
         if (entry != null) {
-            entry.cancel(new QueryException(reason));
+            return entry.cancel();
         } else {
             log.warn("QT could not get entry from running -- was null : {}", key);
+            return false;
         }
-
-        return entry != null;
-    }
-
-    public boolean cancelRunning(String key) {
-        return cancelRunning(key, "Canceled by end user");
     }
 
      void log(StringMapHelper output) {
@@ -178,47 +167,6 @@ public class QueryTracker {
             String msg = Strings.cat("<", format.format(new Date()), ".", this.toString(), ">");
             output.add("timestamp", msg);
             eventLog.writeLine(output.createKVPairs().toString());
-        }
-    }
-
-    public QueryHandle runAndTrackQuery(MeshSourceAggregator meshSourceAggregator,
-            Query query, QueryOpProcessor consumer, String[] opsLog) throws QueryException {
-        if (queuedCounter.count() > MAX_QUEUED_QUERIES) {
-            // server overloaded, reject query to prevent OOM
-            throw new QueryException("Unable to handle query: " + query.uuid() + ". Queue size exceeds max value: " + MAX_QUEUED_QUERIES);
-        }
-        calls.inc();
-        QueryEntry entry = new QueryEntry(this, query, consumer, opsLog);
-
-        if (MAX_CONCURRENT_QUERIES > 0 && !acquireQueryGate(query, entry)) {
-            throw new QueryException("Timed out waiting for queryGate.  Timeout was: " + MAX_QUERY_GATE_WAIT_TIME + " seconds");
-        }
-        try {
-            log.debug("Executing.... {} {}", query.uuid(), entry.queryDetails);
-
-            // Check if the uuid is repeated, then make a new one
-            if (running.putIfAbsent(query.uuid(), entry) != null) {
-                String old = query.uuid();
-                query.useNextUUID();
-                log.warn("Query uuid was already in use in running. Going to try assigning a new one. old:" + old
-                         + " new:" + query.uuid());
-                if (running.putIfAbsent(query.uuid(), entry) != null) {
-                    throw new QueryException("Query uuid was STILL somehow already in use : " + query.uuid());
-                }
-            }
-
-//            for (QueryData querydata : queryDataCollection) {
-//                entry.addHostEntryInfo(querydata.hostEntryInfo);
-//            }
-
-            QueryHandle queryHandle = meshSourceAggregator.query(new ResultProxy(entry, consumer));
-            entry.queryStart(queryHandle);
-
-            return queryHandle;
-        } catch (Exception ex) {
-            queryGate.release();
-            log.warn("Exception thrown while running query: {}", query.uuid(), ex);
-            throw new QueryException(ex);
         }
     }
 
@@ -241,15 +189,15 @@ public class QueryTracker {
         return acquired;
     }
 
-    public static Collection<HostEntryInfo> getActiveHosts(Set<HostEntryInfo> hostInfoSet) {
-        List<HostEntryInfo> runningEntries = new ArrayList<>();
-        if (hostInfoSet != null) {
-            for (HostEntryInfo hostEntryInfo : hostInfoSet) {
-                if (hostEntryInfo.getStarttime() > 0) {
-                    runningEntries.add(hostEntryInfo);
-                }
-            }
-        }
-        return runningEntries;
-    }
+//    public static Collection<HostEntryInfo> getActiveHosts(Set<HostEntryInfo> hostInfoSet) {
+//        List<HostEntryInfo> runningEntries = new ArrayList<>();
+//        if (hostInfoSet != null) {
+//            for (HostEntryInfo hostEntryInfo : hostInfoSet) {
+//                if (hostEntryInfo.getStarttime() > 0) {
+//                    runningEntries.add(hostEntryInfo);
+//                }
+//            }
+//        }
+//        return runningEntries;
+//    }
 }

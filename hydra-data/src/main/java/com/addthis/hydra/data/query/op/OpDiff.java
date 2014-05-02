@@ -22,7 +22,8 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.hydra.data.query.AbstractTableOp;
 import com.addthis.hydra.data.query.QueryOpProcessor;
-import com.addthis.hydra.data.query.QueryStatusObserver;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 
 /**
@@ -54,10 +55,10 @@ public class OpDiff extends AbstractTableOp {
     private static final ValueString plusString = ValueFactory.create("+");
     private static final ValueString minusString = ValueFactory.create("-");
 
-    private ColumnType type[];
+    private ColumnType[] type;
 
-    public OpDiff(DataTableFactory tableFactory, String args, QueryStatusObserver queryStatusObserver) {
-        super(tableFactory, queryStatusObserver);
+    public OpDiff(DataTableFactory tableFactory, String args, ChannelProgressivePromise queryPromise) {
+        super(tableFactory, queryPromise);
         type = new ColumnType[args.length()];
         for (int i = 0; i < args.length(); i++) {
             switch (args.charAt(i)) {
@@ -81,15 +82,15 @@ public class OpDiff extends AbstractTableOp {
         }
     }
 
-    public OpDiff(QueryOpProcessor processor, ColumnType type[], QueryStatusObserver queryStatusObserver) {
-        super(processor, queryStatusObserver);
+    public OpDiff(QueryOpProcessor processor, ColumnType[] type, ChannelProgressivePromise queryPromise) {
+        super(processor, queryPromise);
         this.type = type;
     }
 
     @Override
     public DataTable tableOp(DataTable result) {
         BundleColumnBinder binder = getSourceColumnBinder(result);
-        String altkeys[] = new String[2];
+        String[] altkeys = new String[2];
         String lastkey = null;
         // find alternating keys
         for (Bundle line : result) {

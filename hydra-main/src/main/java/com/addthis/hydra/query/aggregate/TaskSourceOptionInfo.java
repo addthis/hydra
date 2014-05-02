@@ -11,21 +11,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.query;
 
+package com.addthis.hydra.query.aggregate;
 
-import com.addthis.bundle.table.DataTable;
+import com.addthis.codec.Codec;
 
-import io.netty.channel.ChannelProgressivePromise;
+public class TaskSourceOptionInfo implements Codec.Codable {
 
-public class ResultAccumulator extends AbstractTableOp {
+    @Codec.Set(codable = true)
+    public final String hostUuid;
+    @Codec.Set(codable = true)
+    public final boolean active;
 
-    public ResultAccumulator(QueryOpProcessor processor, ChannelProgressivePromise queryPromise) {
-        super(processor, queryPromise);
-    }
-
-    @Override
-    public DataTable tableOp(DataTable result) {
-        return result;
+    public TaskSourceOptionInfo(QueryTaskSourceOption option) {
+        hostUuid = option.queryReference.getHostUUID();
+        active   = option.isActive();
     }
 }

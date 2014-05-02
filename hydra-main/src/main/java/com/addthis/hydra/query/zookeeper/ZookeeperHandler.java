@@ -122,7 +122,12 @@ public class ZookeeperHandler {
         }
     }
 
-    public void validateTaskCount(Query query, Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap) {
+    /**
+     * Tries to make sure enough tasks were found to satisfy the query options.
+     *
+     * @return The canonical task count according to spawn/ zookeeper
+     */
+    public int validateTaskCount(Query query, Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap) {
         IJob zkJob;
         try {
             zkJob = jobConfigurationCache.get(query.getJob());
@@ -158,6 +163,7 @@ public class ZookeeperHandler {
             }
             throw new QueryException(errorMessage + label + sb.toString());
         }
+        return taskCount;
     }
 
 }

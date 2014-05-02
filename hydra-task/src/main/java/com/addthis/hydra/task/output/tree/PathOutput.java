@@ -29,6 +29,10 @@ import com.addthis.hydra.task.output.ValuesOutput;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
+import io.netty.channel.ChannelProgressivePromise;
+import io.netty.channel.DefaultChannelProgressivePromise;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+
 /**
  * @user-reference
  * @hydra-name output
@@ -112,7 +116,8 @@ public class PathOutput extends PathElement {
         rp.appendOp(new OutputOp(rp));
         try {
             output.open();
-            engine.search(query, rp);
+            engine.search(query, rp,
+                    new DefaultChannelProgressivePromise(null, ImmediateEventExecutor.INSTANCE));
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -126,7 +131,7 @@ public class PathOutput extends PathElement {
     class OutputOp extends AbstractTableOp {
 
         public OutputOp(QueryOpProcessor processor) {
-            super(processor, processor.getQueryStatusObserver());
+            super(processor, processor.getQueryPromise());
         }
 
         @Override

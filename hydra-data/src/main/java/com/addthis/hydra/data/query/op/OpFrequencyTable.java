@@ -29,9 +29,10 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.hydra.data.query.AbstractTableOp;
 import com.addthis.hydra.data.query.QueryOpProcessor;
-import com.addthis.hydra.data.query.QueryStatusObserver;
 
 import com.google.common.base.Objects;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 /**
  * Treat columns as belonging to a frequency table and try to
@@ -46,9 +47,9 @@ public class OpFrequencyTable extends AbstractTableOp {
     private boolean appendTotal = false;
 
     // foo=0,1,2,3:4,5:0.99,p12
-    public OpFrequencyTable(QueryOpProcessor processor, String args, QueryStatusObserver queryStatusObserver) {
-        super(processor, queryStatusObserver);
-        String tuple[] = Strings.splitArray(args, ":");
+    public OpFrequencyTable(QueryOpProcessor processor, String args, ChannelProgressivePromise queryPromise) {
+        super(processor, queryPromise);
+        String[] tuple = Strings.splitArray(args, ":");
         cols = Strings.splitArray(tuple[0], ",");
 
         valueIndex = Integer.valueOf(Strings.splitArray(tuple[1], ",")[0]);
@@ -72,7 +73,7 @@ public class OpFrequencyTable extends AbstractTableOp {
     public DataTable tableOp(DataTable result) {
         BundleColumnBinder rowBinder;
         BundleColumnBinder deckBinder;
-        BundleField keyColumns[];
+        BundleField[] keyColumns;
         BundleField valueColumn;
         BundleField freqColumn;
 
@@ -145,7 +146,7 @@ public class OpFrequencyTable extends AbstractTableOp {
     }
 
 
-    public boolean equalColumnKeys(BundleField keyColumns[], Bundle oldb, Bundle newb) {
+    public static boolean equalColumnKeys(BundleField[] keyColumns, Bundle oldb, Bundle newb) {
         boolean eq = true;
         for (int i = 0; i < keyColumns.length; i++) {
             String oldstr = ValueUtil.asNativeString(oldb.getValue(keyColumns[i]));

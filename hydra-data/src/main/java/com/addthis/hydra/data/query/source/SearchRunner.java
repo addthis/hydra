@@ -25,14 +25,18 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.QueryOpProcessor;
+import com.addthis.hydra.data.query.engine.QueryEngine;
 
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.channel.ChannelProgressivePromise;
+import io.netty.channel.DefaultChannelProgressivePromise;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * The class that performs the querying and feeds bundles into the bridge. The second class in the three step query process.
@@ -128,8 +132,12 @@ class SearchRunner implements Runnable {
         long startTime = System.currentTimeMillis();
         MeshQuerySource.queueTimes.update(creationTime - startTime, TimeUnit.MILLISECONDS);
         query = CodecJSON.decodeString(new Query(), options.get("query"));
+        // set as soon as possible (and especially before creating op processor)
+        query.queryPromise = bridge.queryPromise;
         // Parse the query and return a reference to the last QueryOpProcessor.
-        queryOpProcessor = query.newProcessor(bridge, bridge.queryStatusObserver);
+        ChannelProgressivePromise opPromise =
+                new DefaultChannelProgressivePromise(null, ImmediateEventExecutor.INSTANCE);
+        queryOpProcessor = query.newProcessor(bridge, opPromise);
     }
 
     /**
@@ -169,7 +177,7 @@ class SearchRunner implements Runnable {
      */
     protected void search() {
         final long searchStartTime = System.currentTimeMillis();
-        finalEng.search(query, queryOpProcessor, bridge.getQueryStatusObserver());
+        finalEng.search(query, queryOpProcessor, bridge.getQueryPromise());
         queryOpProcessor.sendComplete();
         final long searchDuration = System.currentTimeMillis() - searchStartTime;
         if (log.isDebugEnabled() || query.isTraced()) {

@@ -16,39 +16,32 @@ package com.addthis.hydra.query.aggregate;
 
 import java.io.IOException;
 
-import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
-import com.addthis.hydra.data.query.Query;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class QueryTask implements Runnable {
 
-    private final AggregateHandle aggregateHandle;
+    static final Logger log = LoggerFactory.getLogger(QueryTask.class);
 
-    public QueryTask(AggregateHandle aggregateHandle) {
-        this.aggregateHandle = aggregateHandle;
+    private final MeshSourceAggregator sourceAggregator;
+
+    public QueryTask(MeshSourceAggregator sourceAggregator) {
+        this.sourceAggregator = sourceAggregator;
     }
 
     @Override
     public void run() {
         try {
-            if (aggregateHandle.canceled) {
+            if (sourceAggregator.queryPromise.isDone()) {
                 return;
             }
-            if (aggregateHandle.done.get()) {
-                MeshSourceAggregator.log.warn("Aggregate Handle was unexpectedly marked done");
-                aggregateHandle.stopSources("aggregate handle already thinks it is done");
-            }
-            Query query = aggregateHandle.meshSourceAggregator.query;
-            QueryTaskSource[] taskSources = aggregateHandle.taskSources;
+            QueryTaskSource[] taskSources = sourceAggregator.taskSources;
             int bundlesProcessed = 0;
             int complete = 0;
             boolean processedBundle = true;
             while (processedBundle && (bundlesProcessed < AggregateConfig.FRAME_READER_READS)) {
-                if (query != null && query.queryStatusObserver != null && query.queryStatusObserver.queryCompleted) {
-                    aggregateHandle.stopSources("query completed early");
-                    aggregateHandle.sendComplete();
-                    return;
-                }
                 complete = 0;
                 processedBundle = false;
                 for (int i = 0; i < taskSources.length; i++) {
@@ -60,14 +53,14 @@ public class QueryTask implements Runnable {
                     try {
                         Bundle nextBundle = taskSource.next();
                         if (nextBundle != null) {
-                            aggregateHandle.send(nextBundle);
+                            sourceAggregator.consumer.send(nextBundle);
                             processedBundle = true;
                             bundlesProcessed += 1;
                         }
                     } catch (IOException io) {
                         if (taskSource.lines == 0) {
                             // This QuerySource does not have this file anymore. Signal to the caller that a retry may resolve the issue.
-                            aggregateHandle.meshSourceAggregator.replaceQuerySource(taskSource,
+                            sourceAggregator.replaceQuerySource(taskSource,
                                     taskSource.getSelectedSource(), i);
                         } else {
                             // This query source has started sending lines. Need to fail the query.
@@ -76,15 +69,21 @@ public class QueryTask implements Runnable {
                     }
                 }
             }
-            aggregateHandle.completed = complete;
-            if (complete == taskSources.length) {
-                aggregateHandle.stopSources("source was already marked as complete");
-                aggregateHandle.sendComplete();
-            }  else {
-                aggregateHandle.meshSourceAggregator.executor.execute(this);
+            if (bundlesProcessed > 0) {
+                sourceAggregator.queryPromise.tryProgress(0, bundlesProcessed);
             }
-        } catch (Exception e) {
-            aggregateHandle.sourceError(DataChannelError.promote(e));
+            sourceAggregator.completed = complete;
+            if (complete == taskSources.length) {
+                if (!sourceAggregator.queryPromise.trySuccess()) {
+                    log.warn("Tried to complete queryPromise {} , but failed", sourceAggregator.queryPromise);
+                }
+            } else {
+                sourceAggregator.executor.execute(this);
+            }
+        } catch (Throwable e) {
+            if (!sourceAggregator.queryPromise.tryFailure(e)) {
+                log.warn("Tried to fail queryPromise {} , but failed", sourceAggregator.queryPromise, e);
+            }
         }
     }
 }

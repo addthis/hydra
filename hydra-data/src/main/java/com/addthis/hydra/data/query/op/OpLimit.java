@@ -18,10 +18,11 @@ import com.addthis.basis.util.Strings;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.data.query.AbstractQueryOp;
-import com.addthis.hydra.data.query.QueryStatusObserver;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 /**
  * <p>This query operation <span class="hydra-summary">limits the number of rows that are generated</span>.
@@ -41,19 +42,21 @@ public class OpLimit extends AbstractQueryOp {
     private boolean done;
     private static final Logger log = LoggerFactory.getLogger(OpLimit.class);
 
-    private QueryStatusObserver queryStatusObserver = null;
+    private ChannelProgressivePromise queryPromise = null;
 
     /**
      * @param limit
      */
-    public OpLimit(int limit, int offset, QueryStatusObserver queryStatusObserver) {
-        this.queryStatusObserver = queryStatusObserver;
+    public OpLimit(int limit, int offset, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
+        this.queryPromise = queryPromise;
         setup(limit, offset);
     }
 
-    public OpLimit(String args, QueryStatusObserver queryStatusObserver) {
-        this.queryStatusObserver = queryStatusObserver;
-        String v[] = Strings.splitArray(args, ":");
+    public OpLimit(String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
+        this.queryPromise = queryPromise;
+        String[] v = Strings.splitArray(args, ":");
         if (v.length == 1) {
             setup(Integer.parseInt(v[0]), 0);
         } else if (v.length > 1) {
@@ -68,7 +71,7 @@ public class OpLimit extends AbstractQueryOp {
 
     @Override
     public void send(Bundle row) throws DataChannelError {
-        if (queryStatusObserver.queryCompleted) {
+        if (queryPromise.isDone()) {
             // Someone is attempting to send data even after we marked the query completed to true flag. This means
             // they are doing work and sending us bundles. Throw an exception because that needs to be checked.
             log.trace("Limit reached, sendComplete was called.");
@@ -92,7 +95,7 @@ public class OpLimit extends AbstractQueryOp {
             // Set the queryCompleted to true. After this point, no one should be calling OpLimit.send again, since
             // all sources should check the flag. If someone still calls send we will throw an exception at them. See
             // the top of this function
-            queryStatusObserver.queryCompleted = true;
+            queryPromise.trySuccess();
         }
     }
 

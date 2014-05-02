@@ -14,57 +14,57 @@
 
 package com.addthis.hydra.query.tracker;
 
-import com.addthis.bundle.channel.DataChannelError;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeoutException;
 
-class TimeoutWatcher extends Thread {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-     QueryTracker queryTracker;
+class TimeoutWatcher implements Runnable {
 
-    TimeoutWatcher(QueryTracker queryTracker) {
-        this.queryTracker = queryTracker;
-        setName("QueryTimeoutWatcher");
-        setDaemon(true);
-        start();
+    static final Logger log = LoggerFactory.getLogger(TimeoutWatcher.class);
+
+    ConcurrentMap<String, QueryEntry> running;
+
+    TimeoutWatcher(ConcurrentMap<String, QueryEntry> running) {
+        this.running = running;
     }
 
     @Override
     public void run() {
-        try {
-            long currentTime = System.currentTimeMillis();
-            for (QueryEntry queryEntry : queryTracker.running.values()) {
-                if (queryEntry.waitTime <= 0 || queryEntry.query == null) {
-                    continue;
-                }
-                long queryDuration = currentTime - queryEntry.startTime;
-                // wait time is in seconds
-                double queryDurationInSeconds = queryDuration / 1000.0;
-                QueryTracker.log.warn("[timeout.watcher] query: " + queryEntry.query.uuid() + " has been running for: " + queryDurationInSeconds + " timeout is: " + queryEntry.waitTime);
-                if (queryDurationInSeconds > queryEntry.waitTime) {
-                    QueryTracker.log.warn("[timeout.watcher] query: " + queryEntry.query.uuid() + " has been running for more than " + queryDurationInSeconds + " seconds.  Timeout:" + queryEntry.waitTime + " has been breached.  Canceling query");
-                    // sanity check duration
-                    if (queryDurationInSeconds > 2 * queryEntry.waitTime) {
-                        QueryTracker.log.warn("[timeout.watcher] query: " + queryEntry.query.uuid() + " query duration was insane, resetting to waitTime.  startTime: " + queryEntry.startTime);
-                    }
-                    sendTimeout(queryEntry, queryEntry.waitTime);
-                }
+        long currentTime = System.currentTimeMillis();
+        for (QueryEntry queryEntry : running.values()) {
+            if (queryEntry.waitTime <= 0) {
+                continue;
             }
-            Thread.sleep(5000);
-        } catch (Exception e) {
-            QueryTracker.log.warn("[timeout.watcher] exception while watching queries: " + e.getMessage(), e);
+            long queryDuration = currentTime - queryEntry.startTime;
+            // wait time is in seconds
+            double queryDurationInSeconds = queryDuration / 1000.0;
+            if (queryDurationInSeconds < queryEntry.waitTime) {
+                log.info("query: {} running for: {} timeout is: {}",
+                        queryEntry.query.uuid(), queryDurationInSeconds, queryEntry.waitTime);
+            } else {
+                log.warn("QUERY TIMEOUT query: {} running for: {} timeout is: {}",
+                        queryEntry.query.uuid(), queryDurationInSeconds, queryEntry.waitTime);
+                // sanity check duration
+                if (queryDurationInSeconds > (2 * queryEntry.waitTime)) {
+                    log.warn("query: {} query duration was insane, resetting to waitTime for logging. startTime: {}",
+                            queryEntry.query.uuid(), queryEntry.startTime);
+                }
+                sendTimeout(queryEntry, queryEntry.waitTime);
+            }
         }
     }
 
-     void sendTimeout(QueryEntry entry, long timeout) {
-        String message = "[timeout.watcher] timeout: " + timeout + " has been exceeded, canceling query: " + (entry.query == null ? "" : entry.query.uuid());
-        if (entry.queryHandle == null) {
-            QueryTracker.log.warn("[timeout.watcher] Error.  query: " + entry.query.uuid() + " had a null query handle, removing from running list");
-            entry.finish(new DataChannelError(message));
-
+     static void sendTimeout(QueryEntry entry, long timeout) {
+        String message = "[timeout.watcher] timeout: " + timeout +
+                         " has been exceeded, canceling query: " + entry.query.uuid();
+        if (entry.queryPromise == null) {
+            log.error("QUERY TIMEOUT FAILURE: query: {} had a null query promise", entry.query.uuid());
         } else {
-            entry.queryHandle.cancel(message);
-            if (queryTracker.running.containsKey(entry.query.uuid())) {
-                QueryTracker.log.warn("[timeout.watcher] Error.  query: " + entry.query.uuid() + " was still on running list after canceling. Forcing finish");
-                entry.finish(new DataChannelError(message));
+            if (!entry.queryPromise.tryFailure(new TimeoutException(message))) {
+                log.warn("QUERY TIMEOUT FAILURE: query: {} could not fail promise {}",
+                        entry.query.uuid(), entry.queryPromise);
             }
         }
     }

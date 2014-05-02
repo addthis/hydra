@@ -16,11 +16,17 @@ package com.addthis.hydra.data.query;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 /**
  * this class of operator should modify, drop or create lines
  * using the existing rows as sources.
  */
 public abstract class AbstractRowOp extends AbstractQueryOp {
+
+    public AbstractRowOp(ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
+    }
 
     public abstract Bundle rowOp(Bundle row);
 

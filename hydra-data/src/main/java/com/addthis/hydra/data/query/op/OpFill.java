@@ -22,6 +22,8 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractRowOp;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * fill: create empty columns up to the length of the bundleformat
@@ -33,7 +35,8 @@ public class OpFill extends AbstractRowOp {
     private Integer pad = null;
     private String[] fields;
 
-    public OpFill(String args) {
+    public OpFill(String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         if (args != null && args.length() > 0) {
             switch (args.charAt(0)) {
                 case 'i':
@@ -56,8 +59,8 @@ public class OpFill extends AbstractRowOp {
         }
     }
 
-    public OpFill(String args, boolean pad) {
-        this(Strings.splitArray(args, ":")[0]);
+    public OpFill(String args, boolean pad, ChannelProgressivePromise queryPromise) {
+        this(Strings.splitArray(args, ":")[0], queryPromise);
         if (pad) {
             String[] pair = Strings.splitArray(args, ":");
 

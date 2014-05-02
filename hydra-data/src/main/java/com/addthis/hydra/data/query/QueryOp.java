@@ -61,7 +61,7 @@ public interface QueryOp extends BundleOutput, Closeable {
     /**
      * @return true if this is an instance of table op
      */
-    public void sendTable(DataTable table, QueryStatusObserver queryStatusObserver);
+    public void sendTable(DataTable table);
 
     /**
      * @return simple debugging name

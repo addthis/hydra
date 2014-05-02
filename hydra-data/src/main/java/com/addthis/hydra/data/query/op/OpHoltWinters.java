@@ -14,6 +14,7 @@
 package com.addthis.hydra.data.query.op;
 
 import com.addthis.basis.util.Strings;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.list.ListBundle;
@@ -24,10 +25,12 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractTableOp;
-import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.data.util.HoltWinters;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 /**
  * <p>This query operation <span class="hydra-summary"> applies Holt-Winters algorithm</span>.
@@ -85,8 +88,8 @@ public class OpHoltWinters extends AbstractTableOp {
     private int period = 7;
     private int futureDataPoints = 3;
 
-    public OpHoltWinters(DataTableFactory tableFactory, String args, QueryStatusObserver queryStatusObserver) {
-        super(tableFactory, queryStatusObserver);
+    public OpHoltWinters(DataTableFactory tableFactory, String args, ChannelProgressivePromise queryPromise) {
+        super(tableFactory, queryPromise);
         try {
             if (args.length() > 0) {
                 String[] opt = args.split(":");
