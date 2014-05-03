@@ -298,7 +298,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
 
     @Override
     public void bytesDecode(byte[] b, long version) {
-        if (version < KeyCoder.EncodeType.KEYTOPPER.ordinal()) {
+        if (version == KeyCoder.EncodeType.LEGACY.ordinal()) {
             try {
                 codec.decode(this, b);
             } catch (RuntimeException e) {
