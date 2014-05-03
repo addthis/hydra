@@ -84,7 +84,12 @@
       <version>${hydra.dep.compress.compress-lzf.version}</version>
     </dependency>
     <!-- end 3rd party -->
-
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-math3</artifactId>
+      <version>3.2</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>com.sleepycat</groupId>
       <artifactId>je</artifactId>

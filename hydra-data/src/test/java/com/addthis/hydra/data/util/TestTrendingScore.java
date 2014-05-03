@@ -31,17 +31,17 @@ public class TestTrendingScore {
 
         // Add some hourly trends
         TreeMap<String, KeyTopper> hourly = new TreeMap<String, KeyTopper>();
-        KeyTopper kt1 = new KeyTopper().init().setLossy(true);
+        KeyTopper kt1 = new KeyTopper();
         kt1.increment("foo", 1, 10);
         kt1.increment("bar", 1, 10);
-        KeyTopper kt2 = new KeyTopper().init().setLossy(true);
+        KeyTopper kt2 = new KeyTopper();
         kt2.increment("foo", 1, 10);
         kt2.increment("bar", 2, 10);
-        KeyTopper kt3 = new KeyTopper().init().setLossy(true);
+        KeyTopper kt3 = new KeyTopper();
         kt3.increment("foo", 1, 10);
         kt3.increment("bar", 1, 10);
         kt3.increment("foobar", 2, 10);
-        KeyTopper kt4 = new KeyTopper().init().setLossy(true);
+        KeyTopper kt4 = new KeyTopper();
         kt4.increment("foo", 1, 10);
         kt4.increment("bar", 2, 10);
         kt3.increment("foobar", 4, 10);
@@ -53,10 +53,10 @@ public class TestTrendingScore {
 
         // add some monthly trends
         TreeMap<String, KeyTopper> monthly = new TreeMap<String, KeyTopper>();
-        KeyTopper kt5 = new KeyTopper().init().setLossy(true);
+        KeyTopper kt5 = new KeyTopper();
         kt5.increment("some", 1, 10);
         kt5.increment("more", 2, 10);
-        KeyTopper kt6 = new KeyTopper().init().setLossy(true);
+        KeyTopper kt6 = new KeyTopper();
         kt6.increment("foo", 1, 10);
         kt6.increment("more", 2, 10);
         kt6.increment("urls", 4, 10);
