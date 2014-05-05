@@ -56,6 +56,7 @@ public class DataStoreUtil {
     private static final String canonicalDataStoreType = Parameter.value("spawn.datastore.type", "ZK");
     private static final String cutoverOnceFromType = Parameter.value("spawn.datastore.cutoverOnceFromType");
     private static final int numCutoverThreads = Parameter.intValue("spawn.datastore.numCutoverThreads", 5);
+    private static final int cutoverTimeoutMinutes = Parameter.intValue("spawn.datstore.cutoverTimeoutMinutes", 15);
 
     private static final String clusterName = Parameter.value("cluster.name", "localhost");
     private static final String sqlTableName = Parameter.value("spawn.sql.table", "sdstable_" + clusterName);
@@ -148,7 +149,7 @@ public class DataStoreUtil {
             executorService.submit(new CutoverWorker(sourceDataStore, targetDataStore, gotFailures, partition, checkAllWrites));
         }
         executorService.shutdown();
-        executorService.awaitTermination(15, TimeUnit.MINUTES);
+        executorService.awaitTermination(cutoverTimeoutMinutes, TimeUnit.MINUTES);
         if (gotFailures.get()) {
             throw new RuntimeException("A cutover worker has failed; see log for details");
         }

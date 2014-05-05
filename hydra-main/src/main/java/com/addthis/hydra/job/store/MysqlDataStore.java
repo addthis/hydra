@@ -34,6 +34,7 @@ import com.ning.compress.lzf.LZFDecoder;
 import com.ning.compress.lzf.LZFEncoder;
 import com.ning.compress.lzf.LZFException;
 import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
 
@@ -74,6 +75,7 @@ public class MysqlDataStore implements SpawnDataStore {
     /* Performance metrics */
     private static final Timer queryTimer = Metrics.newTimer(MysqlDataStore.class, "mysqlQueryTime");
     private static final Timer insertTimer = Metrics.newTimer(MysqlDataStore.class, "mysqlInsertTime");
+    private static final Counter errorCounter = Metrics.newCounter(MysqlDataStore.class, "mysqlErrors");
 
     /**
      * Create the data pool, initialize the connection pool, and create the table if necessary.
@@ -137,6 +139,9 @@ public class MysqlDataStore implements SpawnDataStore {
         TimerContext timerContext = queryTimer.time();
         try {
             return preparedStatement.executeQuery();
+        } catch (SQLException e) {
+            errorCounter.inc();
+            throw e;
         } finally {
             timerContext.stop();
         }
@@ -146,6 +151,9 @@ public class MysqlDataStore implements SpawnDataStore {
         TimerContext timerContext = insertTimer.time();
         try {
             return preparedStatement.execute();
+        } catch (SQLException e) {
+            errorCounter.inc();
+            throw e;
         } finally {
             timerContext.stop();
         }
