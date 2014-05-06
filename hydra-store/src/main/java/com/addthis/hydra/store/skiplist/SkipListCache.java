@@ -235,7 +235,8 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
         this.keyCoder = keyCoder;
         this.negInf = keyCoder.negInfinity();
         this.cache = new ConcurrentSkipListMap<>();
-        this.mem_page = (int) MemoryCounter.estimateSize(pageFactory.measureMemoryEmptyPage(KeyCoder.EncodeType.SPARSE));
+        this.mem_page = (int) MemoryCounter.estimateSize(
+                pageFactory.measureMemoryEmptyPage(KeyCoder.EncodeType.defaultType()));
         this.externalStore = externalStore;
         this.maxPageSize = maxPageSize;
         this.maxPages = maxPages;
@@ -675,7 +676,8 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
                 prevPage.state = ExternalMode.DISK_MEMORY_DIRTY;
             }
         } else {
-            Page<K, V> diskPage = pageFactory.generateEmptyPage(SkipListCache.this, floorKey, KeyCoder.EncodeType.SPARSE);
+            Page<K, V> diskPage = pageFactory.generateEmptyPage(SkipListCache.this, floorKey,
+                    KeyCoder.EncodeType.defaultType());
             diskPage.decode(entry.getValue());
             assert (diskPage.nextFirstKey.equals(targetKey));
             assert (compareKeys(prevPage.firstKey, diskPage.firstKey) <= 0);
@@ -938,7 +940,7 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
      */
     private void loadFromExternalStore() {
         byte[] encodedFirstKey = externalStore.firstKey();
-        Page<K, V> leftSentinel = pageFactory.generateEmptyPage(this, negInf, KeyCoder.EncodeType.SPARSE);
+        Page<K, V> leftSentinel = pageFactory.generateEmptyPage(this, negInf, KeyCoder.EncodeType.defaultType());
         ByteBufOutputStream byteBufOutputStream = null;
         try {
             if (encodedFirstKey == null) {
@@ -2318,7 +2320,7 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
         K key = keyCoder.keyDecode(encodedKey);
         while(encodedKey != null) {
             counter++;
-            Page<K, V> page = pageFactory.generateEmptyPage(this, key, KeyCoder.EncodeType.SPARSE);
+            Page<K, V> page = pageFactory.generateEmptyPage(this, key, KeyCoder.EncodeType.defaultType());
             byte[] encodedNextKey = externalStore.higherKey(encodedKey);
             if (encodedNextKey != null) {
                 page.decode(encodedPage);
