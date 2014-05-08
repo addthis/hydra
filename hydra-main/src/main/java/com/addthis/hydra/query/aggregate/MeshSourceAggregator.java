@@ -100,7 +100,10 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
             queryPromise.addListener(this);
             TaskAllocator.allocateQueryTasks(query, taskSources, meshy, queryOptions);
             queryTask = new QueryTask(this);
-            executor.execute(queryTask);
+            if (ctx.channel().isWritable()) {
+                channelWritable = true;
+                executor.execute(queryTask);
+            }
             maybeScheduleStragglerChecks();
         } else if (msg instanceof DetailedStatusTask) {
             DetailedStatusTask task = (DetailedStatusTask) msg;
