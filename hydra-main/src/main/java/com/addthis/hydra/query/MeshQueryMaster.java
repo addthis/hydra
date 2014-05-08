@@ -34,6 +34,7 @@ import com.addthis.hydra.query.aggregate.QueryTaskSource;
 import com.addthis.hydra.query.aggregate.QueryTaskSourceOption;
 import com.addthis.hydra.query.tracker.QueryTracker;
 import com.addthis.hydra.query.tracker.TrackerHandler;
+import com.addthis.hydra.query.web.HttpUtils;
 import com.addthis.hydra.query.zookeeper.ZookeeperHandler;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
@@ -44,6 +45,7 @@ import org.slf4j.LoggerFactory;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 
@@ -154,6 +156,14 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Query msg) throws Exception {
         messageReceived(ctx, msg); // redirect to more sensible netty5 naming scheme
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        log.warn("Exception caught while serving http query endpoint", cause);
+        if (ctx.channel().isActive()) {
+            HttpUtils.sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     protected void messageReceived(ChannelHandlerContext ctx, Query query) throws Exception {

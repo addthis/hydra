@@ -21,15 +21,22 @@ import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.query.aggregate.DetailedStatusTask;
 import com.addthis.hydra.query.web.DataChannelOutputToNettyBridge;
+import com.addthis.hydra.query.web.HttpUtils;
 import com.addthis.hydra.util.StringMapHelper;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelProgressiveFuture;
 import io.netty.channel.ChannelProgressiveFutureListener;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.HttpResponseStatus;
 
 public class TrackerHandler extends SimpleChannelInboundHandler<Query> implements ChannelProgressiveFutureListener {
+
+    private static final Logger log = LoggerFactory.getLogger(TrackerHandler.class);
 
     private final QueryTracker queryTracker;
     private final String[] opsLog;
@@ -51,6 +58,20 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
     }
 
     @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        log.warn("Exception caught while serving http query endpoint", cause);
+        if (queryPromise != null) {
+            queryPromise.tryFailure(cause);
+        }
+        if (opPromise != null) {
+            opPromise.tryFailure(cause);
+        }
+        if (ctx.channel().isActive()) {
+            HttpUtils.sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.queryPromise = ctx.newProgressivePromise();
         this.opPromise = ctx.newProgressivePromise();
@@ -67,13 +88,13 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
         queryTracker.calls.inc();
         queryEntry = new QueryEntry(query, opsLog, queryPromise, this);
 
-        QueryTracker.log.debug("Executing.... {} {}", query.uuid(), queryEntry.queryDetails);
+        log.debug("Executing.... {} {}", query.uuid(), queryEntry.queryDetails);
 
         // Check if the uuid is repeated, then make a new one
         if (queryTracker.running.putIfAbsent(query.uuid(), queryEntry) != null) {
             String old = query.uuid();
             query.useNextUUID();
-            QueryTracker.log.warn("Query uuid was already in use in running. Going to try assigning a new one. old:{} new:{}",
+            log.warn("Query uuid was already in use in running. Going to try assigning a new one. old:{} new:{}",
                     old, query.uuid());
             if (queryTracker.running.putIfAbsent(query.uuid(), queryEntry) != null) {
                 throw new QueryException("Query uuid was STILL somehow already in use : " + query.uuid());
@@ -85,6 +106,7 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
 //                entry.addHostEntryInfo(querydata.hostEntryInfo);
 //            }
 
+        opPromise.addListener(this);
         queryPromise.addListener(this);
         ctx.write(opProcessorConsumer, queryPromise);
 //        QueryTracker.log.warn("Exception thrown while running query: {}", query.uuid(), ex);
@@ -92,7 +114,7 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
 
     @Override
     public void operationProgressed(ChannelProgressiveFuture future, long progress, long total) throws Exception {
-        if (progress == 0) {
+        if (future == queryPromise) {
             queryEntry.preOpLines.addAndGet((int) total);
         } else {
             queryEntry.postOpLines.addAndGet((int) total);
@@ -101,11 +123,14 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
 
     @Override
     public void operationComplete(ChannelProgressiveFuture future) throws Exception {
+        if (future == queryPromise) {
+            return;
+        }
         queryEntry.runTime = queryEntry.getRunTime();
 
         QueryEntry runE = queryTracker.running.remove(query.uuid());
         if (runE == null) {
-            QueryTracker.log.warn("failed to remove running for {}", query.uuid());
+            log.warn("failed to remove running for {}", query.uuid());
         }
 
 //        queryTracker.queryGate.release();
@@ -127,14 +152,15 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
                 queryLine.put("type", "query.error")
                          .put("error", queryFailure.getMessage());
                 queryTracker.queryErrors.inc();
-                opPromise.tryFailure(queryFailure);
+                queryPromise.tryFailure(queryFailure);
             } else {
                 queryLine.put("type", "query.done");
                 queryTracker.recentlyCompleted.put(query.uuid(), queryEntry.getStat());
+                queryPromise.trySuccess();
             }
             queryTracker.log(queryLine);
         } catch (Exception e) {
-            QueryTracker.log.warn("Error while doing record keeping for a query.", e);
+            log.error("Error while doing record keeping for a query.", e);
         }
     }
 

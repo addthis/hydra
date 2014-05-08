@@ -120,7 +120,7 @@ public class HttpUtils {
         ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
-    static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
+    public static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
         log.trace("issuing error of {}", status);
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HTTP_1_1, status, Unpooled.copiedBuffer("Failure: " + status.toString() + "\r\n", CharsetUtil.UTF_8));

@@ -460,8 +460,14 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
 
     @Override
     public void sendComplete() {
-        synchronized (firstOp) {
-            firstOp.sendComplete();
+        try {
+            synchronized (firstOp) {
+                firstOp.sendComplete();
+            }
+            queryPromise.trySuccess();
+        } catch (Exception e) {
+            log.warn("Exception while processing sendComplete on op processor");
+            sourceError(DataChannelError.promote(e));
         }
     }
 
@@ -477,6 +483,7 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
         output.getOutput().sourceError(er);
         try {
             close();
+            queryPromise.tryFailure(er);
         } catch (IOException e) {
             log.warn("Exception while closing QueryOpProcessor", e);
             throw new RuntimeException(e);
