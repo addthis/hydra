@@ -39,7 +39,7 @@ function(
         "UNKNOWN",
         "REBALANCE",
         "REVERT",
-        "DISK FULL",
+        "QUEUED, WAITING ON UNAVAIL HOST",
         "SWAPPING",
         "QUEUED",
         "MIGRATING",
@@ -55,7 +55,7 @@ function(
         "label-inverse",//unknown
         "label-info",//rebalance
         "label-success",//revert
-        "label-danger",//disk full
+        "label-info",//disk full
         "label-info",//swapping
         "label-info",//queued
         "label-success",//migrating

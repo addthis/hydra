@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableSet;
 
 public enum JobTaskState {
     IDLE(0), BUSY(1), ERROR(2), ALLOCATED(3), BACKUP(4), REPLICATE(5),
-    UNKNOWN(6), REBALANCE(7), REVERT(8), DISK_FULL(9), SWAPPING(10), QUEUED(11), MIGRATING(12), FULL_REPLICATE(13);
+    UNKNOWN(6), REBALANCE(7), REVERT(8), QUEUED_HOST_UNAVAIL(9), SWAPPING(10), QUEUED(11), MIGRATING(12), FULL_REPLICATE(13);
 
     private final int value;
 
@@ -36,12 +36,12 @@ public enum JobTaskState {
         }
     }
 
-    private static final Set<JobTaskState> inactiveStates = ImmutableSet.of(IDLE, ERROR, UNKNOWN, DISK_FULL, QUEUED);
+    private static final Set<JobTaskState> inactiveStates = ImmutableSet.of(IDLE, ERROR, UNKNOWN, QUEUED_HOST_UNAVAIL, QUEUED);
     private static Map<JobTaskState, Set<JobTaskState>> transitions;
 
     static {
         transitions = new HashMap<>();
-        transitions.put(IDLE, EnumSet.of(ALLOCATED, BACKUP, REPLICATE, REBALANCE, REVERT, BUSY, DISK_FULL, SWAPPING, QUEUED, FULL_REPLICATE));
+        transitions.put(IDLE, EnumSet.of(ALLOCATED, BACKUP, REPLICATE, REBALANCE, REVERT, BUSY, QUEUED_HOST_UNAVAIL, SWAPPING, QUEUED, FULL_REPLICATE));
         transitions.put(ALLOCATED, EnumSet.of(IDLE, BUSY, ERROR, FULL_REPLICATE, REPLICATE, BACKUP, REBALANCE));
         transitions.put(BUSY, EnumSet.of(IDLE, REPLICATE, BACKUP, ERROR));
         transitions.put(REPLICATE, EnumSet.of(IDLE, BACKUP, ERROR, REBALANCE));
@@ -50,9 +50,9 @@ public enum JobTaskState {
         transitions.put(UNKNOWN, EnumSet.of(IDLE));
         transitions.put(REBALANCE, EnumSet.of(IDLE, FULL_REPLICATE, REPLICATE, QUEUED, ERROR));
         transitions.put(REVERT, EnumSet.of(IDLE, FULL_REPLICATE, REPLICATE));
-        transitions.put(DISK_FULL, EnumSet.of(IDLE));
+        transitions.put(QUEUED_HOST_UNAVAIL, EnumSet.of(IDLE, QUEUED));
         transitions.put(SWAPPING, EnumSet.of(IDLE, ERROR));
-        transitions.put(QUEUED, EnumSet.of(IDLE, ALLOCATED, SWAPPING, ERROR, FULL_REPLICATE));
+        transitions.put(QUEUED, EnumSet.of(IDLE, QUEUED_HOST_UNAVAIL, ALLOCATED, SWAPPING, ERROR, FULL_REPLICATE));
         transitions.put(MIGRATING, EnumSet.of(IDLE, FULL_REPLICATE, REPLICATE, QUEUED, ERROR));
         transitions.put(FULL_REPLICATE, EnumSet.of(IDLE, BACKUP, ERROR, REBALANCE));
     }

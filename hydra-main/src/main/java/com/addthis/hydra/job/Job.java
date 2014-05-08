@@ -391,7 +391,7 @@ public final class Job implements IJob, Codable {
                     JobTaskState state = task.getState();
                     task.setErrorCode(0);
                     task.setPreFailErrorCode(0);
-                    if (state == JobTaskState.ERROR || state == JobTaskState.DISK_FULL) {
+                    if (state == JobTaskState.ERROR) {
                         setTaskState(task, JobTaskState.IDLE, true);
                     }
                 }
@@ -684,7 +684,7 @@ public final class Job implements IJob, Codable {
         } else if (!prevState.isActiveState() && newState.isActiveState()) {
             this.countActiveTasks++;
         }
-        if (newState == JobTaskState.ERROR || newState == JobTaskState.DISK_FULL) {
+        if (newState == JobTaskState.ERROR) {
             this.disabled = true;
         }
         calculateJobState(force);
@@ -704,9 +704,9 @@ public final class Job implements IJob, Codable {
                 reb = true;
             } else if (t.isRunning()) {
                 run = true;
-            } else if (t.getState() == JobTaskState.ALLOCATED || t.getState() == JobTaskState.QUEUED) {
+            } else if (t.getState() == JobTaskState.ALLOCATED || t.getState() == JobTaskState.QUEUED || t.getState() == JobTaskState.QUEUED_HOST_UNAVAIL) {
                 sched = true;
-            } else if (t.getState() == JobTaskState.ERROR || t.getState() == JobTaskState.DISK_FULL) {
+            } else if (t.getState() == JobTaskState.ERROR) {
                 err = true;
                 break;
             }

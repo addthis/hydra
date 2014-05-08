@@ -21,12 +21,13 @@ public class CommandTaskReplicate extends AbstractJobMessage {
 
     private static final long serialVersionUID = 3232052848594886109L;
 
-    public CommandTaskReplicate(String hostUuid, String job, int node, ReplicaTarget replicas[], String jobCommand, String choreWatcherKey, boolean force) {
+    public CommandTaskReplicate(String hostUuid, String job, int node, ReplicaTarget replicas[], String jobCommand, String choreWatcherKey, boolean force, boolean wasQueued) {
         super(hostUuid, job, node);
         this.replicas = replicas;
         this.choreWatcherKey = choreWatcherKey;
         this.force = force;
         this.jobCommand = jobCommand;
+        this.wasQueued = wasQueued;
     }
 
     @Codec.Set(codable = true)
@@ -36,6 +37,9 @@ public class CommandTaskReplicate extends AbstractJobMessage {
     // not all jobs replicate on every execution, if this value is true it will force the replica to occur
     @Codec.Set(codable = true)
     private boolean force;
+    @Codec.Set(codable = true)
+    /* Whether the task was queued when the replication was done. If so, it will be re-queued on completion */
+    private boolean wasQueued;
 
     @Codec.Set(codable = true)
     private String jobCommand;
@@ -81,6 +85,14 @@ public class CommandTaskReplicate extends AbstractJobMessage {
 
     public void setRebalanceTarget(String rebalanceTarget) {
         this.rebalanceTarget = rebalanceTarget;
+    }
+
+    public boolean wasQueued() {
+        return wasQueued;
+    }
+
+    public void setWasQueued(boolean wasQueued) {
+        this.wasQueued = wasQueued;
     }
 
     @Override

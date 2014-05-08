@@ -82,8 +82,8 @@ public class HostFailWorkerTest extends ZkStartUtil {
     @Test
     public void statePersistenceTest() {
         // Mark some hosts for failure, then spin up a new HostFailWorker and make sure it can load the state
-        hostFailWorker.markHostsToFail("a,b", true);
-        hostFailWorker.markHostsToFail("c", false);
+        hostFailWorker.markHostsToFail("a,b", HostFailWorker.FailState.FAILING_FS_DEAD);
+        hostFailWorker.markHostsToFail("c", HostFailWorker.FailState.FAILING_FS_OKAY);
         HostFailWorker hostFailWorker2 = new HostFailWorker(spawn);
         assertEquals("should persist state", HostFailWorker.FailState.FAILING_FS_DEAD, hostFailWorker2.getFailureState("a"));
         assertEquals("should persist state", HostFailWorker.FailState.FAILING_FS_DEAD, hostFailWorker2.getFailureState("b"));
@@ -104,6 +104,20 @@ public class HostFailWorkerTest extends ZkStartUtil {
         spawn.updateHostState(makeHostState("d", true, 10000, 11000)); // This host has more disk used than would fit on the other hosts
         JSONObject failDMessage = hostFailWorker.getInfoForHostFailure("d", true);
         assertTrue("should get fatal warning after failing too-big host", failDMessage.has("fatal"));
+    }
+
+    @Test
+    public void fullDiskTest() throws Exception {
+        String fullHostId = "full";
+        String emptyHostId = "empty";
+        spawn.updateHostState(makeHostState(fullHostId, true, 999, 1000));
+        spawn.updateHostState(makeHostState(emptyHostId, true, 100, 1000));
+        zkClient.create().creatingParentsIfNeeded().forPath("/minion/up/" + fullHostId, new byte[]{});
+        zkClient.create().creatingParentsIfNeeded().forPath("/minion/up/" + emptyHostId, new byte[]{});
+        Thread.sleep(2000); // need to let spawn detect the new minions
+        hostFailWorker.updateFullMinions();
+        assertEquals("should correctly detect full host", HostFailWorker.FailState.DISK_FULL, hostFailWorker.getFailureState(fullHostId));
+        assertEquals("should correctly detect okay host", HostFailWorker.FailState.ALIVE, hostFailWorker.getFailureState(emptyHostId));
     }
 
     private static boolean areClose(double x, double y) {

@@ -60,9 +60,9 @@ public class SpawnBalancerConfig implements Codec.Codable {
     private long lastJobAutobalanceTime = 0L;
 
     // If you're at more than 80% disk capacity, you don't get assigned any new tasks or replicas
-    private double minDiskPercentAvailToReceiveNewTasks = Double.parseDouble(Parameter.value("spawnbalance.min.disk.percent.avail.replicas", ".2"));
-    // If you're at more than 95% disk capacity, you can't run any tasks, and no task that replicates onto you can run either
-    private double minDiskPercentAvailToRunJobs = Double.parseDouble(Parameter.value("spawnbalance.min.disk.percent.avail.live", ".05"));
+    private double minDiskPercentAvailToReceiveNewTasks = Double.parseDouble(Parameter.value("spawnbalance.min.disk.percent.avail.newtasks", ".2"));
+    // If you're at more than 90% disk capacity, push tasks off before running additional tasks
+    private double minDiskPercentAvailToRunJobs = Double.parseDouble(Parameter.value("spawnbalance.min.disk.percent.avail.runtasks", ".1"));
     // Max number of read-only-replicas for a given host
     private int maxReadonlyReplicas = Parameter.intValue("spawnbalance.max.job.task.replicas.per.host", 5);
 

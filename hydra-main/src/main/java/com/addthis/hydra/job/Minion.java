@@ -13,8 +13,43 @@
  */
 package com.addthis.hydra.job;
 
-import com.addthis.bark.ZkGroupMembership;
-import com.addthis.bark.ZkUtil;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.RandomAccessFile;
+import java.io.Serializable;
+
+import java.lang.management.ManagementFactory;
+
+import java.net.InetAddress;
+import java.net.ServerSocket;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Scanner;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.Backoff;
 import com.addthis.basis.util.Bytes;
@@ -24,6 +59,9 @@ import com.addthis.basis.util.Numbers;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.SimpleExec;
 import com.addthis.basis.util.Strings;
+
+import com.addthis.bark.ZkGroupMembership;
+import com.addthis.bark.ZkUtil;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.backup.DailyBackup;
@@ -59,21 +97,22 @@ import com.addthis.hydra.mq.MeshMessageProducer;
 import com.addthis.hydra.mq.MessageConsumer;
 import com.addthis.hydra.mq.MessageListener;
 import com.addthis.hydra.mq.MessageProducer;
-import com.addthis.hydra.mq.RabbitQueueingConsumer;
 import com.addthis.hydra.mq.RabbitMQUtil;
 import com.addthis.hydra.mq.RabbitMessageConsumer;
 import com.addthis.hydra.mq.RabbitMessageProducer;
+import com.addthis.hydra.mq.RabbitQueueingConsumer;
 import com.addthis.hydra.mq.ZKMessageProducer;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
 import com.addthis.maljson.JSONObject;
-
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.MeshyClientConnector;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AlreadyClosedException;
 import com.rabbitmq.client.Channel;
@@ -84,11 +123,13 @@ import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.framework.state.ConnectionState;
 import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.zookeeper.KeeperException;
+
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
@@ -98,39 +139,6 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.RandomAccessFile;
-import java.io.Serializable;
-import java.lang.management.ManagementFactory;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Scanner;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * TODO implement APIs for extended probing, sanity, clearing of job state
@@ -1163,6 +1171,8 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
         private volatile boolean deleted;
         @Codec.Set(codable = true)
         private int retries;
+        @Codec.Set(codable = true)
+        private boolean wasQueued;
 
         private volatile ReplicaTarget[] failureRecoveryReplicas;
         private volatile ReplicaTarget[] replicas;
@@ -1343,6 +1353,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             StatusTaskEnd end = new StatusTaskEnd(uuid, id, node, exit, fileCount, fileBytes);
             end.setRebalanceSource(rebalanceSource);
             end.setRebalanceTarget(rebalanceTarget);
+            end.setWasQueued(wasQueued);
             end.setExitState(exitState);
             setRebalanceSource(null);
             setRebalanceTarget(null);
@@ -1418,7 +1429,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                     exec(this.kick, false);
                 } else if (isReplicating()) {
                     log.warn("[restore] " + getName() + " as replicating");
-                    execReplicate(null, null, false, false);
+                    execReplicate(null, null, false, false, false);
                 } else if (isBackingUp()) {
                     log.warn("[restore] " + getName() + " as backing up");
                     execBackup(null, null, false);
@@ -1742,7 +1753,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                 boolean promoteSuccess = promoteBackupToLive(oldBackup, jobDir);
                 if (promoteSuccess) {
                     try {
-                        execReplicate(null, null, false, true);
+                        execReplicate(null, null, false, true, false);
                         return true;
                     } catch (Exception ex) {
                         log.warn("[revert] post-revert replicate of " + getName() + " failed with exception " + ex, ex);
@@ -1848,6 +1859,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             jobPid = new File(configDir, "job.pid");
             jobPort = new File(jobDir, "job.port");
             jobStopped = new File(jobDir, "job.stopped");
+            wasQueued = false;
             if (execute) {
                 File replicateComplete = new File(getLiveDir(), "replicate.complete");
                 replicateComplete.createNewFile();
@@ -1926,9 +1938,10 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             workItemThread.start();
         }
 
-        public void execReplicate(String rebalanceSource, String rebalanceTarget, boolean replicateAllBackups, boolean execute) throws Exception {
+        public void execReplicate(String rebalanceSource, String rebalanceTarget, boolean replicateAllBackups, boolean execute, boolean wasQueued) throws Exception {
             setRebalanceSource(rebalanceSource);
             setRebalanceTarget(rebalanceTarget);
+            setWasQueued(wasQueued);
             if (log.isDebugEnabled()) {
                 log.debug("[task.execReplicate] " + this.getJobKey());
             }
@@ -2222,11 +2235,16 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
 
         public boolean stopWait(boolean kill) {
             File[] activePidFiles = getActivePidFiles();
-            Integer rsync;
-            if (isReplicating() && ((rsync = findActiveRsync(id, node)) != null)) {
+            Integer rsync = null;
+            if (isReplicating()) {
+                rsync = findActiveRsync(id, node);
+            }
+            boolean success = activePidFiles != null && stopWait(activePidFiles, kill);
+            if (rsync != null) {
+                // Need to kill the rsync after the replicate script to avoid doing a retry
                 shell("kill -9 " + rsync, rootDir);
             }
-            return activePidFiles != null && stopWait(activePidFiles, kill);
+            return success;
         }
 
         public boolean stopWait(File[] pidFiles, boolean kill) {
@@ -2449,6 +2467,14 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
 
         public void setRebalanceSource(String rebalanceSource) {
             this.rebalanceSource = rebalanceSource;
+        }
+
+        public boolean wasQueued() {
+            return wasQueued;
+        }
+
+        public void setWasQueued(boolean wasQueued) {
+            this.wasQueued = wasQueued;
         }
 
         public String getRebalanceTarget() {
@@ -2691,7 +2717,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                 if (task.isRunning() || task.isReplicating() || task.isBackingUp()) {
                     if (!stop.force() && task.isBackingUp()) {
                         log.warn("[task.stop] " + task.getName() + " wasn't terminated because task was backing up and the stop wasn't a kill");
-                    } else if (task.isReplicating() && task.getRebalanceSource() == null) {
+                    } else if (!stop.force() && task.isReplicating() && task.getRebalanceSource() == null) {
                         log.warn("[task.stop] " + task.getName() + " wasn't terminated because task was replicating up and the stop wasn't a kill");
                     } else if (!stop.getOnlyIfQueued()) {
                         task.stopWait(stop.force());
@@ -2776,7 +2802,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                     task.setReplicas(revert.getReplicas());
                     if (revert.getSkipMove()) {
                         try {
-                            task.execReplicate(null, null, false, true);
+                            task.execReplicate(null, null, false, true, false);
                         } catch (Exception ex) {
                             task.sendEndStatus(JobTaskErrorCode.EXIT_REVERT_FAILURE);
                         }
@@ -2820,7 +2846,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                     }
                     try {
                         task.setReplicas(replicate.getReplicas());
-                        task.execReplicate(replicate.getRebalanceSource(), replicate.getRebalanceTarget(), true, true);
+                        task.execReplicate(replicate.getRebalanceSource(), replicate.getRebalanceTarget(), true, true, replicate.wasQueued());
                     } catch (Exception e) {
                         log.warn("[task.replicate] received exception after replicate request for " + task.getJobKey() + ": " + e, e);
                     }

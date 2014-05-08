@@ -112,7 +112,7 @@ public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTa
 
     static {
         nonRunningStates = ImmutableSet.copyOf(Arrays.asList(JobTaskState.IDLE, JobTaskState.ERROR,
-                JobTaskState.ALLOCATED, JobTaskState.REBALANCE, JobTaskState.DISK_FULL,
+                JobTaskState.ALLOCATED, JobTaskState.REBALANCE, JobTaskState.QUEUED_HOST_UNAVAIL,
                 JobTaskState.QUEUED));
     }
 
