@@ -29,6 +29,8 @@ public class QueryTask implements Runnable {
 
     private final MeshSourceAggregator sourceAggregator;
 
+    private int pollFailures = 0;
+
     public QueryTask(MeshSourceAggregator sourceAggregator) {
         this.sourceAggregator = sourceAggregator;
     }
@@ -86,9 +88,20 @@ public class QueryTask implements Runnable {
                 }
             } else {
                 if (bundlesProcessed > 0) {
-                    sourceAggregator.executor.execute(this);
+                    pollFailures = 0;
                 } else {
+                    pollFailures += 1;
+                }
+                if (pollFailures == 0) {
+                    sourceAggregator.executor.execute(this);
+                } else if (pollFailures <= 5) {
+                    sourceAggregator.executor.schedule(this, 5, TimeUnit.MILLISECONDS);
+                } else if (pollFailures <= 10) { // 25 ms - 75 ms
+                    sourceAggregator.executor.schedule(this, 10, TimeUnit.MILLISECONDS);
+                } else if (pollFailures <= 40) { // 75 ms - about one second
                     sourceAggregator.executor.schedule(this, 25, TimeUnit.MILLISECONDS);
+                } else { // > about one second
+                    sourceAggregator.executor.schedule(this, 100, TimeUnit.MILLISECONDS);
                 }
             }
         } catch (Throwable e) {
