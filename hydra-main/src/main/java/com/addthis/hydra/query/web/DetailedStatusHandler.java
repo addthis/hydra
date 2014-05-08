@@ -66,7 +66,7 @@ public class DetailedStatusHandler implements FutureListener<QueryEntryInfo> {
             queryEntry.getDetailedQueryEntryInfo(promise);
         }
         else {
-            onFailure();
+            onFailure(new RuntimeException("query entry unexpectedly null"));
         }
     }
 
@@ -89,9 +89,9 @@ public class DetailedStatusHandler implements FutureListener<QueryEntryInfo> {
         }
     }
 
-    private void onFailure() {
+    private void onFailure(Throwable cause) {
         if (ctx.channel().isActive()) {
-            HttpUtils.sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+            HttpUtils.sendError(ctx, new HttpResponseStatus(500, cause.getMessage()));
         }
     }
 
@@ -100,7 +100,7 @@ public class DetailedStatusHandler implements FutureListener<QueryEntryInfo> {
         if (future.isSuccess()) {
             onSuccess(future.get());
         } else {
-            onFailure();
+            onFailure(future.cause());
         }
     }
 }

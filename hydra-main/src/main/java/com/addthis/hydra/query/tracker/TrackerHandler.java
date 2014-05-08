@@ -67,7 +67,7 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
             opPromise.tryFailure(cause);
         }
         if (ctx.channel().isActive()) {
-            HttpUtils.sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+            HttpUtils.sendError(ctx, new HttpResponseStatus(500, cause.getMessage()));
         }
     }
 
@@ -101,15 +101,9 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
             }
         }
 
-        // TODO: metrics about hosts / tasks
-//            for (QueryData querydata : queryDataCollection) {
-//                entry.addHostEntryInfo(querydata.hostEntryInfo);
-//            }
-
         opPromise.addListener(this);
         queryPromise.addListener(this);
         ctx.write(opProcessorConsumer, queryPromise);
-//        QueryTracker.log.warn("Exception thrown while running query: {}", query.uuid(), ex);
     }
 
     @Override

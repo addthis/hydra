@@ -162,7 +162,7 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         log.warn("Exception caught while serving http query endpoint", cause);
         if (ctx.channel().isActive()) {
-            HttpUtils.sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+            HttpUtils.sendError(ctx, new HttpResponseStatus(500, cause.getMessage()));
         }
     }
 
