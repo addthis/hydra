@@ -33,15 +33,15 @@ import com.addthis.meshy.service.file.FileReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
 
-public class MeshSourceAggregator extends ChannelOutboundHandlerAdapter implements ChannelFutureListener {
+public class MeshSourceAggregator extends ChannelDuplexHandler implements ChannelFutureListener {
 
     static final Logger log = LoggerFactory.getLogger(MeshSourceAggregator.class);
 
@@ -59,9 +59,13 @@ public class MeshSourceAggregator extends ChannelOutboundHandlerAdapter implemen
     // set when write (query) is called
     ChannelProgressivePromise queryPromise;
     DataChannelOutput consumer;
+    Runnable queryTask;
 
     // optionally set near the end of write
     ScheduledFuture<?> stragglerTaskFuture;
+
+    boolean channelWritable;
+    boolean needScheduling;
 
     // set periodically by query task
     int completed;
@@ -95,8 +99,8 @@ public class MeshSourceAggregator extends ChannelOutboundHandlerAdapter implemen
             AggregateConfig.totalQueries.inc();
             queryPromise.addListener(this);
             TaskAllocator.allocateQueryTasks(query, taskSources, meshy, queryOptions);
-            Runnable queryProcessingTask = new QueryTask(this);
-            executor.execute(queryProcessingTask);
+            queryTask = new QueryTask(this);
+            executor.execute(queryTask);
             maybeScheduleStragglerChecks();
         } else if (msg instanceof DetailedStatusTask) {
             DetailedStatusTask task = (DetailedStatusTask) msg;
@@ -156,6 +160,14 @@ public class MeshSourceAggregator extends ChannelOutboundHandlerAdapter implemen
         } else {
             stopSources("query is complete");
             consumer.sendComplete();
+        }
+    }
+
+    @Override
+    public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
+        channelWritable = ctx.channel().isWritable();
+        if (channelWritable && needScheduling) {
+            executor.execute(queryTask);
         }
     }
 }

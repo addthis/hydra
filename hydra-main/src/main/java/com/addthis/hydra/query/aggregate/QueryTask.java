@@ -16,6 +16,8 @@ package com.addthis.hydra.query.aggregate;
 
 import java.io.IOException;
 
+import java.util.concurrent.TimeUnit;
+
 import com.addthis.bundle.core.Bundle;
 
 import org.slf4j.Logger;
@@ -35,6 +37,11 @@ public class QueryTask implements Runnable {
     public void run() {
         try {
             if (sourceAggregator.queryPromise.isDone()) {
+                return;
+            }
+            // channel is not currently writable, so return immediately and get rescheduled later
+            if (!sourceAggregator.channelWritable) {
+                sourceAggregator.needScheduling = true;
                 return;
             }
             QueryTaskSource[] taskSources = sourceAggregator.taskSources;
@@ -78,7 +85,11 @@ public class QueryTask implements Runnable {
                     log.warn("Tried to complete queryPromise {} , but failed", sourceAggregator.queryPromise);
                 }
             } else {
-                sourceAggregator.executor.execute(this);
+                if (bundlesProcessed > 0) {
+                    sourceAggregator.executor.execute(this);
+                } else {
+                    sourceAggregator.executor.schedule(this, 25, TimeUnit.MILLISECONDS);
+                }
             }
         } catch (Throwable e) {
             if (!sourceAggregator.queryPromise.tryFailure(e)) {
