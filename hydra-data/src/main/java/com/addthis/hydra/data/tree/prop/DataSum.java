@@ -137,7 +137,7 @@ public class DataSum extends TreeNodeData<DataSum.Config> {
             sum += conf.value;
             return true;
         }
-        if (keyField == null && conf.key != null) {
+        if (keyField == null) {
             keyField = state.getBundle().getFormat().getField(conf.key);
         }
         sum(state.getBundle().getValue(keyField), conf.value, conf.base, conf.countMissing);
@@ -146,14 +146,19 @@ public class DataSum extends TreeNodeData<DataSum.Config> {
 
     @Override
     public ValueObject getValue(String key) {
-        if (key.equals("sum")) {
-            return ValueFactory.create(sum);
-        } else if (key.equals("avg")) {
-            return ValueFactory.create(num > 0 ? sum / num : 0);
-        } else if (key.equals("count")) {
-            return ValueFactory.create(num);
-        } else {
-            return ValueFactory.create(sum);
+        if (key == null) {
+            key = "sum";
+        }
+        switch (key) {
+            case "sum":
+                return ValueFactory.create(sum);
+            case "avg":
+                return ValueFactory.create(num > 0 ? sum / num : 0);
+            case "num":
+            case "count":
+                return ValueFactory.create(num);
+            default:
+                return ValueFactory.create(sum);
         }
     }
 }

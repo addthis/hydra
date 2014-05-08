@@ -13,18 +13,20 @@
  */
 package com.addthis.hydra.job.store;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.addthis.bark.StringSerializer;
 import com.addthis.bark.ZkUtil;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 /**
  * A class for persisting key-value data within zookeeper.
  */
@@ -95,27 +97,6 @@ public class ZookeeperDataStore implements SpawnDataStore {
             zkClient.create().creatingParentsIfNeeded().forPath(parent + "/" + childId, StringSerializer.serialize(value));
         } catch (KeeperException.NodeExistsException nodeExists) {
             zkClient.setData().forPath(parent + "/" + childId, StringSerializer.serialize(value));
-        }
-    }
-
-    @Override
-    /**
-     * Read data from a zookeeper path and decode it onto a Codable shell object
-     */
-    public <T extends Codec.Codable> boolean loadCodable(String path, T shell) {
-        try {
-            if (zkClient.checkExists().forPath(path) == null) {
-                return false;
-            }
-            String raw = StringSerializer.deserialize(zkClient.getData().forPath(path));
-            if (raw == null) {
-                return false;
-            }
-            codec.decode(shell, raw.getBytes());
-            return true;
-        } catch (Exception e) {
-            log.warn("Failed to decode path " + path + ": " + e, e);
-            return false;
         }
     }
 

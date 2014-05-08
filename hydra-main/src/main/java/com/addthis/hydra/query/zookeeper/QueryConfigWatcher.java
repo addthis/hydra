@@ -19,6 +19,8 @@ import java.util.concurrent.ExecutionException;
 
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.bark.StringSerializer;
+import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.JobQueryConfig;
 import com.addthis.hydra.job.store.AvailableCache;
 import com.addthis.hydra.job.store.SpawnDataStore;
@@ -34,6 +36,8 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PA
  * A class to watch job config data within the SpawnDataStore, cache it, and serve information relevant to query functions
  */
 public class QueryConfigWatcher {
+
+    private static final CodecJSON codec = new CodecJSON();
 
     /* How long job config data can live in the cache before being refreshed */
     private static final long queryConfigRefreshMillis = Parameter.longValue("query.config.refresh.millis", 15000);
@@ -94,7 +98,17 @@ public class QueryConfigWatcher {
     private JobQueryConfig fetchJobQueryConfig(String jobId) {
         JobQueryConfig jobQueryConfig = new JobQueryConfig();
         String jobConfigPath = SPAWN_JOB_CONFIG_PATH + "/" + jobId + "/queryconfig";
-        return spawnDataStore.loadCodable(jobConfigPath, jobQueryConfig) ? jobQueryConfig : null;
+        String raw = spawnDataStore.get(jobConfigPath);
+        if (raw == null) {
+            return null;
+        }
+        try {
+            codec.decode(jobQueryConfig, StringSerializer.deserialize(raw.getBytes()).getBytes());
+            return jobQueryConfig;
+        } catch (Exception e) {
+            log.warn("Failed to decode query config", e);
+            return null;
+        }
     }
 
     /**

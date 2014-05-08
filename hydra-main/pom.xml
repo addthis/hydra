@@ -16,7 +16,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>4.2.3-SNAPSHOT</version>
+    <version>4.2.5-SNAPSHOT</version>
   </parent>
 
   <artifactId>hydra-main</artifactId>
@@ -182,11 +182,6 @@
       <groupId>org.drizzle.jdbc</groupId>
       <artifactId>drizzle-jdbc</artifactId>
       <version>1.2</version>
-    </dependency>
-    <dependency>
-      <groupId>postgresql</groupId>
-      <artifactId>postgresql</artifactId>
-      <version>9.1-901.jdbc4</version>
     </dependency>
     <dependency>
       <groupId>com.mchange</groupId>

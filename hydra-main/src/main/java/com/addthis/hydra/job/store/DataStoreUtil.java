@@ -16,10 +16,17 @@ package com.addthis.hydra.job.store;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.query.zookeeper.AliasBiMap;
+
+import com.google.common.collect.Lists;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +55,8 @@ public class DataStoreUtil {
     /* The following parameters _must_ be the same for the mqmaster and spawn process. */
     private static final String canonicalDataStoreType = Parameter.value("spawn.datastore.type", "ZK");
     private static final String cutoverOnceFromType = Parameter.value("spawn.datastore.cutoverOnceFromType");
+    private static final int numCutoverThreads = Parameter.intValue("spawn.datastore.numCutoverThreads", 5);
+    private static final int cutoverTimeoutMinutes = Parameter.intValue("spawn.datstore.cutoverTimeoutMinutes", 15);
 
     private static final String clusterName = Parameter.value("cluster.name", "localhost");
     private static final String sqlTableName = Parameter.value("spawn.sql.table", "sdstable_" + clusterName);
@@ -59,7 +68,7 @@ public class DataStoreUtil {
 
     private static final String markCutoverCompleteKey = "/spawndatastore.cutover.complete";
 
-    public static enum DataStoreType {ZK, MYSQL, POSTGRES}
+    public static enum DataStoreType {ZK, MYSQL}
 
     /**
      * Create the canonical SpawnDataStore based on the system parameters
@@ -97,8 +106,9 @@ public class DataStoreUtil {
         }
         switch (type) {
             case ZK: return new ZookeeperDataStore(null);
-            case MYSQL: return new MysqlDataStore(sqlHostName, sqlPort, sqlDbName, sqlTableName, properties);
-            case POSTGRES: return new PostgresqlDataStore(sqlHostName, sqlPort, sqlDbName, sqlTableName, properties);
+            case MYSQL:
+                String url = "jdbc:mysql:thin://" + sqlHostName + ":" + sqlPort + "/" + sqlDbName;
+                return new MysqlDataStore(url, sqlTableName, properties);
             default: throw new IllegalArgumentException("Unexpected DataStoreType " + type);
         }
     }
@@ -120,19 +130,67 @@ public class DataStoreUtil {
         }
         List<String> jobIds = sourceDataStore.getChildrenNames(SPAWN_JOB_CONFIG_PATH);
         if (jobIds != null) {
-            for (String jobId : jobIds) {
-                if (jobId == null) {
-                    continue;
+            if (numCutoverThreads <= 1) {
+                for (String jobId : jobIds) {
+                    importJobData(jobId, sourceDataStore, targetDataStore, checkAllWrites);
                 }
-                log.debug("Cutting over job data for " + jobId);
-                String basePath = SPAWN_JOB_CONFIG_PATH + "/" + jobId;
-                importValue(basePath, sourceDataStore, targetDataStore, checkAllWrites);
-                for (String parameter : jobParametersToImport) {
-                    importValue(basePath + "/" + parameter, sourceDataStore, targetDataStore, checkAllWrites);
-                }
+            } else {
+                importJobDataParallel(jobIds, sourceDataStore, targetDataStore, checkAllWrites);
             }
         }
         log.warn("Finished cutover from " + sourceDataStore.getDescription() + " to " + targetDataStore.getDescription());
+    }
+
+    private static void importJobDataParallel(List<String> jobIds, SpawnDataStore sourceDataStore, SpawnDataStore targetDataStore, boolean checkAllWrites) throws Exception {
+        ExecutorService executorService = new ThreadPoolExecutor(numCutoverThreads, numCutoverThreads, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+        AtomicBoolean gotFailures = new AtomicBoolean(false);
+        int partitionSize = Math.max((int) Math.ceil((double) jobIds.size() / numCutoverThreads), 1);
+        for (List<String> partition : Lists.partition(jobIds, partitionSize)) {
+            executorService.submit(new CutoverWorker(sourceDataStore, targetDataStore, gotFailures, partition, checkAllWrites));
+        }
+        executorService.shutdown();
+        executorService.awaitTermination(cutoverTimeoutMinutes, TimeUnit.MINUTES);
+        if (gotFailures.get()) {
+            throw new RuntimeException("A cutover worker has failed; see log for details");
+        }
+
+    }
+
+    private static class CutoverWorker implements Runnable {
+        SpawnDataStore sourceDataStore;
+        SpawnDataStore targetDataStore;
+        private AtomicBoolean gotFailures;
+        private List<String> jobIdPartition;
+        private boolean checkAllWrites;
+
+        private CutoverWorker(SpawnDataStore sourceDataStore, SpawnDataStore targetDataStore, AtomicBoolean gotFailures, List<String> jobIdPartition, boolean checkAllWrites) {
+            this.sourceDataStore = sourceDataStore;
+            this.targetDataStore = targetDataStore;
+            this.gotFailures = gotFailures;
+            this.jobIdPartition = jobIdPartition;
+            this.checkAllWrites = checkAllWrites;
+        }
+
+        @Override
+        public void run() {
+            try {
+                for (String jobId : jobIdPartition) {
+                    importJobData(jobId, sourceDataStore, targetDataStore, checkAllWrites);
+                }
+            } catch (Exception ex) {
+                gotFailures.compareAndSet(false, true);
+                log.error("Exception during datastore cutover", ex);
+            }
+        }
+    }
+
+    private static void importJobData(String jobId, SpawnDataStore sourceDataStore, SpawnDataStore targetDataStore, boolean checkAllWrites) throws Exception {
+        log.debug("Cutting over job data for " + jobId);
+        String basePath = SPAWN_JOB_CONFIG_PATH + "/" + jobId;
+        importValue(basePath, sourceDataStore, targetDataStore, checkAllWrites);
+        for (String parameter : jobParametersToImport) {
+            importValue(basePath + "/" + parameter, sourceDataStore, targetDataStore, checkAllWrites);
+        }
     }
 
     /**

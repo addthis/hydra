@@ -146,7 +146,7 @@ public class ZookeeperHandler {
             (fileReferenceCount != taskCount)) {
             final String errorMessage = "Did not find data for all tasks (and allowPartial is off): " + fileReferenceCount + " out of " + taskCount;
             final int numMissing = taskCount - fileReferenceCount;
-            final String label = "\n Missing the following " + numMissing + " tasks : ";
+            final String label = ". Missing the following " + numMissing + " tasks : ";
             final StringBuilder sb = new StringBuilder();
             final TreeMap<Integer, Set<FileReferenceWrapper>> sortedMap = new TreeMap<>(fileReferenceMap);
             final Iterator<Integer> it = sortedMap.keySet().iterator();

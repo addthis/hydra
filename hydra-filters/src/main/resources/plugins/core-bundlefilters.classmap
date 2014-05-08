@@ -3,6 +3,7 @@
 "clear", com.addthis.hydra.data.filter.bundle.BundleFilterClear
 "concat", com.addthis.hydra.data.filter.bundle.BundleFilterConcat
 "condition", com.addthis.hydra.data.filter.bundle.BundleFilterCondition
+"contains", com.addthis.hydra.data.filter.bundle.BundleFilterContains
 "debug", com.addthis.hydra.data.filter.bundle.BundleFilterDebugPrint
 "defaults", com.addthis.hydra.data.filter.bundle.BundleFilterDefaults
 "equals", com.addthis.hydra.data.filter.bundle.BundleFilterEquals

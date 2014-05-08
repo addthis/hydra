@@ -23,6 +23,8 @@ import java.util.Map;
 import com.addthis.basis.util.Varint;
 
 import com.addthis.codec.Codec;
+import com.addthis.codec.CodecBin2;
+import com.addthis.hydra.store.kv.KeyCoder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +37,8 @@ public final class KeyTopper implements Codec.Codable, Codec.SuperCodable,
         Codec.BytesCodable {
 
     private static final byte[] EMPTY = new byte[0];
+
+    protected static final CodecBin2 codec = new CodecBin2();
 
     private static final Logger log = LoggerFactory.getLogger(KeyTopper.class);
 
@@ -357,31 +361,41 @@ public final class KeyTopper implements Codec.Codable, Codec.SuperCodable,
 
     @Override
     public void bytesDecode(byte[] b, long version) {
-        if (b.length == 0) {
-            return;
-        }
-        ByteBuf byteBuf = Unpooled.wrappedBuffer(b);
-        byte[] keybytes = null;
-        try {
-            int newsize = Varint.readUnsignedVarInt(byteBuf);
-            resize(newsize);
-            size = newsize;
-            for (int index = 0; index < size; index++) {
-                int keyLength = Varint.readUnsignedVarInt(byteBuf);
-                keybytes = new byte[keyLength];
-                byteBuf.readBytes(keybytes);
-                String key = new String(keybytes, "UTF-8");
-                long value = Varint.readUnsignedVarLong(byteBuf);
-                keys[index] = key;
-                values[index] = value;
-                locations.put(key, index);
+        if (version < KeyCoder.EncodeType.KEYTOPPER.ordinal()) {
+            try {
+                codec.decode(this, b);
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
-        } catch (UnsupportedEncodingException e) {
-            log.error("Unexpected error while decoding \"" +
-                      Arrays.toString(keybytes) + "\"", e);
-            throw new RuntimeException(e);
-        } finally {
-            byteBuf.release();
+        } else {
+            if (b.length == 0) {
+                return;
+            }
+            ByteBuf byteBuf = Unpooled.wrappedBuffer(b);
+            byte[] keybytes = null;
+            try {
+                int newsize = Varint.readUnsignedVarInt(byteBuf);
+                resize(newsize);
+                size = newsize;
+                for (int index = 0; index < size; index++) {
+                    int keyLength = Varint.readUnsignedVarInt(byteBuf);
+                    keybytes = new byte[keyLength];
+                    byteBuf.readBytes(keybytes);
+                    String key = new String(keybytes, "UTF-8");
+                    long value = Varint.readUnsignedVarLong(byteBuf);
+                    keys[index] = key;
+                    values[index] = value;
+                    locations.put(key, index);
+                }
+            } catch (UnsupportedEncodingException e) {
+                log.error("Unexpected error while decoding \"" +
+                          Arrays.toString(keybytes) + "\"", e);
+                throw new RuntimeException(e);
+            } finally {
+                byteBuf.release();
+            }
         }
     }
 

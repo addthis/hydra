@@ -13,8 +13,6 @@
  */
 package com.addthis.hydra.job;
 
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PATH;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -35,7 +33,6 @@ import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
-
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -46,6 +43,8 @@ import com.yammer.metrics.core.TimerContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PATH;
 
 /**
  * Stuff about jobs that *others* care about, not in the giant Spawnstate ball of mud.
@@ -124,7 +123,7 @@ public class JobConfigManager {
         try {
             final String jobCodec = new String(codec.encode(job.getRootData()));
             jobSizePersistHisto.update(jobCodec.length());
-            writeUpdateIfDataNotNull(jobPath, new String(codec.encode(job.getRootData())));
+            spawnDataStore.putAsChild(SPAWN_JOB_CONFIG_PATH, job.getId(), jobCodec);
             writeUpdateIfDataNotNull(jobPath + alertChildName, new String(codec.encode(job.getAlerts())));
             writeUpdateIfDataNotNull(jobPath + queryConfigChildName, new String(codec.encode(job.getQueryConfig())));
             // this is just a marker so that we know to use the 'new' configuration
@@ -165,12 +164,12 @@ public class JobConfigManager {
      *
      * @param jobId     The jobId in question
      * @param queryData Query data describing the job configuration. Data for other jobs will be ignored.
-     * @return The reconsituted job object
+     * @return The reconstituted job object
      * @throws Exception
      */
     private IJob createJobFromQueryData(String jobId, Map<String, String> queryData) throws Exception {
         String jobPath = getJobPath(jobId);
-        String rstring = queryData.get(jobPath);
+        String rstring = spawnDataStore.getChild(SPAWN_JOB_CONFIG_PATH, jobId);
         if (rstring == null) {
             return null;
         }
@@ -199,7 +198,11 @@ public class JobConfigManager {
 
     public IJob getJob(String jobId) {
         try {
-            return createJobFromQueryData(jobId, fetchJobData(Arrays.asList(jobId)));
+            Map<String, String> queryData = fetchJobData(jobId);
+            if (queryData == null) {
+                return null;
+            }
+            return createJobFromQueryData(jobId, queryData);
         } catch (Exception e) {
             logger.error("Failure creating job: " + jobId, e);
             throw new RuntimeException(e);
@@ -208,18 +211,14 @@ public class JobConfigManager {
 
     /**
      * Internal function to fetch the job config, query config, etc. for a group of jobs using a single SpawnDataStore operation.
-     * When using PriamDataStore, this is much more efficient than sending many individual requests
      *
-     * @param jobIds The jobIds to fetch
+     * @param jobId The jobId to fetch
      * @return A map describing the results of querying all the relevant paths
      */
-    private Map<String, String> fetchJobData(List<String> jobIds) {
-        List<String> queryPaths = new ArrayList<>(jobIds.size());
-        for (String jobId : jobIds) {
-            String jobPath = getJobPath(jobId);
-            queryPaths.addAll(Arrays.asList(jobPath, jobPath + configChildName, jobPath + queryConfigChildName, jobPath + alertChildName, jobPath + tasksChildName, jobPath + taskChildName));
-        }
-        return spawnDataStore.get(queryPaths.toArray(new String[queryPaths.size()]));
+    private Map<String, String> fetchJobData(String jobId) {
+        String jobPath = getJobPath(jobId);
+        String[] queryPaths = new String[] {jobPath, jobPath + configChildName, jobPath + queryConfigChildName, jobPath + alertChildName, jobPath + tasksChildName, jobPath + taskChildName};
+        return spawnDataStore.get(queryPaths);
     }
 
     private IJob loadLegacyTaskData(String jobPath, ZnodeJob.RootZnodeData rznd, String config, JobQueryConfig jqc, List<JobAlert> alerts) throws Exception {
@@ -242,11 +241,10 @@ public class JobConfigManager {
      * @throws Exception
      */
     private Map<String, IJob> loadJobChunk(List<String> jobIdChunk) throws Exception {
-        Map<String, String> queryData = fetchJobData(jobIdChunk);
         Map<String, IJob> rv = new HashMap<>();
         for (String jobId : jobIdChunk) {
             try {
-                rv.put(jobId, createJobFromQueryData(jobId, queryData));
+                rv.put(jobId, createJobFromQueryData(jobId, fetchJobData(jobId)));
             } catch (Exception ex) {
                 logger.error("Failed while reconstituting job " + jobId);
                 logger.trace("Failed while reconstituting job ", ex);

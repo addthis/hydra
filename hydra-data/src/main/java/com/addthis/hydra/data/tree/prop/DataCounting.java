@@ -148,14 +148,14 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements C
         private double rsd = 0.05;
 
         /**
-         * Used in hyperloglog plus.  The precision is the number of bits used when the cardinality
+         * Used in hyperloglog plus (hllp).  The precision is the number of bits used when the cardinality
          * is calculated using the normal mode. The default is 14.
          */
         @Codec.Set(codable = true)
         private int p = 14;
 
         /**
-         * Used in hyperloglog plus.  The sparse precision is the number of bits used when the cardinality
+         * Used in hyperloglog plus (hllp).  The sparse precision is the number of bits used when the cardinality
          * is calculated using the sparse mode. The default is 25.
          */
         @Codec.Set(codable = true)

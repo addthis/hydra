@@ -16,6 +16,7 @@ package com.addthis.hydra.data.util;
 import java.util.Map;
 
 import com.addthis.codec.CodecBin2;
+import com.addthis.hydra.store.kv.KeyCoder;
 
 
 import org.junit.Test;
@@ -52,9 +53,9 @@ public class TestKeyTopper {
         input.increment("b", 2, 5);
         input.increment("c", 3, 5);
         input.increment("d", 4, 5);
-        byte[] serialized = input.bytesEncode(0);
+        byte[] serialized = input.bytesEncode(KeyCoder.EncodeType.defaultOrdinal());
         KeyTopper output = new KeyTopper();
-        output.bytesDecode(serialized, 0);
+        output.bytesDecode(serialized, KeyCoder.EncodeType.defaultOrdinal());
         assertEquals(4, output.size());
         assertEquals(new Long(1), output.get("a"));
         assertEquals(new Long(2), output.get("b"));
@@ -65,10 +66,10 @@ public class TestKeyTopper {
     @Test
     public void testEmptyBytesCodable() throws Exception {
         KeyTopper input = new KeyTopper();
-        byte[] serialized = input.bytesEncode(0);
+        byte[] serialized = input.bytesEncode(KeyCoder.EncodeType.defaultOrdinal());
         assertEquals(0, serialized.length);
         KeyTopper output = new KeyTopper();
-        output.bytesDecode(serialized, 0);
+        output.bytesDecode(serialized, KeyCoder.EncodeType.defaultOrdinal());
         assertEquals(0, output.size());
     }
 
@@ -79,9 +80,9 @@ public class TestKeyTopper {
         input.increment("b", 2, 5);
         input.increment("c", 3, 5);
         input.increment("d", 4, 5);
-        byte[] serialized = input.bytesEncode(0);
+        byte[] serialized = input.bytesEncode(KeyCoder.EncodeType.defaultOrdinal());
         KeyTopper output = new KeyTopper();
-        output.bytesDecode(serialized, 0);
+        output.bytesDecode(serialized, KeyCoder.EncodeType.defaultOrdinal());
         assertEquals(4, output.size());
         assertEquals(new Long(1), output.get("a"));
         assertEquals(new Long(2), output.get("b"));

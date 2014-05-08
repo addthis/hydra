@@ -31,6 +31,7 @@ import com.addthis.hydra.data.tree.ReadTreeNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.util.KeyTopper;
+import com.addthis.hydra.store.kv.KeyCoder;
 
 import com.addthis.basis.util.Varint;
 import io.netty.buffer.ByteBuf;
@@ -100,7 +101,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
      * <p>Query Path Examples:</p>
      * <pre>
      *     /shard-counter/+130101$+top_ips=k1,k2,k3,k4,k5
-     *     /shard-counter/+130101/+%top_ipss==hit
+     *     /shard-counter/+130101/+%top_ips==hit
      * </pre>
      *
      * @user-reference
@@ -297,18 +298,28 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
 
     @Override
     public void bytesDecode(byte[] b, long version) {
-        top = new KeyTopper();
-        ByteBuf buf = Unpooled.wrappedBuffer(b);
-        try {
-            int topBytesLength = Varint.readUnsignedVarInt(buf);
-            if (topBytesLength > 0) {
-                byte[] topBytes = new byte[topBytesLength];
-                buf.readBytes(topBytes);
-                top.bytesDecode(topBytes, version);
+        if (version == KeyCoder.EncodeType.LEGACY.ordinal()) {
+            try {
+                codec.decode(this, b);
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
-            size = Varint.readUnsignedVarInt(buf);
-        } finally {
-            buf.release();
+        } else {
+            top = new KeyTopper();
+            ByteBuf buf = Unpooled.wrappedBuffer(b);
+            try {
+                int topBytesLength = Varint.readUnsignedVarInt(buf);
+                if (topBytesLength > 0) {
+                    byte[] topBytes = new byte[topBytesLength];
+                    buf.readBytes(topBytes);
+                    top.bytesDecode(topBytes, version);
+                }
+                size = Varint.readUnsignedVarInt(buf);
+            } finally {
+                buf.release();
+            }
         }
     }
 }

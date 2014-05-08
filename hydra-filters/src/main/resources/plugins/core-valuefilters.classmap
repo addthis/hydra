@@ -5,6 +5,7 @@
 "case", com.addthis.hydra.data.filter.value.ValueFilterCase
 "cat", com.addthis.hydra.data.filter.value.ValueFilterCat
 "chain", com.addthis.hydra.data.filter.value.ValueFilterChain
+"contains", com.addthis.hydra.data.filter.value.ValueFilterContains
 "count", com.addthis.hydra.data.filter.value.ValueFilterCounter
 "create-map", com.addthis.hydra.data.filter.value.ValueFilterCreateMap
 "date-range-length", com.addthis.hydra.data.filter.value.ValueFilterDateRangeLength
