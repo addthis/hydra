@@ -87,9 +87,12 @@ public class DataSumFloat extends TreeNodeData<DataSumFloat.Config> {
         if (keyAccess != null) {
             ValueObject kv = state.getBundle().getValue(keyAccess);
             if (kv != null) {
-                num++;
                 try {
-                    sum += ValueUtil.asNumberOrParseDouble(kv).asDouble().getDouble();
+                    double value = ValueUtil.asNumberOrParseDouble(kv).asDouble().getDouble();
+                    if (!Double.isNaN(value)) {
+                        sum += value;
+                        num++;
+                    }
                 } catch (NumberFormatException ex) {
                     if (conf.warnOnError) {
                         System.out.println("uparseable " + kv + " in " + state.getBundle());
@@ -110,7 +113,7 @@ public class DataSumFloat extends TreeNodeData<DataSumFloat.Config> {
         if (key.equals("sum")) {
             return ValueFactory.create(sum);
         } else if (key.equals("avg")) {
-            return ValueFactory.create(num > 0 ? sum / num : 0);
+            return ValueFactory.create(num != 0 ? sum / num : 0);
         } else if (key.equals("count")) {
             return ValueFactory.create(num);
         } else {
