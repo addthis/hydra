@@ -207,12 +207,25 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 }
                 writer.write("]");
                 break;
+            case "/v2/host/list":
             case "/host/list":
-                QueryEntry queryEntry = tracker.getQueryEntry(kv.getValue("uuid"));
-                DetailedStatusHandler hostDetailsHandler =
-                        new DetailedStatusHandler(writer, response, ctx, request, cbf, queryEntry);
-                hostDetailsHandler.handle();
-                return;
+                String queryStatusUuid = kv.getValue("uuid");
+                QueryEntry queryEntry = tracker.getQueryEntry(queryStatusUuid);
+                if (queryEntry != null) {
+                    DetailedStatusHandler hostDetailsHandler =
+                            new DetailedStatusHandler(writer, response, ctx, request, cbf, queryEntry);
+                    hostDetailsHandler.handle();
+                    return;
+                } else {
+                    QueryEntryInfo queryEntryInfo = tracker.getCompletedQueryInfo(queryStatusUuid);
+                    if (queryEntryInfo != null) {
+                        JSONObject entryJSON = CodecJSON.encodeJSON(queryEntryInfo);
+                        writer.write(entryJSON.toString());
+                    } else {
+                        throw new RuntimeException("could not find query");
+                    }
+                    break;
+                }
             case "/query/cancel":
                 if (tracker.cancelRunning(kv.getValue("uuid"))) {
                     if (jsonp) writer.write("{canceled:true,message:'");
@@ -303,13 +316,6 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 json.close();
                 writer.write(swriter.toString());
                 break;
-            }
-            case "/v2/host/list": {
-                queryEntry = tracker.getQueryEntry(kv.getValue("uuid"));
-                hostDetailsHandler =
-                        new DetailedStatusHandler(writer, response, ctx, request, cbf, queryEntry);
-                hostDetailsHandler.handle();
-                return;
             }
             case "/v2/settings/git.properties": {
                 StringWriter swriter = new StringWriter();

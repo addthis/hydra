@@ -34,12 +34,17 @@ public class DetailedStatusTask implements Runnable {
     @Override
     public void run() {
         try {
+            int lines = 0;
             QueryTaskSource[] taskSources = sourceAggregator.taskSources;
             TaskSourceInfo[] taskSourceInfos = new TaskSourceInfo[taskSources.length];
             for (int i = 0; i < taskSources.length; i++) {
                 taskSourceInfos[i] = new TaskSourceInfo(taskSources[i]);
+                lines += taskSources[i].lines;
             }
             QueryEntryInfo queryEntryInfo = queryEntry.getStat();
+            // update entry info, but not the entry since it will get updated incrementally later if this is not
+            // gathering query-end metrics
+            queryEntryInfo.lines = lines;
             queryEntryInfo.tasks = taskSourceInfos;
             promise.trySuccess(queryEntryInfo);
         } catch (Exception e) {

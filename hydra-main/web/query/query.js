@@ -384,16 +384,52 @@ function queryHostsRescan(uuid,job) {
 
 function renderQueryHosts(hosts,tab){
     // console.log("unsorted:"+hosts);
+    hosts = hosts.tasks;
     var html = '<table><tr><th>';
-    html += ['hostname','lines','start time',(tab=='runningqueries'? 'run time':'end time'),'finished'].join('</th><th>')+'</th></tr>';
+    html += ['task','lines','finished','host info'].join('</th><th>')+'</th></tr>';
     var finished=0;
     if(hosts.length>0) {
-        hosts=$(hosts).sortBy(function(el){ return el.runtime;}).reverse();
+        hosts=$(hosts).sortBy(function(el){ return el.lines;}).reverse();
         // console.log("sorted:"+hosts);
     }       
     for (var i=0; i<hosts.length; i++) {
         var h = hosts[i];
-        var row = [h.hostname, h.lines, new Date(h.starttime).toString('yy/MM/dd HH:mm:ss')||'-', (tab=='runningqueries'? (h.runtime/1000.0)+"s" :  (h.endtime>0? new Date(h.endtime).toString('yy/MM/dd HH:mm:ss'):'-') ), (h.finished=="true"?"y":"n")];
+        var options = h.options;
+        var hostInfo = "";
+        if (!h.complete && h.lines > 0) {
+            var selected = "unknown";
+            var inactive = "";
+            for (var j = 0; j < options.length; j++) {
+                var option = options[j];
+                if (option.active) {
+                    selected = option.hostUuid;
+                } else {
+                    inactive += option.hostUuid + ", "
+                }
+            }
+            hostInfo = "selected: " + selected + "   inactive: " + inactive;
+        }
+        if (!h.complete && h.lines == 0) {
+            var active = "active: ";
+            var inactive = "inactive: ";
+            for (var j = 0; j < options.length; j++) {
+                var option = options[j];
+                if (option.active) {
+                    active += option.hostUuid + ", ";
+                } else {
+                    inactive += option.hostUuid + ", ";
+                }
+            }
+            hostInfo = active + "   " + inactive;
+        }
+        if (h.complete) {
+            hostInfo = "options were: "
+            for (var j = 0; j < options.length; j++) {
+                var option = options[j];
+                hostInfo += option.hostUuid + ", ";
+            }
+        }
+        var row = [i, h.lines, (h.complete?"y":"n"), hostInfo];
         html += '<tr><td>'+row.join('</td><td>')+'</td></tr>';
         finished+=(h.finished=="true"?1:0);
     }

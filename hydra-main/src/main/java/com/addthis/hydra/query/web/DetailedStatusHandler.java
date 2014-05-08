@@ -63,6 +63,7 @@ public class DetailedStatusHandler implements FutureListener<QueryEntryInfo> {
     public void handle() {
         if (queryEntry != null) {
             Promise<QueryEntryInfo> promise = new DefaultPromise<>(ctx.executor());
+            promise.addListener(this);
             queryEntry.getDetailedQueryEntryInfo(promise);
         }
         else {

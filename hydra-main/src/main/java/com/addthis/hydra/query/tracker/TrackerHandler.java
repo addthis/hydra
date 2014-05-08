@@ -33,6 +33,8 @@ import io.netty.channel.ChannelProgressiveFutureListener;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.Promise;
 
 public class TrackerHandler extends SimpleChannelInboundHandler<Query> implements ChannelProgressiveFutureListener {
 
@@ -120,11 +122,17 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
         if (future == queryPromise) {
             return;
         }
-        queryEntry.runTime = queryEntry.getRunTime();
-
         QueryEntry runE = queryTracker.running.remove(query.uuid());
         if (runE == null) {
             log.warn("failed to remove running for {}", query.uuid());
+        }
+
+        Promise<QueryEntryInfo> promise = new DefaultPromise<>(ctx.executor());
+        queryEntry.getDetailedQueryEntryInfo(promise);
+        QueryEntryInfo entryInfo = promise.getNow();
+        if (entryInfo == null) {
+            log.warn("Failed to get detailed status for completed query {}; defaulting to brief", query.uuid());
+            entryInfo = queryEntry.getStat();
         }
 
 //        queryTracker.queryGate.release();
@@ -135,11 +143,11 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
                     .put("query.ops", Arrays.toString(opsLog))
                     .put("sources", query.getParameter("sources"))
                     .put("time", System.currentTimeMillis())
-                    .put("time.run", queryEntry.runTime)
+                    .put("time.run", entryInfo.runTime)
                     .put("job.id", query.getJob())
                     .put("job.alias", query.getParameter("track.alias"))
                     .put("query.id", query.uuid())
-                    .put("lines", queryEntry.preOpLines.get())
+                    .put("lines", entryInfo.lines)
                     .put("sender", query.getParameter("sender"));
             if (!future.isSuccess()) {
                 Throwable queryFailure = future.cause();
@@ -149,7 +157,7 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
                 queryPromise.tryFailure(queryFailure);
             } else {
                 queryLine.put("type", "query.done");
-                queryTracker.recentlyCompleted.put(query.uuid(), queryEntry.getStat());
+                queryTracker.recentlyCompleted.put(query.uuid(), entryInfo);
                 queryPromise.trySuccess();
             }
             queryTracker.log(queryLine);
