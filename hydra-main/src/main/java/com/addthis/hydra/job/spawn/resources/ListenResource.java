@@ -220,6 +220,14 @@ public class ListenResource {
         }
     }
 
+    @GET
+    @Path("/hostfailworker.obeyTaskLimit.set")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response setObeyTaskLimit(@QueryParam("obey") boolean obey) {
+        spawn.getHostFailWorker().setObeyTaskSlots(obey);
+        return Response.ok().build();
+    }
+
 
     @GET
     @Path("/git.properties")

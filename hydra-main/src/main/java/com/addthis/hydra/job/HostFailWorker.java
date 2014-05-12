@@ -49,6 +49,7 @@ public class HostFailWorker {
     private static final Logger log = LoggerFactory.getLogger(HostFailWorker.class);
     private final HostFailState hostFailState;
     private AtomicBoolean newAdditions = new AtomicBoolean(false); // True if a host has been recently added to the queue
+    private AtomicBoolean obeyTaskSlots = new AtomicBoolean(true);
     private final Spawn spawn;
 
     // Perform host-failure related operations at a given interval
@@ -58,9 +59,9 @@ public class HostFailWorker {
 
     // Don't rebalance additional tasks if spawn is already rebalancing at least this many.
     // Note that the number of rsyncs performed by a single host is also limited by the availableTaskSlots of that host.
-    private static final int maxMovingTasks = Parameter.intValue("host.fail.maxMovingTasks", 8);
+    private static final int maxMovingTasks = Parameter.intValue("host.fail.maxMovingTasks", 4);
     // Use a smaller max when a disk is being failed, to avoid a 'thundering herds' scenario
-    private static final int maxMovingTasksDiskFull = Parameter.intValue("host.fail.maxMovingTasksDiskFull", 3);
+    private static final int maxMovingTasksDiskFull = Parameter.intValue("host.fail.maxMovingTasksDiskFull", 2);
 
     private final Timer failTimer = new Timer(true);
 
@@ -246,7 +247,7 @@ public class HostFailWorker {
                 }
                 List<JobTaskMoveAssignment> assignments = spawn.getSpawnBalancer().pushTasksOffDiskForFilesystemOkayFailure(host, tasksToMove);
                 // Use available task slots to push tasks off the host in question. Not all of these assignments will necessarily be moved.
-                spawn.executeReallocationAssignments(assignments, !diskFull);
+                spawn.executeReallocationAssignments(assignments, !diskFull && obeyTaskSlots.get());
                 if (failState == FailState.FAILING_FS_OKAY && assignments.isEmpty() && host.countTotalLive() == 0) {
                     // Found no tasks on the failed host, so fail it for real.
                     markHostDead(failedHostUuid);
@@ -254,6 +255,10 @@ public class HostFailWorker {
                 }
             }
         }
+    }
+
+    public void setObeyTaskSlots(boolean obey) {
+        obeyTaskSlots.set(obey);
     }
 
     /**
