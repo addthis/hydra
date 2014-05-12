@@ -693,7 +693,7 @@ public class SpawnBalancer implements Codec.Codable {
     }
 
     public List<JobTaskMoveAssignment> pushTasksOffDiskForFilesystemOkayFailure(HostState host, int moveLimit) {
-        List<HostState> hosts = spawn.listHostStatus(host.getMinionTypes());
+        List<HostState> hosts = spawn.listHostStatus(null);
         return pushTasksOffHost(host, hosts, false, 1, moveLimit, false);
     }
 
