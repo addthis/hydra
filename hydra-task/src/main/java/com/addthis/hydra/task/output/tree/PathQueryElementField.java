@@ -20,6 +20,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
+import com.addthis.bundle.value.ValueTranslationException;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.query.BoundedValue;
@@ -64,7 +65,7 @@ public class PathQueryElementField extends QueryElementField {
                 if (keys[i].bounded) {
                     try {
                         ret.add(keys[i].validate(qv.asLong().getLong()) ? qv : null);
-                    } catch (NumberFormatException ex) {
+                    } catch (ValueTranslationException | NumberFormatException ex) {
                         ret.add(null);
                     }
                 } else {
