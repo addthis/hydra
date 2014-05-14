@@ -218,7 +218,7 @@ public final class TaskFeeder extends Thread {
             task.taskComplete();
             // critical to get any file meta data written before process exits
             MuxFileDirectoryCache.waitForWriteClosure();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             errored.set(true);
             closed.set(true);
             log.trace("", e);
