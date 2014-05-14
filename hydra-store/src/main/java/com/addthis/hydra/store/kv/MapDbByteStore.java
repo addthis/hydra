@@ -26,8 +26,12 @@ import com.google.common.primitives.UnsignedBytes;
 import org.mapdb.BTreeMap;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MapDbByteStore implements ByteStore {
+
+    private static final Logger log = LoggerFactory.getLogger(MapDbByteStore.class);
 
     private final File dir;
     private final File dbFile;
@@ -53,6 +57,8 @@ public class MapDbByteStore implements ByteStore {
                 .valuesOutsideNodesEnable()
                 .comparator(UnsignedBytes.lexicographicalComparator())
                 .makeOrGet();
+
+        log.info("MapDB ByteStore started up for {}", dir);
     }
 
     public MapDbByteStore(File dir, String dbname) {
