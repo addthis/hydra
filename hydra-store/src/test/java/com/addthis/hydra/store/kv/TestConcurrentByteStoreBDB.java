@@ -14,79 +14,11 @@
 package com.addthis.hydra.store.kv;
 
 import java.io.File;
-import java.io.IOException;
 
-import com.addthis.basis.util.Files;
+public class TestConcurrentByteStoreBDB extends AbstractByteStoreTest {
 
-import org.junit.Test;
-
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
-
-public class TestConcurrentByteStoreBDB {
-
-    private static byte[] createBytes(int input) {
-        return String.format("%05d", input).getBytes();
+    @Override
+    public ByteStore createByteStore(File dir, String name) {
+        return new ConcurrentByteStoreBDB(dir, name);
     }
-
-    @Test
-    public void testGetPut() {
-        File tempDir = null;
-        try {
-            tempDir = Files.createTempDir();
-            ConcurrentByteStoreBDB store = new ConcurrentByteStoreBDB(tempDir, "test");
-            for (int i = 0; i < 10; i++) {
-                byte[] key = createBytes(i);
-                byte[] value = createBytes(10 - i);
-                store.put(key, value);
-            }
-            for (int i = 0; i < 10; i++) {
-                byte[] key = createBytes(i);
-                byte[] expected = createBytes(10 - i);
-                byte[] observed = store.get(key);
-                assertArrayEquals(expected, observed);
-            }
-            assertNull(store.get(createBytes(-1)));
-            assertNull(store.get(createBytes(10)));
-            assertNull(store.get(new String("").getBytes()));
-        } catch (IOException ex) {
-            fail(ex.getMessage());
-        } finally {
-            if (tempDir != null) {
-                Files.deleteDir(tempDir);
-            }
-        }
-    }
-
-
-    @Test
-    public void testNextHigherValue() {
-        File tempDir = null;
-        try {
-            tempDir = Files.createTempDir();
-            ConcurrentByteStoreBDB store = new ConcurrentByteStoreBDB(tempDir, "test");
-            for (int i = 1; i < 10; i++) {
-                byte[] key = createBytes(i);
-                byte[] value = createBytes(10 - i);
-                store.put(key, value);
-            }
-            for (int i = 1; i < 9; i++) {
-                byte[] key = createBytes(i);
-                byte[] expected = createBytes(i + 1);
-                byte[] observed = store.higherKey(key);
-                assertArrayEquals(expected, observed);
-            }
-            assertArrayEquals(createBytes(1), store.higherKey(createBytes(0)));
-            assertNull(store.higherKey(createBytes(9)));
-            assertNull(store.higherKey(createBytes(10)));
-        } catch (IOException ex) {
-            fail(ex.getMessage());
-        } finally {
-            if (tempDir != null) {
-                Files.deleteDir(tempDir);
-            }
-        }
-    }
-
 }

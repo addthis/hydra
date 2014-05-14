@@ -17,6 +17,7 @@ import java.io.File;
 
 import java.util.AbstractMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
@@ -63,7 +64,7 @@ public class ConcurrentByteStoreBDB implements ByteStore {
     private final AtomicLong puts = new AtomicLong(0);
     private final AtomicLong bytesIn = new AtomicLong(0);
     private final AtomicLong bytesOut = new AtomicLong(0);
-    private final HashSet<ClosableIterator<PageEntry>> openIterators = new HashSet<>();
+    private final HashSet<ClosableIterator<Map.Entry<byte[], byte[]>>> openIterators = new HashSet<>();
     private final LockMode lockMode = LockMode.DEFAULT;
     private final CursorConfig cursorConfig = CursorConfig.DEFAULT;
     private final OperationStatus opSuccess = OperationStatus.SUCCESS;
@@ -305,161 +306,29 @@ public class ConcurrentByteStoreBDB implements ByteStore {
     }
 
     @Override
-    public ClosableIterator<PageEntry> iterator(final byte[] start) {
-        return iterator(start, false, false);
-    }
-
-    @Override
-    public ClosableIterator<PageEntry> keyIterator(final byte[] start) {
-        return iterator(start, false, true);
-    }
-
-    private ClosableIterator<PageEntry> iterator(final byte[] start, final boolean mustInclude,
-            final boolean keyonly) {
-        return new ClosableIterator<PageEntry>() {
-            private final DatabaseEntry dk = new DatabaseEntry(start);
-            private final DatabaseEntry dv = new DatabaseEntry();
-            private final DatabaseEntry dvs = new DatabaseEntry();
-            private PageEntry next;
-            private Cursor cursor;
-
-            @Override
-            public String toString() {
-                return "CI:" + Bytes.toString(dk.getData()) + "," + next + "," + cursor;
-            }
-
-            {
-                /** use partial entry to avoid pulling page data on a (likely) miss */
-                dvs.setPartial(0, 0, true);
-                try {
-                    cursor = bdb.openCursor(null, cursorConfig);
-                    OperationStatus status;
-                    boolean useAltKey = false;
-                    if (start == null || start.length == 0) {
-                        status = cursor.getFirst(dk, dvs, lockMode);
-                    } else {
-                        status = cursor.getSearchKeyRange(dk, dvs, lockMode);
-                    }
-                    if (status == opSuccess) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("--> floor --> key=" + Bytes.toString(start) + " vs found=" + Bytes.toString(dk.getData()));
-                        }
-                        if (!Bytes.equals(start, dk.getData())) {
-                            useAltKey = true;
-                            status = cursor.getPrev(dk, dvs, lockMode);
-                            if (log.isDebugEnabled()) log.debug("<-- prev -- " + status);
-                        }
-                    } else {
-                        status = cursor.getLast(dk, dvs, lockMode);
-                        if (log.isDebugEnabled()) {
-                            log.debug("--> floor --> tolast key=" + Bytes.toString(start) + " vs last=" + Bytes.toString(dk.getData()));
-                        }
-                    }
-                    if (status == opSuccess || (useAltKey && !mustInclude)) {
-                        if (!keyonly) {
-                            cursor.getCurrent(dvs, dv, lockMode);
-                        }
-                        next = current();
-                        if (log.isDebugEnabled()) log.debug("--> next key=" + Bytes.toString(next.key()));
-                        synchronized (openIterators) {
-                            openIterators.add(this);
-                        }
-                    } else {
-                        close();
-                    }
-                } catch (EnvironmentFailureException e) {
-                    if (cursor != null) {
-                        log.warn("Closing cursor");
-                        cursor.close();
-                    }
-
-                    throw (e);
-                }
-            }
-
-            @Override
-            protected void finalize() {
-                close();
-            }
-
-            @Override
-            public void close() {
-                if (cursor != null) {
-                    cursor.close();
-                    cursor = null;
-                    synchronized (openIterators) {
-                        openIterators.remove(this);
-                    }
-                }
-            }
-
-            class BytePageEntry implements PageEntry {
-
-                private final byte[] key;
-                private final byte[] val;
-
-                BytePageEntry() {
-                    key = dk.getData();
-                    val = keyonly ? null : dv.getData();
-                }
-
-                @Override
-                public String toString() {
-                    return "PE:" + Bytes.toString(key) + "=" + Bytes.toString(val);
-                }
-
-                @Override
-                public byte[] key() {
-                    return key;
-                }
-
-                @Override
-                public byte[] value() {
-                    return val;
-                }
-            }
-
-            private PageEntry current() {
-                return new BytePageEntry();
-            }
-
+    public Iterator<byte[]> keyIterator(final byte[] start) {
+        final ClosableIterator<Map.Entry<byte[], byte[]>> entryIt = iterator(start, false, true);
+        return new Iterator<byte[]>() {
             @Override
             public boolean hasNext() {
-                if (next == null && cursor != null) {
-                    OperationStatus status;
-                    if (keyonly) {
-                        status = cursor.getNext(dk, dvs, lockMode);
-                    } else {
-                        status = cursor.getNext(dk, dv, lockMode);
-                    }
-                    if (status == opSuccess) {
-                        next = current();
-                        if (log.isDebugEnabled()) log.debug("--  hasNext key=" + Bytes.toString(next.key()));
-                    } else {
-                        close();
-                    }
-                }
-                return next != null;
+                return entryIt.hasNext();
             }
 
             @Override
-            public PageEntry next() {
-                if (hasNext()) {
-                    PageEntry ret = next;
-                    if (log.isDebugEnabled()) log.debug("<-- next key=" + Bytes.toString(next.key()));
-                    next = null;
-                    return ret;
-                }
-                throw new NoSuchElementException();
+            public byte[] next() {
+                return entryIt.next().getKey();
             }
 
             @Override
             public void remove() {
-                if (cursor.delete() != opSuccess) {
-                    throw new RuntimeException("unable to delete");
-                }
+                entryIt.remove();
             }
         };
+    }
+
+    private ClosableIterator<Map.Entry<byte[], byte[]>> iterator(final byte[] start, final boolean mustInclude,
+            final boolean keyonly) {
+        return new EntryClosableIterator(start, mustInclude, keyonly);
     }
 
     /**
@@ -516,7 +385,7 @@ public class ConcurrentByteStoreBDB implements ByteStore {
         if (openIterators.size() > 0) {
             log.warn("closing " + openIterators.size() + " iterators on close");
             for (Object e : openIterators.toArray(new Object[openIterators.size()])) {
-                ((ClosableIterator<PageEntry>) e).close();
+                ((ClosableIterator<Map.Entry>) e).close();
             }
         }
         log.info("pages:gets=" + gets + " puts=" + puts + " in=" + bytesIn + " out=" + bytesOut);
@@ -546,5 +415,136 @@ public class ConcurrentByteStoreBDB implements ByteStore {
     @Override
     public long count() {
         return bdb.count();
+    }
+
+    private class EntryClosableIterator implements ClosableIterator<Map.Entry<byte[], byte[]>> {
+
+        private final DatabaseEntry dk;
+        private final DatabaseEntry dv;
+        private final DatabaseEntry dvs;
+        private final byte[] start;
+        private final boolean keyonly;
+        private Map.Entry<byte[], byte[]> next;
+        private Cursor cursor;
+
+        public EntryClosableIterator(byte[] start, boolean mustInclude, boolean keyonly) {
+            this.start = start;
+            this.keyonly = keyonly;
+            dk = new DatabaseEntry(start);
+            dv = new DatabaseEntry();
+            dvs = new DatabaseEntry();
+            /** use partial entry to avoid pulling page data on a (likely) miss */
+            dvs.setPartial(0, 0, true);
+            try {
+                cursor = bdb.openCursor(null, cursorConfig);
+                OperationStatus status;
+                boolean useAltKey = false;
+                if (start == null || start.length == 0) {
+                    status = cursor.getFirst(dk, dvs, lockMode);
+                } else {
+                    status = cursor.getSearchKeyRange(dk, dvs, lockMode);
+                }
+                if (status == opSuccess) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("--> floor --> key=" + Bytes.toString(start) + " vs found=" + Bytes.toString(dk.getData()));
+                    }
+                    if (!Bytes.equals(start, dk.getData())) {
+                        useAltKey = true;
+                        status = cursor.getPrev(dk, dvs, lockMode);
+                        if (log.isDebugEnabled()) log.debug("<-- prev -- " + status);
+                    }
+                } else {
+                    status = cursor.getLast(dk, dvs, lockMode);
+                    if (log.isDebugEnabled()) {
+                        log.debug("--> floor --> tolast key=" + Bytes.toString(start) + " vs last=" + Bytes.toString(dk.getData()));
+                    }
+                }
+                if (status == opSuccess || (useAltKey && !mustInclude)) {
+                    if (!keyonly) {
+                        cursor.getCurrent(dvs, dv, lockMode);
+                    }
+                    next = current();
+                    if (log.isDebugEnabled()) log.debug("--> next key=" + Bytes.toString(next.getKey()));
+                    synchronized (openIterators) {
+                        openIterators.add(this);
+                    }
+                } else {
+                    close();
+                }
+            } catch (EnvironmentFailureException e) {
+                if (cursor != null) {
+                    log.warn("Closing cursor");
+                    cursor.close();
+                }
+
+                throw (e);
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "CI:" + Bytes.toString(dk.getData()) + "," + next + "," + cursor;
+        }
+
+        @Override
+        protected void finalize() {
+            close();
+        }
+
+        @Override
+        public void close() {
+            if (cursor != null) {
+                cursor.close();
+                cursor = null;
+                synchronized (openIterators) {
+                    openIterators.remove(this);
+                }
+            }
+        }
+
+        private Map.Entry<byte[], byte[]> current() {
+            if (keyonly) {
+                return new BytePageEntry(dk.getData());
+            } else {
+                return new BytePageEntry(dk.getData(), dv.getData());
+            }
+        }
+
+        @Override
+        public boolean hasNext() {
+            if (next == null && cursor != null) {
+                OperationStatus status;
+                if (keyonly) {
+                    status = cursor.getNext(dk, dvs, lockMode);
+                } else {
+                    status = cursor.getNext(dk, dv, lockMode);
+                }
+                if (status == opSuccess) {
+                    next = current();
+                    if (log.isDebugEnabled()) log.debug("--  hasNext key=" + Bytes.toString(next.getKey()));
+                } else {
+                    close();
+                }
+            }
+            return next != null;
+        }
+
+        @Override
+        public Map.Entry next() {
+            if (hasNext()) {
+                Map.Entry ret = next;
+                if (log.isDebugEnabled()) log.debug("<-- next key=" + Bytes.toString(next.getKey()));
+                next = null;
+                return ret;
+            }
+            throw new NoSuchElementException();
+        }
+
+        @Override
+        public void remove() {
+            if (cursor.delete() != opSuccess) {
+                throw new RuntimeException("unable to delete");
+            }
+        }
     }
 }

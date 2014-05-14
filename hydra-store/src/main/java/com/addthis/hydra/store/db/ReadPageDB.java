@@ -27,6 +27,7 @@ import com.addthis.codec.Codec;
 import com.addthis.codec.CodecBin2;
 import com.addthis.hydra.store.kv.ByteStore;
 import com.addthis.hydra.store.kv.ByteStoreBDB;
+import com.addthis.hydra.store.kv.MapDbByteStore;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
 import com.addthis.hydra.store.kv.ReadExternalPagedStore;
 
@@ -45,9 +46,10 @@ import org.slf4j.LoggerFactory;
 public class ReadPageDB<V extends IReadWeighable & Codec.BytesCodable> implements IPageDB<DBKey, V> {
 
     private static final Logger log = LoggerFactory.getLogger(ReadPageDB.class);
+
     static final String defaultDbName = Parameter.value("pagedb.dbname", "db.key");
 
-    private final static Codec codec = new CodecBin2();
+    private static final Codec codec = new CodecBin2();
     private final Class<? extends V> clazz;
     private final ReadExternalPagedStore<DBKey, V> eps;
 
@@ -58,7 +60,18 @@ public class ReadPageDB<V extends IReadWeighable & Codec.BytesCodable> implement
     public ReadPageDB(File dir, Class<? extends V> clazz, int maxSize,
             int maxWeight, boolean metrics) throws IOException {
         this.clazz = clazz;
-        ByteStore store = new ByteStoreBDB(dir, defaultDbName, true);
+        String dbType = PageDB.getByteStoreNameForFile(dir);
+        ByteStore store;
+        switch (dbType) {
+            case PageDB.PAGED_MAP_DB:
+                store = new MapDbByteStore(dir, defaultDbName, true);
+                break;
+            case PageDB.PAGED_BERK_DB:
+                // fall through -- the previous dbType was always something like 'pagedb' so this is expected
+            default:
+                store = new ByteStoreBDB(dir, defaultDbName, true);
+                break;
+        }
         this.eps = new ReadExternalPagedStore<>(new ReadDBKeyCoder<>(codec, clazz), store, maxSize, maxWeight, metrics);
     }
 
