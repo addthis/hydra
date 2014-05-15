@@ -538,9 +538,9 @@ public class HostFailWorker {
         public FailState getState(String hostId) {
             synchronized (hostsToFailByType) {
                 if (failFsOkay.contains(hostId)) {
-                    return FailState.FAILING_FS_DEAD;
-                } else if (failFsDead.contains(hostId)) {
                     return FailState.FAILING_FS_OKAY;
+                } else if (failFsDead.contains(hostId)) {
+                    return FailState.FAILING_FS_DEAD;
                 } else if (fsFull.contains(hostId)) {
                     return FailState.DISK_FULL;
                 } else {
