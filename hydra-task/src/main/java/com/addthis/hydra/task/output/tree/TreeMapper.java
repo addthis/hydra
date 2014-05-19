@@ -63,7 +63,6 @@ import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.QueryException;
-import com.addthis.hydra.data.query.channel.QueryChannelServer;
 import com.addthis.hydra.data.query.source.LiveMeshyServer;
 import com.addthis.hydra.data.query.source.LiveQueryReference;
 import com.addthis.hydra.data.query.source.QueryHandle;
@@ -250,7 +249,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
      * after the tree has been constructed.
      */
     @Codec.Set(codable = true)
-    private PathOutput outputs[];
+    private PathOutput[] outputs;
 
     @Codec.Set(codable = true)
     private boolean live = Parameter.boolValue("mapper.live", false);
@@ -289,7 +288,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
     private int maxErrors = 0;
 
     private final ConcurrentMap<String, BundleField> fields = new ConcurrentHashMap<>();
-    private final IndexHash<PathElement[]> pathIndex = new IndexHash<>();
+    private final IndexHash<PathElement[]> pathIndex = new IndexHash();
 
     private DataTree tree;
     private Bench bench;
@@ -299,7 +298,6 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
     private ObjectName jmxname;
     private MBeanRemotingSupport jmxremote;
 
-    private QueryChannelServer queryServer;
     private QueryEngine queryEngine;
     private MeshyServer liveQueryServer;
     private TreeMapperStats mapstats;
@@ -320,7 +318,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
     private final AtomicLong lastBundleTime = new AtomicLong(0);
 
     /** */
-    private class IndexHash<V> {
+    private static class IndexHash<V> {
 
         private HashMap<String, Integer> map = new HashMap<>();
         private ArrayList<V> list = new ArrayList<>(64);
@@ -369,7 +367,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
         // index paths and intern path element keys
         if (paths != null) {
             for (Map.Entry<String, PathElement[]> me : paths.entrySet()) {
-                PathElement pe[] = me.getValue();
+                PathElement[] pe = me.getValue();
                 for (PathElement p : pe) {
                     p.resolve(this);
                 }
@@ -447,16 +445,8 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
             Files.write(new File("job.port"), Bytes.toBytes(Integer.toString(httpPort)), false);
         }
 
-        int queryPort = 0;
-        if (enableQuery) {
-            queryEngine = new QueryEngine(tree);
-            queryServer = new QueryChannelServer(port > 0 ? port++ : 0, this);
-            queryServer.start();
-            queryPort = queryServer.getPort();
-            log.info("[init.query] port=" + queryPort);
-        }
-
         if (enableJmx) {
+            int queryPort = 0;
             jmxname = new ObjectName("com.addthis.hydra:type=Hydra,node=" + queryPort);
             ManagementFactory.getPlatformMBeanServer().registerMBean(mapstats, jmxname);
             ServerSocket ss = new ServerSocket();
@@ -593,7 +583,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
      * Processor interface this is where packets and rules are finally executed
      * locally.
      */
-    private void processPath(Bundle bundle, PathElement path[]) {
+    private void processPath(Bundle bundle, PathElement[] path) {
         try {
             TreeMapState ps = new TreeMapState(this, tree, path, bundle);
             processNodes.addAndGet(ps.touched());
@@ -673,8 +663,8 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
      */
     private static String pad(long v, int chars) {
         String sv = Long.toString(v);
-        String opt[] = new String[]{"K", "M", "B", "T"};
-        DecimalFormat dco[] = new DecimalFormat[]{new DecimalFormat("0.00"), new DecimalFormat("0.0"), new DecimalFormat("0")};
+        String[] opt = new String[]{"K", "M", "B", "T"};
+        DecimalFormat[] dco = new DecimalFormat[]{new DecimalFormat("0.00"), new DecimalFormat("0.0"), new DecimalFormat("0")};
         int indx = 0;
         double div = 1000d;
         outer:
@@ -899,12 +889,6 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
             }
             // disable web interface
             jetty.stop();
-            if (queryServer != null) {
-                // cancel running queries
-                queryEngine.cancelActiveThreads();
-                // stop channel server
-                queryServer.close();
-            }
             boolean doValidate;
             switch (validateTree) {
                 case ALL:

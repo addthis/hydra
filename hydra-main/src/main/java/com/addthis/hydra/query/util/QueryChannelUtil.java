@@ -14,42 +14,32 @@
 package com.addthis.hydra.query.util;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
-import com.addthis.basis.util.Strings;
 
-import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleOutput;
-import com.addthis.bundle.table.DataTable;
 import com.addthis.bundle.value.ValueDouble;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.hydra.data.channel.BlockingBufferedConsumer;
 import com.addthis.hydra.data.channel.BlockingNullConsumer;
 import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.QueryOpProcessor;
-import com.addthis.hydra.data.query.channel.QueryChannelClient;
-import com.addthis.hydra.data.query.channel.QueryChannelClientX;
-import com.addthis.hydra.data.query.channel.QueryHost;
-import com.addthis.hydra.data.query.source.QueryHandle;
+import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.source.QuerySource;
 import com.addthis.hydra.data.tree.ReadTree;
 import com.addthis.hydra.query.QueryEngineSource;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * should be abstracted further to be a generic pipe for queries and results.
@@ -61,62 +51,10 @@ public class QueryChannelUtil {
 
     private static final Logger log = LoggerFactory.getLogger(QueryChannelUtil.class);
 
-    private static final Map<QueryHost, QueryChannelClient> queryChannelClientMap = new HashMap<>();
-    private static final Lock clientMapLock = new ReentrantLock();
-
-    /**
-     * sync query call helper
-     */
-    public static DataTable syncQuery(QueryHost host, Query query) throws Exception {
-        try {
-            QueryChannelClient client = getQueryChannelClient(host);
-            BlockingBufferedConsumer consumer = new BlockingBufferedConsumer();
-            QueryOpProcessor proc = new QueryOpProcessor(consumer, null);
-            client.query(query, proc);
-            return consumer.getTable();
-        } catch (Exception e) {
-            removeQueryChannelClient(host);
-            throw new Exception("Exception running syncQuery", e);
-        }
-    }
-
-    private static QueryChannelClient getQueryChannelClient(QueryHost host) throws IOException {
-        QueryChannelClient client = null;
-        clientMapLock.lock();
-        try {
-            client = queryChannelClientMap.get(host);
-            if (client == null) {
-                client = new QueryChannelClient(host);
-                queryChannelClientMap.put(host, client);
-            }
-        } finally {
-            clientMapLock.unlock();
-        }
-        return client;
-    }
-
-
-    private static void removeQueryChannelClient(QueryHost host) {
-        clientMapLock.lock();
-        try {
-            queryChannelClientMap.remove(host);
-            log.warn("removed QueryChannelClient for host: " + host);
-        } finally {
-            clientMapLock.unlock();
-        }
-    }
-
-    /**
-     * example of how to make simple async calls
-     */
-    public static QueryHandle asyncQuery(QueryHost host, Query query, DataChannelOutput consumer) throws Exception {
-        return getQueryChannelClient(host).query(query, consumer);
-    }
-
     /**
      * @param args host=[host] port=[port] job=[job] path=[path] ops=[ops] lops=[lops] data=[datadir] [iter] [quiet] [sep=separator] [out=file] [trace] [param=val]
      */
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         runQuery(args);
     }
 
@@ -176,7 +114,7 @@ public class QueryChannelUtil {
     }
 
     /** */
-    private static void runQuery(String args[]) throws Exception {
+    private static void runQuery(String[] args) throws Exception {
         HashMap<String, String> qparam = new HashMap<>();
         String sep = null;
         boolean quiet = false;
@@ -191,23 +129,15 @@ public class QueryChannelUtil {
         String host = "localhost";
         String data = null;
         String out = null;
-        List<QueryHost> hosts = new LinkedList<>();
         int port = 2601;
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             int eqpos;
             if (arg.equals("help")) {
-                System.out.println("host=[host] port=[port] job=[job] path=[path] ops=[ops] lops=[lops] data=[datadir] [iter=#] [quiet] [sep=separator] [out=file] [trace] [param=val]");
+                System.out.println("port=[port] job=[job] path=[path] ops=[ops] lops=[lops] data=[datadir] [iter=#] [quiet] [sep=separator] [out=file] [trace] [param=val]");
                 return;
             }
-            if (arg.startsWith("host=")) {
-                host = arg.substring(5);
-            } else if (arg.startsWith("hosts=")) {
-                for (String hostport : Strings.splitArray(arg.substring(6), ",")) {
-                    String hp[] = Strings.splitArray(hostport, ":");
-                    hosts.add(new QueryHost(hp[0], hp.length > 1 ? Integer.parseInt(hp[1]) : port));
-                }
-            } else if (arg.startsWith("port=")) {
+            if (arg.startsWith("port=")) {
                 port = Integer.parseInt(arg.substring(5));
             } else if (arg.equals("trace")) {
                 traced = true;
@@ -269,30 +199,8 @@ public class QueryChannelUtil {
                     }
                 }
             };
-        } else if (hosts.size() > 0) {
-            final boolean logit = log.isDebugEnabled() && !quiet;
-            client = new QueryChannelClientX(hosts) {
-                @Override
-                public QuerySource leaseClient(QueryHost host) {
-                    try {
-                        if (logit) {
-                            log.warn("lease client : " + host);
-                        }
-                        return new QueryChannelClient(host);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-
-                @Override
-                public void releaseClient(QuerySource channel) {
-                    if (logit) {
-                        log.warn("release client : " + channel);
-                    }
-                }
-            };
         } else {
-            client = new QueryChannelClient(host, port);
+            throw new RuntimeException("no data directory specified");
         }
 
         while (iter-- > 0) {
