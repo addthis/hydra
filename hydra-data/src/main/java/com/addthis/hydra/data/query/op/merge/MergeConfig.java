@@ -50,7 +50,7 @@ public class MergeConfig {
                     // next col is top
                 case 't':
                     topColumn = conf.size();
-                    topper = new KeyTopper();
+                    topper = new KeyTopper().init();
                     continue;
                     // average
                 case 'a':

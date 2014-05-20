@@ -17,8 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 
-import com.addthis.basis.util.Varint;
-
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
@@ -29,18 +27,12 @@ import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.TreeNodeDataDeferredOperation;
 import com.addthis.hydra.data.util.KeyTopper;
-import com.addthis.hydra.store.kv.KeyCoder;
 
 import org.slf4j.Logger;
 
 
 import org.slf4j.LoggerFactory;
-
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.Unpooled;
-
-public class DataLimitTop extends TreeNodeData<DataLimitTop.Config> {
+public class DataLimitTop extends TreeNodeData<DataLimitTop.Config> implements Codec.SuperCodable {
 
     private static final Logger log = LoggerFactory.getLogger(DataLimitTop.class);
 
@@ -76,7 +68,7 @@ public class DataLimitTop extends TreeNodeData<DataLimitTop.Config> {
             DataLimitTop dc = new DataLimitTop();
             dc.size = size;
             dc.test = test;
-            dc.top = new KeyTopper();
+            dc.top = new KeyTopper().init().setLossy(true);
             return dc;
         }
     }
@@ -239,48 +231,12 @@ public class DataLimitTop extends TreeNodeData<DataLimitTop.Config> {
     }
 
     @Override
-    public byte[] bytesEncode(long version) {
-        byte[] bytes = null;
-        ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer();
-        try {
-            byte[] topBytes = top.bytesEncode(version);
-            Varint.writeUnsignedVarInt(topBytes.length, buf);
-            buf.writeBytes(topBytes);
-            Varint.writeUnsignedVarInt(size, buf);
-            Varint.writeUnsignedVarInt(test ? 1 : 0, buf);
-            bytes = new byte[buf.readableBytes()];
-            buf.readBytes(bytes);
-        } finally {
-            buf.release();
-        }
-        return bytes;
+    public void postDecode() {
+        // log.warn("deserialized "+this+" with "+top.size()+" elements --> "+top);
     }
 
     @Override
-    public void bytesDecode(byte[] b, long version) {
-        if (version < KeyCoder.EncodeType.KEYTOPPER.ordinal()) {
-            try {
-                codec.decode(this, b);
-            } catch (RuntimeException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        } else {
-            top = new KeyTopper();
-            ByteBuf buf = Unpooled.wrappedBuffer(b);
-            try {
-                int topBytesLength = Varint.readUnsignedVarInt(buf);
-                if (topBytesLength > 0) {
-                    byte[] topBytes = new byte[topBytesLength];
-                    buf.readBytes(topBytes);
-                    top.bytesDecode(topBytes, version);
-                }
-                size = Varint.readUnsignedVarInt(buf);
-                test = (Varint.readUnsignedVarInt(buf)) != 0;
-            } finally {
-                buf.release();
-            }
-        }
+    public void preEncode() {
+        // log.warn("serializing "+this+" with "+top.size()+" elements --> "+top);
     }
 }
