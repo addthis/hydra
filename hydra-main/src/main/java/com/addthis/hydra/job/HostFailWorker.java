@@ -16,7 +16,6 @@ package com.addthis.hydra.job;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -35,21 +34,22 @@ import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
 
-import org.apache.commons.lang3.tuple.Pair;
-
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 
-import org.slf4j.Logger;
+import org.apache.commons.lang3.tuple.Pair;
 
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 public class HostFailWorker {
 
     private static final Logger log = LoggerFactory.getLogger(HostFailWorker.class);
     private final HostFailState hostFailState;
     private AtomicBoolean newAdditions = new AtomicBoolean(false); // True if a host has been recently added to the queue
+    private AtomicBoolean obeyTaskSlots = new AtomicBoolean(true);
     private final Spawn spawn;
 
     // Perform host-failure related operations at a given interval
@@ -59,7 +59,9 @@ public class HostFailWorker {
 
     // Don't rebalance additional tasks if spawn is already rebalancing at least this many.
     // Note that the number of rsyncs performed by a single host is also limited by the availableTaskSlots of that host.
-    private static final int maxMovingTasks = Parameter.intValue("host.fail.maxMovingTasks", 8);
+    private static final int maxMovingTasks = Parameter.intValue("host.fail.maxMovingTasks", 4);
+    // Use a smaller max when a disk is being failed, to avoid a 'thundering herds' scenario
+    private static final int maxMovingTasksDiskFull = Parameter.intValue("host.fail.maxMovingTasksDiskFull", 2);
 
     private final Timer failTimer = new Timer(true);
 
@@ -93,12 +95,12 @@ public class HostFailWorker {
      * Mark a series of hosts for failure
      *
      * @param hostIds        A comma-separated list of host uuids
-     * @param fileSystemDead Whether the file systems of these hosts should be treated as unreachable
+     * @param state      The state of the hosts being failed
      */
-    public void markHostsToFail(String hostIds, boolean fileSystemDead) {
+    public void markHostsToFail(String hostIds, FailState state) {
         if (hostIds != null) {
             for (String host : hostIds.split(",")) {
-                hostFailState.putHost(host, fileSystemDead);
+                hostFailState.putHost(host, state);
                 spawn.sendHostUpdateEvent(spawn.getHostState(host));
             }
             queueFailNextHost();
@@ -131,6 +133,8 @@ public class HostFailWorker {
                 return "queued to fail (fs dead)";
             case FAILING_FS_OKAY:
                 return "queued to fail (fs okay)";
+            case DISK_FULL:
+                return "disk near full; moving tasks off";
             default:
                 return "UNKNOWN";
         }
@@ -215,40 +219,46 @@ public class HostFailWorker {
      * Find the next host on the fail queue, considering filesystem-dead hosts first. Perform the correct actions and remove from the queue if appropriate.
      */
     private void failNextHost() {
-        Pair<String, Boolean> hostToFail = hostFailState.nextHostToFail();
+        Pair<String, FailState> hostToFail = hostFailState.nextHostToFail();
         if (hostToFail != null) {
             String failedHostUuid = hostToFail.getLeft();
-            boolean fileSystemDead = hostToFail.getRight();
-            if (!fileSystemDead && spawn.getSettings().getQuiesced()) {
-                // If filesystem is okay, don't do any moves while spawn is quiesced.
-                return;
-            }
+            FailState failState = hostToFail.getRight();
             HostState host = spawn.getHostState(failedHostUuid);
             if (host == null) {
                 // Host is gone or has no more tasks. Simply mark it as failed.
                 markHostDead(failedHostUuid);
                 return;
             }
-            if (fileSystemDead) {
+            if (failState == FailState.FAILING_FS_DEAD) {
                 // File system is dead. Relocate all tasks ASAP.
                 markHostDead(failedHostUuid);
                 spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.listHostStatus(null), failedHostUuid);
             } else {
-                int tasksToMove = maxMovingTasks - countRebalancingTasks();
+                boolean diskFull = (failState == FailState.DISK_FULL);
+                if (!diskFull && spawn.getSettings().getQuiesced()) {
+                    // If filesystem is okay, don't do any moves while spawn is quiesced.
+                    return;
+                }
+                int taskMovingMax = diskFull ? maxMovingTasksDiskFull : maxMovingTasks;
+                int tasksToMove = taskMovingMax - countRebalancingTasks();
                 if (tasksToMove <= 0) {
                     // Spawn is already moving enough tasks; hold off until later
                     return;
                 }
                 List<JobTaskMoveAssignment> assignments = spawn.getSpawnBalancer().pushTasksOffDiskForFilesystemOkayFailure(host, tasksToMove);
                 // Use available task slots to push tasks off the host in question. Not all of these assignments will necessarily be moved.
-                spawn.executeReallocationAssignments(assignments, true);
-                if (assignments.isEmpty() && host.countTotalLive() == 0) {
+                spawn.executeReallocationAssignments(assignments, !diskFull && obeyTaskSlots.get());
+                if (failState == FailState.FAILING_FS_OKAY && assignments.isEmpty() && host.countTotalLive() == 0) {
                     // Found no tasks on the failed host, so fail it for real.
                     markHostDead(failedHostUuid);
                     spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.listHostStatus(host.getMinionTypes()), failedHostUuid);
                 }
             }
         }
+    }
+
+    public void setObeyTaskSlots(boolean obey) {
+        obeyTaskSlots.set(obey);
     }
 
     /**
@@ -325,6 +335,7 @@ public class HostFailWorker {
 
         @Override
         public void run() {
+            updateFullMinions();
             if (skipIfNewAdditions && newAdditions.get()) {
                 return;
             }
@@ -338,42 +349,73 @@ public class HostFailWorker {
         }
     }
 
+    public void updateFullMinions() {
+        for (HostState hostState : spawn.listHostStatus(null)) {
+            if (hostState == null || hostState.isDead() || !hostState.isUp()) {
+                continue;
+            }
+            String hostId = hostState.getHostUuid();
+            if (spawn.getSpawnBalancer().isDiskFull(hostState)) {
+                markHostsToFail(hostId, HostFailWorker.FailState.DISK_FULL);
+            } else if (getFailureState(hostId) == HostFailWorker.FailState.DISK_FULL) {
+                // Host was previously full, but isn't anymore. Take it off the disk_full list.
+                hostFailState.removeHost(hostId);
+            }
+        }
+    }
+
     /**
      * A class storing the internal state of the host failure queue. All changes are immediately saved to the SpawnDataStore
      */
     private class HostFailState {
-
+        private final Object hostsToFailByTypeLock = new Object();
         private static final String filesystemDeadKey = "deadFs";
         private static final String filesystemOkayKey = "okayFs";
-        private final Map<Boolean, Set<String>> hostsToFailByType = new HashMap<>();
+        private static final String filesystemFullKey = "fullFs";
         private final Set<String> failFsDead;
         private final Set<String> failFsOkay;
+        private final Set<String> fsFull;
+        private final Map<FailState, Set<String>> hostsToFailByType;
 
         public HostFailState() {
-            synchronized (hostsToFailByType) {
+            synchronized (hostsToFailByTypeLock) {
                 failFsDead = new LinkedHashSet<>();
-                hostsToFailByType.put(false, failFsDead);
                 failFsOkay = new LinkedHashSet<>();
-                hostsToFailByType.put(true, failFsOkay);
+                fsFull = new LinkedHashSet<>();
+                hostsToFailByType = ImmutableMap.of(FailState.FAILING_FS_DEAD, failFsDead,
+                        FailState.DISK_FULL, fsFull, FailState.FAILING_FS_OKAY, failFsOkay);
             }
         }
 
         /**
-         * Add a new failed host
+         * Add a new host to the failure queue
          *
          * @param hostId         The host id to add
-         * @param deadFileSystem Whether the host's filesystem should be treated as dead
+         * @param failState      The state of the host being failed
          */
-        public void putHost(String hostId, boolean deadFileSystem) {
-            synchronized (hostsToFailByType) {
-                if (deadFileSystem && failFsOkay.contains(hostId)) {
-                    // Change a host from an fs-okay failure to an fs-dead failure
-                    failFsOkay.remove(hostId);
-                    failFsDead.add(hostId);
-                } else if (!deadFileSystem && failFsDead.contains(hostId)) {
-                    log.warn("Ignoring eventual fail host on " + hostId + " because it is already marked as dead");
-                } else {
-                    hostsToFailByType.get(deadFileSystem).add(hostId);
+        public void putHost(String hostId, FailState failState) {
+
+            synchronized (hostsToFailByTypeLock) {
+                if (failFsDead.contains(hostId)) {
+                    log.info("Ignoring fs-okay failure of " + hostId + " because it is already being failed fs-dead");
+                    return;
+                }
+                switch (failState) {
+                    case FAILING_FS_DEAD:
+                        fsFull.remove(hostId);
+                        failFsOkay.remove(hostId);
+                        failFsDead.add(hostId);
+                        break;
+                    case FAILING_FS_OKAY:
+                        fsFull.remove(hostId);
+                        failFsOkay.add(hostId);
+                        break;
+                    case DISK_FULL:
+                        fsFull.add(hostId);
+                        failFsOkay.remove(hostId);
+                        break;
+                    default:
+                        log.warn("Unexcepted failState " + failState);
                 }
                 saveState();
             }
@@ -384,15 +426,36 @@ public class HostFailWorker {
          *
          * @return The uuid of the next host to fail, and whether the file system is dead. If the queue is empty, return null.
          */
-        public Pair<String, Boolean> nextHostToFail() {
+        public Pair<String, FailState> nextHostToFail() {
             synchronized (hostsToFailByType) {
-                if (!failFsOkay.isEmpty()) {
-                    return Pair.of(failFsOkay.iterator().next(), true);
-                } else if (!failFsDead.isEmpty()) {
-                    return Pair.of(failFsDead.iterator().next(), false);
+                String hostUuid = findFirstHost(failFsDead, false);
+                if (hostUuid != null) {
+                    return Pair.of(hostUuid, FailState.FAILING_FS_DEAD);
+                }
+                hostUuid = findFirstHost(fsFull, true);
+                if (hostUuid != null) {
+                    return Pair.of(hostUuid, FailState.DISK_FULL);
+                }
+                hostUuid = findFirstHost(failFsOkay, true);
+                if (hostUuid != null) {
+                    return Pair.of(hostUuid, FailState.FAILING_FS_OKAY);
                 }
                 return null;
             }
+        }
+
+        private String findFirstHost(Set<String> hosts, boolean requireUp) {
+            for (String hostUuid : hosts) {
+                if (requireUp) {
+                    HostState host = spawn.getHostState(hostUuid);
+                    if (host != null && !host.isDead() && host.isUp()) {
+                        return hostUuid;
+                    }
+                } else {
+                    return hostUuid;
+                }
+            }
+            return null;
         }
 
         /**
@@ -402,9 +465,9 @@ public class HostFailWorker {
          */
         public void removeHost(String hostId) {
             synchronized (hostsToFailByType) {
-                for (Set<String> hosts : hostsToFailByType.values()) {
-                    hosts.remove(hostId);
-                }
+                failFsDead.remove(hostId);
+                failFsOkay.remove(hostId);
+                fsFull.remove(hostId);
                 saveState();
             }
         }
@@ -426,23 +489,24 @@ public class HostFailWorker {
             synchronized (hostsToFailByType) {
                 try {
                     JSONObject decoded = new JSONObject(spawn.getSpawnDataStore().get(dataStoragePath));
-                    loadHostsFromJSONArray(false, decoded.getJSONArray(filesystemOkayKey));
-                    loadHostsFromJSONArray(true, decoded.getJSONArray(filesystemDeadKey));
+                    loadHostsFromJSONArray(failFsOkay, decoded.getJSONArray(filesystemOkayKey));
+                    loadHostsFromJSONArray(failFsDead, decoded.getJSONArray(filesystemDeadKey));
+                    loadHostsFromJSONArray(fsFull, decoded.getJSONArray(filesystemFullKey));
+                    return true;
                 } catch (Exception e) {
                     log.warn("Failed to load HostFailState: " + e + " raw=" + raw, e);
-                    }
-                return !hostsToFailByType.isEmpty();
+                }
+                return false;
             }
         }
 
         /**
          * Internal method to convert a JSONArray from the SpawnDataStore to a list of hosts
          */
-        private void loadHostsFromJSONArray(boolean deadFileSystem, JSONArray arr) throws JSONException {
+        private void loadHostsFromJSONArray(Set<String> modified, JSONArray arr) throws JSONException {
             if (arr == null) {
                 return;
             }
-            Set<String> modified = deadFileSystem ? failFsOkay : failFsDead;
             for (int i = 0; i < arr.length(); i++) {
                 modified.add(arr.getString(i));
             }
@@ -457,11 +521,12 @@ public class HostFailWorker {
                     JSONObject jsonObject = new JSONObject();
                     jsonObject.put(filesystemOkayKey, new JSONArray(failFsDead));
                     jsonObject.put(filesystemDeadKey, new JSONArray(failFsOkay));
+                    jsonObject.put(filesystemFullKey, new JSONArray(fsFull));
                     spawn.getSpawnDataStore().put(dataStoragePath, jsonObject.toString());
                 }
             } catch (Exception e) {
                 log.warn("Failed to save HostFailState: " + e, e);
-                }
+            }
         }
 
         /**
@@ -473,9 +538,11 @@ public class HostFailWorker {
         public FailState getState(String hostId) {
             synchronized (hostsToFailByType) {
                 if (failFsOkay.contains(hostId)) {
-                    return FailState.FAILING_FS_DEAD;
-                } else if (failFsDead.contains(hostId)) {
                     return FailState.FAILING_FS_OKAY;
+                } else if (failFsDead.contains(hostId)) {
+                    return FailState.FAILING_FS_DEAD;
+                } else if (fsFull.contains(hostId)) {
+                    return FailState.DISK_FULL;
                 } else {
                     return FailState.ALIVE;
                 }
@@ -498,6 +565,15 @@ public class HostFailWorker {
         return count;
     }
 
-    public enum FailState {ALIVE, FAILING_FS_DEAD, FAILING_FS_OKAY}
+    /**
+     * This enum tracks HostFailWorker's ideas of Host State. Options are:
+     * - ALIVE: host is normal
+     * - FAILING_FS_DEAD: User has requested that the host be failed immediately. There is a quiet period to allow the
+     * queue logic to exit gracefully and to allow user to cancel if there was a mistake.
+     * - FAILING_FS_OKAY: User has requested that the host be failed eventually, after safely migrating each task off.
+     * - DISK_FULL: HostFailWorker detects hosts that are nearly full on disk, and moves tasks off automatically. Once
+     * they return to safer levels, they will go back to ALIVE status.
+     */
+    public enum FailState {ALIVE, FAILING_FS_DEAD, FAILING_FS_OKAY, DISK_FULL}
 
 }

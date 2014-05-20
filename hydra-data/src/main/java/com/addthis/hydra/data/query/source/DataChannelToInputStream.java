@@ -57,6 +57,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
 
     private static final int outputQueueSize = Parameter.intValue("meshQuerySource.outputQueueSize", 1000);
     private static final int outputBufferSize = Parameter.intValue("meshQuerySource.outputBufferSize", 64000);
+    private static final int queueAttemptLimit = Parameter.intValue("meshQuerySource.queueAttemptLimit", 10000);
 
     private final ListBundleFormat format = new ListBundleFormat();
     private final LinkedBlockingQueue<byte[]> queue = new LinkedBlockingQueue<>(outputQueueSize);
@@ -135,7 +136,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
         byte[] bytes = out.toByteArray();
         out.reset();
         try {
-            for (int i = 0; i < 100; i++) //Try adding to queue 100 times
+            for (int i = 0; i < queueAttemptLimit; i++) //Try adding to queue queueAttemptLimit times
             {
                 if (queue.offer(bytes, 1000L, TimeUnit.MILLISECONDS)) {
                     if (i > 10) {
@@ -148,7 +149,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
                     break;
                 }
             }
-            throw new DataChannelError("Output queue oversized for 100 attempts");
+            throw new DataChannelError("Output queue oversized for " + queueAttemptLimit + " + attempts");
         } catch (InterruptedException e) {
             log.warn("Interrupted while putting bytes onto output buffer");
             throw new DataChannelError("interrupted", e);

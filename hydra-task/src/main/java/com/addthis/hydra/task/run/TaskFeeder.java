@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -41,12 +40,10 @@ import com.addthis.hydra.task.source.TaskDataSource;
 import com.addthis.muxy.MuxFileDirectoryCache;
 
 import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Gauge;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Meter;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * reads TaskDataSource list defined in TreeMapJob (config) using a
@@ -218,10 +215,10 @@ public final class TaskFeeder extends Thread {
             task.taskComplete();
             // critical to get any file meta data written before process exits
             MuxFileDirectoryCache.waitForWriteClosure();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             errored.set(true);
             closed.set(true);
-            log.trace("", e);
+            log.warn("task feeder exception: ", e);
         }
         if (errored.get()) {
             log.warn("[" + Thread.currentThread().getName() + "] exited with error");

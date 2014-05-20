@@ -1011,6 +1011,15 @@ public class SpawnManager {
                 link.sendShortReply(200, "ok", spawn.getJobsToAutobalance().toString());
             }
         });
+        server.mapService("/hostfailworker.setObeyTaskSlots", new HTTPService() {
+            @Override
+            public void httpService(HTTPLink link) throws Exception {
+                KVPairs kv = link.getRequestValues();
+                boolean obey = kv.getIntValue("obey", 1) == 1;
+                spawn.getHostFailWorker().setObeyTaskSlots(obey);
+                link.sendShortReply(200, "ok", "set");
+            }
+        });
         server.mapService("/task.truesize", new HTTPService() {
             @Override
             public void httpService(HTTPLink link) throws Exception {

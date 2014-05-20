@@ -44,19 +44,16 @@ import com.addthis.hydra.job.mq.JobKey;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * A class in charge of balancing load among spawn's hosts.
  * General assumptions:
  * The boxes are not so asymmetrical that running a job on three boxes is slower than running it on a single box.
  * Jobs run faster when they have as few tasks grouped together on individual boxes as possible.
- * <p/>
- * Groups of tasks from the same job living together on machines are termed "job siblings."
- * Motivation: they come from the same source and compete with each other for resources.
  */
 public class SpawnBalancer implements Codec.Codable {
 
@@ -73,6 +70,8 @@ public class SpawnBalancer implements Codec.Codable {
     private ConcurrentHashMap<String, HostScore> cachedHostScores = new ConcurrentHashMap<>();
     private Set<String> activeJobIDs;
     private ReentrantLock aggregateStatisticsLock = new ReentrantLock();
+
+    private static final Set<JobTaskState> movableTaskStates = ImmutableSet.of(JobTaskState.IDLE, JobTaskState.QUEUED, JobTaskState.QUEUED_HOST_UNAVAIL);
 
     private AtomicBoolean autobalanceStarted = new AtomicBoolean(false);
 
@@ -662,7 +661,7 @@ public class SpawnBalancer implements Codec.Codable {
             for (JobKey jobKey : host.allJobKeys()) {
                 Job job = spawn.getJob(jobKey);
                 JobTask task = spawn.getTask(jobKey);
-                if (job != null && task != null && task.getState() == JobTaskState.IDLE // Only add non-null, idle tasks
+                if (job != null && task != null && isInMovableState(task) // Only add non-null tasks that are either idle or queued
                     && (hostId.equals(task.getHostUUID()) || task.hasReplicaOnHost(host.getHostUuid()))) // Only add tasks that are supposed to live on the specified host.
                 {
                     if (obeyDontAutobalanceMe && job.getDontAutoBalanceMe()) {
@@ -679,6 +678,10 @@ public class SpawnBalancer implements Codec.Codable {
         return rv;
     }
 
+    public boolean isInMovableState(JobTask task) {
+        return task != null && movableTaskStates.contains(task.getState());
+    }
+
     private List<JobTaskMoveAssignment> pushTasksOntoDisk(HostState host, List<HostState> heavyHosts) {
         MoveAssignmentList moveAssignments = new MoveAssignmentList();
         for (HostState heavyHost : heavyHosts) {
@@ -690,7 +693,7 @@ public class SpawnBalancer implements Codec.Codable {
     }
 
     public List<JobTaskMoveAssignment> pushTasksOffDiskForFilesystemOkayFailure(HostState host, int moveLimit) {
-        List<HostState> hosts = spawn.listHostStatus(host.getMinionTypes());
+        List<HostState> hosts = spawn.listHostStatus(null);
         return pushTasksOffHost(host, hosts, false, 1, moveLimit, false);
     }
 

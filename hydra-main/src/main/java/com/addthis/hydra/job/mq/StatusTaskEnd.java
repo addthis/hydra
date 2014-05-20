@@ -22,10 +22,10 @@ public class StatusTaskEnd extends AbstractJobMessage {
     private int exitCode;
     private long fileCount;
     private long byteCount;
-    private String choreWatcherKey;
     private TaskExitState exitState;
     private String rebalanceSource;
     private String rebalanceTarget;
+    private boolean wasQueued;
 
     public StatusTaskEnd(String host, String job, Integer node, int exit, long files, long bytes) {
         super(host, job, node);
@@ -50,11 +50,6 @@ public class StatusTaskEnd extends AbstractJobMessage {
         this.rebalanceTarget = rebalanceTarget;
     }
 
-    public StatusTaskEnd setChoreWatcherKey(String key) {
-        this.choreWatcherKey = key;
-        return this;
-    }
-
     public StatusTaskEnd setExitState(TaskExitState exitState) {
         this.exitState = exitState;
         return this;
@@ -77,11 +72,15 @@ public class StatusTaskEnd extends AbstractJobMessage {
         return byteCount;
     }
 
-    public String getChoreWatcherKey() {
-        return choreWatcherKey;
-    }
-
     public TaskExitState getExitState() {
         return exitState;
+    }
+
+    public boolean wasQueued() {
+        return wasQueued;
+    }
+
+    public void setWasQueued(boolean wasQueued) {
+        this.wasQueued = wasQueued;
     }
 }
