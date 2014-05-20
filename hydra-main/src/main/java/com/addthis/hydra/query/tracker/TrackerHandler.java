@@ -15,6 +15,7 @@
 package com.addthis.hydra.query.tracker;
 
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
@@ -27,16 +28,19 @@ import com.addthis.hydra.util.StringMapHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelProgressiveFuture;
 import io.netty.channel.ChannelProgressiveFutureListener;
 import io.netty.channel.ChannelProgressivePromise;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Promise;
 
-public class TrackerHandler extends SimpleChannelInboundHandler<Query> implements ChannelProgressiveFutureListener {
+public class TrackerHandler extends ChannelOutboundHandlerAdapter implements ChannelProgressiveFutureListener {
 
     private static final Logger log = LoggerFactory.getLogger(TrackerHandler.class);
 
@@ -53,24 +57,11 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
     private QueryEntry queryEntry;
     private QueryOpProcessor opProcessorConsumer;
     private ChannelProgressivePromise opPromise;
+    private ChannelPromise requestPromise;
 
     public TrackerHandler(QueryTracker queryTracker, String[] opsLog) {
         this.queryTracker = queryTracker;
         this.opsLog = opsLog;
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        log.warn("Exception caught while serving http query endpoint", cause);
-        if (queryPromise != null) {
-            queryPromise.tryFailure(cause);
-        }
-        if (opPromise != null) {
-            opPromise.tryFailure(cause);
-        }
-        if (ctx.channel().isActive()) {
-            HttpUtils.sendError(ctx, new HttpResponseStatus(500, cause.getMessage()));
-        }
     }
 
     @Override
@@ -82,7 +73,24 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, Query msg) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        if (msg instanceof Query) {
+            writeQuery(ctx, (Query) msg, promise);
+        } else {
+            super.write(ctx, msg, promise);
+        }
+    }
+
+    protected void writeQuery(final ChannelHandlerContext ctx, Query msg, ChannelPromise promise) throws Exception {
+        promise.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (!future.isSuccess()) {
+                    handlerError(ctx, future.cause());
+                }
+            }
+        });
+        this.requestPromise = promise;
         this.query = msg;
         query.queryPromise = queryPromise;
         // create a processor chain based in query ops terminating the query user
@@ -122,6 +130,9 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
         if (future == queryPromise) {
             return;
         }
+        // propogate write completion to higher level handlers; in particular this signals
+        // the NextQueryTask to schedule getting another query for this event loop
+        requestPromise.trySuccess();
         QueryEntry runE = queryTracker.running.remove(query.uuid());
         if (runE == null) {
             log.warn("failed to remove running for {}", query.uuid());
@@ -134,8 +145,6 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
             log.warn("Failed to get detailed status for completed query {}; defaulting to brief", query.uuid());
             entryInfo = queryEntry.getStat();
         }
-
-//        queryTracker.queryGate.release();
 
         try {
             StringMapHelper queryLine = new StringMapHelper()
@@ -161,6 +170,7 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
                 queryPromise.trySuccess();
             }
             queryTracker.log(queryLine);
+            queryTracker.queryMeter.update(entryInfo.runTime, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             log.error("Error while doing record keeping for a query.", e);
         }
@@ -169,4 +179,18 @@ public class TrackerHandler extends SimpleChannelInboundHandler<Query> implement
     public void submitDetailedStatusTask (DetailedStatusTask task) {
         ctx.write(task);
     }
+
+    public void handlerError(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        log.warn("Exception caught while serving http query endpoint", cause);
+        if (queryPromise != null) {
+            queryPromise.tryFailure(cause);
+        }
+        if (opPromise != null) {
+            opPromise.tryFailure(cause);
+        }
+        if (ctx.channel().isActive()) {
+            HttpUtils.sendError(ctx, new HttpResponseStatus(500, cause.getMessage()));
+        }
+    }
+
 }

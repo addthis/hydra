@@ -64,7 +64,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
-class GoogleDriveBundleEncoder extends AbstractBufferingHttpBundleEncoder {
+public class GoogleDriveBundleEncoder extends AbstractBufferingHttpBundleEncoder {
 
     private static final Logger log = LoggerFactory.getLogger(GoogleDriveBundleEncoder.class);
 

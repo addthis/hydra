@@ -124,26 +124,21 @@ public class QueryChannelUtil {
         boolean quiet = false;
         boolean traced = false;
         boolean dsortcompression = false;
-        long ttl = 0;
         int iter = 1;
         ArrayList<String> paths = new ArrayList<>(1);
         ArrayList<String> ops = new ArrayList<>(1);
         ArrayList<String> lops = new ArrayList<>(1);
         String job = null;
-        String host = "localhost";
         String data = null;
         String out = null;
-        int port = 2601;
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             int eqpos;
             if (arg.equals("help")) {
-                System.out.println("port=[port] job=[job] path=[path] ops=[ops] lops=[lops] data=[datadir] [iter=#] [quiet] [sep=separator] [out=file] [trace] [param=val]");
+                System.out.println("job=[job] path=[path] ops=[ops] lops=[lops] data=[datadir] [iter=#] [quiet] [sep=separator] [out=file] [trace] [param=val]");
                 return;
             }
-            if (arg.startsWith("port=")) {
-                port = Integer.parseInt(arg.substring(5));
-            } else if (arg.equals("trace")) {
+            if (arg.equals("trace")) {
                 traced = true;
             } else if (arg.equals("quiet")) {
                 quiet = true;
@@ -167,8 +162,6 @@ public class QueryChannelUtil {
                 paths.add(arg.substring(5));
             } else if (arg.startsWith("fpath=")) {
                 paths.add(Bytes.toString(Files.read(new File(arg.substring(6)))).trim());
-            } else if (arg.startsWith("ttl=")) {
-                ttl = Long.parseLong(arg.substring(4));
             } else if (arg.startsWith("data=")) {
                 data = arg.substring(5);
             } else if (arg.startsWith("out=")) {

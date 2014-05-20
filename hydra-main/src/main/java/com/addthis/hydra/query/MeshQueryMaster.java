@@ -34,7 +34,6 @@ import com.addthis.hydra.query.aggregate.QueryTaskSource;
 import com.addthis.hydra.query.aggregate.QueryTaskSourceOption;
 import com.addthis.hydra.query.tracker.QueryTracker;
 import com.addthis.hydra.query.tracker.TrackerHandler;
-import com.addthis.hydra.query.web.HttpUtils;
 import com.addthis.hydra.query.zookeeper.ZookeeperHandler;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
@@ -44,13 +43,13 @@ import org.slf4j.LoggerFactory;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 
 @ChannelHandler.Sharable
-public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> {
+public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
 
     private static final Logger log = LoggerFactory.getLogger(MeshQueryMaster.class);
     private static final String tempDir = Parameter.value("query.tmpdir", "query.tmpdir");
@@ -154,19 +153,15 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> {
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, Query msg) throws Exception {
-        messageReceived(ctx, msg); // redirect to more sensible netty5 naming scheme
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        log.warn("Exception caught while serving http query endpoint", cause);
-        if (ctx.channel().isActive()) {
-            HttpUtils.sendError(ctx, new HttpResponseStatus(500, cause.getMessage()));
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        if (msg instanceof Query) {
+            writeQuery(ctx, (Query) msg, promise);
+        } else {
+            super.write(ctx, msg, promise);
         }
     }
 
-    protected void messageReceived(ChannelHandlerContext ctx, Query query) throws Exception {
+    protected void writeQuery(ChannelHandlerContext ctx, Query query, ChannelPromise promise) throws Exception {
         String[] opsLog = query.getOps();   // being able to log and monitor rops is kind of important
 
         // creates query for worker and updates local query ops (!mutates query!)
@@ -217,10 +212,10 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> {
         }
 
         MeshSourceAggregator aggregator = new MeshSourceAggregator(sourcesByTaskID, meshy, this, remoteQuery);
-        ctx.pipeline().addLast(executorGroup, "query aggregator", aggregator);
+        ctx.pipeline().addBefore(executorGroup, "mqm", "query aggregator", aggregator);
         TrackerHandler trackerHandler = new TrackerHandler(tracker, opsLog);
-        ctx.pipeline().addLast(executorGroup, "query tracker", trackerHandler);
-        ctx.fireChannelRead(query);
+        ctx.pipeline().addBefore(executorGroup, "mqm", "query tracker", trackerHandler);
+        ctx.write(query, promise);
     }
 
     /**

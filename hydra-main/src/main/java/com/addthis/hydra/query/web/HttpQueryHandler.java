@@ -30,6 +30,7 @@ import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.query.MeshQueryMaster;
+import com.addthis.hydra.query.loadbalance.QueryQueue;
 import com.addthis.hydra.query.tracker.QueryEntry;
 import com.addthis.hydra.query.tracker.QueryEntryInfo;
 import com.addthis.hydra.query.tracker.QueryTracker;
@@ -74,6 +75,8 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
     private final HttpStaticFileHandler staticFileHandler = new HttpStaticFileHandler();
 
     private final QueryServer queryServer;
+
+    private final QueryQueue queryQueue = new QueryQueue();
 
     /**
      * used for tracking metrics and other interesting things about queries
@@ -162,7 +165,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             case "/query/call/":
                 // TODO jsonp enable
                 QueryServer.rawQueryCalls.inc();
-                HttpQueryCallHandler.handleQuery(meshQueryMaster, kv, request, ctx);
+                queryQueue.queueQuery(meshQueryMaster, kv, request, ctx);
                 break;
             case "/query/google/authorization":
                 GoogleDriveAuthentication.gdriveAuthorization(kv, ctx);
@@ -170,7 +173,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             case "/query/google/submit":
                 boolean success = GoogleDriveAuthentication.gdriveAccessToken(kv, ctx);
                 if (success) {
-                    HttpQueryCallHandler.handleQuery(meshQueryMaster, kv, request, ctx);
+                    queryQueue.queueQuery(meshQueryMaster, kv, request, ctx);
                 }
                 break;
             default:

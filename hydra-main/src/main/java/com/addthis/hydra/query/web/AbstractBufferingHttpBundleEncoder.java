@@ -14,8 +14,6 @@
 
 package com.addthis.hydra.query.web;
 
-import java.util.concurrent.TimeUnit;
-
 import java.nio.CharBuffer;
 
 import com.addthis.basis.util.Parameter;
@@ -51,7 +49,6 @@ abstract class AbstractBufferingHttpBundleEncoder extends ChannelOutboundHandler
     private static final int DEFAULT_BATCH_BUFFER_SIZE = Parameter.intValue("qmaster.http.buffer.batch", 100000);
 
     protected final HttpResponse responseStart = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    protected final long startTime;
 
     private final StringBuilder sendBuffer;
     private final int batchBufferSize;
@@ -62,7 +59,6 @@ abstract class AbstractBufferingHttpBundleEncoder extends ChannelOutboundHandler
     AbstractBufferingHttpBundleEncoder(int initialBufferSize, int batchBufferSize) {
         this.batchBufferSize = batchBufferSize;
         HttpHeaders.setTransferEncodingChunked(responseStart);
-        startTime = System.currentTimeMillis();
         sendBuffer = new StringBuilder(initialBufferSize);
     }
 
@@ -156,7 +152,6 @@ abstract class AbstractBufferingHttpBundleEncoder extends ChannelOutboundHandler
         maybeWriteStart(ctx, null);
         appendResponseEndToString(sendBuffer);
         flushStringBuilder(ctx);
-        HttpQueryCallHandler.queryTimes.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
     }
 
     public static void sourceError(ChannelHandlerContext ctx, Exception ex) {

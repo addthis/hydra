@@ -49,38 +49,37 @@ import jsr166e.ConcurrentHashMapV8;
 
 public class QueryTracker {
 
-     static final Logger log = LoggerFactory.getLogger(QueryTracker.class);
+    static final Logger log = LoggerFactory.getLogger(QueryTracker.class);
 
-     static final int MAX_FINISHED_CACHE_SIZE = Parameter.intValue("QueryCache.MAX_FINISHED_CACHE_SIZE", 50);
-     static final int MAX_CONCURRENT_QUERIES = Parameter.intValue("QueryTracker.MAX_CONCURRENT", 5);
-     static final int MAX_QUEUED_QUERIES = Parameter.intValue("QueryTracker.MAX_QUEUED_QUERIES", 100);
-     static final int MAX_QUERY_GATE_WAIT_TIME = Parameter.intValue("QueryTracker.MAX_QUERY_GATE_WAIT_TIME", 180);
-     static final String logDir = Parameter.value("qmaster.log.dir", "log");
-     static final boolean eventLogCompress = Parameter.boolValue("qmaster.eventlog.compress", true);
-     static final int logMaxAge = Parameter.intValue("qmaster.log.maxAge", 60 * 60 * 1000);
-     static final int logMaxSize = Parameter.intValue("qmaster.log.maxSize", 100 * 1024 * 1024);
-     static SimpleDateFormat format = new SimpleDateFormat("yyMMdd-HHmmss.SSS");
+    static final int MAX_FINISHED_CACHE_SIZE = Parameter.intValue("QueryCache.MAX_FINISHED_CACHE_SIZE", 50);
+    static final int MAX_CONCURRENT_QUERIES = Parameter.intValue("QueryTracker.MAX_CONCURRENT", 5);
+    static final int MAX_QUERY_GATE_WAIT_TIME = Parameter.intValue("QueryTracker.MAX_QUERY_GATE_WAIT_TIME", 180);
+    static final String logDir = Parameter.value("qmaster.log.dir", "log");
+    static final boolean eventLogCompress = Parameter.boolValue("qmaster.eventlog.compress", true);
+    static final int logMaxAge = Parameter.intValue("qmaster.log.maxAge", 60 * 60 * 1000);
+    static final int logMaxSize = Parameter.intValue("qmaster.log.maxSize", 100 * 1024 * 1024);
+    static SimpleDateFormat format = new SimpleDateFormat("yyMMdd-HHmmss.SSS");
 
-     final RollingLog eventLog;
+    final RollingLog eventLog;
 
     /**
      * Contains the queries that are running
      */
-     final ConcurrentMap<String, QueryEntry> running = new ConcurrentHashMapV8<>();
+    final ConcurrentMap<String, QueryEntry> running = new ConcurrentHashMapV8<>();
     /**
      * Contains the queries that are queued because we're getting maxed out
      */
-     final ConcurrentMap<String, QueryEntry> queued = new ConcurrentHashMapV8<>();
-     final Cache<String, QueryEntryInfo> recentlyCompleted;
-     final Semaphore queryGate = new Semaphore(MAX_CONCURRENT_QUERIES);
+    final ConcurrentMap<String, QueryEntry> queued = new ConcurrentHashMapV8<>();
+    final Cache<String, QueryEntryInfo> recentlyCompleted;
+    final Semaphore queryGate = new Semaphore(MAX_CONCURRENT_QUERIES);
 
     /* metrics */
-     final Counter calls = Metrics.newCounter(QueryTracker.class, "queryCalls");
-     final Timer queryMeter = Metrics.newTimer(QueryTracker.class, "queryMeter", TimeUnit.MILLISECONDS, TimeUnit.MINUTES);
-     final Counter queryErrors = Metrics.newCounter(QueryTracker.class, "queryErrors");
-     final Counter queuedCounter = Metrics.newCounter(QueryTracker.class, "queuedCount");
-     final Counter queueTimeoutCounter = Metrics.newCounter(QueryTracker.class, "queueTimeoutCounter");
-     final Gauge runningCount = Metrics.newGauge(QueryTracker.class, "RunningCount", new Gauge<Integer>() {
+    final Counter calls = Metrics.newCounter(QueryTracker.class, "queryCalls");
+    final Counter queryErrors = Metrics.newCounter(QueryTracker.class, "queryErrors");
+    final Timer queryMeter = Metrics.newTimer(QueryTracker.class, "queryMeter", TimeUnit.MILLISECONDS, TimeUnit.MINUTES);
+    final Counter queuedCounter = Metrics.newCounter(QueryTracker.class, "queuedCount");
+    final Counter queueTimeoutCounter = Metrics.newCounter(QueryTracker.class, "queueTimeoutCounter");
+    final Gauge runningCount = Metrics.newGauge(QueryTracker.class, "RunningCount", new Gauge<Integer>() {
         @Override
         public Integer value() {
             return running.size();
@@ -91,7 +90,7 @@ public class QueryTracker {
      * thread pool for query timeout watcher runs. Should only need one thread.
      */
     private final ScheduledExecutorService timeoutWatcherService = new ScheduledThreadPoolExecutor(1,
-                    new ThreadFactoryBuilder().setNameFormat("timeoutWatcher=%d").setDaemon(true).build());
+            new ThreadFactoryBuilder().setNameFormat("timeoutWatcher=%d").setDaemon(true).build());
 
     public QueryTracker() {
         Query.setTraceLog(new RollingLog(new File(logDir, "events-trace"), "queryTrace", eventLogCompress, logMaxSize, logMaxAge));
@@ -160,7 +159,7 @@ public class QueryTracker {
         }
     }
 
-     void log(StringMapHelper output) {
+    void log(StringMapHelper output) {
         if (eventLog == null) {
             log.warn(output.toLog() + "----> EventLog was null redirecting to stdout");
         } else {
@@ -170,7 +169,7 @@ public class QueryTracker {
         }
     }
 
-     boolean acquireQueryGate(Query query, QueryEntry entry) {
+    boolean acquireQueryGate(Query query, QueryEntry entry) {
         queuedCounter.inc();
         queued.put(query.uuid(), entry);
         boolean acquired = false;

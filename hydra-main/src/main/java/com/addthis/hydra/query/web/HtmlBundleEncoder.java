@@ -20,9 +20,9 @@ import com.addthis.bundle.value.ValueObject;
 
 import static com.addthis.hydra.query.web.HttpUtils.setContentTypeHeader;
 
-class HtmlBundleEncoder extends AbstractBufferingHttpBundleEncoder {
+public class HtmlBundleEncoder extends AbstractBufferingHttpBundleEncoder {
 
-    HtmlBundleEncoder() {
+    public HtmlBundleEncoder() {
         super();
         setContentTypeHeader(responseStart, "text/html; charset=utf-8");
         responseStart.headers().set("Access-Control-Allow-Origin", "*");
