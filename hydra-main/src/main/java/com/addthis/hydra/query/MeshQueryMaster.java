@@ -28,9 +28,13 @@ import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
+import com.addthis.hydra.query.aggregate.BalancedAllocator;
+import com.addthis.hydra.query.aggregate.DefaultTaskAllocators;
 import com.addthis.hydra.query.aggregate.MeshSourceAggregator;
 import com.addthis.hydra.query.aggregate.QueryTaskSource;
 import com.addthis.hydra.query.aggregate.QueryTaskSourceOption;
+import com.addthis.hydra.query.loadbalance.WorkerData;
+import com.addthis.hydra.query.loadbalance.WorkerTracker;
 import com.addthis.hydra.query.tracker.QueryTracker;
 import com.addthis.hydra.query.tracker.TrackerHandler;
 import com.addthis.hydra.query.zookeeper.ZookeeperHandler;
@@ -78,11 +82,17 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
      */
     private final MeshFileRefCache cachey;
 
+    private final WorkerTracker worky;
+
+    private final DefaultTaskAllocators allocators;
+
     public MeshQueryMaster(QueryTracker tracker) throws Exception {
         this.tracker = tracker;
 
         meshy = new MeshyServer(meshPort, new File(meshRoot));
         cachey = new MeshFileRefCache(meshy);
+        worky = new WorkerTracker();
+        allocators = new DefaultTaskAllocators(new BalancedAllocator(worky));
         connectToMeshPeers();
 
         try {
@@ -109,6 +119,14 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
 
     public ZookeeperHandler keepy() {
         return keepy;
+    }
+
+    public DefaultTaskAllocators allocators() {
+        return allocators;
+    }
+
+    public WorkerTracker worky() {
+        return worky;
     }
 
     public QueryTracker getQueryTracker() {
@@ -195,7 +213,9 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
             int taskSourceOptionsIndex = 0;
             for (FileReferenceWrapper wrapper : sourceOptions) {
                 FileReference queryReference = wrapper.fileReference;
-                taskSourceOptions[taskSourceOptionsIndex] = new QueryTaskSourceOption(queryReference);
+                WorkerData workerData = worky.get(queryReference.getHostUUID());
+                taskSourceOptions[taskSourceOptionsIndex] =
+                        new QueryTaskSourceOption(queryReference, workerData.queryLeases);
                 taskSourceOptionsIndex += 1;
             }
             sourcesByTaskID[i] = new QueryTaskSource(taskSourceOptions);
@@ -219,13 +239,15 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
      * @return A replacement FileReference, which is also placed into the cache if it was newly generated
      * @throws IOException If there is a problem fetching a replacement FileReference
      */
-    public FileReference getReplacementFileReferenceForSingleTask(String job, int task, FileReference failedReference) throws IOException {
+    public QueryTaskSourceOption getReplacementQueryTaskOption(String job, int task, FileReference failedReference) throws IOException, ExecutionException {
         Set<FileReferenceWrapper> wrappers = cachey.getTaskReferencesIfPresent(job, task);
         if (wrappers != null) {
             wrappers.remove(new FileReferenceWrapper(failedReference, task));
             if (!wrappers.isEmpty()) {
                 cachey.updateFileReferenceForTask(job, task, new HashSet<>(wrappers));
-                return wrappers.iterator().next().fileReference;
+                FileReference cachedReplacement = wrappers.iterator().next().fileReference;
+                WorkerData workerData = worky.get(cachedReplacement.getHostUUID());
+                return new QueryTaskSourceOption(cachedReplacement, workerData.queryLeases);
             }
         }
         // If mqm got to this point, there was no replacement fileReference in the cache, so we need to fetch a new one
@@ -233,6 +255,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         HashSet<FileReferenceWrapper> baseSet = wrappers == null ? new HashSet<FileReferenceWrapper>() : new HashSet<>(wrappers);
         baseSet.add(new FileReferenceWrapper(freshFileReference, task));
         cachey.updateFileReferenceForTask(job, task, baseSet);
-        return freshFileReference;
+        WorkerData workerData = worky.get(freshFileReference.getHostUUID());
+        return new QueryTaskSourceOption(freshFileReference, workerData.queryLeases);
     }
 }

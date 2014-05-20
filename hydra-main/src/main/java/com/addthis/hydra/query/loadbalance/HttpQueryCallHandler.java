@@ -70,9 +70,8 @@ public final class HttpQueryCallHandler {
         if (remoteIP instanceof InetSocketAddress) { // only log implementations with known methods
             query.setParameterIfNotYetSet("remoteip", ((InetSocketAddress) remoteIP).getAddress().getHostAddress());
         }
-        query.setParameterIfNotYetSet("parallel", kv.getValue("parallel"));
+        query.setParameterIfNotYetSet("allocator", kv.getValue("allocator"));
         query.setParameterIfNotYetSet("allowPartial", kv.getValue("allowPartial"));
-        query.setParameterIfNotYetSet("dsortcompression", kv.getValue("dsortcompression"));
 
         String filename = kv.getValue("filename", "query");
         String format = kv.getValue("format", "json");
@@ -100,7 +99,7 @@ public final class HttpQueryCallHandler {
                     .put("originalrequest", query.getParameter("originalrequest"))
                     .put("timeout", query.getParameter("timeout"))
                     .put("requestIP", query.getParameter("remoteip"))
-                    .put("parallel", query.getParameter("parallel"))
+                    .put("allocator", query.getParameter("allocator"))
                     .put("allowPartial", query.getParameter("allowPartial")).createKVPairs().toString());
         }
         // support legacy async query semantics

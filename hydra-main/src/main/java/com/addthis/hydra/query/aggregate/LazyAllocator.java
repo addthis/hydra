@@ -18,9 +18,10 @@ import java.util.Map;
 
 import com.addthis.meshy.ChannelMaster;
 
-public interface TaskAllocator {
+public class LazyAllocator implements TaskAllocator {
 
-    void allocateTasks(QueryTaskSource[] taskSources, ChannelMaster meshy,
-            Map<String, String> queryOptions);
-
+    @Override
+    public void allocateTasks(QueryTaskSource[] taskSources, ChannelMaster meshy, Map<String, String> queryOptions) {
+        // throw new TooSleepyToAllocateTasksException("zzz");
+    }
 }

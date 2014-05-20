@@ -431,7 +431,7 @@ function renderQueryHosts(hosts,tab){
         }
         var row = [i, h.lines, (h.complete?"y":"n"), hostInfo];
         html += '<tr><td>'+row.join('</td><td>')+'</td></tr>';
-        finished+=(h.finished=="true"?1:0);
+        finished+=(h.complete?1:0);
     }
     html += '</table>';
     // var tab=fetchValue('tab');    

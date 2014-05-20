@@ -31,6 +31,7 @@ import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.hydra.query.loadbalance.QueryQueue;
+import com.addthis.hydra.query.loadbalance.WorkerData;
 import com.addthis.hydra.query.tracker.QueryEntry;
 import com.addthis.hydra.query.tracker.QueryEntryInfo;
 import com.addthis.hydra.query.tracker.QueryTracker;
@@ -274,6 +275,14 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                     runningEntries.put(entryJSON);
                 }
                 writer.write(runningEntries.toString());
+                break;
+            }
+            case "/v2/queries/workers": {
+                JSONObject jsonObject = new JSONObject();
+                for (WorkerData workerData : meshQueryMaster.worky().values()) {
+                    jsonObject.put(workerData.hostName, workerData.queryLeases.availablePermits());
+                }
+                writer.write(jsonObject.toString());
                 break;
             }
             case "/v2/queries/list":

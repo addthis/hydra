@@ -13,8 +13,6 @@
  */
 package com.addthis.hydra.query.aggregate;
 
-import java.io.IOException;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
@@ -28,7 +26,6 @@ import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.meshy.ChannelMaster;
-import com.addthis.meshy.service.file.FileReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,7 +95,7 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
             consumer = (DataChannelOutput) msg;
             AggregateConfig.totalQueries.inc();
             queryPromise.addListener(this);
-            TaskAllocator.allocateQueryTasks(query, taskSources, meshy, queryOptions);
+            meshQueryMaster.allocators().allocateQueryTasks(query, taskSources, meshy, queryOptions);
             queryTask = new QueryTask(this);
             if (ctx.channel().isWritable()) {
                 channelWritable = true;
@@ -133,21 +130,24 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
         }
     }
 
+    boolean tryActivateSource(QueryTaskSourceOption option) {
+        return option.tryActivate(meshy, queryOptions);
+    }
+
     void replaceQuerySource(QueryTaskSource taskSource, QueryTaskSourceOption option,
-            int taskId) throws IOException {
+            int taskId) throws Exception {
         taskSource.reset();
         // Invoked when a cached FileReference throws an IO Exception
         // Get a fresh FileReference and make a new QuerySource with that FileReference
         //      and the same parameters otherwise
-        FileReference fileReference = meshQueryMaster.getReplacementFileReferenceForSingleTask(query.getJob(),
+        QueryTaskSourceOption newOption = meshQueryMaster.getReplacementQueryTaskOption(query.getJob(),
                 taskId, option.queryReference);
-        QueryTaskSourceOption newOption = new QueryTaskSourceOption(fileReference);
         for (int i = 0; i < taskSource.options.length; i++) {
             if (taskSource.options[i] == option) {
                 taskSource.options[i] = newOption;
             }
         }
-        newOption.activate(meshy, queryOptions);
+        newOption.tryActivate(meshy, queryOptions);
     }
 
     @Override

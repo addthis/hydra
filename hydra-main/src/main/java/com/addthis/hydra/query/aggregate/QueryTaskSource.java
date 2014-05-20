@@ -24,12 +24,12 @@ import com.addthis.meshy.service.stream.SourceInputStream;
 
 public class QueryTaskSource {
 
-    final QueryTaskSourceOption[] options;
+    protected final QueryTaskSourceOption[] options;
 
-    int lines = 0;
-    long endTime = 0;
+    protected int lines = 0;
+    protected long endTime = 0;
 
-    FramedDataChannelReader dataChannelReader;
+    protected FramedDataChannelReader dataChannelReader;
 
     public QueryTaskSource(QueryTaskSourceOption[] options) {
         this.options = options;
@@ -66,6 +66,15 @@ public class QueryTaskSource {
         return bundle;
     }
 
+    public boolean hasNoActiveSources() {
+        for (QueryTaskSourceOption option : options) {
+            if (option.isActive()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public void cancelAllActiveOptions(String message) {
         for (QueryTaskSourceOption option : options) {
             if (option.isActive()) {
@@ -99,7 +108,7 @@ public class QueryTaskSource {
     private QueryTaskSourceOption getReadyOption() {
         for (QueryTaskSourceOption option : options) {
             if (option.isActive() && (option.sourceInputStream.available() > 0)) {
-                return option;
+                    return option;
             }
         }
         return null;

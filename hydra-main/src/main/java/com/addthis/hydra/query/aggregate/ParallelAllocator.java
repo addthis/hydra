@@ -18,9 +18,16 @@ import java.util.Map;
 
 import com.addthis.meshy.ChannelMaster;
 
-public interface TaskAllocator {
+public class ParallelAllocator implements TaskAllocator {
 
-    void allocateTasks(QueryTaskSource[] taskSources, ChannelMaster meshy,
-            Map<String, String> queryOptions);
+    @Override
+    public void allocateTasks(QueryTaskSource[] taskSources, ChannelMaster meshy,
+            Map<String, String> queryOptions) {
+        for (QueryTaskSource taskSource : taskSources) {
+            for (QueryTaskSourceOption option : taskSource.options) {
+                option.tryActivate(meshy, queryOptions);
+            }
+        }
+    }
 
 }

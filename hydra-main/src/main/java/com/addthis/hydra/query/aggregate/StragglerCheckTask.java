@@ -164,24 +164,18 @@ class StragglerCheckTask implements Runnable {
             if (taskSource.oneHasResponded() || (taskSource.options.length == 0)) {
                 continue;
             }
-            QueryTaskSourceOption option = selectArbitraryInactiveOption(taskSource);
-            if (option != null) {
-                option.activate(sourceAggregator.meshy, sourceAggregator.queryOptions);
-                AggregateConfig.totalStragglerCheckerRequests.inc();
-                if (MeshSourceAggregator.log.isDebugEnabled() || sourceAggregator.query.isTraced()) {
-                    Query.emitTrace("Straggler detected for " + sourceAggregator.query.uuid() + " sending duplicate query to host: "
-                                    + option.queryReference.getHostUUID());
+            for (QueryTaskSourceOption option : taskSource.options) {
+                if (!option.isActive()) {
+                    if (option.tryActivate(sourceAggregator.meshy, sourceAggregator.queryOptions)) {
+                        AggregateConfig.totalStragglerCheckerRequests.inc();
+                        if (MeshSourceAggregator.log.isDebugEnabled() || sourceAggregator.query.isTraced()) {
+                            Query.emitTrace("Straggler detected for " + sourceAggregator.query.uuid() + " sending duplicate query to host: "
+                                            + option.queryReference.getHostUUID());
+                        }
+                        break;
+                    }
                 }
             }
         }
-    }
-
-    private static QueryTaskSourceOption selectArbitraryInactiveOption(QueryTaskSource taskSource) {
-        for (QueryTaskSourceOption option : taskSource.options) {
-            if (!option.isActive()) {
-                return option;
-            }
-        }
-        return null;
     }
 }

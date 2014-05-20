@@ -17,6 +17,7 @@ package com.addthis.hydra.query.aggregate;
 import java.io.IOException;
 
 import java.util.Map;
+import java.util.concurrent.Semaphore;
 
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.meshy.ChannelMaster;
@@ -24,17 +25,33 @@ import com.addthis.meshy.service.file.FileReference;
 import com.addthis.meshy.service.stream.SourceInputStream;
 import com.addthis.meshy.service.stream.StreamSource;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class QueryTaskSourceOption {
 
-    final FileReference queryReference;
+    static final Logger log = LoggerFactory.getLogger(QueryTaskSourceOption.class);
+
+    public final FileReference queryReference;
+    public final Semaphore optionLeases;
 
     SourceInputStream sourceInputStream;
 
-    public QueryTaskSourceOption(FileReference queryReference) {
+    public QueryTaskSourceOption(FileReference queryReference, Semaphore optionLeases) {
         this.queryReference = queryReference;
+        this.optionLeases = optionLeases;
     }
 
-    public void activate(ChannelMaster meshy, Map<String, String> queryOptions) {
+    public boolean tryActivate(ChannelMaster meshy, Map<String, String> queryOptions) {
+        if (optionLeases.tryAcquire()) {
+            activate(meshy, queryOptions);
+            log.debug("lease acquired for {}", queryReference.getHostUUID());
+            return true;
+        }
+        return false;
+    }
+
+    private void activate(ChannelMaster meshy, Map<String, String> queryOptions) {
         StreamSource source = null;
         try {
             source = new StreamSource(meshy, queryReference.getHostUUID(),
@@ -53,6 +70,8 @@ public class QueryTaskSourceOption {
     public void cancel(String message) {
         try {
             if (sourceInputStream != null) {
+                optionLeases.release();
+                log.debug("lease dropped for {}", queryReference.getHostUUID());
                 sourceInputStream.close();
                 sourceInputStream = null;
             }

@@ -65,6 +65,14 @@ public class QueryTask implements Runnable {
                             sourceAggregator.consumer.send(nextBundle);
                             processedBundle = true;
                             bundlesProcessed += 1;
+                        } else if (!taskSource.oneHasResponded() && taskSource.hasNoActiveSources()) {
+                            log.debug("query task has no active options; attempting to lease one");
+                            for (QueryTaskSourceOption option : taskSource.options) {
+                                if (sourceAggregator.tryActivateSource(option)) {
+                                    log.debug("task option leased and activated successfully");
+                                    break;
+                                }
+                            }
                         }
                     } catch (IOException io) {
                         if (taskSource.lines == 0) {
@@ -89,25 +97,28 @@ public class QueryTask implements Runnable {
             } else {
                 if (bundlesProcessed > 0) {
                     pollFailures = 0;
+                    sourceAggregator.executor.execute(this);
                 } else {
                     pollFailures += 1;
-                }
-                if (pollFailures == 0) {
-                    sourceAggregator.executor.execute(this);
-                } else if (pollFailures <= 5) {
-                    sourceAggregator.executor.schedule(this, 5, TimeUnit.MILLISECONDS);
-                } else if (pollFailures <= 10) { // 25 ms - 75 ms
-                    sourceAggregator.executor.schedule(this, 10, TimeUnit.MILLISECONDS);
-                } else if (pollFailures <= 40) { // 75 ms - about one second
-                    sourceAggregator.executor.schedule(this, 25, TimeUnit.MILLISECONDS);
-                } else { // > about one second
-                    sourceAggregator.executor.schedule(this, 100, TimeUnit.MILLISECONDS);
+                    rescheduleSelfWithBackoff();
                 }
             }
         } catch (Throwable e) {
             if (!sourceAggregator.queryPromise.tryFailure(e)) {
                 log.warn("Tried to fail queryPromise {} , but failed", sourceAggregator.queryPromise, e);
             }
+        }
+    }
+
+    private void rescheduleSelfWithBackoff() {
+        if (pollFailures <= 5) {
+            sourceAggregator.executor.schedule(this, 5, TimeUnit.MILLISECONDS);
+        } else if (pollFailures <= 10) { // 25 ms - 75 ms
+            sourceAggregator.executor.schedule(this, 10, TimeUnit.MILLISECONDS);
+        } else if (pollFailures <= 40) { // 75 ms - about one second
+            sourceAggregator.executor.schedule(this, 25, TimeUnit.MILLISECONDS);
+        } else { // > about one second
+            sourceAggregator.executor.schedule(this, 100, TimeUnit.MILLISECONDS);
         }
     }
 }

@@ -12,15 +12,21 @@
  * limitations under the License.
  */
 
-package com.addthis.hydra.query.aggregate;
+package com.addthis.hydra.query.loadbalance;
 
-import java.util.Map;
+import java.util.concurrent.Semaphore;
 
-import com.addthis.meshy.ChannelMaster;
+public class WorkerData {
 
-public interface TaskAllocator {
+    public final Semaphore queryLeases;
+    public final String hostName;
 
-    void allocateTasks(QueryTaskSource[] taskSources, ChannelMaster meshy,
-            Map<String, String> queryOptions);
+    public WorkerData(String hostName, int leaseCount) {
+        this(hostName, new Semaphore(leaseCount));
+    }
 
+    public WorkerData(String hostName, Semaphore queryLeases) {
+        this.queryLeases = queryLeases;
+        this.hostName = hostName;
+    }
 }
