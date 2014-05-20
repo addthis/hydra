@@ -263,4 +263,7 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
         buf.readBytes(kb);
         return new String(kb, "UTF-8");
     }
+
+    public int getSize() { return size; }
+
 }
