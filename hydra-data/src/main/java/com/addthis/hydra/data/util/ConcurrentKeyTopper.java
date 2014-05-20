@@ -37,7 +37,6 @@ import jsr166e.ConcurrentHashMapV8;
  * Class that helps maintain a top N list for any String Map TODO should move
  * into basis libraries
  */
-@Deprecated
 public final class ConcurrentKeyTopper implements Codec.SuperCodable, Codec.BytesCodable {
 
     private static final byte[] EMPTY = new byte[0];

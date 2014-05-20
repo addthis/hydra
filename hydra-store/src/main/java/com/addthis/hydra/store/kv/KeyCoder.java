@@ -16,35 +16,7 @@ package com.addthis.hydra.store.kv;
 
 public interface KeyCoder<K, V> {
 
-    /**
-     * LEGACY - all serialization is performed using CodecBin2
-     * SPARSE - initial implementation of BytesCodable
-     * KEYTOPPER - BytesCodable added to DataLimitHot, DataLimitTop, and DataTop
-     */
-    enum EncodeType {
-        LEGACY, SPARSE, KEYTOPPER;
-
-        public static EncodeType from(int ordinal) {
-            switch(ordinal) {
-                case 0:
-                    return LEGACY;
-                case 1:
-                    return SPARSE;
-                case 2:
-                    return KEYTOPPER;
-                default:
-                    throw new IllegalStateException("Unknown ordinal value " + ordinal);
-            }
-        }
-
-        public static EncodeType defaultType() {
-            return KEYTOPPER;
-        }
-
-        public static int defaultOrdinal() {
-            return defaultType().ordinal();
-        }
-    }
+    enum EncodeType {LEGACY, SPARSE}
 
     K negInfinity();
 
