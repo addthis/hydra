@@ -28,7 +28,6 @@ import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
-import com.addthis.hydra.query.aggregate.AggregateConfig;
 import com.addthis.hydra.query.aggregate.MeshSourceAggregator;
 import com.addthis.hydra.query.aggregate.QueryTaskSource;
 import com.addthis.hydra.query.aggregate.QueryTaskSourceOption;
@@ -45,8 +44,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutorGroup;
 
 @ChannelHandler.Sharable
 public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
@@ -80,12 +77,6 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
      * Mesh FileRef Cache -- backed by a loading cache
      */
     private final MeshFileRefCache cachey;
-
-    /**
-     * The executor group that queries are run in.
-     */
-    public final EventExecutorGroup executorGroup =
-            new DefaultEventExecutorGroup(AggregateConfig.FRAME_READER_THREADS);
 
     public MeshQueryMaster(QueryTracker tracker) throws Exception {
         this.tracker = tracker;
@@ -130,7 +121,6 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
                 keepy.close();
             }
             meshy.close();
-            executorGroup.shutdownGracefully().sync();
         } catch (Exception e) {
             log.error("arbitrary exception during mqmaster shutdown", e);
         }
@@ -212,10 +202,11 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         }
 
         MeshSourceAggregator aggregator = new MeshSourceAggregator(sourcesByTaskID, meshy, this, remoteQuery);
-        ctx.pipeline().addBefore(executorGroup, "mqm", "query aggregator", aggregator);
+        ctx.pipeline().addLast(ctx.executor(), "query aggregator", aggregator);
         TrackerHandler trackerHandler = new TrackerHandler(tracker, opsLog);
-        ctx.pipeline().addBefore(executorGroup, "mqm", "query tracker", trackerHandler);
-        ctx.write(query, promise);
+        ctx.pipeline().addLast(ctx.executor(), "query tracker", trackerHandler);
+        ctx.pipeline().remove(this);
+        ctx.pipeline().write(query, promise);
     }
 
     /**

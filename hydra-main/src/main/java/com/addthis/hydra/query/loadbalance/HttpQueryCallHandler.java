@@ -23,7 +23,6 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.source.ErrorHandlingQuerySource;
 import com.addthis.hydra.data.query.source.QuerySource;
-import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.hydra.query.web.DelimitedBundleEncoder;
 import com.addthis.hydra.query.web.GoogleDriveBundleEncoder;
 import com.addthis.hydra.query.web.HtmlBundleEncoder;
@@ -36,13 +35,13 @@ import org.slf4j.LoggerFactory;
 
 import static com.addthis.hydra.query.web.HttpUtils.sendError;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.EventExecutorGroup;
-import io.netty.util.concurrent.ImmediateEventExecutor;
 
 public final class HttpQueryCallHandler {
 
@@ -58,8 +57,8 @@ public final class HttpQueryCallHandler {
     /**
      * special handler for query
      */
-    public static ChannelFuture handleQuery(MeshQueryMaster meshQueryMaster, KVPairs kv, HttpRequest request,
-            ChannelHandlerContext ctx, EventExecutorGroup executor) throws Exception {
+    public static ChannelFuture handleQuery(ChannelHandler queryToQueryResultsEncoder, KVPairs kv,
+            HttpRequest request, ChannelHandlerContext ctx, EventExecutorGroup executor) throws Exception {
         String job = kv.getValue("job");
         String path = kv.getValue("path", kv.getValue("q", ""));
         Query query = new Query(job, new String[]{path}, new String[]{kv.getValue("ops"), kv.getValue("rops")});
@@ -122,8 +121,8 @@ public final class HttpQueryCallHandler {
                 ctx.pipeline().addLast(executor, "format", new HtmlBundleEncoder());
                 break;
             case "gdrive":
-                ctx.pipeline().addLast(ImmediateEventExecutor.INSTANCE, "stringer", stringer);
-                ctx.pipeline().addLast(ImmediateEventExecutor.INSTANCE, "format",
+                ctx.pipeline().addLast(executor, "stringer", stringer);
+                ctx.pipeline().addLast(executor, "format",
                         GoogleDriveBundleEncoder.create(filename, gdriveAccessToken));
                 break;
             default:
@@ -131,8 +130,8 @@ public final class HttpQueryCallHandler {
                         "format", DelimitedBundleEncoder.create(filename, format));
                 break;
         }
-        ctx.pipeline().addLast(executor, "mqm", meshQueryMaster);
-        return ctx.write(query);
+        ctx.pipeline().addLast(executor, "mqm", queryToQueryResultsEncoder);
+        return ctx.pipeline().write(query);
     }
 
     private static void handleError(QuerySource source, Query query) {

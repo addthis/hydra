@@ -86,7 +86,7 @@ public class DataChannelOutputToNettyBridge implements DataChannelOutput {
 
     @Override
     public void sendComplete() { // TODO: keep alive logic
-        log.trace("Writing sendComplete to pipeline");
+        log.trace("Writing sendComplete to pipeline {}", ctx.pipeline());
         ctx.write(SEND_COMPLETE);
         ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
         lastContentFuture.addListener(ChannelFutureListener.CLOSE);

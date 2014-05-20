@@ -31,15 +31,18 @@ public class QueryEntry {
     final String queryDetails;
     final String[] opsLog;
     final ChannelPromise queryPromise;
+    final ChannelPromise opPromise;
     final TrackerHandler trackerHandler;
 
     long runTime;
     long startTime;
 
-    QueryEntry(Query query, String[] opsLog, ChannelPromise queryPromise, TrackerHandler trackerHandler) {
+    QueryEntry(Query query, String[] opsLog, ChannelPromise queryPromise,
+            ChannelPromise opPromise, TrackerHandler trackerHandler) {
         this.query = query;
         this.opsLog = opsLog;
         this.queryPromise = queryPromise;
+        this.opPromise = opPromise;
         this.trackerHandler = trackerHandler;
         this.preOpLines = new AtomicInteger();
         this.postOpLines = new AtomicInteger();
@@ -91,7 +94,7 @@ public class QueryEntry {
      */
     public boolean cancel() {
         // boolean parameter to cancel is ignored
-        return queryPromise.cancel(false);
+        return queryPromise.cancel(false) || opPromise.cancel(false);
     }
 
     public void getDetailedQueryEntryInfo(Promise<QueryEntryInfo> promise) {

@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import java.text.SimpleDateFormat;
@@ -52,8 +51,6 @@ public class QueryTracker {
     static final Logger log = LoggerFactory.getLogger(QueryTracker.class);
 
     static final int MAX_FINISHED_CACHE_SIZE = Parameter.intValue("QueryCache.MAX_FINISHED_CACHE_SIZE", 50);
-    static final int MAX_CONCURRENT_QUERIES = Parameter.intValue("QueryTracker.MAX_CONCURRENT", 5);
-    static final int MAX_QUERY_GATE_WAIT_TIME = Parameter.intValue("QueryTracker.MAX_QUERY_GATE_WAIT_TIME", 180);
     static final String logDir = Parameter.value("qmaster.log.dir", "log");
     static final boolean eventLogCompress = Parameter.boolValue("qmaster.eventlog.compress", true);
     static final int logMaxAge = Parameter.intValue("qmaster.log.maxAge", 60 * 60 * 1000);
@@ -66,19 +63,11 @@ public class QueryTracker {
      * Contains the queries that are running
      */
     final ConcurrentMap<String, QueryEntry> running = new ConcurrentHashMapV8<>();
-    /**
-     * Contains the queries that are queued because we're getting maxed out
-     */
-    final ConcurrentMap<String, QueryEntry> queued = new ConcurrentHashMapV8<>();
     final Cache<String, QueryEntryInfo> recentlyCompleted;
-    final Semaphore queryGate = new Semaphore(MAX_CONCURRENT_QUERIES);
 
     /* metrics */
-    final Counter calls = Metrics.newCounter(QueryTracker.class, "queryCalls");
     final Counter queryErrors = Metrics.newCounter(QueryTracker.class, "queryErrors");
     final Timer queryMeter = Metrics.newTimer(QueryTracker.class, "queryMeter", TimeUnit.MILLISECONDS, TimeUnit.MINUTES);
-    final Counter queuedCounter = Metrics.newCounter(QueryTracker.class, "queuedCount");
-    final Counter queueTimeoutCounter = Metrics.newCounter(QueryTracker.class, "queueTimeoutCounter");
     final Gauge runningCount = Metrics.newGauge(QueryTracker.class, "RunningCount", new Gauge<Integer>() {
         @Override
         public Integer value() {
@@ -106,7 +95,6 @@ public class QueryTracker {
         return running.size();
     }
 
-    // --- end mbean ---
     public List<QueryEntryInfo> getRunning() {
         ArrayList<QueryEntryInfo> list = new ArrayList<>(running.size());
         for (QueryEntry e : running.values()) {
@@ -114,24 +102,6 @@ public class QueryTracker {
         }
         return list;
     }
-
-    public List<QueryEntryInfo> getQueued() {
-        ArrayList<QueryEntryInfo> list = new ArrayList<>(queued.size());
-        for (QueryEntry e : queued.values()) {
-            list.add(e.getStat());
-        }
-        return list;
-    }
-
-    // --- end mbean ---
-//    public List<HostEntryInfo> getQueryHosts() {
-//        //for now, adding all host entries
-//        ArrayList<HostEntryInfo> list = new ArrayList<>();
-//        for (QueryEntry e : running.values()) {
-//            list.addAll(getActiveHosts(e.hostInfoSet));
-//        }
-//        return list;
-//    }
 
     public QueryEntryInfo getCompletedQueryInfo(String uuid) {
         return recentlyCompleted.asMap().get(uuid);
@@ -168,35 +138,4 @@ public class QueryTracker {
             eventLog.writeLine(output.createKVPairs().toString());
         }
     }
-
-    boolean acquireQueryGate(Query query, QueryEntry entry) {
-        queuedCounter.inc();
-        queued.put(query.uuid(), entry);
-        boolean acquired = false;
-        try {
-            if (queryGate.tryAcquire(MAX_QUERY_GATE_WAIT_TIME, TimeUnit.SECONDS)) {
-                acquired = true;
-            }
-        } catch (InterruptedException ignored) {
-        }
-        if (!acquired) {
-            queueTimeoutCounter.inc();
-            log.warn("Timed out waiting for queryGate, queryId: {}", query.uuid());
-        }
-        queued.remove(query.uuid());
-        queuedCounter.dec();
-        return acquired;
-    }
-
-//    public static Collection<HostEntryInfo> getActiveHosts(Set<HostEntryInfo> hostInfoSet) {
-//        List<HostEntryInfo> runningEntries = new ArrayList<>();
-//        if (hostInfoSet != null) {
-//            for (HostEntryInfo hostEntryInfo : hostInfoSet) {
-//                if (hostEntryInfo.getStarttime() > 0) {
-//                    runningEntries.add(hostEntryInfo);
-//                }
-//            }
-//        }
-//        return runningEntries;
-//    }
 }

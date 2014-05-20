@@ -46,7 +46,8 @@ public class NextQueryTask implements Runnable, ChannelFutureListener {
             return;
         }
         try {
-            ChannelFuture queryFuture = HttpQueryCallHandler.handleQuery(request.querySource, request.kv, request.request, request.ctx);
+            ChannelFuture queryFuture = HttpQueryCallHandler.handleQuery(
+                    request.querySource, request.kv, request.request, request.ctx, executor);
             queryFuture.addListener(this);
         } catch (Exception e) {
             log.warn("Exception caught while serving http query endpoint", e);

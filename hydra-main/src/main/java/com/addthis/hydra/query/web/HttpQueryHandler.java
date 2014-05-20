@@ -76,8 +76,6 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
 
     private final QueryServer queryServer;
 
-    private final QueryQueue queryQueue = new QueryQueue();
-
     /**
      * used for tracking metrics and other interesting things about queries
      * that we have run.  Provides insight into currently running queries
@@ -90,13 +88,17 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
      */
     private final MeshQueryMaster meshQueryMaster;
 
+    private final QueryQueue queryQueue;
+
     private final MetricsServletShim fakeMetricsServlet;
 
-    public HttpQueryHandler(QueryServer queryServer, QueryTracker tracker, MeshQueryMaster meshQueryMaster) {
+    public HttpQueryHandler(QueryServer queryServer, QueryTracker tracker, MeshQueryMaster meshQueryMaster,
+            QueryQueue queryQueue) {
         super(true); // auto release
         this.queryServer = queryServer;
         this.tracker = tracker;
         this.meshQueryMaster = meshQueryMaster;
+        this.queryQueue = queryQueue;
         this.fakeMetricsServlet = new MetricsServletShim();
     }
 
@@ -279,11 +281,6 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 for (QueryEntryInfo entryInfo : tracker.getCompleted()) {
                     JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
                     entryJSON.put("state", 0);
-                    queries.put(entryJSON);
-                }
-                for (QueryEntryInfo entryInfo : tracker.getQueued()) {
-                    JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
-                    entryJSON.put("state", 2);
                     queries.put(entryJSON);
                 }
                 for (QueryEntryInfo entryInfo : tracker.getRunning()) {

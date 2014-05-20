@@ -28,8 +28,6 @@ import com.addthis.hydra.util.StringMapHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelProgressiveFuture;
@@ -82,38 +80,33 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
     }
 
     protected void writeQuery(final ChannelHandlerContext ctx, Query msg, ChannelPromise promise) throws Exception {
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (!future.isSuccess()) {
-                    handlerError(ctx, future.cause());
+        try {
+            this.requestPromise = promise;
+            this.query = msg;
+            query.queryPromise = queryPromise;
+            // create a processor chain based in query ops terminating the query user
+            this.opProcessorConsumer = query.newProcessor(queryUser, opPromise);
+            queryEntry = new QueryEntry(query, opsLog, queryPromise, opPromise, this);
+
+            log.debug("Executing.... {} {}", query.uuid(), queryEntry.queryDetails);
+
+            // Check if the uuid is repeated, then make a new one
+            if (queryTracker.running.putIfAbsent(query.uuid(), queryEntry) != null) {
+                String old = query.uuid();
+                query.useNextUUID();
+                log.warn("Query uuid was already in use in running. Going to try assigning a new one. old:{} new:{}",
+                        old, query.uuid());
+                if (queryTracker.running.putIfAbsent(query.uuid(), queryEntry) != null) {
+                    throw new QueryException("Query uuid was STILL somehow already in use : " + query.uuid());
                 }
             }
-        });
-        this.requestPromise = promise;
-        this.query = msg;
-        query.queryPromise = queryPromise;
-        // create a processor chain based in query ops terminating the query user
-        this.opProcessorConsumer = query.newProcessor(queryUser, opPromise);
-        queryTracker.calls.inc();
-        queryEntry = new QueryEntry(query, opsLog, queryPromise, this);
 
-        log.debug("Executing.... {} {}", query.uuid(), queryEntry.queryDetails);
-
-        // Check if the uuid is repeated, then make a new one
-        if (queryTracker.running.putIfAbsent(query.uuid(), queryEntry) != null) {
-            String old = query.uuid();
-            query.useNextUUID();
-            log.warn("Query uuid was already in use in running. Going to try assigning a new one. old:{} new:{}",
-                    old, query.uuid());
-            if (queryTracker.running.putIfAbsent(query.uuid(), queryEntry) != null) {
-                throw new QueryException("Query uuid was STILL somehow already in use : " + query.uuid());
-            }
+            opPromise.addListener(this);
+            queryPromise.addListener(this);
+            ctx.write(opProcessorConsumer, queryPromise);
+        } catch (Exception randoError) {
+            handlerError(ctx, randoError);
         }
-
-        opPromise.addListener(this);
-        queryPromise.addListener(this);
-        ctx.write(opProcessorConsumer, queryPromise);
     }
 
     @Override
@@ -161,7 +154,7 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
             if (!future.isSuccess()) {
                 Throwable queryFailure = future.cause();
                 queryLine.put("type", "query.error")
-                         .put("error", queryFailure.getMessage());
+                        .put("error", queryFailure.getMessage());
                 queryTracker.queryErrors.inc();
                 queryPromise.tryFailure(queryFailure);
             } else {
@@ -176,7 +169,7 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
         }
     }
 
-    public void submitDetailedStatusTask (DetailedStatusTask task) {
+    public void submitDetailedStatusTask(DetailedStatusTask task) {
         ctx.write(task);
     }
 
