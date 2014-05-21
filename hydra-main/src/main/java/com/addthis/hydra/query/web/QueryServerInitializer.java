@@ -19,6 +19,8 @@ import com.addthis.basis.util.Parameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -44,7 +46,15 @@ public class QueryServerInitializer extends ChannelInitializer<SocketChannel> {
     @Override
     protected void initChannel(final SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
-        log.trace("New socket connection {}", ch);
+        if (log.isTraceEnabled()) {
+            log.trace("New socket connection {}", ch);
+            ch.closeFuture().addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    log.trace("channel closed {}", ch);
+                }
+            });
+        }
         pipeline.addLast("decoder", new HttpRequestDecoder(maxInitialLineLength,maxHeaderSize,maxChunkSize));
         pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("aggregator", new HttpObjectAggregator(maxContentLength));

@@ -121,13 +121,13 @@ public class HttpUtils {
     }
 
     public static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
-        log.trace("issuing error of {}", status);
         FullHttpResponse response = new DefaultFullHttpResponse(
                 HTTP_1_1, status, Unpooled.copiedBuffer("Failure: " + status.toString() + "\r\n", CharsetUtil.UTF_8));
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");
+        log.trace("issuing error of {}", status);
 
         // Close the connection as soon as the error message is sent.
-        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+        ctx.channel().writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
     }
 
     /**

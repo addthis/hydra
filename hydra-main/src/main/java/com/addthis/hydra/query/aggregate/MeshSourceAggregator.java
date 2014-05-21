@@ -152,6 +152,8 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
 
     @Override
     public void operationComplete(ChannelFuture future) throws Exception {
+        future.channel().pipeline().remove(this);
+
         // make sure this auto-recurring task doesn't go on forever
         if (stragglerTaskFuture != null) {
             stragglerTaskFuture.cancel(true);

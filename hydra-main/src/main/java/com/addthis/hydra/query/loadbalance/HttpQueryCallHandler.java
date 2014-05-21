@@ -37,11 +37,12 @@ import static com.addthis.hydra.query.web.HttpUtils.sendError;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.DefaultChannelProgressivePromise;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.EventExecutor;
 
 public final class HttpQueryCallHandler {
 
@@ -58,7 +59,7 @@ public final class HttpQueryCallHandler {
      * special handler for query
      */
     public static ChannelFuture handleQuery(ChannelHandler queryToQueryResultsEncoder, KVPairs kv,
-            HttpRequest request, ChannelHandlerContext ctx, EventExecutorGroup executor) throws Exception {
+            HttpRequest request, ChannelHandlerContext ctx, EventExecutor executor) throws Exception {
         String job = kv.getValue("job");
         String path = kv.getValue("path", kv.getValue("q", ""));
         Query query = new Query(job, new String[]{path}, new String[]{kv.getValue("ops"), kv.getValue("rops")});
@@ -130,7 +131,7 @@ public final class HttpQueryCallHandler {
                 break;
         }
         ctx.pipeline().addLast(executor, "mqm", queryToQueryResultsEncoder);
-        return ctx.pipeline().write(query);
+        return ctx.pipeline().write(query, new DefaultChannelProgressivePromise(ctx.channel(), executor));
     }
 
     private static void handleError(QuerySource source, Query query) {

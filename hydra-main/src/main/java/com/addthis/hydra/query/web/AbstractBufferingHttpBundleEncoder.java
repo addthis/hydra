@@ -23,10 +23,11 @@ import com.addthis.bundle.core.Bundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.addthis.hydra.query.web.HttpUtils.sendError;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
@@ -36,6 +37,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 
 /**
@@ -74,10 +76,13 @@ abstract class AbstractBufferingHttpBundleEncoder extends ChannelOutboundHandler
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (msg instanceof Bundle) {
             send(ctx, (Bundle) msg);
-        } else if (msg instanceof Exception) {
-            sourceError(ctx, (Exception) msg);
         } else if (msg == DataChannelOutputToNettyBridge.SEND_COMPLETE) {
             sendComplete(ctx);
+            ctx.pipeline().remove(this);
+            // no need to make the frame reader wait on the async flush to finish
+            promise.trySuccess();
+            ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+            lastContentFuture.addListener(ChannelFutureListener.CLOSE);
         } else {
             super.write(ctx, msg, promise); // forward write to next handler
         }
@@ -152,14 +157,5 @@ abstract class AbstractBufferingHttpBundleEncoder extends ChannelOutboundHandler
         maybeWriteStart(ctx, null);
         appendResponseEndToString(sendBuffer);
         flushStringBuilder(ctx);
-    }
-
-    public static void sourceError(ChannelHandlerContext ctx, Exception ex) {
-        try {
-            sendError(ctx, new HttpResponseStatus(500, ex.getMessage()));
-            log.error("", ex);
-        } catch (Exception e) {
-            log.warn("Exception sending error", e);
-        }
     }
 }

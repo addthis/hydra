@@ -22,7 +22,6 @@ import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.query.aggregate.DetailedStatusTask;
 import com.addthis.hydra.query.web.DataChannelOutputToNettyBridge;
-import com.addthis.hydra.query.web.HttpUtils;
 import com.addthis.hydra.util.StringMapHelper;
 
 import org.slf4j.Logger;
@@ -34,7 +33,6 @@ import io.netty.channel.ChannelProgressiveFuture;
 import io.netty.channel.ChannelProgressiveFutureListener;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Promise;
 
@@ -66,7 +64,6 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.queryPromise = ctx.newProgressivePromise();
         this.opPromise = ctx.newProgressivePromise();
-        this.queryUser = new DataChannelOutputToNettyBridge(ctx);
         this.ctx = ctx;
     }
 
@@ -80,33 +77,33 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
     }
 
     protected void writeQuery(final ChannelHandlerContext ctx, Query msg, ChannelPromise promise) throws Exception {
-        try {
-            this.requestPromise = promise;
-            this.query = msg;
-            query.queryPromise = queryPromise;
-            // create a processor chain based in query ops terminating the query user
-            this.opProcessorConsumer = query.newProcessor(queryUser, opPromise);
-            queryEntry = new QueryEntry(query, opsLog, queryPromise, opPromise, this);
+        this.requestPromise = promise;
+        this.queryUser = new DataChannelOutputToNettyBridge(ctx, promise);
+        this.query = msg;
+        query.queryPromise = queryPromise;
+        // create a processor chain based in query ops terminating the query user
+        this.opProcessorConsumer = query.newProcessor(queryUser, opPromise);
+        queryEntry = new QueryEntry(query, opsLog, requestPromise, this);
 
-            log.debug("Executing.... {} {}", query.uuid(), queryEntry.queryDetails);
-
-            // Check if the uuid is repeated, then make a new one
+        // Check if the uuid is repeated, then make a new one
+        if (queryTracker.running.putIfAbsent(query.uuid(), queryEntry) != null) {
+            String old = query.uuid();
+            query.useNextUUID();
+            log.warn("Query uuid was already in use in running. Going to try assigning a new one. old:{} new:{}",
+                    old, query.uuid());
             if (queryTracker.running.putIfAbsent(query.uuid(), queryEntry) != null) {
-                String old = query.uuid();
-                query.useNextUUID();
-                log.warn("Query uuid was already in use in running. Going to try assigning a new one. old:{} new:{}",
-                        old, query.uuid());
-                if (queryTracker.running.putIfAbsent(query.uuid(), queryEntry) != null) {
-                    throw new QueryException("Query uuid was STILL somehow already in use : " + query.uuid());
-                }
+                throw new QueryException("Query uuid was STILL somehow already in use : " + query.uuid());
             }
-
-            opPromise.addListener(this);
-            queryPromise.addListener(this);
-            ctx.write(opProcessorConsumer, queryPromise);
-        } catch (Exception randoError) {
-            handlerError(ctx, randoError);
         }
+
+        log.debug("Executing.... {} {}", query.uuid(), queryEntry.queryDetails);
+
+        ctx.pipeline().remove(this);
+
+        opPromise.addListener(this);
+        queryPromise.addListener(this);
+        requestPromise.addListener(this);
+        ctx.write(opProcessorConsumer, queryPromise);
     }
 
     @Override
@@ -121,11 +118,24 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
     @Override
     public void operationComplete(ChannelProgressiveFuture future) throws Exception {
         if (future == queryPromise) {
+            // only care about operation progressed events for the gathering promise
             return;
+        } else if (future == opPromise) {
+            // tell aggregator about potential early termination from the op promise
+            if (future.isSuccess()) {
+                queryPromise.trySuccess();
+            } else {
+                queryPromise.tryFailure(opPromise.cause());
+            }
         }
-        // propogate write completion to higher level handlers; in particular this signals
-        // the NextQueryTask to schedule getting another query for this event loop
-        requestPromise.trySuccess();
+        // else the entire request is over; either from an error the last http write completing
+
+        // tell the op processor about potential early termination (which may tell the gatherer in turn)
+        if (future.isSuccess()) {
+            opPromise.trySuccess();
+        } else {
+            opPromise.tryFailure(future.cause());
+        }
         QueryEntry runE = queryTracker.running.remove(query.uuid());
         if (runE == null) {
             log.warn("failed to remove running for {}", query.uuid());
@@ -156,11 +166,9 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
                 queryLine.put("type", "query.error")
                         .put("error", queryFailure.getMessage());
                 queryTracker.queryErrors.inc();
-                queryPromise.tryFailure(queryFailure);
             } else {
                 queryLine.put("type", "query.done");
                 queryTracker.recentlyCompleted.put(query.uuid(), entryInfo);
-                queryPromise.trySuccess();
             }
             queryTracker.log(queryLine);
             queryTracker.queryMeter.update(entryInfo.runTime, TimeUnit.MILLISECONDS);
@@ -171,19 +179,6 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
 
     public void submitDetailedStatusTask(DetailedStatusTask task) {
         ctx.write(task);
-    }
-
-    public void handlerError(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        log.warn("Exception caught while serving http query endpoint", cause);
-        if (queryPromise != null) {
-            queryPromise.tryFailure(cause);
-        }
-        if (opPromise != null) {
-            opPromise.tryFailure(cause);
-        }
-        if (ctx.channel().isActive()) {
-            HttpUtils.sendError(ctx, new HttpResponseStatus(500, cause.getMessage()));
-        }
     }
 
 }

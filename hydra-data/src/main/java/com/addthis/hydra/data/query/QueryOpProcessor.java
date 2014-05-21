@@ -480,10 +480,10 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
 
     @Override
     public void sourceError(DataChannelError er) {
+        queryPromise.tryFailure(er);
         output.getOutput().sourceError(er);
         try {
             close();
-            queryPromise.tryFailure(er);
         } catch (IOException e) {
             log.warn("Exception while closing QueryOpProcessor", e);
             throw new RuntimeException(e);

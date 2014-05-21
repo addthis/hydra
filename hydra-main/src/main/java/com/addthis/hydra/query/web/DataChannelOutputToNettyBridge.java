@@ -27,10 +27,8 @@ import com.addthis.bundle.core.list.ListBundleFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.channel.ChannelPromise;
 
 /**
  * parent of all streaming response classes
@@ -41,10 +39,12 @@ public class DataChannelOutputToNettyBridge implements DataChannelOutput {
 
     protected final ListBundleFormat format = new ListBundleFormat();
     protected final ChannelHandlerContext ctx;
+    protected final ChannelPromise overallQueryPromise;
     static final Object SEND_COMPLETE = new Object();
 
-    public DataChannelOutputToNettyBridge(ChannelHandlerContext ctx) {
+    public DataChannelOutputToNettyBridge(ChannelHandlerContext ctx, ChannelPromise overallQueryPromise) {
         this.ctx = ctx;
+        this.overallQueryPromise = overallQueryPromise;
     }
 
     private final Backoff backoff = new Backoff(1, 10);
@@ -75,8 +75,8 @@ public class DataChannelOutputToNettyBridge implements DataChannelOutput {
 
     @Override
     public void sourceError(DataChannelError ex) {
-        log.trace("Writing exception to pipeline", ex);
-        ctx.write(ex);
+        log.trace("failing high level query promise", ex);
+        overallQueryPromise.tryFailure(ex);
     }
 
     @Override
@@ -88,7 +88,5 @@ public class DataChannelOutputToNettyBridge implements DataChannelOutput {
     public void sendComplete() { // TODO: keep alive logic
         log.trace("Writing sendComplete to pipeline {}", ctx.pipeline());
         ctx.write(SEND_COMPLETE);
-        ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-        lastContentFuture.addListener(ChannelFutureListener.CLOSE);
     }
 }
