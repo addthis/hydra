@@ -112,6 +112,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     private static final int DEFAULT_WORKERS = Parameter.intValue("dataSourceMeshy2.workers", 2);
     private static final int DEFAULT_BUFFER = Parameter.intValue("dataSourceMeshy2.buffer", 128);
     private static final int DEFAULT_COUNTDOWN_LATCH_TIMEOUT = Parameter.intValue("dataSourceMeshy2.timeout.sec", 30);
+    private static final boolean IGNORE_MARKS_ERRORS = Parameter.boolValue("hydra.markdb.error.ignore", false);
     private static final int DEFAULT_MAGIC_MARKS_NUM = 42;
 
     /**
@@ -231,7 +232,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
     private final ListBundleFormat bundleFormat = new ListBundleFormat();
     private final Bundle termBundle = new ListBundle(bundleFormat);
-    private final SourceWorker sourceWorker = new SourceWorker();
     private final ExecutorService workerThreadPool = new ThreadPoolExecutor(
             0, Integer.MAX_VALUE, 5L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),
             new ThreadFactoryBuilder().setNameFormat("streamSourceWorker-%d").build());
@@ -324,7 +324,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     }
 
     @Override
-    protected void open(TaskRunConfig config) {
+    protected void open(TaskRunConfig config, AtomicBoolean errored) {
         if (legacyMode != null) {
             magicMarksNumber = 0;
             useSimpleMarks = true;
@@ -394,6 +394,13 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             shutdown();
         }
         runningThreadCountDownLatch = new CountDownLatch(workers);
+        /**
+         * It would be preferable if a new sourceWorker instance was
+         * constructed for each worker but this is not possible for
+         * SourceWorker to be a non-static inner class and
+         * we have static fields.
+         */
+        SourceWorker sourceWorker = new SourceWorker(errored);
         int workerId = workers;
         while (workerId-- > 0) {
             workerThreadPool.execute(sourceWorker);
@@ -629,37 +636,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         return true;
     }
 
-    private void fill(int threadID) {
-        Wrap wrap = null;
-        try {
-            while (!done.get() && !exiting.get()) {
-                wrap = preOpened.poll(); //take if immediately available
-                if (wrap == null) {
-                    return; //exits worker thread
-                }
-                if (!multiFill(wrap, multiBundleReads)) {
-                    wrap = nextWrappedSource();
-                }
-                if (wrap != null) //May be null from nextWrappedSource -> decreases size of preOpened
-                {
-                    preOpened.put(wrap);
-                }
-                wrap = null;
-            }
-            log.debug("[{}] read", threadID);
-        } catch (Exception ex) {
-            log.warn("", ex);
-        } finally {
-            if (wrap != null) {
-                try {
-                    wrap.close();
-                } catch (Exception ex) {
-                    log.warn("", ex);
-                }
-            }
-        }
-    }
-
     @Override
     public Bundle next() throws DataChannelError {
         if (skipSourceExit > 0 && consecutiveFileSkip.get() >= skipSourceExit) {
@@ -802,7 +778,49 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
     private class SourceWorker implements Runnable {
 
+        /**
+         * generateThreadIDs should be a static field but inner classes cannot have static fields.
+         */
         private final AtomicInteger generateThreadIDs = new AtomicInteger(0);
+        private final AtomicBoolean errored;
+
+        public SourceWorker(AtomicBoolean errored) {
+            this.errored = errored;
+        }
+
+        private void fill(int threadID) {
+            Wrap wrap = null;
+            try {
+                while (!done.get() && !exiting.get()) {
+                    wrap = preOpened.poll(); //take if immediately available
+                    if (wrap == null) {
+                        return; //exits worker thread
+                    }
+                    if (!multiFill(wrap, multiBundleReads)) {
+                        wrap = nextWrappedSource();
+                    }
+                    if (wrap != null) //May be null from nextWrappedSource -> decreases size of preOpened
+                    {
+                        preOpened.put(wrap);
+                    }
+                    wrap = null;
+                }
+                log.debug("[{}] read", threadID);
+            } catch (Exception ex) {
+                log.warn("", ex);
+                if (!IGNORE_MARKS_ERRORS) {
+                    errored.set(true);
+                }
+            } finally {
+                if (wrap != null) {
+                    try {
+                        wrap.close();
+                    } catch (Exception ex) {
+                        log.warn("", ex);
+                    }
+                }
+            }
+        }
 
         @Override
         public void run() {
@@ -824,6 +842,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 fill(threadID);
             } catch (Exception e) {
                 log.warn("Exception while running data source meshy worker thread.", e);
+                if (!IGNORE_MARKS_ERRORS) {
+                    errored.set(true);
+                }
             } finally {
                 log.debug("worker {} exiting done={}", threadID, done);
                 runningThreadCountDownLatch.countDown();

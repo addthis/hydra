@@ -27,6 +27,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -178,15 +179,15 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
     }
 
     @Override
-    public void open(TaskRunConfig config) {
+    public void open(TaskRunConfig config, AtomicBoolean errored) {
         try {
-            doOpen(config);
+            doOpen(config, errored);
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
     }
 
-    private void doOpen(TaskRunConfig config) throws Exception {
+    private void doOpen(TaskRunConfig config, AtomicBoolean errored) throws Exception {
         tracker = new SourceTracker(markDir, config);
         if (shardTotal == null || shardTotal == 0) {
             shardTotal = config.nodeCount;
@@ -201,7 +202,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
         if (hash) {
             sources = new StreamSourceHashed(sources, shards, shardTotal);
         }
-        cacheFillerService.execute(new CacheFiller());
+        cacheFillerService.execute(new CacheFiller(errored));
         log.warn("shards=[" + Strings.join(shards, ",") + " of " + shardTotal + "] sources=" + sources + " peekers=" + peekerThreads + " maxCache=" + maxCacheSize);
     }
 
@@ -355,7 +356,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
         }
     }
 
-    private void fillInputStreamCache() throws InterruptedException {
+    private void fillInputStreamCache(AtomicBoolean errored) throws InterruptedException {
         try {
             while (wrapperList.size() < maxCacheSize && queuedSourceInitTasks.get() < maxCacheSize && !finished) {
                 if (exiting) {
@@ -379,7 +380,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
                     continue;
                 }
 
-                sourceInitService.execute(new SourceInitializer(queuedSourceInitTasks.incrementAndGet(), nextStream, ostream));
+                sourceInitService.execute(new SourceInitializer(queuedSourceInitTasks.incrementAndGet(), nextStream, ostream, errored));
             }
         } catch (Exception ex) {
             log.warn("Unexpected Exception filling cacheList: " + ex.getMessage(), ex);
@@ -426,11 +427,13 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
         private final StreamFile streamFile;
         private final TaskDataSource source;
         private final int initId;
+        private final AtomicBoolean errored;
 
-        private SourceInitializer(int initId, StreamFile streamFile, TaskDataSource source) {
+        private SourceInitializer(int initId, StreamFile streamFile, TaskDataSource source, AtomicBoolean errored) {
             this.initId = initId;
             this.streamFile = streamFile;
             this.source = source;
+            this.errored = errored;
         }
 
         @Override
@@ -439,7 +442,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
                 if (exiting) {
                     return;
                 }
-                InputStream is = null;
+                InputStream is;
                 try {
                     is = streamFile.getInputStream();
                     if (streamFile instanceof StreamSourceMeshy.MeshyStreamFile) {
@@ -455,7 +458,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
                     sourceOpenLock.lock();
                     try {
                         FactoryInputStream.InjectorStreamSource.inject(FactoryInputStream.InjectorStreamSource.DefautlInjectorKey, is);
-                        tracker.open(source);
+                        tracker.open(source, errored);
                     } finally {
                         sourceOpenLock.unlock();
                     }
@@ -496,11 +499,17 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
      */
     private class CacheFiller implements Runnable {
 
+        final AtomicBoolean errored;
+
+        public CacheFiller(AtomicBoolean errored) {
+            this.errored = errored;
+        }
+
         @Override
         public void run() {
             try {
                 while (!exiting && !finished) {
-                    fillInputStreamCache();
+                    fillInputStreamCache(errored);
                     Thread.sleep(cacheFillInterval);
                 }
             } catch (InterruptedException e) {

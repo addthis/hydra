@@ -14,6 +14,7 @@
 package com.addthis.hydra.task.source;
 
 import java.util.LinkedList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
@@ -97,12 +98,12 @@ public class AggregateTaskDataSource extends TaskDataSource {
     }
 
     @Override
-    public void open(TaskRunConfig config) {
+    public void open(TaskRunConfig config, AtomicBoolean errored) {
         for (int i = 0; i < sources.length; i++) {
             TaskDataSource source = sources[i];
             if (source.isEnabled()) {
                 if (log.isDebugEnabled()) log.debug("open " + source);
-                source.open(config);
+                source.open(config, errored);
                 sourceList.add(source);
             } else {
                 if (log.isDebugEnabled()) log.debug("disabled " + source);

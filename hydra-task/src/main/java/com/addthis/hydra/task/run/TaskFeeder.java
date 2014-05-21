@@ -77,7 +77,7 @@ public final class TaskFeeder extends Thread {
     private final Thread threads[];
     private final BlockingQueue<Bundle> queues[];
     private volatile boolean queuesInit;
-    private final AtomicBoolean errored = new AtomicBoolean(false);
+    private final AtomicBoolean errored;
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final AtomicInteger processed = new AtomicInteger(0);
     private final AtomicLong totalReads = new AtomicLong(0);
@@ -96,6 +96,7 @@ public final class TaskFeeder extends Thread {
         modHistrogram = Metrics.newHistogram(getClass(), "mod");
 
         this.source = task.getSource();
+        this.errored = task.getErrored();
         this.task = task;
         this.readers = feeders;
 

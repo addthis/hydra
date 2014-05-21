@@ -14,6 +14,7 @@
 package com.addthis.hydra.task.source;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.Codec;
@@ -78,8 +79,8 @@ public class DataSourceFiltered extends TaskDataSource {
     private Bundle peek;
 
     @Override
-    public void open(TaskRunConfig config) {
-        stream.open(config);
+    public void open(TaskRunConfig config, AtomicBoolean errored) {
+        stream.open(config, errored);
     }
 
     @Override
