@@ -123,7 +123,6 @@ public class QueryChannelUtil {
         String sep = null;
         boolean quiet = false;
         boolean traced = false;
-        boolean dsortcompression = false;
         int iter = 1;
         ArrayList<String> paths = new ArrayList<>(1);
         ArrayList<String> ops = new ArrayList<>(1);
@@ -142,8 +141,6 @@ public class QueryChannelUtil {
                 traced = true;
             } else if (arg.equals("quiet")) {
                 quiet = true;
-            } else if (arg.equals("dsortcompression")) {
-                dsortcompression = true;
             } else if (arg.equals("csv")) {
                 sep = ",";
             } else if (arg.equals("tsv")) {
@@ -174,9 +171,6 @@ public class QueryChannelUtil {
         }
         Query query = new Query(job, paths.toArray(new String[paths.size()]), ops.toArray(new String[ops.size()]));
         query.setTraced(traced);
-        if (dsortcompression) {
-            query.setParameter("dsortcompression", "true");
-        }
         for (Entry<String, String> e : qparam.entrySet()) {
             query.setParameter(e.getKey(), e.getValue());
         }
