@@ -27,8 +27,11 @@ import com.addthis.bundle.core.list.ListBundleFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.LastHttpContent;
 
 /**
  * parent of all streaming response classes
@@ -88,5 +91,10 @@ public class DataChannelOutputToNettyBridge implements DataChannelOutput {
     public void sendComplete() { // TODO: keep alive logic
         log.trace("Writing sendComplete to pipeline {}", ctx.pipeline());
         ctx.write(SEND_COMPLETE);
+        // no need to make the frame reader wait on the async flush to finish
+        overallQueryPromise.trySuccess();
+        ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT,
+                ctx.channel().newPromise());
+        lastContentFuture.addListener(ChannelFutureListener.CLOSE);
     }
 }

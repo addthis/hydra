@@ -72,6 +72,7 @@ public class NextQueryTask implements Runnable, ChannelFutureListener {
 
     @Override
     public void operationComplete(ChannelFuture future) throws Exception {
+        log.trace("complete called");
         if (!future.isSuccess()) {
             log.warn("Exception caught while serving http query endpoint", future.cause());
             ChannelPipeline pipeline = future.channel().pipeline();
@@ -86,6 +87,7 @@ public class NextQueryTask implements Runnable, ChannelFutureListener {
         }
         // schedule next query poll
         executor.execute(this);
+        log.trace("rescheduled");
     }
 
     public static void sendDetailedError(ChannelHandlerContext ctx, Throwable cause) {

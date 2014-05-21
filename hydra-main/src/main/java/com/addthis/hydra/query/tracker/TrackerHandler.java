@@ -127,6 +127,7 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
             } else {
                 queryPromise.tryFailure(opPromise.cause());
             }
+            return;
         }
         // else the entire request is over; either from an error the last http write completing
 

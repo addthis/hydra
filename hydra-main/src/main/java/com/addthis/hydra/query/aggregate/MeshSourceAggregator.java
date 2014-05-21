@@ -102,6 +102,7 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
                 executor.execute(queryTask);
             }
             maybeScheduleStragglerChecks();
+            ctx.pipeline().remove(this);
         } else if (msg instanceof DetailedStatusTask) {
             DetailedStatusTask task = (DetailedStatusTask) msg;
             task.run(this);
@@ -152,7 +153,6 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
 
     @Override
     public void operationComplete(ChannelFuture future) throws Exception {
-        future.channel().pipeline().remove(this);
 
         // make sure this auto-recurring task doesn't go on forever
         if (stragglerTaskFuture != null) {
