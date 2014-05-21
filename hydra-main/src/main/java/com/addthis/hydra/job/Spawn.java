@@ -151,6 +151,8 @@ public class Spawn implements Codec.Codable {
     private static final int queueKickInterval = Parameter.intValue("spawn.queue.kick.interval", 3000);
     private static final int backgroundThreads = Parameter.intValue("spawn.background.threads", 4);
     private static final int backgroundQueueSize = Parameter.intValue("spawn.background.queuesize", 1000);
+    private static final int backgroundHttpTimeout = Parameter.intValue("spawn.background.timeout", 120000);
+
     private static final int backgroundEmailMinute = Parameter.intValue("spawn.background.notification.interval.minutes", 60);
     private static final String backgroundEmailAddress = Parameter.value("spawn.background.notification.address");
     private static final long MILLISECONDS_PER_MINUTE = (1000 * 60);
@@ -2697,7 +2699,7 @@ public class Spawn implements Codec.Codable {
         @Override
         public void run() {
             try {
-                HttpUtil.httpPost(url, "javascript/text", post, 60000);
+                HttpUtil.httpPost(url, "javascript/text", post, backgroundHttpTimeout);
             } catch (IOException ex) {
                 log.error("IOException when attempting to contact \"" +
                           url + "\" in background task \"" + jobId + " " + state + "\"", ex);
