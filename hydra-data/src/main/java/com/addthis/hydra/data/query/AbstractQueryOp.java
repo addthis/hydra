@@ -29,6 +29,8 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueString;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 public abstract class AbstractQueryOp implements QueryOp {
 
@@ -39,11 +41,17 @@ public abstract class AbstractQueryOp implements QueryOp {
     private QueryMemTracker memTracker;
     private BundleColumnBinder sourceBinder;
 
+    private final ChannelProgressivePromise queryPromise;
+
+    protected AbstractQueryOp(ChannelProgressivePromise queryPromise) {
+        this.queryPromise = queryPromise;
+    }
+
     public BundleColumnBinder getSourceColumnBinder(BundleFormatted row) {
         return getSourceColumnBinder(row, null);
     }
 
-    public BundleColumnBinder getSourceColumnBinder(BundleFormatted row, String fields[]) {
+    public BundleColumnBinder getSourceColumnBinder(BundleFormatted row, String[] fields) {
         if (sourceBinder == null) {
             sourceBinder = new BundleColumnBinder(row, fields);
         }
@@ -59,9 +67,9 @@ public abstract class AbstractQueryOp implements QueryOp {
     }
 
     @Override
-    public void sendTable(DataTable table, QueryStatusObserver queryStatusObserver) {
+    public void sendTable(DataTable table) {
         for (Bundle row : table) {
-            if (queryStatusObserver.queryCompleted || queryStatusObserver.queryCancelled) {
+            if (queryPromise.isDone()) {
                 break;
             } else {
                 send(row);
@@ -115,8 +123,8 @@ public abstract class AbstractQueryOp implements QueryOp {
     }
 
     public static int[] csvToInts(String args) {
-        String sv[] = Strings.splitArray(args, ",");
-        int ov[] = new int[sv.length];
+        String[] sv = Strings.splitArray(args, ",");
+        int[] ov = new int[sv.length];
         for (int i = 0; i < ov.length; i++) {
             ov[i] = Integer.parseInt(sv[i]);
         }
@@ -128,7 +136,7 @@ public abstract class AbstractQueryOp implements QueryOp {
      * @param row   source row
      * @return a compound key
      */
-    public static String createCompoundKey(BundleField field[], Bundle row) {
+    public static String createCompoundKey(BundleField[] field, Bundle row) {
         String key = null;
         for (BundleField kc : field) {
             String kv = ValueUtil.asNativeString(row.getValue(kc));

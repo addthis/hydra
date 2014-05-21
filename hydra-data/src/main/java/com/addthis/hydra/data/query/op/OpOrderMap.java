@@ -24,6 +24,8 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.hydra.data.query.AbstractRowOp;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * <p>This query operation <span class="hydra-summary">conditionally copies values</span>.
@@ -58,7 +60,8 @@ public class OpOrderMap extends AbstractRowOp {
     private final ListBundleFormat format = new ListBundleFormat();
     private final List<OrderTuple> oTuples;
 
-    public OpOrderMap(String args) {
+    public OpOrderMap(String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         oTuples = new ArrayList<>();
         try {
             String[] tuples = Strings.splitArray(args, ":");

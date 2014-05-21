@@ -24,7 +24,8 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractTableOp;
-import com.addthis.hydra.data.query.QueryStatusObserver;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 
 /**
@@ -51,10 +52,10 @@ public class OpPercentileRank extends AbstractTableOp {
     private int inputCol;
     private int outputCol;
 
-    public OpPercentileRank(DataTableFactory tableFactory, String args, QueryStatusObserver queryStatusObserver) {
-        super(tableFactory, queryStatusObserver);
+    public OpPercentileRank(DataTableFactory tableFactory, String args, ChannelProgressivePromise queryPromise) {
+        super(tableFactory, queryPromise);
         try {
-            String opt[] = args.split(":");
+            String[] opt = args.split(":");
             if (opt.length == 2) {
                 inputCol = Integer.parseInt(opt[0]);
                 outputCol = Integer.parseInt(opt[1]);

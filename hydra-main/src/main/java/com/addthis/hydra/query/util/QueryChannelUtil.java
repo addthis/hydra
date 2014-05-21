@@ -41,6 +41,10 @@ import com.addthis.hydra.query.QueryEngineSource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.channel.DefaultChannelProgressivePromise;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+
 /**
  * should be abstracted further to be a generic pipe for queries and results.
  * submits and handles responses from QueryChannel.
@@ -119,32 +123,24 @@ public class QueryChannelUtil {
         String sep = null;
         boolean quiet = false;
         boolean traced = false;
-        boolean dsortcompression = false;
-        long ttl = 0;
         int iter = 1;
         ArrayList<String> paths = new ArrayList<>(1);
         ArrayList<String> ops = new ArrayList<>(1);
         ArrayList<String> lops = new ArrayList<>(1);
         String job = null;
-        String host = "localhost";
         String data = null;
         String out = null;
-        int port = 2601;
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             int eqpos;
             if (arg.equals("help")) {
-                System.out.println("port=[port] job=[job] path=[path] ops=[ops] lops=[lops] data=[datadir] [iter=#] [quiet] [sep=separator] [out=file] [trace] [param=val]");
+                System.out.println("job=[job] path=[path] ops=[ops] lops=[lops] data=[datadir] [iter=#] [quiet] [sep=separator] [out=file] [trace] [param=val]");
                 return;
             }
-            if (arg.startsWith("port=")) {
-                port = Integer.parseInt(arg.substring(5));
-            } else if (arg.equals("trace")) {
+            if (arg.equals("trace")) {
                 traced = true;
             } else if (arg.equals("quiet")) {
                 quiet = true;
-            } else if (arg.equals("dsortcompression")) {
-                dsortcompression = true;
             } else if (arg.equals("csv")) {
                 sep = ",";
             } else if (arg.equals("tsv")) {
@@ -163,8 +159,6 @@ public class QueryChannelUtil {
                 paths.add(arg.substring(5));
             } else if (arg.startsWith("fpath=")) {
                 paths.add(Bytes.toString(Files.read(new File(arg.substring(6)))).trim());
-            } else if (arg.startsWith("ttl=")) {
-                ttl = Long.parseLong(arg.substring(4));
             } else if (arg.startsWith("data=")) {
                 data = arg.substring(5);
             } else if (arg.startsWith("out=")) {
@@ -177,9 +171,6 @@ public class QueryChannelUtil {
         }
         Query query = new Query(job, paths.toArray(new String[paths.size()]), ops.toArray(new String[ops.size()]));
         query.setTraced(traced);
-        if (dsortcompression) {
-            query.setParameter("dsortcompression", "true");
-        }
         for (Entry<String, String> e : qparam.entrySet()) {
             query.setParameter(e.getKey(), e.getValue());
         }
@@ -209,7 +200,8 @@ public class QueryChannelUtil {
             BlockingNullConsumer consumer = new BlockingNullConsumer();
             QueryOpProcessor proc = new QueryOpProcessor.Builder(consumer, lops.toArray(new String[lops.size()]))
                     .tempDir(tempDir).build();
-            proc.appendOp(new BundleOutputWrapper(new PrintOp(sep, out)));
+            proc.appendOp(new BundleOutputWrapper(new PrintOp(sep, out),
+                    new DefaultChannelProgressivePromise(null, ImmediateEventExecutor.INSTANCE)));
             client.query(query, proc);
             consumer.waitComplete();
             Files.deleteDir(tempDir);

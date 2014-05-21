@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.query;
+package com.addthis.hydra.query.zookeeper;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -142,17 +142,6 @@ public class QueryConfigWatcher {
     public boolean shouldTrace(String jobID) {
         JobQueryConfig jqc = getJobQueryConfig(jobID);
         return jqc != null && jqc.getQueryTraceLevel() > 0;
-    }
-
-    /**
-     * Fetch the consecutiveFailureThreshold for a jobId
-     *
-     * @param jobID The jobId to check
-     * @return The specified consecutiveFailureThreshold, or -1 if no data was found
-     */
-    public int consecutiveFailureThreshold(String jobID) {
-        JobQueryConfig jqc = getJobQueryConfig(jobID);
-        return jqc != null ? jqc.getConsecutiveFailureThreshold() : -1;
     }
 
 }

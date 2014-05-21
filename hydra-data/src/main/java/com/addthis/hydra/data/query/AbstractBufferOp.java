@@ -18,6 +18,8 @@ import java.util.List;
 
 import com.addthis.bundle.core.Bundle;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 /**
  * this class of operator should may drop or create lines
  * using the existing rows as sources.  it could alternatively
@@ -25,6 +27,10 @@ import com.addthis.bundle.core.Bundle;
  * it's own.
  */
 public abstract class AbstractBufferOp extends AbstractQueryOp {
+
+    public AbstractBufferOp(ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
+    }
 
     /**
      * TODO
@@ -39,13 +45,13 @@ public abstract class AbstractBufferOp extends AbstractQueryOp {
     /**
      * helper to return a single row
      */
-    public List<Bundle> createRows(Bundle row, int count) {
+    public static List<Bundle> createRows(Bundle row, int count) {
         ArrayList<Bundle> single = new ArrayList<Bundle>(count);
         single.add(row);
         return single;
     }
 
-    public List<Bundle> createRows(Bundle row) {
+    public static List<Bundle> createRows(Bundle row) {
         return createRows(row, 1);
     }
 

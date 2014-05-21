@@ -84,6 +84,10 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.channel.DefaultChannelProgressivePromise;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+
 /**
  * This output <span class="hydra-summary">transforms bundle streams into trees for statistical analysis and data queries</span>
  * <p/>
@@ -793,7 +797,8 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
                 Query.emitTrace("query begin " + query.uuid() + " " + query + " to " + consumer);
             }
             try {
-                queryEngine.search(query, consumer);
+                queryEngine.search(query, consumer,
+                        new DefaultChannelProgressivePromise(null, ImmediateEventExecutor.INSTANCE));
                 consumer.sendComplete();
             } catch (QueryException e) {
                 consumer.sourceError(e);

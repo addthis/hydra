@@ -34,13 +34,14 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractQueryOp;
 import com.addthis.hydra.data.query.DiskBackedMap;
 import com.addthis.hydra.data.query.QueryOp;
-import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.data.query.op.merge.MergeConfig;
 import com.addthis.hydra.data.query.op.merge.MergedValue;
 import com.addthis.hydra.data.util.KeyTopper;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Meter;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 /**
  * <p>This query operation <span class="hydra-summary">merges arbitrary rows</span>.
@@ -115,10 +116,11 @@ public class OpGather extends AbstractQueryOp {
 
     private static final Meter diskTips = Metrics.newMeter(OpGather.class, "diskTips", "diskTips", TimeUnit.SECONDS);
 
-    final QueryStatusObserver queryStatusObserver;
+    final ChannelProgressivePromise queryPromise;
 
-    public OpGather(String args, long tipMem, long tipRow, String tmpDir, QueryStatusObserver queryStatusObserver) {
-        this.queryStatusObserver = queryStatusObserver;
+    public OpGather(String args, long tipMem, long tipRow, String tmpDir, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
+        this.queryPromise = queryPromise;
         this.tmpDir = tmpDir;
         this.tipMem = tipMem;
         this.tipRow = tipRow;
@@ -133,7 +135,7 @@ public class OpGather extends AbstractQueryOp {
 
     @Override
     public void send(Bundle row) throws DataChannelError {
-        if (queryStatusObserver.queryCompleted) {
+        if (queryPromise.isDone()) {
             return;
         }
         String key = mergeConfig.handleBindAndGetKey(row, format);
@@ -210,7 +212,7 @@ public class OpGather extends AbstractQueryOp {
     public void sendComplete() {
         QueryOp next = getNext();
         for (MergedRow mergedRow : resultTable.values()) {
-            if (!queryStatusObserver.queryCompleted) {
+            if (!queryPromise.isDone()) {
                 next.send(mergedRow.emit());
             } else {
                 break;

@@ -27,6 +27,8 @@ import com.addthis.bundle.value.ValueString;
 import com.addthis.hydra.data.query.AbstractRowOp;
 import com.addthis.maljson.JSONObject;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * <p>This query operation <span class="hydra-summary">maps values within a
@@ -50,9 +52,10 @@ public class OpRMap extends AbstractRowOp {
     // todo: make linked?
     private Map<Pattern, ValueString> map;
 
-    public OpRMap(String args) {
+    public OpRMap(String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         try {
-            String opt[] = args.split("::");
+            String[] opt = args.split("::");
             if (opt.length >= 2) {
                 col = Integer.parseInt(opt[0]);
                 map = new HashMap<>();

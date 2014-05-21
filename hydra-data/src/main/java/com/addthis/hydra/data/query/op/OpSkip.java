@@ -16,6 +16,8 @@ package com.addthis.hydra.data.query.op;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.data.query.AbstractRowOp;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * <p>This query operation <span class="hydra-summary">skips N rows</span>.
@@ -30,12 +32,13 @@ import com.addthis.hydra.data.query.AbstractRowOp;
  */
 public class OpSkip extends AbstractRowOp {
 
-    private int skip[];
+    private int[] skip;
 
     private boolean on;
     private int rem;
 
-    public OpSkip(String args) {
+    public OpSkip(String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         skip = csvToInts(args);
         rem = skip[0] + 1;
         on = false;

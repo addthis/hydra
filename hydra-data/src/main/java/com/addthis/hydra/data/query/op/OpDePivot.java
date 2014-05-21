@@ -28,6 +28,8 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractBufferOp;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * <p>This query operation <span class="hydra-summary">unwinds a pivot so that it can
@@ -53,13 +55,14 @@ public class OpDePivot extends AbstractBufferOp {
     private final BundleField valField;
     private final BundleField sumField;
 
-    public OpDePivot(QueryOpProcessor processor) {
-        this(processor, null);
+    public OpDePivot(QueryOpProcessor processor, ChannelProgressivePromise queryPromise) {
+        this(processor, null, queryPromise);
     }
 
-    public OpDePivot(QueryOpProcessor processor, String args) {
+    public OpDePivot(QueryOpProcessor processor, String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         if (args != null && args.length() > 0) {
-            String ops[] = Strings.splitArray(args, ",");
+            String[] ops = Strings.splitArray(args, ",");
             for (String op : ops) {
                 if (op.equals("row")) {
                     rowcol = cols++;

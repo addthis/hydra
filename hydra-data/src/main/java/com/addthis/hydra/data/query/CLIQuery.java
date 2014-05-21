@@ -46,7 +46,7 @@ public class CLIQuery {
 
     private static final boolean debug = Parameter.boolValue("cliquery.debug", false);
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         if (args.length == 0) {
             System.out.println("usage: [ops] <input-separator> <output-separator> <grouping>");
             System.out.println("  this utility reads from stdin using newline for record delimiters.");
@@ -59,7 +59,7 @@ public class CLIQuery {
         // setup result processor
         String insep = args.length > 1 ? args[1] : ",";
         String outsep = args.length > 2 ? args[2] : ",";
-        String group[] = new String[]{"\"", "'", "()", "[]", "{}"};
+        String[] group = new String[]{"\"", "'", "()", "[]", "{}"};
         File tempDir = Files.createTempDir();
         QueryOpProcessor rp = new QueryOpProcessor.Builder(new CMDLineDataChannelOutput(outsep), args[0])
                 .tempDir(tempDir).build();

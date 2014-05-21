@@ -21,9 +21,10 @@ import com.addthis.bundle.table.DataTableFactory;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractTableOp;
-import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.data.tree.prop.DataSeen;
 import com.addthis.hydra.store.util.SeenFilterBasic;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 
 /**
@@ -49,9 +50,9 @@ public class OpSeen extends AbstractTableOp {
     private int bitsper; // defaults to 4
     private int hash; // defaults to 4
 
-    public OpSeen(DataTableFactory tableFactory, String args, QueryStatusObserver queryStatusObserver) {
-        super(tableFactory, queryStatusObserver);
-        String v[] = Strings.splitArray(args, ":");
+    public OpSeen(DataTableFactory tableFactory, String args, ChannelProgressivePromise queryPromise) {
+        super(tableFactory, queryPromise);
+        String[] v = Strings.splitArray(args, ":");
         this.column = Integer.parseInt(v[0]);
         this.bits = Integer.parseInt(v[1]);
         this.bitsper = v.length > 2 ? Integer.parseInt(v[2]) : 4;

@@ -19,6 +19,7 @@ import javax.annotation.concurrent.GuardedBy;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -34,12 +35,17 @@ import com.addthis.bundle.core.BundleFormatted;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.io.DataChannelWriter;
+import com.addthis.hydra.data.query.FieldValueList;
 import com.addthis.hydra.data.query.FramedDataChannelReader;
-import com.addthis.hydra.data.query.QueryStatusObserver;
+import com.addthis.hydra.data.query.QueryElement;
+import com.addthis.hydra.data.query.engine.QueryEngine;
+import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.meshy.VirtualFileInput;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 /**
  * This class is the last point the bundles reach before getting converted into bytes and read by meshy to be
@@ -59,9 +65,10 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     private final ByteArrayOutputStream out;
     /**
      * A wrapper for a boolean flag that gets set if close is called. This observer object will be passed all
-     * the way down to {@link com.addthis.hydra.data.query.engine.QueryEngine#tableSearch(java.util.LinkedList, com.addthis.hydra.data.tree.DataTreeNode, com.addthis.hydra.data.query.FieldValueList, com.addthis.hydra.data.query.QueryElement[], int, com.addthis.bundle.channel.DataChannelOutput, int, com.addthis.hydra.data.query.QueryStatusObserver)}.
+     * the way down to {@link QueryEngine#tableSearch(LinkedList,
+     * DataTreeNode, FieldValueList, QueryElement[], int, DataChannelOutput, int, ChannelProgressivePromise)}.
      */
-    public QueryStatusObserver queryStatusObserver = new QueryStatusObserver();
+    public final ChannelProgressivePromise queryPromise;
     private int rows = 0;
     /**
      * A boolean flag that gets set to true once all the data have been sent to the stream, and not necessarily
@@ -78,8 +85,10 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
      * can be accessed elsewhere using the interfaces.
      *
      * @throws Exception
+     * @param queryPromise
      */
-    DataChannelToInputStream() throws Exception {
+    DataChannelToInputStream(ChannelProgressivePromise queryPromise) throws Exception {
+        this.queryPromise = queryPromise;
         out = new ByteArrayOutputStream();
         writer = new DataChannelWriter(out);
     }
@@ -170,12 +179,12 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     }
 
     /**
-     * Tells this channel to close. It sets the closed flag and the queryStatusObserver to true.
+     * Tells this channel to close. It sets the closed flag and the queryPromise to true.
      */
     @Override
     public void close() {
         closed = true;
-        queryStatusObserver.queryCancelled = true;
+        queryPromise.cancel(false);
     }
 
     /**
@@ -272,10 +281,9 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     }
 
     /**
-     * @return a reference to the {@link #queryStatusObserver}.
+     * @return a reference to the {@link #queryPromise}.
      */
-    public QueryStatusObserver getQueryStatusObserver() {
-        return queryStatusObserver;
+    public ChannelProgressivePromise getQueryPromise() {
+        return queryPromise;
     }
-
 }

@@ -17,12 +17,15 @@ import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.bundle.core.Bundle;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 public class ResultChannelOutput extends AbstractQueryOp {
 
     private final DataChannelOutput output;
 
-    public ResultChannelOutput(DataChannelOutput output) {
+    public ResultChannelOutput(DataChannelOutput output, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         this.output = output;
     }
 

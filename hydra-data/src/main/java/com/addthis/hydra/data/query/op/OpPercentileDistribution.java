@@ -20,10 +20,11 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.hydra.data.query.AbstractTableOp;
-import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.data.util.KeyPercentileDistribution;
 
 import com.yammer.metrics.stats.Snapshot;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 /**
  * <p>This query operation <span class="hydra-summary">calculates the percentile distribution of a column</span>.
@@ -50,9 +51,9 @@ public class OpPercentileDistribution extends AbstractTableOp {
      * @param tableFactory
      * @param args
      */
-    public OpPercentileDistribution(DataTableFactory tableFactory, String args, QueryStatusObserver queryStatusObserver) {
-        super(tableFactory, queryStatusObserver);
-        int v[] = csvToInts(args);
+    public OpPercentileDistribution(DataTableFactory tableFactory, String args, ChannelProgressivePromise queryPromise) {
+        super(tableFactory, queryPromise);
+        int[] v = csvToInts(args);
         if (v.length < 1) {
             throw new RuntimeException("missing required column");
         }

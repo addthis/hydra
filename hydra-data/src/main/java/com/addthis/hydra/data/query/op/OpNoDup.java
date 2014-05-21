@@ -21,6 +21,8 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractRowOp;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * <p>This query operation <span class="hydra-summary">removes individual duplicate values</span>.
@@ -33,6 +35,10 @@ import com.addthis.hydra.data.query.AbstractRowOp;
 public class OpNoDup extends AbstractRowOp {
 
     private Bundle last;
+
+    public OpNoDup(ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
+    }
 
     private static Bundle cloneBundle(Bundle input) {
         Bundle output = input.createBundle();

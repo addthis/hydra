@@ -26,7 +26,8 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractTableOp;
-import com.addthis.hydra.data.query.QueryStatusObserver;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 
 /**
@@ -64,8 +65,8 @@ public class OpSort extends AbstractTableOp {
     private final char[] type;
     private final char[] dir;
 
-    public OpSort(DataTableFactory factory, String args, QueryStatusObserver queryStatusObserver) {
-        super(factory, queryStatusObserver);
+    public OpSort(DataTableFactory factory, String args, ChannelProgressivePromise queryPromise) {
+        super(factory, queryPromise);
 
         StringTokenizer st = new StringTokenizer(args, ":");
         cols = Strings.splitArray(st.hasMoreElements() ? st.nextToken() : "0", ",");
@@ -88,7 +89,7 @@ public class OpSort extends AbstractTableOp {
         result.sort(new Comparator<Bundle>() {
             // TODO temp hack b/c table appends are BROKEN ATM WRT table.getFormat()
 //          private final BundleField columns[] = new BundleColumnBinder(result, cols).getFields();
-            private BundleField columns[];
+            private BundleField[] columns;
 
             public int compare(Bundle o1, Bundle o2) {
                 if (columns == null) {

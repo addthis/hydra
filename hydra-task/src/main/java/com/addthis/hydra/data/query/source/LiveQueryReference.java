@@ -24,8 +24,12 @@ import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.meshy.VirtualFileFilter;
 import com.addthis.meshy.VirtualFileInput;
 import com.addthis.meshy.VirtualFileReference;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.channel.DefaultChannelProgressivePromise;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 public class LiveQueryReference extends QueryReference {
 
@@ -72,7 +76,10 @@ public class LiveQueryReference extends QueryReference {
     @Override
     public VirtualFileInput getInput(Map<String, String> options) {
         try {
-            final DataChannelToInputStream bridge = new DataChannelToInputStream();
+            // ideally the channel here would be some kind of meshy construct, but null should
+            // be fine for now -- we never call await/sync etc in the worker
+            final DataChannelToInputStream bridge = new DataChannelToInputStream(
+                    new DefaultChannelProgressivePromise(null, ImmediateEventExecutor.INSTANCE));
             if (options == null) {
                 log.warn("Invalid request to getInput.  Options cannot be null");
                 return null;

@@ -23,6 +23,8 @@ import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractRowOp;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 public class OpRoll extends AbstractRowOp {
 
@@ -60,8 +62,8 @@ public class OpRoll extends AbstractRowOp {
      */
     public static class MinOpRoll extends OpRoll {
 
-        public MinOpRoll(String args) {
-            super(args, OP.MIN);
+        public MinOpRoll(String args, ChannelProgressivePromise queryPromise) {
+            super(args, OP.MIN, queryPromise);
         }
     }
 
@@ -95,8 +97,8 @@ public class OpRoll extends AbstractRowOp {
      */
     public static class MaxOpRoll extends OpRoll {
 
-        public MaxOpRoll(String args) {
-            super(args, OP.MAX);
+        public MaxOpRoll(String args, ChannelProgressivePromise queryPromise) {
+            super(args, OP.MAX, queryPromise);
         }
     }
 
@@ -130,8 +132,8 @@ public class OpRoll extends AbstractRowOp {
      */
     public static class AvgOpRoll extends OpRoll {
 
-        public AvgOpRoll(String args) {
-            super(args, OP.AVG);
+        public AvgOpRoll(String args, ChannelProgressivePromise queryPromise) {
+            super(args, OP.AVG, queryPromise);
         }
     }
 
@@ -165,8 +167,8 @@ public class OpRoll extends AbstractRowOp {
      */
     public static class SumOpRoll extends OpRoll {
 
-        public SumOpRoll(String args) {
-            super(args, OP.SUM);
+        public SumOpRoll(String args, ChannelProgressivePromise queryPromise) {
+            super(args, OP.SUM, queryPromise);
         }
     }
 
@@ -200,28 +202,29 @@ public class OpRoll extends AbstractRowOp {
      */
     public static class DeltaOpRoll extends OpRoll {
 
-        public DeltaOpRoll(String args) {
-            super(args, OP.DELTA);
+        public DeltaOpRoll(String args, ChannelProgressivePromise queryPromise) {
+            super(args, OP.DELTA, queryPromise);
         }
     }
 
 
-    private final String args[];
+    private final String[] args;
     private final OP op;
     private final boolean asInt;
     private final boolean inPlace;
     private final boolean summary;
 
-    private ValueNumber state[];
-    private BundleField colIn[];
-    private BundleField colOut[];
-    private BundleField colKeys[];
+    private ValueNumber[] state;
+    private BundleField[] colIn;
+    private BundleField[] colOut;
+    private BundleField[] colKeys;
     private int rows;
     private String lastKey;
-    private ValueNumber oldvals[];
+    private ValueNumber[] oldvals;
     private Bundle lastRow;
 
-    public OpRoll(String args, OP op) {
+    public OpRoll(String args, OP op, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         boolean asInt = true;
         this.op = op;
         if (args.startsWith("i")) {
