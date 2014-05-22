@@ -57,7 +57,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
 
     private static final int outputQueueSize = Parameter.intValue("meshQuerySource.outputQueueSize", 1000);
     private static final int outputBufferSize = Parameter.intValue("meshQuerySource.outputBufferSize", 64000);
-    private static final int queueAttemptLimit = Parameter.intValue("meshQuerySource.queueAttemptLimit", 10000);
+    private static final int queueAttemptLimit = Parameter.intValue("meshQuerySource.queueAttemptLimit", 100);
 
     private final ListBundleFormat format = new ListBundleFormat();
     private final LinkedBlockingQueue<byte[]> queue = new LinkedBlockingQueue<>(outputQueueSize);
@@ -75,8 +75,12 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
      * pulled or read from the stream.
      */
     private volatile boolean eof;
+
     /**
-     * Stores true if close() has been called.
+     * Checks whether or not {@link #closed} was set to true. If {@link #closed} has been set to true then
+     * it means there has either been a failure up stream or the query has been canceled.
+     * In either case we want to stop the running of this stream and at that point this function will throw
+     * a DataChannelError exception.
      */
     private volatile boolean closed = false;
 
@@ -144,7 +148,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
                     }
                     return;
                 }
-                if (isClosed()) {
+                if (closed) {
                     log.info("Unable to emit chunks due to closed channel");
                     break;
                 }
@@ -157,25 +161,13 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     }
 
     /**
-     * Checks whether or not {@link #closed} was set to true. If {@link #closed} has been set to true then
-     * it means there has either been a failure up stream or the query has been canceled.
-     * In either case we want to stop the running of this stream and at that point this function will throw
-     * a DataChannelError exception.
-     */
-    private boolean isClosed() {
-        return closed;
-    }
-
-    /**
      * Returns true if the eof flag is set and there is no data queued in the stream to be sent.
      *
      * @return true if EOF otherwise false.
      */
     @Override
     public boolean isEOF() {
-        synchronized (out) {
-            return eof && queue.isEmpty() && out.size() == 0;
-        }
+        return eof && queue.isEmpty();
     }
 
     /**
@@ -195,7 +187,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     @Override
     public void send(List<Bundle> bundles) {
         // Just in case the list was empty, we check if the channel is closed here
-        if (isClosed()) {
+        if (closed) {
             log.warn("Unable to send bundles due to closed channel");
         }
         for (Bundle bundle : bundles) {
@@ -211,7 +203,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
      */
     @Override
     public void send(Bundle bundle) throws DataChannelError {
-        if (isClosed()) {
+        if (closed) {
             log.warn("Unable to send bundles due to closed channel");
         }
         try {
@@ -234,7 +226,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
      */
     @Override
     public void sendComplete() {
-        if (isClosed()) {
+        if (closed) {
             log.warn("Unable to send complete due to closed channel");
         }
         synchronized (out) {
@@ -251,7 +243,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
      */
     @Override
     public void sourceError(DataChannelError er) {
-        if (isClosed()) {
+        if (closed) {
             log.warn("Unable to send source error due to closed channel", er);
         }
         try {
