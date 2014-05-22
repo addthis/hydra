@@ -39,6 +39,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
@@ -151,16 +152,18 @@ public class Spawn implements Codec.Codable {
     private static final int queueKickInterval = Parameter.intValue("spawn.queue.kick.interval", 3000);
     private static final int backgroundThreads = Parameter.intValue("spawn.background.threads", 4);
     private static final int backgroundQueueSize = Parameter.intValue("spawn.background.queuesize", 1000);
-    private static final int backgroundHttpTimeout = Parameter.intValue("spawn.background.timeout", 120000);
+    private static final int backgroundHttpTimeout = Parameter.intValue("spawn.background.timeout", 300000);
 
     private static final int backgroundEmailMinute = Parameter.intValue("spawn.background.notification.interval.minutes", 60);
     private static final String backgroundEmailAddress = Parameter.value("spawn.background.notification.address");
     private static final long MILLISECONDS_PER_MINUTE = (1000 * 60);
     private static final AtomicLong emailLastFired = new AtomicLong();
 
+    private static final BlockingQueue<Runnable> backgroundTaskQueue = new LinkedBlockingQueue<>(backgroundQueueSize);
+
     private static final ExecutorService backgroundService = MoreExecutors.getExitingExecutorService(
             new ThreadPoolExecutor(backgroundThreads, backgroundThreads, 0L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(backgroundQueueSize)), 100, TimeUnit.MILLISECONDS);
+                    backgroundTaskQueue), 100, TimeUnit.MILLISECONDS);
     private static String debugOverride = Parameter.value("spawn.debug");
     private static final boolean useStructuredLogger = Parameter.boolValue("spawn.logger.bundle.enable",
             clusterName.equals("localhost")); // default to true if-and-only-if we are running local stack
@@ -198,6 +201,11 @@ public class Spawn implements Codec.Codable {
     private final Gauge<Integer> expandQueueGauge = Metrics.newGauge(Spawn.class, "expandKickExecutorQueue", new Gauge<Integer>() {
         public Integer value() {
             return expandKickQueue.size();
+        }
+    });
+    private final Gauge<Integer> backgroundQueueGauge = Metrics.newGauge(Spawn.class, "backgroundExecutorQueue", new Gauge<Integer>() {
+        public Integer value() {
+            return backgroundTaskQueue.size();
         }
     });
     private final HostFailWorker hostFailWorker;
