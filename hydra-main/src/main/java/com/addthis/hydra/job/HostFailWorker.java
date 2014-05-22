@@ -223,17 +223,17 @@ public class HostFailWorker {
         if (hostToFail != null) {
             String failedHostUuid = hostToFail.getLeft();
             FailState failState = hostToFail.getRight();
-            HostState host = spawn.getHostState(failedHostUuid);
-            if (host == null) {
-                // Host is gone or has no more tasks. Simply mark it as failed.
-                markHostDead(failedHostUuid);
-                return;
-            }
             if (failState == FailState.FAILING_FS_DEAD) {
                 // File system is dead. Relocate all tasks ASAP.
                 markHostDead(failedHostUuid);
                 spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.listHostStatus(null), failedHostUuid);
             } else {
+                HostState host = spawn.getHostState(failedHostUuid);
+                if (host == null) {
+                    // Host is gone or has no more tasks. Simply mark it as failed.
+                    markHostDead(failedHostUuid);
+                    return;
+                }
                 boolean diskFull = (failState == FailState.DISK_FULL);
                 if (!diskFull && spawn.getSettings().getQuiesced()) {
                     // If filesystem is okay, don't do any moves while spawn is quiesced.
