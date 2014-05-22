@@ -783,6 +783,11 @@ public class Spawn implements Codec.Codable {
     }
 
     public void deleteHost(String hostuuid) {
+        HostFailWorker.FailState failState = hostFailWorker.getFailureState(hostuuid);
+        if (failState == HostFailWorker.FailState.FAILING_FS_DEAD || failState == HostFailWorker.FailState.FAILING_FS_OKAY) {
+            log.warn("Refused to drop host because it was in the process of being failed", hostuuid);
+            throw new RuntimeException("Cannot drop a host that is in the process of being failed");
+        }
         synchronized (monitored) {
             HostState state = monitored.remove(hostuuid);
             if (state != null) {
@@ -2144,7 +2149,7 @@ public class Spawn implements Codec.Codable {
                 task.setRebalanceSource(null);
                 task.setRebalanceTarget(null);
             }
-            if (task.getState() == JobTaskState.QUEUED) {
+            if (task.getState() == JobTaskState.QUEUED || task.getState() == JobTaskState.QUEUED_HOST_UNAVAIL) {
                 removeFromQueue(task);
                 log.warn("[task.stop] stopping queued " + task.getJobKey());
             } else if (task.getState() == JobTaskState.REBALANCE) {
@@ -2161,7 +2166,7 @@ public class Spawn implements Codec.Codable {
                 queueJobTaskUpdateEvent(job);
             } else if (force && (host == null || host.isDead() || !host.isUp())) {
                 log.warn("[task.stop] " + task.getJobKey() + " killed on down host");
-                job.errorTask(task, 1);
+                job.setTaskState(task, JobTaskState.IDLE);
                 queueJobTaskUpdateEvent(job);
                 // Host is unreachable; bail once the task is errored.
                 return;
