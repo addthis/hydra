@@ -20,6 +20,8 @@ import java.io.RandomAccessFile;
 
 import java.net.SocketTimeoutException;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import java.nio.channels.FileLock;
 
 import com.addthis.basis.util.Files;
@@ -70,8 +72,8 @@ public class SourceTracker {
         }
     }
 
-    public void open(final TaskDataSource source) {
-        source.open(sourceConfig);
+    public void open(final TaskDataSource source, AtomicBoolean errored) {
+        source.open(sourceConfig, errored);
     }
 
     /**
@@ -160,8 +162,8 @@ public class SourceTracker {
      * @param source source to index and track
      * @return wrapped source or null if it could not be tracked
      */
-    public TaskDataSource openAndInit(final TaskDataSource source) {
-        open(source);
+    public TaskDataSource openAndInit(final TaskDataSource source, AtomicBoolean errored) {
+        open(source, errored);
         return init(source);
     }
 

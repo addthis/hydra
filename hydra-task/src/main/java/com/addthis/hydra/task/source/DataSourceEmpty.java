@@ -14,6 +14,7 @@
 package com.addthis.hydra.task.source;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.bundle.core.Bundle;
@@ -48,7 +49,7 @@ public class DataSourceEmpty extends TaskDataSource {
     }
 
     @Override
-    public void open(TaskRunConfig config) {
+    public void open(TaskRunConfig config, AtomicBoolean errored) {
     }
 
     @Override

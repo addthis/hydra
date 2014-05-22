@@ -14,6 +14,7 @@
 package com.addthis.hydra.task.source;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.Codec;
@@ -51,9 +52,9 @@ public class DataSourceHashed extends TaskDataSource {
     private Integer[] shards;
 
     @Override
-    public void open(TaskRunConfig config) {
+    public void open(TaskRunConfig config, AtomicBoolean errored) {
         shards = config.calcShardList(shardTotal);
-        stream.open(config);
+        stream.open(config, errored);
     }
 
     @Override
