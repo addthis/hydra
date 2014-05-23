@@ -180,9 +180,13 @@ public class Spawn implements Codec.Codable {
     private static final SettableGauge<Integer> hungJobCount = SettableGauge.newSettableGauge(Spawn.class, "hungJobs", 0);
     private static final Meter jobsStartedPerHour = Metrics.newMeter(Spawn.class, "jobsStartedPerHour", "jobsStartedPerHour", TimeUnit.HOURS);
     private static final Meter jobsCompletedPerHour = Metrics.newMeter(Spawn.class, "jobsCompletedPerHour", "jobsCompletedPerHour", TimeUnit.HOURS);
+    private static final Counter nonConsumingClientDropCounter = Metrics.newCounter(Spawn.class, "clientDrops");
 
     public static final String SPAWN_DATA_DIR = Parameter.value("SPAWN_DATA_DIR", "./data");
     public static final String SPAWN_STRUCTURED_LOG_DIR = Parameter.value("spawn.logger.bundle.dir", "./log/spawn-stats");
+
+    private static final int clientDropTimeMillis = Parameter.intValue("spawn.client.drop.time", 60000);
+    private static final int clientDropQueueSize = Parameter.intValue("spawn.client.drop.queue", 2000);
 
     // thread pool for running chore actions that we do not want running in the main thread of Spawn
     private final ExecutorService choreExecutor = MoreExecutors.getExitingExecutorService(
@@ -2979,11 +2983,15 @@ public class Spawn implements Codec.Codable {
         long time = System.currentTimeMillis();
         for (Entry<String, ClientEventListener> ev : listeners.entrySet()) {
             ClientEventListener client = ev.getValue();
-            // drop listeners we haven't heard from in a while
-            if (time - client.lastSeen > 60000) {
+            boolean queueTooLarge = clientDropQueueSize > 0 && client.events.size() > clientDropQueueSize;
+            // Drop listeners we haven't heard from in a while, or if they don't seem to be consuming from their queue
+            if (time - client.lastSeen > clientDropTimeMillis || queueTooLarge) {
                 ClientEventListener listener = listeners.remove(ev.getKey());
                 if (debug("-listen-")) {
                     log.warn("[listen] dropping listener queue for " + ev.getKey() + " = " + listener);
+                }
+                if (queueTooLarge) {
+                    nonConsumingClientDropCounter.inc();
                 }
                 continue;
             }
