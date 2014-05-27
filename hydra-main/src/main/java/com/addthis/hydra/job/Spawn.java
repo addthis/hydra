@@ -3543,13 +3543,13 @@ public class Spawn implements Codec.Codable {
     private List<HostState> getHealthyHostStatesHousingTask(JobTask task, boolean allowReplicas) {
         List<HostState> rv = new ArrayList<>();
         HostState liveHost = getHostState(task.getHostUUID());
-        if (liveHost != null && hostFailWorker.getFailureState(task.getHostUUID()) == HostFailWorker.FailState.ALIVE) {
+        if (liveHost != null && hostFailWorker.shouldKickTasks(task.getHostUUID())) {
             rv.add(liveHost);
         }
         if (allowReplicas && task.getReplicas() != null) {
             for (JobTaskReplica replica : task.getReplicas()) {
                 HostState replicaHost = replica.getHostUUID() != null ? getHostState(replica.getHostUUID()) : null;
-                if (replicaHost != null && replicaHost.hasLive(task.getJobKey()) && hostFailWorker.getFailureState(task.getHostUUID()) == HostFailWorker.FailState.ALIVE) {
+                if (replicaHost != null && replicaHost.hasLive(task.getJobKey()) && hostFailWorker.shouldKickTasks(task.getHostUUID())) {
                     rv.add(replicaHost);
                 }
             }

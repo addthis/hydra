@@ -117,6 +117,12 @@ public class HostFailWorker {
         return hostFailState.getState(hostId);
     }
 
+    public boolean shouldKickTasks(String hostId) {
+        FailState failState = getFailureState(hostId);
+        // A Failing_Fs_Okay host is nominally fine for the time being. It should be allowed to run tasks.
+        return failState == FailState.ALIVE || failState == FailState.FAILING_FS_OKAY;
+    }
+
     /**
      * Retrieve a human-readable string describing whether/how a host has been failed
      *
