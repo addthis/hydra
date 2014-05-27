@@ -23,6 +23,8 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import com.addthis.basis.util.Parameter;
+
 import com.addthis.hydra.job.Spawn;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
@@ -65,6 +67,8 @@ public class WebSocketManager extends WebSocketHandler {
      * The update thread that pushes events to the client web sockets and waits until new websockets are created when there are none
      */
     private final Thread updateThread;
+
+    private static final int clientDropQueueSize = Parameter.intValue("spawn.client.drop.queue", 2000);
 
     public WebSocketManager() {
         this.updateThread = new Thread("WebUpdateThread") {
@@ -346,6 +350,11 @@ public class WebSocketManager extends WebSocketHandler {
         }
 
         public void addEvent(Spawn.ClientEvent event) {
+            if (eventQueue.size() > clientDropQueueSize) {
+                // Queue has grown too big. Client does not appear to be consuming. Drop the socket to prevent an ugly OOM.
+                eventQueue.clear();
+                this.onClose(-1, null);
+            }
             eventQueue.add(event);
         }
 

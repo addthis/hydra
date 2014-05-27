@@ -23,7 +23,6 @@ import javax.ws.rs.core.Response;
 
 import java.io.InputStream;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -37,7 +36,6 @@ import com.addthis.hydra.job.JobMacro;
 import com.addthis.hydra.job.Spawn;
 import com.addthis.hydra.job.SpawnBalancerConfig;
 import com.addthis.hydra.job.mq.HostState;
-import com.addthis.hydra.job.spawn.entities.TopicEvent;
 import com.addthis.hydra.job.spawn.jersey.User;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.maljson.JSONArray;
@@ -94,7 +92,6 @@ public class ListenResource {
         int timeout = timeoutParameter.or(pollTimeout);
         int batchTime = batchtimeParameter.or(batchInterval);
         Spawn.ClientEventListener listener = spawn.getClientEventListener(clientId);
-        List<TopicEvent> events = new ArrayList<TopicEvent>();
         try {
             Spawn.ClientEvent nextEvent = listener.events.poll(timeout, TimeUnit.MILLISECONDS);
             if (nextEvent != null) {
