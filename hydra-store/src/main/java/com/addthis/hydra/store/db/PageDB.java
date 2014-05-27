@@ -31,6 +31,7 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.store.kv.ByteStore;
 import com.addthis.hydra.store.kv.ConcurrentByteStoreBDB;
+import com.addthis.hydra.store.kv.MapDbByteStore;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
 import com.addthis.hydra.store.skiplist.Page;
 import com.addthis.hydra.store.skiplist.PageFactory;
@@ -46,7 +47,11 @@ public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
 
     private static final Logger log = LoggerFactory.getLogger(PageDB.class);
 
+    static final String PAGED_MAP_DB = "paged.mapdb";
+    static final String PAGED_BERK_DB = "paged.bdb";
+
     static final String defaultDbName = Parameter.value("pagedb.dbname", "db.key");
+    static final String DEFAULT_BYTESTORE = Parameter.value("pagedb.bytestore", PAGED_BERK_DB);
 
     private final PagedKeyValueStore<DBKey, V> eps;
     private final DBKeyCoder<V> keyCoder;
@@ -98,12 +103,31 @@ public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
 
     public PageDB(File dir, Class<? extends V> clazz, String dbname, int maxPageSize,
             int maxPages, PageFactory factory) throws IOException {
-        ByteStore store;
         this.keyCoder = new DBKeyCoder<>(clazz);
-        store = new ConcurrentByteStoreBDB(dir, dbname);
+        String dbType = getByteStoreNameForFile(dir);
+        ByteStore store;
+        switch (dbType) {
+            case PAGED_MAP_DB:
+                store = new MapDbByteStore(dir, dbname);
+                break;
+            case PAGED_BERK_DB:
+                // fall through -- the previous dbType was always something like 'pagedb' so this is expected
+            default:
+                store = new ConcurrentByteStoreBDB(dir, dbname);
+                break;
+        }
         this.eps =  new SkipListCache.Builder<>(keyCoder, store, maxPageSize, maxPages).
         pageFactory(factory).build();
-        Files.write(new File(dir, "db.type"), Bytes.toBytes(getClass().getName()), false);
+        Files.write(new File(dir, "db.type"), Bytes.toBytes(dbType), false);
+    }
+
+    public static String getByteStoreNameForFile(File dir) throws IOException {
+        File typeFile = new File(dir, "db.type");
+        if (typeFile.exists()) {
+            return new String(Files.read(typeFile));
+        } else {
+            return DEFAULT_BYTESTORE;
+        }
     }
 
     @Override

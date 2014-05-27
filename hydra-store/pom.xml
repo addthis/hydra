@@ -42,6 +42,11 @@
     <!-- 3rd party -->
     <!-- begin compression libraries -->
     <dependency>
+      <groupId>org.mapdb</groupId>
+      <artifactId>mapdb</artifactId>
+      <version>1.0.1</version>
+    </dependency>
+    <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-buffer</artifactId>
       <version>4.0.18.Final</version>

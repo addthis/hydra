@@ -17,6 +17,7 @@ import java.io.File;
 
 import java.util.AbstractMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -63,7 +64,7 @@ public class ByteStoreBDB implements ByteStore {
     private final AtomicLong puts = new AtomicLong(0);
     private final AtomicLong bytesIn = new AtomicLong(0);
     private final AtomicLong bytesOut = new AtomicLong(0);
-    private final HashSet<ClosableIterator<PageEntry>> openIterators = new HashSet<>();
+    private final HashSet<ClosableIterator<Map.Entry<byte[], byte[]>>> openIterators = new HashSet<>();
     private final LockMode lockMode = LockMode.READ_UNCOMMITTED;
     private final OperationStatus opSuccess = OperationStatus.SUCCESS;
     private final boolean readonly;
@@ -239,12 +240,12 @@ public class ByteStoreBDB implements ByteStore {
 
     @Override
     public Map.Entry<byte[], byte[]> floorEntry(byte[] key) {
-        ClosableIterator<PageEntry> iter = iterator(key, true, false);
+        ClosableIterator<Map.Entry<byte[], byte[]>> iter = iterator(key, true, false);
         try {
             if (iter.hasNext()) {
-                PageEntry entry = iter.next();
-                byte[] rkey = entry.key();
-                byte[] rval = entry.value();
+                Map.Entry<byte[], byte[]> entry = iter.next();
+                byte[] rkey = entry.getKey();
+                byte[] rval = entry.getValue();
                 gets.incrementAndGet();
                 bytesIn.addAndGet(rkey.length + rval.length);
                 return new AbstractMap.SimpleImmutableEntry<byte[], byte[]>(rkey, rval);
@@ -257,23 +258,34 @@ public class ByteStoreBDB implements ByteStore {
     }
 
     @Override
-    public ClosableIterator<PageEntry> iterator(final byte[] start) {
-        return iterator(start, false, false);
+    public Iterator<byte[]> keyIterator(final byte[] start) {
+        final ClosableIterator<Map.Entry<byte[], byte[]>> entryIt = iterator(start, false, true);
+        return new Iterator<byte[]>() {
+            @Override
+            public boolean hasNext() {
+                return entryIt.hasNext();
+            }
+
+            @Override
+            public byte[] next() {
+                return entryIt.next().getKey();
+            }
+
+            @Override
+            public void remove() {
+                entryIt.remove();
+            }
+        };
     }
 
-    @Override
-    public ClosableIterator<PageEntry> keyIterator(final byte[] start) {
-        return iterator(start, false, true);
-    }
-
-    private ClosableIterator<PageEntry> iterator(final byte[] start, final boolean mustInclude,
+    private ClosableIterator<Map.Entry<byte[], byte[]>> iterator(final byte[] start, final boolean mustInclude,
             final boolean keyonly) {
-        return new ClosableIterator<PageEntry>() {
+        return new ClosableIterator<Map.Entry<byte[], byte[]>>() {
             private final DatabaseEntry dk = new DatabaseEntry(start);
             private final DatabaseEntry dv = new DatabaseEntry();
             private final DatabaseEntry dvs = new DatabaseEntry();
 
-            private PageEntry next;
+            private Map.Entry<byte[], byte[]> next;
             private Cursor cursor;
 
             @Override
@@ -313,7 +325,7 @@ public class ByteStoreBDB implements ByteStore {
                             cursor.getCurrent(dvs, dv, lockMode);
                         }
                         next = current();
-                        if (log.isDebugEnabled()) log.debug("--> next key=" + Bytes.toString(next.key()));
+                        if (log.isDebugEnabled()) log.debug("--> next key=" + Bytes.toString(next.getKey()));
                         synchronized (openIterators) {
                             openIterators.add(this);
                         }
@@ -346,34 +358,12 @@ public class ByteStoreBDB implements ByteStore {
                 }
             }
 
-            class BytePageEntry implements PageEntry {
-
-                private final byte[] key;
-                private final byte[] val;
-
-                BytePageEntry() {
-                    key = dk.getData();
-                    val = keyonly ? null : dv.getData();
+            private Map.Entry<byte[], byte[]> current() {
+                if (keyonly) {
+                    return new BytePageEntry(dk.getData());
+                } else {
+                    return new BytePageEntry(dk.getData(), dv.getData());
                 }
-
-                @Override
-                public String toString() {
-                    return "PE:" + Bytes.toString(key) + "=" + Bytes.toString(val);
-                }
-
-                @Override
-                public byte[] key() {
-                    return key;
-                }
-
-                @Override
-                public byte[] value() {
-                    return val;
-                }
-            }
-
-            private PageEntry current() {
-                return new BytePageEntry();
             }
 
             @Override
@@ -387,7 +377,7 @@ public class ByteStoreBDB implements ByteStore {
                     }
                     if (status == opSuccess) {
                         next = current();
-                        if (log.isDebugEnabled()) log.debug("--  hasNext key=" + Bytes.toString(next.key()));
+                        if (log.isDebugEnabled()) log.debug("--  hasNext key=" + Bytes.toString(next.getKey()));
                     } else {
                         close();
                     }
@@ -396,10 +386,10 @@ public class ByteStoreBDB implements ByteStore {
             }
 
             @Override
-            public PageEntry next() {
+            public Map.Entry<byte[], byte[]> next() {
                 if (hasNext()) {
-                    PageEntry ret = next;
-                    if (log.isDebugEnabled()) log.debug("<-- next key=" + Bytes.toString(next.key()));
+                    Map.Entry<byte[], byte[]> ret = next;
+                    if (log.isDebugEnabled()) log.debug("<-- next key=" + Bytes.toString(next.getKey()));
                     next = null;
                     return ret;
                 }
@@ -468,7 +458,7 @@ public class ByteStoreBDB implements ByteStore {
         if (openIterators.size() > 0) {
             log.warn("closing " + openIterators.size() + " iterators on close");
             for (Object e : openIterators.toArray(new Object[openIterators.size()])) {
-                ((ClosableIterator<PageEntry>) e).close();
+                ((ClosableIterator<Map.Entry<byte[], byte[]>>) e).close();
             }
         }
         log.info("pages:gets=" + gets + " puts=" + puts + " in=" + bytesIn + " out=" + bytesOut);

@@ -19,7 +19,7 @@ import java.io.InputStream;
 
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.Map.Entry;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -29,13 +29,13 @@ import java.util.zip.GZIPInputStream;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Parameter;
+import com.addthis.basis.util.Varint;
 
 import com.addthis.codec.Codec;
 import com.addthis.hydra.store.db.IReadWeighable;
 import com.addthis.hydra.store.db.ReadDBKeyCoder;
 import com.addthis.hydra.store.kv.metrics.ExternalPagedStoreMetrics;
 
-import com.addthis.basis.util.Varint;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -221,8 +221,8 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                 }
                 decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
                 while (count-- > 0) {
-                    byte kb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
-                    byte vb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                    byte[] kb = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                    byte[] vb = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
                     K key = keyCoder.keyDecode(kb);
                     decode.map.put(key, new PageValue(vb, KeyCoder.EncodeType.SPARSE));
                 }
@@ -236,8 +236,8 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                 K nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in));
                 decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
                 while (entries-- > 0) {
-                    byte kb[] = Bytes.readBytes(in);
-                    byte vb[] = Bytes.readBytes(in);
+                    byte[] kb = Bytes.readBytes(in);
+                    byte[] vb = Bytes.readBytes(in);
                     K key = keyCoder.keyDecode(kb);
                     decode.map.put(key, new PageValue(vb, KeyCoder.EncodeType.LEGACY));
                 }
@@ -392,7 +392,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         }
 
         @Override
-        public Iterator<Entry<K, V>> range(K start, boolean inclusive) {
+        public Iterator<Map.Entry<K, V>> range(K start, boolean inclusive) {
             SortedMap<K, PageValue> tailMap = start != null ? map.tailMap(start, inclusive) : map;
             if (log.isDebugEnabled()) {
                 log.debug("range start=" + start + " tailMap=" + tailMap + " map=" + map);
@@ -425,15 +425,15 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
      * <p/>
      * TODO delete class
      */
-    private final class TreePageIterator implements Iterator<Entry<K, V>> {
+    private final class TreePageIterator implements Iterator<Map.Entry<K, V>> {
 
-        private final Iterator<Entry<K, PageValue>> iter;
+        private final Iterator<Map.Entry<K, PageValue>> iter;
 
-        private final class TreePageIterEntry implements Entry<K, V> {
+        private final class TreePageIterEntry implements Map.Entry<K, V> {
 
-            private final Entry<K, PageValue> entry;
+            private final Map.Entry<K, PageValue> entry;
 
-            TreePageIterEntry(Entry<K, PageValue> entry) {
+            TreePageIterEntry(Map.Entry<K, PageValue> entry) {
                 this.entry = entry;
             }
 
@@ -469,7 +469,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         }
 
         @Override
-        public Entry<K, V> next() {
+        public Map.Entry<K, V> next() {
             return new TreePageIterEntry(iter.next());
         }
 
@@ -513,7 +513,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
 
         private KeyValuePage<K, V> nextPage;
         private KeyValuePage<K, V> page;
-        private ClosableIterator<PageEntry> keyIterator;
+        private Iterator<byte[]> keyIterator;
         private final int sampleRate;
         private final K start;
         private final boolean inclusive;
@@ -548,7 +548,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
             if (nextPage == null && keyIterator.hasNext()) {
                 byte[] encodedKey = null;
                 for (int i = 0; i < rate && keyIterator.hasNext(); i++) {
-                    encodedKey = keyIterator.next().key();
+                    encodedKey = keyIterator.next();
                 }
                 if (encodedKey != null) {
                     nextPage = getOrLoadPageForKey(keyCoder.keyDecode(encodedKey));
@@ -632,7 +632,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         }
     }
 
-    public Iterator<Entry<K, V>> range(K start, boolean inclusive, int sampleRate) {
+    public Iterator<Map.Entry<K, V>> range(K start, boolean inclusive, int sampleRate) {
         //create PageIterator (to get a stream of pages), then create a bounded iterator
         return new BoundedIterator(getPageIterator(start, inclusive, sampleRate), start, inclusive);
     }
@@ -649,19 +649,19 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
      * TODO ----
      * Probably should try to buffer next page in many cases.
      */
-    private class BoundedIterator implements ClosableIterator<Entry<K, V>> {
+    private class BoundedIterator implements ClosableIterator<Map.Entry<K, V>> {
 
         private K firstKey;
         private boolean inclusive;
         //backing PageIterator (provides pages)
         private Iterator<KeyValuePage<K, V>> pageIterator;
         //backing ValueIterator (iterates over a page)
-        private Iterator<Entry<K, V>> valueIterator;
+        private Iterator<Map.Entry<K, V>> valueIterator;
         //TreePage
         private KeyValuePage<K, V> nextPage;
         //K-V pairs
-        private Entry<K, V> lastEntry;
-        private Entry<K, V> nextEntry;
+        private Map.Entry<K, V> lastEntry;
+        private Map.Entry<K, V> nextEntry;
 
         BoundedIterator(Iterator<KeyValuePage<K, V>> iterator, K firstKey, boolean inclusive) {
             this.pageIterator = iterator;
@@ -704,7 +704,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         }
 
         @Override
-        public Entry<K, V> next() {
+        public Map.Entry<K, V> next() {
             if (!hasNext()) {
                 throw new NoSuchElementException();
             }

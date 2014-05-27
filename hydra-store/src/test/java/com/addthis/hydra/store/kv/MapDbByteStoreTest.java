@@ -14,10 +14,12 @@
 
 package com.addthis.hydra.store.kv;
 
-public interface PageEntry {
+import java.io.File;
 
-    public byte[] key();
+public class MapDbByteStoreTest extends AbstractByteStoreTest {
 
-    public byte[] value();
-
+    @Override
+    public ByteStore createByteStore(File dir, String name) {
+        return new MapDbByteStore(dir, name);
+    }
 }

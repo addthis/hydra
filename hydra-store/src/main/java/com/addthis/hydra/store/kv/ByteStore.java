@@ -14,9 +14,8 @@
 
 package com.addthis.hydra.store.kv;
 
+import java.util.Iterator;
 import java.util.Map;
-
-import com.addthis.basis.util.ClosableIterator;
 
 public interface ByteStore {
 
@@ -62,9 +61,7 @@ public interface ByteStore {
      */
     public byte[] firstEntry();
 
-    public ClosableIterator<PageEntry> iterator(byte[] start);
-
-    public ClosableIterator<PageEntry> keyIterator(byte[] start);
+    public Iterator<byte[]> keyIterator(byte[] start);
 
     public void close();
 
