@@ -14,7 +14,6 @@
 package com.addthis.hydra.job;
 
 import java.io.File;
-import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -22,6 +21,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.SimpleExec;
@@ -31,16 +31,15 @@ import com.addthis.hydra.job.backup.BackupToDelete;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class MinionTaskDeleter implements Codec.Codable {
 
     private static final Logger log = LoggerFactory.getLogger(MinionTaskDeleter.class);
 
     @Codec.Set(codable = true)
-    private final HashSet<String> tasksToDelete;
+    private final ConcurrentSkipListSet<String> tasksToDelete;
     @Codec.Set(codable = true)
-    private final HashSet<BackupToDelete> backupsToDelete;
+    private final ConcurrentSkipListSet<BackupToDelete> backupsToDelete;
 
     private static final Map<String, ScheduledBackupType> backupTypesByDesc = ScheduledBackupType.getBackupTypes();
     private static final Map<ScheduledBackupType, Long> protectedBackupTypes = ScheduledBackupType.getProtectedBackupTypes();
@@ -51,8 +50,8 @@ public class MinionTaskDeleter implements Codec.Codable {
     private Thread deletionThread;
 
     public MinionTaskDeleter() {
-        this.tasksToDelete = new HashSet<>();
-        this.backupsToDelete = new HashSet<>();
+        this.tasksToDelete = new ConcurrentSkipListSet<>();
+        this.backupsToDelete = new ConcurrentSkipListSet<>();
     }
 
     /**
