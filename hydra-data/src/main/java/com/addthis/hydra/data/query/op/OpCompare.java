@@ -18,6 +18,8 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractRowOp;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * <p>This query operation <span class="hydra-summary">filters rows based on arithmetic comparison</span>.
@@ -51,9 +53,10 @@ public class OpCompare extends AbstractRowOp {
     private String op;
     private long compValue;
 
-    public OpCompare(String args) {
+    public OpCompare(String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         try {
-            String opt[] = args.split(":");
+            String[] opt = args.split(":");
             if (opt.length == 3) {
                 col = Integer.parseInt(opt[0]);
                 op = opt[1];

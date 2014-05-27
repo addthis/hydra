@@ -18,7 +18,7 @@ import com.addthis.codec.Codec;
 import org.slf4j.Logger;
 
 import org.slf4j.LoggerFactory;
-public class BackupToDelete implements Codec.Codable {
+public class BackupToDelete implements Codec.Codable, Comparable {
 
     private static Logger log = LoggerFactory.getLogger(BackupToDelete.class);
     @Codec.Set(codable = true)
@@ -68,5 +68,10 @@ public class BackupToDelete implements Codec.Codable {
                "backupPath='" + backupPath + '\'' +
                ", backupType='" + backupType + '\'' +
                '}';
+    }
+
+    @Override
+    public int compareTo(Object o) {
+        return o != null ? Integer.compare(this.hashCode(), o.hashCode()) : 0;
     }
 }

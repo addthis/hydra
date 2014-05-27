@@ -21,7 +21,7 @@ import com.addthis.hydra.data.query.QueryException;
 
 import static com.addthis.hydra.query.web.HttpUtils.setContentTypeHeader;
 
-class DelimitedBundleEncoder extends AbstractBufferingHttpBundleEncoder {
+public class DelimitedBundleEncoder extends AbstractBufferingHttpBundleEncoder {
 
     String delimiter;
 

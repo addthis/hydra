@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.store.kv;
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.InputStream;
 
@@ -47,10 +48,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.SnappyInputStream;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.Unpooled;
-
 /**
  * read only caching page store intended to play nice with the query system
  * <p/>
@@ -82,8 +79,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
 
     private final boolean collectMetrics;
 
-    protected static final int FLAGS_TYPE_OFFSET = 5;
-    protected static final int FLAGS_COMPRESSION_TYPE = 0x0f;
+    private static final int FLAGS_IS_SPARSE = 1 << 5;
 
     /**
      * guava loading cache for storing pages. Get method takes the exact page key, so finding the
@@ -189,13 +185,11 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
 
     //decode pages. Called on the bytes returned by store.get()
     private TreePage pageDecode(byte[] page) {
-        ByteBuf buffer = Unpooled.wrappedBuffer(page);
         try {
-            InputStream in = new ByteBufInputStream(buffer);
-            long header = Varint.readUnsignedVarLong(buffer);
-            int gztype = ((int) header) & FLAGS_COMPRESSION_TYPE;
-            int ordinal = (int) (header >>> FLAGS_TYPE_OFFSET);
-            KeyCoder.EncodeType encodeType = KeyCoder.EncodeType.from(ordinal);
+            InputStream in = new ByteArrayInputStream(page);
+            int flags = in.read() & 0xff;
+            int gztype = flags & 0x0f;
+            boolean isSparse = (flags & FLAGS_IS_SPARSE) != 0;
             switch (gztype) {
                 case 1:
                     in = new InflaterInputStream(in);
@@ -211,49 +205,46 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                     break;
             }
             TreePage decode;
-            switch (encodeType) {
-                case LEGACY: {
-                    int entries = (int) Bytes.readLength(in);
-                    if (collectMetrics) {
-                        metrics.updatePageSize(entries);
-                    }
-                    K firstKey = keyCoder.keyDecode(Bytes.readBytes(in));
-                    K nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in));
-                    decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
-                    while (entries-- > 0) {
-                        byte[] kb = Bytes.readBytes(in);
-                        byte[] vb = Bytes.readBytes(in);
-                        K key = keyCoder.keyDecode(kb);
-                        decode.map.put(key, new PageValue(vb, KeyCoder.EncodeType.LEGACY));
-                    }
-                    //ignoring memory data
-                    in.close();
-                    if (log.isDebugEnabled()) {
-                        log.debug("decoded " + decode);
-                    }
-                    break;
+            if (isSparse) {
+                DataInputStream dis = new DataInputStream(in);
+                int entries = Varint.readUnsignedVarInt(dis);
+                if (collectMetrics) {
+                    metrics.updatePageSize(entries);
                 }
-                default: {
-                    DataInputStream dis = new DataInputStream(in);
-                    int entries = Varint.readUnsignedVarInt(dis);
-                    if (collectMetrics) {
-                        metrics.updatePageSize(entries);
-                    }
-                    int count = entries;
+                int count = entries;
 
-                    K firstKey = keyCoder.keyDecode(Bytes.readBytes(in, Varint.readUnsignedVarInt(dis)));
-                    int nextFirstKeyLength = Varint.readUnsignedVarInt(dis);
-                    K nextFirstKey = null;
-                    if (nextFirstKeyLength > 0) {
-                        nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in, nextFirstKeyLength));
-                    }
-                    decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
-                    while (count-- > 0) {
-                        byte[] kb = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
-                        byte[] vb = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
-                        K key = keyCoder.keyDecode(kb);
-                        decode.map.put(key, new PageValue(vb, encodeType));
-                    }
+                K firstKey = keyCoder.keyDecode(Bytes.readBytes(in, Varint.readUnsignedVarInt(dis)));
+                int nextFirstKeyLength = Varint.readUnsignedVarInt(dis);
+                K nextFirstKey = null;
+                if (nextFirstKeyLength > 0) {
+                    nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in, nextFirstKeyLength));
+                }
+                decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
+                while (count-- > 0) {
+                    byte[] kb = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                    byte[] vb = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                    K key = keyCoder.keyDecode(kb);
+                    decode.map.put(key, new PageValue(vb, KeyCoder.EncodeType.SPARSE));
+                }
+
+            } else {
+                int entries = (int) Bytes.readLength(in);
+                if (collectMetrics) {
+                    metrics.updatePageSize(entries);
+                }
+                K firstKey = keyCoder.keyDecode(Bytes.readBytes(in));
+                K nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in));
+                decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
+                while (entries-- > 0) {
+                    byte[] kb = Bytes.readBytes(in);
+                    byte[] vb = Bytes.readBytes(in);
+                    K key = keyCoder.keyDecode(kb);
+                    decode.map.put(key, new PageValue(vb, KeyCoder.EncodeType.LEGACY));
+                }
+                //ignoring memory data
+                in.close();
+                if (log.isDebugEnabled()) {
+                    log.debug("decoded " + decode);
                 }
             }
 
@@ -263,8 +254,6 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
             throw ex;
         } catch (Exception ex) {
             throw new RuntimeException(ex);
-        } finally {
-            buffer.release();
         }
     }
 

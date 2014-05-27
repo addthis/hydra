@@ -118,6 +118,7 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
 
     private final AtomicLong totalEmit = new AtomicLong(0);
     private final AtomicBoolean emitGate = new AtomicBoolean(false);
+    private final AtomicBoolean errored = new AtomicBoolean(false);
     private final long startTime = JitterClock.globalTime();
     private long lastMark;
     private TaskRunConfig config;
@@ -238,7 +239,7 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         if (map == null) {
             map = new MapDef();
         }
-        getSource().init(config);
+        getSource().init(config, errored);
         getOutput().init(config);
         if (builder != null) {
             builder.init();
@@ -406,5 +407,9 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         getOutput().sendComplete();
         log.info("[taskComplete]");
         emitTaskExitState();
+    }
+
+    public AtomicBoolean getErrored() {
+        return errored;
     }
 }

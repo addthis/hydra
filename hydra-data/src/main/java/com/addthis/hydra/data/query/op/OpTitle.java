@@ -26,6 +26,8 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractQueryOp;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * <p>This query operation <span class="hydra-summary">inserts a row at the top of the data</span>.
@@ -42,14 +44,15 @@ public class OpTitle extends AbstractQueryOp {
     /**
      * @param args
      */
-    public OpTitle(String args) {
-        this(Strings.splitArray(args, ","));
+    public OpTitle(String args, ChannelProgressivePromise queryPromise) {
+        this(Strings.splitArray(args, ","), queryPromise);
     }
 
     /**
      * @param title
      */
-    public OpTitle(String title[]) {
+    public OpTitle(String[] title, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         for (String col : title) {
             header.add(ValueFactory.create(col));
         }

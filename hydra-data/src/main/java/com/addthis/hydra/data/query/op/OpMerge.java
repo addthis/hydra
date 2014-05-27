@@ -20,9 +20,10 @@ import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.hydra.data.query.AbstractQueryOp;
 import com.addthis.hydra.data.query.QueryOp;
-import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.hydra.data.query.op.merge.MergeConfig;
 import com.addthis.hydra.data.query.op.merge.MergedValue;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 
 /**
@@ -74,10 +75,11 @@ public class OpMerge extends AbstractQueryOp {
     private final int countdown;
     private final MergedValue[] conf;
     private final ListBundleFormat format = new ListBundleFormat();
-    private final QueryStatusObserver queryStatusObserver;
+    private final ChannelProgressivePromise queryPromise;
 
-    public OpMerge(String args, QueryStatusObserver queryStatusObserver) {
-        this.queryStatusObserver = queryStatusObserver;
+    public OpMerge(String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
+        this.queryPromise = queryPromise;
 
         mergeConfig = new MergeConfig(args);
         countdown = mergeConfig.numericArg;
@@ -90,7 +92,7 @@ public class OpMerge extends AbstractQueryOp {
 
     @Override
     public void send(Bundle bundle) {
-        if (queryStatusObserver.queryCompleted) {
+        if (queryPromise.isDone()) {
             return;
         }
         String key = mergeConfig.handleBindAndGetKey(bundle, format);
@@ -122,7 +124,7 @@ public class OpMerge extends AbstractQueryOp {
     @Override
     public void sendComplete() {
         QueryOp next = getNext();
-        if (!queryStatusObserver.queryCompleted) {
+        if (!queryPromise.isDone()) {
             maybeSendLastRow();
         }
         next.sendComplete();

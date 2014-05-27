@@ -174,7 +174,7 @@ public class Hoover extends TaskRunnable implements Runnable {
      * Default is ["ssh", "{{USER}}@{{HOST}}", "ls", "{{PATH}}" ].
      */
     @Codec.Set(codable = true)
-    private String listCommand[] = new String[]{"ssh", "{{USER}}@{{HOST}}", "ls", "{{PATH}}"};
+    private String listCommand[] = new String[]{"ssh", "{{USER}}@{{HOST}}", "ls", "-l", "{{PATH}}"};
 
     /**
      * Execute this command to copy a file from the remote machine to the local machine.
@@ -279,6 +279,12 @@ public class Hoover extends TaskRunnable implements Runnable {
      */
     @Codec.Set(codable = true)
     private int maxFindAttempts = 5;
+
+    /**
+     * if true files that already exist but differ in size will be re-transferred from remote host
+     */
+    @Codec.Set(codable = true)
+    private boolean matchSize = false;
 
     private AtomicBoolean terminated = new AtomicBoolean(false);
     private SimpleDateFormat dateFormat;
@@ -444,8 +450,8 @@ public class Hoover extends TaskRunnable implements Runnable {
         }
     }
 
-    private MarkFile getMarkFile(String host, String fileName) {
-        return new MarkFile(host, fileName);
+    private MarkFile getMarkFile(String host, Long size, String fileName) {
+        return new MarkFile(host, size, fileName);
     }
 
     private int postCommand() {
@@ -526,7 +532,7 @@ public class Hoover extends TaskRunnable implements Runnable {
             return false;
         }
 
-        if (markFile.markFile.exists()) {
+        if (markFile.markFile.exists() && (!matchSize || markFile.markFile.length() == markFile.size)) {
             if (verboseCheck || log.isDebugEnabled()) log.info("mark skip for host=" + markFile.host + " file=" + markFile.name());
             return false;
         }
@@ -556,10 +562,11 @@ public class Hoover extends TaskRunnable implements Runnable {
         try {
             Process proc = Runtime.getRuntime().exec(newCmd);
             BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-            String fileName = null;
-            while ((fileName = reader.readLine()) != null) {
-                MarkFile markFile = getMarkFile(hostNickname, fileName.trim());
-                if (verboseCheck || log.isDebugEnabled()) log.info("found host=" + host + " file=" + fileName);
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] fileDetails = line.split(" ");
+                MarkFile markFile = getMarkFile(hostNickname, Long.valueOf(fileDetails[4].trim()), fileDetails[8].trim());
+                if (verboseCheck || log.isDebugEnabled()) log.info("found host=" + host + " file=" + fileDetails[8] + " size=" + fileDetails[4]);
                 if (checkFile(markFile)) {
                     files.add(markFile);
                 }
@@ -664,10 +671,12 @@ public class Hoover extends TaskRunnable implements Runnable {
         public final String dateDay;
         public final String dateHour;
         public final DateTime dateTime;
+        public final long size;
 
-        MarkFile(String host, String path) {
+        MarkFile(String host, long size, String path) {
             this.host = host;
             this.path = path;
+            this.size = size;
             this.fileName = new File(path).getName();
             try {
                 File hostRoot = Files.initDirectory(new File(markRoot, host));

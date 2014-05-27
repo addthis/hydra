@@ -13,218 +13,107 @@
  */
 package com.addthis.hydra.data.util;
 
-import java.io.UnsupportedEncodingException;
-
-import java.util.AbstractMap;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.addthis.basis.util.Varint;
-
 import com.addthis.codec.Codec;
-import com.addthis.codec.CodecBin2;
-import com.addthis.hydra.store.kv.KeyCoder;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.Unpooled;
+/**
+ * Class that helps maintain a top N list for any String Map TODO should move
+ * into basis libraries
+ */
+public final class KeyTopper implements Codec.Codable {
 
-public final class KeyTopper implements Codec.Codable, Codec.SuperCodable,
-        Codec.BytesCodable {
-
-    private static final byte[] EMPTY = new byte[0];
-
-    protected static final CodecBin2 codec = new CodecBin2();
-
-    private static final Logger log = LoggerFactory.getLogger(KeyTopper.class);
-
-    /**
-     * Construct a top-K counter with a size of zero.
-     * The key topper will allocate memory upon the first insert operation.
-     */
     public KeyTopper() {
-        values = new long[0];
-        locations = new HashMap<>();
-        keys = new String[0];
-        size = 0;
     }
 
-    /**
-     * Is not used during the lifetime of the object.
-     * Used for backwards compatibility when decoding an object.
-     */
-    @Codec.Set(codable = true)
+    @Codec.Set(codable = true, required = true)
     private HashMap<String, Long> map;
-
-    /**
-     * Is not used during the lifetime of the object.
-     * Used for backwards compatibility when decoding an object.
-     */
     @Codec.Set(codable = true)
     private long minVal;
-
-    /**
-     * Is not used during the lifetime of the object.
-     * Used for backwards compatibility when decoding an object.
-     */
     @Codec.Set(codable = true)
     private String minKey;
-
-    /**
-     * Is not used during the lifetime of the object.
-     * Used for backwards compatibility when decoding an object.
-     */
     @Codec.Set(codable = true)
     private boolean lossy;
 
-    /**
-     * These fields are used by the class. Any other
-     * fields are for backwards compatibility.
-     * keys are stored in unsorted order.
-     * values are stored in unsorted order.
-     * locations assign strings to a position in the two arrays.
-     * size represents the number of items currently in the object.
-     */
-    private Map<String,Integer> locations;
-    private String[] keys;
-    private long[] values;
-    private int size;
-
     @Override
     public String toString() {
-        return "topper(keys: " +
-               Arrays.toString(keys) +
-               " values: " +
-               Arrays.toString(values) + ")";
+        return "topper(min:" + minKey + "=" + minVal + "->" + map.toString() + ",lossy:" + lossy + ")";
     }
 
-    private static class StringLong implements Comparable<StringLong> {
+    public KeyTopper init() {
+        map = new HashMap<String, Long>();
+        return this;
+    }
 
-        private final String key;
-        private final long value;
+    public KeyTopper setLossy(boolean isLossy) {
+        lossy = isLossy;
+        return this;
+    }
 
-        StringLong(String key, long value) {
-            this.key = key;
-            this.value = value;
-        }
+    public boolean isLossy() {
+        return lossy;
+    }
 
-        @Override
-        public int compareTo(StringLong other) {
-            return Long.compare(this.value, other.value);
-        }
+    public int size() {
+        return map.size();
+    }
+
+    public Long get(String key) {
+        return map.get(key);
     }
 
     /**
      * returns the list sorted by greatest to least count.
-     * This is an expensive operation.
      */
+    @SuppressWarnings("unchecked")
     public Map.Entry<String, Long>[] getSortedEntries() {
-
-        Map.Entry<String, Long> e[] = new Map.Entry[size];
-        StringLong sl[] = new StringLong[size];
-        for(int i = 0; i < size; i++) {
-            sl[i] = new StringLong(keys[i], values[i]);
-        }
-        Arrays.sort(sl);
-        for(int i = 0; i < size; i++) {
-            e[i] = new AbstractMap.SimpleImmutableEntry<>(sl[i].key, sl[i].value);
-        }
+        Map.Entry e[] = new Map.Entry[map.size()];
+        e = map.entrySet().toArray(e);
+        Arrays.sort(e, new Comparator() {
+            public int compare(Object arg0, Object arg1) {
+                return (int) (((Long) ((Map.Entry) arg1).getValue()) - ((Long) ((Map.Entry) arg0).getValue()));
+            }
+        });
         return e;
     }
 
-    /**
-     * Resize the collections as requested.
-     *
-     * @param capacity
-     */
-    private void resize(int capacity) {
-        if (capacity > values.length) {
-            long[] newValues = new long[capacity];
-            String[] newNames = new String[capacity];
-            System.arraycopy(values, 0, newValues, 0, size);
-            System.arraycopy(keys, 0, newNames, 0, size);
-            values = newValues;
-            keys = newNames;
-        } else if (capacity < values.length) {
-            Map.Entry<String,Long>[] sorted = getSortedEntries();
-            Map<String,Integer> newLocations = new HashMap<>();
-            long[] newValues = new long[capacity];
-            String[] newKeys = new String[capacity];
-            int newSize = Math.min(size, capacity);
-            for(int i = 0; i < newSize; i++) {
-                Map.Entry<String,Long> entry = sorted[i];
-                newKeys[i] = entry.getKey();
-                newValues[i] = entry.getValue();
-                newLocations.put(entry.getKey(), i);
-            }
-            keys = newKeys;
-            values = newValues;
-            locations = newLocations;
-            size = newSize;
-        }
-    }
-
-    /**
-     * Scan through all elements to find the minimum element.
-     */
-    private int selectMinElement() {
-        long minValue = Long.MAX_VALUE;
-        int position = -1;
-        for(int i = 0; i < size; i++) {
-            if (values[i] < minValue) {
-                minValue = values[i];
-                position = i;
+    /** */
+    private void recalcMin(boolean maxed, boolean newentry, String id) {
+        if (minKey == null || (maxed && newentry) || (!newentry && id.equals(minKey))) {
+            minVal = 0;
+            for (Map.Entry<String, Long> e : this.map.entrySet()) {
+                if (minVal == 0 || e.getValue() < minVal) {
+                    minVal = e.getValue();
+                    minKey = e.getKey();
+                }
             }
         }
-        return position;
     }
 
     /**
-     * Inserts the key {@code key} with a corresponding weight.
-     * This will evict another key with the current minimum weight.
-     * If {@code additive} is true then the new value associated
-     * with {@code key} is the current minimum + weight. Otherwise
-     * the new value is the weight. The correct implementation of
-     * the top-K data structure assumes that {@code additive} is true.
-     *
-     * @param id        new key to insert
-     * @param weight    weight associated with key
-     * @param position  position of the minimum element
-     * @param additive  see comment above
-     * @return          old key that is removed
-     */
-    private String replace(String id, long weight, int position, boolean additive) {
-        String evicted = keys[position];
-        locations.remove(evicted);
-        locations.put(id, position);
-        keys[position] = id;
-        values[position] = weight + (additive ? values[position] : 0);
-        return evicted;
-    }
-
-    /**
-     * Updates the key {@code id} using a weight of 1.
-     * If the key is already in the top-K then increment its weight.
-     * Otherwise evict a key with the minimum value and replace
-     * it with (key, minimum + 1).
+     * Adds 'ID' the top N if: 1) there are more empty slots or 2) count >
+     * smallest top count in the list
      *
      * @param id
      * @return element dropped from top or null if accepted into top with no
      *         drops
      */
     public String increment(String id, int maxsize) {
-        return increment(id, 1, maxsize);
+        Long count = map.get(id);
+        if (count == null) {
+            count = Math.max(lossy && (map.size() >= maxsize) ? minVal - 1 : 0L, 0L);
+        }
+        return update(id, count + 1, maxsize);
     }
 
     /**
-     * Updates the key {@code id} with the specified weight.
-     * If the key is already in the top-K then update the weight.
-     * Otherwise evict a key with the minimum value and replace
-     * it with (key, minimum + weight).
+     * Adds 'ID' the top N if: 1) there are more empty slots or 2) count >
+     * smallest top count in the list
+     * This one increments weight
      *
      * @param id
      * @param weight
@@ -232,197 +121,87 @@ public final class KeyTopper implements Codec.Codable, Codec.SuperCodable,
      *         drops
      */
     public String increment(String id, int weight, int maxsize) {
-        Integer position = locations.get(id);
-        if (position != null) {
-            values[position] += weight;
-            return null;
+        Long count = map.get(id);
+
+        if (count == null) {
+            count = Math.max(lossy && (map.size() >= maxsize) ? minVal - 1 : 0L, 0L);
         }
-        resize(maxsize);
-        if (size < values.length) {
-            values[size] = weight;
-            keys[size] = id;
-            locations.put(id, size);
-            size++;
-            return null;
+
+        return update(id, count + weight, maxsize);
+    }
+
+    public String decrement(String id, int maxsize) {
+        Long count = map.get(id);
+        if (count == null) {
+            count = Math.max(lossy && (map.size() >= maxsize) ? minVal + 1 : 0L, 0L);
         }
-        return replace(id, weight, selectMinElement(), true);
+        return update(id, count - 1, maxsize);
     }
 
     /**
      * Increments the count for 'ID' in the top map if 'ID' already exists in
-     * the map.
+     * the map. This method is used if you want to increment a lossy top without
+     * removing an element. Used when there is a two stage update for new data
+     * elements
      *
      * @param id the id to increment if it already exists in the map
      * @return whether the element was in the map
      */
     public boolean incrementExisting(String id) {
-        Integer position = locations.get(id);
-        if (position != null) {
-            values[position]++;
+        if (map.containsKey(id)) {
+            map.put(id, get(id) + 1);
             return true;
-        } else {
-            return false;
         }
+        return false;
     }
 
     /**
-     *
-     * This method is maintained for legacy purposes although it does not
-     * conform to the standard behavior of a top-K data structure.
-     * It adds {@code id} the data structure if (1) there are more empty slots
-     * or (2) count > smallest top count in the list. A correct top-K update
-     * operation should always insert the new key into the data structure.
-     * Use {@link #increment(String, int)} or {@link #increment(String, int, int)}
-     * to maintain the correct semantics for top-K items.
+     * Adds 'ID' the top N if: 1) there are more empty slots or 2) count >
+     * smallest top count in the list
      *
      * @param id
      * @param count
      * @return element dropped from top or null if accepted into top with no
      *         drops. returns the offered key if it was rejected for update
      *         or inclusion in the top.
-     **/
+     */
     public String update(String id, long count, int maxsize) {
-        Integer position = locations.get(id);
-        if (position != null) {
-            values[position] = count;
-            return null;
-        }
-        resize(maxsize);
-        if (size < values.length) {
-            values[size] = count;
-            locations.put(id, size);
-            keys[size] = id;
-            size++;
-            return null;
-        } else {
-            int minPosition = selectMinElement();
-            if (count <= values[minPosition]) {
-                return id;
+        String removed = null;
+        /** should go into top */
+        if (count >= minVal) {
+            boolean newentry = map.get(id) == null;
+            boolean maxed = map.size() >= maxsize;
+            // only remove if topN is full and we're not updating an existing entry
+            if (maxed && newentry) {
+                if (minKey == null && minVal == 0) {
+                    recalcMin(maxed, newentry, id);
+                }
+                map.remove(minKey);
+                removed = minKey;
+            }
+            // update or add entry
+            map.put(id, count);
+            // recalc min *only* if the min entry was removed or updated
+            // checking for null minkey is critical check for empty topN as it
+            // sets first min
+            if (count == minVal) {
+                minKey = id;
             } else {
-                return replace(id, count, minPosition, false);
+                recalcMin(maxed, newentry, id);
             }
         }
-    }
-
-    public int size() {
-        return size;
-    }
-
-
-    /**
-     * Returns either the estimated count associated with the key,
-     * or null if the key is not present in the top-K items.
-     *
-     * @param key
-     * @return
-     */
-    public Long get(String key) {
-        Integer position = locations.get(key);
-        if (position != null) {
-            return values[position];
-        } else {
-            return null;
-        }
-    }
-
-    @Override
-    public byte[] bytesEncode(long version) {
-
-        if (size == 0) {
-            return EMPTY;
-        }
-        String key = null;
-        long value;
-        byte[] retBytes = null;
-        ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.buffer();
-        try {
-            Varint.writeUnsignedVarInt(size, byteBuf);
-            for (int index = 0; index < size; index++) {
-                key = keys[index];
-                value = values[index];
-                if (key == null) {
-                    throw new IllegalStateException("KeyTopper decoded null key");
-                }
-                byte[] keyBytes = key.getBytes("UTF-8");
-                Varint.writeUnsignedVarInt(keyBytes.length, byteBuf);
-                byteBuf.writeBytes(keyBytes);
-                Varint.writeUnsignedVarLong(value, byteBuf);
-            }
-            retBytes = new byte[byteBuf.readableBytes()];
-            byteBuf.readBytes(retBytes);
-        } catch (UnsupportedEncodingException e) {
-            log.error("Unexpected error while encoding \"" + key + "\"", e);
-            throw new RuntimeException(e);
-        } finally {
-            byteBuf.release();
-        }
-        return retBytes;
-    }
-
-    @Override
-    public void bytesDecode(byte[] b, long version) {
-        if (version < KeyCoder.EncodeType.KEYTOPPER.ordinal()) {
-            try {
-                codec.decode(this, b);
-            } catch (RuntimeException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        } else {
-            if (b.length == 0) {
-                return;
-            }
-            ByteBuf byteBuf = Unpooled.wrappedBuffer(b);
-            byte[] keybytes = null;
-            try {
-                int newsize = Varint.readUnsignedVarInt(byteBuf);
-                resize(newsize);
-                size = newsize;
-                for (int index = 0; index < size; index++) {
-                    int keyLength = Varint.readUnsignedVarInt(byteBuf);
-                    keybytes = new byte[keyLength];
-                    byteBuf.readBytes(keybytes);
-                    String key = new String(keybytes, "UTF-8");
-                    long value = Varint.readUnsignedVarLong(byteBuf);
-                    keys[index] = key;
-                    values[index] = value;
-                    locations.put(key, index);
-                }
-            } catch (UnsupportedEncodingException e) {
-                log.error("Unexpected error while decoding \"" +
-                          Arrays.toString(keybytes) + "\"", e);
-                throw new RuntimeException(e);
-            } finally {
-                byteBuf.release();
+        /** should go into top */
+        else if (map.size() < maxsize) {
+            map.put(id, count);
+            if (minKey == null || count < minVal) {
+                minKey = id;
+                minVal = count;
             }
         }
-    }
-
-    /**
-     * The {@link #bytesEncode(long)} method does not need any
-     * behavior from this method.
-     */
-    @Override
-    public void preEncode() {}
-
-    /**
-     * This method is responsible for converting the old legacy fields
-     * {@link #map}, {@link #minVal} and {@link #minKey} into the new
-     * fields.
-     **/
-    @Override
-    public void postDecode() {
-        int newsize = map.size();
-        resize(newsize);
-        size = newsize;
-        int index = 0;
-        for (Map.Entry<String, Long> entry : map.entrySet()) {
-            keys[index] = entry.getKey();
-            values[index] = entry.getValue();
-            locations.put(entry.getKey(), index);
-            index++;
+        /** not eligible for top */
+        else {
+            removed = id;
         }
-        map = null;
+        return removed;
     }
 }

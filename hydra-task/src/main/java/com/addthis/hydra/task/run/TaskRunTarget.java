@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.run;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.task.source.TaskDataSource;
 
@@ -20,6 +22,8 @@ import com.addthis.hydra.task.source.TaskDataSource;
 public interface TaskRunTarget {
 
     public TaskDataSource getSource();
+
+    public AtomicBoolean getErrored();
 
     /**
      * called during normal processing

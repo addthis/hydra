@@ -23,8 +23,6 @@ import java.util.Set;
 
 import com.addthis.basis.util.Files;
 
-import com.addthis.hydra.query.util.MeshSourceAggregator;
-import com.addthis.hydra.query.util.QueryData;
 import com.addthis.meshy.service.file.FileReference;
 
 import org.junit.After;
@@ -178,17 +176,17 @@ public class MeshQueryMasterTest {
 
     @Test
     public void testAllocateQueryTask_happyPath() throws Exception {
-        Map<String, Integer> queryTaskCountMap = new HashMap<String, Integer>();
-        queryTaskCountMap.put("h1", 1);
-        queryTaskCountMap.put("h2", 0);
-        FileReference fileReference1 = new FileReference("test1", 1000, 1000) {{ setHostUUID("h1"); }};
-        FileReference fileReference2 = new FileReference("test1", 1000, 1000) {{ setHostUUID("h2"); }};
-        HashMap<String, Boolean> readOnlyHostMap = new HashMap<String, Boolean>();
-        HashSet<QueryData> queryDataSet = new HashSet<QueryData>();
-        queryDataSet.add(new QueryData(null, fileReference1, null, "jobid", 0));
-        queryDataSet.add(new QueryData(null, fileReference2, null, "jobid", 0));
-        QueryData bestQueryData = MeshSourceAggregator.allocateQueryTaskLegacy(queryTaskCountMap, queryDataSet, readOnlyHostMap);
-        assertEquals(bestQueryData.hostEntryInfo.getHostName(), fileReference2.getHostUUID());
+//        Map<String, Integer> queryTaskCountMap = new HashMap<String, Integer>();
+//        queryTaskCountMap.put("h1", 1);
+//        queryTaskCountMap.put("h2", 0);
+//        FileReference fileReference1 = new FileReference("test1", 1000, 1000) {{ setHostUUID("h1"); }};
+//        FileReference fileReference2 = new FileReference("test1", 1000, 1000) {{ setHostUUID("h2"); }};
+//        HashMap<String, Boolean> readOnlyHostMap = new HashMap<String, Boolean>();
+//        HashSet<QueryData> queryDataSet = new HashSet<QueryData>();
+//        queryDataSet.add(new QueryData(null, fileReference1, null, "jobid", 0));
+//        queryDataSet.add(new QueryData(null, fileReference2, null, "jobid", 0));
+//        QueryData bestQueryData = TaskAllocator.allocateQueryTaskLegacy(queryTaskCountMap, queryDataSet, readOnlyHostMap);
+//        assertEquals(bestQueryData.hostEntryInfo.getHostName(), fileReference2.getHostUUID());
     }
 
 //	@Test

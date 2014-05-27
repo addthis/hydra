@@ -43,7 +43,6 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractRowOp;
-import com.addthis.hydra.data.query.QueryStatusObserver;
 import com.addthis.muxy.MuxFile;
 import com.addthis.muxy.MuxFileDirectory;
 
@@ -54,6 +53,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.SnappyInputStream;
 import org.xerial.snappy.SnappyOutputStream;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 /**
  * <p>This query operation <span class="hydra-summary">performs a disk-backed sort</span>.
@@ -88,9 +89,9 @@ public class OpDiskSort extends AbstractRowOp {
     private static final int CHUNK_MERGES = Parameter.intValue("op.disksort.chunk.merges", 1000);
     private static final int GZTYPE = Parameter.intValue("op.disksort.gz.type", 0);
 
-    private final Bundle buffer[] = new Bundle[CHUNK_ROWS + 1];
+    private final Bundle[] buffer = new Bundle[CHUNK_ROWS + 1];
     private final BundleFactory factory = new ListBundle();
-    private final QueryStatusObserver queryStatusObserver;
+    private final ChannelProgressivePromise queryPromise;
 
     private Path tempDir;
     private String[] cols;
@@ -102,8 +103,9 @@ public class OpDiskSort extends AbstractRowOp {
     private BundleComparator comparatorSS;
     private int chunk = 0;
 
-    public OpDiskSort(String args, String tempDirString, QueryStatusObserver queryStatusObserver) {
-        this.queryStatusObserver = queryStatusObserver;
+    public OpDiskSort(String args, String tempDirString, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
+        this.queryPromise = queryPromise;
         init(args, tempDirString);
     }
 
@@ -209,7 +211,7 @@ public class OpDiskSort extends AbstractRowOp {
         if (chunk == 0) {
             Arrays.sort(buffer, 0, bufferIndex, comparator);
             for (int i = 0; i < bufferIndex; i++) {
-                if (!queryStatusObserver.queryCompleted) {
+                if (!queryPromise.isDone()) {
                     getNext().send(buffer[i]);
                 } else {
                     break;
@@ -219,7 +221,7 @@ public class OpDiskSort extends AbstractRowOp {
             super.sendComplete();
             return;
         }
-        if (!queryStatusObserver.queryCompleted) {
+        if (!queryPromise.isDone()) {
             dumpBufferToMFM();
         } else {
             cleanup();
@@ -230,12 +232,12 @@ public class OpDiskSort extends AbstractRowOp {
         /** progressively compact levels until only one chunk is emitted in a merge */
         if (chunk > CHUNK_MERGES) {
             while (mergeLevel(level++) > CHUNK_MERGES) {
-                if (queryStatusObserver.queryCompleted) {
+                if (queryPromise.isDone()) {
                     break;
                 }
             }
         }
-        if (queryStatusObserver.queryCompleted) {
+        if (queryPromise.isDone()) {
             cleanup();
             super.sendComplete();
             return;
@@ -245,7 +247,7 @@ public class OpDiskSort extends AbstractRowOp {
         Bundle next = null;
         int bundles = 0;
         while ((next = sortedSource.next()) != null) {
-            if (!queryStatusObserver.queryCompleted) {
+            if (!queryPromise.isDone()) {
                 getNext().send(next);
                 bundles++;
             } else {
@@ -377,7 +379,7 @@ public class OpDiskSort extends AbstractRowOp {
 
     private class BundleComparator implements Comparator<Bundle> {
 
-        private BundleField columns[];
+        private BundleField[] columns;
 
         @Override
         public int compare(Bundle o1, Bundle o2) {

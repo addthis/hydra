@@ -117,6 +117,12 @@ public class HostFailWorker {
         return hostFailState.getState(hostId);
     }
 
+    public boolean shouldKickTasks(String hostId) {
+        FailState failState = getFailureState(hostId);
+        // A Failing_Fs_Okay host is nominally fine for the time being. It should be allowed to run tasks.
+        return failState == FailState.ALIVE || failState == FailState.FAILING_FS_OKAY;
+    }
+
     /**
      * Retrieve a human-readable string describing whether/how a host has been failed
      *
@@ -223,17 +229,17 @@ public class HostFailWorker {
         if (hostToFail != null) {
             String failedHostUuid = hostToFail.getLeft();
             FailState failState = hostToFail.getRight();
-            HostState host = spawn.getHostState(failedHostUuid);
-            if (host == null) {
-                // Host is gone or has no more tasks. Simply mark it as failed.
-                markHostDead(failedHostUuid);
-                return;
-            }
             if (failState == FailState.FAILING_FS_DEAD) {
                 // File system is dead. Relocate all tasks ASAP.
                 markHostDead(failedHostUuid);
                 spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.listHostStatus(null), failedHostUuid);
             } else {
+                HostState host = spawn.getHostState(failedHostUuid);
+                if (host == null) {
+                    // Host is gone or has no more tasks. Simply mark it as failed.
+                    markHostDead(failedHostUuid);
+                    return;
+                }
                 boolean diskFull = (failState == FailState.DISK_FULL);
                 if (!diskFull && spawn.getSettings().getQuiesced()) {
                     // If filesystem is okay, don't do any moves while spawn is quiesced.
@@ -538,9 +544,9 @@ public class HostFailWorker {
         public FailState getState(String hostId) {
             synchronized (hostsToFailByType) {
                 if (failFsOkay.contains(hostId)) {
-                    return FailState.FAILING_FS_DEAD;
-                } else if (failFsDead.contains(hostId)) {
                     return FailState.FAILING_FS_OKAY;
+                } else if (failFsDead.contains(hostId)) {
+                    return FailState.FAILING_FS_DEAD;
                 } else if (fsFull.contains(hostId)) {
                     return FailState.DISK_FULL;
                 } else {

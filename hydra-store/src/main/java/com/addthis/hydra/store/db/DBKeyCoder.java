@@ -57,7 +57,6 @@ class DBKeyCoder<V extends Codec.BytesCodable> implements KeyCoder<DBKey, V> {
                 case LEGACY:
                     return codec.encode(value);
                 case SPARSE:
-                case KEYTOPPER:
                     if (value == null) {
                         return zero;
                     } else {
@@ -84,7 +83,6 @@ class DBKeyCoder<V extends Codec.BytesCodable> implements KeyCoder<DBKey, V> {
                 case LEGACY:
                     return codec.decode(clazz.newInstance(), value);
                 case SPARSE:
-                case KEYTOPPER:
                     if (value.length > 0) {
                         V v = clazz.newInstance();
                         v.bytesDecode(value, encodeType.ordinal());

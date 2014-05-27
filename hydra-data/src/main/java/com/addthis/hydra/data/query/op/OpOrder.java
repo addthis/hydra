@@ -22,6 +22,8 @@ import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.hydra.data.query.AbstractRowOp;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * <p>This query operation <span class="hydra-summary">reorders columns</span>.
@@ -52,11 +54,12 @@ import com.addthis.hydra.data.query.AbstractRowOp;
 public class OpOrder extends AbstractRowOp {
 
     private final ListBundleFormat format = new ListBundleFormat();
-    private final String fields[];
+    private final String[] fields;
     private BundleColumnBinder mapIn;
     private BundleColumnBinder mapOut;
 
-    public OpOrder(String args) {
+    public OpOrder(String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         fields = Strings.splitArray(args, ",");
     }
 
@@ -67,8 +70,8 @@ public class OpOrder extends AbstractRowOp {
             mapIn = new BundleColumnBinder(row, fields);
             mapOut = new BundleColumnBinder(next, fields);
         }
-        BundleField fieldsIn[] = mapIn.getFields();
-        BundleField fieldsOut[] = mapOut.getFields();
+        BundleField[] fieldsIn = mapIn.getFields();
+        BundleField[] fieldsOut = mapOut.getFields();
         for (int i = 0; i < fields.length; i++) {
             next.setValue(fieldsOut[i], row.getValue(fieldsIn[i]));
         }

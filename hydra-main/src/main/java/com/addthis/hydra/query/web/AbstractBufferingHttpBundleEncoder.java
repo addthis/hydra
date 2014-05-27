@@ -14,8 +14,6 @@
 
 package com.addthis.hydra.query.web;
 
-import java.util.concurrent.TimeUnit;
-
 import java.nio.CharBuffer;
 
 import com.addthis.basis.util.Parameter;
@@ -25,7 +23,6 @@ import com.addthis.bundle.core.Bundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.addthis.hydra.query.web.HttpUtils.sendError;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
@@ -51,7 +48,6 @@ abstract class AbstractBufferingHttpBundleEncoder extends ChannelOutboundHandler
     private static final int DEFAULT_BATCH_BUFFER_SIZE = Parameter.intValue("qmaster.http.buffer.batch", 100000);
 
     protected final HttpResponse responseStart = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    protected final long startTime;
 
     private final StringBuilder sendBuffer;
     private final int batchBufferSize;
@@ -62,7 +58,6 @@ abstract class AbstractBufferingHttpBundleEncoder extends ChannelOutboundHandler
     AbstractBufferingHttpBundleEncoder(int initialBufferSize, int batchBufferSize) {
         this.batchBufferSize = batchBufferSize;
         HttpHeaders.setTransferEncodingChunked(responseStart);
-        startTime = System.currentTimeMillis();
         sendBuffer = new StringBuilder(initialBufferSize);
     }
 
@@ -78,10 +73,9 @@ abstract class AbstractBufferingHttpBundleEncoder extends ChannelOutboundHandler
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (msg instanceof Bundle) {
             send(ctx, (Bundle) msg);
-        } else if (msg instanceof Exception) {
-            sourceError(ctx, (Exception) msg);
         } else if (msg == DataChannelOutputToNettyBridge.SEND_COMPLETE) {
             sendComplete(ctx);
+            ctx.pipeline().remove(this);
         } else {
             super.write(ctx, msg, promise); // forward write to next handler
         }
@@ -156,15 +150,5 @@ abstract class AbstractBufferingHttpBundleEncoder extends ChannelOutboundHandler
         maybeWriteStart(ctx, null);
         appendResponseEndToString(sendBuffer);
         flushStringBuilder(ctx);
-        HttpQueryCallHandler.queryTimes.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
-    }
-
-    public static void sourceError(ChannelHandlerContext ctx, Exception ex) {
-        try {
-            sendError(ctx, new HttpResponseStatus(500, ex.getMessage()));
-            log.error("", ex);
-        } catch (Exception e) {
-            log.warn("Exception sending error", e);
-        }
     }
 }

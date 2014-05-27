@@ -19,6 +19,7 @@ import javax.annotation.concurrent.GuardedBy;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -34,12 +35,17 @@ import com.addthis.bundle.core.BundleFormatted;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.io.DataChannelWriter;
+import com.addthis.hydra.data.query.FieldValueList;
 import com.addthis.hydra.data.query.FramedDataChannelReader;
-import com.addthis.hydra.data.query.QueryStatusObserver;
+import com.addthis.hydra.data.query.QueryElement;
+import com.addthis.hydra.data.query.engine.QueryEngine;
+import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.meshy.VirtualFileInput;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 /**
  * This class is the last point the bundles reach before getting converted into bytes and read by meshy to be
@@ -51,7 +57,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
 
     private static final int outputQueueSize = Parameter.intValue("meshQuerySource.outputQueueSize", 1000);
     private static final int outputBufferSize = Parameter.intValue("meshQuerySource.outputBufferSize", 64000);
-    private static final int queueAttemptLimit = Parameter.intValue("meshQuerySource.queueAttemptLimit", 10000);
+    private static final int queueAttemptLimit = Parameter.intValue("meshQuerySource.queueAttemptLimit", 100);
 
     private final ListBundleFormat format = new ListBundleFormat();
     private final LinkedBlockingQueue<byte[]> queue = new LinkedBlockingQueue<>(outputQueueSize);
@@ -59,17 +65,22 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     private final ByteArrayOutputStream out;
     /**
      * A wrapper for a boolean flag that gets set if close is called. This observer object will be passed all
-     * the way down to {@link com.addthis.hydra.data.query.engine.QueryEngine#tableSearch(java.util.LinkedList, com.addthis.hydra.data.tree.DataTreeNode, com.addthis.hydra.data.query.FieldValueList, com.addthis.hydra.data.query.QueryElement[], int, com.addthis.bundle.channel.DataChannelOutput, int, com.addthis.hydra.data.query.QueryStatusObserver)}.
+     * the way down to {@link QueryEngine#tableSearch(LinkedList,
+     * DataTreeNode, FieldValueList, QueryElement[], int, DataChannelOutput, int, ChannelProgressivePromise)}.
      */
-    public QueryStatusObserver queryStatusObserver = new QueryStatusObserver();
+    public final ChannelProgressivePromise queryPromise;
     private int rows = 0;
     /**
      * A boolean flag that gets set to true once all the data have been sent to the stream, and not necessarily
      * pulled or read from the stream.
      */
     private volatile boolean eof;
+
     /**
-     * Stores true if close() has been called.
+     * Checks whether or not {@link #closed} was set to true. If {@link #closed} has been set to true then
+     * it means there has either been a failure up stream or the query has been canceled.
+     * In either case we want to stop the running of this stream and at that point this function will throw
+     * a DataChannelError exception.
      */
     private volatile boolean closed = false;
 
@@ -78,8 +89,10 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
      * can be accessed elsewhere using the interfaces.
      *
      * @throws Exception
+     * @param queryPromise
      */
-    DataChannelToInputStream() throws Exception {
+    DataChannelToInputStream(ChannelProgressivePromise queryPromise) throws Exception {
+        this.queryPromise = queryPromise;
         out = new ByteArrayOutputStream();
         writer = new DataChannelWriter(out);
     }
@@ -135,7 +148,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
                     }
                     return;
                 }
-                if (isClosed()) {
+                if (closed) {
                     log.info("Unable to emit chunks due to closed channel");
                     break;
                 }
@@ -148,34 +161,22 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     }
 
     /**
-     * Checks whether or not {@link #closed} was set to true. If {@link #closed} has been set to true then
-     * it means there has either been a failure up stream or the query has been canceled.
-     * In either case we want to stop the running of this stream and at that point this function will throw
-     * a DataChannelError exception.
-     */
-    private boolean isClosed() {
-        return closed;
-    }
-
-    /**
      * Returns true if the eof flag is set and there is no data queued in the stream to be sent.
      *
      * @return true if EOF otherwise false.
      */
     @Override
     public boolean isEOF() {
-        synchronized (out) {
-            return eof && queue.isEmpty() && out.size() == 0;
-        }
+        return eof && queue.isEmpty();
     }
 
     /**
-     * Tells this channel to close. It sets the closed flag and the queryStatusObserver to true.
+     * Tells this channel to close. It sets the closed flag and the queryPromise to true.
      */
     @Override
     public void close() {
         closed = true;
-        queryStatusObserver.queryCancelled = true;
+        queryPromise.cancel(false);
     }
 
     /**
@@ -186,7 +187,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     @Override
     public void send(List<Bundle> bundles) {
         // Just in case the list was empty, we check if the channel is closed here
-        if (isClosed()) {
+        if (closed) {
             log.warn("Unable to send bundles due to closed channel");
         }
         for (Bundle bundle : bundles) {
@@ -202,7 +203,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
      */
     @Override
     public void send(Bundle bundle) throws DataChannelError {
-        if (isClosed()) {
+        if (closed) {
             log.warn("Unable to send bundles due to closed channel");
         }
         try {
@@ -225,7 +226,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
      */
     @Override
     public void sendComplete() {
-        if (isClosed()) {
+        if (closed) {
             log.warn("Unable to send complete due to closed channel");
         }
         synchronized (out) {
@@ -242,7 +243,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
      */
     @Override
     public void sourceError(DataChannelError er) {
-        if (isClosed()) {
+        if (closed) {
             log.warn("Unable to send source error due to closed channel", er);
         }
         try {
@@ -272,10 +273,9 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     }
 
     /**
-     * @return a reference to the {@link #queryStatusObserver}.
+     * @return a reference to the {@link #queryPromise}.
      */
-    public QueryStatusObserver getQueryStatusObserver() {
-        return queryStatusObserver;
+    public ChannelProgressivePromise getQueryPromise() {
+        return queryPromise;
     }
-
 }

@@ -38,6 +38,8 @@ import io.netty.buffer.Unpooled;
 
 public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.SuperCodable {
 
+    static final boolean IGNORE_DESERIALIZATION_ERROR = Boolean.getBoolean("hydra.tree.data.map");
+
     /**
      * <p><span class="hydra-summary">maintains a KV map maintained as an LRU up to a given size</span>.
      * That is, new elements added to the map that would increase its size over the max are added but the element
@@ -114,9 +116,9 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
     }
 
     @Codec.Set(codable = true, required = true)
-    private String keys[];
+    private String[] keys;
     @Codec.Set(codable = true, required = true)
-    private String vals[];
+    private String[] vals;
     @Codec.Set(codable = true, required = true)
     private int size;
 
@@ -169,7 +171,7 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
 
     @Override
     public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
-        String keys[] = key != null ? Strings.splitArray(key, ",") : null;
+        String[] keys = key != null ? Strings.splitArray(key, ",") : null;
         ArrayList<DataTreeNode> list = new ArrayList<>(map.size());
         synchronized (map) {
             if (keys != null && keys.length > 0) {
@@ -206,6 +208,7 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
                 for (String val : vals) {
                     writeString(buf, val);
                 }
+                Varint.writeUnsignedVarInt(size, buf);
             }
             encodedBytes = new byte[buf.readableBytes()];
             buf.readBytes(encodedBytes);
@@ -237,6 +240,14 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
                 for (int i = 0; i < length; i++) {
                     vals[i] = readString(buf);
                 }
+                if (buf.readableBytes() > 0) {
+                    size = Varint.readUnsignedVarInt(buf);
+                } else {
+                    if (!IGNORE_DESERIALIZATION_ERROR) {
+                        throw new RuntimeException("Tried to deserialize a corrupted DataMap attachment. " +
+                        "set the system property hydra.tree.data.map=true to ignore (Map Attachment will be empty on old nodes)");
+                    }
+                }
             } catch (UnsupportedEncodingException e) {
                 throw new RuntimeException(e);
             }
@@ -252,4 +263,7 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
         buf.readBytes(kb);
         return new String(kb, "UTF-8");
     }
+
+    public int getSize() { return size; }
+
 }

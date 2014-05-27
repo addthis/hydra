@@ -20,7 +20,8 @@ import com.addthis.bundle.table.DataTableFactory;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractTableOp;
-import com.addthis.hydra.data.query.QueryStatusObserver;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 
 /**
@@ -31,8 +32,8 @@ import com.addthis.hydra.data.query.QueryStatusObserver;
  */
 public class OpTranspose extends AbstractTableOp {
 
-    public OpTranspose(DataTableFactory tableFactory, QueryStatusObserver queryStatusObserver) {
-        super(tableFactory, queryStatusObserver);
+    public OpTranspose(DataTableFactory tableFactory, ChannelProgressivePromise queryPromise) {
+        super(tableFactory, queryPromise);
     }
 
     @Override
@@ -43,8 +44,8 @@ public class OpTranspose extends AbstractTableOp {
         int rowsIn = tableIn.size();
         int colsIn = tableIn.get(0).getFormat().getFieldCount();
         DataTable tableOut = createTable(colsIn);
-        BundleField fieldIn[] = new BundleColumnBinder(tableIn.get(0)).getFields();
-        BundleField fieldOut[] = new BundleField[rowsIn];
+        BundleField[] fieldIn = new BundleColumnBinder(tableIn.get(0)).getFields();
+        BundleField[] fieldOut = new BundleField[rowsIn];
         for (int i = 0; i < rowsIn; i++) {
             fieldOut[i] = tableOut.getFormat().getField(Integer.toString(i));
         }

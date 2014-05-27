@@ -25,10 +25,11 @@ import com.addthis.bundle.table.DataTableFactory;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractTableOp;
-import com.addthis.hydra.data.query.QueryStatusObserver;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.channel.ChannelProgressivePromise;
 
 /**
  * <p>This query operation <span class="hydra-summary">removes (key, value) pairs
@@ -43,12 +44,12 @@ import org.slf4j.LoggerFactory;
  */
 public class OpRemoveSingletons extends AbstractTableOp {
 
-    private Logger log = LoggerFactory.getLogger(OpChangePoints.class);
+    private Logger log = LoggerFactory.getLogger(OpRemoveSingletons.class);
     int keyColumn;
     int valColumn;
 
-    public OpRemoveSingletons(DataTableFactory factory, String args, QueryStatusObserver queryStatusObserver) {
-        super(factory, queryStatusObserver);
+    public OpRemoveSingletons(DataTableFactory factory, String args, ChannelProgressivePromise queryPromise) {
+        super(factory, queryPromise);
         try {
             String[] opt = args.split(":");
             keyColumn = opt.length >= 1 ? Integer.parseInt(opt[0]) : 0;

@@ -25,6 +25,8 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractRowOp;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * <p>This query operation <span class="hydra-summary">performs postfix (RPN)
@@ -153,8 +155,9 @@ public class OpString extends AbstractRowOp {
 
     private final List<StringOp> ops;
 
-    public OpString(String args) {
-        String op[] = Strings.splitArray(args, ",");
+    public OpString(String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
+        String[] op = Strings.splitArray(args, ",");
         ops = new ArrayList<>(op.length);
         for (String o : op) {
             if (o.equals("+") || o.equals("cat")) {
@@ -216,7 +219,7 @@ public class OpString extends AbstractRowOp {
                     int pos = (int) stack.pop().asLong().getLong();
                     String sep = stack.pop().toString();
                     str = stack.pop().toString();
-                    String seg[] = Strings.splitArray(str, sep);
+                    String[] seg = Strings.splitArray(str, sep);
                     stack.push(ValueFactory.create(seg[pos]));
                     break;
                 case OP_COLVAL:

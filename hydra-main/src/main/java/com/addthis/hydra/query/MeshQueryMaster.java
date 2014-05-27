@@ -18,97 +18,47 @@ import java.io.IOException;
 
 import java.net.InetSocketAddress;
 
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.bundle.channel.DataChannelOutput;
-import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
-import com.addthis.hydra.data.query.QueryOpProcessor;
-import com.addthis.hydra.data.query.QueryStatusObserver;
-import com.addthis.hydra.data.query.source.ErrorHandlingQuerySource;
-import com.addthis.hydra.data.query.source.QueryHandle;
-import com.addthis.hydra.job.IJob;
-import com.addthis.hydra.job.Job;
-import com.addthis.hydra.job.JobConfigManager;
-import com.addthis.hydra.job.store.DataStoreUtil;
-import com.addthis.hydra.job.store.SpawnDataStore;
-import com.addthis.hydra.query.util.MeshSourceAggregator;
-import com.addthis.hydra.query.util.QueryData;
-import com.addthis.hydra.query.web.DataChannelOutputToNettyBridge;
+import com.addthis.hydra.query.aggregate.BalancedAllocator;
+import com.addthis.hydra.query.aggregate.DefaultTaskAllocators;
+import com.addthis.hydra.query.aggregate.MeshSourceAggregator;
+import com.addthis.hydra.query.aggregate.QueryTaskSource;
+import com.addthis.hydra.query.aggregate.QueryTaskSourceOption;
+import com.addthis.hydra.query.loadbalance.WorkerData;
+import com.addthis.hydra.query.loadbalance.WorkerTracker;
+import com.addthis.hydra.query.tracker.QueryTracker;
+import com.addthis.hydra.query.tracker.TrackerHandler;
+import com.addthis.hydra.query.zookeeper.ZookeeperHandler;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
-
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 
 @ChannelHandler.Sharable
-public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> implements ErrorHandlingQuerySource {
+public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
 
     private static final Logger log = LoggerFactory.getLogger(MeshQueryMaster.class);
     private static final String tempDir = Parameter.value("query.tmpdir", "query.tmpdir");
-    private static final int failureExpireMinutes = Parameter.intValue("qmaster.failureExpireMinutes", 5);
     private static final int meshPort = Parameter.intValue("qmaster.mesh.port", 5100);
     private static final String meshRoot = Parameter.value("qmaster.mesh.root", "/home/hydra");
     private static final String meshPeers = Parameter.value("qmaster.mesh.peers", "localhost");
     private static final int meshPeerPort = Parameter.intValue("qmaster.mesh.peer.port", 5101);
     private static final boolean enableZooKeeper = Parameter.boolValue("qmaster.enableZooKeeper", true);
-
-    /**
-     * A ZooKeeper/Priam backed data structure that keeps track of
-     * the Hydra jobs in the cluster.  We are specifically
-     * interested in how many tasks are in each job so we know
-     * the minimum number of responses required to run a query.
-     */
-    private final JobConfigManager jobConfigManager;
-
-    /**
-     * A SpawnDataStore used by the JobConfigManager to fetch job status.
-     * Uses either zookeeper or priam depending on the cluster config.
-     */
-    private final SpawnDataStore spawnDataStore;
-
-    /**
-     * Monitors ZooKeeper for query configuration information.
-     * Used to determine if queries are enabled and/or traceable
-     * for a given job
-     */
-    private final QueryConfigWatcher queryConfigWatcher;
-
-    /**
-     * A ZooKeeper backed data structure that maintains a
-     * bi-directional mapping of job aliases to job IDs
-     */
-    private final AliasBiMap aliasBiMap;
-
-    /**
-     * Used to determine if a job has failed.  In the case
-     * where a single alias is mapped to multiple jobs
-     * this can be useful to fail over to another version of a
-     * job when the primary job is not reachable
-     */
-    private final JobFailureDetector jobFailureDetector;
 
     /**
      * used for tracking metrics and other interesting things about queries
@@ -118,43 +68,32 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> implemen
     private final QueryTracker tracker;
 
     /**
-     * used for tracking metrics and information regarding query worker mesh hosts
-     */
-    private final MeshHostTracker hostTracker;
-
-    /**
      * Primary Mesh server
      */
     private final MeshyServer meshy;
+
+    /**
+     * Abstracts away zookeeper reliant functions
+     */
+    private final ZookeeperHandler keepy;
 
     /**
      * Mesh FileRef Cache -- backed by a loading cache
      */
     private final MeshFileRefCache cachey;
 
-    /**
-     * a cache of job configuration data, used to reduce load placed on ZK server with high volume queries
-     */
-    private final LoadingCache<String, IJob> jobConfigurationCache = CacheBuilder.newBuilder()
-            .maximumSize(2000)
-            .refreshAfterWrite(10, TimeUnit.MINUTES)
-            .build(
-                    new CacheLoader<String, IJob>() {
-                        public IJob load(String jobId) throws IOException {
-                            return jobConfigManager.getJob(jobId);
-                        }
-                    }
-            );
+    private final WorkerTracker worky;
 
-    private final ConcurrentHashMap<String, Boolean> hostMap = new ConcurrentHashMap<>();
+    private final DefaultTaskAllocators allocators;
 
     public MeshQueryMaster(QueryTracker tracker) throws Exception {
         this.tracker = tracker;
 
         meshy = new MeshyServer(meshPort, new File(meshRoot));
         cachey = new MeshFileRefCache(meshy);
+        worky = new WorkerTracker();
+        allocators = new DefaultTaskAllocators(new BalancedAllocator(worky));
         connectToMeshPeers();
-        this.hostTracker = new MeshHostTracker(meshy);
 
         try {
             // Delete the tmp directory (disk sort directory)
@@ -166,18 +105,9 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> implemen
         }
 
         if (enableZooKeeper) {
-            spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();
-            this.jobConfigManager = new JobConfigManager(spawnDataStore);
-            this.jobFailureDetector = new JobFailureDetector(failureExpireMinutes);
-            this.queryConfigWatcher = new QueryConfigWatcher(spawnDataStore);
-            this.aliasBiMap = new AliasBiMap(spawnDataStore);
-            this.aliasBiMap.loadCurrentValues();
+            keepy = new ZookeeperHandler();
         } else {
-            this.spawnDataStore = null;
-            this.jobConfigManager = null;
-            this.jobFailureDetector = null;
-            this.queryConfigWatcher = null;
-            this.aliasBiMap = null;
+            keepy = null;
         }
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -187,18 +117,30 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> implemen
         });
     }
 
+    public ZookeeperHandler keepy() {
+        return keepy;
+    }
+
+    public DefaultTaskAllocators allocators() {
+        return allocators;
+    }
+
+    public WorkerTracker worky() {
+        return worky;
+    }
+
     public QueryTracker getQueryTracker() {
         return tracker;
     }
 
     protected void shutdown() {
         try {
-            if (spawnDataStore != null) {
-                spawnDataStore.close();
+            if (keepy != null) {
+                keepy.close();
             }
             meshy.close();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("arbitrary exception during mqmaster shutdown", e);
         }
     }
 
@@ -211,25 +153,33 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> implemen
         }
     }
 
+    public void handleError(Query query) {
+        String job = query.getJob();
+        if (job != null) {
+            cachey.invalidate(job);
+        }
+    }
+
     @Override
-    public QueryHandle query(Query query, DataChannelOutput consumer) throws QueryException {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        if (msg instanceof Query) {
+            writeQuery(ctx, (Query) msg, promise);
+        } else {
+            super.write(ctx, msg, promise);
+        }
+    }
+
+    protected void writeQuery(ChannelHandlerContext ctx, Query query, ChannelPromise promise) throws Exception {
         String[] opsLog = query.getOps();   // being able to log and monitor rops is kind of important
 
-            /* creates query for worker and updates local query ops */
+        // creates query for worker and updates local query ops (!mutates query!)
+        // TODO: fix this pipeline interface
         Query remoteQuery = query.createPipelinedQuery();
 
-        String job = query.getJob();
-        if (enableZooKeeper && aliasBiMap == null) {
-            throw new QueryException("QueryMaster has not been initialized, try query again soon...");
+        if (keepy != null) {
+            keepy.resolveAlias(query);
+            keepy.validateJobForQuery(query);
         }
-
-        job = validateJobForQuery(query, job);
-
-        query.setTraced((enableZooKeeper && queryConfigWatcher.shouldTrace(query.getJob())) || query.isTraced());
-
-        /** create a processor chain based in query ops terminating in provided consumer */
-        QueryOpProcessor wrappedConsumer = query.getProcessor(consumer, new QueryStatusObserver());
-        query.queryStatusObserver = wrappedConsumer.getQueryStatusObserver();
 
         Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap;
         try {
@@ -242,95 +192,41 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> implemen
             throw new QueryException("Exception getting file references: " + e.getMessage());
         }
 
-        if (enableZooKeeper) {
-            IJob zkJob;
-            try {
-                zkJob = jobConfigurationCache.get(job);
-            } catch (ExecutionException e) {
-                throw new QueryException("unable to retrieve job configuration for job: " + job);
-            }
-            if (zkJob == null) {
-                final String errorMessage = "[MeshQueryMaster] Error:  unable to find ZK reference for job: " + job;
-                throw new QueryException(errorMessage);
-            }
+        int canonicalTasks = 0;
 
-            final int taskCount = new Job(zkJob).getTaskCount();
-            int fileReferenceCount = fileReferenceMap.size();
-            if (!(query.getParameter("allowPartial") != null && Boolean.valueOf(query.getParameter("allowPartial"))) && fileReferenceCount != taskCount) {
-                final String errorMessage = "Did not find data for all tasks (and allowPartial is off): " + fileReferenceCount + " out of " + taskCount;
-                final int numMissing = taskCount - fileReferenceCount;
-                final String label = ". Missing the following " + numMissing + " tasks : ";
-                final StringBuilder sb = new StringBuilder();
-                final TreeMap<Integer, Set<FileReferenceWrapper>> sortedMap = new TreeMap<>(fileReferenceMap);
-                final Iterator<Integer> it = sortedMap.keySet().iterator();
-                Integer key = it.next();
-                for (int i = 0; i < taskCount; i++) {
-                    if (key == null || i != key) {
-                        if (sb.length() > 0) {
-                            sb.append(", ");
-                        }
-                        sb.append(i);
-                    } else {
-                        key = it.hasNext() ? it.next() : null;
-                    }
-                }
-                throw new QueryException(errorMessage + label + sb.toString());
-            }
-        }
-
-        final Map<Integer, Set<QueryData>> sourceMap = new HashMap<>();
-        final HashMap<String, String> options = new HashMap<>();
-        options.put("query", CodecJSON.encodeString(remoteQuery));
-        Set<QueryData> potentialQueryDataList = new HashSet<>();
-        for (Map.Entry<Integer, Set<FileReferenceWrapper>> entry : fileReferenceMap.entrySet()) {
-            HashSet<QueryData> queryDataSet = new HashSet<>();
-            for (FileReferenceWrapper wrapper : entry.getValue()) {
-                QueryData queryData = new QueryData(meshy, wrapper.fileReference, options, query.getJob(), wrapper.taskId);
-                queryDataSet.add(queryData);
-                potentialQueryDataList.add(queryData);
-            }
-            sourceMap.put(entry.getKey(), queryDataSet);
-        }
-        MeshSourceAggregator aggregator = new MeshSourceAggregator(sourceMap, new ConcurrentHashMap<>(hostMap), this);
-        QueryHandle handle = tracker.runAndTrackQuery(aggregator, potentialQueryDataList,
-                query, wrappedConsumer, opsLog);
-        if (enableZooKeeper) {
-            jobFailureDetector.indicateSuccess(query.getParameter("job", query.getJob()));
-        }
-        return handle;
-    }
-
-    private String validateJobForQuery(Query query, String job) {
-        if (!enableZooKeeper) {
-            return job;
-        }
-        List<String> possibleJobs = aliasBiMap.getJobs(job);
-        if (possibleJobs != null && possibleJobs.size() > 0) {
-            for (String pjob : possibleJobs) {
-                int threshold = queryConfigWatcher.consecutiveFailureThreshold(pjob);
-                if (!jobFailureDetector.hasFailed(pjob, threshold > 0 ? threshold : Integer.MAX_VALUE)) {
-                    query.setParameter("track.alias", job);
-                    query.setJob(pjob);
-                    return pjob;
-                }
-            }
-            // if we get here it means we've not found a good job
-            throw new QueryException("All available jobs for " + job + " have failed :" + possibleJobs.toString());
+        if (keepy != null) {
+            canonicalTasks = keepy.validateTaskCount(query, fileReferenceMap);
         } else {
-            String trackA = aliasBiMap.getLikelyAlias(job);
-            query.setParameter("track.alias", trackA != null ? trackA : "");
+            for (Integer taskId : fileReferenceMap.keySet()) {
+                if (taskId > canonicalTasks) {
+                    canonicalTasks = taskId;
+                }
+            }
+            // tasks are zero indexed
+            canonicalTasks += 1;
         }
-        if (!queryConfigWatcher.jobIsTracked(query.getJob())) {
-            throw new QueryException("job not found (wrong job id or not detected yet): " + job);
-        }
-        if (!queryConfigWatcher.safeToQuery(query.getJob())) {
-            throw new QueryException("job is not safe to query (are queries enabled for this job in spawn?): " + job);
-        }
-        return job;
-    }
 
-    public void invalidateFileReferenceCache() {
-        cachey.invalidateFileReferenceCache();
+        QueryTaskSource[] sourcesByTaskID = new QueryTaskSource[canonicalTasks];
+        for (int i = 0; i < canonicalTasks; i++) {
+            Set<FileReferenceWrapper> sourceOptions = fileReferenceMap.get(i);
+            QueryTaskSourceOption[] taskSourceOptions = new QueryTaskSourceOption[sourceOptions.size()];
+            int taskSourceOptionsIndex = 0;
+            for (FileReferenceWrapper wrapper : sourceOptions) {
+                FileReference queryReference = wrapper.fileReference;
+                WorkerData workerData = worky.get(queryReference.getHostUUID());
+                taskSourceOptions[taskSourceOptionsIndex] =
+                        new QueryTaskSourceOption(queryReference, workerData.queryLeases);
+                taskSourceOptionsIndex += 1;
+            }
+            sourcesByTaskID[i] = new QueryTaskSource(taskSourceOptions);
+        }
+
+        MeshSourceAggregator aggregator = new MeshSourceAggregator(sourcesByTaskID, meshy, this, remoteQuery);
+        ctx.pipeline().addLast(ctx.executor(), "query aggregator", aggregator);
+        TrackerHandler trackerHandler = new TrackerHandler(tracker, opsLog);
+        ctx.pipeline().addLast(ctx.executor(), "query tracker", trackerHandler);
+        ctx.pipeline().remove(this);
+        ctx.pipeline().write(query, promise);
     }
 
     /**
@@ -343,13 +239,15 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> implemen
      * @return A replacement FileReference, which is also placed into the cache if it was newly generated
      * @throws IOException If there is a problem fetching a replacement FileReference
      */
-    public FileReference getReplacementFileReferenceForSingleTask(String job, int task, FileReference failedReference) throws IOException {
+    public QueryTaskSourceOption getReplacementQueryTaskOption(String job, int task, FileReference failedReference) throws IOException, ExecutionException {
         Set<FileReferenceWrapper> wrappers = cachey.getTaskReferencesIfPresent(job, task);
         if (wrappers != null) {
             wrappers.remove(new FileReferenceWrapper(failedReference, task));
             if (!wrappers.isEmpty()) {
                 cachey.updateFileReferenceForTask(job, task, new HashSet<>(wrappers));
-                return wrappers.iterator().next().fileReference;
+                FileReference cachedReplacement = wrappers.iterator().next().fileReference;
+                WorkerData workerData = worky.get(cachedReplacement.getHostUUID());
+                return new QueryTaskSourceOption(cachedReplacement, workerData.queryLeases);
             }
         }
         // If mqm got to this point, there was no replacement fileReference in the cache, so we need to fetch a new one
@@ -357,47 +255,7 @@ public class MeshQueryMaster extends SimpleChannelInboundHandler<Query> implemen
         HashSet<FileReferenceWrapper> baseSet = wrappers == null ? new HashSet<FileReferenceWrapper>() : new HashSet<>(wrappers);
         baseSet.add(new FileReferenceWrapper(freshFileReference, task));
         cachey.updateFileReferenceForTask(job, task, baseSet);
-        return freshFileReference;
-    }
-
-    public String getMeshHostJSON() {
-        return this.hostTracker.getHostsJSON();
-    }
-
-    public Collection<IJob> getJobs() {
-        return jobConfigManager.getJobs().values();
-    }
-
-    @Override
-    public void noop() {
-    }
-
-    @Override
-    public void handleError(Query query) {
-        String job = query.getJob();
-        if (job != null) {
-            cachey.invalidate(job);
-        }
-    }
-
-    @Override
-    public boolean isClosed() {
-        // if we are running we are not closed
-        return false;
-    }
-
-    @Override
-    protected void channelRead0(ChannelHandlerContext ctx, Query msg) throws Exception {
-        messageReceived(ctx, msg); // redirect to more sensible netty5 naming scheme
-    }
-
-    protected void messageReceived(ChannelHandlerContext ctx, Query msg) throws Exception {
-        DataChannelOutput consumer = new DataChannelOutputToNettyBridge(ctx);
-        try {
-            query(msg, consumer); // ignore query handle
-        } catch (Exception ex) {
-            handleError(msg);
-            consumer.sourceError(new QueryException(ex));
-        }
+        WorkerData workerData = worky.get(freshFileReference.getHostUUID());
+        return new QueryTaskSourceOption(freshFileReference, workerData.queryLeases);
     }
 }

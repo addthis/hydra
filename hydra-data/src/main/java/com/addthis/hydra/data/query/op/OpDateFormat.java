@@ -27,6 +27,8 @@ import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 
 /**
  * <p>This query operation <span class="hydra-summary">transforms from one date format to another</span>.
@@ -46,7 +48,7 @@ import org.joda.time.format.DateTimeFormatter;
  */
 public class OpDateFormat extends AbstractRowOp {
 
-    private int incols[];
+    private int[] incols;
     private int outcol;
 
     private DateTimeFormatter inFormat;
@@ -54,11 +56,12 @@ public class OpDateFormat extends AbstractRowOp {
     private int fromMillis; // base for conversion or 0
     private int toMillis; // base for conversion or 0
 
-    public OpDateFormat(String args) {
+    public OpDateFormat(String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         try {
-            String opt[] = args.split(":");
+            String[] opt = args.split(":");
             if (opt.length >= 2) {
-                String cval[] = Strings.splitArray(opt[0], ",");
+                String[] cval = Strings.splitArray(opt[0], ",");
                 incols = new int[cval.length];
                 for (int i = 0; i < cval.length; i++) {
                     incols[i] = Integer.parseInt(cval[i]);

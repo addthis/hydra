@@ -16,7 +16,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>4.2.5-SNAPSHOT</version>
+    <version>4.2.8-SNAPSHOT</version>
   </parent>
 
   <artifactId>hydra-data</artifactId>
@@ -69,6 +69,11 @@
       <version>2.0.1</version>
     </dependency>
     <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-all</artifactId>
+      <version>4.0.19.Final</version>
+    </dependency>
+    <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
       <version>${hydra.dep.commons-codec.version}</version>
@@ -84,12 +89,7 @@
       <version>${hydra.dep.compress.compress-lzf.version}</version>
     </dependency>
     <!-- end 3rd party -->
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-math3</artifactId>
-      <version>3.2</version>
-      <scope>test</scope>
-    </dependency>
+
     <dependency>
       <groupId>com.sleepycat</groupId>
       <artifactId>je</artifactId>

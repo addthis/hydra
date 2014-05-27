@@ -16,10 +16,12 @@ package com.addthis.hydra.data.query;
 
 import com.addthis.bundle.table.DataTable;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 public class ResultAccumulator extends AbstractTableOp {
 
-    public ResultAccumulator(QueryOpProcessor processor, QueryStatusObserver queryStatusObserver) {
-        super(processor, queryStatusObserver);
+    public ResultAccumulator(QueryOpProcessor processor, ChannelProgressivePromise queryPromise) {
+        super(processor, queryPromise);
     }
 
     @Override

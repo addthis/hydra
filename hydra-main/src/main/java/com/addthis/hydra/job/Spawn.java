@@ -39,6 +39,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
@@ -93,7 +94,7 @@ import com.addthis.hydra.job.spawn.SpawnService;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
-import com.addthis.hydra.query.AliasBiMap;
+import com.addthis.hydra.query.zookeeper.AliasBiMap;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.hydra.util.EmailUtil;
@@ -151,14 +152,18 @@ public class Spawn implements Codec.Codable {
     private static final int queueKickInterval = Parameter.intValue("spawn.queue.kick.interval", 3000);
     private static final int backgroundThreads = Parameter.intValue("spawn.background.threads", 4);
     private static final int backgroundQueueSize = Parameter.intValue("spawn.background.queuesize", 1000);
+    private static final int backgroundHttpTimeout = Parameter.intValue("spawn.background.timeout", 300000);
+
     private static final int backgroundEmailMinute = Parameter.intValue("spawn.background.notification.interval.minutes", 60);
     private static final String backgroundEmailAddress = Parameter.value("spawn.background.notification.address");
     private static final long MILLISECONDS_PER_MINUTE = (1000 * 60);
     private static final AtomicLong emailLastFired = new AtomicLong();
 
+    private static final BlockingQueue<Runnable> backgroundTaskQueue = new LinkedBlockingQueue<>(backgroundQueueSize);
+
     private static final ExecutorService backgroundService = MoreExecutors.getExitingExecutorService(
             new ThreadPoolExecutor(backgroundThreads, backgroundThreads, 0L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(backgroundQueueSize)), 100, TimeUnit.MILLISECONDS);
+                    backgroundTaskQueue), 100, TimeUnit.MILLISECONDS);
     private static String debugOverride = Parameter.value("spawn.debug");
     private static final boolean useStructuredLogger = Parameter.boolValue("spawn.logger.bundle.enable",
             clusterName.equals("localhost")); // default to true if-and-only-if we are running local stack
@@ -175,9 +180,13 @@ public class Spawn implements Codec.Codable {
     private static final SettableGauge<Integer> hungJobCount = SettableGauge.newSettableGauge(Spawn.class, "hungJobs", 0);
     private static final Meter jobsStartedPerHour = Metrics.newMeter(Spawn.class, "jobsStartedPerHour", "jobsStartedPerHour", TimeUnit.HOURS);
     private static final Meter jobsCompletedPerHour = Metrics.newMeter(Spawn.class, "jobsCompletedPerHour", "jobsCompletedPerHour", TimeUnit.HOURS);
+    private static final Counter nonConsumingClientDropCounter = Metrics.newCounter(Spawn.class, "clientDrops");
 
     public static final String SPAWN_DATA_DIR = Parameter.value("SPAWN_DATA_DIR", "./data");
     public static final String SPAWN_STRUCTURED_LOG_DIR = Parameter.value("spawn.logger.bundle.dir", "./log/spawn-stats");
+
+    private static final int clientDropTimeMillis = Parameter.intValue("spawn.client.drop.time", 60000);
+    private static final int clientDropQueueSize = Parameter.intValue("spawn.client.drop.queue", 2000);
 
     // thread pool for running chore actions that we do not want running in the main thread of Spawn
     private final ExecutorService choreExecutor = MoreExecutors.getExitingExecutorService(
@@ -196,6 +205,11 @@ public class Spawn implements Codec.Codable {
     private final Gauge<Integer> expandQueueGauge = Metrics.newGauge(Spawn.class, "expandKickExecutorQueue", new Gauge<Integer>() {
         public Integer value() {
             return expandKickQueue.size();
+        }
+    });
+    private final Gauge<Integer> backgroundQueueGauge = Metrics.newGauge(Spawn.class, "backgroundExecutorQueue", new Gauge<Integer>() {
+        public Integer value() {
+            return backgroundTaskQueue.size();
         }
     });
     private final HostFailWorker hostFailWorker;
@@ -773,6 +787,11 @@ public class Spawn implements Codec.Codable {
     }
 
     public void deleteHost(String hostuuid) {
+        HostFailWorker.FailState failState = hostFailWorker.getFailureState(hostuuid);
+        if (failState == HostFailWorker.FailState.FAILING_FS_DEAD || failState == HostFailWorker.FailState.FAILING_FS_OKAY) {
+            log.warn("Refused to drop host because it was in the process of being failed", hostuuid);
+            throw new RuntimeException("Cannot drop a host that is in the process of being failed");
+        }
         synchronized (monitored) {
             HostState state = monitored.remove(hostuuid);
             if (state != null) {
@@ -2134,7 +2153,7 @@ public class Spawn implements Codec.Codable {
                 task.setRebalanceSource(null);
                 task.setRebalanceTarget(null);
             }
-            if (task.getState() == JobTaskState.QUEUED) {
+            if (task.getState() == JobTaskState.QUEUED || task.getState() == JobTaskState.QUEUED_HOST_UNAVAIL) {
                 removeFromQueue(task);
                 log.warn("[task.stop] stopping queued " + task.getJobKey());
             } else if (task.getState() == JobTaskState.REBALANCE) {
@@ -2151,7 +2170,7 @@ public class Spawn implements Codec.Codable {
                 queueJobTaskUpdateEvent(job);
             } else if (force && (host == null || host.isDead() || !host.isUp())) {
                 log.warn("[task.stop] " + task.getJobKey() + " killed on down host");
-                job.errorTask(task, 1);
+                job.setTaskState(task, JobTaskState.IDLE);
                 queueJobTaskUpdateEvent(job);
                 // Host is unreachable; bail once the task is errored.
                 return;
@@ -2697,7 +2716,7 @@ public class Spawn implements Codec.Codable {
         @Override
         public void run() {
             try {
-                HttpUtil.httpPost(url, "javascript/text", post, 60000);
+                HttpUtil.httpPost(url, "javascript/text", post, backgroundHttpTimeout);
             } catch (IOException ex) {
                 log.error("IOException when attempting to contact \"" +
                           url + "\" in background task \"" + jobId + " " + state + "\"", ex);
@@ -2964,11 +2983,15 @@ public class Spawn implements Codec.Codable {
         long time = System.currentTimeMillis();
         for (Entry<String, ClientEventListener> ev : listeners.entrySet()) {
             ClientEventListener client = ev.getValue();
-            // drop listeners we haven't heard from in a while
-            if (time - client.lastSeen > 60000) {
+            boolean queueTooLarge = clientDropQueueSize > 0 && client.events.size() > clientDropQueueSize;
+            // Drop listeners we haven't heard from in a while, or if they don't seem to be consuming from their queue
+            if (time - client.lastSeen > clientDropTimeMillis || queueTooLarge) {
                 ClientEventListener listener = listeners.remove(ev.getKey());
                 if (debug("-listen-")) {
                     log.warn("[listen] dropping listener queue for " + ev.getKey() + " = " + listener);
+                }
+                if (queueTooLarge) {
+                    nonConsumingClientDropCounter.inc();
                 }
                 continue;
             }
@@ -3520,13 +3543,13 @@ public class Spawn implements Codec.Codable {
     private List<HostState> getHealthyHostStatesHousingTask(JobTask task, boolean allowReplicas) {
         List<HostState> rv = new ArrayList<>();
         HostState liveHost = getHostState(task.getHostUUID());
-        if (liveHost != null && hostFailWorker.getFailureState(task.getHostUUID()) == HostFailWorker.FailState.ALIVE) {
+        if (liveHost != null && hostFailWorker.shouldKickTasks(task.getHostUUID())) {
             rv.add(liveHost);
         }
         if (allowReplicas && task.getReplicas() != null) {
             for (JobTaskReplica replica : task.getReplicas()) {
                 HostState replicaHost = replica.getHostUUID() != null ? getHostState(replica.getHostUUID()) : null;
-                if (replicaHost != null && replicaHost.hasLive(task.getJobKey()) && hostFailWorker.getFailureState(task.getHostUUID()) == HostFailWorker.FailState.ALIVE) {
+                if (replicaHost != null && replicaHost.hasLive(task.getJobKey()) && hostFailWorker.shouldKickTasks(task.getHostUUID())) {
                     rv.add(replicaHost);
                 }
             }

@@ -15,6 +15,7 @@ package com.addthis.hydra.task.source;
 
 import java.util.Iterator;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
@@ -60,8 +61,8 @@ public class SortedTaskDataSource extends TaskDataSource {
     }
 
     @Override
-    protected void open(TaskRunConfig config) {
-        source.open(config);
+    protected void open(TaskRunConfig config, AtomicBoolean errored) {
+        source.open(config, errored);
     }
 
     private void fill() {

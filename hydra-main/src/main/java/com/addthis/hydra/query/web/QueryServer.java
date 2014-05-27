@@ -16,9 +16,13 @@ package com.addthis.hydra.query.web;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.data.query.channel.QueryChannelServer;
 import com.addthis.hydra.query.MeshQueryMaster;
-import com.addthis.hydra.query.QueryTracker;
+import com.addthis.hydra.query.aggregate.AggregateConfig;
+import com.addthis.hydra.query.loadbalance.NextQueryTask;
+import com.addthis.hydra.query.loadbalance.QueryQueue;
+import com.addthis.hydra.query.tracker.QueryTracker;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,6 +43,9 @@ import io.netty.channel.DefaultMessageSizeEstimator;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.EventExecutorGroup;
 
 public class QueryServer {
 
@@ -50,19 +57,16 @@ public class QueryServer {
     static final Counter rawQueryCalls = Metrics.newCounter(MeshQueryMaster.class, "rawQueryCalls");
     static final JsonFactory factory = new JsonFactory(new ObjectMapper());
 
-    /**
-     * server that listens for query requests using java protocol
-     */
-    private final QueryChannelServer queryChannelServer;
-
     private final HttpQueryHandler httpQueryHandler;
     private final QueryServerInitializer queryServerInitializer;
+    private final QueryQueue queryQueue;
     private final int webPort;
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
+    private EventExecutorGroup executorGroup;
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         if (args.length > 0 && (args[0].equals("--help") || args[0].equals("-h"))) {
             System.out.println("usage: qmaster");
         }
@@ -79,11 +83,9 @@ public class QueryServer {
 
         QueryTracker queryTracker = new QueryTracker();
         MeshQueryMaster meshQueryMaster = new MeshQueryMaster(queryTracker);
-        httpQueryHandler = new HttpQueryHandler(this, queryTracker, meshQueryMaster);
+        queryQueue = new QueryQueue();
+        httpQueryHandler = new HttpQueryHandler(this, queryTracker, meshQueryMaster, queryQueue);
         queryServerInitializer = new QueryServerInitializer(httpQueryHandler);
-
-        queryChannelServer = new QueryChannelServer(queryPort, meshQueryMaster);
-        queryChannelServer.start();
 
         log.info("[init] query port={}, web port={}", queryPort, webPort);
 
@@ -97,6 +99,11 @@ public class QueryServer {
     public void run() throws Exception {
         bossGroup = new NioEventLoopGroup(1);
         workerGroup = new NioEventLoopGroup();
+        executorGroup = new DefaultEventExecutorGroup(AggregateConfig.FRAME_READER_THREADS,
+                new ThreadFactoryBuilder().setDaemon(true).setNameFormat("frame-reader-%d").build());
+        for (EventExecutor executor : executorGroup) {
+            executor.execute(new NextQueryTask(queryQueue, executor));
+        }
         ServerBootstrap b = new ServerBootstrap();
         b.option(ChannelOption.SO_BACKLOG, 1024);
         b.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
@@ -112,12 +119,15 @@ public class QueryServer {
 
     protected void shutdown() {
         try {
-            queryChannelServer.close();
             if (bossGroup != null) {
-                bossGroup.shutdownGracefully();
+                bossGroup.shutdownGracefully().sync();
             }
             if (workerGroup != null) {
-                workerGroup.shutdownGracefully();
+                workerGroup.shutdownGracefully().sync();
+            }
+            if (executorGroup != null) {
+                // no sync because there is apparently no easy way to interrupt the take() calls?
+                executorGroup.shutdownGracefully();
             }
         } catch (Exception e) {
             e.printStackTrace();

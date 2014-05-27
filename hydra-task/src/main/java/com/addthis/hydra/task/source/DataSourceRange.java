@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.source;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.Codec;
@@ -69,8 +71,8 @@ public class DataSourceRange extends TaskDataSource {
     }
 
     @Override
-    protected void open(TaskRunConfig config) {
-        source.open(config);
+    protected void open(TaskRunConfig config, AtomicBoolean errored) {
+        source.open(config, errored);
     }
 
 }

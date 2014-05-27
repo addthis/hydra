@@ -30,8 +30,11 @@ import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.query.MeshQueryMaster;
-import com.addthis.hydra.query.QueryTracker;
-import com.addthis.hydra.query.util.HostEntryInfo;
+import com.addthis.hydra.query.loadbalance.QueryQueue;
+import com.addthis.hydra.query.loadbalance.WorkerData;
+import com.addthis.hydra.query.tracker.QueryEntry;
+import com.addthis.hydra.query.tracker.QueryEntryInfo;
+import com.addthis.hydra.query.tracker.QueryTracker;
 import com.addthis.hydra.util.MetricsServletShim;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
@@ -86,13 +89,17 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
      */
     private final MeshQueryMaster meshQueryMaster;
 
+    private final QueryQueue queryQueue;
+
     private final MetricsServletShim fakeMetricsServlet;
 
-    public HttpQueryHandler(QueryServer queryServer, QueryTracker tracker, MeshQueryMaster meshQueryMaster) {
+    public HttpQueryHandler(QueryServer queryServer, QueryTracker tracker, MeshQueryMaster meshQueryMaster,
+            QueryQueue queryQueue) {
         super(true); // auto release
         this.queryServer = queryServer;
         this.tracker = tracker;
         this.meshQueryMaster = meshQueryMaster;
+        this.queryQueue = queryQueue;
         this.fakeMetricsServlet = new MetricsServletShim();
     }
 
@@ -100,7 +107,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         log.warn("Exception caught while serving http query endpoint", cause);
         if (ctx.channel().isActive()) {
-            sendError(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+            sendError(ctx, new HttpResponseStatus(500, cause.getMessage()));
         }
     }
 
@@ -109,7 +116,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
         messageReceived(ctx, request); // redirect to more sensible netty5 naming scheme
     }
 
-    private void decodeParameters(QueryStringDecoder urlDecoder, KVPairs kv) {
+    private static void decodeParameters(QueryStringDecoder urlDecoder, KVPairs kv) {
         for (Map.Entry<String, List<String>> entry : urlDecoder.parameters().entrySet()) {
             String k = entry.getKey();
             String v = entry.getValue().get(0); // ignore duplicates
@@ -161,7 +168,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             case "/query/call/":
                 // TODO jsonp enable
                 QueryServer.rawQueryCalls.inc();
-                HttpQueryCallHandler.handleQuery(meshQueryMaster, kv, request, ctx);
+                queryQueue.queueQuery(meshQueryMaster, kv, request, ctx);
                 break;
             case "/query/google/authorization":
                 GoogleDriveAuthentication.gdriveAuthorization(kv, ctx);
@@ -169,7 +176,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             case "/query/google/submit":
                 boolean success = GoogleDriveAuthentication.gdriveAccessToken(kv, ctx);
                 if (success) {
-                    HttpQueryCallHandler.handleQuery(meshQueryMaster, kv, request, ctx);
+                    queryQueue.queueQuery(meshQueryMaster, kv, request, ctx);
                 }
                 break;
             default:
@@ -194,25 +201,37 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 break;
             case "/query/list":
                 writer.write("[\n");
-                for (QueryTracker.QueryEntryInfo stat : tracker.getRunning()) {
+                for (QueryEntryInfo stat : tracker.getRunning()) {
                     writer.write(CodecJSON.encodeString(stat).concat(",\n"));
                 }
                 writer.write("]");
                 break;
             case "/completed/list":
                 writer.write("[\n");
-                for (QueryTracker.QueryEntryInfo stat : tracker.getCompleted()) {
+                for (QueryEntryInfo stat : tracker.getCompleted()) {
                     writer.write(CodecJSON.encodeString(stat).concat(",\n"));
                 }
                 writer.write("]");
                 break;
+            case "/v2/host/list":
             case "/host/list":
-                writer.write("[\n");
-                for (HostEntryInfo hostEntryInfo : tracker.getQueryHosts(kv.getValue("uuid"))) {
-                    writer.write("{'hostname':'" + hostEntryInfo.getHostName() + "','lines':'" + hostEntryInfo.getLines() + "','starttime':" + hostEntryInfo.getStarttime() + ", 'finished':'" + hostEntryInfo.getFinished() + "', 'endtime':" + hostEntryInfo.getEndtime() + ", 'runtime':" + hostEntryInfo.getRuntime() + "},");
+                String queryStatusUuid = kv.getValue("uuid");
+                QueryEntry queryEntry = tracker.getQueryEntry(queryStatusUuid);
+                if (queryEntry != null) {
+                    DetailedStatusHandler hostDetailsHandler =
+                            new DetailedStatusHandler(writer, response, ctx, request, cbf, queryEntry);
+                    hostDetailsHandler.handle();
+                    return;
+                } else {
+                    QueryEntryInfo queryEntryInfo = tracker.getCompletedQueryInfo(queryStatusUuid);
+                    if (queryEntryInfo != null) {
+                        JSONObject entryJSON = CodecJSON.encodeJSON(queryEntryInfo);
+                        writer.write(entryJSON.toString());
+                    } else {
+                        throw new RuntimeException("could not find query");
+                    }
+                    break;
                 }
-                writer.write("]");
-                break;
             case "/query/cancel":
                 if (tracker.cancelRunning(kv.getValue("uuid"))) {
                     if (jsonp) writer.write("{canceled:true,message:'");
@@ -238,7 +257,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             }
             case "/v2/queries/finished.list": {
                 JSONArray runningEntries = new JSONArray();
-                for (QueryTracker.QueryEntryInfo entryInfo : tracker.getCompleted()) {
+                for (QueryEntryInfo entryInfo : tracker.getCompleted()) {
                     JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
                     //TODO: replace this with some high level summary
                     entryJSON.put("hostInfoSet", "");
@@ -249,7 +268,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             }
             case "/v2/queries/running.list": {
                 JSONArray runningEntries = new JSONArray();
-                for (QueryTracker.QueryEntryInfo entryInfo : tracker.getRunning()) {
+                for (QueryEntryInfo entryInfo : tracker.getRunning()) {
                     JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
                     //TODO: replace this with some high level summary
                     entryJSON.put("hostInfoSet", "");
@@ -258,23 +277,23 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 writer.write(runningEntries.toString());
                 break;
             }
+            case "/v2/queries/workers": {
+                JSONObject jsonObject = new JSONObject();
+                for (WorkerData workerData : meshQueryMaster.worky().values()) {
+                    jsonObject.put(workerData.hostName, workerData.queryLeases.availablePermits());
+                }
+                writer.write(jsonObject.toString());
+                break;
+            }
             case "/v2/queries/list":
                 JSONArray queries = new JSONArray();
-                for (QueryTracker.QueryEntryInfo entryInfo : tracker.getCompleted()) {
+                for (QueryEntryInfo entryInfo : tracker.getCompleted()) {
                     JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
-                    entryJSON.put("hostEntries", entryInfo.hostInfoSet.size());
                     entryJSON.put("state", 0);
                     queries.put(entryJSON);
                 }
-                for (QueryTracker.QueryEntryInfo entryInfo : tracker.getQueued()) {
+                for (QueryEntryInfo entryInfo : tracker.getRunning()) {
                     JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
-                    entryJSON.put("hostEntries", entryInfo.hostInfoSet.size());
-                    entryJSON.put("state", 2);
-                    queries.put(entryJSON);
-                }
-                for (QueryTracker.QueryEntryInfo entryInfo : tracker.getRunning()) {
-                    JSONObject entryJSON = CodecJSON.encodeJSON(entryInfo);
-                    entryJSON.put("hostEntries", entryInfo.hostInfoSet.size());
                     entryJSON.put("state", 3);
                     queries.put(entryJSON);
                 }
@@ -284,7 +303,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 StringWriter swriter = new StringWriter();
                 final JsonGenerator json = QueryServer.factory.createJsonGenerator(swriter);
                 json.writeStartArray();
-                for (IJob job : meshQueryMaster.getJobs()) {
+                for (IJob job : meshQueryMaster.keepy().getJobs()) {
                     if (job.getQueryConfig() != null && job.getQueryConfig().getCanQuery()) {
                         List<JobTask> tasks = job.getCopyOfTasks();
                         String uuid = job.getId();
@@ -301,25 +320,6 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                         json.writeNumberField("nodes", tasks.size());
                         json.writeEndObject();
                     }
-                }
-                json.writeEndArray();
-                json.close();
-                writer.write(swriter.toString());
-                break;
-            }
-            case "/v2/host/list": {
-                StringWriter swriter = new StringWriter();
-                final JsonGenerator json = QueryServer.factory.createJsonGenerator(swriter);
-                json.writeStartArray();
-                for (HostEntryInfo hostEntryInfo : tracker.getQueryHosts(kv.getValue("uuid"))) {
-                    json.writeStartObject();
-                    json.writeStringField("hostname", hostEntryInfo.getHostName());
-                    json.writeNumberField("lines", hostEntryInfo.getLines());
-                    json.writeNumberField("startTime", hostEntryInfo.getStarttime());
-                    json.writeNumberField("endTime", hostEntryInfo.getEndtime());
-                    json.writeNumberField("taskId", hostEntryInfo.getTaskId());
-                    json.writeBooleanField("finished", hostEntryInfo.getFinished());
-                    json.writeEndObject();
                 }
                 json.writeEndArray();
                 json.close();
@@ -354,10 +354,6 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 writer.write(swriter.toString());
                 break;
             }
-            case "/v2/hosts/list":
-                String hosts = meshQueryMaster.getMeshHostJSON();
-                writer.write(hosts);
-                break;
             default:
                 // forward to static file server
                 ctx.pipeline().addLast(staticFileHandler);

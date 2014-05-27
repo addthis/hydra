@@ -18,6 +18,8 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.table.DataTable;
 import com.addthis.bundle.table.DataTableFactory;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 /**
  * this class of operator should act as it's own source.
  * it will create a new bundle stream by fully consuming
@@ -28,11 +30,12 @@ public abstract class AbstractTableOp extends AbstractQueryOp implements QueryTa
     protected DataTable table;
 
     private final DataTableFactory tableFactory;
-    private final QueryStatusObserver queryStatusObserver;
+    private final ChannelProgressivePromise queryPromise;
 
-    public AbstractTableOp(DataTableFactory tableFactory, QueryStatusObserver queryStatusObserver) {
+    public AbstractTableOp(DataTableFactory tableFactory, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         this.tableFactory = tableFactory;
-        this.queryStatusObserver = queryStatusObserver;
+        this.queryPromise = queryPromise;
     }
 
     public abstract DataTable tableOp(DataTable table);
@@ -68,7 +71,7 @@ public abstract class AbstractTableOp extends AbstractQueryOp implements QueryTa
     private void complete() {
         QueryOp next = getNext();
         if (next != null) {
-            next.sendTable(getTable(), queryStatusObserver);
+            next.sendTable(getTable());
         }
     }
 }

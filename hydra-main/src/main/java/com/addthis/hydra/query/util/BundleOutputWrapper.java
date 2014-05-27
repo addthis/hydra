@@ -18,6 +18,8 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleOutput;
 import com.addthis.hydra.data.query.AbstractQueryOp;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 /**
  * wraps any DataChannelOutput and makes a QueryOp
  */
@@ -25,7 +27,8 @@ public class BundleOutputWrapper extends AbstractQueryOp {
 
     private final BundleOutput output;
 
-    public BundleOutputWrapper(BundleOutput output) {
+    public BundleOutputWrapper(BundleOutput output, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
         this.output = output;
     }
 

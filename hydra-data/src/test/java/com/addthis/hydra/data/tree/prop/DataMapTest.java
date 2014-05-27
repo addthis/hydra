@@ -13,7 +13,8 @@ public class DataMapTest extends TestCase {
 
     @Test
     public void testSparseEncodeDecode() throws Exception {
-        DataMap dataMap = new DataMap(100);
+        int size = 100;
+        DataMap dataMap = new DataMap(size);
         long val = 1232432425l;
         dataMap.put("foo", ValueFactory.create(val));
         byte[] bytes = dataMap.bytesEncode(KeyCoder.EncodeType.SPARSE.ordinal());
@@ -21,6 +22,8 @@ public class DataMapTest extends TestCase {
         decoded.bytesDecode(bytes, KeyCoder.EncodeType.SPARSE.ordinal());
         ValueObject result = dataMap.getValue("foo");
         assertEquals(val, result.asLong().getLong());
+        assertEquals(size, dataMap.getSize());
+        assertEquals(size, decoded.getSize());
     }
 
     @Test
@@ -37,8 +40,10 @@ public class DataMapTest extends TestCase {
         assertTrue(customBytes.length < codecBytes.length);
         DataMap dataMap1 = new DataMap(size);
         codec.decode(dataMap1, codecBytes);
-        DataMap dataMap2 = new DataMap(size);
+        DataMap dataMap2 = new DataMap();
         dataMap2.bytesDecode(customBytes, KeyCoder.EncodeType.SPARSE.ordinal());
         assertEquals(dataMap1.getValue("key:9997").asLong().getLong(), dataMap2.getValue("key:9997").asLong().getLong());
+        assertEquals(size, dataMap1.getSize());
+        assertEquals(size, dataMap2.getSize());
     }
 }
