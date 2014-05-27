@@ -31,6 +31,8 @@ import com.addthis.maljson.JSONObject;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Counter;
 
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketHandler;
@@ -69,6 +71,9 @@ public class WebSocketManager extends WebSocketHandler {
     private final Thread updateThread;
 
     private static final int clientDropQueueSize = Parameter.intValue("spawn.client.drop.queue", 2000);
+    private static final int eventArrayWarningSize = Parameter.intValue("spawn.client.eventarray.warningsize", 5000);
+    private static final Counter nonConsumingClientDropCounter = Metrics.newCounter(Spawn.class, "clientDropsSpawnV2");
+
 
     public WebSocketManager() {
         this.updateThread = new Thread("WebUpdateThread") {
@@ -353,6 +358,7 @@ public class WebSocketManager extends WebSocketHandler {
             if (eventQueue.size() > clientDropQueueSize) {
                 // Queue has grown too big. Client does not appear to be consuming. Drop the socket to prevent an ugly OOM.
                 eventQueue.clear();
+                nonConsumingClientDropCounter.inc();
                 this.onClose(-1, null);
             }
             eventQueue.add(event);
@@ -368,7 +374,11 @@ public class WebSocketManager extends WebSocketHandler {
                     events++;
                 }
                 if (events > 0) {
-                    sendMessageByTopic("event.batch.update", eventArray.toString());
+                    String eventArrayString = eventArray.toString();
+                    sendMessageByTopic("event.batch.update", eventArrayString);
+                    if (eventArrayString.length() > eventArrayWarningSize) {
+                        log.warn("[WebSocketManager] warning: large event array detected; user={} startsWith=", this.getUsername(), eventArrayString.substring(0, 500));
+                    }
                 }
             } catch (Exception ex) {
                 log.warn("[WebSocketManager] error sending batch updates to web socket");
