@@ -15,6 +15,7 @@ package com.addthis.hydra.data.filter.bundle;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.Bundle;
@@ -64,7 +65,16 @@ public class BundleFilterDebugPrint extends BundleFilter {
     @Codec.Set(codable = true)
     private long maxBundles = 100;
 
+    /**
+     * Optionally specify to print a bundle every N seconds if
+     * parameter is a positive integer. Default is 0.
+     */
+    @Codec.Set(codable = true)
+    private long every = 0;
+
     private final AtomicLong bundleCounter = new AtomicLong();
+
+    private final AtomicLong bundleTimer = new AtomicLong();
 
     // Should be used solely for unit testing.
     private String cacheOutput = null;
@@ -89,9 +99,27 @@ public class BundleFilterDebugPrint extends BundleFilter {
         return BundlePrinter.printBundle(bundle);
     }
 
+    private boolean testBundleTimer() {
+        if (every <= 0) {
+            return false;
+        }
+        while (true) {
+            long current = JitterClock.globalTime();
+            long previous = bundleTimer.get();
+            if (current - previous > (every * 1000)) {
+                if (bundleTimer.compareAndSet(previous, current)) {
+                    return true;
+                }
+            } else {
+                return false;
+            }
+        }
+    }
+
     @Override
     public boolean filterExec(Bundle bundle) {
-        if (bundleCounter.getAndIncrement() < maxBundles) {
+        boolean print = (bundleCounter.getAndIncrement() < maxBundles) || testBundleTimer();
+        if (print) {
             String bundleString = formatBundle(bundle);
             if (Strings.isEmpty(prefix)) {
                 log.info(bundleString);
