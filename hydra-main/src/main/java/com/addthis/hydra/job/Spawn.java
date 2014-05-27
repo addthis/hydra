@@ -1096,6 +1096,7 @@ public class Spawn implements Codec.Codable {
                 scheduleTask(job, task, expandJob(job));
             } catch (Exception e) {
                 log.warn("Warning: failed to kick task " + task.getJobKey() + " with: " + e, e);
+                job.errorTask(task, JobTaskErrorCode.KICK_ERROR);
             }
         }
         return true;
