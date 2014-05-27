@@ -812,7 +812,7 @@ public class SpawnManager {
                 String defaultSource = isReplica ? task.getReplicas().get(0).getHostUUID() : task.getHostUUID();
                 String source = kv.getValue("source", defaultSource);
                 String target = kv.getValue("target", "");
-                if (spawn.moveTask(id, node, source, target)) {
+                if (task != null && spawn.moveTask(task.getJobKey(), source, target)) {
                     emitLogLineForAction(kv, "move job " + id + " node " + node + " from " + source + " to " + target);
                 }
             }

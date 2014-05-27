@@ -2026,13 +2026,13 @@ public class Spawn implements Codec.Codable {
         return expandJob(job.getId(), job.getParameters(), getJobConfig(job.getId()));
     }
 
-    public boolean moveTask(String jobID, int node, String sourceUUID, String targetUUID) {
+    public boolean moveTask(JobKey jobKey, String sourceUUID, String targetUUID) {
         if (sourceUUID == null || targetUUID == null || sourceUUID.equals(targetUUID)) {
             log.warn("[task.move] fail: invalid input " + sourceUUID + "," + targetUUID);
             return false;
         }
-        TaskMover tm = new TaskMover(this, new JobKey(jobID, node), targetUUID, sourceUUID);
-        log.warn("[task.move] attempting move for " + jobID + " / " + node);
+        TaskMover tm = new TaskMover(this, jobKey, targetUUID, sourceUUID);
+        log.warn("[task.move] attempting move for " + jobKey);
         return tm.execute();
     }
 
@@ -3410,7 +3410,7 @@ public class Spawn implements Codec.Codable {
         }
         CommandTaskKick kick = new CommandTaskKick(
                 task.getHostUUID(),
-                new JobKey(job.getId(), task.getTaskID()),
+                task.getJobKey(),
                 job.getPriority(),
                 job.getCopyOfTasks().size(),
                 job.getMaxRunTime() != null ? job.getMaxRunTime() * 60000 : 0,
