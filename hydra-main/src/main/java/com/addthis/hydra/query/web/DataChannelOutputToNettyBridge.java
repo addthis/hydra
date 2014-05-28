@@ -69,7 +69,7 @@ public class DataChannelOutputToNettyBridge implements DataChannelOutput {
 
     @Override
     public void send(List<Bundle> bundles) {
-        if (bundles != null && !bundles.isEmpty()) {
+        if ((bundles != null) && !bundles.isEmpty()) {
             for (Bundle bundle : bundles) {
                 send(bundle);
             }

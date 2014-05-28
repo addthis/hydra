@@ -102,7 +102,6 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
                 executor.execute(queryTask);
             }
             maybeScheduleStragglerChecks();
-            ctx.pipeline().remove(this);
         } else if (msg instanceof DetailedStatusTask) {
             DetailedStatusTask task = (DetailedStatusTask) msg;
             task.run(this);
@@ -161,10 +160,27 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
         if (!future.isSuccess()) {
             stopSources(future.cause().getMessage());
             meshQueryMaster.handleError(query);
-            consumer.sourceError(DataChannelError.promote((Exception) future.cause()));
+            consumer.sourceError(promoteHackForThrowables(future.cause()));
         } else {
+            safelyRemoveSelfFromPipeline(future);
             stopSources("query is complete");
             consumer.sendComplete();
+        }
+    }
+
+    private static DataChannelError promoteHackForThrowables(Throwable cause) {
+        if (cause instanceof DataChannelError) {
+            return (DataChannelError) cause;
+        } else {
+            return new DataChannelError(cause);
+        }
+    }
+
+    private void safelyRemoveSelfFromPipeline(ChannelFuture future) {
+        try {
+            future.channel().pipeline().remove(this);
+        } catch (Exception e) {
+            log.warn("unexpected error while trying to remove mesh source aggregator from the pipeline on success", e);
         }
     }
 
