@@ -44,29 +44,31 @@ import org.slf4j.LoggerFactory;
  * command-line/jar entry-point to start either hydra or batch.
  */
 public class Main {
-
-    private static final Logger log = LoggerFactory.getLogger(Main.class);
+    private static final Logger log;
 
     private static final boolean GANGLIA_ENABLE = Parameter.boolValue("ganglia.enable", true);
     private static final String GANGLIA_HOSTS = Parameter.value("ganglia.hosts", "localhost:8649");
     private static final String METRICS_REPORTER_CONFIG_FILE = Parameter.value("metrics.reporter.config", "");
     private static final boolean GANGLIA_SHORT_NAMES = Parameter.boolValue("ganglia.useShortNames", false);
+    private static final boolean ANNOUNCE_LOG_INIT = Parameter.boolValue("init.log4j.verbose", false);
 
     public static final Map<String, String> cmap = new HashMap<>();
     public static final DynamicLoader.DynamicLoaderResult dlr;
 
-    @SuppressWarnings("unused")
-    public static void registerFilter(String name, String clazz) {
-        cmap.put(name, clazz);
-    }
-
-    /** register types */
     static {
+        /** force log4j init before first logger is created */
+        initLog4j();
+        log = LoggerFactory.getLogger(Main.class);
+        /** register types */
         dlr =  DynamicLoader.readDynamicClasses("hydra.loader");
         PluginReader.registerLazyPlugin("-executables.classmap", cmap);
         cmap.putAll(dlr.executables);
     }
 
+    @SuppressWarnings("unused")
+    public static void registerFilter(String name, String clazz) {
+        cmap.put(name, clazz);
+    }
 
     public static void main(String args[]) {
         initLog4j();
@@ -195,6 +197,11 @@ public class Main {
             return;
         }
 
+        if (log != null) {
+            log.debug("log4j already initialized");
+            return;
+        }
+
         if (System.getProperty("log4j.defaultInitOverride","false").equalsIgnoreCase("true"))  {
             String config = System.getProperty("log4j.configuration", "log4j.properties");
             if (config.startsWith("/")) {
@@ -234,7 +241,7 @@ public class Main {
             } catch(Exception e) {
                 throw new RuntimeException("Failed to enable log4j", e);
             }
-            log.info("log4j initialized");
+            if (ANNOUNCE_LOG_INIT) LoggerFactory.getLogger(Main.class).info("log4j initialized");
         }
         else {
             System.err.println("Explicitly asked for log4j initialization, but had log4j.defaultInitOverride!=true. Default log4j properties may or may not be used");
