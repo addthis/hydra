@@ -24,8 +24,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecBin2;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.ReadPageDB;
 import com.addthis.hydra.store.kv.ReadPageCache;
@@ -51,9 +49,6 @@ import org.slf4j.LoggerFactory;
 public class ReadTree implements ReadDataTree {
 
     private static final Logger log = LoggerFactory.getLogger(ReadTree.class);
-
-    private static final String DEFAULT_DB_NAME = Parameter.value("pagedb.dbname", "db.key");
-    private static final Codec DEFAULT_CODEC = new CodecBin2();
 
     // max number of nodes allowed to reside in memory. Zero means unlimited (not recommended)
     private static final int nodeCacheSize = Parameter.intValue("hydra.tree.cache.nodeCacheSize", 250);
