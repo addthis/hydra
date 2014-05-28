@@ -525,8 +525,8 @@ public class HostFailWorker {
             try {
                 synchronized (hostsToFailByType) {
                     JSONObject jsonObject = new JSONObject();
-                    jsonObject.put(filesystemOkayKey, new JSONArray(failFsDead));
-                    jsonObject.put(filesystemDeadKey, new JSONArray(failFsOkay));
+                    jsonObject.put(filesystemDeadKey, new JSONArray(failFsDead));
+                    jsonObject.put(filesystemOkayKey, new JSONArray(failFsOkay));
                     jsonObject.put(filesystemFullKey, new JSONArray(fsFull));
                     spawn.getSpawnDataStore().put(dataStoragePath, jsonObject.toString());
                 }
