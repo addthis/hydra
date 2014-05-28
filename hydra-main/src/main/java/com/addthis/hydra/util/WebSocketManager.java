@@ -71,7 +71,6 @@ public class WebSocketManager extends WebSocketHandler {
     private final Thread updateThread;
 
     private static final int clientDropQueueSize = Parameter.intValue("spawn.client.drop.queue", 2000);
-    private static final int eventArrayWarningSize = Parameter.intValue("spawn.client.eventarray.warningsize", 5000);
     private static final Counter nonConsumingClientDropCounter = Metrics.newCounter(Spawn.class, "clientDropsSpawnV2");
 
 
@@ -376,9 +375,6 @@ public class WebSocketManager extends WebSocketHandler {
                 if (events > 0) {
                     String eventArrayString = eventArray.toString();
                     sendMessageByTopic("event.batch.update", eventArrayString);
-                    if (eventArrayString.length() > eventArrayWarningSize) {
-                        log.warn("[WebSocketManager] warning: large event array detected; user={} startsWith=", this.getUsername(), eventArrayString.substring(0, 500));
-                    }
                 }
             } catch (Exception ex) {
                 log.warn("[WebSocketManager] error sending batch updates to web socket");
