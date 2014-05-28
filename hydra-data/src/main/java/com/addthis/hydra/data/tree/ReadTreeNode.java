@@ -48,7 +48,7 @@ public class ReadTreeNode extends AbstractTreeNode implements IReadWeighable {
     }
 
     protected void initTree(ReadTree tree) {
-        this.name = name;
+        this.tree = tree;
     }
 
     //reference to the transient (in memory) tree object -- not serialized
