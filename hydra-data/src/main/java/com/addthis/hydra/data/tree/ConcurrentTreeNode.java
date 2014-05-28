@@ -57,7 +57,7 @@ import io.netty.buffer.PooledByteBufAllocator;
  *
  */
 public class ConcurrentTreeNode extends AbstractTreeNode
-        implements DataTreeNode, Codec.ConcurrentCodable, Codec.SuperCodable, Iterable<DataTreeNode> {
+        implements DataTreeNode, Codec.ConcurrentCodable, Iterable<DataTreeNode> {
 
     public static final int ALIAS = 1 << 1;
 
