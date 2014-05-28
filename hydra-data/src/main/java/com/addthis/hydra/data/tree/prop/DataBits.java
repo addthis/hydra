@@ -53,7 +53,7 @@ public class DataBits extends TreeNodeData<DataBits.Config> {
      * @user-reference
      * @hydra-name bits
      */
-    public static final class Config extends TreeDataParameters<DataBits> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * Number of bits to track starting from the least significant.

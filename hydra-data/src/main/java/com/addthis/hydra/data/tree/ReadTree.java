@@ -22,24 +22,23 @@ import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.store.db.CloseOperation;
+import com.addthis.codec.Codec;
+import com.addthis.codec.CodecBin2;
 import com.addthis.hydra.store.db.DBKey;
-import com.addthis.hydra.store.db.IPageDB.Range;
 import com.addthis.hydra.store.db.ReadPageDB;
-import com.addthis.hydra.store.kv.ReadExternalPagedStore;
+import com.addthis.hydra.store.kv.ReadPageCache;
+import com.addthis.hydra.store.kv.ReadWeigher;
 import com.addthis.hydra.store.util.Raw;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.cache.Weigher;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
+
 /**
  * <p/>
  * Read-only Tree (for querying)
@@ -49,9 +48,12 @@ import org.slf4j.LoggerFactory;
  * <p/>
  * MUST BE CLOSED. It is not okay to simply dereference. (due to the bdb instance it uses).
  */
-public final class ReadTree implements DataTree {
+public class ReadTree implements ReadDataTree {
 
     private static final Logger log = LoggerFactory.getLogger(ReadTree.class);
+
+    private static final String DEFAULT_DB_NAME = Parameter.value("pagedb.dbname", "db.key");
+    private static final Codec DEFAULT_CODEC = new CodecBin2();
 
     // max number of nodes allowed to reside in memory. Zero means unlimited (not recommended)
     private static final int nodeCacheSize = Parameter.intValue("hydra.tree.cache.nodeCacheSize", 250);
@@ -63,7 +65,6 @@ public final class ReadTree implements DataTree {
 
         If set to zero, then nodeCacheSize will be used and nodes will be unweighted */
     private static final int nodeCacheWeight = Parameter.intValue("hydra.tree.cache.nodeCacheWeight", nodeCacheSize * 24);
-
 
     /*  max number of pages allowed to reside in memory. When pageCacheWeight is default, this value
         is used to calculate pageCacheWeight. With a default pageCacheWeight or with pageCacheWeight == 0,
@@ -78,18 +79,12 @@ public final class ReadTree implements DataTree {
     private static final int pageCacheWeight = Parameter.intValue("hydra.tree.cache.pageCacheWeight", pageCacheSize * 1724);
 
     private final File root;
-    private final ReadPageDB<ReadTreeNode> source;
+    private final ReadPageCache<DBKey, ReadTreeNode> source;
     private final ReadTreeNode treeRootNode;
     private final LoadingCache<CacheKey, ReadTreeNode> loadingNodeCache;
     private final AtomicBoolean closed = new AtomicBoolean(false);
-    private final boolean metrics;
 
     public ReadTree(File root) throws Exception {
-        this(root, false);
-    }
-
-    public ReadTree(File root, boolean metrics) throws Exception {
-        this.metrics = metrics;
 
         if (!root.isDirectory()) {
             throw new IOException("Unable to open root directory '" + root + "'");
@@ -102,24 +97,19 @@ public final class ReadTree implements DataTree {
                 // limit by weight
                 loadingNodeCache = CacheBuilder.newBuilder()
                         .maximumWeight(nodeCacheWeight)
-                        .weigher(new Weigher<CacheKey, ReadTreeNode>() {
-                            @Override
-                            public int weigh(CacheKey key, ReadTreeNode value) {
                             /* A lean node goes from 24 to 24 + its string name and + cacheKey. the 24 becomes a small percentage.
 
                                 Dangerous, fat nodes typically have lots of serialized strings in their value payload. The inflation
                                 ratio there is actually probably less than for lean nodes since the various pointers for the string
                                 objects may not be nearly as large as the strings themselves. Therefore, holding them to the lean
                                 node's expansion standard is probably conservative enough. */
-                                return value.getWeight();
-                            }
-                        })
+                        .weigher(ReadWeigher.INSTANCE)
                         .build(
                                 new CacheLoader<CacheKey, ReadTreeNode>() {
                                     public ReadTreeNode load(CacheKey key) throws Exception {
                                         ReadTreeNode node = sourceGet(key.dbkey());
                                         if (node != null) {
-                                            node.init(ReadTree.this, key.name);
+                                            node.initName(key.name);
                                             return node;
                                         } else {
                                             throw new ExecutionException("Source did not have node", new NullPointerException());
@@ -135,7 +125,7 @@ public final class ReadTree implements DataTree {
                                     public ReadTreeNode load(CacheKey key) throws Exception {
                                         ReadTreeNode node = sourceGet(key.dbkey());
                                         if (node != null) {
-                                            node.init(ReadTree.this, key.name);
+                                            node.initName(key.name);
                                             return node;
                                         } else {
                                             throw new ExecutionException("Source did not have node", new NullPointerException());
@@ -159,16 +149,17 @@ public final class ReadTree implements DataTree {
      * @return the source - make sure to close it eventually
      * @throws Exception
      */
-    private ReadPageDB<ReadTreeNode> initSource() throws Exception {
+    private ReadPageCache<DBKey, ReadTreeNode> initSource() throws Exception {
         long start = System.currentTimeMillis();
 
-        //open page db (opens byte store and bdb as well)
-        ReadPageDB<ReadTreeNode> source = new ReadPageDB<>(root, ReadTreeNode.class,
-                pageCacheSize, pageCacheWeight, metrics);
+        ReadPageCache<DBKey, ReadTreeNode> pageCache = ReadPageDB.newPageCache(
+                root,
+                new DBKeyToReadTreeNode(this),
+                pageCacheSize, pageCacheWeight);
 
         long openTime = System.currentTimeMillis() - start;
-        log.info("dir=" + root + " openms=" + openTime);
-        return source;
+        log.info("dir={} openms={}", root, openTime);
+        return pageCache;
     }
 
     /**
@@ -206,9 +197,7 @@ public final class ReadTree implements DataTree {
         try {
             CacheKey key = new CacheKey(parentID, childName);
             ReadTreeNode node = loadingNodeCache.get(key);
-            if (log.isTraceEnabled()) {
-                log.trace("[node.get] " + parentID + " --> " + childName + " --> " + node);
-            }
+            log.trace("[node.get] {} --> {} --> {}", parentID, childName, node);
             return node;
         } catch (ExecutionException e) { //Source does not have node
             return null;
@@ -226,12 +215,10 @@ public final class ReadTree implements DataTree {
      * @param child  - name of child
      * @return child
      */
-    protected DataTreeNode getNode(final ReadTreeNode parent, final String child) {
+    protected ReadNode getNode(final ReadTreeNode parent, final String child) {
         Integer nodedb = parent.nodeDB();
         if (nodedb == null) {
-            if (log.isTraceEnabled()) {
-                log.trace("[node.get] " + parent + " --> " + child + " NOMAP --> null");
-            }
+            log.trace("[node.get] {} --> {} NOMAP --> null", parent, child);
             return null;
         }
         return getNode(nodedb, child);
@@ -247,44 +234,25 @@ public final class ReadTree implements DataTree {
      */
     protected ReadTreeNode sourceGet(final DBKey key) {
         ReadTreeNode node = source.get(key);
-        if (log.isTraceEnabled()) {
-            log.trace("[source.get] " + key + " --> " + node);
-        }
+        log.trace("[source.get] {} --> {}", key, node);
         return node;
     }
 
-    @SuppressWarnings("unchecked")
-    protected Range<DBKey, ReadTreeNode> fetchNodeRange(int db) {
+    protected Iterator<Map.Entry<DBKey, ReadTreeNode>> fetchNodeRange(int db) {
         return source.range(new DBKey(db), new DBKey(db + 1));
     }
 
-    protected Range<DBKey, ReadTreeNode> fetchNodeRange(int db, int sampleRate) {
+    protected Iterator<Map.Entry<DBKey, ReadTreeNode>> fetchNodeRange(int db, int sampleRate) {
         return source.range(new DBKey(db), new DBKey(db + 1), sampleRate);
     }
 
-    @SuppressWarnings("unchecked")
-    protected Range<DBKey, ReadTreeNode> fetchNodeRange(int db, String from, String to) {
-        return source.range(new DBKey(db, Raw.get(from)), to == null ? new DBKey(db+1, (Raw)null) : new DBKey(db, Raw.get(to)));
+    protected Iterator<Map.Entry<DBKey, ReadTreeNode>> fetchNodeRange(int db, String from, String to) {
+        return source.range(new DBKey(db, Raw.get(from)),
+                (to == null) ? new DBKey(db + 1, (Raw) null) : new DBKey(db, Raw.get(to)));
     }
 
     public ReadTreeNode getRootNode() {
         return treeRootNode;
-    }
-
-    @Override
-    public void sync() {
-
-    }
-
-    /**
-     * Close the source.
-     *
-     * @param cleanLog unused in the ReadTree implementation.
-     * @param operation unused in the ReadTree implementation.
-     **/
-    @Override
-    public void close(boolean cleanLog, CloseOperation operation) {
-        close();
     }
 
     /**
@@ -297,29 +265,12 @@ public final class ReadTree implements DataTree {
             log.trace("already closed");
             return;
         }
-        if (log.isDebugEnabled()) {
-            log.debug("closing " + this);
-        }
-        try {//source is final in read-tree
+        log.debug("closing {}", this);
+        try {
             source.close();
         } catch (Exception ex)  {
             log.error("While closing source:", ex);
         }
-    }
-
-    @Override
-    public int getDBCount() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public int getCacheSize() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public double getCacheHitRate() {
-        throw new UnsupportedOperationException();
     }
 
     /**
@@ -368,46 +319,29 @@ public final class ReadTree implements DataTree {
      */
 
     @Override
-    public DataTreeNode getNode(String name) {
+    public ReadNode getNode(String name) {
         return getRootNode().getNode(name);
     }
 
     @Override
-    public DataTreeNode getLeasedNode(String name) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public DataTreeNode getOrCreateNode(String name, DataTreeNodeInitializer init) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean deleteNode(String node) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ClosableIterator<DataTreeNode> getIterator() {
-        ReadTreeNode rootNode = getRootNode();
-        if (rootNode != null) {
+    public Iterator<ReadNode> getIterator() {
+        if (getRootNode() != null) {
             return getRootNode().getIterator();
         }
         return null;
     }
 
     @Override
-    public ClosableIterator<DataTreeNode> getIterator(String begin) {
+    public Iterator<ReadNode> getIterator(String begin) {
         return getRootNode().getIterator(begin);
     }
 
     @Override
-    public ClosableIterator<DataTreeNode> getIterator(String from, String to) {
+    public Iterator<ReadNode> getIterator(String from, String to) {
         return getRootNode().getIterator(from, to);
     }
 
-    @Override
-    public Iterator<DataTreeNode> iterator() {
+    public Iterator<ReadNode> iterator() {
         return getRootNode().iterator();
     }
 
@@ -417,7 +351,7 @@ public final class ReadTree implements DataTree {
     }
 
     @Override
-    public DataTree getTreeRoot() {
+    public ReadDataTree getTreeRoot() {
         return this;
     }
 
@@ -432,75 +366,16 @@ public final class ReadTree implements DataTree {
     }
 
     @Override
-    public void incrementCounter() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long incrementCounter(long val) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void writeLock() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void writeUnlock() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void setCounter(long val) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void updateChildData(DataTreeNodeUpdater state, TreeDataParent path) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void updateParentData(DataTreeNodeUpdater state, DataTreeNode child, boolean isnew) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean aliasTo(DataTreeNode target) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void lease() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void release() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public DataTreeNodeActor getData(String key) {
+    public TreeNodeData<?> getData(String key) {
         return getRootNode().getData(key);
     }
 
     @Override
-    public Map<String, TreeNodeData> getDataMap() {
+    public Map<String, TreeNodeData<?>> getDataMap() {
         return getRootNode().getDataMap();
     }
 
-    public ReadExternalPagedStore<DBKey, ReadTreeNode> getReadEps() {
-        return source.getReadEps();
+    public ReadPageCache<DBKey, ReadTreeNode> getSource() {
+        return source;
     }
-
-    /**
-     * For testing purposes only.
-     */
-    void testIntegrity() {
-        ReadExternalPagedStore store = source.getReadEps();
-        store.testIntegrity();
-    }
-
 }

@@ -15,7 +15,7 @@ package com.addthis.hydra.data.tree;
 
 public class DataTreeUtil {
 
-    public static final DataTreeNode pathLocateFrom(DataTreeNode node, String path[]) {
+    public static final DataTreeNode pathLocateFrom(DataTreeNode node, String[] path) {
         int plen = path.length;
         for (int i = 0; i < plen; i++) {
             node = node.getNode(path[i]);

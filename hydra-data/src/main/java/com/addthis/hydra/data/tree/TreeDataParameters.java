@@ -14,8 +14,6 @@
 package com.addthis.hydra.data.tree;
 
 import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.ClassMap;
-import com.addthis.codec.Codec.ClassMapFactory;
 import com.addthis.hydra.common.plugins.PluginReader;
 
 
@@ -36,9 +34,9 @@ import com.addthis.hydra.common.plugins.PluginReader;
  * @hydra-category
  */
 @Codec.Set(classMapFactory = TreeDataParameters.CMAP.class)
-public abstract class TreeDataParameters<T extends TreeNodeData<?>> implements Codec.Codable {
+public abstract class TreeDataParameters implements Codec.Codable {
 
-    static ClassMap cmap = new ClassMap() {
+    static Codec.ClassMap cmap = new Codec.ClassMap() {
         @Override
         public String getClassField() {
             return "type";
@@ -50,9 +48,9 @@ public abstract class TreeDataParameters<T extends TreeNodeData<?>> implements C
         }
     };
 
-    public static class CMAP implements ClassMapFactory {
+    public static class CMAP implements Codec.ClassMapFactory {
 
-        public ClassMap getClassMap() {
+        public Codec.ClassMap getClassMap() {
             return cmap;
         }
     }
@@ -67,11 +65,5 @@ public abstract class TreeDataParameters<T extends TreeNodeData<?>> implements C
         PluginReader.registerPlugin("-treenodedata.classmap", cmap, TreeNodeData.class);
     }
 
-    public abstract T newInstance();
-
-    public T newInstance(DataTreeNode boundTo) {
-        T newInstance = newInstance();
-        newInstance.setBoundNode(boundTo);
-        return newInstance;
-    }
+    public abstract TreeNodeData<?> newInstance();
 }

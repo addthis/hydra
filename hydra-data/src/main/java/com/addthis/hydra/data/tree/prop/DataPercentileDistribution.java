@@ -65,7 +65,7 @@ public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistr
      * @user-reference
      * @hydra-name distribution
      */
-    public static final class Config extends TreeDataParameters<DataPercentileDistribution> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * Name of the field to monitor. This field is required.

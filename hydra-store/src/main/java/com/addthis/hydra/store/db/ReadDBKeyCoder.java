@@ -14,6 +14,7 @@
 package com.addthis.hydra.store.db;
 
 import com.addthis.codec.Codec;
+import com.addthis.hydra.store.kv.IReadWeighable;
 
 /**
  */

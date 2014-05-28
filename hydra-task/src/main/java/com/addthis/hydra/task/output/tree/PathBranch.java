@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.codec.Codec;
-import com.addthis.hydra.data.tree.TreeNodeList;
+import com.addthis.hydra.data.tree.DataTreeNode;
 
 
 /**
@@ -58,7 +58,7 @@ public final class PathBranch extends PathElement {
     public PathBranch() {
     }
 
-    public PathBranch(PathElement each[]) {
+    public PathBranch(PathElement[] each) {
         this.each = each;
     }
 
@@ -67,7 +67,7 @@ public final class PathBranch extends PathElement {
         return "[PathEach each=" + (each != null ? Strings.join(each, ",") : "null") + " list=" + list + "]";
     }
 
-    public void setEach(PathElement each[]) {
+    public void setEach(PathElement[] each) {
         if (count > 0) {
             throw new IllegalArgumentException("setEach only valid before resolving");
         }
@@ -91,7 +91,7 @@ public final class PathBranch extends PathElement {
             count += each.length;
         }
         if (list != null) {
-            for (PathElement pe[] : list) {
+            for (PathElement[] pe : list) {
                 for (PathElement p : pe) {
                     p.resolve(mapper);
                 }
@@ -101,15 +101,15 @@ public final class PathBranch extends PathElement {
     }
 
     @Override
-    public TreeNodeList getNextNodeList(TreeMapState state) {
-        TreeNodeList res = new TreeNodeList(count);
+    public ArrayList<DataTreeNode> getNextNodeList(TreeMapState state) {
+        ArrayList<DataTreeNode> res = new ArrayList<>(count);
         if (each != null) {
             for (int i = 0, ps = each.length; i < ps; i++) {
                 res.addAll(state.processPathElement(each[i]));
             }
         }
         if (list != null) {
-            for (PathElement pe[] : list) {
+            for (PathElement[] pe : list) {
                 res.addAll(state.processPath(pe));
             }
         }

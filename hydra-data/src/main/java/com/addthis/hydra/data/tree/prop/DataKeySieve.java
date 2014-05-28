@@ -2,11 +2,12 @@ package com.addthis.hydra.data.tree.prop;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.Bundle;
@@ -18,6 +19,7 @@ import com.addthis.codec.Codec;
 import com.addthis.hydra.data.tree.ConcurrentTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
+import com.addthis.hydra.data.tree.ReadNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.TreeNodeDataDeferredOperation;
@@ -34,12 +36,12 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
      * @user-reference
      * @hydra-name key.sieve
      */
-    public final static class Config extends TreeDataParameters<DataKeySieve> {
+    public static final class Config extends TreeDataParameters {
 
         @Codec.Set(codable = true, required = true)
         private String key;
         @Codec.Set(codable = true, required = true)
-        private SeenFilterBasic<String> tiers[];
+        private SeenFilterBasic<String>[] tiers;
         @Codec.Set(codable = true)
         private int maxCount;
 
@@ -69,9 +71,9 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
     }
 
     @Codec.Set(codable = true, required = true)
-    private SeenFilterBasic<String> tiers[];
+    private SeenFilterBasic<String>[] tiers;
     @Codec.Set(codable = true)
-    private DataCounting counts[];
+    private DataCounting[] counts;
 
     private BundleField keyAccess;
     private DataCounting.Config template;
@@ -85,7 +87,7 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
     }
 
     @Override
-    public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, DataKeySieve.Config conf) {
+    public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, Config conf) {
         Bundle p = state.getBundle();
         if (keyAccess == null) {
             keyAccess = p.getFormat().getField(conf.key);
@@ -160,9 +162,9 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
      * query node/%token=% to get the histogram for calculating entropy
      */
     @Override
-    public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
+    public Collection<ReadNode> getNodes(ReadNode parent, String key) {
         if (key == null || key.length() == 0) {
-            ArrayList<DataTreeNode> list = new ArrayList<>(tiers.length);
+            ArrayList<ReadNode> list = new ArrayList<>(tiers.length);
             for (SeenFilterBasic<String> bloom : tiers) {
                 list.add(new MyTreeNode(Integer.toHexString(bloom.hashCode()), bloom.getSaturation(), bloom.getBits()));
             }
@@ -170,11 +172,11 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
         }
         // for generating entropy
         if (key.equals("%") && counts != null) {
-            ArrayList<DataTreeNode> list = new ArrayList<>(tiers.length);
+            ArrayList<ReadNode> list = new ArrayList<>(tiers.length);
             long thits = 0;
             TreeMap<Long, MyTreeNode> inst = new TreeMap<>();
-            for (ClosableIterator<DataTreeNode> iter = parent.getIterator(); iter.hasNext(); ) {
-                DataTreeNode n = iter.next();
+            for (Iterator<? extends ReadNode> iter = parent.getIterator(); iter.hasNext(); ) {
+                ReadNode n = iter.next();
                 long l = n.getCounter();
                 MyTreeNode v = inst.get(l);
                 if (v == null) {
@@ -199,8 +201,8 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
             }
             return list;
         }
-        String keys[] = Strings.splitArray(key, ",");
-        ArrayList<DataTreeNode> list = new ArrayList<>(keys.length);
+        String[] keys = Strings.splitArray(key, ",");
+        ArrayList<ReadNode> list = new ArrayList<>(keys.length);
         synchronized (this) {
             keyloop:
             for (String k : keys) {
@@ -215,7 +217,7 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
                     }
                     count++;
                 }
-                DataTreeNode n = parent.getNode(k);
+                ReadNode n = parent.getNode(k);
                 if (n != null) {
                     list.add(n);
                 } else {
@@ -229,7 +231,7 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
     /**
      * phantom node created for reporting
      */
-    private class MyTreeNode extends ConcurrentTreeNode {
+    private static class MyTreeNode extends ConcurrentTreeNode {
 
         MyTreeNode(String name, long hits) {
             this.name = name;

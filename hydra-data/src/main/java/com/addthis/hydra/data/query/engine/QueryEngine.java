@@ -28,13 +28,12 @@ import com.addthis.hydra.data.query.FieldValueList;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryElement;
 import com.addthis.hydra.data.query.QueryException;
-import com.addthis.hydra.data.tree.DataTree;
-import com.addthis.hydra.data.tree.DataTreeNode;
+import com.addthis.hydra.data.tree.ReadDataTree;
+import com.addthis.hydra.data.tree.ReadNode;
 
 import com.google.common.collect.Iterators;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 
 import io.netty.channel.ChannelProgressivePromise;
@@ -47,14 +46,14 @@ public class QueryEngine {
 
     private static final Logger log = LoggerFactory.getLogger(QueryEngine.class);
 
-    protected final DataTree tree;
+    protected final ReadDataTree tree;
     private final AtomicInteger used;
     private final AtomicBoolean isOpen;
     private final AtomicBoolean isClosed;
     private final HashSet<Thread> active;
     private boolean closeWhenIdle;
 
-    public QueryEngine(DataTree tree) {
+    public QueryEngine(ReadDataTree tree) {
         this.tree = tree;
         this.used = new AtomicInteger(0);
         this.isOpen = new AtomicBoolean(false);
@@ -230,7 +229,7 @@ public class QueryEngine {
             }
         }
         try {
-            LinkedList<DataTreeNode> stack = new LinkedList<>();
+            LinkedList<ReadNode> stack = new LinkedList<>();
             stack.push(tree);
             tableSearch(stack, new FieldValueList(new KVBundleFormat()), path, 0, result, 0, queryPromise);
         } catch (QueryException ex) {
@@ -269,7 +268,7 @@ public class QueryEngine {
      *                            out by throwing QueryExceptions.
      * @throws QueryException
      */
-    private void tableSearch(LinkedList<DataTreeNode> stack, DataTreeNode root, FieldValueList prefix, QueryElement[] path,
+    private void tableSearch(LinkedList<ReadNode> stack, ReadNode root, FieldValueList prefix, QueryElement[] path,
             int pathIndex, DataChannelOutput result, int collect,
             ChannelProgressivePromise queryPromise) throws QueryException {
         stack.push(root);
@@ -298,7 +297,7 @@ public class QueryEngine {
     /**
      * see above.
      */
-    private void tableSearch(LinkedList<DataTreeNode> stack, FieldValueList prefix, QueryElement[] path,
+    private void tableSearch(LinkedList<ReadNode> stack, FieldValueList prefix, QueryElement[] path,
             int pathIndex, DataChannelOutput sink, int collect,
             ChannelProgressivePromise queryPromise) throws QueryException {
         if (queryPromise.isDone()) {
@@ -306,7 +305,7 @@ public class QueryEngine {
             throw new QueryException("Query closed during processing");
         }
 
-        DataTreeNode root = stack != null ? stack.peek() : null;
+        ReadNode root = (stack != null) ? stack.peek() : null;
         if (log.isDebugEnabled()) {
             log.debug("root={} pre={} path={} idx={} res={} coll={}",
                     root, prefix, Arrays.toString(path), pathIndex, sink, collect);
@@ -325,7 +324,12 @@ public class QueryEngine {
             return;
         }
         QueryElement next = path[pathIndex];
-        Iterator<DataTreeNode> iter = root != null ? next.matchNodes(tree, stack) : next.emptyok() ? Iterators.<DataTreeNode>emptyIterator() : null;
+        Iterator<? extends ReadNode> iter;
+        if (root != null) {
+            iter = next.matchNodes(stack);
+        } else {
+            iter = (next.emptyok() ? Iterators.<ReadNode>emptyIterator() : null);
+        }
         if (iter == null) {
             return;
         }
@@ -343,14 +347,14 @@ public class QueryEngine {
                     }
                     if (queryPromise.isDone()) {
                         if (iter instanceof ClosableIterator) {
-                            ((ClosableIterator<DataTreeNode>) iter).close();
+                            ((ClosableIterator<?>) iter).close();
                         }
 
                         log.warn("Query closed during processing, root={}", root);
                         throw new QueryException("Query closed during processing, root=" + root);
                     }
 
-                    DataTreeNode tn = iter.next();
+                    ReadNode tn = iter.next();
                     if (tn == null && !next.emptyok()) {
                         break;
                     }
@@ -381,14 +385,14 @@ public class QueryEngine {
                 }
                 if (queryPromise.isDone()) {
                     if (iter instanceof ClosableIterator) {
-                        ((ClosableIterator<DataTreeNode>) iter).close();
+                        ((ClosableIterator<?>) iter).close();
                     }
 
                     log.warn("Query closed during processing, root={}", root);
                     throw new QueryException("Query closed during processing, root=" + root);
                 }
 
-                DataTreeNode tn = iter.next();
+                ReadNode tn = iter.next();
                 if (next.hasData()) {
                     if (tn == null && !next.emptyok()) {
                         return;
@@ -423,7 +427,7 @@ public class QueryEngine {
             }
 
             if (iter instanceof ClosableIterator) {
-                ((ClosableIterator<DataTreeNode>) iter).close();
+                ((ClosableIterator<?>) iter).close();
             }
         }
     }

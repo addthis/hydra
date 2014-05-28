@@ -17,9 +17,7 @@ import java.io.IOException;
 
 import com.addthis.hydra.store.db.CloseOperation;
 
-public interface DataTree extends DataTreeNode {
-
-    public void close();
+public interface DataTree extends ReadDataTree, DataTreeNode {
 
     /**
      * Close the tree.

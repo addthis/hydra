@@ -56,7 +56,7 @@ public class DataSumFloat extends TreeNodeData<DataSumFloat.Config> {
      * @hydra-name sumf
      */
 
-    public static final class Config extends TreeDataParameters<DataSumFloat> {
+    public static final class Config extends TreeDataParameters {
 
         @Codec.Set(codable = true)
         private String key;

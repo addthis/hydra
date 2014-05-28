@@ -13,51 +13,19 @@
  */
 package com.addthis.hydra.store.db;
 
-import java.io.IOException;
-import java.io.OutputStream;
-
-import java.util.Map.Entry;
-
-import com.addthis.basis.util.ClosableIterator;
-
 import com.addthis.codec.Codec;
-import com.addthis.hydra.store.db.IPageDB.Key;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
-import com.addthis.hydra.store.util.Raw;
 
-
-public interface IPageDB<K extends Key, V extends Codec.BytesCodable> {
-
-    public interface Key {
-
-        public int id();
-
-        public byte[] key();
-
-        public byte[] toBytes();
-
-        public Raw rawKey();
-
-        public void writeOut(OutputStream out) throws IOException;
-    }
-
-    public interface Range<K, V> extends ClosableIterator<Entry<K, V>>, Iterable<Entry<K, V>> {
-
-    }
-
-    public V get(K key);
+public interface IPageDB<K extends PageKey, V extends Codec.BytesCodable> extends IReadPageDB<K, V> {
 
     public V put(K key, V value);
 
     public V remove(K key);
 
+    @Override
+    public PageRange<K, V> range(K from, K to);
+
     public void remove(K from, K to, boolean inclusive);
-
-    public Range<K, V> range(K from, K to);
-
-    public void close();
-
-    public PagedKeyValueStore<DBKey, V> getEps();
 
     /**
      * Close the source.
@@ -67,6 +35,8 @@ public interface IPageDB<K extends Key, V extends Codec.BytesCodable> {
      * @return status code. A status code of 0 indicates success.
      */
     public int close(boolean cleanLog, CloseOperation operation);
+
+    public PagedKeyValueStore<DBKey, V> getEps();
 
     public void setCacheSize(final int cachesize);
 

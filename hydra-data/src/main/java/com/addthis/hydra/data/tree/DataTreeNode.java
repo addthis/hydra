@@ -13,12 +13,9 @@
  */
 package com.addthis.hydra.data.tree;
 
-import java.util.Map;
-
 import com.addthis.basis.util.ClosableIterator;
 
-
-public interface DataTreeNode extends Iterable<DataTreeNode> {
+public interface DataTreeNode extends ReadNode {
 
     /**
      * TODO temporary workaround.  MUST call ONLY for nodes retrieved via getOrCreateNode().
@@ -29,26 +26,6 @@ public interface DataTreeNode extends Iterable<DataTreeNode> {
      * TODO temporary workaround.  MUST call ONLY for nodes retrieved via getOrCreateNode().
      */
     public void release();
-
-    /**
-     * @return this node's name (label) in the tree
-     */
-    public String getName();
-
-    /**
-     * @return tree that this node belongs to
-     */
-    public DataTree getTreeRoot();
-
-    /**
-     * @return number of iterable child nodes
-     */
-    public int getNodeCount();
-
-    /**
-     * @return value of intrinsic counter
-     */
-    public long getCounter();
 
     /**
      * atomically increment intrinsic counter
@@ -68,17 +45,6 @@ public interface DataTreeNode extends Iterable<DataTreeNode> {
     public void writeLock();
 
     public void writeUnlock();
-
-    /**
-     * @return data bound to this node/key
-     */
-    public DataTreeNodeActor getData(String key);
-
-    /**
-     * return node if it exists, do not create otherwise.
-     * returned node is read only.  do not call release().
-     */
-    public DataTreeNode getNode(String name);
 
     /**
      * return node if it exists, do not create otherwise.
@@ -103,27 +69,6 @@ public interface DataTreeNode extends Iterable<DataTreeNode> {
     public boolean deleteNode(String node);
 
     /**
-     * @return an iterator of all nodes in this branch
-     */
-    public ClosableIterator<DataTreeNode> getIterator();
-
-    /**
-     * @return an in iterator starting at first node with a matching <i>prefix</i>
-     * and exclude all nodes that do not begin with <i>prefix</i>.  for example a
-     * prefix of "abc" would <b>not</b> match names beginning with "abd".  for that
-     * use case, use getIterator(from, to) where "to" could be null or a lexicographic
-     * value &gt; "abd".
-     */
-    public ClosableIterator<DataTreeNode> getIterator(String prefix);
-
-    /**
-     * @param from optional beginning point (null = first)
-     * @param to optional end point (null = last)
-     * @return an in iterator starting at first node with a name &gt;= begin and &lt; to
-     */
-    public ClosableIterator<DataTreeNode> getIterator(String from, String to);
-
-    /**
      * TODO for immediate compatibility -- rethink this
      *
      * @param state
@@ -140,5 +85,18 @@ public interface DataTreeNode extends Iterable<DataTreeNode> {
      */
     public void updateParentData(DataTreeNodeUpdater state, DataTreeNode child, boolean isnew);
 
-    Map<String, TreeNodeData> getDataMap();
+    @Override
+    public ClosableIterator<DataTreeNode> getIterator(String from, String to);
+
+    @Override
+    public ClosableIterator<DataTreeNode> getIterator(String prefix);
+
+    @Override
+    public ClosableIterator<DataTreeNode> getIterator();
+
+    @Override
+    public DataTreeNode getNode(String name);
+
+    @Override
+    public DataTree getTreeRoot();
 }

@@ -13,6 +13,9 @@
  */
 package com.addthis.hydra.task.output.tree;
 
+import java.util.Collections;
+import java.util.List;
+
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.util.ValueUtil;
@@ -20,7 +23,6 @@ import com.addthis.codec.Codec;
 import com.addthis.hydra.data.query.FieldValueList;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeUtil;
-import com.addthis.hydra.data.tree.TreeNodeList;
 
 /**
  * This {@link PathElement PathElement} <span class="hydra-summary">performs a query against
@@ -44,7 +46,7 @@ public final class PathQuery extends PathOp {
      * Path traversal to the target node. This field is required.
      */
     @Codec.Set(codable = true, required = true)
-    private PathValue path[];
+    private PathValue[] path;
 
     /**
      * When traversing the tree in search of the target node,
@@ -93,8 +95,8 @@ public final class PathQuery extends PathOp {
     }
 
     @Override
-    public TreeNodeList getNextNodeList(TreeMapState state) {
-        String p[] = new String[path.length];
+    public List<DataTreeNode> getNextNodeList(TreeMapState state) {
+        String[] p = new String[path.length];
         for (int i = 0; i < p.length; i++) {
             p[i] = ValueUtil.asNativeString(path[i].getPathValue(state));
             if (p[i] == null) {
@@ -116,7 +118,7 @@ public final class PathQuery extends PathOp {
                 if (debug > 0) {
                     debug(true);
                 }
-                return TreeMapState.empty();
+                return Collections.emptyList();
             }
         } else {
             if (debug > 0) {

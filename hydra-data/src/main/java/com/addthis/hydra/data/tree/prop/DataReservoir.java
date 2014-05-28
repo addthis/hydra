@@ -15,6 +15,7 @@ package com.addthis.hydra.data.tree.prop;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import java.math.RoundingMode;
@@ -26,6 +27,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
+import com.addthis.hydra.data.tree.ReadNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 
@@ -44,7 +46,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
 
     private static final Logger log = LoggerFactory.getLogger(DataReservoir.class);
 
-    private static final ImmutableList<DataTreeNode> EMPTY_LIST = ImmutableList.<DataTreeNode>builder().build();
+    private static final ImmutableList<ReadNode> EMPTY_LIST = ImmutableList.<ReadNode>builder().build();
 
     private static final byte[] EMPTY_BYTES = new byte[0];
 
@@ -67,7 +69,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * @user-reference
      * @hydra-name reservoir
      */
-    public static final class Config extends TreeDataParameters<DataReservoir> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * Bundle field name from which to draw the epoch.
@@ -243,10 +245,10 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
     }
 
     /**
-     * Helper method for {@link #getNodes(com.addthis.hydra.data.tree.DataTreeNode, String)}
+     * Helper method for {@link #getNodes(com.addthis.hydra.data.tree.ReadNode, String)}
      * If raw=true then add nodes for the raw observations.
      */
-    private void addRawObservations(List<DataTreeNode> result) {
+    private void addRawObservations(List<ReadNode> result) {
         result.add(new VirtualTreeNode("minEpoch", minEpoch));
         VirtualTreeNode[] children = new VirtualTreeNode[reservoir.length];
         for(int i = 0 ; i < reservoir.length; i++) {
@@ -263,9 +265,9 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * @param raw if true then generate debugging nodes
      * @return list of nodes
      */
-    private List<DataTreeNode> makeDefaultNodes(boolean raw) {
+    private List<ReadNode> makeDefaultNodes(boolean raw) {
         if (raw) {
-            List<DataTreeNode> result = new ArrayList<>();
+            List<ReadNode> result = new ArrayList<>();
             addRawObservations(result);
             return result;
         } else {
@@ -283,7 +285,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
     }
 
     @Override
-    public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
+    public Collection<ReadNode> getNodes(ReadNode parent, String key) {
         long targetEpoch = -1;
         int numObservations = -1;
         double sigma = Double.POSITIVE_INFINITY;
@@ -375,7 +377,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
 
         VirtualTreeNode vchild, vparent;
         if (delta >= 0 && measurement >= minMeasurement) {
-            List<DataTreeNode> result = new ArrayList<>();
+            List<ReadNode> result = new ArrayList<>();
             vchild = new VirtualTreeNode("threshold",
                     DoubleMath.roundToLong(sigma * stddev + mean, RoundingMode.HALF_UP));
             vparent = new VirtualTreeNode("stddev",

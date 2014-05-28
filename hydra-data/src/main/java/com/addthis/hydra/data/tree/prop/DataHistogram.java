@@ -15,6 +15,7 @@ package com.addthis.hydra.data.tree.prop;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -24,6 +25,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
+import com.addthis.hydra.data.tree.ReadNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.TreeNodeDataDeferredOperation;
@@ -67,7 +69,7 @@ public class DataHistogram extends TreeNodeData<DataHistogram.Config> implements
      * @user-reference
      * @hydra-name histo
      */
-    public static final class Config extends TreeDataParameters<DataHistogram> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * Base for the interval of the exponentially sized buckets.
@@ -111,13 +113,13 @@ public class DataHistogram extends TreeNodeData<DataHistogram.Config> implements
     }
 
     @Override
-    public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
+    public Collection<ReadNode> getNodes(ReadNode parent, String key) {
         if (key == null) {
             return null;
         }
         if (key.equals("tiers")) {
             Map<Long, Long> map = histo.getHistogram();
-            ArrayList<DataTreeNode> tiers = new ArrayList<>(map.size());
+            ArrayList<ReadNode> tiers = new ArrayList<>(map.size());
             for (Entry<Long, Long> e : histo.getSortedHistogram().entrySet()) {
                 tiers.add(new VirtualTreeNode(e.getKey().toString(), e.getValue()));
             }

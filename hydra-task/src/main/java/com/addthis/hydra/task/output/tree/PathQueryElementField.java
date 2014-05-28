@@ -26,7 +26,7 @@ import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.query.BoundedValue;
 import com.addthis.hydra.data.query.QueryElementField;
 import com.addthis.hydra.data.tree.DataTreeNode;
-import com.addthis.hydra.data.tree.DataTreeNodeActor;
+import com.addthis.hydra.data.tree.TreeNodeData;
 
 import org.slf4j.Logger;
 
@@ -49,11 +49,11 @@ public class PathQueryElementField extends QueryElementField {
 
     public List<ValueObject> getValues(DataTreeNode node, TreeMapState state) {
         if (keys == null) {
-            return new ArrayList<ValueObject>();
+            return new ArrayList<>();
         }
-        ArrayList<ValueObject> ret = new ArrayList<ValueObject>(keys.length);
+        ArrayList<ValueObject> ret = new ArrayList<>(keys.length);
 
-        DataTreeNodeActor actor = node.getData(name);
+        TreeNodeData<?> actor = node.getData(name);
         if (actor != null && keys != null) {
             for (int i = 0; i < keys.length; i++) {
                 String name = keys[i].name;
@@ -61,7 +61,7 @@ public class PathQueryElementField extends QueryElementField {
                     // TODO: filter?
                     name = ValueUtil.asNativeString(keys[i].getKeyValue(state.getBundle()));
                 }
-                ValueObject qv = actor.onValueQuery(name);
+                ValueObject qv = actor.getValue(name);
                 if (keys[i].bounded) {
                     try {
                         ret.add(keys[i].validate(qv.asLong().getLong()) ? qv : null);

@@ -20,6 +20,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.tree.DataTreeNode;
+import com.addthis.hydra.data.tree.ReadNode;
 import com.addthis.hydra.data.tree.ReadTreeNode;
 
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -76,7 +77,7 @@ public class QueryElementProperty implements Codec.Codable {
         return field;
     }
 
-    public ValueObject getValue(DataTreeNode node) {
+    public ValueObject getValue(ReadNode node) {
         if (key != null && key.name != null) {
             if (key.name.equals("json")) {
                 try {

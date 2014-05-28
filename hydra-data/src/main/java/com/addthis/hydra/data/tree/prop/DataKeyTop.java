@@ -15,10 +15,12 @@ package com.addthis.hydra.data.tree.prop;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.Map;
 
 import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.Varint;
 
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
@@ -27,11 +29,12 @@ import com.addthis.codec.Codec;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
+import com.addthis.hydra.data.tree.ReadNode;
 import com.addthis.hydra.data.tree.ReadTreeNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.util.ConcurrentKeyTopper;
-import com.addthis.basis.util.Varint;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -105,7 +108,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
      * @user-reference
      * @hydra-name key.top
      */
-    public static final class Config extends TreeDataParameters<DataKeyTop> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * Bundle field name from which to draw values.
@@ -170,7 +173,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
             if (conf.splitRegex != null) {
                 // System.out.println("SPLITTING:" + val + ":" +
                 // conf.splitRegex);
-                String split[] = val.toString().split(conf.splitRegex);
+                String[] split = val.toString().split(conf.splitRegex);
                 // System.out.println(Arrays.toString(split));
                 for (int i = 0; i < split.length; i++) {
                     top.increment(split[i], size);
@@ -226,32 +229,32 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
     }
 
     @Override
-    public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
+    public Collection<ReadNode> getNodes(ReadNode parent, String key) {
         if (key != null && key.startsWith("=")) {
             key = key.substring(1);
             if (key.equals("hit") || key.equals("node")) {
                 ConcurrentKeyTopper map = top;
-                Entry<String, Long>[] top = map.getSortedEntries();
-                ArrayList<DataTreeNode> ret = new ArrayList<>(top.length);
-                for (Entry<String, Long> e : top) {
-                    DataTreeNode node = parent.getNode(e.getKey());
+                Map.Entry<String, Long>[] top = map.getSortedEntries();
+                ArrayList<ReadNode> ret = new ArrayList<>(top.length);
+                for (Map.Entry<String, Long> e : top) {
+                    ReadNode node = parent.getNode(e.getKey());
                     if (node != null) {
                         ret.add(node);
                     }
                 }
                 return ret;
             } else if (key.equals("vhit")) {
-                Entry<String, Long>[] list = top.getSortedEntries();
-                ArrayList<DataTreeNode> ret = new ArrayList<>(list.length);
-                for (Entry<String, Long> e : list) {
+                Map.Entry<String, Long>[] list = top.getSortedEntries();
+                ArrayList<ReadNode> ret = new ArrayList<>(list.length);
+                for (Map.Entry<String, Long> e : list) {
                     ret.add(new VirtualTreeNode(e.getKey(), e.getValue()));
                 }
                 return ret;
             } else if (key.equals("phit")) {
-                Entry<String, Long>[] list = top.getSortedEntries();
-                ArrayList<DataTreeNode> ret = new ArrayList<>(list.length);
-                for (Entry<String, Long> e : list) {
-                    DataTreeNode node = parent.getNode(e.getKey());
+                Map.Entry<String, Long>[] list = top.getSortedEntries();
+                ArrayList<ReadNode> ret = new ArrayList<>(list.length);
+                for (Map.Entry<String, Long> e : list) {
+                    ReadNode node = parent.getNode(e.getKey());
                     if (node != null) {
                         node = ((ReadTreeNode) node).getCloneWithCount(e.getValue());
                         ret.add(node);
@@ -260,8 +263,8 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
                 return ret;
             }
         } else if (key != null) {
-            String keys[] = Strings.splitArray(key, ":");
-            ArrayList<DataTreeNode> list = new ArrayList<>(keys.length);
+            String[] keys = Strings.splitArray(key, ":");
+            ArrayList<ReadNode> list = new ArrayList<>(keys.length);
             for (String k : keys) {
                 Long v = top.get(k);
                 if (v != null) {
@@ -270,8 +273,8 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
             }
             return list.size() > 0 ? list : null;
         }
-        ArrayList<DataTreeNode> list = new ArrayList<>(top.size());
-        for (Entry<String, Long> s : top.getSortedEntries()) {
+        ArrayList<ReadNode> list = new ArrayList<>(top.size());
+        for (Map.Entry<String, Long> s : top.getSortedEntries()) {
             list.add(new VirtualTreeNode(s.getKey(), s.getValue()));
         }
         return list;

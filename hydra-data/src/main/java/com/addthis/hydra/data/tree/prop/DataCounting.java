@@ -95,7 +95,7 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements C
      * @user-reference
      * @hydra-name count
      */
-    public static final class Config extends TreeDataParameters<DataCounting> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * Field to count or estimate cardinalities for. This field is required.

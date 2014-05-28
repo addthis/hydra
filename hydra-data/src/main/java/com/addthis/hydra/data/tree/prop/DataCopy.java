@@ -55,7 +55,7 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
      * @user-reference
      * @hydra-name copy
      */
-    public static final class Config extends TreeDataParameters<DataCopy> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * A mapping from labels to field names. Values are taken from the field

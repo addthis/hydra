@@ -1,10 +1,9 @@
 package com.addthis.hydra.data.tree.prop;
 
-import java.util.List;
+import java.util.Collection;
+import java.util.Iterator;
 
-import com.addthis.basis.util.ClosableIterator;
-
-import com.addthis.hydra.data.tree.DataTreeNode;
+import com.addthis.hydra.data.tree.ReadNode;
 
 import org.junit.Test;
 
@@ -92,7 +91,7 @@ public class DataReservoirTest {
         reservoir.updateReservoir(2, 4, 12);
         reservoir.updateReservoir(3, 4, 4);
         reservoir.updateReservoir(4, 4, 100);
-        List<DataTreeNode> result = reservoir.getNodes(null, "epoch=4~sigma=2.0");
+        Collection<ReadNode> result = reservoir.getNodes(null, "epoch=4~sigma=2.0");
         assertEquals(0, result.size());
         result = reservoir.getNodes(null, "epoch=4~obs=3");
         assertEquals(0, result.size());
@@ -111,9 +110,9 @@ public class DataReservoirTest {
         reservoir.updateReservoir(2, 4, 12);
         reservoir.updateReservoir(3, 4, 4);
         reservoir.updateReservoir(4, 4, 100);
-        List<DataTreeNode> result = reservoir.getNodes(null, "epoch=4~sigma=2.0~obs=3");
+        Collection<ReadNode> result = reservoir.getNodes(null, "epoch=4~sigma=2.0~obs=3");
         assertEquals(1, result.size());
-        DataTreeNode node = result.iterator().next();
+        ReadNode node = result.iterator().next();
         assertEquals(node.getName(), "delta");
         assertEquals(86, node.getCounter());
         node = node.getIterator().next();
@@ -137,7 +136,7 @@ public class DataReservoirTest {
         reservoir.updateReservoir(2, 4, 12);
         reservoir.updateReservoir(3, 4, 4);
         reservoir.updateReservoir(4, 4, 100);
-        List<DataTreeNode> result = reservoir.getNodes(null, "epoch=4~sigma=2.0~obs=3~min=101");
+        Collection<ReadNode> result = reservoir.getNodes(null, "epoch=4~sigma=2.0~obs=3~min=101");
         assertEquals(0, result.size());
         reservoir.updateReservoir(4, 4);
         result = reservoir.getNodes(null, "epoch=4~sigma=2.0~obs=3~min=101");
@@ -151,9 +150,9 @@ public class DataReservoirTest {
         reservoir.updateReservoir(2, 4, 12);
         reservoir.updateReservoir(3, 4, 4);
         reservoir.updateReservoir(4, 4, 100);
-        List<DataTreeNode> result = reservoir.getNodes(null, "epoch=4~sigma=2.0~obs=3~raw=true");
+        Collection<ReadNode> result = reservoir.getNodes(null, "epoch=4~sigma=2.0~obs=3~raw=true");
         assertEquals(3, result.size());
-        for(DataTreeNode node : result) {
+        for(ReadNode node : result) {
             switch (node.getName()) {
                 case "delta":
                     break;
@@ -161,8 +160,8 @@ public class DataReservoirTest {
                     assertEquals(1, node.getCounter());
                     break;
                 case "observations": {
-                    ClosableIterator<DataTreeNode> children = node.getIterator();
-                    DataTreeNode child;
+                    Iterator<? extends ReadNode> children = node.getIterator();
+                    ReadNode child;
                     assertTrue(children.hasNext());
                     child = children.next();
                     assertEquals("1", child.getName());
@@ -180,7 +179,6 @@ public class DataReservoirTest {
                     assertEquals("4", child.getName());
                     assertEquals(100, child.getCounter());
                     assertFalse(children.hasNext());
-                    children.close();
                     break;
                 }
                 default:

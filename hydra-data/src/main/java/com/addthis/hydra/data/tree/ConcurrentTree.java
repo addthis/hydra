@@ -45,7 +45,7 @@ import com.addthis.hydra.common.Configuration;
 import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB;
-import com.addthis.hydra.store.db.IPageDB.Range;
+import com.addthis.hydra.store.db.PageRange;
 import com.addthis.hydra.store.db.PageDB;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
 import com.addthis.hydra.store.skiplist.Page;
@@ -111,7 +111,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     private final ScheduledExecutorService deletionThreadPool;
 
     @GuardedBy("treeTrashNode")
-    private Range<DBKey, ConcurrentTreeNode> trashIterator;
+    private PageRange<DBKey, ConcurrentTreeNode> trashIterator;
 
     @SuppressWarnings("unused")
     final Gauge<Integer> treeTrashNodeCount = Metrics.newGauge(SkipListCache.class,
@@ -460,17 +460,17 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     }
 
     @SuppressWarnings("unchecked")
-    protected Range<DBKey, ConcurrentTreeNode> fetchNodeRange(int db) {
+    protected PageRange<DBKey, ConcurrentTreeNode> fetchNodeRange(int db) {
         return source.range(new DBKey(db), new DBKey(db + 1));
     }
 
     @SuppressWarnings({"unchecked", "unused"})
-    protected Range<DBKey, ConcurrentTreeNode> fetchNodeRange(int db, String from) {
+    protected PageRange<DBKey, ConcurrentTreeNode> fetchNodeRange(int db, String from) {
         return source.range(new DBKey(db, Raw.get(from)), new DBKey(db + 1));
     }
 
     @SuppressWarnings("unchecked")
-    protected Range<DBKey, ConcurrentTreeNode> fetchNodeRange(int db, String from, String to) {
+    protected PageRange<DBKey, ConcurrentTreeNode> fetchNodeRange(int db, String from, String to) {
         return source.range(new DBKey(db, Raw.get(from)),
                 to == null ? new DBKey(db+1, (Raw)null) : new DBKey(db, Raw.get(to)));
     }
@@ -700,7 +700,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         return getRootNode().getIterator(from, to);
     }
 
-    @Override
     public Iterator<DataTreeNode> iterator() {
         return getRootNode().iterator();
     }
@@ -776,12 +775,12 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     }
 
     @Override
-    public DataTreeNodeActor getData(String key) {
+    public TreeNodeData<?> getData(String key) {
         return getRootNode().getData(key);
     }
 
     @Override
-    public Map<String, TreeNodeData> getDataMap() {
+    public Map<String, TreeNodeData<?>> getDataMap() {
         return getRootNode().getDataMap();
     }
 
@@ -806,7 +805,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
      */
     long deleteSubTree(ConcurrentTreeNode rootNode, long counter) {
         int nodeDB = rootNode.nodeDB();
-        Range<DBKey, ConcurrentTreeNode> range = fetchNodeRange(nodeDB);
+        PageRange<DBKey, ConcurrentTreeNode> range = fetchNodeRange(nodeDB);
         try {
             while (range.hasNext()) {
                 // do not emit logging when counter is negative
@@ -878,7 +877,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
         int nodeDB = treeTrashNode.nodeDB();
 
-        Range<DBKey, ConcurrentTreeNode> range = fetchNodeRange(nodeDB);
+        PageRange<DBKey, ConcurrentTreeNode> range = fetchNodeRange(nodeDB);
 
         while (range.hasNext()) {
             Map.Entry<DBKey, ConcurrentTreeNode> entry = range.next();

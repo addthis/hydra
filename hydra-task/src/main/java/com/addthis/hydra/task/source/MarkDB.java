@@ -23,8 +23,10 @@ import com.addthis.basis.util.Varint;
 
 import com.addthis.codec.Codec;
 import com.addthis.hydra.store.db.DBKey;
-import com.addthis.hydra.store.db.IReadWeighable;
 import com.addthis.hydra.store.db.ReadPageDB;
+import com.addthis.hydra.store.kv.IReadWeighable;
+import com.addthis.hydra.store.kv.ReadPageCache;
+import com.addthis.hydra.store.kv.ReadPageCaches;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -41,8 +43,8 @@ public class MarkDB {
         File markDirFile = new File(args[0]);
         if (args.length == 2 && args[1].equals("-s")) {
             try {
-                ReadPageDB<Record> markDB = new ReadPageDB<>(markDirFile, Record.class, 1000, 20);
-                TreeMap<DBKey, Record> tm = markDB.toTreeMap();
+                ReadPageCache<DBKey, Record> markDB = ReadPageDB.newPageCache(markDirFile, Record.class, 1000, 20);
+                TreeMap<DBKey, Record> tm = ReadPageCaches.toTreeMap(markDB);
                 for (Map.Entry<DBKey, Record> se : tm.entrySet()) {
                     System.out.println("Path: " + se.getKey().rawKey() + " Index: " + se.getValue().index);
                 }
@@ -53,8 +55,8 @@ public class MarkDB {
             }
         } else {
             try {
-                ReadPageDB<Mark> markDB = new ReadPageDB<>(markDirFile, Mark.class, 1000, 20);
-                TreeMap<DBKey, Mark> tm = markDB.toTreeMap();
+                ReadPageCache<DBKey, Mark> markDB = ReadPageDB.newPageCache(markDirFile, Mark.class, 1000, 20);
+                TreeMap<DBKey, Mark> tm = ReadPageCaches.toTreeMap(markDB);
                 for (Map.Entry<DBKey, Mark> se : tm.entrySet()) {
                     System.out.println("Path: " + se.getKey().rawKey() + " Index: " + se.getValue().index);
                 }

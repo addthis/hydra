@@ -14,14 +14,16 @@
 package com.addthis.hydra.data.tree.prop;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.Map;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
+import com.addthis.hydra.data.tree.ReadNode;
 import com.addthis.hydra.data.tree.ReadTreeNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
@@ -39,7 +41,7 @@ public class DataLimitHot extends TreeNodeData<DataLimitHot.Config> {
      * @user-reference
      * @hydra-name limit.hot
      */
-    public static final class Config extends TreeDataParameters<DataLimitHot> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * Maximum number of child nodes allowed.
@@ -110,33 +112,33 @@ public class DataLimitHot extends TreeNodeData<DataLimitHot.Config> {
     }
 
     @Override
-    public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
+    public Collection<ReadNode> getNodes(ReadNode parent, String key) {
         if (key == null) {
             return null;
         }
         if (key.equals("hit") || key.equals("node")) {
             KeyTopper map = top;
-            Entry<String, Long>[] top = map.getSortedEntries();
-            ArrayList<DataTreeNode> ret = new ArrayList<>(top.length);
-            for (Entry<String, Long> e : top) {
-                DataTreeNode node = parent.getNode(e.getKey());
+            Map.Entry<String, Long>[] top = map.getSortedEntries();
+            ArrayList<ReadNode> ret = new ArrayList<>(top.length);
+            for (Map.Entry<String, Long> e : top) {
+                ReadNode node = parent.getNode(e.getKey());
                 if (node != null) {
                     ret.add(node);
                 }
             }
             return ret;
         } else if (key.equals("vhit")) {
-            Entry<String, Long>[] list = top.getSortedEntries();
-            ArrayList<DataTreeNode> ret = new ArrayList<>(list.length);
-            for (Entry<String, Long> e : list) {
+            Map.Entry<String, Long>[] list = top.getSortedEntries();
+            ArrayList<ReadNode> ret = new ArrayList<>(list.length);
+            for (Map.Entry<String, Long> e : list) {
                 ret.add(new VirtualTreeNode(e.getKey(), e.getValue()));
             }
             return ret;
         } else if (key.equals("phit")) {
-            Entry<String, Long>[] list = top.getSortedEntries();
-            ArrayList<DataTreeNode> ret = new ArrayList<>(list.length);
-            for (Entry<String, Long> e : list) {
-                DataTreeNode node = parent.getNode(e.getKey());
+            Map.Entry<String, Long>[] list = top.getSortedEntries();
+            ArrayList<ReadNode> ret = new ArrayList<>(list.length);
+            for (Map.Entry<String, Long> e : list) {
+                ReadNode node = parent.getNode(e.getKey());
                 if (node != null) {
                     node = ((ReadTreeNode) node).getCloneWithCount(e.getValue());
                     ret.add(node);

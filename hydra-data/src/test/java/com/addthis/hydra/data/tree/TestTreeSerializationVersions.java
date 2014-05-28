@@ -84,7 +84,7 @@ public class TestTreeSerializationVersions {
                 assertNotNull(node);
                 assertEquals(1, node.getLeaseCount());
                 assertEquals(Integer.toString(i), node.getName());
-                Map<String, TreeNodeData> attachments = node.getDataMap();
+                Map<String, TreeNodeData<?>> attachments = node.getDataMap();
                 assertNotNull(attachments);
                 assertTrue(attachments.containsKey("time"));
                 DataTime attachment = (DataTime) attachments.get("time");
@@ -122,7 +122,7 @@ public class TestTreeSerializationVersions {
                 assertNotNull(node);
                 assertEquals(1, node.getLeaseCount());
                 assertEquals(Integer.toString(i), node.getName());
-                Map<String, TreeNodeData> attachments = node.getDataMap();
+                Map<String, TreeNodeData<?>> attachments = node.getDataMap();
                 assertNotNull(attachments);
                 assertTrue(attachments.containsKey("time"));
                 DataTime attachment = (DataTime) attachments.get("time");

@@ -13,7 +13,15 @@
  */
 package com.addthis.hydra.data.tree.prop;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+
+import java.nio.ByteBuffer;
+
 import com.addthis.basis.util.Strings;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
@@ -32,14 +40,11 @@ import com.addthis.bundle.value.ValueTranslationException;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
+import com.addthis.hydra.data.tree.ReadNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
-import com.addthis.hydra.data.tree.TreeNodeList;
-import com.clearspring.analytics.stream.quantile.TDigest;
 
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.List;
+import com.clearspring.analytics.stream.quantile.TDigest;
 
 public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Codec.SuperCodable {
 
@@ -84,7 +89,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Cod
      * @user-reference
      * @hydra-name tdigest
      */
-    public static final class Config extends TreeDataParameters<DataTDigest> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * Bundle field name from which to insert keys into the sketch.
@@ -134,9 +139,9 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Cod
 
 
     @Override
-    public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
-        String keys[] = Strings.splitArray(key, ",");
-        TreeNodeList list = new TreeNodeList(keys.length);
+    public Collection<ReadNode> getNodes(ReadNode parent, String key) {
+        String[] keys = Strings.splitArray(key, ",");
+        List<ReadNode> list = new ArrayList(keys.length);
         for (String k : keys) {
             double quantile = filter.quantile(Double.valueOf(k));
             list.add(new VirtualTreeNode(k, (long) quantile));
@@ -262,7 +267,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Cod
 
         @Override
         public void setValues(ValueMap valueMapEntries) {
-            byte b[] = valueMapEntries.get("b").asBytes().getBytes();
+            byte[] b = valueMapEntries.get("b").asBytes().getBytes();
             this.quantile = valueMapEntries.get("q").asDouble().getDouble();
             this.op = OP.valueOf(valueMapEntries.get("o").asString().toString());
             tdigest = TDigest.fromBytes(ByteBuffer.wrap(b));
