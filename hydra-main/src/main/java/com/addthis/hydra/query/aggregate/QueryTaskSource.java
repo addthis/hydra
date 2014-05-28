@@ -47,10 +47,16 @@ public class QueryTaskSource {
             return true;
         }
         if (oneHasResponded() && dataChannelReader.eof.get()) {
-            endTime = System.currentTimeMillis();
+            eagerComplete();
             return true;
         }
         return false;
+    }
+
+    private void eagerComplete() {
+        endTime = System.currentTimeMillis();
+        // eagerly free up resources that are no longer needed -- especially any worker leases
+        cancelAllActiveOptions("task is already complete");
     }
 
     public Bundle next() throws IOException, DataChannelError {
@@ -62,10 +68,14 @@ public class QueryTaskSource {
         Bundle bundle = dataChannelReader.read();
         if (bundle != null) {
             lines++;
+        } else if (dataChannelReader.eof.get()) {
+            eagerComplete();
         }
         return bundle;
     }
 
+    /** Whether this task has any currently active sources. This may be false either if no option was ever
+     *  activated or if this task is complete. */
     public boolean hasNoActiveSources() {
         for (QueryTaskSourceOption option : options) {
             if (option.isActive()) {

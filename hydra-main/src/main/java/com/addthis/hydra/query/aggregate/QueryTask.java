@@ -111,7 +111,9 @@ public class QueryTask implements Runnable {
     }
 
     private void rescheduleSelfWithBackoff() {
-        if (pollFailures <= 5) {
+        if (pollFailures <= 2) {
+            sourceAggregator.executor.execute(this);
+        } else if (pollFailures <= 5) {
             sourceAggregator.executor.schedule(this, 5, TimeUnit.MILLISECONDS);
         } else if (pollFailures <= 10) { // 25 ms - 75 ms
             sourceAggregator.executor.schedule(this, 10, TimeUnit.MILLISECONDS);
