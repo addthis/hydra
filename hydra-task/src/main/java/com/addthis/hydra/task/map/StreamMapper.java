@@ -15,6 +15,7 @@ package com.addthis.hydra.task.map;
 
 import java.io.File;
 
+import java.text.SimpleDateFormat;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -34,6 +35,7 @@ import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.filter.bundle.BundleFilterDebugPrint;
 import com.addthis.hydra.data.filter.value.ValueFilter;
+import com.addthis.hydra.data.util.TimeField;
 import com.addthis.hydra.task.output.TaskDataOutput;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.task.run.TaskFeeder;
@@ -88,33 +90,46 @@ import org.slf4j.LoggerFactory;
 public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRunTarget {
 
     private static final Logger log = LoggerFactory.getLogger(StreamMapper.class);
-    private final boolean emitTaskState = Parameter.boolValue("task.mapper.emitState", true);
+    private static final boolean emitTaskState = Parameter.boolValue("task.mapper.emitState", true);
+    private static final SimpleDateFormat dateFormat = new SimpleDateFormat(Parameter.value("task.mapper.dateFormat","yyMMdd-HHmmss"));
 
     /**
      * The data source for this job.
      */
     @Codec.Set(codable = true, required = true)
     private TaskDataSource source;
+
     /**
      * The transformations to apply onto the data.
      */
     @Codec.Set(codable = true)
     private MapDef map;
+
     /**
      * The data sink for emitting the result of the transformations.
      */
     @Codec.Set(codable = true, required = true)
     private TaskDataOutput output;
+
     /**
-     * Lorem ipsum dolor sit amet.
+     * Allow more flexible stream builders.  For example, asynchronous or builders
+     * where one or more bundles roll up into a single bundle or a single bundle causes
+     * the emission of multiple bundles.
      */
     @Codec.Set(codable = true)
     private StreamBuilder builder;
+
     /**
      * Print to the console statistics while processing the data. Default is <code>true</code>.
      */
     @Codec.Set(codable = true)
     private boolean stats = true;
+
+    /**
+     * Optionally extract bundle time and print average of bundles processed since last log line
+     */
+    @Codec.Set(codable = true)
+    private TimeField timeField;
 
     private final AtomicLong totalEmit = new AtomicLong(0);
     private final AtomicBoolean emitGate = new AtomicBoolean(false);
@@ -125,11 +140,13 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
     private TaskFeeder feeder;
 
     // metrics
-    private final Meter processedMeterMetric = Metrics.newMeter(getClass(), "streamMapper", "processedMeter", TimeUnit.SECONDS);
+    private final Meter processedInMeterMetric = Metrics.newMeter(getClass(), "streamMapper", "processedMeter", TimeUnit.SECONDS);
+    private final Meter processedOutMeterMetric = Metrics.newMeter(getClass(), "streamMapperOut", "processedMeter", TimeUnit.SECONDS);
     private final Counter inputCountMetric = Metrics.newCounter(getClass(), "inputCount");
     private final Counter outputCountMetric = Metrics.newCounter(getClass(), "outputCount");
     private final Counter totalInputCountMetric = Metrics.newCounter(getClass(), "totalInputCount");
-    private final AtomicLong bundleFilterTime = new AtomicLong(0);
+    private final AtomicLong bundleMapFilterTime = new AtomicLong(0);
+    private final AtomicLong bundleTimeSum = new AtomicLong(0);
 
     /**
      * This section defines the transformations to apply onto the data.
@@ -301,7 +318,9 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         log.debug("output: {}", bundle);
         getOutput().send(bundle);
         outputCountMetric.inc();
+        processedOutMeterMetric.mark();
         totalEmit.incrementAndGet();
+        bundleTimeSum.addAndGet(getBundleTime(bundle) >> 8);
     }
 
     @Override
@@ -310,23 +329,23 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
             log.debug("input: {}", bundle);
             inputCountMetric.inc();
             totalInputCountMetric.inc();
-            processedMeterMetric.mark();
+            processedInMeterMetric.mark();
             long markBefore = System.nanoTime();
             if (map.filterIn == null || map.filterIn.filter(bundle)) {
                 bundle = mapBundle(bundle);
                 if (map.filterOut == null || map.filterOut.filter(bundle)) {
-                    bundleFilterTime.addAndGet(System.nanoTime() - markBefore);
+                    bundleMapFilterTime.addAndGet(System.nanoTime() - markBefore);
                     if (builder != null) {
                         builder.process(bundle, this);
                     } else {
                         emit(bundle);
                     }
                 } else {
-                    bundleFilterTime.addAndGet(System.nanoTime() - markBefore);
+                    bundleMapFilterTime.addAndGet(System.nanoTime() - markBefore);
                     log.debug("filterOut dropped bundle : {}", bundle);
                 }
             } else {
-                bundleFilterTime.addAndGet(System.nanoTime() - markBefore);
+                bundleMapFilterTime.addAndGet(System.nanoTime() - markBefore);
                 log.debug("filterIn dropped bundle : {}", bundle);
             }
             long time = JitterClock.globalTime();
@@ -335,11 +354,14 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
                 inputCountMetric.clear();
                 long out = outputCountMetric.count();
                 outputCountMetric.clear();
+                long avg_t = (bundleTimeSum.getAndSet(0) / Math.max(1,out)) << 8;
                 if (stats) {
-                    log.info("in={} out={} skip={} ms={} rate={} total={} filterTime={}",
+                    log.info("t={} in={} out={} skip={} ms={} rateIn={} rateOut={} total={} mapFilterMS={}",
+                            dateFormat.format(avg_t),
                             in, out, Math.max(in - out, 0), time - lastMark,
-                            Math.round(processedMeterMetric.oneMinuteRate()), totalEmit,
-                            pad(bundleFilterTime.getAndSet(0), 6));
+                            Math.round(processedInMeterMetric.oneMinuteRate()),
+                            Math.round(processedOutMeterMetric.oneMinuteRate()),
+                            totalEmit, pad(bundleMapFilterTime.getAndSet(0) / 1000, 6));
                 }
                 lastMark = time;
                 emitGate.set(false);
@@ -367,12 +389,28 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
                 exitState.setHadMoreData(source.hadMoreData());
                 exitState.setInput(totalInputCountMetric.count());
                 exitState.setTotalEmitted(totalEmit.get());
-                exitState.setMeanRate(processedMeterMetric.meanRate());
+                exitState.setMeanRate(processedInMeterMetric.meanRate());
                 Files.write(new CodecJSON().encode(exitState), new File("job.exit"));
             } catch (Exception ex) {
                 log.error("", ex);
             }
         }
+    }
+
+    /* borrowed from TreeMapper.java */
+    private long getBundleTime(Bundle bundle) {
+        long bundleTime = JitterClock.globalTime();
+        if (timeField != null) {
+            ValueObject vo = bundle.getValue(bundle.getFormat().getField(timeField.getField()));
+            if (vo == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("missing time " + timeField.getField() + " in [" + bundle.getCount() + "] --> " + bundle);
+                }
+            } else {
+                bundleTime = timeField.toUnix(vo);
+            }
+        }
+        return bundleTime;
     }
 
     /**
