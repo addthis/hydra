@@ -1892,7 +1892,7 @@ public class Spawn implements Codec.Codable {
                     require(newReplicaCount < monitored.size(), "replication factor must be < # live hosts");
                     rebalanceReplicas(job);
                 }
-                sendJobUpdateEvent(job);
+                queueJobTaskUpdateEvent(job);
             } finally {
                 jobLock.unlock();
             }
@@ -2013,7 +2013,7 @@ public class Spawn implements Codec.Codable {
         require(job != null, "job not found");
         require(job.isEnabled(), "job disabled");
         require(scheduleJob(job, isManualKick), "unable to schedule job");
-        sendJobUpdateEvent(job);
+        queueJobTaskUpdateEvent(job);
         Job.logJobEvent(job, JobEvent.START, eventLog);
     }
 
@@ -2814,7 +2814,7 @@ public class Spawn implements Codec.Codable {
 
     public void drainJobTaskUpdateQueue() {
         long start = System.currentTimeMillis();
-        Set<String> jobIds = new HashSet<String>();
+        Set<String> jobIds = new HashSet<>();
         jobUpdateQueue.drainTo(jobIds);
         if (jobIds.size() > 0) {
             if (log.isTraceEnabled()) {
@@ -3529,13 +3529,13 @@ public class Spawn implements Codec.Codable {
             log.warn("[taskQueuesByPriority] cannot kick " + task.getJobKey() + " because one or more of its hosts is down or scheduled to be failed: " + unavailableHosts.toString());
             if (task.getState() != JobTaskState.QUEUED_HOST_UNAVAIL) {
                 job.setTaskState(task, JobTaskState.QUEUED_HOST_UNAVAIL);
-                sendJobUpdateEvent(job);
+                queueJobTaskUpdateEvent(job);
             }
             return false;
         } else if (task.getState() == JobTaskState.QUEUED_HOST_UNAVAIL) {
             // Task was previously waiting on an unavailable host, but that host is back. Update state accordingly.
             job.setTaskState(task, JobTaskState.QUEUED);
-            sendJobUpdateEvent(job);
+            queueJobTaskUpdateEvent(job);
         }
         // Obey the maximum simultaneous task running limit for this job, if it is set.
         return !(job.getMaxSimulRunning() > 0 && job.getCountActiveTasks() >= job.getMaxSimulRunning());
