@@ -85,8 +85,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
 
         @Override
         public DataReservoir newInstance() {
-            DataReservoir reservoir = new DataReservoir();
-            return reservoir;
+            return new DataReservoir();
         }
     }
 
@@ -112,7 +111,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * If the requested length is larger than the reservoir
      * then allocate additional space for the reservoir.
      *
-     * @param newsize
+     * @param newsize new size of the reservoir
      */
     private void resize(int newsize) {
         if (reservoir == null) {
@@ -139,12 +138,12 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * epoch. Otherwise shift the reservoir to accommodate the new
      * epoch.
      *
-     * @param epoch
+     * @param epoch new epoch to accommodate
      */
     private void shift(long epoch) {
         long delta = (epoch - minEpoch);
         if (delta < reservoir.length) {
-            return;
+            // do nothing
         } else if (delta > 2 * (reservoir.length - 1)) {
             Arrays.fill(reservoir, 0);
             minEpoch = epoch - (reservoir.length - 1);
@@ -160,12 +159,10 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * Insert the new epoch. Assumes that {@link #shift(long epoch)}
      * has previously been invoked.
      *
-     * @param epoch
+     * @param epoch new epoch to insert
      */
     private void update(long epoch, long count) {
-        if (epoch < minEpoch) {
-            return;
-        } else {
+        if (epoch >= minEpoch) {
             reservoir[(int) (epoch - minEpoch)] += count;
         }
     }
@@ -199,7 +196,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * Return the count associated with the input epoch,
      * or an error value if the input is out of bounds.
      *
-     * @param epoch
+     * @param epoch target epoch
      * @return the non-negative count or -1 if input is less
      *         than minimum epoch or -2 if input is greater
      *         than maximum epoch or -3 if the data structure
@@ -282,11 +279,20 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         return result;
     }
 
+    private static long generateValue(double value, boolean doubleToLongBits) {
+        if (doubleToLongBits) {
+            return Double.doubleToLongBits(value);
+        } else {
+            return DoubleMath.roundToLong(value, RoundingMode.HALF_UP);
+        }
+    }
+
     @Override
     public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
         long targetEpoch = -1;
         int numObservations = -1;
         double sigma = Double.POSITIVE_INFINITY;
+        boolean doubleToLongBits = false;
         int measurement;
         int minMeasurement = Integer.MIN_VALUE;
         boolean raw = false;
@@ -300,6 +306,9 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
                 String kvkey = kv[0];
                 String kvvalue = kv[1];
                 switch (kvkey) {
+                    case "double":
+                        doubleToLongBits = Boolean.parseBoolean(kvvalue);
+                        break;
                     case "epoch":
                         targetEpoch = Long.parseLong(kvvalue);
                         break;
@@ -377,18 +386,18 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         if (delta >= 0 && measurement >= minMeasurement) {
             List<DataTreeNode> result = new ArrayList<>();
             vchild = new VirtualTreeNode("threshold",
-                    DoubleMath.roundToLong(sigma * stddev + mean, RoundingMode.HALF_UP));
+                    generateValue(sigma * stddev + mean, doubleToLongBits));
             vparent = new VirtualTreeNode("stddev",
-                    DoubleMath.roundToLong(stddev, RoundingMode.HALF_UP), generateSingletonArray(vchild));
+                    generateValue(stddev, doubleToLongBits), generateSingletonArray(vchild));
             vchild = vparent;
             vparent = new VirtualTreeNode("mean",
-                    DoubleMath.roundToLong(mean, RoundingMode.HALF_UP), generateSingletonArray(vchild));
+                    generateValue(mean, doubleToLongBits), generateSingletonArray(vchild));
             vchild = vparent;
             vparent = new VirtualTreeNode("measurement",
                     measurement, generateSingletonArray(vchild));
             vchild = vparent;
             vparent = new VirtualTreeNode("delta",
-                    DoubleMath.roundToLong(delta, RoundingMode.HALF_UP), generateSingletonArray(vchild));
+                    generateValue(delta, doubleToLongBits), generateSingletonArray(vchild));
             result.add(vparent);
             if (raw) {
                 addRawObservations(result);
@@ -409,8 +418,8 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         try {
             Varint.writeUnsignedVarLong(minEpoch, byteBuf);
             Varint.writeUnsignedVarInt(reservoir.length, byteBuf);
-            for (int i = 0; i < reservoir.length; i++) {
-                Varint.writeUnsignedVarInt(reservoir[i], byteBuf);
+            for(int element : reservoir) {
+                Varint.writeUnsignedVarInt(element, byteBuf);
             }
             retBytes = new byte[byteBuf.readableBytes()];
             byteBuf.readBytes(retBytes);
