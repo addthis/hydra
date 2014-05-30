@@ -243,13 +243,42 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * Helper method for {@link #getNodes(com.addthis.hydra.data.tree.DataTreeNode, String)}
      * If raw=true then add nodes for the raw observations.
      */
-    private void addRawObservations(List<DataTreeNode> result) {
-        result.add(new VirtualTreeNode("minEpoch", minEpoch));
-        VirtualTreeNode[] children = new VirtualTreeNode[reservoir.length];
-        for(int i = 0 ; i < reservoir.length; i++) {
-            children[i] = new VirtualTreeNode(Long.toString(minEpoch + i),
-                    reservoir[i]);
+    private void addRawObservations(List<DataTreeNode> result, long targetEpoch, int numObservations) {
+
+        if (targetEpoch < 0 || targetEpoch >= minEpoch + reservoir.length) {
+            targetEpoch = minEpoch + reservoir.length - 1;
         }
+        if (numObservations < 0 || numObservations > reservoir.length - 1) {
+            numObservations = reservoir.length - 1;
+        }
+
+        int count = 0;
+        int index = reservoir.length - 1;
+        long currentEpoch = minEpoch + index;
+
+        while (currentEpoch != targetEpoch) {
+            index--;
+            currentEpoch--;
+        }
+
+        /**
+         * numObservations elements for the historical value.
+         * Add one element to store for the target epoch.
+         * Add one element to store the "minEpoch" node.
+         */
+        VirtualTreeNode[] children = new VirtualTreeNode[numObservations + 2];
+        children[count++] = new VirtualTreeNode(Long.toString(currentEpoch), reservoir[index--]);
+
+        while (count <= numObservations && index >= 0) {
+            children[count++] = new VirtualTreeNode(Long.toString(minEpoch + index), reservoir[index--]);
+        }
+
+        while (count <= numObservations) {
+            children[count++] = new VirtualTreeNode(Long.toString(minEpoch + index), 0);
+            index--;
+        }
+
+        children[count] = new VirtualTreeNode("minEpoch", minEpoch);
         result.add(new VirtualTreeNode("observations", 1, children));
     }
 
@@ -260,10 +289,10 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * @param raw if true then generate debugging nodes
      * @return list of nodes
      */
-    private List<DataTreeNode> makeDefaultNodes(boolean raw) {
+    private List<DataTreeNode> makeDefaultNodes(boolean raw, long targetEpoch, int numObservations) {
         if (raw) {
             List<DataTreeNode> result = new ArrayList<>();
-            addRawObservations(result);
+            addRawObservations(result, targetEpoch, numObservations);
             return result;
         } else {
             return EMPTY_LIST;
@@ -327,20 +356,20 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
                 }
             }
         }
-        if (targetEpoch == -1) {
-            return makeDefaultNodes(raw);
+        if (targetEpoch < 0) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
         } else if (sigma == Double.POSITIVE_INFINITY) {
-            return makeDefaultNodes(raw);
-        } else if (numObservations == -1) {
-            return makeDefaultNodes(raw);
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
+        } else if (numObservations <= 0) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
         } else if (reservoir == null) {
-            return makeDefaultNodes(raw);
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
         } else if (targetEpoch < minEpoch) {
-            return makeDefaultNodes(raw);
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
         } else if (targetEpoch >= minEpoch + reservoir.length) {
-            return makeDefaultNodes(raw);
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
         } else if (numObservations > (reservoir.length - 1)) {
-            return makeDefaultNodes(raw);
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
         }
 
         int count = 0;
@@ -400,11 +429,11 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
                     generateValue(delta, doubleToLongBits), generateSingletonArray(vchild));
             result.add(vparent);
             if (raw) {
-                addRawObservations(result);
+                addRawObservations(result, targetEpoch, numObservations);
             }
             return result;
         } else {
-            return makeDefaultNodes(raw);
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
         }
     }
 

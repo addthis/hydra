@@ -151,21 +151,20 @@ public class DataReservoirTest {
         reservoir.updateReservoir(2, 4, 12);
         reservoir.updateReservoir(3, 4, 4);
         reservoir.updateReservoir(4, 4, 100);
-        List<DataTreeNode> result = reservoir.getNodes(null, "epoch=4~sigma=2.0~obs=3~raw=true");
-        assertEquals(3, result.size());
+        List<DataTreeNode> result = reservoir.getNodes(null, "raw=true");
+        assertEquals(1, result.size());
         for(DataTreeNode node : result) {
             switch (node.getName()) {
-                case "delta":
-                    break;
-                case "minEpoch":
-                    assertEquals(1, node.getCounter());
-                    break;
                 case "observations": {
                     ClosableIterator<DataTreeNode> children = node.getIterator();
                     DataTreeNode child;
                     assertTrue(children.hasNext());
                     child = children.next();
-                    assertEquals("1", child.getName());
+                    assertEquals("4", child.getName());
+                    assertEquals(100, child.getCounter());
+                    assertTrue(children.hasNext());
+                    child = children.next();
+                    assertEquals("3", child.getName());
                     assertEquals(4, child.getCounter());
                     assertTrue(children.hasNext());
                     child = children.next();
@@ -173,12 +172,115 @@ public class DataReservoirTest {
                     assertEquals(12, child.getCounter());
                     assertTrue(children.hasNext());
                     child = children.next();
-                    assertEquals("3", child.getName());
+                    assertEquals("1", child.getName());
                     assertEquals(4, child.getCounter());
+                    assertTrue(children.hasNext());
+                    child = children.next();
+                    assertEquals("minEpoch", child.getName());
+                    assertEquals(1, child.getCounter());
+                    assertFalse(children.hasNext());
+                    children.close();
+                    break;
+                }
+                default:
+                    fail("Unexpected node " + node.getName());
+            }
+        }
+        result = reservoir.getNodes(null, "epoch=4~sigma=2.0~obs=3~raw=true");
+        assertEquals(2, result.size());
+        for(DataTreeNode node : result) {
+            switch (node.getName()) {
+                case "delta":
+                    break;
+                case "observations": {
+                    ClosableIterator<DataTreeNode> children = node.getIterator();
+                    DataTreeNode child;
                     assertTrue(children.hasNext());
                     child = children.next();
                     assertEquals("4", child.getName());
                     assertEquals(100, child.getCounter());
+                    assertTrue(children.hasNext());
+                    child = children.next();
+                    assertEquals("3", child.getName());
+                    assertEquals(4, child.getCounter());
+                    assertTrue(children.hasNext());
+                    child = children.next();
+                    assertEquals("2", child.getName());
+                    assertEquals(12, child.getCounter());
+                    assertTrue(children.hasNext());
+                    child = children.next();
+                    assertEquals("1", child.getName());
+                    assertEquals(4, child.getCounter());
+                    assertTrue(children.hasNext());
+                    child = children.next();
+                    assertEquals("minEpoch", child.getName());
+                    assertEquals(1, child.getCounter());
+                    assertFalse(children.hasNext());
+                    children.close();
+                    break;
+                }
+                default:
+                    fail("Unexpected node " + node.getName());
+            }
+        }
+        result = reservoir.getNodes(null, "epoch=4~sigma=2.0~obs=2~raw=true");
+        assertEquals(2, result.size());
+        for(DataTreeNode node : result) {
+            switch (node.getName()) {
+                case "delta":
+                    break;
+                case "observations": {
+                    ClosableIterator<DataTreeNode> children = node.getIterator();
+                    DataTreeNode child;
+                    assertTrue(children.hasNext());
+                    child = children.next();
+                    assertEquals("4", child.getName());
+                    assertEquals(100, child.getCounter());
+                    assertTrue(children.hasNext());
+                    child = children.next();
+                    assertEquals("3", child.getName());
+                    assertEquals(4, child.getCounter());
+                    assertTrue(children.hasNext());
+                    child = children.next();
+                    assertEquals("2", child.getName());
+                    assertEquals(12, child.getCounter());
+                    assertTrue(children.hasNext());
+                    child = children.next();
+                    assertEquals("minEpoch", child.getName());
+                    assertEquals(1, child.getCounter());
+                    assertFalse(children.hasNext());
+                    children.close();
+                    break;
+                }
+                default:
+                    fail("Unexpected node " + node.getName());
+            }
+        }
+        result = reservoir.getNodes(null, "epoch=3~sigma=-2.0~obs=2~raw=true");
+        assertEquals(2, result.size());
+        for(DataTreeNode node : result) {
+            switch (node.getName()) {
+                case "delta":
+                    break;
+                case "observations": {
+                    ClosableIterator<DataTreeNode> children = node.getIterator();
+                    DataTreeNode child;
+                    assertTrue(children.hasNext());
+                    child = children.next();
+                    assertEquals("3", child.getName());
+                    assertEquals(4, child.getCounter());
+                    assertTrue(children.hasNext());
+                    child = children.next();
+                    assertEquals("2", child.getName());
+                    assertEquals(12, child.getCounter());
+                    assertTrue(children.hasNext());
+                    child = children.next();
+                    assertEquals("1", child.getName());
+                    assertEquals(4, child.getCounter());
+                    assertTrue(children.hasNext());
+                    child = children.next();
+                    assertEquals("minEpoch", child.getName());
+                    assertEquals(1, child.getCounter());
                     assertFalse(children.hasNext());
                     children.close();
                     break;
