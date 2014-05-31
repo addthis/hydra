@@ -45,6 +45,7 @@ import com.addthis.hydra.data.query.op.OpFold;
 import com.addthis.hydra.data.query.op.OpFrequencyTable;
 import com.addthis.hydra.data.query.op.OpGather;
 import com.addthis.hydra.data.query.op.OpHistogram;
+import com.addthis.hydra.data.query.op.OpHistogramExplicit;
 import com.addthis.hydra.data.query.op.OpHoltWinters;
 import com.addthis.hydra.data.query.op.OpLimit;
 import com.addthis.hydra.data.query.op.OpMap;
@@ -124,6 +125,7 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
         GATHER("gather"),
         FILL("fill"),
         HISTOGRAM("histo"),
+        HISTOGRAM2("histo2"),
         HOLTWINTERS("holtwinters"),
         DISTRIBUTION("distribution"),
         LIMIT("limit"),
@@ -274,6 +276,9 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
                         break; // TODO move OpTop code into OpGather and delete OpTop
                     case HISTOGRAM:
                         appendOp(new OpHistogram(args, queryPromise));
+                        break;
+                    case HISTOGRAM2:
+                        appendOp(new OpHistogramExplicit(args, queryPromise));
                         break;
                     case HOLTWINTERS:
                         appendOp(new OpHoltWinters(this, args, queryPromise));

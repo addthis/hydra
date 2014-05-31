@@ -131,6 +131,15 @@ public abstract class AbstractQueryOp implements QueryOp {
         return ov;
     }
 
+    public static float[] csvToFloats(String args) {
+        String[] sv = Strings.splitArray(args, ",");
+        float[] ov = new float[sv.length];
+        for (int i = 0; i < ov.length; i++) {
+            ov[i] = Float.parseFloat(sv[i]);
+        }
+        return ov;
+    }
+
     /**
      * @param field array of BundleField
      * @param row   source row
