@@ -140,12 +140,10 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
     private TaskFeeder feeder;
 
     // metrics
-    private final Meter processedInMeterMetric = Metrics.newMeter(getClass(), "streamMapper", "processedMeter", TimeUnit.SECONDS);
-    private final Meter processedOutMeterMetric = Metrics.newMeter(getClass(), "streamMapperOut", "processedMeter", TimeUnit.SECONDS);
+    private final Meter processedMeterMetric = Metrics.newMeter(getClass(), "streamMapper", "processedMeter", TimeUnit.SECONDS);
     private final Counter inputCountMetric = Metrics.newCounter(getClass(), "inputCount");
     private final Counter outputCountMetric = Metrics.newCounter(getClass(), "outputCount");
     private final Counter totalInputCountMetric = Metrics.newCounter(getClass(), "totalInputCount");
-    private final AtomicLong bundleMapFilterTime = new AtomicLong(0);
     private final AtomicLong bundleTimeSum = new AtomicLong(0);
 
     /**
@@ -318,7 +316,7 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         log.debug("output: {}", bundle);
         getOutput().send(bundle);
         outputCountMetric.inc();
-        processedOutMeterMetric.mark();
+        processedMeterMetric.mark();
         totalEmit.incrementAndGet();
         bundleTimeSum.addAndGet(getBundleTime(bundle) >> 8);
     }
@@ -329,23 +327,19 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
             log.debug("input: {}", bundle);
             inputCountMetric.inc();
             totalInputCountMetric.inc();
-            processedInMeterMetric.mark();
             long markBefore = System.nanoTime();
             if (map.filterIn == null || map.filterIn.filter(bundle)) {
                 bundle = mapBundle(bundle);
                 if (map.filterOut == null || map.filterOut.filter(bundle)) {
-                    bundleMapFilterTime.addAndGet(System.nanoTime() - markBefore);
                     if (builder != null) {
                         builder.process(bundle, this);
                     } else {
                         emit(bundle);
                     }
                 } else {
-                    bundleMapFilterTime.addAndGet(System.nanoTime() - markBefore);
                     log.debug("filterOut dropped bundle : {}", bundle);
                 }
             } else {
-                bundleMapFilterTime.addAndGet(System.nanoTime() - markBefore);
                 log.debug("filterIn dropped bundle : {}", bundle);
             }
             long time = JitterClock.globalTime();
@@ -354,14 +348,20 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
                 inputCountMetric.clear();
                 long out = outputCountMetric.count();
                 outputCountMetric.clear();
-                long avg_t = (bundleTimeSum.getAndSet(0) / Math.max(1,out)) << 8;
                 if (stats) {
-                    log.info("t={} in={} out={} skip={} ms={} rateIn={} rateOut={} total={} mapFilterMS={}",
-                            dateFormat.format(avg_t),
-                            in, out, Math.max(in - out, 0), time - lastMark,
-                            Math.round(processedInMeterMetric.oneMinuteRate()),
-                            Math.round(processedOutMeterMetric.oneMinuteRate()),
-                            totalEmit, pad(bundleMapFilterTime.getAndSet(0) / 1000, 6));
+                    if (timeField != null) {
+                        long avg_t = (bundleTimeSum.getAndSet(0) / Math.max(1,out)) << 8;
+                        log.info("bundleTime={} in={} out={} drop={} ms={} rate={} total={}",
+                                dateFormat.format(avg_t),
+                                in, out, Math.max(in - out, 0), time - lastMark,
+                                Math.round(processedMeterMetric.oneMinuteRate()),
+                                totalEmit);
+                    } else {
+                        log.info("in={} out={} drop={} ms={} rate={} total={}",
+                                in, out, Math.max(in - out, 0), time - lastMark,
+                                Math.round(processedMeterMetric.oneMinuteRate()),
+                                totalEmit);
+                    }
                 }
                 lastMark = time;
                 emitGate.set(false);
@@ -389,7 +389,7 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
                 exitState.setHadMoreData(source.hadMoreData());
                 exitState.setInput(totalInputCountMetric.count());
                 exitState.setTotalEmitted(totalEmit.get());
-                exitState.setMeanRate(processedInMeterMetric.meanRate());
+                exitState.setMeanRate(processedMeterMetric.meanRate());
                 Files.write(new CodecJSON().encode(exitState), new File("job.exit"));
             } catch (Exception ex) {
                 log.error("", ex);
@@ -413,19 +413,19 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         return bundleTime;
     }
 
+    final static String padOpt[] = {"K", "M", "B", "T"};
+    final static DecimalFormat padDCO[] = {new DecimalFormat("0.00"), new DecimalFormat("0.0"), new DecimalFormat("0")};
     /**
      * number right pad utility for log data
      */
     private static String pad(long v, int chars) {
         String sv = Long.toString(v);
-        String opt[] = {"K", "M", "B", "T"};
-        DecimalFormat dco[] = {new DecimalFormat("0.00"), new DecimalFormat("0.0"), new DecimalFormat("0")};
-        int indx = 0;
         double div = 1000d;
+        int indx = 0;
         outer:
-        while (sv.length() > chars - 1 && indx < opt.length) {
-            for (DecimalFormat dc : dco) {
-                sv = dc.format(v / div).concat(opt[indx]);
+        while (sv.length() > chars - 1 && indx < padOpt.length) {
+            for (DecimalFormat dc : padDCO) {
+                sv = dc.format(v / div).concat(padOpt[indx]);
                 if (sv.length() <= chars - 1) {
                     break outer;
                 }
