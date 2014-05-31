@@ -25,6 +25,7 @@ public class TestOpNumber extends TestOp {
         doOpTest(new DataTableHelper().tr(), "num=n2,n5,dup,mult,sub,v-1,set", new DataTableHelper().tr().td("-23"));
         doOpTest(new DataTableHelper().tr(), "num=n4,n2,div,v-1,set", new DataTableHelper().tr().td("2"));
         doOpTest(new DataTableHelper().tr(), "num=n3,n2,ddiv,v-1,set", new DataTableHelper().tr().td("1.5"));
+        doOpTest(new DataTableHelper().tr(), "num=n3.0,tob,btof,v-1,set", new DataTableHelper().tr().td("3.0"));
         DataTableHelper s1 = new DataTableHelper().
                 tr().td("A", "1", "art").
                 tr().td("B", "2", "bot").

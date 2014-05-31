@@ -61,6 +61,8 @@ public class BundleCalculator {
         OP_DDIV,
         OP_TOINT,
         OP_TOFLOAT,
+        OP_BITS_TOINT,
+        OP_BITS_TOFLOAT,
         OP_SHIFTOUT,
         OP_SQRT,
         OP_DGT,
@@ -158,6 +160,14 @@ public class BundleCalculator {
                 case "tof":
                 case "tofloat":
                     ops.add(new MathOp(Operation.OP_TOFLOAT, null));
+                    break;
+                case "tob":
+                case "tobits":
+                    ops.add(new MathOp(Operation.OP_BITS_TOINT, null));
+                    break;
+                case "btof":
+                case "btofloat":
+                    ops.add(new MathOp(Operation.OP_BITS_TOFLOAT, null));
                     break;
                 case "out":
                 case "shiftout":
@@ -386,6 +396,14 @@ public class BundleCalculator {
                     break;
                 case OP_TOFLOAT:
                     stack.push(ValueUtil.asNumberOrParseDouble(stack.pop()));
+                    break;
+                case OP_BITS_TOINT:
+                    long bits = Double.doubleToLongBits(stack.pop().asDouble().getDouble());
+                    stack.push(ValueFactory.create(bits));
+                    break;
+                case OP_BITS_TOFLOAT:
+                    bits = stack.pop().asLong().getLong();
+                    stack.push(ValueFactory.create(Double.longBitsToDouble(bits)));
                     break;
                 case OP_DGT:
                     v1 = stack.pop();
