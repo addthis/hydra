@@ -66,6 +66,12 @@ public class TaskDataOutputChain extends DataOutputTypeList {
     private TaskDataOutput outputs[];
 
     /**
+     * If true then create copy of the bundle for each output. Default value is true.
+     */
+    @Codec.Set(codable = true)
+    private boolean copy = true;
+
+    /**
      * If true then create a deep copy of a bundle when it is passed to a child
      * output sink. This may be useful when the child sink modifies
      * the bundle. Default value is false.
@@ -83,7 +89,11 @@ public class TaskDataOutputChain extends DataOutputTypeList {
     }
 
     public void send(Bundle row) throws DataChannelError {
-        if (immutableCopy) {
+        if (!copy && !immutableCopy) {
+            for (TaskDataOutput output : outputs) {
+                output.send(row);
+            }
+        } else if (immutableCopy) {
             for (TaskDataOutput output : outputs) {
                 output.send(Bundles.deepCopyBundle(row, output.createBundle()));
             }
