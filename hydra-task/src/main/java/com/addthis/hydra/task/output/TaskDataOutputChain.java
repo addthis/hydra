@@ -90,21 +90,12 @@ public class TaskDataOutputChain extends TaskDataOutput {
         if (immutableCopy) {
             for (TaskDataOutput output : outputs) {
                 currentOutput = output;
-                Bundle copy = Bundles.deepCopyBundle(row, output.createBundle());
-                output.send(copy);
+                output.send(Bundles.deepCopyBundle(row, output.createBundle()));
             }
         } else {
-            Bundle prevCopy = null;
             for (TaskDataOutput output : outputs) {
                 currentOutput = output;
-                if (prevCopy == null) {
-                    prevCopy = row;
-                    output.send(row);
-                } else {
-                    Bundle copy = Bundles.shallowCopyBundle(prevCopy, output.createBundle());
-                    output.send(copy);
-                    prevCopy = copy;
-                }
+                output.send(Bundles.shallowCopyBundle(row, output.createBundle()));
             }
         }
     }
