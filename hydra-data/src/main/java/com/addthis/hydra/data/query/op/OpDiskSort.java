@@ -45,6 +45,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractRowOp;
 import com.addthis.muxy.MuxFile;
 import com.addthis.muxy.MuxFileDirectory;
+import com.addthis.muxy.MuxFileDirectoryCache;
 
 import com.ning.compress.lzf.LZFInputStream;
 import com.ning.compress.lzf.LZFOutputStream;
@@ -113,7 +114,7 @@ public class OpDiskSort extends AbstractRowOp {
         try {
             tempDir = Paths.get(tempDirString, String.valueOf(UUID.randomUUID()));
             Files.createDirectories(tempDir);
-            mfm = new MuxFileDirectory(tempDir, null);
+            mfm = MuxFileDirectoryCache.getWriteableInstance(tempDir.toFile());
             mfm.setDeleteFreed(true);
             log.debug("tempDir={} mfm={}", tempDir, mfm);
         } catch (Exception ex) {
