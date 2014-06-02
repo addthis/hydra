@@ -14,8 +14,6 @@
 
 package com.addthis.hydra.query.aggregate;
 
-import java.util.concurrent.TimeUnit;
-
 import com.addthis.basis.util.JitterClock;
 
 import com.addthis.hydra.data.query.Query;
@@ -71,8 +69,6 @@ class StragglerCheckTask implements Runnable {
             }
             handleStragglers();
         }
-        sourceAggregator.executor.schedule(
-                this, AggregateConfig.stragglerCheckPeriod, TimeUnit.MILLISECONDS);
     }
 
     void checkForStragglersMeans() {

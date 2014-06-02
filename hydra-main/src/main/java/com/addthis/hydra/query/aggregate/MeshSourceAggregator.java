@@ -120,7 +120,8 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
             Runnable stragglerCheckTask = new StragglerCheckTask(this);
             int checkPeriod = AggregateConfig.stragglerCheckPeriod;
             // just have it reschedule itself since that's what recurring tasks are for, right?
-            stragglerTaskFuture = executor.schedule(stragglerCheckTask, checkPeriod, TimeUnit.MILLISECONDS);
+            stragglerTaskFuture = executor.scheduleWithFixedDelay(
+                    stragglerCheckTask, checkPeriod, checkPeriod, TimeUnit.MILLISECONDS);
         }
     }
 
