@@ -45,7 +45,9 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractRowOp;
 import com.addthis.muxy.MuxFile;
 import com.addthis.muxy.MuxFileDirectory;
-import com.addthis.muxy.MuxFileDirectoryCache;
+import com.addthis.muxy.MuxyEventListener;
+import com.addthis.muxy.MuxyFileEvent;
+import com.addthis.muxy.MuxyStreamEvent;
 
 import com.ning.compress.lzf.LZFInputStream;
 import com.ning.compress.lzf.LZFOutputStream;
@@ -89,6 +91,7 @@ public class OpDiskSort extends AbstractRowOp {
     private static final int CHUNK_ROWS = Parameter.intValue("op.disksort.chunk.rows", 5000);
     private static final int CHUNK_MERGES = Parameter.intValue("op.disksort.chunk.merges", 1000);
     private static final int GZTYPE = Parameter.intValue("op.disksort.gz.type", 0);
+    private static final MuxyEventListener DISCARDER = new SingleDirMuxyEventListener();
 
     private final Bundle[] buffer = new Bundle[CHUNK_ROWS + 1];
     private final BundleFactory factory = new ListBundle();
@@ -114,7 +117,7 @@ public class OpDiskSort extends AbstractRowOp {
         try {
             tempDir = Paths.get(tempDirString, String.valueOf(UUID.randomUUID()));
             Files.createDirectories(tempDir);
-            mfm = MuxFileDirectoryCache.getWriteableInstance(tempDir.toFile());
+            mfm = new MuxFileDirectory(tempDir, DISCARDER);
             mfm.setDeleteFreed(true);
             log.debug("tempDir={} mfm={}", tempDir, mfm);
         } catch (Exception ex) {
@@ -529,6 +532,24 @@ public class OpDiskSort extends AbstractRowOp {
                     return comp;
                 }
             }
+        }
+    }
+
+    private static class SingleDirMuxyEventListener implements MuxyEventListener {
+
+        @Override
+        public void streamEvent(MuxyStreamEvent event, Object target) {
+            // ignored
+        }
+
+        @Override
+        public void fileEvent(MuxyFileEvent event, Object target) {
+            // ignored
+        }
+
+        @Override
+        public void reportWrite(long bytes) {
+            // ignored
         }
     }
 }
