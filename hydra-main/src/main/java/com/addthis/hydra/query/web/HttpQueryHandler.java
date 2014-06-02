@@ -166,6 +166,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 break;
             case "/query/call":
             case "/query/call/":
+                // TODO jsonp enable
                 QueryServer.rawQueryCalls.inc();
                 queryQueue.queueQuery(meshQueryMaster, kv, request, ctx);
                 break;
@@ -186,8 +187,12 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
 
     private void fastHandle(ChannelHandlerContext ctx, FullHttpRequest request, String target,
             KVPairs kv) throws Exception {
+
+        String cbf = kv.getValue("cbfunc");
+        String cba = kv.getValue("cbfunc-arg");
+        boolean jsonp = cbf != null;
         StringBuilderWriter writer = new StringBuilderWriter(50);
-        HttpResponse response = HttpUtils.startResponse(writer);
+        HttpResponse response = HttpUtils.startResponse(writer, cbf, cba);
         response.headers().add("Access-Control-Allow-Origin", "*");
 
         switch (target) {
@@ -214,7 +219,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 QueryEntry queryEntry = tracker.getQueryEntry(queryStatusUuid);
                 if (queryEntry != null) {
                     DetailedStatusHandler hostDetailsHandler =
-                            new DetailedStatusHandler(writer, response, ctx, request, queryEntry);
+                            new DetailedStatusHandler(writer, response, ctx, request, cbf, queryEntry);
                     hostDetailsHandler.handle();
                     return;
                 } else {
@@ -229,11 +234,14 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 }
             case "/query/cancel":
                 if (tracker.cancelRunning(kv.getValue("uuid"))) {
+                    if (jsonp) writer.write("{canceled:true,message:'");
                     writer.write("canceled " + kv.getValue("uuid"));
                 } else {
+                    if (jsonp) writer.write("{canceled:false,message:'");
                     writer.write("canceled failed for " + kv.getValue("uuid"));
                     response.setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
                 }
+                if (jsonp) writer.write("'}");
                 break;
             case "/query/encode": {
                 Query q = new Query(null, kv.getValue("query", kv.getValue("path", "")), null);
@@ -353,6 +361,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 ctx.fireChannelRead(request);
                 return; // don't do text response clean up
         }
+        HttpUtils.endResponse(writer, cbf);
         log.trace("response being sent {}", writer);
         ByteBuf textResponse = ByteBufUtil.encodeString(ctx.alloc(),
                 CharBuffer.wrap(writer.getBuilder()), CharsetUtil.UTF_8);

@@ -26,14 +26,27 @@ public class JsonBundleEncoder extends AbstractBufferingHttpBundleEncoder {
 
     static final char[] hex = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
-    public JsonBundleEncoder() {
+    private final String jsonp;
+    private final String jargs;
+
+    public JsonBundleEncoder(String jsonp, String jargs) {
         super();
+        this.jsonp = jsonp;
+        this.jargs = jargs;
         setContentTypeHeader(responseStart, "application/json; charset=utf-8");
         responseStart.headers().set("Access-Control-Allow-Origin", "*");
     }
 
     @Override
     public void appendResponseStartToString(StringBuilder sendBuffer) {
+        if (jsonp != null) {
+            sendBuffer.append(jsonp);
+            sendBuffer.append('(');
+            if (jargs != null) {
+                sendBuffer.append(jargs);
+                sendBuffer.append(',');
+            }
+        }
         sendBuffer.append('[');
     }
 
@@ -80,6 +93,9 @@ public class JsonBundleEncoder extends AbstractBufferingHttpBundleEncoder {
     @Override
     protected void appendResponseEndToString(StringBuilder sendBuffer) {
         sendBuffer.append("]");
+        if (jsonp != null) {
+            sendBuffer.append(");");
+        }
     }
 
     /* convert string to json valid format */

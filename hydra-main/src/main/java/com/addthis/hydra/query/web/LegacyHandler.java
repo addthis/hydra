@@ -58,14 +58,17 @@ public class LegacyHandler {
         if (async == null) {
             return query;
         } else if (async.equals("new")) {
+            String cbf = kv.getValue("cbfunc");
+            String cba = kv.getValue("cbfunc-arg");
             StringBuilderWriter writer = new StringBuilderWriter(50);
-            HttpResponse response = HttpUtils.startResponse(writer);
+            HttpResponse response = HttpUtils.startResponse(writer, cbf, cba);
             String asyncUuid = genAsyncUuid();
             asyncCache.put(asyncUuid, query);
             if (query.isTraced()) {
                 Query.emitTrace("async create " + asyncUuid + " from " + query);
             }
             writer.write("{\"id\":\"" + asyncUuid + "\"}");
+            HttpUtils.endResponse(writer, cbf);
             ByteBuf textResponse = ByteBufUtil.encodeString(ctx.alloc(),
                     CharBuffer.wrap(writer.getBuilder()), CharsetUtil.UTF_8);
             HttpContent content = new DefaultHttpContent(textResponse);

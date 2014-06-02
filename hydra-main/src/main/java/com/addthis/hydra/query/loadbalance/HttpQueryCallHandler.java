@@ -76,6 +76,8 @@ public final class HttpQueryCallHandler {
 
         String filename = kv.getValue("filename", "query");
         String format = kv.getValue("format", "json");
+        String jsonp = kv.getValue("jsonp", kv.getValue("cbfunc"));
+        String jargs = kv.getValue("jargs", kv.getValue("cbfunc-arg"));
         String gdriveAccessToken = kv.getValue("accesstoken");
         int timeout = Math.min(kv.getIntValue("timeout", maxQueryTime), maxQueryTime);
         query.setParameterIfNotYetSet("timeout", timeout);
@@ -113,7 +115,7 @@ public final class HttpQueryCallHandler {
         }
         switch (format) {
             case "json":
-                ctx.pipeline().addLast(executor, "format", new JsonBundleEncoder());
+                ctx.pipeline().addLast(executor, "format", new JsonBundleEncoder(jsonp, jargs));
                 break;
             case "html":
                 ctx.pipeline().addLast(executor, "format", new HtmlBundleEncoder());

@@ -193,9 +193,21 @@ public class HttpUtils {
         response.headers().set(CONTENT_TYPE, type);
     }
 
-    static HttpResponse startResponse(Writer writer) throws IOException {
+    static void endResponse(Writer writer, String cbf) throws IOException {
+        if (cbf != null) {
+            writer.write(");");
+        }
+    }
+
+    static HttpResponse startResponse(Writer writer, String cbf, String cba) throws IOException {
         HttpResponse response = new DefaultHttpResponse(HTTP_1_1, HttpResponseStatus.OK);
-        setContentTypeHeader(response, "application/json; charset=utf-8");
+        if (cbf != null) {
+            setContentTypeHeader(response, "application/javascript; charset=utf-8");
+            writer.write(cbf + "(");
+            if (cba != null) writer.write(cba + ",");
+        } else {
+            setContentTypeHeader(response, "application/json; charset=utf-8");
+        }
         return response;
     }
 }
