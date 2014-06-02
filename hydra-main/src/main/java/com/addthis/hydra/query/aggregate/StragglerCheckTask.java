@@ -96,6 +96,9 @@ class StragglerCheckTask implements Runnable {
         long startTime = sourceAggregator.startTime;
         int runtimesIndex = 0;
         for (QueryTaskSource taskSource : sourceAggregator.taskSources) {
+            if (runtimesIndex >= runtimes.length) {
+                break;
+            }
             if (taskSource.complete()) {
                 if (taskSource.endTime > 0) {
                     runtimes[runtimesIndex] = taskSource.endTime - startTime;
@@ -103,9 +106,6 @@ class StragglerCheckTask implements Runnable {
                     runtimes[runtimesIndex] = -1;
                 }
                 runtimesIndex += 1;
-                if (runtimesIndex >= runtimes.length) {
-                    break;
-                }
             }
         }
         return runtimes;
