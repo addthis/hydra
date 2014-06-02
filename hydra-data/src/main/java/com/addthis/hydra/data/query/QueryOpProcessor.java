@@ -399,7 +399,7 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
     public void processRow(Bundle row) throws QueryException {
         rowsin++;
         cellsin += row.getCount();
-        if (queryPromise != null && !queryPromise.isDone()) {
+        if ((queryPromise != null) && !queryPromise.isDone()) {
             firstOp.send(row);
         }
         if (OP_MAXROWS > 0 && rowsin > OP_MAXROWS) {
@@ -466,9 +466,7 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
     @Override
     public void sendComplete() {
         try {
-            synchronized (firstOp) {
-                firstOp.sendComplete();
-            }
+            firstOp.sendComplete();
             queryPromise.trySuccess();
         } catch (Exception e) {
             log.warn("Exception while processing sendComplete on op processor");
@@ -478,9 +476,7 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
 
     @Override
     public void close() throws IOException {
-        synchronized (firstOp) {
-            firstOp.close();
-        }
+        firstOp.close();
     }
 
     @Override
