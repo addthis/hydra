@@ -106,6 +106,16 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
     @Codec.Set(codable = true)
     private BundleFilter filter;
 
+    /**
+     * Throw error if shutdown thread takes
+     * longer than this many seconds
+     */
+    @Codec.Set(codable = true)
+    private int maxShutDownSeconds = 60;
+
+    @Codec.Set(codable = true)
+    private boolean errorOnMaintenanceShutdownExceeded = true;
+
     private final Semaphore diskFlushThreadSemaphore = new Semaphore(0);
     private volatile boolean stopped = false;
     private volatile boolean exiting = false;
@@ -355,8 +365,11 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
     private void shutdownMaintenanceThreads() {
         writerMaintenanceThread.shutdown();
         try {
-            if (!writerMaintenanceThread.awaitTermination(30, TimeUnit.SECONDS)) {
-                log.error("Waited 30 seconds for write maintenance termination but it did not finish");
+            if (!writerMaintenanceThread.awaitTermination(maxShutDownSeconds, TimeUnit.SECONDS)) {
+                log.error("Waited {} seconds for write maintenance termination but it did not finish", maxShutDownSeconds);
+                if (errorOnMaintenanceShutdownExceeded) {
+                    throw new RuntimeException("Exceeded maximum allowable write maintenance shutdown time, with errorOnMaintenanceShutdownExceeded=true");
+                }
             }
         } catch (InterruptedException ie) {
             log.error("Thread interrupted while waiting for write maintenance termination");
