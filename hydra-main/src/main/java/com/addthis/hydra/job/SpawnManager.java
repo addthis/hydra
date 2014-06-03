@@ -606,7 +606,6 @@ public class SpawnManager {
             @Override
             public void httpService(HTTPLink link) throws Exception {
                 KVPairs kv = link.getRequestValues();
-                String jsonp = kv.getValue("callback");
                 String jobId = kv.getValue("id", "");
                 IJob job = spawn.getJob(jobId);
                 if (job != null) {

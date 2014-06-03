@@ -35,7 +35,7 @@ function(
             return url;
         },
         sync: function(method, model, options){
-            options.dataType = "jsonp";
+            options.dataType = "json";
             return Backbone.sync(method, model, options);
         },
         clear:function(){

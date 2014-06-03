@@ -47,16 +47,14 @@ public class DetailedStatusHandler implements FutureListener<QueryEntryInfo> {
     private final HttpResponse response;
     private final ChannelHandlerContext ctx;
     private final FullHttpRequest request;
-    private final String cbf;
     private final QueryEntry queryEntry;
 
     public DetailedStatusHandler(StringBuilderWriter writer, HttpResponse response, ChannelHandlerContext ctx,
-            FullHttpRequest request, String cbf, QueryEntry queryEntry) {
+            FullHttpRequest request, QueryEntry queryEntry) {
         this.writer = writer;
         this.response = response;
         this.ctx = ctx;
         this.request = request;
-        this.cbf = cbf;
         this.queryEntry = queryEntry;
     }
 
@@ -74,7 +72,6 @@ public class DetailedStatusHandler implements FutureListener<QueryEntryInfo> {
     private void onSuccess(QueryEntryInfo queryEntryInfo) throws Exception {
         JSONObject entryJSON = CodecJSON.encodeJSON(queryEntryInfo);
         writer.write(entryJSON.toString());
-        HttpUtils.endResponse(writer, cbf);
         ByteBuf textResponse = ByteBufUtil.encodeString(ctx.alloc(),
                 CharBuffer.wrap(writer.getBuilder()), CharsetUtil.UTF_8);
         HttpContent content = new DefaultHttpContent(textResponse);

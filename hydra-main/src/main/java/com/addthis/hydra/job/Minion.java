@@ -2533,6 +2533,8 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
     public void doHandle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws Exception {
         response.setBufferSize(65535);
         response.setHeader("Access-Control-Allow-Origin", "*");
+        response.setHeader("Access-Control-Allow-Headers", "accept, username");
+        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT");
         KVPairs kv = new KVPairs();
         boolean handled = true;
         for (Enumeration<String> e = request.getParameterNames(); e.hasMoreElements(); ) {
@@ -2612,14 +2614,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             JobTask job = tasks.get(jobName);
             if (job != null) {
                 File log = (out ? job.logOut : job.logErr);
-                JSONObject logJson = job.readLogLines(log, offset, lines);
-                //for JSONP support
-                if (kv.hasKey("callback")) {
-                    String callback = kv.getValue("callback");
-                    response.getWriter().write(callback + "(" + logJson.toString() + ")");
-                } else {
-                    response.getWriter().write(logJson.toString());
-                }
+                response.getWriter().write(job.readLogLines(log, offset, lines).toString());
             } else {
                 response.sendError(400, "No Job");
             }
