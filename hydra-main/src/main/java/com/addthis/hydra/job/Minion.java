@@ -2533,6 +2533,8 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
     public void doHandle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws Exception {
         response.setBufferSize(65535);
         response.setHeader("Access-Control-Allow-Origin", "*");
+        response.setHeader("Access-Control-Allow-Headers", "accept, username");
+        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT");
         KVPairs kv = new KVPairs();
         boolean handled = true;
         for (Enumeration<String> e = request.getParameterNames(); e.hasMoreElements(); ) {
