@@ -748,8 +748,6 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
             } else if (target.equals("/profile")) {
                 boolean was = profiling.get();
                 boolean is = getIntParam(request, "enable", was ? 1 : 0) == 1;
-                String jsonp = getParam(request, "jsonp", null);
-                String jargs = getParam(request, "jargs", null);
                 profiling.set(is);
                 if (getIntParam(request, "dump", 0) == 1) {
                     String json;
@@ -757,9 +755,6 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
                         json = CodecJSON.encodeString(config);
                     } catch (Exception e) {
                         throw new IOException(e);
-                    }
-                    if (jsonp != null) {
-                        json = jsonp + "(" + (jargs != null ? jargs + "," : "") + json + ");";
                     }
                     Files.write(new File("job.profile"), Bytes.toBytes(json), false);
                     httpServletResponse.getWriter().write(json);
