@@ -469,7 +469,7 @@ public class QueryOpProcessor implements DataChannelOutput, DataTableFactory, Qu
             firstOp.sendComplete();
             queryPromise.trySuccess();
         } catch (Exception e) {
-            log.warn("Exception while processing sendComplete on op processor");
+            log.debug("Exception while processing sendComplete on op processor");
             sourceError(DataChannelError.promote(e));
         }
     }
