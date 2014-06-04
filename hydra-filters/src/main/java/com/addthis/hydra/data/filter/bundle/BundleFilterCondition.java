@@ -49,6 +49,12 @@ public class BundleFilterCondition extends BundleFilter {
     @Codec.Set(codable = true)
     BundleFilter elseDo;
 
+    /**
+     * If true, return the conditional filter's return value. This field is optional. Default false.
+     */
+    @Codec.Set(codable = true)
+    boolean returnFilter;
+
     @Override
     public void initialize() {
         ifCondition.initOnceOnly();
@@ -65,11 +71,11 @@ public class BundleFilterCondition extends BundleFilter {
         if (row != null) {
             if (ifCondition != null && ifCondition.filterExec(row)) {
                 if (ifDo != null) {
-                    return ifDo.filterExec(row);
+                    return returnFilter ? ifDo.filterExec(row) : true;
                 }
             } else {
                 if (elseDo != null) {
-                    return elseDo.filterExec(row);
+                    return returnFilter ? elseDo.filterExec(row) : true;
                 }
             }
         }
