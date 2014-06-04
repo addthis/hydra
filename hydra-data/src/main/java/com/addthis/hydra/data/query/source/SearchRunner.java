@@ -15,6 +15,7 @@
 package com.addthis.hydra.data.query.source;
 
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -84,13 +85,14 @@ class SearchRunner implements Runnable {
             finalEng = getEngine();
             search();
             //success
-        } catch (DataChannelError ex) //TODO -- Handle cancels better (less verbosely)
-        {
-            log.warn("DataChannelError while running search, query was likely canceled on the server side," +
-                     " {} or the query execution got a Thread.interrupt call", ex.getMessage());
+        } catch (CancellationException ignored) {
+            log.info("query was cancelled remotely; stopping processing early");
+        } catch (DataChannelError ex) {
+            log.warn("DataChannelError while running search, query was likely canceled on the " +
+                     "server side, or the query execution got a Thread.interrupt call", ex);
             reportError(ex);
         } catch (Exception ex) {
-            log.warn("Generic Exception while running search. {}", ex.getMessage());
+            log.warn("Generic Exception while running search.", ex);
             reportError(ex);
         }
 

@@ -1,3 +1,16 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.addthis.hydra.job.spawn;
 
 import java.io.IOException;
@@ -23,6 +36,10 @@ import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
 
+import com.google.common.annotations.VisibleForTesting;
+
+import org.apache.commons.lang3.StringUtils;
+
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.DateTimeFormatterBuilder;
 import org.slf4j.Logger;
@@ -34,7 +51,8 @@ public class JobAlertUtil {
     private static final String defaultOps = "gather=s";
     private static final int alertQueryTimeout = Parameter.intValue("alert.query.timeout", 20_000);
     private static final int alertQueryRetries = Parameter.intValue("alert.query.retries", 4);
-    private static final DateTimeFormatter ymdFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000).appendMonthOfYear(2).appendDayOfMonth(2).toFormatter();
+    @VisibleForTesting
+    static final DateTimeFormatter ymdFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000).appendMonthOfYear(2).appendDayOfMonth(2).toFormatter();
     private static final int pathTokenOffset = Parameter.intValue("source.mesh.path.token.offset", 2);
     private static final int pathOff = Parameter.intValue("source.mesh.path.offset", 0);
     private static final String sortToken = Parameter.value("source.mesh.path.token", "/");
@@ -170,12 +188,22 @@ public class JobAlertUtil {
      * @param path The input path to process
      * @return The path with the relevant tokens replaced
      */
-    private static String expandDateMacro(String path) {
-        for (String entry : path.split("[/:]")) {
-            if (entry.startsWith(DateUtil.NOW_PREFIX) && entry.endsWith(DateUtil.NOW_POSTFIX)) {
-                path = path.replace(entry, DateUtil.getDateTime(ymdFormatter, entry).toString(ymdFormatter));
+    @VisibleForTesting
+    static String expandDateMacro(String path) {
+        String[] parts = StringUtils.splitByWholeSeparatorPreserveAllTokens(path, DateUtil.NOW_PREFIX);
+        StringBuilder sb = new StringBuilder(parts[0]);
+        for (int i = 1; i<parts.length; i++) {
+            String part = parts[i];
+            int end = part.indexOf(DateUtil.NOW_POSTFIX);
+            if (end > -1) {
+                String dateEnd = part.substring(0, end + 2);
+                sb.append(DateUtil.getDateTime(ymdFormatter, DateUtil.NOW_PREFIX + dateEnd).toString(ymdFormatter));
+                sb.append(part.substring(end + 2));
+            } else {
+                sb.append(DateUtil.NOW_PREFIX);
+                sb.append(part);
             }
         }
-        return path;
+        return sb.toString();
     }
 }
