@@ -32,6 +32,8 @@ import com.addthis.hydra.data.tree.TreeNodeList;
 
 import com.clearspring.analytics.stream.frequency.CountMinSketch;
 
+import com.google.common.annotations.VisibleForTesting;
+
 public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> implements Codec.SuperCodable {
 
     /**
@@ -69,10 +71,10 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
      *   val(x): literal value estimation associated with key x</pre>
      * <p/>
      *
-     * <p>If no command is specified or an invalid command is specified then the estimator returns as
-     * a custom value type.
+     * <p>If no command is specified or an invalid command is specified then the estimator returns
+     * the total size. </p>
      *
-     * <p>%{attachment}={a "~" separated list of key} : generates a virtual node for each key.
+     * <p>%{attachment}={a "~" separated list of keys} : generates a virtual node for each key.
      * The number of hits for each virtual node is equal to the count estimate in the sketch.
      * Keys with an estimate of 0 will not appear in the output.</p>
      * <p/>
@@ -129,6 +131,12 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
     private BundleField keyAccess;
     private BundleField countAccess;
 
+    public DataCountMinSketch(){}
+
+    public DataCountMinSketch(int depth, int width) {
+        this.sketch = new CountMinSketch(depth, width, 0);
+    }
+
     @Override
     public ValueObject getValue(String key) {
         if (key == null || key.equals("total")) {
@@ -145,6 +153,9 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
 
     @Override
     public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
+        if (key == null) {
+            throw new IllegalArgumentException("No key arguments entered");
+        }
         String keys[] = Strings.splitArray(key, "~");
         TreeNodeList list = new TreeNodeList(keys.length);
         for (String k : keys) {
@@ -198,5 +209,10 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
     @Override
     public void preEncode() {
         raw = CountMinSketch.serialize(sketch);
+    }
+
+    @VisibleForTesting
+    public void add(String val, long count) {
+        sketch.add(val, count);
     }
 }
