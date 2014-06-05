@@ -54,7 +54,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name chain
  */
-public class TaskDataOutputChain extends TaskDataOutput {
+public class TaskDataOutputChain extends DataOutputTypeList {
 
     private static final Logger log = LoggerFactory.getLogger(TaskDataOutputChain.class);
 
@@ -66,6 +66,12 @@ public class TaskDataOutputChain extends TaskDataOutput {
     private TaskDataOutput outputs[];
 
     /**
+     * If true then create copy of the bundle for each output. Default value is true.
+     */
+    @Codec.Set(codable = true)
+    private boolean copy = true;
+
+    /**
      * If true then create a deep copy of a bundle when it is passed to a child
      * output sink. This may be useful when the child sink modifies
      * the bundle. Default value is false.
@@ -73,42 +79,30 @@ public class TaskDataOutputChain extends TaskDataOutput {
     @Codec.Set(codable = true)
     private boolean immutableCopy = false;
 
-    private TaskDataOutput currentOutput = null;
-
     @Override
     protected void open(TaskRunConfig config) {
         log.warn("[init] beginning init chain");
         for (int i = 0; i < outputs.length; i++) {
             outputs[i].open(config);
         }
-        currentOutput = outputs[0];
         log.warn("[init] all outputs initialized");
     }
 
-
     public void send(Bundle row) throws DataChannelError {
-        if (immutableCopy) {
+        if (!copy && !immutableCopy) {
             for (TaskDataOutput output : outputs) {
-                currentOutput = output;
-                Bundle copy = Bundles.deepCopyBundle(row, output.createBundle());
-                output.send(copy);
+                output.send(row);
+            }
+        } else if (immutableCopy) {
+            for (TaskDataOutput output : outputs) {
+                output.send(Bundles.deepCopyBundle(row, output.createBundle()));
             }
         } else {
-            Bundle prevCopy = null;
             for (TaskDataOutput output : outputs) {
-                currentOutput = output;
-                if (prevCopy == null) {
-                    prevCopy = row;
-                    output.send(row);
-                } else {
-                    Bundle copy = Bundles.shallowCopyBundle(prevCopy, output.createBundle());
-                    output.send(copy);
-                    prevCopy = copy;
-                }
+                output.send(Bundles.shallowCopyBundle(row, output.createBundle()));
             }
         }
     }
-
 
     public void send(List<Bundle> bundles) {
         if (bundles != null && !bundles.isEmpty()) {
@@ -118,11 +112,9 @@ public class TaskDataOutputChain extends TaskDataOutput {
         }
     }
 
-
     public void sendComplete() {
         log.warn("[sendComplete] forwarding completion signal to all outputs");
         for (TaskDataOutput output : outputs) {
-            currentOutput = output;
             output.sendComplete();
         }
         log.warn("[sendComplete] forwarding complete");
@@ -131,14 +123,8 @@ public class TaskDataOutputChain extends TaskDataOutput {
     public void sourceError(DataChannelError er) {
         log.warn("[sourceError] forwarding to all outputs" + er);
         for (TaskDataOutput output : outputs) {
-            currentOutput = output;
             output.sourceError(er);
         }
         log.warn("[sourceError] forwarding complete");
-    }
-
-    @Override
-    public Bundle createBundle() {
-        return currentOutput.createBundle();
     }
 }
