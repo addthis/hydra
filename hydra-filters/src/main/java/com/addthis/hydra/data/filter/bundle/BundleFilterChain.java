@@ -16,6 +16,7 @@ package com.addthis.hydra.data.filter.bundle;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.BundlePrinter;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 
@@ -78,7 +79,7 @@ public class BundleFilterChain extends BundleFilter {
         for (BundleFilter f : filter) {
             if (!f.filterExec(row) && failStop) {
                 if (debug && bundleCounter.getAndIncrement() < debugMaxBundles) {
-                    log.warn("fail @ " + CodecJSON.encodeString(f));
+                    log.warn("fail @ " + CodecJSON.encodeString(f) +" with " + BundlePrinter.printBundle(row));
                 }
                 return failReturn;
             }
