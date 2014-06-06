@@ -26,6 +26,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLTransactionRollbackException;
 
 import com.addthis.basis.util.Parameter;
 
@@ -47,15 +48,19 @@ import org.slf4j.LoggerFactory;
 public class MysqlDataStore implements SpawnDataStore {
     private static final Logger log = LoggerFactory.getLogger(MysqlDataStore.class);
     private static final String driverClass = Parameter.value("sql.datastore.driverclass", "org.drizzle.jdbc.DrizzleDriver");
+    /* There are known issues with Drizzle and InnoDB tables. Using the MyISAM type is strongly recommended. */
+    private static final String tableType = Parameter.value("sql.datastore.tabletype", "MyISAM");
     private static final String description = "mysql";
     private final ComboPooledDataSource cpds;
     private final String tableName;
 
     /* The maximum allowable length for 'path' and 'child' values. */
-    protected static final int maxPathLength = Parameter.intValue("sql.datastore.max.path.length", 200);
+    protected static final int maxPathLength = Parameter.intValue("sql.datastore.max.path.length", 150);
     /* Configuration parameters for the jdbc connection pool. */
-    private static final int minPoolSize = Parameter.intValue("sql.datastore.minpoolsize", 10);
-    private static final int maxPoolSize = Parameter.intValue("sql.datastore.maxpoolsize", 20);
+    private static final int minPoolSize = Parameter.intValue("sql.datastore.minpoolsize", 5);
+    private static final int maxPoolSize = Parameter.intValue("sql.datastore.maxpoolsize", 10);
+    /* Number of times to retry inserts after a rollback exception */
+    private static final int insertRetries = Parameter.intValue("sql.datastore.insertretries", 5);
 
     /* Column names. Using default parameters, path and child are VARCHAR(200) and value is a BLOB. */
     protected static final String pathKey = "path";
@@ -79,7 +84,7 @@ public class MysqlDataStore implements SpawnDataStore {
 
     /**
      * Create the data pool, initialize the connection pool, and create the table if necessary.
-      * @param jdbcUrl The URL used to connect to the database, e.g. "jdbc:mysql:thin://localhost:3306/spawndatabase"
+     * @param jdbcUrl The URL used to connect to the database, e.g. "jdbc:mysql:thin://localhost:3306/spawndatabase"
      *                 It is assumed that this database has been created and basic privileges have been granted to the spawn user.
      * @param tableName The table name where data will be stored
      * @param properties Properties for the connection pool. Should include user and password if appropriate.
@@ -122,29 +127,38 @@ public class MysqlDataStore implements SpawnDataStore {
 
     /**
      * On startup, create the table if it doesn't exist, and enforce that path+childId combinations must be unique
-      * @throws SQLException If creating execution fails
+     * @throws SQLException If creating execution fails
      */
     private void runStartupCommand() throws SQLException {
         try (Connection connection = cpds.getConnection()) {
             String cmd = String.format("CREATE TABLE IF NOT EXISTS %s ( " +
-                          "%s INT NOT NULL AUTO_INCREMENT, " + // Auto-incrementing int id
-                          "%s VARCHAR(%d) NOT NULL, %s MEDIUMBLOB, %s VARCHAR(%d), " + // VARCHAR path, BLOB value, VARCHAR child
-                          "PRIMARY KEY (%s), UNIQUE KEY (%s,%s))", // Use id as primary key, enforce unique (path, child) combo
-                    tableName, idKey, pathKey, maxPathLength, valueKey, childKey, maxPathLength, idKey, pathKey, childKey);
+                                       "%s INT NOT NULL AUTO_INCREMENT, " + // Auto-incrementing int id
+                                       "%s VARCHAR(%d) NOT NULL, %s MEDIUMBLOB, %s VARCHAR(%d), " + // VARCHAR path, BLOB value, VARCHAR child
+                                       "PRIMARY KEY (%s), UNIQUE KEY (%s,%s)) " + // Use id as primary key, enforce unique (path, child) combo
+                                       "ENGINE=%s", // Use specified table type (MyISAM works best in practice)
+                    tableName, idKey, pathKey, maxPathLength, valueKey, childKey, maxPathLength, idKey, pathKey, childKey, tableType);
             connection.prepareStatement(cmd).execute();
         }
     }
 
     private static ResultSet executeAndTimeQuery(PreparedStatement preparedStatement) throws SQLException {
         TimerContext timerContext = queryTimer.time();
-        try {
-            return preparedStatement.executeQuery();
-        } catch (SQLException e) {
-            errorCounter.inc();
-            throw e;
-        } finally {
-            timerContext.stop();
+        int remainingRetries = insertRetries;
+        while (remainingRetries > 0) {
+            try {
+                return preparedStatement.executeQuery();
+            } catch (SQLTransactionRollbackException tre) {
+                remainingRetries--;
+                continue;
+            }
+            catch (SQLException e) {
+                errorCounter.inc();
+                throw e;
+            } finally {
+                timerContext.stop();
+            }
         }
+        throw new SQLException("Failed insert after retries");
     }
 
     private static boolean executeAndTimeInsert(PreparedStatement preparedStatement) throws SQLException {
