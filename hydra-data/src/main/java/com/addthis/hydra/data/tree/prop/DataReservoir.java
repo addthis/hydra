@@ -15,7 +15,9 @@ package com.addthis.hydra.data.tree.prop;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import java.math.RoundingMode;
 
@@ -32,6 +34,11 @@ import com.addthis.hydra.data.tree.TreeNodeData;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.math.DoubleMath;
+
+import org.apache.commons.math3.distribution.ExponentialDistribution;
+import org.apache.commons.math3.distribution.GammaDistribution;
+import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.stat.inference.KolmogorovSmirnovTest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -321,10 +328,11 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         long targetEpoch = -1;
         int numObservations = -1;
         double sigma = Double.POSITIVE_INFINITY;
+        int percentile = 0;
         boolean doubleToLongBits = false;
-        int measurement;
         int minMeasurement = Integer.MIN_VALUE;
         boolean raw = false;
+        String mode = "sigma";
         if (key == null) {
             return null;
         }
@@ -353,9 +361,181 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
                     case "raw":
                         raw = Boolean.parseBoolean(kvvalue);
                         break;
+                    case "percentile":
+                        percentile = Integer.parseInt(kvvalue);
+                        break;
+                    case "mode":
+                        mode = kvvalue;
+                        break;
+                    default:
+                        throw new RuntimeException("Unknown key " + kvkey);
                 }
             }
         }
+        switch (mode) {
+            case "sigma":
+                return sigmaAnomalyDetection(targetEpoch, numObservations, doubleToLongBits, raw, sigma, minMeasurement);
+            case "modelfit":
+                return modelFitAnomalyDetection(targetEpoch, numObservations, doubleToLongBits, raw, percentile);
+            default:
+                throw new RuntimeException("Unknown mode type '" + mode + "'");
+        }
+    }
+
+    private static void updateFrequencies(Map<Integer,Integer> frequencies, int value) {
+        Integer count = frequencies.get(value);
+        if (count == null) {
+            count = 0;
+        }
+        frequencies.put(value, count + 1);
+    }
+
+    private double gaussianNegativeProbability(double mean, double stddev) {
+        NormalDistribution distribution = new NormalDistribution(mean, stddev);
+        return distribution.cumulativeProbability(0.0);
+    }
+
+    @VisibleForTesting
+    List<DataTreeNode> modelFitAnomalyDetection(long targetEpoch, int numObservations,
+            boolean doubleToLongBits, boolean raw, int percentile) {
+        int measurement;
+        int count = 0;
+        int min = Integer.MAX_VALUE;
+
+        if (targetEpoch < 0) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
+        } else if (numObservations <= 0) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
+        } else if (reservoir == null) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
+        } else if (targetEpoch < minEpoch) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
+        } else if (targetEpoch >= minEpoch + reservoir.length) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
+        } else if (numObservations > (reservoir.length - 1)) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
+        }
+
+        /**
+         * Fitting to a geometric distribution uses the mean value of the sample.
+         *
+         * Fitting to a normal distribution uses the Apache Commons Math implementation.
+         */
+        double mean = 0.0;
+        double m2 = 0.0;
+        double stddev;
+        double gaussianNegative = -1.0;
+        Map<Integer,Integer> frequencies = new HashMap<>();
+        double threshold;
+
+        int index = reservoir.length - 1;
+        long currentEpoch = minEpoch + index;
+
+        while (currentEpoch != targetEpoch) {
+            index--;
+            currentEpoch--;
+        }
+
+        measurement = reservoir[index--];
+        currentEpoch--;
+
+        while (count < numObservations && index >= 0) {
+            int value = reservoir[index--];
+            if (value < min) {
+                min = value;
+            }
+            updateFrequencies(frequencies, value);
+            count++;
+            double delta = value - mean;
+            mean += delta / count;
+            m2 += delta * (value - mean);
+        }
+
+        while (count < numObservations) {
+            int value = 0;
+            if (value < min) {
+                min = value;
+            }
+            updateFrequencies(frequencies, value);
+            count++;
+            double delta = value - mean;
+            mean += delta / count;
+            m2 += delta * (value - mean);
+        }
+
+        if (count < 2) {
+            stddev = 0.0;
+        } else {
+            stddev = Math.sqrt(m2 / count);
+        }
+
+        int mode = -1;
+        int modeCount = -1;
+
+        for(Map.Entry<Integer,Integer> entry : frequencies.entrySet()) {
+            int key = entry.getKey();
+            int value = entry.getValue();
+            if (value > modeCount || (value == modeCount && key > mode)) {
+                mode = key;
+                modeCount = value;
+            }
+        }
+
+        if (mean > 0.0 && stddev > 0.0) {
+            gaussianNegative = gaussianNegativeProbability(mean, stddev);
+        }
+
+        if (percentile == 0.0) {
+            threshold = -1.0;
+        } else if (mean == 0.0) {
+            threshold = 0.0;
+        } else if (stddev == 0.0) {
+            threshold = mean;
+        } else if (mean > 1.0) {
+            NormalDistribution distribution = new NormalDistribution(mean, stddev);
+            double badProbability = distribution.cumulativeProbability(1.0);
+            double goodProbability = badProbability + (1.0 - badProbability) * (percentile / 100.0);
+            threshold = distribution.inverseCumulativeProbability(goodProbability);
+        } else {
+            ExponentialDistribution distribution = new ExponentialDistribution(mean);
+            double badProbability = distribution.cumulativeProbability(1.0);
+            double goodProbability = badProbability + (1.0 - badProbability) * (percentile / 100.0);
+            threshold = distribution.inverseCumulativeProbability(goodProbability);
+        }
+
+        List<DataTreeNode> result = new ArrayList<>();
+        VirtualTreeNode vchild, vparent;
+
+        if (measurement > threshold) {
+            vchild = new VirtualTreeNode("gaussianNegative",
+                    generateValue(gaussianNegative, doubleToLongBits));
+            vparent = new VirtualTreeNode("mode", mode, generateSingletonArray(vchild));
+            vchild = vparent;
+            vparent = new VirtualTreeNode("stddev",
+                    generateValue(stddev, doubleToLongBits), generateSingletonArray(vchild));
+            vchild = vparent;
+            vparent = new VirtualTreeNode("mean",
+                    generateValue(mean, doubleToLongBits), generateSingletonArray(vchild));
+            vchild = vparent;
+            vparent = new VirtualTreeNode("measurement",
+                    measurement, generateSingletonArray(vchild));
+            vchild = vparent;
+            vparent = new VirtualTreeNode("delta",
+                    generateValue(measurement - threshold, doubleToLongBits), generateSingletonArray(vchild));
+            result.add(vparent);
+            if (raw) {
+                addRawObservations(result, targetEpoch, numObservations);
+            }
+        } else {
+            makeDefaultNodes(raw, targetEpoch, numObservations);
+        }
+        return result;
+    }
+
+    private List<DataTreeNode> sigmaAnomalyDetection(long targetEpoch, int numObservations, boolean doubleToLongBits, boolean raw, double sigma,
+            int minMeasurement) {
+
+        int measurement;
         if (targetEpoch < 0) {
             return makeDefaultNodes(raw, targetEpoch, numObservations);
         } else if (sigma == Double.POSITIVE_INFINITY) {

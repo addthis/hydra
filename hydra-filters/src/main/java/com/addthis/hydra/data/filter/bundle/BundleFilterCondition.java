@@ -68,17 +68,28 @@ public class BundleFilterCondition extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle row) {
+        boolean returnValue = true;
         if (row != null) {
             if (ifCondition != null && ifCondition.filterExec(row)) {
                 if (ifDo != null) {
-                    return returnFilter ? ifDo.filterExec(row) : true;
+                    if (returnFilter) {
+                        returnValue = ifDo.filterExec(row);
+                    }   else {
+                        // ignore result
+                        ifDo.filterExec(row);
+                    }
                 }
             } else {
                 if (elseDo != null) {
-                    return returnFilter ? elseDo.filterExec(row) : true;
+                    if (returnFilter) {
+                        returnValue = elseDo.filterExec(row);
+                    }   else {
+                        // ignore result
+                        elseDo.filterExec(row);
+                    }
                 }
             }
         }
-        return true;
+        return returnValue;
     }
 }
