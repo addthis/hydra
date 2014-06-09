@@ -88,6 +88,11 @@
       <artifactId>compress-lzf</artifactId>
       <version>${hydra.dep.compress.compress-lzf.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-math3</artifactId>
+      <version>3.3</version>
+    </dependency>
     <!-- end 3rd party -->
 
     <dependency>

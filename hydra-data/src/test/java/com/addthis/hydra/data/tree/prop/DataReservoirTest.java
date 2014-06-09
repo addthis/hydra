@@ -1,5 +1,7 @@
 package com.addthis.hydra.data.tree.prop;
 
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 
 import com.addthis.basis.util.ClosableIterator;
@@ -311,6 +313,55 @@ public class DataReservoirTest {
         assertEquals(1, reservoir.retrieveCount(3));
         assertEquals(-1, reservoir.retrieveCount(-1));
         assertEquals(-2, reservoir.retrieveCount(4));
+    }
+
+    private DataTreeNode retrieveNode(Iterator<DataTreeNode> iterator, String... names) {
+        if (names.length == 0) {
+            return null;
+        }
+        while (iterator.hasNext()) {
+            DataTreeNode node = iterator.next();
+            if (node.getName().equals(names[0])) {
+                if (names.length == 1) {
+                    return node;
+                } else {
+                    return retrieveNode(node.iterator(), Arrays.copyOfRange(names, 1, names.length));
+                }
+            }
+        }
+        return null;
+    }
+
+    private static final String[] gNegativePath = {"delta", "measurement", "mean", "stddev", "mode", "gaussianNegative"};
+
+    @Test
+    public void testModelFitting() {
+        DataReservoir reservoir = new DataReservoir();
+        reservoir.updateReservoir(1, 10, 0);
+        reservoir.updateReservoir(2, 10, 0);
+        reservoir.updateReservoir(3, 10, 0);
+        reservoir.updateReservoir(4, 10, 0);
+        reservoir.updateReservoir(5, 10, 0);
+        reservoir.updateReservoir(6, 10, 0);
+        reservoir.updateReservoir(7, 10, 0);
+        reservoir.updateReservoir(8, 10, 0);
+        reservoir.updateReservoir(9, 10, 1);
+        reservoir.updateReservoir(10, 10, 1);
+        List<DataTreeNode> result = reservoir.modelFitAnomalyDetection(10, 9, true, true, 0);
+        DataTreeNode gaussianNegative = retrieveNode(result.iterator(), gNegativePath);
+        reservoir = new DataReservoir();
+        reservoir.updateReservoir(1, 10, 10);
+        reservoir.updateReservoir(2, 10, 10);
+        reservoir.updateReservoir(3, 10, 10);
+        reservoir.updateReservoir(4, 10, 10);
+        reservoir.updateReservoir(5, 10, 10);
+        reservoir.updateReservoir(6, 10, 10);
+        reservoir.updateReservoir(7, 10, 10);
+        reservoir.updateReservoir(8, 10, 10);
+        reservoir.updateReservoir(9, 10, 9);
+        reservoir.updateReservoir(10, 10, 1);
+        result = reservoir.modelFitAnomalyDetection(10, 9, true, true, 0);
+        gaussianNegative = retrieveNode(result.iterator(), gNegativePath);
     }
 
 }
