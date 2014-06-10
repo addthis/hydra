@@ -332,7 +332,7 @@ public class DataReservoirTest {
         return null;
     }
 
-    private static final String[] gNegativePath = {"delta", "measurement", "mean", "stddev", "mode", "gaussianNegative"};
+    private static final String[] percentilePath = {"delta", "measurement", "mean", "stddev", "mode", "percentile"};
 
     @Test
     public void testModelFitting() {
@@ -348,7 +348,8 @@ public class DataReservoirTest {
         reservoir.updateReservoir(9, 10, 1);
         reservoir.updateReservoir(10, 10, 1);
         List<DataTreeNode> result = reservoir.modelFitAnomalyDetection(10, 9, true, true, 0);
-        DataTreeNode gaussianNegative = retrieveNode(result.iterator(), gNegativePath);
+        DataTreeNode percentile = retrieveNode(result.iterator(), percentilePath);
+        assertTrue(Double.longBitsToDouble(percentile.getCounter()) > 90.0);
         reservoir = new DataReservoir();
         reservoir.updateReservoir(1, 10, 10);
         reservoir.updateReservoir(2, 10, 10);
@@ -359,9 +360,10 @@ public class DataReservoirTest {
         reservoir.updateReservoir(7, 10, 10);
         reservoir.updateReservoir(8, 10, 10);
         reservoir.updateReservoir(9, 10, 9);
-        reservoir.updateReservoir(10, 10, 1);
+        reservoir.updateReservoir(10, 10, 11);
         result = reservoir.modelFitAnomalyDetection(10, 9, true, true, 0);
-        gaussianNegative = retrieveNode(result.iterator(), gNegativePath);
+        percentile = retrieveNode(result.iterator(), percentilePath);
+        assertTrue(Double.longBitsToDouble(percentile.getCounter()) > 90.0);
     }
 
 }

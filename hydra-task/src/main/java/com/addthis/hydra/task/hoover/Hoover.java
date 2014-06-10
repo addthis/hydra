@@ -248,10 +248,10 @@ public class Hoover extends TaskRunnable implements Runnable {
 
     /**
      * Command to be executed to delete files. Default is
-     * <br>["find", "{{DIR}}", "-mtime", "+{{DAYS}}", "-print", "-exec", "rm", "{}", ";"]</br>
+     * <br>["find", "{{DIR}}", "-type", "f", "-mtime", "+{{DAYS}}", "-print", "-exec", "rm", "{}", ";"]</br>
      */
     @Codec.Set(codable = true)
-    private String purgeCommand[] = new String[]{"find", "{{DIR}}", "-mtime", "+{{DAYS}}", "-print", "-exec", "rm", "{}", ";"};
+    private String purgeCommand[] = new String[]{"find", "{{DIR}}", "-type", "f", "-mtime", "+{{DAYS}}", "-print", "-exec", "rm", "{}", ";"};
 
     /**
      * If true then purge mark files that are older than purgeAfterDays days. Default is true.

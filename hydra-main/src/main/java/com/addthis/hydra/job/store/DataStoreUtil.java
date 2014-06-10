@@ -59,8 +59,8 @@ public class DataStoreUtil {
     private static final int cutoverTimeoutMinutes = Parameter.intValue("spawn.datstore.cutoverTimeoutMinutes", 15);
 
     private static final String clusterName = Parameter.value("cluster.name", "localhost");
-    private static final String sqlTableName = Parameter.value("spawn.sql.table", "sdstable_" + clusterName);
-    private static final String sqlDbName = Parameter.value("spawn.sql.db", "spawndatastore");
+    private static final String sqlTableName = Parameter.value("spawn.sql.table", "sdsTable_" + clusterName);
+    private static final String sqlDbName = Parameter.value("spawn.sql.db", "sdsDB_" + clusterName);
     private static final String sqlHostName = Parameter.value("spawn.sql.host", "localhost");
     private static final String sqlUser = Parameter.value("spawn.sql.user"); // Intentionally defaults to null for no user/pass
     private static final String sqlPassword = Parameter.value("spawn.sql.password", "");
@@ -107,8 +107,8 @@ public class DataStoreUtil {
         switch (type) {
             case ZK: return new ZookeeperDataStore(null);
             case MYSQL:
-                String url = "jdbc:mysql:thin://" + sqlHostName + ":" + sqlPort + "/" + sqlDbName;
-                return new MysqlDataStore(url, sqlTableName, properties);
+                String url = "jdbc:mysql:thin://" + sqlHostName + ":" + sqlPort + "/";
+                return new MysqlDataStore(url, sqlDbName, sqlTableName, properties);
             default: throw new IllegalArgumentException("Unexpected DataStoreType " + type);
         }
     }

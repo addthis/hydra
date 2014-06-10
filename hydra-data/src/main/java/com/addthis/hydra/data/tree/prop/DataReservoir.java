@@ -35,6 +35,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.math.DoubleMath;
 
+import org.apache.commons.math3.distribution.AbstractRealDistribution;
 import org.apache.commons.math3.distribution.ExponentialDistribution;
 import org.apache.commons.math3.distribution.GammaDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
@@ -427,6 +428,8 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         double gaussianNegative = -1.0;
         Map<Integer,Integer> frequencies = new HashMap<>();
         double threshold;
+        double badProbability = Double.NaN;
+        AbstractRealDistribution distribution = null;
 
         int index = reservoir.length - 1;
         long currentEpoch = minEpoch + index;
@@ -485,20 +488,18 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
             gaussianNegative = gaussianNegativeProbability(mean, stddev);
         }
 
-        if (percentile == 0.0) {
-            threshold = -1.0;
-        } else if (mean == 0.0) {
+        if (mean == 0.0) {
             threshold = 0.0;
         } else if (stddev == 0.0) {
             threshold = mean;
         } else if (mean > 1.0) {
-            NormalDistribution distribution = new NormalDistribution(mean, stddev);
-            double badProbability = distribution.cumulativeProbability(1.0);
+            distribution = new NormalDistribution(mean, stddev);
+            badProbability = distribution.cumulativeProbability(0.0);
             double goodProbability = badProbability + (1.0 - badProbability) * (percentile / 100.0);
             threshold = distribution.inverseCumulativeProbability(goodProbability);
         } else {
-            ExponentialDistribution distribution = new ExponentialDistribution(mean);
-            double badProbability = distribution.cumulativeProbability(1.0);
+            distribution = new ExponentialDistribution(mean);
+            badProbability = distribution.cumulativeProbability(0.0);
             double goodProbability = badProbability + (1.0 - badProbability) * (percentile / 100.0);
             threshold = distribution.inverseCumulativeProbability(goodProbability);
         }
@@ -506,9 +507,19 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         List<DataTreeNode> result = new ArrayList<>();
         VirtualTreeNode vchild, vparent;
 
-        if (measurement > threshold) {
+        if (measurement > threshold || percentile == 0.0) {
+            double measurePercentile;
+            if (distribution == null) {
+                measurePercentile = -1.0;
+            } else {
+                measurePercentile = distribution.probability(0.0, measurement) / (1.0 - badProbability);
+            }
+            measurePercentile *= 100.0;
             vchild = new VirtualTreeNode("gaussianNegative",
                     generateValue(gaussianNegative, doubleToLongBits));
+            vparent = new VirtualTreeNode("percentile",
+                    generateValue(measurePercentile, doubleToLongBits), generateSingletonArray(vchild));
+            vchild = vparent;
             vparent = new VirtualTreeNode("mode", mode, generateSingletonArray(vchild));
             vchild = vparent;
             vparent = new VirtualTreeNode("stddev",
