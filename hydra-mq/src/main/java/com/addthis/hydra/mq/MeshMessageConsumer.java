@@ -160,14 +160,19 @@ public class MeshMessageConsumer implements MessageConsumer {
         provider.setListener(wantPath, new com.addthis.meshy.service.message.MessageListener() {
             @Override
             public void requestContents(String fileName, Map<String, String> options, OutputStream out) throws IOException {
-                if (debug) log.info("topic consumer request fileName={}, options={} on topic={}", fileName, options, topic);
+                boolean scan = options != null && options.get("scan") != null;
+                if (debug) log.info("topic consumer request fileName={}, options={} on topic={} scan={}", fileName, options, topic, scan);
                 Bytes.writeString(uuid, out);
                 Bytes.writeInt(routingKeys.size(), out);
                 for (String routingKey : routingKeys) {
                     Bytes.writeString(routingKey, out);
                 }
                 out.close();
-                poller.bump();
+                if (scan) {
+                    scanner.bump();
+                } else {
+                    poller.bump();
+                }
             }
         });
         if (debug) log.info("listening to " + sources);
@@ -223,8 +228,20 @@ public class MeshMessageConsumer implements MessageConsumer {
             }
         }
 
+        private void safeWait(final Object lock ,final long timeout) {
+            try {
+                synchronized (lock) {
+                    lock.wait(timeout);
+                }
+            } catch (Exception ex) {
+                log.warn("", ex);
+            }
+        }
+
         public void loop() {
             while (true) {
+                /* allows multiple back-to-back bump message to merge */
+                safeWait(new Object(), 500);
                 try {
                     if (debug) log.info("task start");
                     task();
@@ -232,13 +249,7 @@ public class MeshMessageConsumer implements MessageConsumer {
                 } catch (Exception ex) {
                     log.warn("", ex);
                 }
-                try {
-                    synchronized (bumper) {
-                        bumper.wait(timeout);
-                    }
-                } catch (Exception ex) {
-                    log.warn("", ex);
-                }
+                safeWait(bumper, timeout);
             }
         }
     }

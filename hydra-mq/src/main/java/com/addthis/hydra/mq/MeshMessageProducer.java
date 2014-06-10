@@ -225,7 +225,9 @@ public class MeshMessageProducer implements MessageProducer {
             try {
                 if (debug) log.info("update want={}", wantPath);
                 for (FileReference ref : mesh.listFiles(new String[] { wantPath })) {
-                    InputStream in = mesh.readFile(ref);
+                    HashMap<String,String> opt = new HashMap<>();
+                    opt.put("scan","scan");
+                    InputStream in = mesh.readFile(ref, opt);
                     String uuid = Bytes.readString(in);
                     int keyCount = Bytes.readInt(in);
                     while (keyCount-- > 0) {
