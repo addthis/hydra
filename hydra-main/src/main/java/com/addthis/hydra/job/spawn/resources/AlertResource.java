@@ -52,13 +52,14 @@ public class AlertResource {
         int type = kv.getIntValue("type", -1);
         int timeout = kv.getIntValue("timeout", 0);
         String email = kv.getValue("email", "");
+        String description = kv.getValue("description", "");
         String canaryPath = kv.getValue("canaryPath");
         String canaryOps = kv.getValue("canaryOps");
         String canaryRops = kv.getValue("canaryRops");
         String canaryFilter = kv.getValue("canaryFilter");
         int canaryConfigThreshold = kv.getIntValue("canaryConfigThreshold", 0);
         if (jobIds != null) {
-            JobAlert jobAlert = new JobAlert(alertId, type, timeout, email, jobIds.split(","));
+            JobAlert jobAlert = new JobAlert(alertId, type, timeout, email, description, jobIds.split(","));
             jobAlert.setCanaryPath(canaryPath == null ? "" : canaryPath);
             jobAlert.setCanaryOps(canaryOps == null ? "" : canaryOps);
             jobAlert.setCanaryRops(canaryRops == null ? "" : canaryRops);

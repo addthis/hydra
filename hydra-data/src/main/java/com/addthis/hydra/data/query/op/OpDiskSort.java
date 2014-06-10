@@ -63,7 +63,8 @@ import io.netty.channel.ChannelProgressivePromise;
  * <p>This query operation <span class="hydra-summary">performs a disk-backed sort</span>.
  * <p/>
  * <p>The syntax is dsort=[cols]:[type]:[direction]. [cols] is one or more columns
- * separated by commas. Type is a sequence of either "n" for numeric or "s" for string.
+ * separated by commas. Type is a sequence of
+ * ["i" or "l" or "n"] for integer number, ["d" or "f"] for floating point number, or "s" for string.
  * Direction is a sequence of either "a" for ascending or "d" for descending. The lengths
  * of [type] and [direction] must be equal to the number of column specified.
  * <p/>
