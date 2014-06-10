@@ -2675,7 +2675,7 @@ public class Spawn implements Codec.Codable {
         job.setFinishTime(System.currentTimeMillis());
         spawnFormattedLogger.finishJob(job);
         if (!quiesce) {
-            if (!errored) {
+            if (job.isEnabled() && !errored) {
                 /* rekick if any task had more work to do */
                 if (job.hadMoreData()) {
                     log.warn("[job.done] " + job.getId() + " :: rekicking on more data");
