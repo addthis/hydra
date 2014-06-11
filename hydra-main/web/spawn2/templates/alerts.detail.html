@@ -88,8 +88,12 @@
             <input value="<%-alert.canaryFilter%>" type="text" class="form-control" id="canaryFilter" name="canaryFilter" placeholder="">
         </div>
     </div>
-
-
+    <div id="alertDescription" class="form" role="form">
+        <div class="form-group">
+            <label class="sr-only" for="timeout" style="margin-bottom:0px;">Alert description</label>
+            <textarea rows="4" cols="50" class="form-control" id="description" name="description" placeholder=""><%-alert.description%></textarea>
+        </div>
+    </div>
 </div>
 <div id="alertDetailContainer" class="main-container">
 </div>

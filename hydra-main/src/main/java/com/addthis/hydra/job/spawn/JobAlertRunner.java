@@ -238,6 +238,10 @@ public class JobAlertRunner {
         for (String jobId : activeJobs.keySet()) {
             sb.append(summary(spawn.getJob(jobId)) + "\n");
         }
+        String description = jobAlert.getDescription();
+        if (description != null) {
+            sb.append("Alert Description: " + description);
+        }
         EmailUtil.email(jobAlert.getEmail(), status, sb.toString());
         putAlert(jobAlert.getAlertId(), jobAlert);
     }
