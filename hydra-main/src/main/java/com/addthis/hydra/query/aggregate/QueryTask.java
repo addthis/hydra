@@ -65,7 +65,9 @@ public class QueryTask implements Runnable {
                             sourceAggregator.consumer.send(nextBundle);
                             processedBundle = true;
                             bundlesProcessed += 1;
-                        } else if (!taskSource.oneHasResponded() && taskSource.hasNoActiveSources()) {
+                        } else if (!taskSource.oneHasResponded()
+                                   && taskSource.hasNoActiveSources()
+                                   && !sourceAggregator.queryPromise.isDone()) {
                             log.debug("query task has no active options; attempting to lease one");
                             for (QueryTaskSourceOption option : taskSource.options) {
                                 if (sourceAggregator.tryActivateSource(option)) {
