@@ -76,16 +76,12 @@ public class FramedDataChannelReader extends DataChannelReader {
             frame = bis.read();
         } else {
             byte[] data = in.poll(pollWaitTime, TimeUnit.MILLISECONDS);
-            if (data == null) {
-                // poll timeout no data yet
-                return null;
-            } else if (data.length == 0) {
+            if (in.isEOF() && ((data == null) || (data.length == 0))) {
                 eof.set(true);
                 return null;
-//              // 0 byte array from client, probably error in mesh stream
-//              Not working as I had expected commenting out for now
-//              err = new DataChannelError("[FrameDataChannelReader] received unexpected zero length byte array");
-//              throw err;
+            } else if (data == null) {
+                // poll timeout no data yet
+                return null;
             } else {
                 // more data to read
                 bis = new ByteArrayInputStream(data);

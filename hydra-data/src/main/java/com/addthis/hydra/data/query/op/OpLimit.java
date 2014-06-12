@@ -102,8 +102,8 @@ public class OpLimit extends AbstractQueryOp {
     @Override
     public void sendComplete() {
         if (!done) {
-            getNext().sendComplete();
             done = true;
+            getNext().sendComplete();
         }
     }
 }
