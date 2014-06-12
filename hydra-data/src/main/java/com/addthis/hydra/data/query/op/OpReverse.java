@@ -15,8 +15,8 @@ package com.addthis.hydra.data.query.op;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.table.DataTable;
+import com.addthis.bundle.table.DataTableFactory;
 import com.addthis.hydra.data.query.AbstractTableOp;
-import com.addthis.hydra.data.query.QueryOpProcessor;
 
 import io.netty.channel.ChannelProgressivePromise;
 
@@ -32,7 +32,7 @@ import io.netty.channel.ChannelProgressivePromise;
  */
 public class OpReverse extends AbstractTableOp {
 
-    public OpReverse(QueryOpProcessor processor, ChannelProgressivePromise queryPromise) {
+    public OpReverse(DataTableFactory processor, ChannelProgressivePromise queryPromise) {
         super(processor, queryPromise);
     }
 

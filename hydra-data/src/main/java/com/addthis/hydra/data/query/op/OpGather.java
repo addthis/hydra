@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.data.query.op;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 import java.util.HashMap;
@@ -108,11 +109,11 @@ public class OpGather extends AbstractQueryOp {
     private final KeyTopper topper;
     private final int topSize;
     private final int topColumn;
+    private final String tmpDir;
 
     private boolean tippedToDisk = false;
     private boolean tipToDisk = Parameter.boolValue("opgather.tiptodisk", false);
 
-    private String tmpDir = "opgather.tmp";
 
     private static final Meter diskTips = Metrics.newMeter(OpGather.class, "diskTips", "diskTips", TimeUnit.SECONDS);
 
@@ -223,10 +224,8 @@ public class OpGather extends AbstractQueryOp {
 
     @Override
     public void close() throws IOException {
-        if (resultTable instanceof DiskBackedMap) {
-            ((DiskBackedMap<MergedRow>) resultTable).close();
+        if (resultTable instanceof Closeable) {
+            ((Closeable) resultTable).close();
         }
-
-        super.close();
     }
 }

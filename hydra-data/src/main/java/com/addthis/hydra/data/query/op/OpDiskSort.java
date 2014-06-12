@@ -111,12 +111,19 @@ public class OpDiskSort extends AbstractRowOp {
     public OpDiskSort(String args, String tempDirString, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
         this.queryPromise = queryPromise;
-        init(args, tempDirString);
+        this.tempDir = Paths.get(tempDirString, String.valueOf(UUID.randomUUID()));
+        init(args);
     }
 
-    private void init(String args, String tempDirString) {
+    public OpDiskSort(String args, Path tempDir, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
+        this.queryPromise = queryPromise;
+        this.tempDir = tempDir.resolve(String.valueOf(UUID.randomUUID()));
+        init(args);
+    }
+
+    private void init(String args) {
         try {
-            tempDir = Paths.get(tempDirString, String.valueOf(UUID.randomUUID()));
             Files.createDirectories(tempDir);
             mfm = new MuxFileDirectory(tempDir, DISCARDER);
             mfm.setDeleteFreed(true);
@@ -147,9 +154,6 @@ public class OpDiskSort extends AbstractRowOp {
     @Override
     public void close() throws IOException {
         cleanup();
-        if (getNext() != null) {
-            getNext().close();
-        }
     }
 
     private void cleanup() {

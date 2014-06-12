@@ -59,13 +59,8 @@ class TimeoutWatcher implements Runnable {
      static void sendTimeout(QueryEntry entry, long timeout) {
         String message = "[timeout.watcher] timeout: " + timeout +
                          " has been exceeded, canceling query: " + entry.query.uuid();
-        if (entry.queryPromise == null) {
-            log.error("QUERY TIMEOUT FAILURE: query: {} had a null query promise", entry.query.uuid());
-        } else {
-            if (!entry.queryPromise.tryFailure(new TimeoutException(message))) {
-                log.warn("QUERY TIMEOUT FAILURE: query: {} could not fail promise {}",
-                        entry.query.uuid(), entry.queryPromise);
-            }
-        }
+         if (!entry.tryFailure(new TimeoutException(message))) {
+             log.warn("QUERY TIMEOUT FAILURE: query: {}", entry.query.uuid());
+         }
     }
 }

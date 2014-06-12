@@ -14,8 +14,8 @@
 package com.addthis.hydra.data.query.op;
 
 import com.addthis.bundle.table.DataTable;
+import com.addthis.bundle.table.DataTableFactory;
 import com.addthis.hydra.data.query.AbstractTableOp;
-import com.addthis.hydra.data.query.QueryOpProcessor;
 
 import io.netty.channel.ChannelProgressivePromise;
 
@@ -35,7 +35,7 @@ import io.netty.channel.ChannelProgressivePromise;
  */
 public class OpMedian extends AbstractTableOp {
 
-    public OpMedian(QueryOpProcessor processor, ChannelProgressivePromise queryPromise) {
+    public OpMedian(DataTableFactory processor, ChannelProgressivePromise queryPromise) {
         super(processor, queryPromise);
     }
 

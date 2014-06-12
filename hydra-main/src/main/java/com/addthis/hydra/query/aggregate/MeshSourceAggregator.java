@@ -158,14 +158,16 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
         if (stragglerTaskFuture != null) {
             stragglerTaskFuture.cancel(true);
         }
-        if (!future.isSuccess()) {
-            stopSources(future.cause().getMessage());
-            meshQueryMaster.handleError(query);
-            consumer.sourceError(promoteHackForThrowables(future.cause()));
-        } else {
+        if (future.isSuccess()) {
             safelyRemoveSelfFromPipeline(future);
             stopSources("query is complete");
             consumer.sendComplete();
+        } else {
+            stopSources(future.cause().getMessage());
+            consumer.sourceError(promoteHackForThrowables(future.cause()));
+            if (!future.isCancelled()) {
+                meshQueryMaster.handleError(query);
+            }
         }
     }
 

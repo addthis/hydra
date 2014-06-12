@@ -53,6 +53,7 @@ abstract class AbstractBufferingHttpBundleEncoder extends ChannelOutboundHandler
     private final int batchBufferSize;
 
     private boolean writeStarted = false;
+    private boolean responseWritten = false;
 
 
     AbstractBufferingHttpBundleEncoder(int initialBufferSize, int batchBufferSize) {
@@ -92,7 +93,6 @@ abstract class AbstractBufferingHttpBundleEncoder extends ChannelOutboundHandler
 
     private boolean maybeWriteStart(ChannelHandlerContext ctx, Bundle row) {
         if (!writeStarted) {
-            ctx.write(responseStart);
             appendResponseStartToString(sendBuffer);
             if (row != null) {
                 appendInitialBundleToString(row, sendBuffer);
@@ -139,6 +139,9 @@ abstract class AbstractBufferingHttpBundleEncoder extends ChannelOutboundHandler
     }
 
     protected void flushStringBuilder(ChannelHandlerContext ctx) {
+        if (!responseWritten) {
+            ctx.write(responseStart);
+        }
         if (sendBuffer.length() > 0) {
             ByteBuf msg = encodeString(ctx.alloc(), sendBuffer);
             sendBuffer.setLength(0);

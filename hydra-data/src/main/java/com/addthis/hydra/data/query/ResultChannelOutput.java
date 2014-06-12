@@ -40,11 +40,23 @@ public class ResultChannelOutput extends AbstractQueryOp {
 
     @Override
     public void sendComplete() {
-        output.sendComplete();
+        if (opPromise.cause() != null) {
+            output.sourceError(promoteHackForThrowables(opPromise.cause()));
+        } else {
+            output.sendComplete();
+        }
     }
 
     @Override
     public String getSimpleName() {
         return "ResultChannelOutput(" + output + ")";
+    }
+
+    private static DataChannelError promoteHackForThrowables(Throwable cause) {
+        if (cause instanceof DataChannelError) {
+            return (DataChannelError) cause;
+        } else {
+            return new DataChannelError(cause);
+        }
     }
 }

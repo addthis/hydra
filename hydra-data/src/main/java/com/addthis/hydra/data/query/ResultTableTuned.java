@@ -50,21 +50,25 @@ public class ResultTableTuned implements DataTable, DataTableFactory {
     private boolean tipped;
     private boolean cantip;
     private long memTip;
-    private int rowTip;
+    private long rowTip;
     private int cells;
     private long estMem;
 
-    protected ResultTableTuned(File tempDir, int rowtip, long memtip, DataTableFactory factory, int sizeHint) throws IOException {
+    protected ResultTableTuned(File tempDir,
+                               long rowtip,
+                               long memtip,
+                               DataTableFactory factory,
+                               int sizeHint) throws IOException {
         this.tempDir = tempDir;
         this.memTip = memtip;
         this.rowTip = rowtip;
         this.factory = factory;
-        this.cantip = tempDir != null && tempDir.exists() && tempDir.isDirectory() && (rowtip > 0 || memtip > 0);
+        this.cantip = tempDir != null && tempDir.exists() && tempDir.isDirectory() &&
+                      ((rowtip > 0) || (memtip > 0));
         this.tipped = !cantip;
-        if (log.isDebugEnabled()) {
-            log.debug("creating RAT temp=" + tempDir + ", rowTip=" + rowtip + ", memTip=" + memTip + ", cantip=" + cantip + ", tipped=" + tipped);
-        }
-        if (cantip && sizeHint >= rowtip && rowtip > 0) {
+        log.debug("creating RAT temp={}, rowTip={}, memTip={}, cantip={}, tipped={}", tempDir,
+                  rowtip, memTip, cantip, tipped);
+        if (cantip && (sizeHint >= rowtip) && (rowtip > 0)) {
             File tmp = createTempFile();
             tipped = true;
             result = new ResultTableDisk(factory, tmp);

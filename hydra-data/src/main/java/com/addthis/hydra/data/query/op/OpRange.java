@@ -14,8 +14,8 @@
 package com.addthis.hydra.data.query.op;
 
 import com.addthis.bundle.table.DataTable;
+import com.addthis.bundle.table.DataTableFactory;
 import com.addthis.hydra.data.query.AbstractTableOp;
-import com.addthis.hydra.data.query.QueryOpProcessor;
 
 import io.netty.channel.ChannelProgressivePromise;
 
@@ -37,7 +37,7 @@ public class OpRange extends AbstractTableOp {
     private int begin;
     private int end;
 
-    public OpRange(QueryOpProcessor processor, String args, ChannelProgressivePromise queryPromise) {
+    public OpRange(DataTableFactory processor, String args, ChannelProgressivePromise queryPromise) {
         super(processor, queryPromise);
         int[] ov = csvToInts(args);
         begin = ov[0];

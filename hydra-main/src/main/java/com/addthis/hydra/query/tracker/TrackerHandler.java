@@ -45,15 +45,15 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
 
     // set when added to pipeline
     private DataChannelOutputToNettyBridge queryUser;
-    private ChannelProgressivePromise queryPromise;
     private ChannelHandlerContext ctx;
+    ChannelProgressivePromise queryPromise;
 
     // set on query
     private Query query;
     private QueryEntry queryEntry;
     private QueryOpProcessor opProcessorConsumer;
-    private ChannelProgressivePromise opPromise;
-    private ChannelPromise requestPromise;
+    ChannelProgressivePromise opPromise;
+    ChannelPromise requestPromise;
 
     public TrackerHandler(QueryTracker queryTracker, String[] opsLog) {
         this.queryTracker = queryTracker;
@@ -83,7 +83,7 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
         query.queryPromise = queryPromise;
         // create a processor chain based in query ops terminating the query user
         this.opProcessorConsumer = query.newProcessor(queryUser, opPromise);
-        queryEntry = new QueryEntry(query, opsLog, requestPromise, this);
+        queryEntry = new QueryEntry(query, opsLog, this);
 
         // Check if the uuid is repeated, then make a new one
         if (queryTracker.running.putIfAbsent(query.uuid(), queryEntry) != null) {
@@ -125,18 +125,19 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
             if (future.isSuccess()) {
                 queryPromise.trySuccess();
             } else {
-                queryPromise.tryFailure(opPromise.cause());
+                queryPromise.tryFailure(future.cause());
             }
             return;
         }
         // else the entire request is over; either from an error the last http write completing
 
-        // tell the op processor about potential early termination (which may tell the gatherer in turn)
+        // tell the op processor about potential early termination (which may in turn tell aggre.)
         if (future.isSuccess()) {
             opPromise.trySuccess();
         } else {
             opPromise.tryFailure(future.cause());
         }
+        opProcessorConsumer.close();
         QueryEntry runE = queryTracker.running.remove(query.uuid());
         if (runE == null) {
             log.warn("failed to remove running for {}", query.uuid());
@@ -165,7 +166,7 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
             if (!future.isSuccess()) {
                 Throwable queryFailure = future.cause();
                 queryLine.put("type", "query.error")
-                        .put("error", queryFailure.getMessage());
+                         .put("error", queryFailure.getMessage());
                 queryTracker.queryErrors.inc();
             } else {
                 queryLine.put("type", "query.done");
