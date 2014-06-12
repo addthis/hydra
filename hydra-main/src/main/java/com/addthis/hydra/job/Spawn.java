@@ -181,6 +181,7 @@ public class Spawn implements Codec.Codable {
     private static final Meter jobsStartedPerHour = Metrics.newMeter(Spawn.class, "jobsStartedPerHour", "jobsStartedPerHour", TimeUnit.HOURS);
     private static final Meter jobsCompletedPerHour = Metrics.newMeter(Spawn.class, "jobsCompletedPerHour", "jobsCompletedPerHour", TimeUnit.HOURS);
     private static final Counter nonConsumingClientDropCounter = Metrics.newCounter(Spawn.class, "clientDrops");
+    private static final Counter nonHostTaskMessageCounter = Metrics.newCounter(Spawn.class, "nonHostTaskMessage");
 
     public static final String SPAWN_DATA_DIR = Parameter.value("SPAWN_DATA_DIR", "./data");
     public static final String SPAWN_STRUCTURED_LOG_DIR = Parameter.value("spawn.logger.bundle.dir", "./log/spawn-stats");
@@ -2403,16 +2404,13 @@ public class Spawn implements Codec.Codable {
                     if (job.getStartTime() == null) {
                         job.setStartTime(System.currentTimeMillis());
                     }
-                    JobTask node = null;
-                    for (JobTask jobNode : job.getCopyOfTasks()) {
-                        if (jobNode.getTaskID() == begin.getNodeID()) {
-                            node = jobNode;
-                            break;
-                        }
+                    task = job.getTask(begin.getNodeID());
+                    if (!checkTaskMessage(task, begin.getHostUuid())) {
+                        break;
                     }
-                    if (node != null) {
-                        job.setTaskState(node, JobTaskState.BUSY);
-                        node.incrementStarts();
+                    if (task != null) {
+                        job.setTaskState(task, JobTaskState.BUSY);
+                        task.incrementStarts();
                         queueJobTaskUpdateEvent(job);
                     } else {
                         log.warn("[task.begin] done report for missing node " + begin.getJobKey());
@@ -2427,6 +2425,9 @@ public class Spawn implements Codec.Codable {
                 job = getJob(cantBegin.getJobUuid());
                 task = getTask(cantBegin.getJobUuid(), cantBegin.getNodeID());
                 if (job != null && task != null) {
+                    if (!checkTaskMessage(task, cantBegin.getHostUuid())) {
+                        break;
+                    }
                     try {
                         job.setTaskState(task, JobTaskState.IDLE);
                         log.info("[task.cantbegin] kicking " + task.getJobKey());
@@ -2463,6 +2464,9 @@ public class Spawn implements Codec.Codable {
                 job = getJob(replicate.getJobUuid());
                 task = getTask(replicate.getJobUuid(), replicate.getNodeID());
                 if (task != null) {
+                    if (!checkTaskMessage(task, replicate.getHostUuid())) {
+                        break;
+                    }
                     log.info("[task.replicate] " + job.getId() + "/" + task.getTaskID());
                     JobTaskState taskState = task.getState();
                     if (taskState != JobTaskState.REBALANCE && taskState != JobTaskState.MIGRATING) {
@@ -2476,6 +2480,9 @@ public class Spawn implements Codec.Codable {
                 job = getJob(revert.getJobUuid());
                 task = getTask(revert.getJobUuid(), revert.getNodeID());
                 if (task != null) {
+                    if (!checkTaskMessage(task, revert.getHostUuid())) {
+                        break;
+                    }
                     log.info("[task.revert] " + job.getId() + "/" + task.getTaskID());
                     job.setTaskState(task, JobTaskState.REVERT, true);
                     queueJobTaskUpdateEvent(job);
@@ -2497,29 +2504,43 @@ public class Spawn implements Codec.Codable {
                 }
                 break;
             case STATUS_TASK_END:
-                StatusTaskEnd update = (StatusTaskEnd) core;
-                log.info("[task.end] :: " + update.getJobUuid() + "/" + update.getNodeID() + " exit=" + update.getExitCode());
+                StatusTaskEnd end = (StatusTaskEnd) core;
+                log.info("[task.end] :: " + end.getJobUuid() + "/" + end.getNodeID() + " exit=" + end.getExitCode());
                 tasksCompletedPerHour.mark();
-                                try {
-                    job = getJob(update.getJobUuid());
+                try {
+                    job = getJob(end.getJobUuid());
                     if (job == null) {
-                        log.warn("[task.end] on dead job " + update.getJobKey() + " from " + update.getHostUuid());
+                        log.warn("[task.end] on dead job " + end.getJobKey() + " from " + end.getHostUuid());
                         break;
                     }
-                    task = getTask(update.getJobUuid(), update.getNodeID());
-                    if (task.getHostUUID() != null && !task.getHostUUID().equals(update.getHostUuid())) {
-                        log.warn("[task.end] received from incorrect host " + update.getHostUuid());
+                    task = job.getTask(end.getNodeID());
+                    if (!checkTaskMessage(task, end.getHostUuid())) {
                         break;
                     }
                     if (task.isRunning()) {
-                        taskQueuesByPriority.incrementHostAvailableSlots(update.getHostUuid());
+                        taskQueuesByPriority.incrementHostAvailableSlots(end.getHostUuid());
                     }
-                    handleStatusTaskEnd(job, task, update);
+                    handleStatusTaskEnd(job, task, end);
                 } catch (Exception ex) {
                     log.warn("Failed to handle end message: " + ex, ex);
                 }
                 break;
         }
+    }
+
+    /**
+     * Before updating task state, make sure the message source matches the host of the task
+     * @param task The task to consider
+     * @param messageSourceUuid The source of the message regarding that task
+     * @return True if the message source matches the task's expected host
+     */
+    private boolean checkTaskMessage(JobTask task, String messageSourceUuid) {
+        if (task == null || messageSourceUuid == null || !messageSourceUuid.equals(task.getHostUUID())) {
+            log.warn("Ignoring task state message from non-live host {}", messageSourceUuid);
+            nonHostTaskMessageCounter.inc();
+            return false;
+        }
+        return true;
     }
 
     /**
