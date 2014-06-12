@@ -104,8 +104,7 @@ public class QueryOpProcessor implements DataChannelOutput, QueryMemTracker, Clo
         this.rowTip = rowTip;
         this.output = new ResultChannelOutput(output, opPromise);
         this.memTracker = memTracker;
-        firstOp = this.output;
-        parseOps(ops);
+        this.firstOp = this.output;
         this.tableFactory = new DataTableFactory() {
             @Override
             public DataTable createTable(int expectedSize) {
@@ -118,6 +117,7 @@ public class QueryOpProcessor implements DataChannelOutput, QueryMemTracker, Clo
                 }
             }
         };
+        parseOps(ops);
     }
 
     public ChannelProgressivePromise opPromise() {
