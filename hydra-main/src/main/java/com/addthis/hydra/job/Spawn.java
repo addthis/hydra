@@ -2166,7 +2166,7 @@ public class Spawn implements Codec.Codable {
                 task.setRebalanceTarget(null);
             }
             else if (force && (task.getState() == JobTaskState.REVERT)) {
-                log.warn("[task.stop] " + task.getJobKey() + " killed in state " + task.getState());
+                log.warn("[task.stop] " + task.getJobKey() + " killed in revert state");
                 int code  = JobTaskErrorCode.EXIT_REVERT_FAILURE;
                 job.errorTask(task, code);
                 queueJobTaskUpdateEvent(job);
@@ -2174,7 +2174,6 @@ public class Spawn implements Codec.Codable {
                 log.warn("[task.stop] " + task.getJobKey() + " killed on down host");
                 job.setTaskState(task, JobTaskState.IDLE);
                 queueJobTaskUpdateEvent(job);
-                // Host is unreachable; bail once the task is errored.
                 return;
             } else if (host != null && !host.hasLive(task.getJobKey())) {
                 log.warn("[task.stop] node that minion doesn't think is running: " + task.getJobKey());
@@ -2192,7 +2191,7 @@ public class Spawn implements Codec.Codable {
                 log.warn("[task.stop]" + jobUUID + "/" + taskID + "]: no host monitored for uuid " + task.getHostUUID());
             }
         } else {
-            log.warn("[task.stop]" + jobUUID + "]: no nodes");
+            log.warn("[task.stop] job/task {}/{} not found", jobUUID, taskID);
         }
     }
 
