@@ -16,11 +16,13 @@ package com.addthis.hydra.query.tracker;
 
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.query.aggregate.DetailedStatusTask;
+import com.addthis.hydra.query.aggregate.TaskSourceInfo;
 import com.addthis.hydra.query.web.DataChannelOutputToNettyBridge;
 import com.addthis.hydra.util.StringMapHelper;
 
@@ -87,13 +89,7 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
 
         // Check if the uuid is repeated, then make a new one
         if (queryTracker.running.putIfAbsent(query.uuid(), queryEntry) != null) {
-            String old = query.uuid();
-            query.useNextUUID();
-            log.warn("Query uuid was already in use in running. Going to try assigning a new one. old:{} new:{}",
-                    old, query.uuid());
-            if (queryTracker.running.putIfAbsent(query.uuid(), queryEntry) != null) {
-                throw new QueryException("Query uuid was STILL somehow already in use : " + query.uuid());
-            }
+            throw new QueryException("Query uuid somehow already in use : " + query.uuid());
         }
 
         log.debug("Executing.... {} {}", query.uuid(), queryEntry.queryDetails);
@@ -118,7 +114,13 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
     @Override
     public void operationComplete(ChannelProgressiveFuture future) throws Exception {
         if (future == queryPromise) {
-            // only care about operation progressed events for the gathering promise
+            // get a snapshot of query sources after aggregation ends
+            Promise<TaskSourceInfo[]> promise = new DefaultPromise<>(ctx.executor());
+            submitDetailedStatusTask(new DetailedStatusTask(promise));
+            queryEntry.lastSourceInfo = promise.getNow();
+            if (queryEntry.queryState == QueryState.AGGREGATING) {
+                queryEntry.queryState = QueryState.OPS;
+            }
             return;
         } else if (future == opPromise) {
             // tell aggregator about potential early termination from the op promise
@@ -134,8 +136,16 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
         // tell the op processor about potential early termination (which may in turn tell aggre.)
         if (future.isSuccess()) {
             opPromise.trySuccess();
+            queryEntry.queryState = QueryState.COMPLETE;
         } else {
             opPromise.tryFailure(future.cause());
+            if (future.isCancelled()) {
+                queryEntry.queryState = QueryState.CANCELLED;
+            } else if (future.cause() instanceof TimeoutException){
+                queryEntry.queryState = QueryState.TIMEOUT;
+            } else {
+                queryEntry.queryState = QueryState.ERROR;
+            }
         }
         opProcessorConsumer.close();
         QueryEntry runE = queryTracker.running.remove(query.uuid());
@@ -143,26 +153,33 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
             log.warn("failed to remove running for {}", query.uuid());
         }
 
-        Promise<QueryEntryInfo> promise = new DefaultPromise<>(ctx.executor());
-        queryEntry.getDetailedQueryEntryInfo(promise);
-        QueryEntryInfo entryInfo = promise.getNow();
-        if (entryInfo == null) {
-            log.warn("Failed to get detailed status for completed query {}; defaulting to brief", query.uuid());
-            entryInfo = queryEntry.getStat();
+        QueryEntryInfo entryInfo = queryEntry.getStat();
+        TaskSourceInfo[] taskSourceInfos = entryInfo.tasks;
+        if (taskSourceInfos == null) {
+            log.warn("Failed to get detailed status for completed query {}; defaulting to brief",
+                     query.uuid());
+        } else {
+            int exactLines = 0;
+            for (TaskSourceInfo taskSourceInfo : taskSourceInfos) {
+                exactLines += taskSourceInfo.lines;
+            }
+            entryInfo.lines = exactLines;
+            entryInfo.tasks = taskSourceInfos;
         }
 
         try {
             StringMapHelper queryLine = new StringMapHelper()
-                    .put("query.path", query.getPaths()[0])
-                    .put("query.ops", Arrays.toString(opsLog))
-                    .put("sources", query.getParameter("sources"))
+                    .put("query.path", entryInfo.paths[0])
+                    .put("query.ops", Arrays.toString(entryInfo.ops))
+                    .put("sources", entryInfo.sources)
                     .put("time", System.currentTimeMillis())
                     .put("time.run", entryInfo.runTime)
-                    .put("job.id", query.getJob())
-                    .put("job.alias", query.getParameter("track.alias"))
-                    .put("query.id", query.uuid())
+                    .put("job.id", entryInfo.job)
+                    .put("job.alias", entryInfo.alias)
+                    .put("query.id", entryInfo.uuid)
                     .put("lines", entryInfo.lines)
-                    .put("sender", query.getParameter("sender"));
+                    .put("sentLines", entryInfo.sentLines)
+                    .put("sender", entryInfo.sender);
             if (!future.isSuccess()) {
                 Throwable queryFailure = future.cause();
                 queryLine.put("type", "query.error")
@@ -170,8 +187,8 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
                 queryTracker.queryErrors.inc();
             } else {
                 queryLine.put("type", "query.done");
-                queryTracker.recentlyCompleted.put(query.uuid(), entryInfo);
             }
+            queryTracker.recentlyCompleted.put(query.uuid(), entryInfo);
             queryTracker.log(queryLine);
             queryTracker.queryMeter.update(entryInfo.runTime, TimeUnit.MILLISECONDS);
         } catch (Exception e) {

@@ -11,23 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.addthis.hydra.query.tracker;
 
-package com.addthis.hydra.query.aggregate;
-
-import com.addthis.codec.Codec;
-
-public class TaskSourceOptionInfo implements Codec.Codable {
-
-    @Codec.Set(codable = true)
-    public final String hostUuid;
-    @Codec.Set(codable = true)
-    public final boolean active;
-    @Codec.Set(codable = true)
-    public final boolean selected;
-
-    public TaskSourceOptionInfo(QueryTaskSourceOption option, boolean selected) {
-        this.hostUuid = option.queryReference.getHostUUID();
-        this.active   = option.isActive();
-        this.selected = selected;
-    }
+public enum QueryState {
+    QUEUED, AGGREGATING, OPS, SENDING, COMPLETE, CANCELLED, TIMEOUT, ERROR
 }

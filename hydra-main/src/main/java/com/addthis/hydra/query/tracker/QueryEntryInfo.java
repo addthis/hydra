@@ -22,7 +22,7 @@ public class QueryEntryInfo implements Codec.Codable {
     @Codec.Set(codable = true)
     public String[] paths;
     @Codec.Set(codable = true)
-    public String uuid;
+    public long uuid;
     @Codec.Set(codable = true)
     public String alias;
     @Codec.Set(codable = true)
@@ -41,6 +41,10 @@ public class QueryEntryInfo implements Codec.Codable {
     public long runTime;
     @Codec.Set(codable = true)
     public long lines;
+    @Codec.Set(codable = true)
+    public long sentLines;
+    @Codec.Set(codable = true)
+    public QueryState state;
     @Codec.Set(codable = true)
     public TaskSourceInfo[] tasks;
 }

@@ -12,13 +12,14 @@
  * limitations under the License.
  */
 
-package com.addthis.hydra.query.web;
+package com.addthis.hydra.query.tracker;
 
 import java.nio.CharBuffer;
 
 import com.addthis.codec.CodecJSON;
-import com.addthis.hydra.query.tracker.QueryEntry;
-import com.addthis.hydra.query.tracker.QueryEntryInfo;
+import com.addthis.hydra.query.aggregate.DetailedStatusTask;
+import com.addthis.hydra.query.aggregate.TaskSourceInfo;
+import com.addthis.hydra.query.web.HttpUtils;
 import com.addthis.maljson.JSONObject;
 
 import org.apache.commons.io.output.StringBuilderWriter;
@@ -41,7 +42,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 
-public class DetailedStatusHandler implements FutureListener<QueryEntryInfo> {
+public class DetailedStatusHandler implements FutureListener<TaskSourceInfo[]> {
 
     private final StringBuilderWriter writer;
     private final HttpResponse response;
@@ -60,30 +61,39 @@ public class DetailedStatusHandler implements FutureListener<QueryEntryInfo> {
 
     public void handle() {
         if (queryEntry != null) {
-            Promise<QueryEntryInfo> promise = new DefaultPromise<>(ctx.executor());
-            promise.addListener(this);
-            queryEntry.getDetailedQueryEntryInfo(promise);
+            if (queryEntry.lastSourceInfo == null) {
+                Promise<TaskSourceInfo[]> promise = new DefaultPromise<>(ctx.executor());
+                promise.addListener(this);
+                DetailedStatusTask statusTask = new DetailedStatusTask(promise);
+                queryEntry.trackerHandler.submitDetailedStatusTask(statusTask) ;
+            } else {
+                onSuccess(queryEntry.getStat());
+            }
         }
         else {
             onFailure(new RuntimeException("query entry unexpectedly null"));
         }
     }
 
-    private void onSuccess(QueryEntryInfo queryEntryInfo) throws Exception {
-        JSONObject entryJSON = CodecJSON.encodeJSON(queryEntryInfo);
-        writer.write(entryJSON.toString());
-        ByteBuf textResponse = ByteBufUtil.encodeString(ctx.alloc(),
-                CharBuffer.wrap(writer.getBuilder()), CharsetUtil.UTF_8);
-        HttpContent content = new DefaultHttpContent(textResponse);
-        response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, textResponse.readableBytes());
-        if (HttpHeaders.isKeepAlive(request)) {
-            response.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
-        }
-        ctx.write(response);
-        ctx.write(content);
-        ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
-        if (!HttpHeaders.isKeepAlive(request)) {
-            lastContentFuture.addListener(ChannelFutureListener.CLOSE);
+    private void onSuccess(QueryEntryInfo queryEntryInfo) {
+        try {
+            JSONObject entryJSON = CodecJSON.encodeJSON(queryEntryInfo);
+            writer.write(entryJSON.toString());
+            ByteBuf textResponse = ByteBufUtil.encodeString(ctx.alloc(),
+                                                            CharBuffer.wrap(writer.getBuilder()), CharsetUtil.UTF_8);
+            HttpContent content = new DefaultHttpContent(textResponse);
+            response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, textResponse.readableBytes());
+            if (HttpHeaders.isKeepAlive(request)) {
+                response.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+            }
+            ctx.write(response);
+            ctx.write(content);
+            ChannelFuture lastContentFuture = ctx.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
+            if (!HttpHeaders.isKeepAlive(request)) {
+                lastContentFuture.addListener(ChannelFutureListener.CLOSE);
+            }
+        } catch (Throwable t) {
+            onFailure(t);
         }
     }
 
@@ -94,9 +104,21 @@ public class DetailedStatusHandler implements FutureListener<QueryEntryInfo> {
     }
 
     @Override
-    public void operationComplete(Future<QueryEntryInfo> future) throws Exception {
+    public void operationComplete(Future<TaskSourceInfo[]> future) throws Exception {
         if (future.isSuccess()) {
-            onSuccess(future.get());
+            try {
+                TaskSourceInfo[] taskSourceInfos = future.get();
+                QueryEntryInfo queryEntryInfo = queryEntry.getStat();
+                long exactLines = 0;
+                for (TaskSourceInfo taskSourceInfo : taskSourceInfos) {
+                    exactLines += taskSourceInfo.lines;
+                }
+                queryEntryInfo.lines = exactLines;
+                queryEntryInfo.tasks = taskSourceInfos;
+                onSuccess(queryEntryInfo);
+            } catch (Throwable t) {
+                onFailure(t);
+            }
         } else {
             onFailure(future.cause());
         }

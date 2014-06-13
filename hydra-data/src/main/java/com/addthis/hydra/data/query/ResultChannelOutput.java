@@ -24,6 +24,8 @@ public class ResultChannelOutput extends AbstractQueryOp {
 
     private final DataChannelOutput output;
 
+    private int lines = 0;
+
     public ResultChannelOutput(DataChannelOutput output, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
         this.output = output;
@@ -33,13 +35,23 @@ public class ResultChannelOutput extends AbstractQueryOp {
         return output;
     }
 
+    private void reportLines() {
+        opPromise.tryProgress(0, lines);
+        lines = 0;
+    }
+
     @Override
     public void send(Bundle row) throws DataChannelError {
         output.send(row);
+        lines += 1;
+        if (lines >= 100) {
+            reportLines();
+        }
     }
 
     @Override
     public void sendComplete() {
+        reportLines();
         if (opPromise.cause() != null) {
             output.sourceError(promoteHackForThrowables(opPromise.cause()));
         } else {

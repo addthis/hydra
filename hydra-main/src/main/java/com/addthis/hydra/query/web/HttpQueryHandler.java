@@ -32,6 +32,7 @@ import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.hydra.query.loadbalance.QueryQueue;
 import com.addthis.hydra.query.loadbalance.WorkerData;
+import com.addthis.hydra.query.tracker.DetailedStatusHandler;
 import com.addthis.hydra.query.tracker.QueryEntry;
 import com.addthis.hydra.query.tracker.QueryEntryInfo;
 import com.addthis.hydra.query.tracker.QueryTracker;
@@ -236,7 +237,9 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 }
                 break;
             case "/query/encode": {
-                Query q = new Query(null, kv.getValue("query", kv.getValue("path", "")), null);
+                Query q = new Query(null,
+                                    new String[]{kv.getValue("query", kv.getValue("path", ""))},
+                                    null);
                 JSONArray path = CodecJSON.encodeJSON(q).getJSONArray("path");
                 writer.write(path.toString());
                 break;

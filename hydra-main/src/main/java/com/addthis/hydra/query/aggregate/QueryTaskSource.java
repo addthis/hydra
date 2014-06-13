@@ -18,9 +18,6 @@ import java.io.IOException;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
-import com.addthis.hydra.data.query.FramedDataChannelReader;
-import com.addthis.meshy.service.file.FileReference;
-import com.addthis.meshy.service.stream.SourceInputStream;
 
 public class QueryTaskSource {
 
@@ -29,7 +26,7 @@ public class QueryTaskSource {
     protected int lines = 0;
     protected long endTime = 0;
 
-    protected FramedDataChannelReader dataChannelReader;
+    protected TaskChannelReader dataChannelReader;
 
     public QueryTaskSource(QueryTaskSourceOption[] options) {
         this.options = options;
@@ -110,9 +107,8 @@ public class QueryTaskSource {
         dataChannelReader = null;
     }
 
-    private void createReader(SourceInputStream sourceInputStream, FileReference queryReference) {
-        dataChannelReader = new FramedDataChannelReader(
-                sourceInputStream, queryReference.name, AggregateConfig.FRAME_READER_POLL);
+    private void createReader(QueryTaskSourceOption readySourceOption) {
+        dataChannelReader = new TaskChannelReader(readySourceOption);
     }
 
     private QueryTaskSourceOption getReadyOption() {
@@ -136,7 +132,7 @@ public class QueryTaskSource {
         QueryTaskSourceOption readyOption = getReadyOption();
         if (readyOption != null) {
             cancelOtherActiveOptions(readyOption);
-            createReader(readyOption.sourceInputStream, readyOption.queryReference);
+            createReader(readyOption);
             return true;
         }
         return false;

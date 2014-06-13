@@ -396,12 +396,12 @@ function renderQueryHosts(hosts,tab){
         var h = hosts[i];
         var options = h.options;
         var hostInfo = "";
-        if (!h.complete && h.lines > 0) {
+        if (h.lines > 0) {
             var selected = "unknown";
             var inactive = "";
             for (var j = 0; j < options.length; j++) {
                 var option = options[j];
-                if (option.active) {
+                if (option.selected) {
                     selected = option.hostUuid;
                 } else {
                     inactive += option.hostUuid + ", "
@@ -409,7 +409,7 @@ function renderQueryHosts(hosts,tab){
             }
             hostInfo = "selected: " + selected + "   inactive: " + inactive;
         }
-        if (!h.complete && h.lines == 0) {
+        if (h.lines == 0) {
             var active = "active: ";
             var inactive = "inactive: ";
             for (var j = 0; j < options.length; j++) {
@@ -421,13 +421,6 @@ function renderQueryHosts(hosts,tab){
                 }
             }
             hostInfo = active + "   " + inactive;
-        }
-        if (h.complete) {
-            hostInfo = "options were: "
-            for (var j = 0; j < options.length; j++) {
-                var option = options[j];
-                hostInfo += option.hostUuid + ", ";
-            }
         }
         var row = [i, h.lines, (h.complete?"y":"n"), hostInfo];
         html += '<tr><td>'+row.join('</td><td>')+'</td></tr>';
@@ -517,21 +510,48 @@ function renderCompletedEntries(cache) {
 }
 
 function limit(txt,chars) {
+    return limitLines(txt, chars, 1);
+}
+
+function limitLines(txt,chars,lines) {
     if (!txt) { return txt; }
     var t = txt.toString();
-    if (t.length > chars) {
-        return t.substring(0, chars)+" ...";
+    var output = "";
+    while (t.length > 0 && lines > 0) {
+        if (output.length > 0) {
+            output += "<br>";
+        }
+        if (lines <= 1 && t.length > chars) {
+            chars = chars - 3;
+        }
+        output += t.substring(0, chars);
+        t = t.substring(chars);
+        lines -= 1;
     }
-    return txt;
+    if (t.length > 0) {
+        output += "...";
+    }
+    return output;
 }
 
 /* cache entry list render */
 function renderCacheList(list,div,kill) {
+    list.sort(function(a, b) {return b.uuid - a.uuid});
     var html = '<table><tr><th>';
-    html += ['submit','uuid','alias','job','path','ops','run','lines','kill'].join('</th><th>')+'</th></tr>';
+    html += ['submit','uuid','state','job','path','ops','rops','run','lines','sent','kill'].join('</th><th>')+'</th></tr>';
     for (var i=0; i<list.length; i++) {
         var le = list[i];
-        var row = [new Date(le.startTime).toString('yy/MM/dd HH:mm:ss'), "<a onclick='QM.queryHostsRescan(\""+le.uuid+"\",\""+le.job+"\")' href='#'>"+le.uuid+"</a>", le.alias || '', limit(le.job,15), limit(le.paths,80), limit(le.ops,40), fcsnum(le.runTime), fcsnum(le.lines), '<a href="#" onclick="QM.'+kill+'(\''+le.uuid+'\')">x</a>'];
+        var expectedRows = [(le.paths[0] || "").length / 40, (le.ops[0] || "").length / 40, (le.ops[1] || "").length / 40].max();
+        expectedRows = [expectedRows, 1].max();
+        expectedRows = [expectedRows, 3].min();
+        var row = [new Date(le.startTime).toString('HH:mm:ss'),
+        "<a onclick='QM.queryHostsRescan(\""+le.uuid+"\",\""+le.job+"\")' href='#'>"+le.uuid+"</a>",
+        le.state, limitLines(le.alias || le.job,12,expectedRows),
+        "<a onclick='QM.queryHostsRescan(\""+le.uuid+"\",\""+le.job+"\")' href='#'>" +
+        limitLines(le.paths[0],40,3) + "</a>",
+        limitLines(le.ops[0],40,3), limitLines(le.ops[1],40,3),
+        fcsnum(le.runTime), fcsnum(le.lines), fcsnum(le.sentLines),
+        '<a href="#" onclick="QM.'+kill+'(\''+le.uuid+'\')">x</a>'];
         html += '<tr><td>'+row.join('</td><td>')+'</td></tr>';
     }
     html += '</table>';

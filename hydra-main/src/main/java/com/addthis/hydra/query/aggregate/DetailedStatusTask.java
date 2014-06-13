@@ -14,21 +14,16 @@
 
 package com.addthis.hydra.query.aggregate;
 
-import com.addthis.hydra.query.tracker.QueryEntry;
-import com.addthis.hydra.query.tracker.QueryEntryInfo;
-
 import io.netty.util.concurrent.Promise;
 
 public class DetailedStatusTask implements Runnable {
 
-    private final Promise<QueryEntryInfo> promise;
-    private final QueryEntry queryEntry;
+    private final Promise<TaskSourceInfo[]> promise;
 
     private MeshSourceAggregator sourceAggregator;
 
-    public DetailedStatusTask(Promise<QueryEntryInfo> promise, QueryEntry queryEntry) {
+    public DetailedStatusTask(Promise<TaskSourceInfo[]> promise) {
         this.promise = promise;
-        this.queryEntry = queryEntry;
     }
 
     @Override
@@ -41,12 +36,7 @@ public class DetailedStatusTask implements Runnable {
                 taskSourceInfos[i] = new TaskSourceInfo(taskSources[i]);
                 lines += taskSources[i].lines;
             }
-            QueryEntryInfo queryEntryInfo = queryEntry.getStat();
-            // update entry info, but not the entry since it will get updated incrementally later if this is not
-            // gathering query-end metrics
-            queryEntryInfo.lines = lines;
-            queryEntryInfo.tasks = taskSourceInfos;
-            promise.trySuccess(queryEntryInfo);
+            promise.trySuccess(taskSourceInfos);
         } catch (Exception e) {
             promise.tryFailure(e);
         }

@@ -11,23 +11,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.addthis.hydra.query.aggregate;
 
-import com.addthis.codec.Codec;
+import com.addthis.hydra.data.query.FramedDataChannelReader;
 
-public class TaskSourceOptionInfo implements Codec.Codable {
+public class TaskChannelReader extends FramedDataChannelReader {
 
-    @Codec.Set(codable = true)
-    public final String hostUuid;
-    @Codec.Set(codable = true)
-    public final boolean active;
-    @Codec.Set(codable = true)
-    public final boolean selected;
+    final QueryTaskSourceOption sourceOption;
 
-    public TaskSourceOptionInfo(QueryTaskSourceOption option, boolean selected) {
-        this.hostUuid = option.queryReference.getHostUUID();
-        this.active   = option.isActive();
-        this.selected = selected;
+    public TaskChannelReader(QueryTaskSourceOption taskSourceOption) {
+        super(taskSourceOption.sourceInputStream, AggregateConfig.FRAME_READER_POLL);
+        sourceOption = taskSourceOption;
     }
 }

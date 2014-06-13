@@ -17,9 +17,7 @@ package com.addthis.hydra.query.tracker;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.query.aggregate.DetailedStatusTask;
-
-import io.netty.util.concurrent.Promise;
+import com.addthis.hydra.query.aggregate.TaskSourceInfo;
 
 public class QueryEntry {
 
@@ -33,6 +31,9 @@ public class QueryEntry {
 
     long runTime;
     long startTime;
+
+    volatile TaskSourceInfo[] lastSourceInfo;
+    volatile QueryState queryState = QueryState.AGGREGATING;
 
     QueryEntry(Query query, String[] opsLog, TrackerHandler trackerHandler) {
         this.query = query;
@@ -59,7 +60,7 @@ public class QueryEntry {
     public QueryEntryInfo getStat() {
         QueryEntryInfo stat = new QueryEntryInfo();
         stat.paths = query.getPaths();
-        stat.uuid = query.uuid();
+        stat.uuid = query.queryId();
         stat.ops = opsLog;
         stat.job = query.getJob();
         stat.alias = query.getParameter("track.alias");
@@ -67,9 +68,11 @@ public class QueryEntry {
         stat.remoteip = query.getParameter("remoteip");
         stat.sender = query.getParameter("sender");
         stat.lines = preOpLines.get();
+        stat.sentLines = postOpLines.get();
         stat.runTime = getRunTime();
         stat.startTime = startTime;
-//        stat.tasks = hostInfoSet;
+        stat.tasks = lastSourceInfo;
+        stat.state = queryState;
         return stat;
     }
 
@@ -103,10 +106,4 @@ public class QueryEntry {
         success |= trackerHandler.requestPromise.tryFailure(cause);
         return success;
     }
-
-    public void getDetailedQueryEntryInfo(Promise<QueryEntryInfo> promise) {
-        DetailedStatusTask task = new DetailedStatusTask(promise, this);
-        trackerHandler.submitDetailedStatusTask(task);
-    }
-
 }
