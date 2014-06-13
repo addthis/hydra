@@ -541,15 +541,15 @@ function renderCacheList(list,div,kill) {
     html += ['submit','uuid','state','job','path','ops','rops','run','lines','sent','kill'].join('</th><th>')+'</th></tr>';
     for (var i=0; i<list.length; i++) {
         var le = list[i];
-        var expectedRows = [(le.paths[0] || "").length / 40, (le.ops[0] || "").length / 40, (le.ops[1] || "").length / 40].max();
+        var expectedRows = [(le.paths[0] || "").length / 30, (le.ops[0] || "").length / 20, (le.ops[1] || "").length / 20].max();
         expectedRows = [expectedRows, 1].max();
         expectedRows = [expectedRows, 3].min();
         var row = [new Date(le.startTime).toString('HH:mm:ss'),
         "<a onclick='QM.queryHostsRescan(\""+le.uuid+"\",\""+le.job+"\")' href='#'>"+le.uuid+"</a>",
         le.state, limitLines(le.alias || le.job,12,expectedRows),
         "<a onclick='QM.queryHostsRescan(\""+le.uuid+"\",\""+le.job+"\")' href='#'>" +
-        limitLines(le.paths[0],40,3) + "</a>",
-        limitLines(le.ops[0],40,3), limitLines(le.ops[1],40,3),
+        limitLines(le.paths[0],30,3) + "</a>",
+        limitLines(le.ops[0],20,3), limitLines(le.ops[1],20,3),
         fcsnum(le.runTime), fcsnum(le.lines), fcsnum(le.sentLines),
         '<a href="#" onclick="QM.'+kill+'(\''+le.uuid+'\')">x</a>'];
         html += '<tr><td>'+row.join('</td><td>')+'</td></tr>';
