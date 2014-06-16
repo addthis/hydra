@@ -20,6 +20,8 @@ public interface KeyCoder<K, V> {
 
     K negInfinity();
 
+    K posInfinity();
+
     byte[] keyEncode(K key);
 
     byte[] valueEncode(V value, EncodeType encodeType);

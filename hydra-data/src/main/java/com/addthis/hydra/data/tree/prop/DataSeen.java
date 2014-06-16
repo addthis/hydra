@@ -69,7 +69,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
      * @user-reference
      * @hydra-name seen
      */
-    public static final class Config extends TreeDataParameters<DataSeen> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * Bundle field name from which to draw values.

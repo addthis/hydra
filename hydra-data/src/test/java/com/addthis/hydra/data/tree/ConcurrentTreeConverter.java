@@ -24,7 +24,7 @@ import com.addthis.hydra.store.db.CloseOperation;
 
 public class ConcurrentTreeConverter {
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         int maxNodes = (args.length >= 3) ? Integer.parseInt(args[2]) : -1;
         new ConcurrentTreeConverter(new File(args[0]), new File(args[1]), maxNodes);
     }
@@ -66,10 +66,10 @@ public class ConcurrentTreeConverter {
             writeNode.requireNodeDB();
         }
         writeNode.setCounter(readChild.getCounter());
-        Map<String, TreeNodeData> readMap = readChild.getDataMap();
+        Map<String, TreeNodeData<?>> readMap = readChild.getDataMap();
         if (readMap != null) {
-            Map<String, TreeNodeData> writeMap = writeNode.createMap();
-            for (Map.Entry<String, TreeNodeData> entry : readMap.entrySet()) {
+            Map<String, TreeNodeData<?>> writeMap = writeNode.createMap();
+            for (Map.Entry<String, TreeNodeData<?>> entry : readMap.entrySet()) {
                 writeMap.put(entry.getKey(), entry.getValue());
             }
         }
@@ -86,7 +86,7 @@ public class ConcurrentTreeConverter {
         if (maxNodes > 0 && nodeCount >= maxNodes) {
             return;
         }
-        Iterator<DataTreeNode> iter = readNode.iterator();
+        Iterator<ReadNode> iter = readNode.iterator();
         if (iter != null) {
             if (iter.hasNext()) {
                 hasNodes++;
@@ -99,7 +99,7 @@ public class ConcurrentTreeConverter {
                 }
             } finally {
                 if (iter instanceof ClosableIterator) {
-                    ((ClosableIterator<DataTreeNode>) iter).close();
+                    ((ClosableIterator<?>) iter).close();
                 }
             }
             iter = readNode.iterator();
@@ -111,7 +111,7 @@ public class ConcurrentTreeConverter {
                 }
             } finally {
                 if (iter instanceof ClosableIterator) {
-                    ((ClosableIterator<DataTreeNode>) iter).close();
+                    ((ClosableIterator<?>) iter).close();
                 }
             }
         }

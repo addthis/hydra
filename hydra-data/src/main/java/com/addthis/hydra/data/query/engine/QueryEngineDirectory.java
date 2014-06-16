@@ -17,7 +17,7 @@ import java.io.File;
 
 import java.util.concurrent.TimeUnit;
 
-import com.addthis.hydra.data.tree.DataTree;
+import com.addthis.hydra.data.tree.ReadDataTree;
 import com.addthis.hydra.data.tree.ReadTree;
 
 import com.yammer.metrics.Metrics;
@@ -50,7 +50,7 @@ public class QueryEngineDirectory extends QueryEngine {
 
     private final String dir;
 
-    public QueryEngineDirectory(DataTree tree, String dir) {
+    public QueryEngineDirectory(ReadDataTree tree, String dir) {
         super(tree);
         this.dir = dir;
         currentlyOpenEngines.inc();
@@ -61,7 +61,7 @@ public class QueryEngineDirectory extends QueryEngine {
         ((ReadTree) tree).warmCacheFrom(((ReadTree) other.getTree()).getCacheIterable());
     }
 
-    public DataTree getTree() {
+    public ReadDataTree getTree() {
         return tree;
     }
 

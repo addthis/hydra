@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.data.tree.DataTree;
+import com.addthis.hydra.data.tree.ReadDataTree;
 import com.addthis.hydra.data.tree.ReadTree;
 
 import com.google.common.cache.CacheLoader;
@@ -95,7 +95,7 @@ class EngineLoader extends CacheLoader<String, QueryEngine> {
     protected QueryEngine newQueryEngineDirectory(String dir) throws Exception {
         String canonicalDirString = new File(dir).getCanonicalPath();
 
-        DataTree tree = new ReadTree(new File(canonicalDirString));
+        ReadDataTree tree = new ReadTree(new File(canonicalDirString));
         try {
             return new QueryEngineDirectory(tree, canonicalDirString);
         } catch (Exception e) {

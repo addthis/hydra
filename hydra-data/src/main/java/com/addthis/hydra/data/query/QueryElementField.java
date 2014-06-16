@@ -26,7 +26,8 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecBin2;
 import com.addthis.hydra.data.tree.DataTreeNode;
-import com.addthis.hydra.data.tree.DataTreeNodeActor;
+import com.addthis.hydra.data.tree.ReadNode;
+import com.addthis.hydra.data.tree.TreeNodeData;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
@@ -45,7 +46,7 @@ public class QueryElementField implements Codec.Codable {
     @Codec.Set(codable = true)
     public String name;
     @Codec.Set(codable = true)
-    public BoundedValue keys[];
+    public BoundedValue[] keys;
 
     private BundleField field;
 
@@ -62,10 +63,10 @@ public class QueryElementField implements Codec.Codable {
             tok = tok.substring(1);
             keys = memKey;
         }
-        String kv[] = Strings.splitArray(Bytes.urldecode(tok), "=");
+        String[] kv = Strings.splitArray(Bytes.urldecode(tok), "=");
         if (kv.length == 2) {
             name = kv[0];
-            String keyarr[] = Strings.splitArray(kv[1], ",");
+            String[] keyarr = Strings.splitArray(kv[1], ",");
             keys = new BoundedValue[keyarr.length];
             for (int i = 0; i < keyarr.length; i++) {
                 keys[i] = new BoundedValue().parse(keyarr[i], nextColumn);
@@ -110,13 +111,13 @@ public class QueryElementField implements Codec.Codable {
         return field;
     }
 
-    public List<ValueObject> getValues(DataTreeNode node) {
+    public List<ValueObject> getValues(ReadNode node) {
         if (keys == null) {
             return new ArrayList<>();
         }
         ArrayList<ValueObject> ret = new ArrayList<>(keys.length);
         synchronized (node) {
-            DataTreeNodeActor actor = node.getData(name);
+            TreeNodeData<?> actor = node.getData(name);
             if (actor != null) {
                 if (keys.length == 0) {
                     int size = -1;
@@ -129,7 +130,7 @@ public class QueryElementField implements Codec.Codable {
                     return ret;
                 }
                 for (int i = 0; i < keys.length; i++) {
-                    ValueObject qv = actor.onValueQuery(keys[i].name);
+                    ValueObject qv = actor.getValue(keys[i].name);
                     if (keys[i].bounded) {
                         try {
                             ret.add(keys[i].validate(qv.asLong().getLong()) ? qv : null);

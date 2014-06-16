@@ -46,6 +46,11 @@ class DBKeyCoder<V extends Codec.BytesCodable> implements KeyCoder<DBKey, V> {
     }
 
     @Override
+    public DBKey posInfinity() {
+        return new DBKey(Integer.MAX_VALUE, "");
+    }
+
+    @Override
     public byte[] keyEncode(DBKey key) {
         return key != null ? key.toBytes() : new byte[0];
     }
@@ -77,7 +82,6 @@ class DBKeyCoder<V extends Codec.BytesCodable> implements KeyCoder<DBKey, V> {
 
     @Override
     public V valueDecode(byte[] value, EncodeType encodeType) {
-
         try {
             switch (encodeType) {
                 case LEGACY:

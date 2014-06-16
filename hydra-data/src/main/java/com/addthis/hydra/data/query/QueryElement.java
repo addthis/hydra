@@ -19,7 +19,6 @@ import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
 
-import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.value.ValueFactory;
@@ -28,6 +27,7 @@ import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.DataTreeNode;
+import com.addthis.hydra.data.tree.ReadNode;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
@@ -130,7 +130,7 @@ public class QueryElement implements Codec.SuperCodable {
     public QueryElement parse(String q, MutableInt nextColumn) {
         int pos = 0;
         if (q.startsWith("(") && (pos = q.indexOf(")")) > 0) {
-            String range[] = Strings.splitArray(q.substring(1, pos), "-");
+            String[] range = Strings.splitArray(q.substring(1, pos), "-");
             if (range.length == 1) {
                 limit = Integer.parseInt(range[0]);
             } else {
@@ -152,7 +152,7 @@ public class QueryElement implements Codec.SuperCodable {
                 if (st.hasMoreTokens()) {
                     tok = st.nextToken();
                     if (sep.equals(":")) {
-                        String ps[] = Strings.splitArray(tok, ",");
+                        String[] ps = Strings.splitArray(tok, ",");
                         if (prop == null) {
                             prop = new ArrayList<>(ps.length);
                         }
@@ -199,11 +199,11 @@ public class QueryElement implements Codec.SuperCodable {
         return hasdata;
     }
 
-    public Iterator<DataTreeNode> matchNodes(DataTree tree, LinkedList<DataTreeNode> stack) {
-        return node != null ? node.getNodes(stack) : null;
+    public Iterator<? extends ReadNode> matchNodes(LinkedList<ReadNode> stack) {
+        return (node != null) ? node.getNodes(stack) : null;
     }
 
-    public int update(FieldValueList fvlist, DataTreeNode tn) {
+    public int update(FieldValueList fvlist, ReadNode tn) {
         if (tn == null) {
             return 0;
         }
@@ -268,37 +268,32 @@ public class QueryElement implements Codec.SuperCodable {
     /**
      * for node iteration using a reference node's keys
      */
-    static final class ReferencePathIterator implements ClosableIterator<DataTreeNode> {
+    static final class ReferencePathIterator implements Iterator<ReadNode> {
 
-        private final ClosableIterator<DataTreeNode> refiter;
-        private final DataTreeNode node;
-        private DataTreeNode next;
+        private final Iterator<? extends ReadNode> refiter;
+        private final ReadNode node;
+        private ReadNode next;
 
-        ReferencePathIterator(DataTreeNode refnode, DataTreeNode node) {
+        ReferencePathIterator(ReadNode refnode, ReadNode node) {
             this.refiter = refnode.getIterator();
             this.node = node;
         }
 
         @Override
-        public void close() {
-            refiter.close();
-        }
-
-        @Override
         public boolean hasNext() {
             while (next == null && refiter.hasNext()) {
-                DataTreeNode nextRef = refiter.next();
+                ReadNode nextRef = refiter.next();
                 next = node.getNode(nextRef.getName());
             }
             return next != null;
         }
 
         @Override
-        public DataTreeNode next() {
+        public ReadNode next() {
             if (!hasNext()) {
                 throw new NoSuchElementException();
             }
-            DataTreeNode ret = next;
+            ReadNode ret = next;
             next = null;
             return ret;
         }

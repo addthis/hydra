@@ -13,7 +13,8 @@
  */
 package com.addthis.hydra.data.tree.prop;
 
-import java.util.List;
+import java.util.ArrayList;
+import java.util.Collection;
 
 import com.addthis.basis.util.Strings;
 
@@ -26,9 +27,9 @@ import com.addthis.bundle.value.ValueTranslationException;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
+import com.addthis.hydra.data.tree.ReadNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
-import com.addthis.hydra.data.tree.TreeNodeList;
 
 import com.clearspring.analytics.stream.frequency.CountMinSketch;
 
@@ -87,7 +88,7 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
      * @user-reference
      * @hydra-name count.min.sketch
      */
-    public static final class Config extends TreeDataParameters<DataCountMinSketch> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * Bundle field name from which to insert keys into the sketch.
@@ -152,12 +153,12 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
 
 
     @Override
-    public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
+    public Collection<ReadNode> getNodes(ReadNode parent, String key) {
         if (key == null) {
             throw new IllegalArgumentException("No key arguments entered");
         }
-        String keys[] = Strings.splitArray(key, "~");
-        TreeNodeList list = new TreeNodeList(keys.length);
+        String[] keys = Strings.splitArray(key, "~");
+        Collection<ReadNode> list = new ArrayList<>(keys.length);
         for (String k : keys) {
             long count = sketch.estimateCount(k);
             list.add(new VirtualTreeNode(k, count));

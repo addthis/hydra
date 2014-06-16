@@ -13,20 +13,21 @@
  */
 package com.addthis.hydra.task.output.tree;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.codec.Codec;
 import com.addthis.codec.Codec.ClassMap;
 import com.addthis.codec.Codec.ClassMapFactory;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
+import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeDataParent;
-import com.addthis.hydra.data.tree.TreeNodeList;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /*
  * TODO clean up preCheck in element, event*
@@ -46,7 +47,7 @@ import org.slf4j.LoggerFactory;
 public abstract class PathElement implements Codec.Codable, TreeDataParent {
 
     protected static final Logger log = LoggerFactory.getLogger(PathElement.class);
-    protected static final boolean debug = System.getProperty("hydra.path.debug", "0").equals("1");
+
     protected static final boolean defCountHit = System.getProperty("hydra.default.counthit", "1").equals("1");
 
     private static ClassMap cmap = new ClassMap() {
@@ -215,7 +216,7 @@ public abstract class PathElement implements Codec.Codable, TreeDataParent {
             for (String f : feature) {
                 if (!featureSet.contains(f)) {
                     disabled = true;
-                    log.warn("feature disabled " + this + ", missing '" + f + "'");
+                    log.warn("feature disabled {}, missing '{}'", this, f);
                     break;
                 }
             }
@@ -224,7 +225,7 @@ public abstract class PathElement implements Codec.Codable, TreeDataParent {
             for (String f : featureOff) {
                 if (featureSet.contains(f)) {
                     disabled = true;
-                    log.warn("feature disabled " + this + ", enabled '" + f + "'");
+                    log.warn("feature disabled {}, enabled '{}'", this, f);
                     break;
                 }
             }
@@ -242,11 +243,9 @@ public abstract class PathElement implements Codec.Codable, TreeDataParent {
     /**
      * wrapper that calls getPathValue to prevent multiple calls
      */
-    public final TreeNodeList processNode(final TreeMapState state) {
-        if (debug) {
-            log.warn("processNode<" + this + ">");
-        }
-        TreeNodeList list = null;
+    public final List<DataTreeNode> processNode(final TreeMapState state) {
+        log.debug("processNode<{}>", this);
+        List<DataTreeNode> list = null;
         if (filter == null || filter.filter(state.getBundle())) {
             if (label != null) {
                 state.push(label.processNode(state));
@@ -256,7 +255,11 @@ public abstract class PathElement implements Codec.Codable, TreeDataParent {
                 list = getNextNodeList(state);
             }
         }
-        return term ? null : op ? TreeMapState.empty() : list;
+        if (op) {
+            return term ? null : Collections.<DataTreeNode>emptyList();
+        } else {
+            return term ? null : list;
+        }
     }
 
     /**
@@ -264,7 +267,7 @@ public abstract class PathElement implements Codec.Codable, TreeDataParent {
      *
      * @return list of child nodes of current node to process next
      */
-    public abstract TreeNodeList getNextNodeList(final TreeMapState state);
+    public abstract List<DataTreeNode> getNextNodeList(final TreeMapState state);
 
     public final PathElement label() {
         return label;

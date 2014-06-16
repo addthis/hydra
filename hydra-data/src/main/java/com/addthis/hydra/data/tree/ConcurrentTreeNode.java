@@ -13,11 +13,6 @@
  */
 package com.addthis.hydra.data.tree;
 
-import com.addthis.basis.util.ClosableIterator;
-import com.addthis.basis.util.MemoryCounter.Mem;
-import com.addthis.hydra.store.db.DBKey;
-import com.addthis.hydra.store.db.IPageDB.Range;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -31,6 +26,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import java.nio.charset.Charset;
+
+import com.addthis.basis.util.ClosableIterator;
+import com.addthis.basis.util.MemoryCounter.Mem;
+import com.addthis.basis.util.Varint;
+
+import com.addthis.codec.Codec;
+import com.addthis.codec.CodecBin2;
+import com.addthis.hydra.data.util.ConcurrentKeyTopper;
+import com.addthis.hydra.store.db.DBKey;
+import com.addthis.hydra.store.db.PageRange;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 
 /**
  * Each instance has an AtomicInteger 'lease' that records the current
@@ -47,7 +56,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * deleting nodes is a higher priority operation that modifying nodes).
  *
  */
-public class ConcurrentTreeNode extends AbstractTreeNode {
+public class ConcurrentTreeNode extends AbstractTreeNode
+        implements DataTreeNode, Codec.ConcurrentCodable, Iterable<DataTreeNode> {
 
     public static final int ALIAS = 1 << 1;
 
@@ -114,8 +124,8 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         return name;
     }
 
-    @SuppressWarnings("unchecked")
-    public Map<String, TreeNodeData> getDataMap() {
+    @Override
+    public Map<String, TreeNodeData<?>> getDataMap() {
         return data;
     }
 
@@ -373,7 +383,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         return true;
     }
 
-    HashMap<String, TreeNodeData> createMap() {
+    HashMap<String, TreeNodeData<?>> createMap() {
         if (data == null) {
             data = new HashMap<>();
         }
@@ -403,13 +413,13 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
                     data = new HashMap<>(dataconf.size());
                 }
                 for (Entry<String, TreeDataParameters> el : dataconf.entrySet()) {
-                    TreeNodeData tnd = data.get(el.getKey());
+                    TreeNodeData<?> tnd = data.get(el.getKey());
                     if (tnd == null) {
-                        tnd = el.getValue().newInstance(this);
+                        tnd = el.getValue().newInstance();
                         data.put(el.getKey(), tnd);
                         updated = true;
                     }
-                    if (tnd.updateChildData(state, this, el.getValue())) {
+                    if (tnd.updateChildDataUnsafe(state, this, el.getValue())) {
                         updated = true;
                     }
                 }
@@ -432,7 +442,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         try {
             if (child != null && data != null) {
                 deferredOps = new ArrayList<>(1);
-                for (TreeNodeData<?> tnd : data.values()) {
+                for (TreeNodeData tnd : data.values()) {
                     if (isnew && tnd.updateParentNewChild(state, this, child, deferredOps)) {
                         changed.set(true);
                     }
@@ -453,7 +463,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
 
     // TODO concurrent broken -- data classes should be responsible for their
     // own get/update sync
-    public DataTreeNodeActor getData(String key) {
+    public TreeNodeData<?> getData(String key) {
         lock.readLock().lock();
         try {
             return data != null ? data.get(key) : null;
@@ -484,11 +494,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     @Override
     public void postDecode() {
         decoded.set(true);
-        if (data != null) {
-            for (TreeNodeData actor : data.values()) {
-                actor.setBoundNode(this);
-            }
-        }
     }
 
     @Override
@@ -501,11 +506,11 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
      */
     private final class Iter implements ClosableIterator<DataTreeNode> {
 
-        private Range<DBKey, ConcurrentTreeNode> range;
+        private PageRange<DBKey, ConcurrentTreeNode> range;
         private ConcurrentTreeNode next;
         private boolean filterDeleted;
 
-        private Iter(Range<DBKey, ConcurrentTreeNode> range, boolean filterDeleted) {
+        private Iter(PageRange<DBKey, ConcurrentTreeNode> range, boolean filterDeleted) {
             this.range = range;
             this.filterDeleted = filterDeleted;
             fetchNext();
@@ -642,4 +647,50 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     public synchronized void setCounter(long val) {
         hits = val;
     }
+
+    @Override
+    public byte[] bytesEncode(long version) {
+        preEncode();
+        if (!encodeLock()) {
+            throw new RuntimeException("Unable to acquire encoding lock");
+        }
+        byte[] returnBytes;
+        ByteBuf b = PooledByteBufAllocator.DEFAULT.buffer();
+        try {
+            Varint.writeUnsignedVarLong(hits, b);
+            Varint.writeSignedVarInt(nodedb == null ? -1 : nodedb, b);
+            if (data != null && data.size() > 0) {
+                int numAttachments = data.size();
+                Varint.writeSignedVarInt(numAttachments, b);
+                for (Map.Entry<String, TreeNodeData<?>> entry : data.entrySet()) {
+
+                    byte[] keyBytes = entry.getKey().getBytes(Charset.forName("UTF-8"));
+                    Varint.writeUnsignedVarInt(keyBytes.length, b);
+                    b.writeBytes(keyBytes);
+                    String classInfo = CodecBin2.getClassFieldMap(entry.getValue().getClass()).getClassName(entry.getValue());
+                    byte[] classNameBytes = classInfo.getBytes(Charset.forName("UTF-8"));
+                    Varint.writeUnsignedVarInt(classNameBytes.length, b);
+                    b.writeBytes(classNameBytes);
+                    byte[] bytes = entry.getValue().bytesEncode(version);
+                    Varint.writeUnsignedVarInt(bytes.length, b);
+                    b.writeBytes(bytes);
+                }
+            } else {
+                Varint.writeSignedVarInt(-1, b);
+            }
+            if (nodedb != null) {
+                Varint.writeUnsignedVarInt(nodes, b);
+                Varint.writeUnsignedVarInt(bits, b);
+            }
+            returnBytes = new byte[b.readableBytes()];
+            b.readBytes(returnBytes);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            b.release();
+            encodeUnlock();
+        }
+        return returnBytes;
+    }
+
 }

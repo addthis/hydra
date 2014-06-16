@@ -27,6 +27,11 @@ public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
     }
 
     @Override
+    public Integer posInfinity() {
+        return Integer.MAX_VALUE;
+    }
+
+    @Override
     public byte[] keyEncode(Integer key) {
         return key != null ? Bytes.toBytes(key.intValue() ^ Integer.MIN_VALUE) : new byte[0];
     }

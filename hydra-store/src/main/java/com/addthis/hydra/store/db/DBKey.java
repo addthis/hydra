@@ -25,7 +25,7 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.hydra.store.util.Raw;
 
 
-public final class DBKey implements IPageDB.Key, Comparable<DBKey> {
+public final class DBKey implements PageKey, Comparable<DBKey> {
 
     private static final Raw EMPTY = Raw.get(new byte[0]);
 

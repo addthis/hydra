@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.addthis.hydra.data.tree.DataTreeNode;
+import com.addthis.hydra.data.tree.ReadNode;
 
 import org.junit.Test;
 
@@ -26,11 +26,11 @@ public class DataCountMinSketchTest {
         dataCountMinSketch2.add("d", 2);
         dataCountMinSketch2.add("c", 1);
 
-        List<DataTreeNode> aggregatedNodes = new ArrayList<>();
+        List<ReadNode> aggregatedNodes = new ArrayList<>();
         aggregatedNodes.addAll(dataCountMinSketch.getNodes(null, "b~c"));
         aggregatedNodes.addAll(dataCountMinSketch2.getNodes(null, "b~c"));
         Map<String, Long> aggregatedCount = new HashMap<>();
-        for (DataTreeNode node : aggregatedNodes) {
+        for (ReadNode node : aggregatedNodes) {
             String key = node.getName();
             long count = node.getCounter();
             if (aggregatedCount.containsKey(key)) {

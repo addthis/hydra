@@ -2,6 +2,8 @@ package com.addthis.hydra.data.tree;
 
 import java.io.File;
 
+import com.addthis.hydra.store.kv.ReadPageCaches;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +27,7 @@ public class TreeIntegrity {
             ReadTree tree = null;
             try {
                 tree = new ReadTree(root);
-                tree.testIntegrity();
+                ReadPageCaches.testIntegrity(tree.getSource());
             } catch(Exception ex) {
                 log.error(ex.toString());
             } finally {

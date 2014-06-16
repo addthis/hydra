@@ -47,8 +47,8 @@ public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
 
     private static final Logger log = LoggerFactory.getLogger(PageDB.class);
 
-    static final String PAGED_MAP_DB = "paged.mapdb";
-    static final String PAGED_BERK_DB = "paged.bdb";
+    public static final String PAGED_MAP_DB = "paged.mapdb";
+    public static final String PAGED_BERK_DB = "paged.bdb";
 
     static final String defaultDbName = Parameter.value("pagedb.dbname", "db.key");
     static final String DEFAULT_BYTESTORE = Parameter.value("pagedb.bytestore", PAGED_BERK_DB);
@@ -157,7 +157,7 @@ public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
 
     public TreeMap<DBKey, V> toTreeMap() {
         try {
-            Range<DBKey, V> range = this.range(this.eps.getFirstKey(), new DBKey(Integer.MAX_VALUE, ""));
+            PageRange<DBKey, V> range = this.range(this.eps.getFirstKey(), new DBKey(Integer.MAX_VALUE, ""));
             Iterator<Entry<DBKey, V>> iterator = range.iterator();
             TreeMap<DBKey, V> map = new TreeMap<>();
             while (iterator.hasNext()) {
@@ -172,7 +172,7 @@ public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
     }
 
     @Override
-    public IPageDB.Range<DBKey, V> range(DBKey from, DBKey to) {
+    public PageRange<DBKey, V> range(DBKey from, DBKey to) {
         return new DR(from, to);
     }
 
@@ -236,7 +236,7 @@ public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
         eps.setMemEstimateInterval(sample);
     }
 
-    private class DR implements IPageDB.Range<DBKey, V>, Iterator<Entry<DBKey, V>> {
+    private class DR implements PageRange<DBKey, V>, Iterator<Entry<DBKey, V>> {
 
         private final Iterator<Entry<DBKey, V>> iter;
         private final DBKey to;

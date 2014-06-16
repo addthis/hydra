@@ -62,7 +62,7 @@ public class DataSum extends TreeNodeData<DataSum.Config> {
      * @user-reference
      * @hydra-name sum
      */
-    public static final class Config extends TreeDataParameters<DataSum> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * The target field for calculating statistics.

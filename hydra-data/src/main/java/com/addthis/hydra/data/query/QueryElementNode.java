@@ -23,7 +23,6 @@ import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.BundleField;
@@ -31,8 +30,7 @@ import com.addthis.bundle.core.BundleFormat;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecBin2;
 import com.addthis.hydra.data.query.QueryElement.ReferencePathIterator;
-import com.addthis.hydra.data.tree.DataTreeNode;
-import com.addthis.hydra.data.tree.DataTreeNodeActor;
+import com.addthis.hydra.data.tree.ReadNode;
 import com.addthis.hydra.data.tree.ReadTreeNode;
 import com.addthis.hydra.data.tree.TreeNodeData;
 
@@ -50,9 +48,9 @@ public class QueryElementNode implements Codec.Codable {
     private static String memKey = "";
 
     @Codec.Set(codable = true)
-    public String match[];
+    public String[] match;
     @Codec.Set(codable = true)
-    public String trap[];
+    public String[] trap;
     @Codec.Set(codable = true)
     public String data;
     @Codec.Set(codable = true)
@@ -71,7 +69,7 @@ public class QueryElementNode implements Codec.Codable {
     @Codec.Set(codable = true)
     public Boolean not;
     @Codec.Set(codable = true)
-    public String path[];
+    public String[] path;
     @Codec.Set(codable = true)
     public Boolean up;
 
@@ -111,7 +109,7 @@ public class QueryElementNode implements Codec.Codable {
 
         QueryElementNode.MODE mode = MODE.MATCH;
 
-        String list[] = Strings.splitArray(tok, ",");
+        String[] list = Strings.splitArray(tok, ",");
         for (String component : list) {
             if (component.startsWith("*")) {
                 component = component.substring(1);
@@ -145,7 +143,7 @@ public class QueryElementNode implements Codec.Codable {
                 continue;
             }
             if (component.startsWith("%") && !(component.startsWith("%2d") || component.startsWith("%2c"))) {
-                String kv[] = Bytes.urldecode(component.substring(1)).split("=", 2);
+                String[] kv = Bytes.urldecode(component.substring(1)).split("=", 2);
                 if (kv.length == 2) {
                     data = kv[0];
                     dataKey = kv[1];
@@ -172,7 +170,7 @@ public class QueryElementNode implements Codec.Codable {
             }
         }
         if (matchList.size() > 0) {
-            String out[] = new String[matchList.size()];
+            String[] out = new String[matchList.size()];
             match = matchList.toArray(out);
             if (tok.startsWith(",")) {
                 TreeSet<String> sorted = new TreeSet<>();
@@ -259,8 +257,8 @@ public class QueryElementNode implements Codec.Codable {
         return not != null && not;
     }
 
-    private DataTreeNode followPath(DataTreeNode from, String path[]) {
-        DataTreeNode node = from;
+    private ReadNode followPath(ReadNode from, String[] path) {
+        ReadNode node = from;
         for (String name : path) {
             node = node.getNode(name);
             if (node == null) {
@@ -270,32 +268,30 @@ public class QueryElementNode implements Codec.Codable {
         return node;
     }
 
-    public Iterator<DataTreeNode> getNodes(LinkedList<DataTreeNode> stack) {
-        List<DataTreeNode> ret = null;
+    public Iterator<? extends ReadNode> getNodes(LinkedList<ReadNode> stack) {
+        List<ReadNode> ret = null;
         if (up()) {
             ret = new ArrayList<>(1);
             ret.add(stack.get(1));
             return ret.iterator();
         }
-        DataTreeNode parent = stack.peek();
+        ReadNode parent = stack.peek();
         try {
-            DataTreeNode tmp;
+            ReadNode tmp;
             if (path != null) {
-                DataTreeNode refnode = followPath(parent.getTreeRoot(), path);
-                return refnode != null ? new ReferencePathIterator(refnode, parent) : null;
+                ReadNode refnode = followPath(parent.getTreeRoot(), path);
+                return (refnode != null) ? new ReferencePathIterator(refnode, parent) : null;
             }
             if (trap != null) {
                 for (String name : trap) {
-                    for (ClosableIterator<DataTreeNode> iter = parent.getIterator(); iter.hasNext();) {
+                    for (Iterator<? extends ReadNode> iter = parent.getIterator(); iter.hasNext();) {
                         tmp = iter.next();
                         if (regex()) {
                             if (tmp.getName().matches(name)) {
-                                iter.close();
                                 return null;
                             }
                         } else {
                             if (tmp.getName().equals(name)) {
-                                iter.close();
                                 return null;
                             }
                         }
@@ -314,7 +310,7 @@ public class QueryElementNode implements Codec.Codable {
                             regexPatterns[i] = Pattern.compile(match[i]);
                         }
                     }
-                    for (Iterator<DataTreeNode> iter = parent.getIterator(); iter.hasNext();) {
+                    for (Iterator<? extends ReadNode > iter = parent.getIterator(); iter.hasNext();) {
                         tmp = iter.next();
                         for (Pattern name : regexPatterns) {
                             if (name.matcher(tmp.getName()).matches() ^ not()) {
@@ -328,7 +324,7 @@ public class QueryElementNode implements Codec.Codable {
                     } else if (match.length == 1) {
                         return parent.getIterator(match[0]);
                     } else {
-                        ArrayList<Iterator<DataTreeNode>> metaIterator = new ArrayList<>();
+                        ArrayList<Iterator<? extends ReadNode>> metaIterator = new ArrayList<>();
                         for (String name : match) {
                             metaIterator.add(parent.getIterator(name));
                         }
@@ -338,7 +334,7 @@ public class QueryElementNode implements Codec.Codable {
                     return parent.getIterator(match.length > 0 ? match[0] : null, match.length > 1 ? match[1] : null);
                 } else {
                     for (String name : match) {
-                        DataTreeNode find = parent.getNode(name);
+                        ReadNode find = parent.getNode(name);
                         if (find != null) {
                             ret.add(find);
                         }
@@ -348,16 +344,16 @@ public class QueryElementNode implements Codec.Codable {
             if (data != null) {
                 if (regex()) {
                     if (parent.getDataMap() != null) {
-                        for (Map.Entry<String, TreeNodeData> actor : parent.getDataMap().entrySet()) {
+                        for (Map.Entry<String, TreeNodeData<?>> actor : parent.getDataMap().entrySet()) {
                             int memSize = CodecBin2.encodeBytes(actor.getValue()).length;
                             ReadTreeNode memNode = new ReadTreeNode(actor.getKey(), memSize);
                             ret.add(memNode);
                         }
                     }
                 } else {
-                    DataTreeNodeActor actor = parent.getData(data);
+                    TreeNodeData<?> actor = parent.getData(data);
                     if (actor != null) {
-                        Collection<DataTreeNode> nodes = actor.onNodeQuery(dataKey);
+                        Collection<ReadNode> nodes = actor.getNodes(parent, dataKey);
                         if (nodes != null) {
                             ret.addAll(nodes);
                         }

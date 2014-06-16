@@ -15,10 +15,12 @@ package com.addthis.hydra.data.tree.prop;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.Map;
+import java.util.Set;
 
 import com.addthis.basis.util.Strings;
 
@@ -27,6 +29,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
+import com.addthis.hydra.data.tree.ReadNode;
 import com.addthis.hydra.data.tree.ReadTreeNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
@@ -88,7 +91,7 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codec.Codab
      * @user-reference
      * @hydra-name top
      */
-    public static final class Config extends TreeDataParameters<DataTop> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * If non-zero then store the store the top N nodes ranked
@@ -149,7 +152,7 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codec.Codab
     @Codec.Set(codable = true)
     private Recent recent;
     @Codec.Set(codable = true, required = true)
-    private int limits[];
+    private int[] limits;
 
     private boolean increment;
 
@@ -208,15 +211,15 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codec.Codab
     }
 
     @Override
-    public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
+    public Collection<ReadNode> getNodes(ReadNode parent, String key) {
         if (key == null) {
             return null;
         }
         if (key.equals("recent")) {
-            ArrayList<DataTreeNode> ret = new ArrayList<>(recent.size());
+            ArrayList<ReadNode> ret = new ArrayList<>(recent.size());
             HashSet<String> seen = new HashSet<>();
             for (String r : recent) {
-                DataTreeNode node = parent.getNode(r);
+                ReadNode node = parent.getNode(r);
                 if (node != null && seen.add(r)) {
                     ret.add(node);
                 }
@@ -229,27 +232,27 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codec.Codab
             if (map == null) {
                 return null;
             }
-            Entry<String, Long>[] top = map.getSortedEntries();
-            ArrayList<DataTreeNode> ret = new ArrayList<>(top.length);
-            for (Entry<String, Long> e : top) {
-                DataTreeNode node = parent.getNode(e.getKey());
+            Map.Entry<String, Long>[] top = map.getSortedEntries();
+            ArrayList<ReadNode> ret = new ArrayList<>(top.length);
+            for (Map.Entry<String, Long> e : top) {
+                ReadNode node = parent.getNode(e.getKey());
                 if (node != null) {
                     ret.add(node);
                 }
             }
             return ret;
         } else if (key.equals("vhit") && topHit != null) {
-            Entry<String, Long>[] top = topHit.getSortedEntries();
-            ArrayList<DataTreeNode> ret = new ArrayList<DataTreeNode>(top.length);
-            for (Entry<String, Long> e : top) {
+            Map.Entry<String, Long>[] top = topHit.getSortedEntries();
+            ArrayList<ReadNode> ret = new ArrayList<>(top.length);
+            for (Map.Entry<String, Long> e : top) {
                 ret.add(new VirtualTreeNode(e.getKey(), e.getValue()));
             }
             return ret;
         } else if (key.equals("phit") && topHit != null) {
-            Entry<String, Long>[] top = topHit.getSortedEntries();
-            ArrayList<DataTreeNode> ret = new ArrayList<DataTreeNode>(top.length);
-            for (Entry<String, Long> e : top) {
-                DataTreeNode node = parent.getNode(e.getKey());
+            Map.Entry<String, Long>[] top = topHit.getSortedEntries();
+            ArrayList<ReadNode> ret = new ArrayList<>(top.length);
+            for (Map.Entry<String, Long> e : top) {
+                ReadNode node = parent.getNode(e.getKey());
                 if (node != null) {
                     node = ((ReadTreeNode) node).getCloneWithCount(e.getValue());
                     ret.add(node);
@@ -257,20 +260,20 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codec.Codab
             }
             return ret;
         } else if (key.startsWith("phitl") && topHit != null) {
-            Entry<String, Long>[] top = topHit.getSortedEntries();
+            Map.Entry<String, Long>[] top = topHit.getSortedEntries();
             String dataListStr = key.substring(5);
             String[] dataListArray = dataListStr.split(",");
             // url decode
-            java.util.Set<String> dataListSet = new HashSet<>();
+            Set<String> dataListSet = new HashSet<>();
             for (String dataElement : dataListArray) {
                 dataListSet.add(Strings.urlDecode(dataElement));
             }
-            ArrayList<DataTreeNode> ret = new ArrayList<>(top.length);
-            for (Entry<String, Long> e : top) {
+            ArrayList<ReadNode> ret = new ArrayList<>(top.length);
+            for (Map.Entry<String, Long> e : top) {
                 if (!dataListSet.contains(e.getKey())) {
                     continue;
                 }
-                DataTreeNode node = parent.getNode(e.getKey());
+                ReadNode node = parent.getNode(e.getKey());
                 if (node != null) {
                     node = ((ReadTreeNode) node).getCloneWithCount(e.getValue());
                     ret.add(node);

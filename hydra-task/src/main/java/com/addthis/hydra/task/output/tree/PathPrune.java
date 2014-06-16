@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.output.tree;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import com.addthis.basis.util.ClosableIterator;
@@ -21,7 +23,6 @@ import com.addthis.basis.util.JitterClock;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.TreeNodeData;
-import com.addthis.hydra.data.tree.TreeNodeList;
 import com.addthis.hydra.data.tree.prop.DataTime;
 
 import org.slf4j.Logger;
@@ -72,12 +73,12 @@ public class PathPrune extends PathElement {
     // Is it better to try to do the pruning in this method or
     // whatever is getting the TreeNodeList back?
     @Override
-    public TreeNodeList getNextNodeList(final TreeMapState state) {
+    public List<DataTreeNode> getNextNodeList(final TreeMapState state) {
         long now = JitterClock.globalTime();
         DataTreeNode root = state.current();
 
         findAndPruneChildren(root, now, relativeDown);
-        return TreeMapState.empty();
+        return Collections.emptyList();
     }
 
     public void findAndPruneChildren(final DataTreeNode root, long now, int depth) {
@@ -99,7 +100,7 @@ public class PathPrune extends PathElement {
         int total = 0;
         while (keyNodeItr.hasNext()) {
             DataTreeNode treeNode = keyNodeItr.next();
-            Map<String, TreeNodeData> dataMap = treeNode.getDataMap();
+            Map<String, TreeNodeData<?>> dataMap = treeNode.getDataMap();
             if (dataMap != null) {
                 TreeNodeData timeNodeData = dataMap.get(timePropKey);
                 DataTime dt = (DataTime) timeNodeData;

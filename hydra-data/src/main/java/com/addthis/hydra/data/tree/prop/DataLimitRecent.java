@@ -39,7 +39,7 @@ public class DataLimitRecent extends TreeNodeData<DataLimitRecent.Config> {
      * @user-reference
      * @hydra-name limit.recent
      */
-    public static final class Config extends TreeDataParameters<DataLimitRecent> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * If non-zero then remove values that are older than the oldest bundle by this amount.

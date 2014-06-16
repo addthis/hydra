@@ -18,8 +18,6 @@ import java.util.List;
 
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.ClassMap;
-import com.addthis.codec.Codec.ClassMapFactory;
 import com.addthis.codec.CodecBin2;
 import com.addthis.hydra.common.plugins.PluginReader;
 
@@ -29,18 +27,18 @@ import com.addthis.hydra.common.plugins.PluginReader;
  * in the 'data' field of PathElements.
  */
 @Codec.Set(classMapFactory = TreeNodeData.CMAP.class)
-public abstract class TreeNodeData<C extends TreeDataParameters<?>> implements Codec.BytesCodable, DataTreeNodeActor {
+public abstract class TreeNodeData<T extends TreeDataParameters> implements Codec.BytesCodable {
 
-    static final ClassMap cmap = new ClassMap() {
+    static final Codec.ClassMap cmap = new Codec.ClassMap() {
         @Override
         public String getClassField() {
             return "t";
         }
     };
 
-    public static class CMAP implements ClassMapFactory {
+    public static class CMAP implements Codec.ClassMapFactory {
 
-        public ClassMap getClassMap() {
+        public Codec.ClassMap getClassMap() {
             return cmap;
         }
     }
@@ -61,7 +59,19 @@ public abstract class TreeNodeData<C extends TreeDataParameters<?>> implements C
      * called from PathValue.processNodeUpdates() -> PathValue.processChild() -> TreeNode.updateChildData() -> this.
      * implement data handling in child node.  called before parent nodeUpdate().
      */
-    public abstract boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, C conf);
+    public abstract boolean updateChildData(DataTreeNodeUpdater state,
+            DataTreeNode childNode, T conf);
+
+    /**
+     * called from PathValue.processNodeUpdates() -> PathValue.processChild() -> TreeNode.updateChildData() -> this.
+     * implement data handling in child node.  called before parent nodeUpdate().
+     *
+     * This version explicitly casts the type so that it is clear what is happening at runtime.
+     */
+    public boolean updateChildDataUnsafe(DataTreeNodeUpdater state,
+            DataTreeNode childNode, TreeDataParameters conf) {
+        return updateChildData(state, childNode, (T) conf);
+    }
 
     /**
      * override to track new children
@@ -91,7 +101,7 @@ public abstract class TreeNodeData<C extends TreeDataParameters<?>> implements C
     /**
      * return a list of non-editable child nodes to the query engine given a query key
      */
-    public Collection<DataTreeNode> getNodes(DataTreeNode parent, String key) {
+    public Collection<ReadNode> getNodes(ReadNode parent, String key) {
         return null;
     }
 
@@ -107,31 +117,6 @@ public abstract class TreeNodeData<C extends TreeDataParameters<?>> implements C
      */
     public List<String> getNodeTypes() {
         return null;
-    }
-
-    /**
-     * --- support for DataTreeNodeActor ---
-     */
-
-    private DataTreeNode node;
-
-    public DataTreeNode getBoundNode() {
-        return node;
-    }
-
-    @Override
-    public void setBoundNode(DataTreeNode node) {
-        this.node = node;
-    }
-
-    @Override
-    public Collection<DataTreeNode> onNodeQuery(String option) {
-        return getNodes(node, option);
-    }
-
-    @Override
-    public ValueObject onValueQuery(String option) {
-        return getValue(option);
     }
 
     @Override

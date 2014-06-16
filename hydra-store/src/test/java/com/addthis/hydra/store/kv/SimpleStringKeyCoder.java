@@ -24,6 +24,11 @@ class SimpleStringKeyCoder implements KeyCoder<String, DBValue> {
     }
 
     @Override
+    public String posInfinity() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public byte[] keyEncode(String key) {
         return key != null ? Bytes.toBytes(key) : new byte[0];
     }

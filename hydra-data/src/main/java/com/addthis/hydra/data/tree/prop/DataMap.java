@@ -16,6 +16,7 @@ package com.addthis.hydra.data.tree.prop;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
@@ -29,6 +30,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
+import com.addthis.hydra.data.tree.ReadNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.basis.util.Varint;
@@ -53,7 +55,7 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
      * @user-reference
      * @hydra-name map
      */
-    public static final class Config extends TreeDataParameters<DataMap> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * Field to get the map key from. This field is required.
@@ -170,9 +172,9 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
     }
 
     @Override
-    public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
+    public Collection<ReadNode> getNodes(ReadNode parent, String key) {
         String[] keys = key != null ? Strings.splitArray(key, ",") : null;
-        ArrayList<DataTreeNode> list = new ArrayList<>(map.size());
+        ArrayList<ReadNode> list = new ArrayList<>(map.size());
         synchronized (map) {
             if (keys != null && keys.length > 0) {
                 for (String k : keys) {

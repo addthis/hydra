@@ -56,7 +56,7 @@ public class DataTime extends TreeNodeData<DataTime.Config> {
      * @user-reference
      * @hydra-name time
      */
-    public static final class Config extends TreeDataParameters<DataTime> {
+    public static final class Config extends TreeDataParameters {
 
         /**
          * Bundle field name from which to draw values.

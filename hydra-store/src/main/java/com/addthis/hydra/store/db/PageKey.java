@@ -11,11 +11,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.addthis.hydra.store.db;
 
-public interface IReadWeighable {
+import java.io.IOException;
+import java.io.OutputStream;
 
-    public void setWeight(int weight);
+import com.addthis.hydra.store.util.Raw;
 
-    public int getWeight();
+public interface PageKey {
+
+    public int id();
+
+    public byte[] key();
+
+    public byte[] toBytes();
+
+    public Raw rawKey();
+
+    public void writeOut(OutputStream out) throws IOException;
 }

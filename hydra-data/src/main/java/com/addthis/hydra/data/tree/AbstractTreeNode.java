@@ -1,17 +1,18 @@
 package com.addthis.hydra.data.tree;
 
+import java.util.HashMap;
+
+import java.nio.charset.StandardCharsets;
+
 import com.addthis.basis.util.Varint;
+
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecBin2;
+
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
-import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.Map;
-
-public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodable, Codec.ConcurrentCodable, Codec.BytesCodable {
+public abstract class AbstractTreeNode implements ReadNode, Codec.SuperCodable, Codec.BytesCodable {
 
     @Codec.Set(codable = true)
     protected long hits;
@@ -23,53 +24,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
     protected int bits;
     @SuppressWarnings("unchecked")
     @Codec.Set(codable = true)
-    protected HashMap<String, TreeNodeData> data;
-
-
-    @Override
-    public byte[] bytesEncode(long version) {
-        preEncode();
-        if (!encodeLock()) {
-            throw new RuntimeException("Unable to acquire encoding lock");
-        }
-        byte[] returnBytes;
-        ByteBuf b = PooledByteBufAllocator.DEFAULT.buffer();
-        try {
-            Varint.writeUnsignedVarLong(hits, b);
-            Varint.writeSignedVarInt(nodedb == null ? -1 : nodedb, b);
-            if (data != null && data.size() > 0) {
-                int numAttachments = data.size();
-                Varint.writeSignedVarInt(numAttachments, b);
-                for (Map.Entry<String, TreeNodeData> entry : data.entrySet()) {
-
-                    byte[] keyBytes = entry.getKey().getBytes(Charset.forName("UTF-8"));
-                    Varint.writeUnsignedVarInt(keyBytes.length, b);
-                    b.writeBytes(keyBytes);
-                    String classInfo = CodecBin2.getClassFieldMap(entry.getValue().getClass()).getClassName(entry.getValue());
-                    byte[] classNameBytes = classInfo.getBytes(Charset.forName("UTF-8"));
-                    Varint.writeUnsignedVarInt(classNameBytes.length, b);
-                    b.writeBytes(classNameBytes);
-                    byte[] bytes = entry.getValue().bytesEncode(version);
-                    Varint.writeUnsignedVarInt(bytes.length, b);
-                    b.writeBytes(bytes);
-                }
-            } else {
-                Varint.writeSignedVarInt(-1, b);
-            }
-            if (nodedb != null) {
-                Varint.writeUnsignedVarInt(nodes, b);
-                Varint.writeUnsignedVarInt(bits, b);
-            }
-            returnBytes = new byte[b.readableBytes()];
-            b.readBytes(returnBytes);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-            b.release();
-            encodeUnlock();
-        }
-        return returnBytes;
-    }
+    protected HashMap<String, TreeNodeData<?>> data;
 
     @Override
     public void bytesDecode(byte[] b, long version) {
@@ -79,16 +34,16 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
             nodedb = Varint.readSignedVarInt(buf);
             int numAttachments = Varint.readSignedVarInt(buf);
             if (numAttachments > 0) {
-                HashMap<String, TreeNodeData> dataMap = new HashMap<>();
+                HashMap<String, TreeNodeData<?>> dataMap = new HashMap<>(numAttachments);
                 for (int i = 0; i < numAttachments; i++) {
                     int kl = Varint.readUnsignedVarInt(buf);
                     if (kl == 0) {
                         continue;
                     }
-                    String key = new String(buf.readBytes(kl).array(), Charset.forName("UTF-8"));
+                    String key = new String(buf.readBytes(kl).array(), StandardCharsets.UTF_8);
                     int cl = Varint.readUnsignedVarInt(buf);
-                    String className = new String(buf.readBytes(cl).array(), Charset.forName("UTF-8"));
-                    TreeNodeData tn = (TreeNodeData) CodecBin2.getClassFieldMap(TreeNodeData.class).getClass(className).newInstance();
+                    String className = new String(buf.readBytes(cl).array(), StandardCharsets.UTF_8);
+                    TreeNodeData<?> tn = (TreeNodeData) CodecBin2.getClassFieldMap(TreeNodeData.class).getClass(className).newInstance();
                     int vl = Varint.readUnsignedVarInt(buf);
                     tn.bytesDecode(buf.readBytes(vl).array(), version);
                     dataMap.put(key, tn);
@@ -107,5 +62,13 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
         } finally {
             buf.release();
         }
+    }
+
+    @Override
+    public void postDecode() {
+    }
+
+    @Override
+    public void preEncode() {
     }
 }

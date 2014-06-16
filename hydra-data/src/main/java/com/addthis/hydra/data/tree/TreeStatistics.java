@@ -20,6 +20,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -30,14 +31,13 @@ import com.addthis.basis.util.ClosableIterator;
 
 import com.addthis.codec.CodableStatistics;
 import com.addthis.hydra.store.db.DBKey;
-import com.addthis.hydra.store.kv.ReadExternalPagedStore;
-import com.addthis.hydra.store.kv.metrics.ExternalPagedStoreMetrics;
+import com.addthis.hydra.store.db.ReadDBKeyCoder;
+import com.addthis.hydra.store.kv.ReadPageCache;
 import com.addthis.hydra.util.Histogram;
 
 import com.yammer.metrics.stats.Snapshot;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class TreeStatistics {
 
@@ -53,7 +53,7 @@ public class TreeStatistics {
     private final ReadTree readTree;
 
     @Nonnull
-    private final ReadExternalPagedStore<DBKey, ReadTreeNode> readEPS;
+    private final ReadPageCache<DBKey, ReadTreeNode> readEPS;
 
     @Nonnull
     private final ConcurrentTree writeTree;
@@ -87,7 +87,7 @@ public class TreeStatistics {
         this.readTree = readTree;
         this.writeTree = writeTree;
         this.terminating = terminating;
-        this.readEPS = readTree.getReadEps();
+        this.readEPS = readTree.getSource();
         this.sampleRate = sampleRate;
         this.children = children;
         scheduler.scheduleAtFixedRate(new ReporterRunnable(), 0, LOG_REPORT_RATE, TimeUnit.SECONDS);
@@ -123,8 +123,6 @@ public class TreeStatistics {
                 walkSizeStatistics(writeRoot);
                 log.warn("Phase (3) of (3) completed.");
             }
-
-            pageDBStatistics(writeRoot);
 
             // set phase to final value in case previous phases failed to run
             phase = 4;
@@ -202,21 +200,17 @@ public class TreeStatistics {
      * selected children. The selection of children is determined by
      * the iterator.
      */
-    private void iteratingWalkChildrenStatistics(ClosableIterator<DataTreeNode> iterator,
+    private void iteratingWalkChildrenStatistics(Iterator<ReadNode> iterator,
             ReadTreeNode readParent,
             ConcurrentTreeNode writeParent) {
-        try {
-            while (iterator.hasNext() && !terminating.get()) {
-                try {
-                    ReadTreeNode readNode = (ReadTreeNode) iterator.next();
-                    generateNodeStatistics(readNode, readParent, writeParent);
-                } catch (Exception ex) {
-                    log.warn(ex.toString());
-                    log.warn(printStackTrace(ex));
-                }
+        while (iterator.hasNext() && !terminating.get()) {
+            try {
+                ReadTreeNode readNode = (ReadTreeNode) iterator.next();
+                generateNodeStatistics(readNode, readParent, writeParent);
+            } catch (Exception ex) {
+                log.warn(ex.toString());
+                log.warn(printStackTrace(ex));
             }
-        } finally {
-            iterator.close();
         }
     }
 
@@ -227,21 +221,15 @@ public class TreeStatistics {
     private void walkChildrenStatistics(ReadTreeNode readParent, ConcurrentTreeNode writeParent) {
         int nodeCount = readParent.getNodeCount();
 
-        ClosableIterator<DataTreeNode> iterator = null;
+        Iterator<ReadNode> iterator = null;
 
-        try {
-            if (sampleRate < 2 || nodeCount < children) {
-                iterator = readParent.getIterator();
-            } else {
-                iterator = readParent.getIterator(sampleRate);
-            }
-
-            iteratingWalkChildrenStatistics(iterator, readParent, writeParent);
-        } finally {
-            if (iterator != null) {
-                iterator.close();
-            }
+        if (sampleRate < 2 || nodeCount < children) {
+            iterator = readParent.getIterator();
+        } else {
+            iterator = readParent.getIterator(sampleRate);
         }
+
+        iteratingWalkChildrenStatistics(iterator, readParent, writeParent);
     }
 
     /**
@@ -269,7 +257,7 @@ public class TreeStatistics {
             long keyBytes = readEPS.getKeyCoder().keyEncode(cacheKey.dbkey()).length;
 
             // get value statistics
-            CodableStatistics statistics = readEPS.getKeyCoder().valueStatistics(readNode);
+            CodableStatistics statistics = ((ReadDBKeyCoder<ReadTreeNode>) readEPS.getKeyCoder()).valueStatistics(readNode);
 
             nodeState = writeTree.getOrCreateNode(newChild, "node", null);
 
@@ -599,34 +587,7 @@ public class TreeStatistics {
         }
     }
 
-    private void pageDBStatistics(ConcurrentTreeNode writeRoot) {
-        ExternalPagedStoreMetrics metrics = readEPS.getMetrics();
-
-        if (metrics == null) {
-            return;
-        }
-
-        com.yammer.metrics.core.Histogram pageSize = metrics.getPageSize();
-
-        ConcurrentTreeNode pageDBNode = null, keyNode = null;
-
-        try {
-            pageDBNode = writeTree.getOrCreateNode(writeRoot, "pagedb", null);
-            keyNode = writeTree.getOrCreateNode(pageDBNode, "keys", null);
-            exportHistogram(pageSize, keyNode);
-        } finally {
-            if (pageDBNode != null) {
-                pageDBNode.release();
-            }
-            if (keyNode != null) {
-                keyNode.release();
-            }
-        }
-
-
-    }
-
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         if (args.length != 2) {
             System.err.println("usage: [read tree root] [write tree root]");
             System.exit(2);
@@ -635,7 +596,7 @@ public class TreeStatistics {
         File readRoot = new File(args[0]);
         File writeRoot = new File(args[1]);
 
-        ReadTree readTree = new ReadTree(readRoot, true);
+        ReadTree readTree = new ReadTree(readRoot);
         ConcurrentTree writeTree = new ConcurrentTree(writeRoot);
 
         TreeStatistics statistics = new TreeStatistics(readTree, writeTree);
