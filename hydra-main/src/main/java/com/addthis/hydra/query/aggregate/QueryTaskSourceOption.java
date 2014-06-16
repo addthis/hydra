@@ -57,7 +57,9 @@ public class QueryTaskSourceOption {
             source = new StreamSource(meshy, queryReference.getHostUUID(),
                     queryReference.getHostUUID(), queryReference.name, queryOptions, 0);
         } catch (IOException e) {
-            MeshSourceAggregator.log.warn("Error getting query handle for fileReference: {}/{}", queryReference.getHostUUID(), queryReference.name, e);
+            log.warn("Error getting query handle for fileReference: {}/{}",
+                    queryReference.getHostUUID(), queryReference.name, e);
+            optionLeases.release();
             throw new QueryException(e);
         }
         sourceInputStream = source.getInputStream();
@@ -67,16 +69,18 @@ public class QueryTaskSourceOption {
         return sourceInputStream != null;
     }
 
+    /** The message is currently a no-op, but is left in to make it easier to support later and because
+     *  it is handy for self-documenting-like calls. */
     public void cancel(String message) {
         try {
             if (sourceInputStream != null) {
                 optionLeases.release();
-                log.debug("lease dropped for {}", queryReference.getHostUUID());
+                log.debug("lease dropped for {} with reason {}", queryReference.getHostUUID(), message);
                 sourceInputStream.close();
                 sourceInputStream = null;
             }
         } catch (Exception e) {
-            MeshSourceAggregator.log.warn("Exception closing sourceInputStream: ", e);
+            log.warn("Exception canceling sourceInputStream for {}", queryReference, e);
         }
     }
 }

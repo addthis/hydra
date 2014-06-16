@@ -16,7 +16,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>4.2.8-SNAPSHOT</version>
+    <version>4.2.10-SNAPSHOT</version>
   </parent>
 
   <artifactId>hydra-data</artifactId>
@@ -87,6 +87,11 @@
       <groupId>com.ning</groupId>
       <artifactId>compress-lzf</artifactId>
       <version>${hydra.dep.compress.compress-lzf.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-math3</artifactId>
+      <version>3.3</version>
     </dependency>
     <!-- end 3rd party -->
 

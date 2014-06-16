@@ -102,7 +102,6 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
                 executor.execute(queryTask);
             }
             maybeScheduleStragglerChecks();
-            ctx.pipeline().remove(this);
         } else if (msg instanceof DetailedStatusTask) {
             DetailedStatusTask task = (DetailedStatusTask) msg;
             task.run(this);
@@ -121,7 +120,8 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
             Runnable stragglerCheckTask = new StragglerCheckTask(this);
             int checkPeriod = AggregateConfig.stragglerCheckPeriod;
             // just have it reschedule itself since that's what recurring tasks are for, right?
-            stragglerTaskFuture = executor.schedule(stragglerCheckTask, checkPeriod, TimeUnit.MILLISECONDS);
+            stragglerTaskFuture = executor.scheduleWithFixedDelay(
+                    stragglerCheckTask, checkPeriod, checkPeriod, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -158,13 +158,32 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
         if (stragglerTaskFuture != null) {
             stragglerTaskFuture.cancel(true);
         }
-        if (!future.isSuccess()) {
-            stopSources(future.cause().getMessage());
-            meshQueryMaster.handleError(query);
-            consumer.sourceError(DataChannelError.promote((Exception) future.cause()));
-        } else {
+        if (future.isSuccess()) {
+            safelyRemoveSelfFromPipeline(future);
             stopSources("query is complete");
             consumer.sendComplete();
+        } else {
+            stopSources(future.cause().getMessage());
+            consumer.sourceError(promoteHackForThrowables(future.cause()));
+            if (!future.isCancelled()) {
+                meshQueryMaster.handleError(query);
+            }
+        }
+    }
+
+    private static DataChannelError promoteHackForThrowables(Throwable cause) {
+        if (cause instanceof DataChannelError) {
+            return (DataChannelError) cause;
+        } else {
+            return new DataChannelError(cause);
+        }
+    }
+
+    private void safelyRemoveSelfFromPipeline(ChannelFuture future) {
+        try {
+            future.channel().pipeline().remove(this);
+        } catch (Exception e) {
+            log.warn("unexpected error while trying to remove mesh source aggregator from the pipeline on success", e);
         }
     }
 

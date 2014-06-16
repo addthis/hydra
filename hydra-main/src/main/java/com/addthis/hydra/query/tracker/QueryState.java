@@ -11,22 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.query;
+package com.addthis.hydra.query.tracker;
 
-
-import com.addthis.bundle.table.DataTable;
-import com.addthis.bundle.table.DataTableFactory;
-
-import io.netty.channel.ChannelProgressivePromise;
-
-public class ResultAccumulator extends AbstractTableOp {
-
-    public ResultAccumulator(DataTableFactory processor, ChannelProgressivePromise queryPromise) {
-        super(processor, queryPromise);
-    }
-
-    @Override
-    public DataTable tableOp(DataTable result) {
-        return result;
-    }
+public enum QueryState {
+    QUEUED, AGGREGATING, OPS, SENDING, COMPLETE, CANCELLED, TIMEOUT, ERROR
 }

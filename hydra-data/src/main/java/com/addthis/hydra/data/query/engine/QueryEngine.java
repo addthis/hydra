@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -232,10 +233,8 @@ public class QueryEngine {
             LinkedList<ReadNode> stack = new LinkedList<>();
             stack.push(tree);
             tableSearch(stack, new FieldValueList(new KVBundleFormat()), path, 0, result, 0, queryPromise);
-        } catch (QueryException ex) {
-            if (log.isDebugEnabled()) {
-                log.debug("", ex);
-            }
+        } catch (QueryException | CancellationException ex) {
+            log.debug("", ex);
         } catch (RuntimeException ex)  {
             log.warn("", ex);
             throw ex;
@@ -301,7 +300,10 @@ public class QueryEngine {
             int pathIndex, DataChannelOutput sink, int collect,
             ChannelProgressivePromise queryPromise) throws QueryException {
         if (queryPromise.isDone()) {
-            log.warn("Query closed during processing");
+            log.debug("Query promise completed during processing");
+            if (queryPromise.isCancelled()) {
+                throw (CancellationException) queryPromise.cause();
+            }
             throw new QueryException("Query closed during processing");
         }
 
@@ -350,7 +352,10 @@ public class QueryEngine {
                             ((ClosableIterator<?>) iter).close();
                         }
 
-                        log.warn("Query closed during processing, root={}", root);
+                        log.debug("Query promise completed during processing. root={}", root);
+                        if (queryPromise.isCancelled()) {
+                            throw (CancellationException) queryPromise.cause();
+                        }
                         throw new QueryException("Query closed during processing, root=" + root);
                     }
 
@@ -388,7 +393,10 @@ public class QueryEngine {
                         ((ClosableIterator<?>) iter).close();
                     }
 
-                    log.warn("Query closed during processing, root={}", root);
+                    log.debug("Query promise completed during processing. root={}", root);
+                    if (queryPromise.isCancelled()) {
+                        throw (CancellationException) queryPromise.cause();
+                    }
                     throw new QueryException("Query closed during processing, root=" + root);
                 }
 

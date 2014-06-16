@@ -25,7 +25,6 @@ import com.addthis.basis.util.Strings;
 import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.codec.Codec;
 import com.addthis.codec.CodecJSON;
-import com.addthis.maljson.JSONObject;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
@@ -39,11 +38,11 @@ import io.netty.channel.ChannelProgressivePromise;
  */
 public class Query implements Codec.Codable {
 
-    private static final Logger log = LoggerFactory.getLogger(Query.class);
-    private static final int MAX_PRINT_LENGTH = 3000;
-    private static final String idPrefix = CUID.createCUID();
+    private static final Logger log              = LoggerFactory.getLogger(Query.class);
+    private static final int    MAX_PRINT_LENGTH = 3000;
+    private static final String SESSION_ID       = CUID.createCUID();
 
-    private static final AtomicLong queryID = new AtomicLong(0);
+    private static final AtomicLong queryIds = new AtomicLong(0);
 
     protected static RollingLog traceLog;
 
@@ -52,37 +51,29 @@ public class Query implements Codec.Codable {
     @Codec.Set(codable = true)
     private String[] ops;
     @Codec.Set(codable = true)
-    private String job;
+    private String   job;
     @Codec.Set(codable = true)
-    private boolean trace;
+    private boolean  trace;
+    @Codec.Set(codable = true)
+    private String   sessionId;
+    @Codec.Set(codable = true)
+    private long     queryId;
     @Codec.Set(codable = true)
     private HashMap<String, String> params = new HashMap<>();
-    @Codec.Set(codable = true)
-    private volatile String uuid = nextUUID();
 
     @Codec.Set(codable = false)
     public ChannelProgressivePromise queryPromise = null;
 
-    private final List<QueryOp> appendops = new ArrayList<>(1);
-
+    // for codec
     public Query() {
     }
 
-    public Query(String uuid, String job, String[] paths, String[] ops) {
-        this(job, paths, ops);
-        if (uuid != null) {
-            this.uuid = uuid;
-        }
-    }
-
     public Query(String job, String[] paths, String[] ops) {
-        setJob(job);
-        setOps(ops);
-        setPaths(paths);
-    }
-
-    public Query(String job, String path, String[] ops) {
-        this(job, new String[]{path}, ops);
+        this.job = job;
+        this.paths = paths;
+        this.ops = ops;
+        this.sessionId = SESSION_ID;
+        this.queryId = queryIds.incrementAndGet();
     }
 
     //Set the rolling log for trace events
@@ -97,14 +88,6 @@ public class Query implements Codec.Codable {
         } else {
             log.warn(line);
         }
-    }
-
-    public void useNextUUID() {
-        uuid = nextUUID();
-    }
-
-    public static String nextUUID() {
-        return idPrefix + ":" + queryID.incrementAndGet();
     }
 
     public ChannelProgressivePromise getQueryPromise() {
@@ -140,26 +123,15 @@ public class Query implements Codec.Codable {
     }
 
     public String uuid() {
-        return uuid;
+        return String.valueOf(queryId);
     }
 
-    public String hashKey(String exclude) {
-        ArrayList<String> xprop = new ArrayList<>(1);
-        xprop.add(exclude);
-        return hashKey(xprop);
+    public long queryId() {
+        return queryId;
     }
 
-    public String hashKey(List<String> excludeProp) {
-        try {
-            JSONObject o = CodecJSON.encodeJSON(this);
-            o.remove("uuid");
-            for (String prop : excludeProp) {
-                o.remove(prop);
-            }
-            return o.toString();
-        } catch (Exception ex) {
-            return toString();
-        }
+    public String sessionId() {
+        return sessionId;
     }
 
     @Override
@@ -171,25 +143,16 @@ public class Query implements Codec.Codable {
             }
             return queryString;
         } catch (Exception ex) {
-            return Strings.join(paths, "|").concat(";").concat(ops != null ? Strings.join(ops, "|") : "").concat(";").concat(job != null ? job : "");
+            return Strings.join(paths, "|")
+                          .concat(";")
+                          .concat(ops != null ? Strings.join(ops, "|") : "")
+                          .concat(";")
+                          .concat(job != null ? job : "");
         }
-    }
-
-    /**
-     * does not serialize - used internally by query master and worker
-     */
-    public Query appendOp(QueryOp op) {
-        appendops.add(op);
-        return this;
     }
 
     public String[] getPaths() {
         return paths;
-    }
-
-    public Query setPaths(String[] path) {
-        this.paths = path;
-        return this;
     }
 
     public boolean isTraced() {
@@ -202,7 +165,7 @@ public class Query implements Codec.Codable {
     }
 
     public List<QueryElement[]> getQueryPaths() {
-        ArrayList<QueryElement[]> list = new ArrayList<QueryElement[]>(paths.length);
+        ArrayList<QueryElement[]> list = new ArrayList<>(paths.length);
         for (String path : paths) {
             list.add(parseQueryPath(path));
         }
@@ -222,29 +185,19 @@ public class Query implements Codec.Codable {
     }
 
     public QueryOpProcessor newProcessor(DataChannelOutput output, ChannelProgressivePromise opPromise) {
-        QueryOpProcessor rp = new QueryOpProcessor(output, ops, opPromise);
-        for (QueryOp op : appendops) {
-            rp.appendOp(op);
-        }
-        return rp;
+        return new QueryOpProcessor(output, ops, opPromise);
     }
 
     public String getJob() {
         return job;
     }
 
-    public Query setJob(String job) {
+    public void setJob(String job) {
         this.job = job;
-        return this;
     }
 
     public String[] getOps() {
         return ops;
-    }
-
-    public Query setOps(String[] ops) {
-        this.ops = ops;
-        return this;
     }
 
     /**
@@ -268,7 +221,8 @@ public class Query implements Codec.Codable {
         q.job = job;
         q.trace = trace;
         q.params = params;
-        q.uuid = uuid;
+        q.sessionId = sessionId;
+        q.queryId = queryId;
         return q;
     }
 

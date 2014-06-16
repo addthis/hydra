@@ -18,9 +18,6 @@ import java.io.IOException;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
-import com.addthis.hydra.data.query.FramedDataChannelReader;
-import com.addthis.meshy.service.file.FileReference;
-import com.addthis.meshy.service.stream.SourceInputStream;
 
 public class QueryTaskSource {
 
@@ -29,7 +26,7 @@ public class QueryTaskSource {
     protected int lines = 0;
     protected long endTime = 0;
 
-    protected FramedDataChannelReader dataChannelReader;
+    protected TaskChannelReader dataChannelReader;
 
     public QueryTaskSource(QueryTaskSourceOption[] options) {
         this.options = options;
@@ -47,10 +44,16 @@ public class QueryTaskSource {
             return true;
         }
         if (oneHasResponded() && dataChannelReader.eof.get()) {
-            endTime = System.currentTimeMillis();
+            eagerComplete();
             return true;
         }
         return false;
+    }
+
+    private void eagerComplete() {
+        endTime = System.currentTimeMillis();
+        // eagerly free up resources that are no longer needed -- especially any worker leases
+        cancelAllActiveOptions("task is already complete");
     }
 
     public Bundle next() throws IOException, DataChannelError {
@@ -62,10 +65,14 @@ public class QueryTaskSource {
         Bundle bundle = dataChannelReader.read();
         if (bundle != null) {
             lines++;
+        } else if (dataChannelReader.eof.get()) {
+            eagerComplete();
         }
         return bundle;
     }
 
+    /** Whether this task has any currently active sources. This may be false either if no option was ever
+     *  activated or if this task is complete. */
     public boolean hasNoActiveSources() {
         for (QueryTaskSourceOption option : options) {
             if (option.isActive()) {
@@ -100,9 +107,8 @@ public class QueryTaskSource {
         dataChannelReader = null;
     }
 
-    private void createReader(SourceInputStream sourceInputStream, FileReference queryReference) {
-        dataChannelReader = new FramedDataChannelReader(
-                sourceInputStream, queryReference.name, AggregateConfig.FRAME_READER_POLL);
+    private void createReader(QueryTaskSourceOption readySourceOption) {
+        dataChannelReader = new TaskChannelReader(readySourceOption);
     }
 
     private QueryTaskSourceOption getReadyOption() {
@@ -126,7 +132,7 @@ public class QueryTaskSource {
         QueryTaskSourceOption readyOption = getReadyOption();
         if (readyOption != null) {
             cancelOtherActiveOptions(readyOption);
-            createReader(readyOption.sourceInputStream, readyOption.queryReference);
+            createReader(readyOption);
             return true;
         }
         return false;

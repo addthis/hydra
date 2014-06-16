@@ -39,13 +39,15 @@ function(
         		canaryPath: "",
         		canaryCheckDates: "",
         		canaryConfigThreshold: "",
-        		email:""},
+        		email:"",
+        		description:""},
         	save:function(){
         		var postData = {
         			lastAlertTime:this.get("lastAlertTime"),
         			type:$("#alertType").val(),
         			timeout:this.get("timeout"),
         			email:this.get("email"),
+        			description:((this.get("description") instanceof Array) ? this.get("description")[0] : this.get("description")),
         			jobIds:this.get("jobIds"),
         			canaryPath:this.get("canaryPath"),
         			canaryConfigThreshold:this.get("canaryConfigThreshold"),

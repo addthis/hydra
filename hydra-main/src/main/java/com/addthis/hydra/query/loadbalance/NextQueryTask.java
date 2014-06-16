@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -41,8 +42,8 @@ public class NextQueryTask implements Runnable, ChannelFutureListener {
 
     private static final Logger log = LoggerFactory.getLogger(NextQueryTask.class);
 
-    public final QueryQueue queryQueue;
-    public final EventExecutor executor;
+    private final QueryQueue queryQueue;
+    private final EventExecutor executor;
 
     public NextQueryTask(QueryQueue queryQueue, EventExecutor executor) {
         this.queryQueue = queryQueue;
@@ -59,9 +60,17 @@ public class NextQueryTask implements Runnable, ChannelFutureListener {
             return;
         }
         try {
-            ChannelFuture queryFuture = HttpQueryCallHandler.handleQuery(
+            final ChannelFuture queryFuture = HttpQueryCallHandler.handleQuery(
                     request.querySource, request.kv, request.request, request.ctx, executor);
             queryFuture.addListener(this);
+            queryFuture.channel().closeFuture().addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (queryFuture.cancel(false)) {
+                        log.warn("cancelling query due to closed output channel");
+                    }
+                }
+            });
         } catch (Exception e) {
             log.warn("Exception caught before mesh query master added to pipeline", e);
             if (request.ctx.channel().isActive()) {
@@ -74,28 +83,69 @@ public class NextQueryTask implements Runnable, ChannelFutureListener {
     public void operationComplete(ChannelFuture future) throws Exception {
         log.trace("complete called");
         if (!future.isSuccess()) {
-            log.warn("Exception caught while serving http query endpoint", future.cause());
-            ChannelPipeline pipeline = future.channel().pipeline();
-            log.trace("pipeline before pruning {}", pipeline);
-            while(!"encoder".equals(pipeline.lastContext().name())) {
-                pipeline.removeLast();
-            }
-            log.trace("pipeline after pruning {}", pipeline);
-            if (future.channel().isActive()) {
-                sendDetailedError(pipeline.lastContext(), future.cause());
-            }
+            safelyHandleQueryFailure(future);
         }
         // schedule next query poll
         executor.execute(this);
         log.trace("rescheduled");
     }
 
-    public static void sendDetailedError(ChannelHandlerContext ctx, Throwable cause) {
+    private static void safelyHandleQueryFailure(ChannelFuture future) {
+        try {
+            ChannelPipeline pipeline = future.channel().pipeline();
+            ChannelHandlerContext lastContext = cleanPipelineAndGetLastContext(pipeline);
+            if (lastContext != null) {
+                sendDetailedError(lastContext, future.cause());
+            } else {
+                logAndFormatErrorDetail(future.cause());
+            }
+        } catch (Throwable error) {
+            log.warn("unexpected error while trying to report to user; closing channel", error);
+            safelyTryChannelClose(future);
+        }
+    }
+
+    private static void safelyTryChannelClose(ChannelFuture future) {
+        try {
+            Channel channel = future.channel();
+            channel.close();
+        } catch (Throwable error) {
+            log.error("unexpected error while trying to close channel; ignoring to keep frame reader alive", error);
+        }
+    }
+
+    private static ChannelHandlerContext cleanPipelineAndGetLastContext(ChannelPipeline pipeline) {
+        log.trace("pipeline before pruning {}", pipeline);
+        ChannelHandlerContext lastContext = pipeline.lastContext();
+        while ((lastContext != null) && !"encoder".equals(lastContext.name())) {
+            pipeline.removeLast();
+            lastContext = pipeline.lastContext();
+        }
+        log.trace("pipeline after pruning {}", pipeline);
+        return lastContext;
+    }
+
+    private static String logAndFormatErrorDetail(Throwable cause) {
+        if (cause == null) {
+            log.warn("query call errored with an empty cause");
+            return "unknown query error";
+        } else if (cause instanceof CancellationException) {
+            log.info("query call was cancelled by a user");
+            return "Query was Cancelled by a User";
+        } else if (cause instanceof TimeoutException) {
+            log.info("query call was cancelled by the timeout watcher");
+            return "Query timed out";
+        } else {
+            log.warn("query call errored due to internal errors or malformed input", cause);
+            return Throwables.getStackTraceAsString(cause);
+        }
+    }
+
+    private static void sendDetailedError(ChannelHandlerContext ctx, Throwable cause) {
         if (cause == null) {
             cause = new RuntimeException("query failed for unknown reasons");
         }
         String reasonPhrase = cause.getMessage();
-        String detailPhrase = Throwables.getStackTraceAsString(cause);
         HttpResponseStatus responseStatus;
         try {
             responseStatus = new HttpResponseStatus(500, reasonPhrase);
@@ -103,11 +153,7 @@ public class NextQueryTask implements Runnable, ChannelFutureListener {
             reasonPhrase = cause.getClass().getSimpleName();
             responseStatus = new HttpResponseStatus(500, reasonPhrase);
         }
-        if (cause instanceof CancellationException) {
-            detailPhrase = "Query was Cancelled by a User";
-        } else if (cause instanceof TimeoutException) {
-            detailPhrase = "Query timed out";
-        }
+        String detailPhrase = logAndFormatErrorDetail(cause);
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, responseStatus,
                 Unpooled.copiedBuffer(detailPhrase + "\r\n", CharsetUtil.UTF_8));
         response.headers().set(CONTENT_TYPE, "text/plain; charset=UTF-8");

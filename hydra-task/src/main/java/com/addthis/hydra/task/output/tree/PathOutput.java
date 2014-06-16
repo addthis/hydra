@@ -82,10 +82,10 @@ public class PathOutput extends PathElement {
     @Override
     public void resolve(final TreeMapper mapper) {
         super.resolve(mapper);
-        if (queryString == null && query == null) {
+        if ((queryString == null) && (query == null)) {
             throw new RuntimeException("either query or queryString required in PathOutput");
         }
-        if (query == null && queryString != null) {
+        if (query == null) {
             String[] q = Strings.splitArray(queryString, "/");
             query = new QueryElement[q.length];
             MutableInt col = new MutableInt(0);
@@ -133,7 +133,7 @@ public class PathOutput extends PathElement {
     class OutputOp extends AbstractTableOp {
 
         public OutputOp(QueryOpProcessor processor) {
-            super(processor, processor.getQueryPromise());
+            super(processor.tableFactory(), processor.opPromise());
         }
 
         @Override

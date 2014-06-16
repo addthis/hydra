@@ -30,30 +30,35 @@ import com.addthis.meshy.service.stream.SourceInputStream;
 
 public class FramedDataChannelReader extends DataChannelReader {
 
-    public AtomicBoolean eof = new AtomicBoolean(false);
-    public boolean busy;
-    private DataChannelError err;
-    private final SourceInputStream in;
-    public final String fileReferenceName;
-    private final DataChannelCodec.ClassIndexMap classMap;
-    private final DataChannelCodec.FieldIndexMap fieldMap;
-    private ByteArrayInputStream bis;
-    private final int pollWaitTime;
-
     public static final int FRAME_MORE = 0;
     public static final int FRAME_EOF = 1;
     public static final int FRAME_ERROR = 2;
     public static final int FRAME_BUSY = 3;
 
-    public FramedDataChannelReader(final SourceInputStream in, String fileReferenceName, int pollWaitTime) {
-        this(in, fileReferenceName, DataChannelCodec.createClassIndexMap(), DataChannelCodec.createFieldIndexMap(), pollWaitTime);
+    private final int pollWaitTime;
+
+    public AtomicBoolean eof = new AtomicBoolean(false);
+    public boolean busy;
+
+    private final SourceInputStream in;
+    private final DataChannelCodec.ClassIndexMap classMap;
+    private final DataChannelCodec.FieldIndexMap fieldMap;
+
+    private ByteArrayInputStream bis;
+    private DataChannelError err;
+
+    public FramedDataChannelReader(SourceInputStream in,
+                                   int pollWaitTime) {
+        this(in, DataChannelCodec.createClassIndexMap(),
+             DataChannelCodec.createFieldIndexMap(), pollWaitTime);
     }
 
-    public FramedDataChannelReader(final SourceInputStream in, String fileReferenceName,
-            DataChannelCodec.ClassIndexMap classMap, DataChannelCodec.FieldIndexMap fieldMap, int pollWaitTime) {
+    public FramedDataChannelReader(final SourceInputStream in,
+                                   DataChannelCodec.ClassIndexMap classMap,
+                                   DataChannelCodec.FieldIndexMap fieldMap,
+                                   int pollWaitTime) {
         super(new ListBundle(), in);
         this.in = in;
-        this.fileReferenceName = fileReferenceName;
         this.classMap = classMap;
         this.fieldMap = fieldMap;
         this.pollWaitTime = pollWaitTime;
@@ -76,16 +81,12 @@ public class FramedDataChannelReader extends DataChannelReader {
             frame = bis.read();
         } else {
             byte[] data = in.poll(pollWaitTime, TimeUnit.MILLISECONDS);
-            if (data == null) {
-                // poll timeout no data yet
-                return null;
-            } else if (data.length == 0) {
+            if (in.isEOF() && ((data == null) || (data.length == 0))) {
                 eof.set(true);
                 return null;
-//              // 0 byte array from client, probably error in mesh stream
-//              Not working as I had expected commenting out for now
-//              err = new DataChannelError("[FrameDataChannelReader] received unexpected zero length byte array");
-//              throw err;
+            } else if (data == null) {
+                // poll timeout no data yet
+                return null;
             } else {
                 // more data to read
                 bis = new ByteArrayInputStream(data);

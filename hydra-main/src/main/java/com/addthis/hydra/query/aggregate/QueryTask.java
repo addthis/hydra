@@ -65,7 +65,9 @@ public class QueryTask implements Runnable {
                             sourceAggregator.consumer.send(nextBundle);
                             processedBundle = true;
                             bundlesProcessed += 1;
-                        } else if (!taskSource.oneHasResponded() && taskSource.hasNoActiveSources()) {
+                        } else if (!taskSource.oneHasResponded()
+                                   && taskSource.hasNoActiveSources()
+                                   && !sourceAggregator.queryPromise.isDone()) {
                             log.debug("query task has no active options; attempting to lease one");
                             for (QueryTaskSourceOption option : taskSource.options) {
                                 if (sourceAggregator.tryActivateSource(option)) {
@@ -111,13 +113,15 @@ public class QueryTask implements Runnable {
     }
 
     private void rescheduleSelfWithBackoff() {
-        if (pollFailures <= 5) {
-            sourceAggregator.executor.schedule(this, 5, TimeUnit.MILLISECONDS);
-        } else if (pollFailures <= 10) { // 25 ms - 75 ms
+        if (pollFailures <= 25) {
+            sourceAggregator.executor.execute(this);
+        } else if (pollFailures <= 150) {
+            sourceAggregator.executor.schedule(this, 1, TimeUnit.MILLISECONDS);
+        } else if (pollFailures <= 200) { // 125 ms - 625 ms
             sourceAggregator.executor.schedule(this, 10, TimeUnit.MILLISECONDS);
-        } else if (pollFailures <= 40) { // 75 ms - about one second
+        } else if (pollFailures <= 250) { // 625 ms - 1875 ms
             sourceAggregator.executor.schedule(this, 25, TimeUnit.MILLISECONDS);
-        } else { // > about one second
+        } else { // > 1.875 seconds
             sourceAggregator.executor.schedule(this, 100, TimeUnit.MILLISECONDS);
         }
     }

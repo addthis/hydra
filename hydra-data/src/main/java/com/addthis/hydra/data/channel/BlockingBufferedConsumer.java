@@ -30,11 +30,11 @@ public class BlockingBufferedConsumer extends BlockingNullConsumer {
     }
 
     public BlockingBufferedConsumer(String[] ops) throws InterruptedException {
-        table = new QueryOpProcessor(this, ops).createTable(0);
+        table = new QueryOpProcessor(this, ops).tableFactory().createTable(0);
     }
 
     public BlockingBufferedConsumer(QueryOpProcessor proc) throws InterruptedException {
-        table = proc.createTable(0);
+        table = proc.tableFactory().createTable(0);
     }
 
     @Override

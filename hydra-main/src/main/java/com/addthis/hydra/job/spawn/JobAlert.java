@@ -71,6 +71,9 @@ public class JobAlert implements Codec.Codable {
     private String canaryFilter;
     @Codec.Set(codable = true)
     private int canaryConfigThreshold;
+    @Codec.Set(codable = true)
+    private String description;
+
 
     /* For alerts tracking multiple jobs, this variable marks if the set of active jobs has changed since the last alert check */
     private boolean hasChanged = false;
@@ -101,16 +104,18 @@ public class JobAlert implements Codec.Codable {
         this.type = 0;
         this.timeout = 0;
         this.email = "";
+        this.description = "";
         activeJobs = new HashMap<>();
         priorActiveJobs = new HashMap<>();
     }
 
-    public JobAlert(String alertId, int type, int timeout, String email, String[] jobIds) {
+    public JobAlert(String alertId, int type, int timeout, String email, String description, String[] jobIds) {
         this.alertId = alertId;
         this.lastAlertTime = -1;
         this.type = type;
         this.timeout = timeout;
         this.email = email;
+        this.description = description;
         this.jobIds = jobIds;
         activeJobs = new HashMap<>();
         priorActiveJobs = new HashMap<>();
@@ -170,12 +175,16 @@ public class JobAlert implements Codec.Codable {
         this.timeout = timeout;
     }
 
-    public String getEmail() {
-        return email;
-    }
+    public String getEmail() {return email; }
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getDescription() {return description; }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public String[] getJobIds() {

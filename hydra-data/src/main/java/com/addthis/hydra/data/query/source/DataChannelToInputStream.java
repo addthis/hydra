@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -188,7 +189,8 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     public void send(List<Bundle> bundles) {
         // Just in case the list was empty, we check if the channel is closed here
         if (closed) {
-            log.warn("Unable to send bundles due to closed channel");
+            log.debug("Unable to send bundles due to closed channel");
+            throw new CancellationException("master cancelled query");
         }
         for (Bundle bundle : bundles) {
             send(bundle);
@@ -196,15 +198,15 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     }
 
     /**
-     * Takes in a bundle and writes it on the writer (mapped to out), which encodes the bundle to bytes.
+     * Takes in a bundle and writes it on the writer (mapped to out),
+     * which encodes the bundle to bytes.
      *
-     * @param bundle
-     * @throws com.addthis.bundle.channel.DataChannelError
      */
     @Override
     public void send(Bundle bundle) throws DataChannelError {
         if (closed) {
-            log.warn("Unable to send bundles due to closed channel");
+            log.debug("Unable to send bundles due to closed channel");
+            throw new CancellationException("master cancelled query");
         }
         try {
             synchronized (out) {
@@ -227,7 +229,8 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     @Override
     public void sendComplete() {
         if (closed) {
-            log.warn("Unable to send complete due to closed channel");
+            log.debug("Unable to send complete due to closed channel");
+            throw new CancellationException("master cancelled query");
         }
         synchronized (out) {
             out.write(FramedDataChannelReader.FRAME_EOF);
@@ -244,7 +247,8 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
     @Override
     public void sourceError(DataChannelError er) {
         if (closed) {
-            log.warn("Unable to send source error due to closed channel", er);
+            log.debug("Unable to send source error due to closed channel", er);
+            return;
         }
         try {
             // if we know writer is closed, don't try to write to it.

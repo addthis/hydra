@@ -174,7 +174,7 @@ public class Hoover extends TaskRunnable implements Runnable {
      * Default is ["ssh", "{{USER}}@{{HOST}}", "ls", "{{PATH}}" ].
      */
     @Codec.Set(codable = true)
-    private String listCommand[] = new String[]{"ssh", "{{USER}}@{{HOST}}", "ls", "-l", "{{PATH}}"};
+    private String listCommand[] = new String[]{"ssh", "{{USER}}@{{HOST}}", "ls", "{{PATH}}"};
 
     /**
      * Execute this command to copy a file from the remote machine to the local machine.
@@ -248,10 +248,10 @@ public class Hoover extends TaskRunnable implements Runnable {
 
     /**
      * Command to be executed to delete files. Default is
-     * <br>["find", "{{DIR}}", "-mtime", "+{{DAYS}}", "-print", "-exec", "rm", "{}", ";"]</br>
+     * <br>["find", "{{DIR}}", "-type", "f", "-mtime", "+{{DAYS}}", "-print", "-exec", "rm", "{}", ";"]</br>
      */
     @Codec.Set(codable = true)
-    private String purgeCommand[] = new String[]{"find", "{{DIR}}", "-mtime", "+{{DAYS}}", "-print", "-exec", "rm", "{}", ";"};
+    private String purgeCommand[] = new String[]{"find", "{{DIR}}", "-type", "f", "-mtime", "+{{DAYS}}", "-print", "-exec", "rm", "{}", ";"};
 
     /**
      * If true then purge mark files that are older than purgeAfterDays days. Default is true.
@@ -279,12 +279,6 @@ public class Hoover extends TaskRunnable implements Runnable {
      */
     @Codec.Set(codable = true)
     private int maxFindAttempts = 5;
-
-    /**
-     * if true files that already exist but differ in size will be re-transferred from remote host
-     */
-    @Codec.Set(codable = true)
-    private boolean matchSize = false;
 
     private AtomicBoolean terminated = new AtomicBoolean(false);
     private SimpleDateFormat dateFormat;
@@ -450,8 +444,8 @@ public class Hoover extends TaskRunnable implements Runnable {
         }
     }
 
-    private MarkFile getMarkFile(String host, Long size, String fileName) {
-        return new MarkFile(host, size, fileName);
+    private MarkFile getMarkFile(String host, String fileName) {
+        return new MarkFile(host, fileName);
     }
 
     private int postCommand() {
@@ -532,7 +526,7 @@ public class Hoover extends TaskRunnable implements Runnable {
             return false;
         }
 
-        if (markFile.markFile.exists() && (!matchSize || markFile.markFile.length() == markFile.size)) {
+        if (markFile.markFile.exists()) {
             if (verboseCheck || log.isDebugEnabled()) log.info("mark skip for host=" + markFile.host + " file=" + markFile.name());
             return false;
         }
@@ -562,11 +556,10 @@ public class Hoover extends TaskRunnable implements Runnable {
         try {
             Process proc = Runtime.getRuntime().exec(newCmd);
             BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] fileDetails = line.split(" ");
-                MarkFile markFile = getMarkFile(hostNickname, Long.valueOf(fileDetails[4].trim()), fileDetails[8].trim());
-                if (verboseCheck || log.isDebugEnabled()) log.info("found host=" + host + " file=" + fileDetails[8] + " size=" + fileDetails[4]);
+            String fileName = null;
+            while ((fileName = reader.readLine()) != null) {
+                MarkFile markFile = getMarkFile(hostNickname, fileName.trim());
+                if (verboseCheck || log.isDebugEnabled()) log.info("found host=" + host + " file=" + fileName);
                 if (checkFile(markFile)) {
                     files.add(markFile);
                 }
@@ -671,12 +664,10 @@ public class Hoover extends TaskRunnable implements Runnable {
         public final String dateDay;
         public final String dateHour;
         public final DateTime dateTime;
-        public final long size;
 
-        MarkFile(String host, long size, String path) {
+        MarkFile(String host, String path) {
             this.host = host;
             this.path = path;
-            this.size = size;
             this.fileName = new File(path).getName();
             try {
                 File hostRoot = Files.initDirectory(new File(markRoot, host));

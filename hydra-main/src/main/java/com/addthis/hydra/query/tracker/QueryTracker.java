@@ -27,7 +27,6 @@ import java.text.SimpleDateFormat;
 
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.RollingLog;
-import com.addthis.basis.util.Strings;
 
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.util.StringMapHelper;
@@ -130,12 +129,7 @@ public class QueryTracker {
     }
 
     void log(StringMapHelper output) {
-        if (eventLog == null) {
-            log.warn(output.toLog() + "----> EventLog was null redirecting to stdout");
-        } else {
-            String msg = Strings.cat("<", format.format(new Date()), ".", this.toString(), ">");
-            output.add("timestamp", msg);
-            eventLog.writeLine(output.createKVPairs().toString());
-        }
+        output.add("timestamp", format.format(new Date()));
+        eventLog.writeLine(output.createKVPairs().toString());
     }
 }

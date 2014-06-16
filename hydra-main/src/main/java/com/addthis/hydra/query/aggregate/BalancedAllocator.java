@@ -49,10 +49,10 @@ public class BalancedAllocator implements TaskAllocator {
         int pinningMatrix = taskId % optionCount; // high accuracy super computing cache taster
         WorkerData pinnedWorker = worky.get(options[pinningMatrix].queryReference.getHostUUID());
         int pinnedLeases = pinnedWorker.queryLeases.availablePermits(); // so very racey
-        if (pinnedLeases >= SOFT_TASK_MAX) {
+        if (pinnedLeases <= SOFT_TASK_MAX) {
             for (QueryTaskSourceOption option : options) {
                 WorkerData randoWorker = worky.get(option.queryReference.getHostUUID());
-                if ((randoWorker.queryLeases.availablePermits() < SOFT_TASK_MAX) &&
+                if ((randoWorker.queryLeases.availablePermits() > SOFT_TASK_MAX) &&
                     option.tryActivate(meshy, queryOptions)) {
                     return;
                 }

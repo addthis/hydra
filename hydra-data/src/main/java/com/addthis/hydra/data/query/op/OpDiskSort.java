@@ -45,6 +45,9 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractRowOp;
 import com.addthis.muxy.MuxFile;
 import com.addthis.muxy.MuxFileDirectory;
+import com.addthis.muxy.MuxyEventListener;
+import com.addthis.muxy.MuxyFileEvent;
+import com.addthis.muxy.MuxyStreamEvent;
 
 import com.ning.compress.lzf.LZFInputStream;
 import com.ning.compress.lzf.LZFOutputStream;
@@ -60,7 +63,8 @@ import io.netty.channel.ChannelProgressivePromise;
  * <p>This query operation <span class="hydra-summary">performs a disk-backed sort</span>.
  * <p/>
  * <p>The syntax is dsort=[cols]:[type]:[direction]. [cols] is one or more columns
- * separated by commas. Type is a sequence of either "n" for numeric or "s" for string.
+ * separated by commas. Type is a sequence of
+ * ["i" or "l" or "n"] for integer number, ["d" or "f"] for floating point number, or "s" for string.
  * Direction is a sequence of either "a" for ascending or "d" for descending. The lengths
  * of [type] and [direction] must be equal to the number of column specified.
  * <p/>
@@ -88,6 +92,7 @@ public class OpDiskSort extends AbstractRowOp {
     private static final int CHUNK_ROWS = Parameter.intValue("op.disksort.chunk.rows", 5000);
     private static final int CHUNK_MERGES = Parameter.intValue("op.disksort.chunk.merges", 1000);
     private static final int GZTYPE = Parameter.intValue("op.disksort.gz.type", 0);
+    private static final MuxyEventListener DISCARDER = new SingleDirMuxyEventListener();
 
     private final Bundle[] buffer = new Bundle[CHUNK_ROWS + 1];
     private final BundleFactory factory = new ListBundle();
@@ -106,14 +111,21 @@ public class OpDiskSort extends AbstractRowOp {
     public OpDiskSort(String args, String tempDirString, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
         this.queryPromise = queryPromise;
-        init(args, tempDirString);
+        this.tempDir = Paths.get(tempDirString, String.valueOf(UUID.randomUUID()));
+        init(args);
     }
 
-    private void init(String args, String tempDirString) {
+    public OpDiskSort(String args, Path tempDir, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
+        this.queryPromise = queryPromise;
+        this.tempDir = tempDir.resolve(String.valueOf(UUID.randomUUID()));
+        init(args);
+    }
+
+    private void init(String args) {
         try {
-            tempDir = Paths.get(tempDirString, String.valueOf(UUID.randomUUID()));
             Files.createDirectories(tempDir);
-            mfm = new MuxFileDirectory(tempDir, null);
+            mfm = new MuxFileDirectory(tempDir, DISCARDER);
             mfm.setDeleteFreed(true);
             log.debug("tempDir={} mfm={}", tempDir, mfm);
         } catch (Exception ex) {
@@ -142,9 +154,6 @@ public class OpDiskSort extends AbstractRowOp {
     @Override
     public void close() throws IOException {
         cleanup();
-        if (getNext() != null) {
-            getNext().close();
-        }
     }
 
     private void cleanup() {
@@ -528,6 +537,24 @@ public class OpDiskSort extends AbstractRowOp {
                     return comp;
                 }
             }
+        }
+    }
+
+    private static class SingleDirMuxyEventListener implements MuxyEventListener {
+
+        @Override
+        public void streamEvent(MuxyStreamEvent event, Object target) {
+            // ignored
+        }
+
+        @Override
+        public void fileEvent(MuxyFileEvent event, Object target) {
+            // ignored
+        }
+
+        @Override
+        public void reportWrite(long bytes) {
+            // ignored
         }
     }
 }

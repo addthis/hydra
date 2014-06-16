@@ -17,10 +17,7 @@ package com.addthis.hydra.query.tracker;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.query.aggregate.DetailedStatusTask;
-
-import io.netty.channel.ChannelPromise;
-import io.netty.util.concurrent.Promise;
+import com.addthis.hydra.query.aggregate.TaskSourceInfo;
 
 public class QueryEntry {
 
@@ -30,17 +27,17 @@ public class QueryEntry {
     final int waitTime;
     final String queryDetails;
     final String[] opsLog;
-    final ChannelPromise queryPromise;
     final TrackerHandler trackerHandler;
 
     long runTime;
     long startTime;
 
-    QueryEntry(Query query, String[] opsLog, ChannelPromise queryPromise,
-            TrackerHandler trackerHandler) {
+    volatile TaskSourceInfo[] lastSourceInfo;
+    volatile QueryState queryState = QueryState.AGGREGATING;
+
+    QueryEntry(Query query, String[] opsLog, TrackerHandler trackerHandler) {
         this.query = query;
         this.opsLog = opsLog;
-        this.queryPromise = queryPromise;
         this.trackerHandler = trackerHandler;
         this.preOpLines = new AtomicInteger();
         this.postOpLines = new AtomicInteger();
@@ -63,7 +60,7 @@ public class QueryEntry {
     public QueryEntryInfo getStat() {
         QueryEntryInfo stat = new QueryEntryInfo();
         stat.paths = query.getPaths();
-        stat.uuid = query.uuid();
+        stat.uuid = query.queryId();
         stat.ops = opsLog;
         stat.job = query.getJob();
         stat.alias = query.getParameter("track.alias");
@@ -71,9 +68,11 @@ public class QueryEntry {
         stat.remoteip = query.getParameter("remoteip");
         stat.sender = query.getParameter("sender");
         stat.lines = preOpLines.get();
+        stat.sentLines = postOpLines.get();
         stat.runTime = getRunTime();
         stat.startTime = startTime;
-//        stat.tasks = hostInfoSet;
+        stat.tasks = lastSourceInfo;
+        stat.state = queryState;
         return stat;
     }
 
@@ -92,12 +91,19 @@ public class QueryEntry {
      */
     public boolean cancel() {
         // boolean parameter to cancel is ignored
-        return queryPromise.cancel(false);
+        boolean success = false;
+        success |= trackerHandler.queryPromise.cancel(false);
+        success |= trackerHandler.opPromise.cancel(false);
+        success |= trackerHandler.requestPromise.cancel(false);
+        return success;
     }
 
-    public void getDetailedQueryEntryInfo(Promise<QueryEntryInfo> promise) {
-        DetailedStatusTask task = new DetailedStatusTask(promise, this);
-        trackerHandler.submitDetailedStatusTask(task);
+    boolean tryFailure(Throwable cause) {
+        // boolean parameter to cancel is ignored
+        boolean success = false;
+        success |= trackerHandler.queryPromise.tryFailure(cause);
+        success |= trackerHandler.opPromise.tryFailure(cause);
+        success |= trackerHandler.requestPromise.tryFailure(cause);
+        return success;
     }
-
 }

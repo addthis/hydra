@@ -237,19 +237,7 @@ public class SpawnHttp extends AbstractHandler {
 
         public void sendShortReply(int code, String topic, String message) {
             KVPairs kv = getRequestValues();
-            String cbf = kv.getValue("cbfunc", kv.getValue("callback"));
-            String cbv = kv.getValue("cbfunc-arg");
             try {
-                if (cbf != null) {
-                    if (message == null || message.length() == 0) {
-                        message = "null";
-                    } else if (!(message.startsWith("{") || message.startsWith("["))) {
-                        message = new JSONObject().put("message", message).toString();
-                    }
-                    message = Strings.cat(cbf,"(",message,",\"",topic,"\"");
-                    if (cbv != null) message = Strings.cat(message,",",cbv);
-                    message = Strings.cat(message,");");
-                }
                 response.setStatus(code);
                 response.setHeader("Content-Type", "application/javascript");
                 response.setHeader("topic", topic);

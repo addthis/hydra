@@ -161,6 +161,18 @@ import io.netty.channel.ChannelProgressivePromise;
  * <td>1</td>
  * </tr>
  * <tr>
+ * <td>"tob" or "tobits"</td>
+ * <td>1</td>
+ * <td>convert floating point a to its bitwise long representation</td>
+ * <td>1</td>
+ * </tr>
+ * <tr>
+ * <td>"btof" or "btofloat"</td>
+ * <td>1</td>
+ * <td>convert the bitwise representation of long a to a floating-point value</td>
+ * <td>1</td>
+ * </tr>
+ * <tr>
  * <td>"out" or "shiftout"</td>
  * <td>1</td>
  * <td>append a to the end of the bundle</td>

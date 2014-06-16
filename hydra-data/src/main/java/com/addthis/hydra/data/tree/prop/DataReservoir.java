@@ -16,7 +16,9 @@ package com.addthis.hydra.data.tree.prop;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import java.math.RoundingMode;
 
@@ -34,6 +36,10 @@ import com.addthis.hydra.data.tree.TreeNodeData;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.math.DoubleMath;
+
+import org.apache.commons.math3.distribution.AbstractRealDistribution;
+import org.apache.commons.math3.distribution.ExponentialDistribution;
+import org.apache.commons.math3.distribution.NormalDistribution;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,8 +93,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
 
         @Override
         public DataReservoir newInstance() {
-            DataReservoir reservoir = new DataReservoir();
-            return reservoir;
+            return new DataReservoir();
         }
     }
 
@@ -114,7 +119,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * If the requested length is larger than the reservoir
      * then allocate additional space for the reservoir.
      *
-     * @param newsize
+     * @param newsize new size of the reservoir
      */
     private void resize(int newsize) {
         if (reservoir == null) {
@@ -141,12 +146,12 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * epoch. Otherwise shift the reservoir to accommodate the new
      * epoch.
      *
-     * @param epoch
+     * @param epoch new epoch to accommodate
      */
     private void shift(long epoch) {
         long delta = (epoch - minEpoch);
         if (delta < reservoir.length) {
-            return;
+            // do nothing
         } else if (delta > 2 * (reservoir.length - 1)) {
             Arrays.fill(reservoir, 0);
             minEpoch = epoch - (reservoir.length - 1);
@@ -162,12 +167,10 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * Insert the new epoch. Assumes that {@link #shift(long epoch)}
      * has previously been invoked.
      *
-     * @param epoch
+     * @param epoch new epoch to insert
      */
     private void update(long epoch, long count) {
-        if (epoch < minEpoch) {
-            return;
-        } else {
+        if (epoch >= minEpoch) {
             reservoir[(int) (epoch - minEpoch)] += count;
         }
     }
@@ -201,7 +204,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * Return the count associated with the input epoch,
      * or an error value if the input is out of bounds.
      *
-     * @param epoch
+     * @param epoch target epoch
      * @return the non-negative count or -1 if input is less
      *         than minimum epoch or -2 if input is greater
      *         than maximum epoch or -3 if the data structure
@@ -248,13 +251,42 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * Helper method for {@link #getNodes(com.addthis.hydra.data.tree.ReadNode, String)}
      * If raw=true then add nodes for the raw observations.
      */
-    private void addRawObservations(List<ReadNode> result) {
-        result.add(new VirtualTreeNode("minEpoch", minEpoch));
-        VirtualTreeNode[] children = new VirtualTreeNode[reservoir.length];
-        for(int i = 0 ; i < reservoir.length; i++) {
-            children[i] = new VirtualTreeNode(Long.toString(minEpoch + i),
-                    reservoir[i]);
+    private void addRawObservations(List<ReadNode> result, long targetEpoch, int numObservations) {
+
+        if (targetEpoch < 0 || targetEpoch >= minEpoch + reservoir.length) {
+            targetEpoch = minEpoch + reservoir.length - 1;
         }
+        if (numObservations < 0 || numObservations > reservoir.length - 1) {
+            numObservations = reservoir.length - 1;
+        }
+
+        int count = 0;
+        int index = reservoir.length - 1;
+        long currentEpoch = minEpoch + index;
+
+        while (currentEpoch != targetEpoch) {
+            index--;
+            currentEpoch--;
+        }
+
+        /**
+         * numObservations elements for the historical value.
+         * Add one element to store for the target epoch.
+         * Add one element to store the "minEpoch" node.
+         */
+        VirtualTreeNode[] children = new VirtualTreeNode[numObservations + 2];
+        children[count++] = new VirtualTreeNode(Long.toString(currentEpoch), reservoir[index--]);
+
+        while (count <= numObservations && index >= 0) {
+            children[count++] = new VirtualTreeNode(Long.toString(minEpoch + index), reservoir[index--]);
+        }
+
+        while (count <= numObservations) {
+            children[count++] = new VirtualTreeNode(Long.toString(minEpoch + index), 0);
+            index--;
+        }
+
+        children[count] = new VirtualTreeNode("minEpoch", minEpoch);
         result.add(new VirtualTreeNode("observations", 1, children));
     }
 
@@ -265,10 +297,10 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * @param raw if true then generate debugging nodes
      * @return list of nodes
      */
-    private List<ReadNode> makeDefaultNodes(boolean raw) {
+    private List<ReadNode> makeDefaultNodes(boolean raw, long targetEpoch, int numObservations) {
         if (raw) {
             List<ReadNode> result = new ArrayList<>();
-            addRawObservations(result);
+            addRawObservations(result, targetEpoch, numObservations);
             return result;
         } else {
             return EMPTY_LIST;
@@ -284,14 +316,24 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         return result;
     }
 
+    private static long generateValue(double value, boolean doubleToLongBits) {
+        if (doubleToLongBits) {
+            return Double.doubleToLongBits(value);
+        } else {
+            return DoubleMath.roundToLong(value, RoundingMode.HALF_UP);
+        }
+    }
+
     @Override
     public Collection<ReadNode> getNodes(ReadNode parent, String key) {
         long targetEpoch = -1;
         int numObservations = -1;
         double sigma = Double.POSITIVE_INFINITY;
-        int measurement;
+        int percentile = 0;
+        boolean doubleToLongBits = false;
         int minMeasurement = Integer.MIN_VALUE;
         boolean raw = false;
+        String mode = "sigma";
         if (key == null) {
             return null;
         }
@@ -302,6 +344,9 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
                 String kvkey = kv[0];
                 String kvvalue = kv[1];
                 switch (kvkey) {
+                    case "double":
+                        doubleToLongBits = Boolean.parseBoolean(kvvalue);
+                        break;
                     case "epoch":
                         targetEpoch = Long.parseLong(kvvalue);
                         break;
@@ -317,23 +362,205 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
                     case "raw":
                         raw = Boolean.parseBoolean(kvvalue);
                         break;
+                    case "percentile":
+                        percentile = Integer.parseInt(kvvalue);
+                        break;
+                    case "mode":
+                        mode = kvvalue;
+                        break;
+                    default:
+                        throw new RuntimeException("Unknown key " + kvkey);
                 }
             }
         }
-        if (targetEpoch == -1) {
-            return makeDefaultNodes(raw);
-        } else if (sigma == Double.POSITIVE_INFINITY) {
-            return makeDefaultNodes(raw);
-        } else if (numObservations == -1) {
-            return makeDefaultNodes(raw);
+        switch (mode) {
+            case "sigma":
+                return sigmaAnomalyDetection(targetEpoch, numObservations, doubleToLongBits, raw, sigma, minMeasurement);
+            case "modelfit":
+                return modelFitAnomalyDetection(targetEpoch, numObservations, doubleToLongBits, raw, percentile);
+            default:
+                throw new RuntimeException("Unknown mode type '" + mode + "'");
+        }
+    }
+
+    private static void updateFrequencies(Map<Integer,Integer> frequencies, int value) {
+        Integer count = frequencies.get(value);
+        if (count == null) {
+            count = 0;
+        }
+        frequencies.put(value, count + 1);
+    }
+
+    private static double gaussianNegativeProbability(double mean, double stddev) {
+        NormalDistribution distribution = new NormalDistribution(mean, stddev);
+        return distribution.cumulativeProbability(0.0);
+    }
+
+    @VisibleForTesting
+    List<ReadNode> modelFitAnomalyDetection(long targetEpoch, int numObservations,
+            boolean doubleToLongBits, boolean raw, int percentile) {
+        int measurement;
+        int count = 0;
+        int min = Integer.MAX_VALUE;
+
+        if (targetEpoch < 0) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
+        } else if (numObservations <= 0) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
         } else if (reservoir == null) {
-            return makeDefaultNodes(raw);
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
         } else if (targetEpoch < minEpoch) {
-            return makeDefaultNodes(raw);
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
         } else if (targetEpoch >= minEpoch + reservoir.length) {
-            return makeDefaultNodes(raw);
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
         } else if (numObservations > (reservoir.length - 1)) {
-            return makeDefaultNodes(raw);
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
+        }
+
+        /**
+         * Fitting to a geometric distribution uses the mean value of the sample.
+         *
+         * Fitting to a normal distribution uses the Apache Commons Math implementation.
+         */
+        double mean = 0.0;
+        double m2 = 0.0;
+        double stddev;
+        double gaussianNegative = -1.0;
+        Map<Integer,Integer> frequencies = new HashMap<>();
+        double threshold;
+        double badProbability = Double.NaN;
+        AbstractRealDistribution distribution = null;
+
+        int index = reservoir.length - 1;
+        long currentEpoch = minEpoch + index;
+
+        while (currentEpoch != targetEpoch) {
+            index--;
+            currentEpoch--;
+        }
+
+        measurement = reservoir[index--];
+        currentEpoch--;
+
+        while (count < numObservations && index >= 0) {
+            int value = reservoir[index--];
+            if (value < min) {
+                min = value;
+            }
+            updateFrequencies(frequencies, value);
+            count++;
+            double delta = value - mean;
+            mean += delta / count;
+            m2 += delta * (value - mean);
+        }
+
+        while (count < numObservations) {
+            int value = 0;
+            if (value < min) {
+                min = value;
+            }
+            updateFrequencies(frequencies, value);
+            count++;
+            double delta = value - mean;
+            mean += delta / count;
+            m2 += delta * (value - mean);
+        }
+
+        if (count < 2) {
+            stddev = 0.0;
+        } else {
+            stddev = Math.sqrt(m2 / count);
+        }
+
+        int mode = -1;
+        int modeCount = -1;
+
+        for(Map.Entry<Integer,Integer> entry : frequencies.entrySet()) {
+            int key = entry.getKey();
+            int value = entry.getValue();
+            if (value > modeCount || (value == modeCount && key > mode)) {
+                mode = key;
+                modeCount = value;
+            }
+        }
+
+        if (mean > 0.0 && stddev > 0.0) {
+            gaussianNegative = gaussianNegativeProbability(mean, stddev);
+        }
+
+        if (mean == 0.0) {
+            threshold = 0.0;
+        } else if (stddev == 0.0) {
+            threshold = mean;
+        } else if (mean > 1.0) {
+            distribution = new NormalDistribution(mean, stddev);
+            badProbability = distribution.cumulativeProbability(0.0);
+            double goodProbability = badProbability + (1.0 - badProbability) * (percentile / 100.0);
+            threshold = distribution.inverseCumulativeProbability(goodProbability);
+        } else {
+            distribution = new ExponentialDistribution(mean);
+            badProbability = distribution.cumulativeProbability(0.0);
+            double goodProbability = badProbability + (1.0 - badProbability) * (percentile / 100.0);
+            threshold = distribution.inverseCumulativeProbability(goodProbability);
+        }
+
+        List<ReadNode> result = new ArrayList<>();
+        VirtualTreeNode vchild, vparent;
+
+        if (measurement > threshold || percentile == 0.0) {
+            double measurePercentile;
+            if (distribution == null) {
+                measurePercentile = -1.0;
+            } else {
+                measurePercentile = distribution.probability(0.0, measurement) / (1.0 - badProbability);
+            }
+            measurePercentile *= 100.0;
+            vchild = new VirtualTreeNode("gaussianNegative",
+                    generateValue(gaussianNegative, doubleToLongBits));
+            vparent = new VirtualTreeNode("percentile",
+                    generateValue(measurePercentile, doubleToLongBits), generateSingletonArray(vchild));
+            vchild = vparent;
+            vparent = new VirtualTreeNode("mode", mode, generateSingletonArray(vchild));
+            vchild = vparent;
+            vparent = new VirtualTreeNode("stddev",
+                    generateValue(stddev, doubleToLongBits), generateSingletonArray(vchild));
+            vchild = vparent;
+            vparent = new VirtualTreeNode("mean",
+                    generateValue(mean, doubleToLongBits), generateSingletonArray(vchild));
+            vchild = vparent;
+            vparent = new VirtualTreeNode("measurement",
+                    measurement, generateSingletonArray(vchild));
+            vchild = vparent;
+            vparent = new VirtualTreeNode("delta",
+                    generateValue(measurement - threshold, doubleToLongBits), generateSingletonArray(vchild));
+            result.add(vparent);
+            if (raw) {
+                addRawObservations(result, targetEpoch, numObservations);
+            }
+        } else {
+            makeDefaultNodes(raw, targetEpoch, numObservations);
+        }
+        return result;
+    }
+
+    private List<ReadNode> sigmaAnomalyDetection(long targetEpoch, int numObservations, boolean doubleToLongBits, boolean raw, double sigma,
+            int minMeasurement) {
+
+        int measurement;
+        if (targetEpoch < 0) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
+        } else if (sigma == Double.POSITIVE_INFINITY) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
+        } else if (numObservations <= 0) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
+        } else if (reservoir == null) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
+        } else if (targetEpoch < minEpoch) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
+        } else if (targetEpoch >= minEpoch + reservoir.length) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
+        } else if (numObservations > (reservoir.length - 1)) {
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
         }
 
         int count = 0;
@@ -379,25 +606,25 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         if (delta >= 0 && measurement >= minMeasurement) {
             List<ReadNode> result = new ArrayList<>();
             vchild = new VirtualTreeNode("threshold",
-                    DoubleMath.roundToLong(sigma * stddev + mean, RoundingMode.HALF_UP));
+                    generateValue(sigma * stddev + mean, doubleToLongBits));
             vparent = new VirtualTreeNode("stddev",
-                    DoubleMath.roundToLong(stddev, RoundingMode.HALF_UP), generateSingletonArray(vchild));
+                    generateValue(stddev, doubleToLongBits), generateSingletonArray(vchild));
             vchild = vparent;
             vparent = new VirtualTreeNode("mean",
-                    DoubleMath.roundToLong(mean, RoundingMode.HALF_UP), generateSingletonArray(vchild));
+                    generateValue(mean, doubleToLongBits), generateSingletonArray(vchild));
             vchild = vparent;
             vparent = new VirtualTreeNode("measurement",
                     measurement, generateSingletonArray(vchild));
             vchild = vparent;
             vparent = new VirtualTreeNode("delta",
-                    DoubleMath.roundToLong(delta, RoundingMode.HALF_UP), generateSingletonArray(vchild));
+                    generateValue(delta, doubleToLongBits), generateSingletonArray(vchild));
             result.add(vparent);
             if (raw) {
-                addRawObservations(result);
+                addRawObservations(result, targetEpoch, numObservations);
             }
             return result;
         } else {
-            return makeDefaultNodes(raw);
+            return makeDefaultNodes(raw, targetEpoch, numObservations);
         }
     }
 
@@ -411,8 +638,8 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         try {
             Varint.writeUnsignedVarLong(minEpoch, byteBuf);
             Varint.writeUnsignedVarInt(reservoir.length, byteBuf);
-            for (int i = 0; i < reservoir.length; i++) {
-                Varint.writeUnsignedVarInt(reservoir[i], byteBuf);
+            for(int element : reservoir) {
+                Varint.writeUnsignedVarInt(element, byteBuf);
             }
             retBytes = new byte[byteBuf.readableBytes()];
             byteBuf.readBytes(retBytes);

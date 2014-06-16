@@ -25,85 +25,83 @@ import org.slf4j.LoggerFactory;
 import io.netty.channel.ChannelProgressivePromise;
 
 /**
- * <p>This query operation <span class="hydra-summary">limits the number of rows that are generated</span>.
+ * This query operation <span class="hydra-summary">limits the number of rows that are generated</span>.
  * <p/>
- * <p>There are two forms of this operation. "limit=N" limits the number of rows that
- * are emitted to N rows. "limit=N:M" skips over the first N rows and then limits the
- * number of rows that are emitted to M rows.</p>
+ * There are two forms of this operation. "sendCount=N" limits the number of rows that
+ * are emitted to N rows. "sendCount=M:N" skips over the first M rows and then limits the
+ * number of rows that are emitted to N rows.
  *
  * @user-reference
- * @hydra-name limit
+ * @hydra-name sendCount
  */
 public class OpLimit extends AbstractQueryOp {
 
-    private int limit;
-    private int originalLimit;
-    private int offset;
-    private boolean done;
     private static final Logger log = LoggerFactory.getLogger(OpLimit.class);
 
-    private ChannelProgressivePromise queryPromise = null;
+    /** used to ensure sendComplete is only called once; not needed in theory, but unclear */
+    private boolean done;
+    private int     sendCount;
+    private int     skipCount;
 
-    /**
-     * @param limit
-     */
-    public OpLimit(int limit, int offset, ChannelProgressivePromise queryPromise) {
+    private final int originalSkipCount;
+
+    public OpLimit(int sendCount, int skipCount, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
-        this.queryPromise = queryPromise;
-        setup(limit, offset);
+        this.originalSkipCount = sendCount;
+        this.skipCount = skipCount;
+        this.sendCount = sendCount;
+        if (originalSkipCount <= 0) {
+            throw new IllegalArgumentException("sendCount must be > 0");
+        }
     }
 
     public OpLimit(String args, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
-        this.queryPromise = queryPromise;
         String[] v = Strings.splitArray(args, ":");
         if (v.length == 1) {
-            setup(Integer.parseInt(v[0]), 0);
-        } else if (v.length > 1) {
-            setup(Integer.parseInt(v[1]), Integer.parseInt(v[0]));
+            this.originalSkipCount = Integer.parseInt(v[0]);
+            this.skipCount = 0;
+        } else if (v.length == 2) {
+            this.originalSkipCount = Integer.parseInt(v[1]);
+            this.skipCount = Integer.parseInt(v[0]);
+        } else {
+            throw new IllegalArgumentException("OpLimit requires [1,2] integer parameters");
         }
-    }
-
-    protected void setup(int limit, int offset) {
-        originalLimit = this.limit = limit;
-        this.offset = offset;
+        this.sendCount = originalSkipCount;
+        if (originalSkipCount <= 0) {
+            throw new IllegalArgumentException("sendCount must be > 0");
+        }
     }
 
     @Override
     public void send(Bundle row) throws DataChannelError {
-        if (queryPromise.isDone()) {
-            // Someone is attempting to send data even after we marked the query completed to true flag. This means
-            // they are doing work and sending us bundles. Throw an exception because that needs to be checked.
-            log.trace("Limit reached, sendComplete was called.");
+        // skipCount bundles until skipCount is reached
+        if (skipCount > 0) {
+            skipCount--;
             return;
         }
-
-        if (offset > 0) {
-            offset--;
-            return;
-        }
-        if (limit > 0) {
-            limit--;
+        // emit bundles until sendCount is reached
+        if (sendCount > 0) {
+            sendCount--;
             getNext().send(row);
-        }
-        if (limit == 0) {
-            sendComplete();
-            if (log.isDebugEnabled()) {
-                log.debug("OpLimit: limit reached " + originalLimit + " and sendComplete has been called");
+            // if we just emitted the last bundle, complete the operation
+            if (sendCount == 0) {
+                sendComplete();
+                opPromise.trySuccess(); // best-effort signal to parent op-processor and source
+                log.debug("OpLimit: sendCount reached {} and sendComplete has been called",
+                          originalSkipCount);
             }
-
-            // Set the queryCompleted to true. After this point, no one should be calling OpLimit.send again, since
-            // all sources should check the flag. If someone still calls send we will throw an exception at them. See
-            // the top of this function
-            queryPromise.trySuccess();
+        } else {
+            // TODO: signal to sender so they don't have to pro-actively check the promise
+            log.trace("received bundle after sendCount reached; possibly expected to some extent");
         }
     }
 
     @Override
     public void sendComplete() {
         if (!done) {
-            getNext().sendComplete();
             done = true;
+            getNext().sendComplete();
         }
     }
 }

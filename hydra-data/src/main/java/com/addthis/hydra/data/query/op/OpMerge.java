@@ -13,8 +13,6 @@
  */
 package com.addthis.hydra.data.query.op;
 
-import java.io.IOException;
-
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
@@ -128,12 +126,5 @@ public class OpMerge extends AbstractQueryOp {
             maybeSendLastRow();
         }
         next.sendComplete();
-    }
-
-    @Override
-    public void close() throws IOException {
-        if (getNext() != null) {
-            getNext().close();
-        }
     }
 }
