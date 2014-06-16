@@ -224,7 +224,11 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                         JSONObject entryJSON = CodecJSON.encodeJSON(queryEntryInfo);
                         writer.write(entryJSON.toString());
                     } else {
-                        throw new RuntimeException("could not find query");
+                        log.trace("could not find query for status");
+                        if (ctx.channel().isActive()) {
+                            sendError(ctx, new HttpResponseStatus(404, "could not find query"));
+                        }
+                        return;
                     }
                     break;
                 }
