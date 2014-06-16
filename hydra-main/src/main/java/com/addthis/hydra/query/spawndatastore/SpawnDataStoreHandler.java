@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package com.addthis.hydra.query.zookeeper;
+package com.addthis.hydra.query.spawndatastore;
 
 import java.io.IOException;
 
@@ -38,7 +38,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
-public class ZookeeperHandler {
+public class SpawnDataStoreHandler {
 
     /**
      * A ZooKeeper/Priam backed data structure that keeps track of
@@ -81,7 +81,7 @@ public class ZookeeperHandler {
                     }
             );
 
-    public ZookeeperHandler() throws Exception {
+    public SpawnDataStoreHandler() throws Exception {
         spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();
         this.jobConfigManager = new JobConfigManager(spawnDataStore);
         this.queryConfigWatcher = new QueryConfigWatcher(spawnDataStore);

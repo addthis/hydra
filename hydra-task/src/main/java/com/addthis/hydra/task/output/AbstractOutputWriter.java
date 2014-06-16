@@ -111,7 +111,7 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
      * longer than this many seconds
      */
     @Codec.Set(codable = true)
-    private int maxShutDownSeconds = 60;
+    private int maxShutDownSeconds = 240;
 
     @Codec.Set(codable = true)
     private boolean errorOnMaintenanceShutdownExceeded = true;

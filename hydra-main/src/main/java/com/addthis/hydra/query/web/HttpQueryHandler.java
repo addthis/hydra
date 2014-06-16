@@ -298,7 +298,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 StringWriter swriter = new StringWriter();
                 final JsonGenerator json = QueryServer.factory.createJsonGenerator(swriter);
                 json.writeStartArray();
-                for (IJob job : meshQueryMaster.keepy().getJobs()) {
+                for (IJob job : meshQueryMaster.getSpawnDataStoreHandler().getJobs()) {
                     if (job.getQueryConfig() != null && job.getQueryConfig().getCanQuery()) {
                         List<JobTask> tasks = job.getCopyOfTasks();
                         String uuid = job.getId();
