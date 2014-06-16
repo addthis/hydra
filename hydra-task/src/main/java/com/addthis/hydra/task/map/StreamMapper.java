@@ -318,7 +318,7 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         outputCountMetric.inc();
         processedMeterMetric.mark();
         totalEmit.incrementAndGet();
-        bundleTimeSum.addAndGet(getBundleTime(bundle) >> 8);
+        if (timeField != null) bundleTimeSum.addAndGet(getBundleTime(bundle) >> 8);
     }
 
     @Override
@@ -400,15 +400,13 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
     /* borrowed from TreeMapper.java */
     private long getBundleTime(Bundle bundle) {
         long bundleTime = JitterClock.globalTime();
-        if (timeField != null) {
-            ValueObject vo = bundle.getValue(bundle.getFormat().getField(timeField.getField()));
-            if (vo == null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("missing time " + timeField.getField() + " in [" + bundle.getCount() + "] --> " + bundle);
-                }
-            } else {
-                bundleTime = timeField.toUnix(vo);
+        ValueObject vo = bundle.getValue(bundle.getFormat().getField(timeField.getField()));
+        if (vo == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("missing time " + timeField.getField() + " in [" + bundle.getCount() + "] --> " + bundle);
             }
+        } else {
+            bundleTime = timeField.toUnix(vo);
         }
         return bundleTime;
     }
