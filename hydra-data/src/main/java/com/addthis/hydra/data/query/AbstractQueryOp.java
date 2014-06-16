@@ -34,17 +34,17 @@ import io.netty.channel.ChannelProgressivePromise;
 
 public abstract class AbstractQueryOp implements QueryOp {
 
-    public static final ValueLong ZERO = ValueFactory.create(0);
+    public static final ValueLong   ZERO         = ValueFactory.create(0);
     public static final ValueString EMPTY_STRING = ValueFactory.create("");
 
-    private QueryOp next;
-    private QueryMemTracker memTracker;
+    private QueryOp            next;
+    private QueryMemTracker    memTracker;
     private BundleColumnBinder sourceBinder;
 
-    private final ChannelProgressivePromise queryPromise;
+    protected final ChannelProgressivePromise opPromise;
 
-    protected AbstractQueryOp(ChannelProgressivePromise queryPromise) {
-        this.queryPromise = queryPromise;
+    protected AbstractQueryOp(ChannelProgressivePromise opPromise) {
+        this.opPromise = opPromise;
     }
 
     public BundleColumnBinder getSourceColumnBinder(BundleFormatted row) {
@@ -60,16 +60,13 @@ public abstract class AbstractQueryOp implements QueryOp {
 
     @Override
     public void close() throws IOException {
-        // next should be null at the output, which is an instance of ResultChannelOutput
-        if (next != null) {
-            next.close();
-        }
+        // sub-classes should implement for any clean-up they need
     }
 
     @Override
     public void sendTable(DataTable table) {
         for (Bundle row : table) {
-            if (queryPromise.isDone()) {
+            if (opPromise.isDone()) {
                 break;
             } else {
                 send(row);

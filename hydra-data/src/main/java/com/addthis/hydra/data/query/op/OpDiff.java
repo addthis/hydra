@@ -21,7 +21,6 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.hydra.data.query.AbstractTableOp;
-import com.addthis.hydra.data.query.QueryOpProcessor;
 
 import io.netty.channel.ChannelProgressivePromise;
 
@@ -82,7 +81,7 @@ public class OpDiff extends AbstractTableOp {
         }
     }
 
-    public OpDiff(QueryOpProcessor processor, ColumnType[] type, ChannelProgressivePromise queryPromise) {
+    public OpDiff(DataTableFactory processor, ColumnType[] type, ChannelProgressivePromise queryPromise) {
         super(processor, queryPromise);
         this.type = type;
     }

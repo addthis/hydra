@@ -11,22 +11,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.query;
+package com.addthis.hydra.query.aggregate;
 
+import com.addthis.hydra.data.query.FramedDataChannelReader;
 
-import com.addthis.bundle.table.DataTable;
-import com.addthis.bundle.table.DataTableFactory;
+public class TaskChannelReader extends FramedDataChannelReader {
 
-import io.netty.channel.ChannelProgressivePromise;
+    final QueryTaskSourceOption sourceOption;
 
-public class ResultAccumulator extends AbstractTableOp {
-
-    public ResultAccumulator(DataTableFactory processor, ChannelProgressivePromise queryPromise) {
-        super(processor, queryPromise);
-    }
-
-    @Override
-    public DataTable tableOp(DataTable result) {
-        return result;
+    public TaskChannelReader(QueryTaskSourceOption taskSourceOption) {
+        super(taskSourceOption.sourceInputStream, AggregateConfig.FRAME_READER_POLL);
+        sourceOption = taskSourceOption;
     }
 }

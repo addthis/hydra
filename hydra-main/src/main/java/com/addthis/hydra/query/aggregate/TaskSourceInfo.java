@@ -33,7 +33,9 @@ public class TaskSourceInfo implements Codec.Codable {
         endTime  = taskSource.endTime;
         options  = new TaskSourceOptionInfo[taskSource.options.length];
         for (int i = 0; i < taskSource.options.length; i++) {
-            options[i] = new TaskSourceOptionInfo(taskSource.options[i]);
+            boolean selected = (taskSource.dataChannelReader != null) &&
+                (taskSource.dataChannelReader.sourceOption == taskSource.options[i]);
+            options[i] = new TaskSourceOptionInfo(taskSource.options[i], selected);
         }
     }
 

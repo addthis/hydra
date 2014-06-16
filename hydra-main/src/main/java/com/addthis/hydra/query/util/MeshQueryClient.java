@@ -65,7 +65,7 @@ public class MeshQueryClient {
         options.put("path", queryPath);
         options.put("ops", queryOps);
         try {
-            return new FramedDataChannelReader(meshyClient.readFile(fileReference.getHostUUID(), fileReference.name, options), fileReference.name, 0);
+            return new FramedDataChannelReader(meshyClient.readFile(fileReference.getHostUUID(), fileReference.name, options), 0);
         } catch (IOException e) {
             throw new DataChannelError(e);
         }

@@ -22,9 +22,12 @@ public class TaskSourceOptionInfo implements Codec.Codable {
     public final String hostUuid;
     @Codec.Set(codable = true)
     public final boolean active;
+    @Codec.Set(codable = true)
+    public final boolean selected;
 
-    public TaskSourceOptionInfo(QueryTaskSourceOption option) {
-        hostUuid = option.queryReference.getHostUUID();
-        active   = option.isActive();
+    public TaskSourceOptionInfo(QueryTaskSourceOption option, boolean selected) {
+        this.hostUuid = option.queryReference.getHostUUID();
+        this.active   = option.isActive();
+        this.selected = selected;
     }
 }

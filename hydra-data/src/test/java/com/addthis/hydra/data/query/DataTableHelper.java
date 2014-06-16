@@ -48,7 +48,7 @@ public class DataTableHelper implements DataTable {
     public DataTableHelper(int sizeHint, File tempDir, int rowTip) {
         // TODO BROKEN
         result = new QueryOpProcessor.Builder(null, null)
-                .rowTip(rowTip).tempDir(tempDir).build().createTable(sizeHint);
+                .rowTip(rowTip).tempDir(tempDir).build().tableFactory().createTable(sizeHint);
     }
 
     public DataTableHelper td(long val) {

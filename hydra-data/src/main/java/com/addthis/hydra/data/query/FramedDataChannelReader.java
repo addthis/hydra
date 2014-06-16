@@ -30,30 +30,35 @@ import com.addthis.meshy.service.stream.SourceInputStream;
 
 public class FramedDataChannelReader extends DataChannelReader {
 
-    public AtomicBoolean eof = new AtomicBoolean(false);
-    public boolean busy;
-    private DataChannelError err;
-    private final SourceInputStream in;
-    public final String fileReferenceName;
-    private final DataChannelCodec.ClassIndexMap classMap;
-    private final DataChannelCodec.FieldIndexMap fieldMap;
-    private ByteArrayInputStream bis;
-    private final int pollWaitTime;
-
     public static final int FRAME_MORE = 0;
     public static final int FRAME_EOF = 1;
     public static final int FRAME_ERROR = 2;
     public static final int FRAME_BUSY = 3;
 
-    public FramedDataChannelReader(final SourceInputStream in, String fileReferenceName, int pollWaitTime) {
-        this(in, fileReferenceName, DataChannelCodec.createClassIndexMap(), DataChannelCodec.createFieldIndexMap(), pollWaitTime);
+    private final int pollWaitTime;
+
+    public AtomicBoolean eof = new AtomicBoolean(false);
+    public boolean busy;
+
+    private final SourceInputStream in;
+    private final DataChannelCodec.ClassIndexMap classMap;
+    private final DataChannelCodec.FieldIndexMap fieldMap;
+
+    private ByteArrayInputStream bis;
+    private DataChannelError err;
+
+    public FramedDataChannelReader(SourceInputStream in,
+                                   int pollWaitTime) {
+        this(in, DataChannelCodec.createClassIndexMap(),
+             DataChannelCodec.createFieldIndexMap(), pollWaitTime);
     }
 
-    public FramedDataChannelReader(final SourceInputStream in, String fileReferenceName,
-            DataChannelCodec.ClassIndexMap classMap, DataChannelCodec.FieldIndexMap fieldMap, int pollWaitTime) {
+    public FramedDataChannelReader(final SourceInputStream in,
+                                   DataChannelCodec.ClassIndexMap classMap,
+                                   DataChannelCodec.FieldIndexMap fieldMap,
+                                   int pollWaitTime) {
         super(new ListBundle(), in);
         this.in = in;
-        this.fileReferenceName = fileReferenceName;
         this.classMap = classMap;
         this.fieldMap = fieldMap;
         this.pollWaitTime = pollWaitTime;

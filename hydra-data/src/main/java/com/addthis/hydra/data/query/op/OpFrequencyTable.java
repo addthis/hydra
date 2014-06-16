@@ -24,11 +24,11 @@ import com.addthis.basis.util.Strings;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.table.DataTable;
+import com.addthis.bundle.table.DataTableFactory;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.hydra.data.query.AbstractTableOp;
-import com.addthis.hydra.data.query.QueryOpProcessor;
 
 import com.google.common.base.Objects;
 
@@ -47,7 +47,7 @@ public class OpFrequencyTable extends AbstractTableOp {
     private boolean appendTotal = false;
 
     // foo=0,1,2,3:4,5:0.99,p12
-    public OpFrequencyTable(QueryOpProcessor processor, String args, ChannelProgressivePromise queryPromise) {
+    public OpFrequencyTable(DataTableFactory processor, String args, ChannelProgressivePromise queryPromise) {
         super(processor, queryPromise);
         String[] tuple = Strings.splitArray(args, ":");
         cols = Strings.splitArray(tuple[0], ",");

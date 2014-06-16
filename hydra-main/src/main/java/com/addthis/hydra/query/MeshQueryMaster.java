@@ -37,7 +37,7 @@ import com.addthis.hydra.query.loadbalance.WorkerData;
 import com.addthis.hydra.query.loadbalance.WorkerTracker;
 import com.addthis.hydra.query.tracker.QueryTracker;
 import com.addthis.hydra.query.tracker.TrackerHandler;
-import com.addthis.hydra.query.zookeeper.ZookeeperHandler;
+import com.addthis.hydra.query.spawndatastore.SpawnDataStoreHandler;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
 
@@ -73,9 +73,9 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
     private final MeshyServer meshy;
 
     /**
-     * Abstracts away zookeeper reliant functions
+     * Abstracts away spawndatastore-reliant functions
      */
-    private final ZookeeperHandler keepy;
+    private final SpawnDataStoreHandler spawnDataStoreHandler;
 
     /**
      * Mesh FileRef Cache -- backed by a loading cache
@@ -105,9 +105,9 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         }
 
         if (enableZooKeeper) {
-            keepy = new ZookeeperHandler();
+            spawnDataStoreHandler = new SpawnDataStoreHandler();
         } else {
-            keepy = null;
+            spawnDataStoreHandler = null;
         }
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -117,8 +117,8 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         });
     }
 
-    public ZookeeperHandler keepy() {
-        return keepy;
+    public SpawnDataStoreHandler getSpawnDataStoreHandler() {
+        return spawnDataStoreHandler;
     }
 
     public DefaultTaskAllocators allocators() {
@@ -135,8 +135,8 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
 
     protected void shutdown() {
         try {
-            if (keepy != null) {
-                keepy.close();
+            if (spawnDataStoreHandler != null) {
+                spawnDataStoreHandler.close();
             }
             meshy.close();
         } catch (Exception e) {
@@ -176,9 +176,9 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         // TODO: fix this pipeline interface
         Query remoteQuery = query.createPipelinedQuery();
 
-        if (keepy != null) {
-            keepy.resolveAlias(query);
-            keepy.validateJobForQuery(query);
+        if (spawnDataStoreHandler != null) {
+            spawnDataStoreHandler.resolveAlias(query);
+            spawnDataStoreHandler.validateJobForQuery(query);
         }
 
         Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap;
@@ -194,8 +194,8 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
 
         int canonicalTasks = 0;
 
-        if (keepy != null) {
-            canonicalTasks = keepy.validateTaskCount(query, fileReferenceMap);
+        if (spawnDataStoreHandler != null) {
+            canonicalTasks = spawnDataStoreHandler.validateTaskCount(query, fileReferenceMap);
         } else {
             for (Integer taskId : fileReferenceMap.keySet()) {
                 if (taskId > canonicalTasks) {

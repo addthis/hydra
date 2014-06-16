@@ -26,7 +26,6 @@ import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractBufferOp;
-import com.addthis.hydra.data.query.QueryOpProcessor;
 
 import io.netty.channel.ChannelProgressivePromise;
 
@@ -55,11 +54,7 @@ public class OpDePivot extends AbstractBufferOp {
     private final BundleField valField;
     private final BundleField sumField;
 
-    public OpDePivot(QueryOpProcessor processor, ChannelProgressivePromise queryPromise) {
-        this(processor, null, queryPromise);
-    }
-
-    public OpDePivot(QueryOpProcessor processor, String args, ChannelProgressivePromise queryPromise) {
+    public OpDePivot(String args, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
         if (args != null && args.length() > 0) {
             String[] ops = Strings.splitArray(args, ",");
