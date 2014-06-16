@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.query.zookeeper;
+package com.addthis.hydra.query.spawndatastore;
 
 import javax.annotation.concurrent.ThreadSafe;
 

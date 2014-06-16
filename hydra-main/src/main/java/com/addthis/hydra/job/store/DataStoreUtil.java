@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.query.zookeeper.AliasBiMap;
+import com.addthis.hydra.query.spawndatastore.AliasBiMap;
 
 import com.google.common.collect.Lists;
 

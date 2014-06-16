@@ -94,7 +94,7 @@ import com.addthis.hydra.job.spawn.SpawnService;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
-import com.addthis.hydra.query.zookeeper.AliasBiMap;
+import com.addthis.hydra.query.spawndatastore.AliasBiMap;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.hydra.util.EmailUtil;
