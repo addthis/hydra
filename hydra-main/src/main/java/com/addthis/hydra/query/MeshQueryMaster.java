@@ -53,12 +53,17 @@ import io.netty.channel.ChannelPromise;
 public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
 
     private static final Logger log = LoggerFactory.getLogger(MeshQueryMaster.class);
-    private static final String tempDir = Parameter.value("query.tmpdir", "query.tmpdir");
-    private static final int meshPort = Parameter.intValue("qmaster.mesh.port", 5100);
-    private static final String meshRoot = Parameter.value("qmaster.mesh.root", "/home/hydra");
+
+    private static final String tempDir   = Parameter.value("query.tmpdir", "query.tmpdir");
+    private static final int    meshPort  = Parameter.intValue("qmaster.mesh.port", 5100);
+    private static final String meshRoot  = Parameter.value("qmaster.mesh.root", "/home/hydra");
     private static final String meshPeers = Parameter.value("qmaster.mesh.peers", "localhost");
-    private static final int meshPeerPort = Parameter.intValue("qmaster.mesh.peer.port", 5101);
-    private static final boolean enableZooKeeper = Parameter.boolValue("qmaster.enableZooKeeper", true);
+    private static final int     meshPeerPort = Parameter.intValue("qmaster.mesh.peer.port", 5101);
+    private static final boolean enableZooKeeper =
+            Parameter.boolValue("qmaster.enableZooKeeper", true);
+
+    private static final QueryTaskSource EMPTY_TASK_SOURCE =
+            new QueryTaskSource(new QueryTaskSourceOption[0]);
 
     /**
      * used for tracking metrics and other interesting things about queries
@@ -209,16 +214,20 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         QueryTaskSource[] sourcesByTaskID = new QueryTaskSource[canonicalTasks];
         for (int i = 0; i < canonicalTasks; i++) {
             Set<FileReferenceWrapper> sourceOptions = fileReferenceMap.get(i);
-            QueryTaskSourceOption[] taskSourceOptions = new QueryTaskSourceOption[sourceOptions.size()];
-            int taskSourceOptionsIndex = 0;
-            for (FileReferenceWrapper wrapper : sourceOptions) {
-                FileReference queryReference = wrapper.fileReference;
-                WorkerData workerData = worky.get(queryReference.getHostUUID());
-                taskSourceOptions[taskSourceOptionsIndex] =
-                        new QueryTaskSourceOption(queryReference, workerData.queryLeases);
-                taskSourceOptionsIndex += 1;
+            if (sourceOptions != null) {
+                QueryTaskSourceOption[] taskSourceOptions = new QueryTaskSourceOption[sourceOptions.size()];
+                int taskSourceOptionsIndex = 0;
+                for (FileReferenceWrapper wrapper : sourceOptions) {
+                    FileReference queryReference = wrapper.fileReference;
+                    WorkerData workerData = worky.get(queryReference.getHostUUID());
+                    taskSourceOptions[taskSourceOptionsIndex] =
+                            new QueryTaskSourceOption(queryReference, workerData.queryLeases);
+                    taskSourceOptionsIndex += 1;
+                }
+                sourcesByTaskID[i] = new QueryTaskSource(taskSourceOptions);
+            } else {
+                sourcesByTaskID[i] = EMPTY_TASK_SOURCE;
             }
-            sourcesByTaskID[i] = new QueryTaskSource(taskSourceOptions);
         }
 
         MeshSourceAggregator aggregator = new MeshSourceAggregator(sourcesByTaskID, meshy, this, remoteQuery);
