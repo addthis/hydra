@@ -326,7 +326,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         long targetEpoch = -1;
         int numObservations = -1;
         double sigma = Double.POSITIVE_INFINITY;
-        int percentile = 0;
+        double percentile = 0;
         boolean doubleToLongBits = false;
         int minMeasurement = Integer.MIN_VALUE;
         boolean raw = false;
@@ -360,7 +360,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
                         raw = Boolean.parseBoolean(kvvalue);
                         break;
                     case "percentile":
-                        percentile = Integer.parseInt(kvvalue);
+                        percentile = Double.parseDouble(kvvalue);
                         break;
                     case "mode":
                         mode = kvvalue;
@@ -395,7 +395,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
 
     @VisibleForTesting
     List<DataTreeNode> modelFitAnomalyDetection(long targetEpoch, int numObservations,
-            boolean doubleToLongBits, boolean raw, int percentile) {
+            boolean doubleToLongBits, boolean raw, double percentile) {
         int measurement;
         int count = 0;
         int min = Integer.MAX_VALUE;
