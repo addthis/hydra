@@ -10,3 +10,4 @@
 "printbundles", com.addthis.hydra.task.util.BundleStreamPeeker
 "mesh", com.addthis.meshy.Main
 "testPlugins", com.addthis.hydra.common.plugins.TestPlugins
+"zookeeper", org.apache.zookeeper.server.quorum.QuorumPeerMain
