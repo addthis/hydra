@@ -13,7 +13,6 @@
  */
 package com.addthis.hydra.job;
 
-import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.mq.JobKey;
 
 /**
@@ -24,16 +23,14 @@ public class JobTaskMoveAssignment {
     private final JobKey jobKey;
     private final String sourceUUID;
     private final String targetUUID;
-    private final boolean promote;
     private final boolean delete;
     private final boolean fromReplica;
 
-    public JobTaskMoveAssignment(JobKey jobKey, String sourceUUID, String targetUUID, boolean fromReplica, boolean promote, boolean delete) {
+    public JobTaskMoveAssignment(JobKey jobKey, String sourceUUID, String targetUUID, boolean fromReplica, boolean delete) {
         this.jobKey = jobKey;
         this.sourceUUID = sourceUUID;
         this.targetUUID = targetUUID;
         this.fromReplica = fromReplica;
-        this.promote = promote;
         this.delete = delete;
     }
 
@@ -51,10 +48,6 @@ public class JobTaskMoveAssignment {
 
     public boolean isFromReplica() {
         return fromReplica;
-    }
-
-    public boolean promote() {
-        return promote;
     }
 
     public boolean delete() {

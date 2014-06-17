@@ -382,7 +382,7 @@ public class SpawnBalancer implements Codec.Codable {
                     continue;
                 }
                 if (!alreadyMoved.contains(jobKey) && pullHost != null && tasksByHost.moveTask(nextTaskItem, pushHost, pullHost)) {
-                    rv.add(new JobTaskMoveAssignment(nextTaskItem.getTask().getJobKey(), pushHost, pullHost, false, false, false));
+                    rv.add(new JobTaskMoveAssignment(nextTaskItem.getTask().getJobKey(), pushHost, pullHost, false, false));
                     alreadyMoved.add(nextTaskItem.getTask().getJobKey());
                     maxBytesToMove -= trueSizeBytes;
                 }
@@ -426,7 +426,7 @@ public class SpawnBalancer implements Codec.Codable {
                     continue;
                 }
                 if (!alreadyMoved.contains(jobKey) && tasksByHost.moveTask(item, pushHost, pullHost)) {
-                    rv.add(new JobTaskMoveAssignment(item.getTask().getJobKey(), pushHost, pullHost, false, false, false));
+                    rv.add(new JobTaskMoveAssignment(item.getTask().getJobKey(), pushHost, pullHost, false, false));
                     alreadyMoved.add(item.getTask().getJobKey());
                     maxBytesToMove -= trueSizeBytes;
                 }
@@ -727,7 +727,7 @@ public class SpawnBalancer implements Codec.Codable {
         List<JobTaskMoveAssignment> rv = new ArrayList<>();
         for (JobKey key : host.allJobKeys()) {
             if (spawn.getJob(key) == null) {
-                rv.add(new JobTaskMoveAssignment(key, host.getHostUuid(), null, false, false, true));
+                rv.add(new JobTaskMoveAssignment(key, host.getHostUuid(), null, false, true));
             }
             if (rv.size() >= deleteLimit) {
                 break;
@@ -757,7 +757,7 @@ public class SpawnBalancer implements Codec.Codable {
         boolean live = task.getHostUUID().equals(fromHostId);
         if (!live && !task.hasReplicaOnHost(fromHostId)) {
             // Task was found somewhere it didn't belong
-            return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, null, false, false, true);
+            return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, null, false, true);
         }
         while (hostStateIterator.hasNext()) {
             HostState next = hostStateIterator.next();
@@ -765,7 +765,7 @@ public class SpawnBalancer implements Codec.Codable {
             if (!taskHost.equals(nextId) && !task.hasReplicaOnHost(nextId) && next.canMirrorTasks() && okToPutReplicaOnHost(next, task)) {
                 hostStateIterator.remove();
                 otherHosts.add(next);
-                return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, nextId, !live, false, false);
+                return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, nextId, !live, false);
             }
         }
         return null;

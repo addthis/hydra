@@ -1236,32 +1236,24 @@ public class Spawn implements Codec.Codable {
                     log.warn("[job.reallocate] received invalid host assignment: from " + sourceHostID + " to " + targetHostID);
                     continue;
                 }
-                JobTask task = getTask(assignment.getJobKey());
-                Job job = getJob(task.getJobUUID());
-                if (job == null || job.getCopyOfTasks() == null || job.getCopyOfTasks().isEmpty()) {
-                    log.warn("[job.reallocate] invalid or empty job");
-                    continue;
+                JobKey key = assignment.getJobKey();
+                JobTask task = getTask(key);
+                Job job = getJob(key);
+                if (job == null || task == null) {
+                    log.warn("[job.reallocate] invalid job or task");
+                    // Continue with the next assignment
                 }
-                if (assignment.promote()) {
-                    log.warn("[job.reallocate] promoting " + task.getJobKey() + " on " + sourceHostID);
-                    task.setHostUUID(sourceHostID);
-                    List<JobTaskReplica> replicasToModify = targetHost.isReadOnly() ? task.getReadOnlyReplicas() : task.getReplicas();
-                    removeReplicasForHost(sourceHostID, replicasToModify);
-                    replicasToModify.add(new JobTaskReplica(targetHostID, task.getJobUUID(), task.getRunCount(), 0l));
-                    swapTask(task, sourceHostID, false);
-                    jobsNeedingUpdate.add(task.getJobUUID());
-                    executedAssignments.addAll(assignments);
-                } else {
+                else {
                     HostState liveHost = getHostState(task.getHostUUID());
                     if (limitToAvailableSlots && liveHost != null && (liveHost.getAvailableTaskSlots() == 0 || hostsAlreadyMovingTasks.contains(task.getHostUUID()))) {
                         continue;
                     }
-                    hostsAlreadyMovingTasks.add(task.getHostUUID());
-                    JobKey key = task.getJobKey();
                     log.warn("[job.reallocate] replicating task " + key + " onto " + targetHostID + " as " + (assignment.isFromReplica() ? "replica" : "live"));
                     TaskMover tm = new TaskMover(this, key, targetHostID, sourceHostID);
-                    tm.execute();
-                    executedAssignments.add(assignment);
+                    if (tm.execute()) {
+                        hostsAlreadyMovingTasks.add(task.getHostUUID());
+                        executedAssignments.add(assignment);
+                    }
                 }
             }
         }
@@ -1598,6 +1590,7 @@ public class Spawn implements Codec.Codable {
             HostState liveHost = spawn.getHostState(task.getHostUUID());
             if (liveHost == null || !liveHost.hasLive(task.getJobKey())) {
                 log.warn("[task.mover] failed to find live task for: " + taskKey);
+                fixTaskDir(taskKey.getJobUuid(), taskKey.getNodeNumber(), false, false);
                 return false;
             }
             if (!task.getHostUUID().equals(sourceHostUUID) && !task.hasReplicaOnHost(sourceHostUUID)) {
