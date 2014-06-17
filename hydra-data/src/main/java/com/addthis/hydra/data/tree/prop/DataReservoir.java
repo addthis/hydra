@@ -490,10 +490,8 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
             threshold = mean;
         } else if (mean > 1.0) {
             NormalDistribution distribution = new NormalDistribution(mean, stddev);
-            double badProbability = distribution.cumulativeProbability(0.0);
-            double goodProbability = badProbability + (1.0 - badProbability) * (percentile / 100.0);
-            threshold = distribution.inverseCumulativeProbability(goodProbability);
-            measurePercentile = distribution.probability(0.0, measurement) / (1.0 - badProbability) * 100.0;
+            threshold = distribution.inverseCumulativeProbability(percentile / 100.0);
+            measurePercentile = distribution.cumulativeProbability(measurement) * 100.0;
         } else {
             double p = 1.0 / (1.0 + mean);
             GeometricDistribution distribution = new GeometricDistribution(p);
