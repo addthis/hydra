@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.job.store;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
@@ -67,8 +68,9 @@ public class DataStoreUtil {
     private static final int sqlPort = Parameter.intValue("spawn.sql.port", 3306);
 
     private static final String markCutoverCompleteKey = "/spawndatastore.cutover.complete";
+    private static final String fsDataStoreFileRoot = Parameter.value("spawn.datastore.fs.dir", "etc/datastore");
 
-    public static enum DataStoreType {ZK, MYSQL}
+    public static enum DataStoreType {ZK, MYSQL, FS}
 
     /**
      * Create the canonical SpawnDataStore based on the system parameters
@@ -105,6 +107,7 @@ public class DataStoreUtil {
             properties.put("password", sqlPassword);
         }
         switch (type) {
+            case FS: return new FilesystemDataStore(new File(fsDataStoreFileRoot));
             case ZK: return new ZookeeperDataStore(null);
             case MYSQL:
                 String url = "jdbc:mysql:thin://" + sqlHostName + ":" + sqlPort + "/";
