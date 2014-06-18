@@ -323,8 +323,12 @@ public class Spawn implements Codec.Codable {
     }
 
     private Spawn(File dataDir, File webDir) throws Exception {
-        getSettings().setQuiesced(quiesce);
         this.dataDir = Files.initDirectory(dataDir);
+        File statefile = new File(dataDir, stateFilePath);
+        if (statefile.exists() && statefile.isFile()) {
+            codec.decode(this, Files.read(statefile));
+        }
+        getSettings().setQuiesced(quiesce);
         this.monitored = new ConcurrentHashMap<>();
         this.listeners = new ConcurrentHashMap<>();
         this.spawnFormattedLogger = useStructuredLogger ?
@@ -332,10 +336,6 @@ public class Spawn implements Codec.Codable {
                                     SpawnFormattedLogger.createNullLogger();
         this.zkClient = ZkUtil.makeStandardClient();
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
-        File statefile = new File(dataDir, stateFilePath);
-        if (statefile.exists() && statefile.isFile()) {
-            codec.decode(this, Files.read(statefile));
-        }
         this.queryHost = (queryHttpHost != null ? queryHttpHost : InetAddress.getLocalHost().getHostAddress()) + ":" + queryPort;
         this.spawnHost = (httpHost != null ? httpHost : InetAddress.getLocalHost().getHostAddress()) + ":" + webPort;
         if (uuid == null) {
@@ -427,8 +427,7 @@ public class Spawn implements Codec.Codable {
 
     private void writeState() {
         try {
-            File statefile = new File(dataDir, stateFilePath);
-            Files.write(statefile, codec.encode(this), false);
+            Files.write(new File(dataDir, stateFilePath), codec.encode(this), false);
         } catch (Exception e) {
             log.warn("WARNING: failed to write spawn state to log file at " + stateFilePath);
         }
