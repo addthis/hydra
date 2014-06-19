@@ -136,10 +136,15 @@ public class JobAlertUtil {
         return result;
     }
 
-    public static boolean[] evaluateQueryWithFilter(String jobId, String query, String ops, String rops, String filter) {
+    public static boolean[] evaluateQueryWithFilter(JobAlert alert, String jobId) {
+        String query = alert.getCanaryPath();
+        String ops = alert.getCanaryOps();
+        String rops = alert.getCanaryRops();
+        String filter = alert.getCanaryFilter();
         String url = getQueryURL(jobId, query, ops, rops);
         log.trace("Emitting query with url {}", url);
         JSONArray array = JSONFetcher.staticLoadJSONArray(url, alertQueryTimeout, alertQueryRetries);
+        alert.appendCanaryOutputMessage(array.toString() + "\n");
         boolean valid = true;
         /**
          * Test the following conditions:
@@ -166,6 +171,7 @@ public class JobAlertUtil {
         try {
             bFilter = CodecJSON.decodeObject(BundleFilter.class, new JSONObject(filter));
         } catch (Exception ex) {
+            alert.appendCanaryOutputMessage("Error attempting to create bundle filter: " + ex + "\n");
             log.error("Error attempting to create bundle filter {}", ex);
             valid = false;
         }

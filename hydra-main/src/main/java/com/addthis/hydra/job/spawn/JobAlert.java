@@ -74,6 +74,7 @@ public class JobAlert implements Codec.Codable {
     @Codec.Set(codable = true)
     private String description;
 
+    private String canaryOutputMessage;
 
     /* For alerts tracking multiple jobs, this variable marks if the set of active jobs has changed since the last alert check */
     private boolean hasChanged = false;
@@ -227,6 +228,16 @@ public class JobAlert implements Codec.Codable {
         this.canaryConfigThreshold = canaryConfigThreshold;
     }
 
+    public String getCanaryOutputMessage() {
+        return canaryOutputMessage;
+    }
+
+    public void appendCanaryOutputMessage(String canaryOutputMessage) {
+        this.canaryOutputMessage += canaryOutputMessage;
+    }
+
+
+
     public JSONObject toJSON() throws Exception {
         JSONObject rv = CodecJSON.encodeJSON(this);
         if (jobIds != null) {
@@ -336,8 +347,8 @@ public class JobAlert implements Codec.Codable {
             return false;
         }
         try {
-            boolean[] result = JobAlertUtil.evaluateQueryWithFilter(job.getId(),
-                    canaryPath, canaryOps, canaryRops, canaryFilter);
+            canaryOutputMessage = "";
+            boolean[] result = JobAlertUtil.evaluateQueryWithFilter(this, job.getId());
             boolean failure = false;
             for(int i = 0; i < result.length; i++) {
                 failure = failure || !result[i];
@@ -345,6 +356,7 @@ public class JobAlert implements Codec.Codable {
             return failure;
         } catch (Exception ex) {
             log.warn("Exception during canary check: ", ex);
+            canaryOutputMessage += ex.toString() + "\n";
             return false;
         }
     }

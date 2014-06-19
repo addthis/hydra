@@ -28,6 +28,7 @@ import java.text.SimpleDateFormat;
 
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
+import com.addthis.basis.util.Strings;
 
 import com.addthis.codec.CodecJSON;
 import com.addthis.hydra.job.*;
@@ -240,8 +241,12 @@ public class JobAlertRunner {
             sb.append(summary(spawn.getJob(jobId)) + "\n");
         }
         String description = jobAlert.getDescription();
-        if (description != null) {
-            sb.append("Alert Description : " + description);
+        String canaryOutputMessage = jobAlert.getCanaryOutputMessage();
+        if (Strings.isNotEmpty(description)) {
+            sb.append("Alert Description : " + description + "\n");
+        }
+        if (Strings.isNotEmpty(canaryOutputMessage)) {
+            sb.append("Canary output : " + canaryOutputMessage + "\n");
         }
         EmailUtil.email(jobAlert.getEmail(), status, sb.toString());
         putAlert(jobAlert.getAlertId(), jobAlert);
