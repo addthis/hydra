@@ -1106,7 +1106,7 @@ public class Spawn implements Codec.Codable {
      * Get a replacement host for a new task
      *
      * @param job The job for the task to be reassigned
-     * @return A replacement host ID
+     * @return A replacement host ID, if one can be found; null otherwise
      */
     private String getReplacementHost(Job job) {
         List<HostState> hosts = getLiveHostsByReadOnlyStatus(job.getMinionType(), false);
@@ -1115,7 +1115,7 @@ public class Spawn implements Codec.Codable {
                 return host.getHostUuid();
             }
         }
-        return hosts.get(0).getHostUuid();
+        return null;
     }
 
     /**
@@ -1132,8 +1132,11 @@ public class Spawn implements Codec.Codable {
         HostState host = getHostState(task.getHostUUID());
         boolean changed = false;
         if (host == null || !host.canMirrorTasks()) {
-            task.setHostUUID(getReplacementHost(job));
-            changed = true;
+            String replacementHost = getReplacementHost(job);
+            if (replacementHost != null) {
+                task.setHostUUID(replacementHost);
+                changed = true;
+            }
         }
         if (task.getReplicas() != null) {
             List<JobTaskReplica> tempReplicas = new ArrayList<>(task.getReplicas());
