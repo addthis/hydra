@@ -192,7 +192,7 @@ public class JobAlertRunner {
         StringBuffer sb = new StringBuffer();
         sb.append("Cluster : " + clusterHead + "\n");
         sb.append("Job : " + job.getId() + "\n");
-        sb.append("Link : http://" + clusterHead + ":5052/spawn2/index.html#jobs/" + job.getId() + "/tasks\n");
+        sb.append("Job Link : http://" + clusterHead + ":5052/spawn2/index.html#jobs/" + job.getId() + "/tasks\n");
         sb.append("Description : " + job.getDescription() + "\n");
         sb.append("------------------------------ \n");
         sb.append("Task Summary \n");
@@ -234,13 +234,14 @@ public class JobAlertRunner {
         Map<String, String> activeJobs = jobAlert.getActiveJobs();
         log.info("Alerting " + jobAlert.getEmail() + " :: jobs : " + activeJobs.keySet() + " : " + status);
         StringBuilder sb = new StringBuilder();
-        sb.append("Alert: " + jobAlert.getAlertStatus() + " \n");
+        sb.append("Alert : " + jobAlert.getAlertStatus() + " \n");
+        sb.append("Alert link : http://" + clusterHead + ":5052/spawn2/index.html#alerts/" + jobAlert.getAlertId() + " \n");
         for (String jobId : activeJobs.keySet()) {
             sb.append(summary(spawn.getJob(jobId)) + "\n");
         }
         String description = jobAlert.getDescription();
         if (description != null) {
-            sb.append("Alert Description: " + description);
+            sb.append("Alert Description : " + description);
         }
         EmailUtil.email(jobAlert.getEmail(), status, sb.toString());
         putAlert(jobAlert.getAlertId(), jobAlert);

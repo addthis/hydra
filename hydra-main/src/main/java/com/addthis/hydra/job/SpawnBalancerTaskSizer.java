@@ -149,7 +149,7 @@ public class SpawnBalancerTaskSizer {
         long trueSize = fetchTaskTrueSize(jobId, taskId);
         long reportedSize = getReportedSize(spawn.getTask(jobId, taskId));
         double ratio = getRatio(trueSize, reportedSize);
-        log.warn("[spawn.balancer.task.sizer] updated ratio for job " + jobId + " reported=" + reportedSize + " true=" + trueSize + " ratio=" + ratio);
+        log.info("[spawn.balancer.task.sizer] updated ratio for job " + jobId + " reported=" + reportedSize + " true=" + trueSize + " ratio=" + ratio);
         cachedJobRatios.put(jobId, ratio);
     }
 
