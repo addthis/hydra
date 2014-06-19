@@ -118,8 +118,8 @@ function(
             data.stateText = States[data.state];
             data.stateLabel = StateLabels[data.state];
             data.parameters = data.parameters || [];
-            data.ondone=data.onComplete || "";
-            data.onerror=data.onError || "";
+            data.onComplete=data.onComplete || "";
+            data.onError=data.onError || "";
             if(!_.isEmpty(data.queryConfig)){
                 data.qc_canQuery=data.queryConfig.canQuery;
                 data.qc_queryTraceLevel=data.queryConfig.queryTraceLevel;

@@ -191,8 +191,8 @@ QueryParam:
  * command: The command name of the job. Each command has a unique name. Required.
  * priority: The importance of the job relative to other jobs in the cluster. Specified as an integer >= 0. The higher the number, the higher the priority. Default: 0.
  * description: The description of the job. Optional.
- * ondone: The URL the job should curl (GET) upon completion. Optional.
- * onerror: The URL the job should curl (GET) if it errors. Optional.
+ * onComplete: The URL the job should curl (GET) upon completion. Optional.
+ * onError: The URL the job should curl (GET) if it errors. Optional.
  * config: The configuration of the job. Optional.
  * maxrun: The maximum duration of the job Specified as the number of minutes. Optional. Default: runs until job finished processing data. 
  * rekick: The number of minutes that the job should wait in idle state before automatically rekicking itself. Default: never rekicks itself.

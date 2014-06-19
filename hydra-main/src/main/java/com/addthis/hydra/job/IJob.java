@@ -94,6 +94,15 @@ public interface IJob extends Comparable<IJob> {
 
     public void setOnErrorURL(String url);
 
+    /* timeout in seconds */
+    public int getOnCompleteTimeout();
+
+    public void setOnCompleteTimeout(int timeout);
+
+    public int getOnErrorTimeout();
+
+    public void setOnErrorTimeout(int timeout);
+
     public int getBackups();
 
     public int getHourlyBackups();

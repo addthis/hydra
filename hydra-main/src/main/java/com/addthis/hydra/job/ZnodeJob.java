@@ -78,6 +78,10 @@ public class ZnodeJob implements IJob {
         @Codec.Set(codable = true)
         private String onError;
         @Codec.Set(codable = true)
+        private int onCompleteTimeout;
+        @Codec.Set(codable = true)
+        private int onErrorTimeout;
+        @Codec.Set(codable = true)
         private int runCount;
         @Codec.Set(codable = true)
         private long runTime;
@@ -232,6 +236,8 @@ public class ZnodeJob implements IJob {
         rznData.maxRunTime = job.getMaxRunTime();
         rznData.onComplete = job.getOnCompleteURL();
         rznData.onError = job.getOnErrorURL();
+        rznData.onCompleteTimeout = job.getOnCompleteTimeout();
+        rznData.onErrorTimeout = job.getOnErrorTimeout();
         rznData.runCount = job.getRunCount();
         rznData.runTime = job.getRunTime();
         rznData.command = job.getCommand();
@@ -385,7 +391,7 @@ public class ZnodeJob implements IJob {
     }
 
     public void setParameters(Collection<JobParameter> parameters) {
-        this.rznData.parameters = new ArrayList<JobParameter>(parameters.size());
+        this.rznData.parameters = new ArrayList<>(parameters.size());
         this.rznData.parameters.addAll(parameters);
     }
 
@@ -412,6 +418,14 @@ public class ZnodeJob implements IJob {
     public void setOnErrorURL(String url) {
         this.rznData.onError = url;
     }
+
+    public int getOnCompleteTimeout() { return rznData.onCompleteTimeout; }
+
+    public void setOnCompleteTimeout(int timeout) { this.rznData.onCompleteTimeout = timeout; }
+
+    public int getOnErrorTimeout() { return rznData.onErrorTimeout; }
+
+    public void setOnErrorTimeout(int timeout) { this.rznData.onErrorTimeout = timeout; }
 
     public int getBackups() {
         return rznData.backups;

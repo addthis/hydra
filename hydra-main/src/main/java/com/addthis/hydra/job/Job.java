@@ -111,6 +111,11 @@ public final class Job implements IJob, Codable {
     private String onComplete;
     @Codec.Set(codable = true)
     private String onError;
+    /* timeout in seconds */
+    @Codec.Set(codable = true)
+    private int onCompleteTimeout;
+    @Codec.Set(codable = true)
+    private int onErrorTimeout;
     @Codec.Set(codable = true)
     private int runCount;
     @Codec.Set(codable = true)
@@ -214,6 +219,8 @@ public final class Job implements IJob, Codable {
         this.config = job.getConfig();
         this.onComplete = job.getOnCompleteURL();
         this.onError = job.getOnErrorURL();
+        this.onCompleteTimeout = job.getOnCompleteTimeout();
+        this.onErrorTimeout = job.getOnErrorTimeout();
         this.runCount = job.getRunCount();
         this.runTime = job.getRunTime();
         this.command = job.getCommand();
@@ -431,24 +438,28 @@ public final class Job implements IJob, Codable {
     }
 
     @Override
-    public String getOnCompleteURL() {
-        return onComplete;
-    }
+    public String getOnCompleteURL() { return onComplete; }
 
     @Override
-    public void setOnCompleteURL(String url) {
-        this.onComplete = url;
-    }
+    public void setOnCompleteURL(String url) { this.onComplete = url; }
 
     @Override
-    public String getOnErrorURL() {
-        return onError;
-    }
+    public String getOnErrorURL() { return onError; }
 
     @Override
-    public void setOnErrorURL(String url) {
-        this.onError = url;
-    }
+    public void setOnErrorURL(String url) { this.onError = url; }
+
+    @Override
+    public int getOnCompleteTimeout() { return onCompleteTimeout; }
+
+    @Override
+    public void setOnCompleteTimeout(int timeout) { this.onCompleteTimeout = timeout; }
+
+    @Override
+    public int getOnErrorTimeout() { return onErrorTimeout; }
+
+    @Override
+    public void setOnErrorTimeout(int timeout) { this.onErrorTimeout = timeout; }
 
     @Override
     public int getBackups() {

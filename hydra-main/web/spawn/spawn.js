@@ -1773,8 +1773,8 @@ function fillFormsFromJob(uuid, clone) {
 	$('form_job_owner').value = $('form_iam').value || job.owner; 
 	$('form_job_desc').value = job.description || 'describe this job';
 	$('form_job_nodes').value = job.nodes.length == 0 ? 1 : job.nodes.length;
-	$('form_job_ondone').value = job.onComplete || '';
-	$('form_job_onerror').value = job.onError || '';
+	$('form_job_onComplete').value = job.onComplete || '';
+	$('form_job_onError').value = job.onError || '';
 	$('form_job_rekick').value = typeof job.rekickTimeout == 'undefined' ? '' : job.rekickTimeout;
 	$('form_job_logkill').value = job.killSignal || '';
 	$('form_job_hourlyBackups').value = typeof job.hourlyBackups == 'undefined' ? '0' : job.hourlyBackups;

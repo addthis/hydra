@@ -1105,8 +1105,10 @@ public class SpawnManager {
         job.setOwner(kv.getValue("owner", job.getOwner()));
         job.setPriority(kv.getIntValue("priority", job.getPriority()));
         job.setDescription(kv.getValue("description", kv.getValue("desc", job.getDescription())));
-        job.setOnCompleteURL(kv.getValue("ondone", job.getOnCompleteURL()));
-        job.setOnErrorURL(kv.getValue("onerror", job.getOnErrorURL()));
+        job.setOnCompleteURL(kv.getValue("onComplete", job.getOnCompleteURL()));
+        job.setOnErrorURL(kv.getValue("onError", job.getOnErrorURL()));
+        job.setOnCompleteTimeout(kv.getIntValue("onCompleteTimeout", job.getOnCompleteTimeout()));
+        job.setOnErrorTimeout(kv.getIntValue("onErrorTimeout", job.getOnErrorTimeout()));
         spawn.setJobConfig(id, kv.getValue("config", spawn.getJobConfig("id")));
         job.setMaxRunTime(HTTPService.getValidLong(kv, "maxrun", job.getMaxRunTime()));
         job.setRekickTimeout(HTTPService.getValidLong(kv, "rekick", job.getRekickTimeout()));

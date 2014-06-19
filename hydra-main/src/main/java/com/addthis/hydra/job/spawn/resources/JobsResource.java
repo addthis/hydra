@@ -523,8 +523,11 @@ public class JobsResource {
         job.setPriority(kv.getIntValue("priority", job.getPriority()));
 
         job.setDescription(kv.getValue("description", job.getDescription()));
-        job.setOnCompleteURL(kv.getValue("ondone", job.getOnCompleteURL()));
-        job.setOnErrorURL(kv.getValue("onerror", job.getOnErrorURL()));
+        job.setOnCompleteURL(kv.getValue("onComplete", job.getOnCompleteURL()));
+        job.setOnErrorURL(kv.getValue("onError", job.getOnErrorURL()));
+        job.setOnCompleteTimeout(kv.getIntValue("onCompleteTimeout", job.getOnCompleteTimeout()));
+        job.setOnErrorTimeout(kv.getIntValue("onErrorTimeout", job.getOnErrorTimeout()));
+
         spawn.setJobConfig(job.getId(), kv.getValue("config", spawn.getJobConfig(job.getId())));
 
         job.setMaxRunTime(SpawnHttp.HTTPService.getValidLong(kv, "maxrun", job.getMaxRunTime()));
@@ -877,8 +880,11 @@ public class JobsResource {
         job.setOwner(kv.getValue("owner", job.getOwner()));
         job.setPriority(kv.getIntValue("priority", job.getPriority()));
         job.setDescription(kv.getValue("description", job.getDescription()));
-        job.setOnCompleteURL(kv.getValue("ondone", job.getOnCompleteURL()));
-        job.setOnErrorURL(kv.getValue("onerror", job.getOnErrorURL()));
+        job.setOnCompleteURL(kv.getValue("onComplete", job.getOnCompleteURL()));
+        job.setOnErrorURL(kv.getValue("onError", job.getOnErrorURL()));
+        job.setOnCompleteTimeout(kv.getIntValue("onCompleteTimeout", job.getOnCompleteTimeout()));
+        job.setOnErrorTimeout(kv.getIntValue("onErrorTimeout", job.getOnErrorTimeout()));
+
         spawn.setJobConfig(id, kv.getValue("config"));
         job.setEnabled(kv.getIntValue("enable", job.isEnabled() ? 1 : 0) == 1);
         job.setKillSignal(kv.getValue("logkill", job.getKillSignal()));

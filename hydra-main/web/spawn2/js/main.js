@@ -756,8 +756,6 @@ function(
                 'nodes',
                 'onComplete',
                 'onError',
-                'ondone',
-                'onerror',
                 'owner',
                 'parameters',
                 'priority',

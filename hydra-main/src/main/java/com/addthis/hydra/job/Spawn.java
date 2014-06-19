@@ -2641,13 +2641,13 @@ public class Spawn implements Codec.Codable {
         }
     }
 
-    private void doOnState(Job job, String url, String state) {
+    private void doOnState(Job job, String url, int timeout, String state) {
         if (Strings.isEmpty(url)) {
             return;
         }
         if (url.startsWith("http://")) {
             try {
-                quietBackgroundPost(job.getId(), state, url, codec.encode(job));
+                quietBackgroundPost(job.getId(), state, url, timeout, codec.encode(job));
             } catch (Exception e) {
                 log.error("", e);
                 emailNotification(job.getId(), state, e);
@@ -2700,14 +2700,14 @@ public class Spawn implements Codec.Codable {
                         log.warn("", ex);
                     }
                 } else {
-                    doOnState(job, job.getOnCompleteURL(), "onComplete");
+                    doOnState(job, job.getOnCompleteURL(), job.getOnCompleteTimeout(), "onComplete");
                     if (ENABLE_JOB_FIXDIRS_ONCOMPLETE && job.getRunCount() > 1) {
                         // Perform a fixDirs on completion, cleaning up missing replicas/orphans.
                         fixTaskDir(job.getId(), -1, false, true);
                     }
                 }
             } else {
-                doOnState(job, job.getOnErrorURL(), "onError");
+                doOnState(job, job.getOnErrorURL(), job.getOnErrorTimeout(), "onError");
             }
         }
         Job.logJobEvent(job, JobEvent.FINISH, eventLog);
@@ -2720,19 +2720,23 @@ public class Spawn implements Codec.Codable {
         private final String jobId;
         private final String state;
         private final String url;
+        private final int timeout;
         private final byte[] post;
 
-        BackgroundPost(String jobId, String state, String url, byte[] post) {
+        BackgroundPost(String jobId, String state, String url, int timeout, byte[] post) {
             this.jobId = jobId;
             this.state = state;
             this.url = url;
+            this.timeout = timeout;
             this.post = post;
         }
 
         @Override
         public void run() {
             try {
-                HttpUtil.httpPost(url, "javascript/text", post, backgroundHttpTimeout);
+                // timeout is passed as seconds and must be converted to milliseconds
+                int postTimeout = timeout > 0 ? (timeout * 1000) : backgroundHttpTimeout;
+                HttpUtil.httpPost(url, "javascript/text", post, postTimeout);
             } catch (IOException ex) {
                 log.error("IOException when attempting to contact \"" +
                           url + "\" in background task \"" + jobId + " " + state + "\"", ex);
@@ -2745,8 +2749,8 @@ public class Spawn implements Codec.Codable {
         }
     }
 
-    private void quietBackgroundPost(String jobId, String state, String url, byte[] post) {
-        BackgroundPost task = new BackgroundPost(jobId, state, url, post);
+    private void quietBackgroundPost(String jobId, String state, String url, int timeout, byte[] post) {
+        BackgroundPost task = new BackgroundPost(jobId, state, url, timeout, post);
         try {
             backgroundService.submit(task);
         } catch (RejectedExecutionException ex) {
