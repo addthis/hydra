@@ -15,6 +15,7 @@ package com.addthis.hydra;
 
 import java.io.File;
 
+import java.io.FileInputStream;
 import java.lang.reflect.Method;
 
 import java.net.InetAddress;
@@ -51,6 +52,7 @@ public class Main {
     private static final String METRICS_REPORTER_CONFIG_FILE = Parameter.value("metrics.reporter.config", "");
     private static final boolean GANGLIA_SHORT_NAMES = Parameter.boolValue("ganglia.useShortNames", false);
     private static final boolean ANNOUNCE_LOG_INIT = Parameter.boolValue("init.log4j.verbose", false);
+    private static final String PROPERTIES_FILE = Parameter.value("hydra.properties", null);
 
     public static final Map<String, String> cmap = new HashMap<>();
     public static final DynamicLoader.DynamicLoaderResult dlr;
@@ -63,6 +65,8 @@ public class Main {
         dlr =  DynamicLoader.readDynamicClasses("hydra.loader");
         PluginReader.registerLazyPlugin("-executables.classmap", cmap);
         cmap.putAll(dlr.executables);
+        /** optionally load properties file */
+        loadProperties();
     }
 
     @SuppressWarnings("unused")
@@ -248,4 +252,20 @@ public class Main {
         }
     }
 
+
+    public static void loadProperties() {
+        if (PROPERTIES_FILE != null) {
+            File file = new File(PROPERTIES_FILE);
+            if (file.exists() && file.isFile()) {
+                try {
+                    log.info("loading properties from {}", file);
+                    FileInputStream in = new FileInputStream(file);
+                    System.getProperties().load(in);
+                    in.close();
+                } catch (Exception ex) {
+                    log.error("", ex);
+                }
+            }
+        }
+    }
 }
