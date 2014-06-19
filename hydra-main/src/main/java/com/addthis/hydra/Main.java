@@ -65,8 +65,8 @@ public class Main {
         dlr =  DynamicLoader.readDynamicClasses("hydra.loader");
         PluginReader.registerLazyPlugin("-executables.classmap", cmap);
         cmap.putAll(dlr.executables);
-        /** optionally load properties file */
-        loadProperties();
+        /** load properties from specified file */
+        loadProperties(PROPERTIES_FILE);
     }
 
     @SuppressWarnings("unused")
@@ -193,7 +193,9 @@ public class Main {
         }
     }
 
-    // Addapted from CassandraDaemon:initLog4j
+    /**
+     * Adapted from CassandraDaemon:initLog4j
+     */
     public static void initLog4j()
     {
         if (!isClassAvailable("org.apache.log4j.PropertyConfigurator")) {
@@ -252,19 +254,25 @@ public class Main {
         }
     }
 
-
-    public static void loadProperties() {
-        if (PROPERTIES_FILE != null) {
-            File file = new File(PROPERTIES_FILE);
+    /**
+     * Merges resources from the supplied fileName into System properties.
+     * Does nothing if fileName is null. Emits a log warning if specified
+     * file does not exist.
+     *
+     * @param fileName name of file from which to load Properties
+     */
+    public static void loadProperties(final String fileName) {
+        if (fileName != null) {
+            File file = new File(fileName);
             if (file.exists() && file.isFile()) {
-                try {
+                try (FileInputStream in = new FileInputStream(file)) {
                     log.info("loading properties from {}", file);
-                    FileInputStream in = new FileInputStream(file);
                     System.getProperties().load(in);
-                    in.close();
                 } catch (Exception ex) {
                     log.error("", ex);
                 }
+            } else {
+                log.warn("invalid properties file: {}", fileName);
             }
         }
     }
