@@ -49,7 +49,7 @@ public class HostFailWorker {
     private static final Logger log = LoggerFactory.getLogger(HostFailWorker.class);
     private final HostFailState hostFailState;
     private AtomicBoolean newAdditions = new AtomicBoolean(false); // True if a host has been recently added to the queue
-    private AtomicBoolean obeyTaskSlots = new AtomicBoolean(true);
+    private AtomicBoolean obeyTaskSlots = new AtomicBoolean(false); // Whether spawn should honor the max task slots when moving tasks to fail hosts
     private final Spawn spawn;
 
     // Perform host-failure related operations at a given interval
@@ -58,8 +58,7 @@ public class HostFailWorker {
     private static final long hostFailQuietPeriod = Parameter.longValue("host.fail.quiet.period", 20_000);
 
     // Don't rebalance additional tasks if spawn is already rebalancing at least this many.
-    // Note that the number of rsyncs performed by a single host is also limited by the availableTaskSlots of that host.
-    private static final int maxMovingTasks = Parameter.intValue("host.fail.maxMovingTasks", 4);
+    private static final int maxMovingTasks = Parameter.intValue("host.fail.maxMovingTasks", 6);
     // Use a smaller max when a disk is being failed, to avoid a 'thundering herds' scenario
     private static final int maxMovingTasksDiskFull = Parameter.intValue("host.fail.maxMovingTasksDiskFull", 2);
 
