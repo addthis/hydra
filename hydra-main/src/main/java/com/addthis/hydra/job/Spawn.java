@@ -245,6 +245,7 @@ public class Spawn implements Codec.Codable {
     private boolean quiesce;
     @Codec.Set(codable = true)
     private final HashSet<String> disabledHosts = new HashSet<>();
+    private final int defaultReplicaCount = Parameter.intValue("spawn.defaultReplicaCount", 1);
     private static final int TASK_QUEUE_DRAIN_INTERVAL = Parameter.intValue("task.queue.drain.interval", 500);
     private static final boolean ENABLE_JOB_STORE = Parameter.boolValue("job.store.enable", true);
     private static final boolean ENABLE_JOB_FIXDIRS_ONCOMPLETE = Parameter.boolValue("job.fixdirs.oncomplete", true);
@@ -919,11 +920,11 @@ public class Spawn implements Codec.Codable {
             job.setOwner(job.getCreator());
             job.setState(JobState.IDLE);
             job.setCommand(command);
-            job.setDailyBackups(1);
+            job.setDailyBackups(4);
             job.setWeeklyBackups(1);
-            job.setMonthlyBackups(1);
-            job.setHourlyBackups(1);
-            job.setReplicas(1);
+            job.setMonthlyBackups(0);
+            job.setHourlyBackups(0);
+            job.setReplicas(defaultReplicaCount);
             job.setMinionType(minionType);
             List<HostState> hostStates = getOrCreateHostStateList(minionType, taskHosts);
             List<JobTask> tasksAssignedToHosts = balancer.generateAssignedTasksForNewJob(job.getId(), taskCount, hostStates);
@@ -3887,6 +3888,10 @@ public class Spawn implements Codec.Codable {
             writeState();
         }
 
+        public int getDefaultReplicaCount() {
+            return defaultReplicaCount;
+        }
+
         public String getQueryHost() {
             return queryHost;
         }
@@ -3932,7 +3937,7 @@ public class Spawn implements Codec.Codable {
         }
 
         public JSONObject toJSON() throws JSONException {
-            return new JSONObject().put("debug", debug).put("quiesce", quiesce).put("queryHost", queryHost).put("spawnHost", spawnHost).put("disabled", getDisabled());
+            return new JSONObject().put("debug", debug).put("quiesce", quiesce).put("queryHost", queryHost).put("spawnHost", spawnHost).put("disabled", getDisabled()).put("defaultReplicaCount", defaultReplicaCount);
         }
     }
 

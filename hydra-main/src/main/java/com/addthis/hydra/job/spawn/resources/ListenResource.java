@@ -163,8 +163,7 @@ public class ListenResource {
             setup.put("aliases", aliases);
             setup.put("alerts", spawn.fetchAllAlertsMap());
             setup.put("quiesced", (spawn.getSettings().getQuiesced() ? "1" : "0"));
-            int numQueued = spawn.getTaskQueuedCount();
-            setup.put("spawnqueuesize", numQueued);
+            setup.put("spawnqueuesize", spawn.getTaskQueuedCount());
             setup.put("clientId", clientCounter.incrementAndGet());
             return Response.ok(setup.toString()).build();
         } catch (Exception ex) {

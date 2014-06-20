@@ -48,6 +48,7 @@ var initonce = false,
 	lastHostlist = null,
 	lastCmdlist = null,
 	lastMacrolist = null,
+	defaultReplicaCount = 1,
 	//this will store the filter functions for tables, each table rendered can have at most 1
 	filterFunctions = {},
 	lastLog = {},
@@ -819,6 +820,7 @@ function setupCallback(rpc) {
 	setHostlist(setup.hosts);
 	lastMacrolist = setup.macros;
 	lastCmdlist = setup.commands;
+	if (setup.defaultReplicaCount != null) defaultReplicaCount = setup.defaultReplicaCount; // allow defaultReplicaCount = 0
 	if (setup.hosts) renderHosts();
 	if (setup.jobs) renderJobs();
 	if (setup.macros) renderMacros();
@@ -1782,7 +1784,7 @@ function fillFormsFromJob(uuid, clone) {
 	$('form_job_weeklyBackups').value = typeof job.weeklyBackups == 'undefined' ? '0' : job.weeklyBackups;
 	$('form_job_monthlyBackups').value = typeof job.monthlyBackups == 'undefined' ? '0' : job.monthlyBackups;
 	$('form_job_retries').value = typeof job.retries == 'undefined' ? '0' : job.retries;
-	$('form_job_replicas').value = typeof job.replicas == 'undefined' ? '1' : job.replicas;
+	$('form_job_replicas').value = typeof job.replicas == 'undefined' ? defaultReplicaCount.toString() : job.replicas;
 	$('form_job_readOnlyReplicas').value = typeof job.readOnlyReplicas == 'undefined' ? '0' : job.readOnlyReplicas;
 	$('form_job_dontDeleteMe').value = typeof job.dontDeleteMe == 'undefined' ? '0' : job.dontDeleteMe ? '1' : '0';
 	$('form_job_dontAutoBalanceMe').value = typeof job.dontAutoBalanceMe == 'undefined' ? '0' : job.dontAutoBalanceMe ? '1' : '0';
