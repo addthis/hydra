@@ -1398,6 +1398,7 @@ public class Spawn implements Codec.Codable {
     private void resolveMissingLive(JobTask task) {
         HostState liveHost = getHostState(task.getHostUUID());
         if (liveHost != null && liveHost.hasLive(task.getJobKey())) {
+            replaceDownHosts(task);
             copyTaskToReplicas(task);
             return;
         }
