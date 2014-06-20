@@ -117,7 +117,11 @@ function(
             		"bVisible":true,
             		"bSearchable":true,
             		"mRender":function(val,type,data){
-                		return "<a href='#alerts/"+encodeURIComponent(val)+"'>"+val+"</a>";
+            		    if (!!data.description) {
+            		        return "<a href='#alerts/"+encodeURIComponent(val)+"' title='"+data.description.trim()+"'>"+val+"</a>";
+            		    } else {
+            		        return "<a href='#alerts/"+encodeURIComponent(val)+"'>"+val+"</a>";
+            		    }
             		}
         		},        
         		{
