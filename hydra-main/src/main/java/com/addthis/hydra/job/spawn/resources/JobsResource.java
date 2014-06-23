@@ -46,7 +46,6 @@ import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.codec.CodecExceptionLineNumber;
 import com.addthis.codec.CodecJSON;
-import com.addthis.hydra.job.FlowGraph;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobExpand;
@@ -429,27 +428,6 @@ public class JobsResource {
             return Response.ok(returnGraph.toString()).build();
         } catch (Exception ex) {
             return buildServerError(ex);
-        }
-    }
-
-
-    @GET
-    @Path("/dependencies.list")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getJobDependencies(@QueryParam("id") @DefaultValue("") String id) {
-        IJob job = spawn.getJob(id);
-        if (job != null) {
-            FlowGraph g = new FlowGraph();
-            spawn.buildDependencyFlowGraph(g, job.getId());
-            FlowGraph.DisplayFlowNode root = g.build(job.getId());
-            try {
-                JSONObject json = root.toJSON();
-                return Response.ok(json.toString()).build();
-            } catch (Exception ex) {
-                return buildServerError(ex);
-            }
-        } else {
-            return Response.ok("{\"flow_id\":\"" + id + "\" , \"dependencies\":{}}").build();
         }
     }
 

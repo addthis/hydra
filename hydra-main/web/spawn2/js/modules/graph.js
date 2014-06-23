@@ -44,13 +44,13 @@ function(
         flatten:function(root) {
             var nodes = [], i = 0;
 
-            function recurse(node) {
-                if (node.children) node.children.forEach(recurse);
+            function visit(node) {
+                if (node.children) node.children.forEach(visit);
                 if (!node.id) node.id = ++i;
                 nodes.push(node);
             }
 
-            recurse(root);
+            visit(root);
             return nodes;
         },
         // Toggle children on click.

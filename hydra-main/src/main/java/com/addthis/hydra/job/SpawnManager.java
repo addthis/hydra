@@ -53,6 +53,7 @@ import com.google.common.collect.Lists;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 public class SpawnManager {
 
     private static Logger log = LoggerFactory.getLogger(SpawnManager.class);
@@ -581,25 +582,6 @@ public class SpawnManager {
                     }
                 }
                 link.sendJSON(200, "OK", a);
-            }
-        });
-        /**
-         * url called via ajax by client to receive a list of jobs that depend on a given job
-         */
-        server.mapService("/jobDependencies.list", new HTTPService() {
-            @Override
-            public void httpService(HTTPLink link) throws Exception {
-                KVPairs kv = link.getRequestValues();
-                IJob job = spawn.getJob(kv.getValue("id", ""));
-                if (job != null) {
-                    FlowGraph g = new FlowGraph();
-                    spawn.buildDependencyFlowGraph(g, job.getId());
-                    FlowGraph.DisplayFlowNode root = g.build(job.getId());
-                    JSONObject json = root.toJSON();
-                    link.sendJSON(200, "OK", json);
-                } else {
-                    link.sendJSON(200, "OK", json("flow_id",kv.getValue("id", "")).put("dependencies",json()));
-                }
             }
         });
         server.mapService("/job.get", new HTTPService() {

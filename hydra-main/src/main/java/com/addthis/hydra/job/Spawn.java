@@ -756,16 +756,6 @@ public class Spawn implements Codec.Codable {
             jobLock.unlock();
         }
     }
-
-    public void buildDependencyFlowGraph(FlowGraph graph, String jobId) {
-        graph.addFlow(jobId);
-        Collection<Job> jobDeps = this.listDependentJobs(jobId);
-        for (Job jobDep : jobDeps) {
-            graph.addFlow(jobId, jobDep.getId());
-            buildDependencyFlowGraph(graph, jobDep.getId());
-        }
-    }
-
     /**
      * Gets the backup times for a given job and node of all backup types by using MeshyClient. If the nodeId is -1 it will
      * get the backup times for all nodes.
