@@ -605,6 +605,10 @@ public class Spawn implements Codec.Codable {
         return aliasBiMap.viewAliasMap();
     }
 
+    public List<String> aliasToJobs(String alias) {
+        return aliasBiMap.getJobs(alias);
+    }
+
     public void addAlias(String alias, List<String> jobs) {
         if (jobs.size() > 0) {
             aliasBiMap.putAlias(alias, jobs);

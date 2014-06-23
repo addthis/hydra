@@ -30,6 +30,7 @@ import com.addthis.basis.util.TokenReplacerOverflowException;
 import com.addthis.hydra.common.plugins.PluginReader;
 import com.addthis.hydra.data.util.CommentTokenizer;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 
@@ -44,15 +45,17 @@ public class JobExpand {
 
     private static class MacroTokenReplacer extends TokenReplacer {
 
-        private final Spawn.SpawnState spawnState;
+        private final Spawn spawn;
 
-        private static Logger log = LoggerFactory.getLogger(MacroTokenReplacer.class);
+        private static final Logger log = LoggerFactory.getLogger(MacroTokenReplacer.class);
+
+        private static final Joiner joiner = Joiner.on(',').skipNulls();
 
         private static final Pattern macroPattern = Pattern.compile("%\\{(.+?)\\}%");
 
-        MacroTokenReplacer(Spawn.SpawnState spawnState) {
+        MacroTokenReplacer(Spawn spawn) {
             super("%{", "}%");
-            this.spawnState = spawnState;
+            this.spawn = spawn;
         }
 
         @Override
@@ -69,11 +72,20 @@ public class JobExpand {
                     throw new RuntimeException(ex);
                 }
             }
-            JobMacro macro = spawnState.macros.get(label);
+            JobMacro macro = spawn.getSpawnState().macros.get(label);
+            String target = null;
             if (macro != null) {
+                target = macro.getMacro();
+            } else {
+                List<String> aliases = spawn.aliasToJobs(label);
+                if (aliases != null) {
+                    target = joiner.join(aliases);
+                }
+            }
+            if (target != null) {
                 List<String> contents = new ArrayList<>();
                 List<String> delimiters = new ArrayList<>();
-                CommentTokenizer commentTokenizer = new CommentTokenizer(macro.getMacro());
+                CommentTokenizer commentTokenizer = new CommentTokenizer(target);
                 commentTokenizer.tokenize(contents, delimiters);
                 StringBuilder builder = new StringBuilder();
                 int length = contents.size();
@@ -251,7 +263,7 @@ public class JobExpand {
      * recursively expand macros
      */
     public static String macroExpand(Spawn spawn, String rawtext) throws TokenReplacerOverflowException {
-        MacroTokenReplacer replacer = new MacroTokenReplacer(spawn.getSpawnState());
+        MacroTokenReplacer replacer = new MacroTokenReplacer(spawn);
         List<String> contents = new ArrayList<>();
         List<String> delimiters = new ArrayList<>();
         CommentTokenizer commentTokenizer = new CommentTokenizer(rawtext);
