@@ -183,8 +183,8 @@ public class SpawnManager {
                     ret.put("commands", commandlist);
                     ret.put("jobs", joblist);
                     ret.put("hosts", hostlist);
-                    int numQueued = spawn.getTaskQueuedCount();
-                    ret.put("spawnqueuesize", numQueued);
+                    ret.put("defaultReplicaCount", spawn.getSettings().getDefaultReplicaCount());
+                    ret.put("spawnqueuesize", spawn.getTaskQueuedCount());
                 }
                 link.sendJSON(200, "OK", ret);
             }
