@@ -724,6 +724,13 @@ public class Spawn implements Codec.Codable {
                 if (Strings.isEmpty(value)) {
                     value = param.getDefaultValue();
                 }
+                if (value != null) {
+                    try {
+                        value = JobExpand.macroExpand(this, value);
+                    } catch (TokenReplacerOverflowException ex) {
+                        log.error("Token replacement overflow for input '" + value + "'");
+                    }
+                }
                 if (value != null && spawnState.jobs.containsKey(value)) {
                     dataSources.add(value);
                 }
