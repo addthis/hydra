@@ -1518,18 +1518,17 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             return rv;
         }
 
-        private List<String> assembleBackupCommandsForHost(boolean local, ReplicaTarget replica, List<String> symlinkCommands, List<String> deleteCommands) {
+        private List<String> assembleBackupCommandsForHost(boolean local, ReplicaTarget replica, List<String> symlinkCommands, List<String> deleteCommands, long time) {
             List<String> copyCommands = new ArrayList<String>();
             for (ScheduledBackupType type : ScheduledBackupType.getBackupTypes().values()) {
                 String[] allBackups = local ? findLocalBackups(false) : findRemoteBackups(false, replica);
-                String[] validBackups = allBackups;
-                String backupName = type.generateCurrentName(true);
+                String backupName = type.generateNameForTime(time, true);
                 String symlinkName = type.getSymlinkName();
                 String userAT = local ? null : replica.getUserAT();
                 String source = "live";
                 String path = local ? jobDir.getParentFile().getAbsolutePath() : getTaskBaseDir(replica.getBaseDir(), id, node);
                 int maxNumBackups = getMaxNumBackupsForType(type);
-                if (maxNumBackups > 0 && type.shouldMakeNewBackup(validBackups)) {
+                if (maxNumBackups > 0 && type.shouldMakeNewBackup(allBackups)) {
                     String backupCMD = createBackupCommand(local, userAT, path, source, backupName);
                     copyCommands.add(backupCMD);
                     if (symlinkName != null) {
@@ -1537,7 +1536,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                     }
                     maxNumBackups -= 1; // Diminish the max number by one, because we're about to add a new one
                 }
-                List<String> backupsToDelete = type.oldBackupsToDelete(allBackups, validBackups, maxNumBackups);
+                List<String> backupsToDelete = type.oldBackupsToDelete(allBackups, allBackups, maxNumBackups);
                 for (String oldBackup : backupsToDelete) {
                     if (MinionTaskDeleter.shouldDeleteBackup(oldBackup, type)) {
                         deleteCommands.add(createDeleteCommand(local, userAT, path + "/" + oldBackup));
@@ -2093,9 +2092,10 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             StringBuilder bash = new StringBuilder("#!/bin/bash\n");
             bash.append("cd " + jobDir.getCanonicalPath() + "\n");
             bash.append(makeRetryDefinition());
-            List<String> symlinkCommands = new ArrayList<String>();
-            List<String> deleteCommands = new ArrayList<String>();
-            List<String> localBackupCommands = assembleBackupCommandsForHost(true, null, symlinkCommands, deleteCommands);
+            List<String> symlinkCommands = new ArrayList<>();
+            List<String> deleteCommands = new ArrayList<>();
+            long now = System.currentTimeMillis();
+            List<String> localBackupCommands = assembleBackupCommandsForHost(true, null, symlinkCommands, deleteCommands, now);
             appendCommandsWithStartFinishMessages(bash, "updating local backups", localBackupCommands, backupCommandDelaySeconds);
             if (replicas != null) {
                 for (ReplicaTarget replica : replicas) {
@@ -2103,7 +2103,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                         continue;
                     }
                     String action = "updating backups on " + replica.getHost() + " uuid=" + replica.getHostUuid();
-                    List<String> remoteBackupCommands = assembleBackupCommandsForHost(false, replica, symlinkCommands, deleteCommands);
+                    List<String> remoteBackupCommands = assembleBackupCommandsForHost(false, replica, symlinkCommands, deleteCommands, now);
                     appendCommandsWithStartFinishMessages(bash, action, remoteBackupCommands, backupCommandDelaySeconds);
                 }
             }
