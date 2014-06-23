@@ -625,8 +625,9 @@ public class SpawnBalancer implements Codec.Codable {
             return rv;
         }
         List<HostState> sortedHosts = sortHostsByDiskSpace(hosts);
+        HostFailWorker.FailState failState = spawn.getHostFailWorker().getFailureState(hostID);
         int numAlleviateHosts = (int) Math.ceil(sortedHosts.size() * config.getAlleviateHostPercentage());
-        if (isExtremeHost(hostID, true, true) || getUsedDiskPercent(host) > 1 - config.getMinDiskPercentAvailToReceiveNewTasks()) {
+        if (failState == HostFailWorker.FailState.FAILING_FS_OKAY || isExtremeHost(hostID, true, true) || getUsedDiskPercent(host) > 1 - config.getMinDiskPercentAvailToReceiveNewTasks()) {
             // Host disk is overloaded
             log.warn("[spawn.balancer] " + hostID + " categorized as overloaded host; looking for tasks to push off of it");
             List<HostState> lightHosts = sortedHosts.subList(0, numAlleviateHosts);
