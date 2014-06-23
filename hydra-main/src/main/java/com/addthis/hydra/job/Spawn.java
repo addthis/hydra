@@ -1298,6 +1298,9 @@ public class Spawn implements Codec.Codable {
             List<JobTaskDirectoryMatch> allMismatches = new ArrayList<>();
             // Check each task to see if any live/replica directories are missing or incorrectly placed
             for (JobTask task : job.getCopyOfTasks()) {
+                if (replaceDownHosts(task)) {
+                    continue;
+                }
                 List<JobTaskDirectoryMatch> directoryMismatches = matchTaskToDirectories(task, false);
                 if (!directoryMismatches.isEmpty()) {
                     // If there are issues with a task's directories, resolve them.
