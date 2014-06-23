@@ -1,0 +1,14 @@
+{ "configuration": {
+  "name": "hydra-oss-default",
+  "status": "error",
+  "packages": "org.apache.logging.log4j.test",
+  "ThresholdFilter": { "level": "debug" },
+  "appenders": {
+    "Console": { "name": "STDOUT",
+      "PatternLayout": { "pattern": "%m%n" }
+    }
+  },
+  "loggers": {
+    "root": { "level": "error", "AppenderRef": { "ref": "STDOUT" }}
+  }
+}}

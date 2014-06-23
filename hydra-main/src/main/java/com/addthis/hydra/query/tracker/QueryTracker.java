@@ -13,23 +13,19 @@
  */
 package com.addthis.hydra.query.tracker;
 
-import java.io.File;
+import java.io.Closeable;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import java.text.SimpleDateFormat;
-
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.RollingLog;
 
-import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.util.StringMapHelper;
+import com.addthis.hydra.task.output.TaskDataOutput;
+import com.addthis.hydra.util.LogUtil;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -45,24 +41,18 @@ import org.slf4j.LoggerFactory;
 
 import jsr166e.ConcurrentHashMapV8;
 
-public class QueryTracker {
+public class QueryTracker implements Closeable {
 
     static final Logger log = LoggerFactory.getLogger(QueryTracker.class);
 
     static final int MAX_FINISHED_CACHE_SIZE = Parameter.intValue("QueryCache.MAX_FINISHED_CACHE_SIZE", 50);
-    static final String logDir = Parameter.value("qmaster.log.dir", "log");
-    static final boolean eventLogCompress = Parameter.boolValue("qmaster.eventlog.compress", true);
-    static final int logMaxAge = Parameter.intValue("qmaster.log.maxAge", 60 * 60 * 1000);
-    static final int logMaxSize = Parameter.intValue("qmaster.log.maxSize", 100 * 1024 * 1024);
-    static SimpleDateFormat format = new SimpleDateFormat("yyMMdd-HHmmss.SSS");
-
-    final RollingLog eventLog;
 
     /**
      * Contains the queries that are running
      */
     final ConcurrentMap<String, QueryEntry> running = new ConcurrentHashMapV8<>();
     final Cache<String, QueryEntryInfo> recentlyCompleted;
+    final TaskDataOutput eventLog;
 
     /* metrics */
     final Counter queryErrors = Metrics.newCounter(QueryTracker.class, "queryErrors");
@@ -81,13 +71,18 @@ public class QueryTracker {
             new ThreadFactoryBuilder().setNameFormat("timeoutWatcher=%d").setDaemon(true).build());
 
     public QueryTracker() {
-        Query.setTraceLog(new RollingLog(new File(logDir, "events-trace"), "queryTrace", eventLogCompress, logMaxSize, logMaxAge));
-        this.eventLog = new RollingLog(new File(logDir, "events-query"), "query", eventLogCompress, logMaxSize, logMaxAge);
-
         this.recentlyCompleted = CacheBuilder.newBuilder()
-                .maximumSize(MAX_FINISHED_CACHE_SIZE).build();
-        // start timeoutWatcher
-        this.timeoutWatcherService.scheduleWithFixedDelay(new TimeoutWatcher(running), 5, 5, TimeUnit.SECONDS);
+                                             .maximumSize(MAX_FINISHED_CACHE_SIZE)
+                                             .build();
+
+        this.timeoutWatcherService.scheduleWithFixedDelay(
+                new TimeoutWatcher(running), 5, 5, TimeUnit.SECONDS);
+        this.eventLog = LogUtil.newBundleOutputFromConfig("queries");
+    }
+
+    @Override
+    public void close() {
+        eventLog.sendComplete();
     }
 
     public int getRunningCount() {
@@ -126,10 +121,5 @@ public class QueryTracker {
             log.warn("QT could not get entry from running -- was null : {}", key);
             return false;
         }
-    }
-
-    void log(StringMapHelper output) {
-        output.add("timestamp", format.format(new Date()));
-        eventLog.writeLine(output.createKVPairs().toString());
     }
 }

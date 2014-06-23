@@ -57,11 +57,8 @@ import org.slf4j.LoggerFactory;
  */
 public class MeshQueryWorker {
 
-    private static final  Logger log = LoggerFactory.getLogger(MeshQueryWorker.class);
-    private static final boolean eventLogCompress = Parameter.boolValue("qworker.eventlog.compress", true);
-    private static final int logMaxAge = Parameter.intValue("qworker.log.maxAge", 60 * 60 * 1000);
-    private static final int logMaxSize = Parameter.intValue("qworker.log.maxSize", 100 * 1024 * 1024);
-    private static final String logDir = Parameter.value("qworker.log.dir", "log");
+    private static final Logger log          = LoggerFactory.getLogger(MeshQueryWorker.class);
+    private static final String logDir       = Parameter.value("qworker.log.dir", "log");
     private static final String propFileName = Parameter.value("qworker.propfile", "mqworker.prop");
 
     /**
@@ -91,7 +88,7 @@ public class MeshQueryWorker {
      */
     private static final JsonFactory factory = new JsonFactory(new ObjectMapper());
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         //start jetty and metrics servlet
         MeshQueryWorker qs = new MeshQueryWorker();
         //run meshy as per current standard
@@ -107,8 +104,6 @@ public class MeshQueryWorker {
      * @throws Exception
      */
     public MeshQueryWorker() throws Exception {
-        Query.setTraceLog(new RollingLog(new File(logDir, "events-worker"), "queryTraceWorker", eventLogCompress, logMaxSize, logMaxAge));
-
         this.metricsHandler = new ServletHandler();
         htmlQueryServer = startHtmlQueryServer();
 

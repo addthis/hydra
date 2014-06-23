@@ -1,3 +1,4 @@
 "channel", com.addthis.hydra.task.output.OutputStreamChannel
 "column", com.addthis.hydra.task.output.OutputStreamColumnized
 "noop", com.addthis.hydra.task.output.OutputStreamNoop
+"json", com.addthis.hydra.task.output.OutputStreamJson

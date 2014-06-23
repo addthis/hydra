@@ -165,9 +165,11 @@ class SearchRunner implements Runnable {
         } //else we got an engine so we're good -- maybe this logic should be in the cache get
 
         if (engineGetDuration > MeshQuerySource.slowQueryThreshold || log.isDebugEnabled() || query.isTraced()) {
-            Query.emitTrace("[QueryReference] Retrieved queryEngine for query: " + query.uuid() + ", key:" +
-                            goldDirString + " after waiting: " + engineGetDuration + "ms.  slow=" +
-                            (engineGetDuration > MeshQuerySource.slowQueryThreshold));
+
+            Query.traceLog.info(
+                    "[QueryReference] Retrieved queryEngine for query: " + query.uuid() + ", key:" +
+                                goldDirString + " after waiting: " + engineGetDuration + "ms.  slow=" +
+                                (engineGetDuration > MeshQuerySource.slowQueryThreshold));
         }
         return engine;
     }
@@ -183,8 +185,9 @@ class SearchRunner implements Runnable {
         queryOpProcessor.sendComplete();
         final long searchDuration = System.currentTimeMillis() - searchStartTime;
         if (log.isDebugEnabled() || query.isTraced()) {
-            Query.emitTrace("[QueryReference] search complete " + query.uuid() + " in " + searchDuration + "ms directory: " +
-                            goldDirString + " slow=" + (searchDuration > MeshQuerySource.slowQueryThreshold) + " rowsIn: " + queryOpProcessor.getInputRows());
+            Query.traceLog.info(
+                    "[QueryReference] search complete " + query.uuid() + " in " + searchDuration + "ms directory: " +
+                                goldDirString + " slow=" + (searchDuration > MeshQuerySource.slowQueryThreshold) + " rowsIn: " + queryOpProcessor.getInputRows());
         }
         MeshQuerySource.queryTimes.update(searchDuration, TimeUnit.MILLISECONDS);
     }

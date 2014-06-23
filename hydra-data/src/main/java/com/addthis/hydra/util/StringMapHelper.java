@@ -15,7 +15,6 @@ package com.addthis.hydra.util;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
@@ -40,7 +39,7 @@ public class StringMapHelper extends MapHelper<String, String> {
 
     public KVPairs createKVPairs() {
         KVPairs kv = new KVPairs();
-        for (Entry<String, String> e : map().entrySet()) {
+        for (Map.Entry<String, String> e : map().entrySet()) {
             kv.putValue(e.getKey(), e.getValue());
         }
         return kv;
@@ -53,10 +52,11 @@ public class StringMapHelper extends MapHelper<String, String> {
         return this;
     }
 
-    public String toLog() {
-        StringBuffer sb = new StringBuffer();
-        for (Entry<String, String> kv : map().entrySet()) {
-            sb.append(kv.getKey() + "=" + kv.getValue() + " ");
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> kv : map().entrySet()) {
+            sb.append(kv.getKey()).append('=').append(kv.getValue()).append(' ');
         }
         return sb.toString();
     }

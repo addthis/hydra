@@ -789,7 +789,8 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
 
         public void run() {
             if (query.isTraced()) {
-                Query.emitTrace("query begin " + query.uuid() + " " + query + " to " + consumer);
+                Query.traceLog.info("query begin " + query.uuid() + " " + query + " to " + consumer);
+
             }
             try {
                 queryEngine.search(query, consumer,
@@ -803,7 +804,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
                 log.warn("query error " + query.uuid() + " " + e, e);
                 } finally {
                 if (query.isTraced()) {
-                    Query.emitTrace("query end " + query.uuid());
+                    Query.traceLog.info("query end " + query.uuid());
                 }
             }
         }
@@ -811,7 +812,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
         @Override
         public void cancel(String message) {
             if (query.isTraced()) {
-                Query.emitTrace("query interrupt " + query.uuid());
+                Query.traceLog.info("query interrupt " + query.uuid());
             }
             interrupt();
         }
