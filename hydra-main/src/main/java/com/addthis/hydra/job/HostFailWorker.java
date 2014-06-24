@@ -493,10 +493,10 @@ public class HostFailWorker {
             }
             synchronized (hostsToFailByType) {
                 try {
-                    JSONObject decoded = new JSONObject(spawn.getSpawnDataStore().get(dataStoragePath));
-                    loadHostsFromJSONArray(failFsOkay, decoded.getJSONArray(filesystemOkayKey));
-                    loadHostsFromJSONArray(failFsDead, decoded.getJSONArray(filesystemDeadKey));
-                    loadHostsFromJSONArray(fsFull, decoded.getJSONArray(filesystemFullKey));
+                    JSONObject decoded = new JSONObject(raw);
+                    loadHostsFromJSONArray(failFsOkay, decoded.optJSONArray(filesystemOkayKey));
+                    loadHostsFromJSONArray(failFsDead, decoded.optJSONArray(filesystemDeadKey));
+                    loadHostsFromJSONArray(fsFull, decoded.optJSONArray(filesystemFullKey));
                     return true;
                 } catch (Exception e) {
                     log.warn("Failed to load HostFailState: " + e + " raw=" + raw, e);
