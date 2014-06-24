@@ -276,7 +276,8 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Cod
         @Override
         public ValueNumber sum(ValueNumber valueNumber) {
             if (TDigestValue.class == valueNumber.getClass()) {
-                return new TDigestValue(TDigest.merge(tdigest.compression(), Arrays.asList(((TDigestValue) valueNumber).tdigest)), op, quantile);
+                return new TDigestValue(TDigest.merge(tdigest.compression(),
+                        Arrays.asList(this.tdigest, ((TDigestValue) valueNumber).tdigest)), op, quantile);
             }
             return asLong().sum(valueNumber.asLong());
         }
