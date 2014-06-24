@@ -615,7 +615,7 @@ public class SpawnManager {
                 int node = kv.getIntValue("node", -1);
                 IJob job = spawn.getJob(id);
                 if (job != null) {
-                    link.sendShortReply(200, "OK", spawn.checkTaskDirText(id, node));
+                    link.sendJSON(200, "OK", json("result",spawn.checkTaskDirText(id, node)));
                 } else {
                     link.sendJSON(200, "Error", json("error","invalid job id"));
                 }
@@ -629,7 +629,7 @@ public class SpawnManager {
                 int node = kv.getIntValue("node", -1);
                 IJob job = spawn.getJob(id);
                 if (job != null) {
-                    link.sendShortReply(200, "OK", spawn.fixTaskDir(id, node, false, false));
+                    link.sendJSON(200, "OK", json("result",spawn.fixTaskDir(id, node, false, false)));
                 } else {
                     link.sendJSON(200, "Error", json("error","invalid job id"));
                 }
