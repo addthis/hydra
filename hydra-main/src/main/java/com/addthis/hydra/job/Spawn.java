@@ -3432,6 +3432,10 @@ public class Spawn implements Codec.Codable {
             // If a rebalance was stopped cleanly, resume it.
             if (new TaskMover(this, task.getJobKey(), task.getRebalanceTarget(), task.getRebalanceSource()).execute()) {
                 return true;
+            } else {
+                // Unable to complete the stopped rebalance. Clear out source/target and kick as normal.
+                task.setRebalanceSource(null);
+                task.setRebalanceTarget(null);
             }
         }
         CommandTaskKick kick = new CommandTaskKick(
