@@ -813,9 +813,15 @@ public class JobsResource {
                 boolean schedule = kv.getValue("spawn", "0").equals("1");
                 boolean manual = kv.getValue("manual", "0").equals("1");
                 String id = kv.getValue("id", "");
+                String config = kv.getValue("config");
+                if (config != null && config.length() > Spawn.inputMaxNumberOfCharacters) {
+                    throw new IllegalArgumentException("Job config length of " + config.length()
+                                                       + " characters is greater than max length of "
+                                                       + Spawn.inputMaxNumberOfCharacters);
+                }
 //              emitLogLineForAction(kv, "submit job " + id);
                 if (Strings.isEmpty(id) && !schedule) {
-                    String[] hosts = generateHosts(kv.getValue("hosts", ""), kv.getValue("config"));
+                    String[] hosts = generateHosts(kv.getValue("hosts", ""), config);
                     IJob job = spawn.createJob(
                             kv.getValue("owner", user.getUsername()),
                             kv.getIntValue("nodes", -1),

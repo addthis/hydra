@@ -148,15 +148,16 @@ public class Spawn implements Codec.Codable {
     private static final String queryHttpHost = Parameter.value("spawn.queryhost");
     private static final int webPort = Parameter.intValue("spawn.http.port", 5050);
     private static final int requestHeaderBufferSize = Parameter.intValue("spawn.http.bufsize", 8192);
-    private static final int hostStatusRequestInterval = Parameter.intValue("spawn.status.interval", 5000);
-    private static final int queueKickInterval = Parameter.intValue("spawn.queue.kick.interval", 3000);
+    private static final int hostStatusRequestInterval = Parameter.intValue("spawn.status.interval", 5_000);
+    private static final int queueKickInterval = Parameter.intValue("spawn.queue.kick.interval", 3_000);
     private static final int backgroundThreads = Parameter.intValue("spawn.background.threads", 4);
-    private static final int backgroundQueueSize = Parameter.intValue("spawn.background.queuesize", 1000);
-    private static final int backgroundHttpTimeout = Parameter.intValue("spawn.background.timeout", 300000);
+    private static final int backgroundQueueSize = Parameter.intValue("spawn.background.queuesize", 1_000);
+    private static final int backgroundHttpTimeout = Parameter.intValue("spawn.background.timeout", 300_000);
 
     private static final int backgroundEmailMinute = Parameter.intValue("spawn.background.notification.interval.minutes", 60);
     private static final String backgroundEmailAddress = Parameter.value("spawn.background.notification.address");
-    private static final long MILLISECONDS_PER_MINUTE = (1000 * 60);
+    public  static final long inputMaxNumberOfCharacters = Parameter.longValue("spawn.input.max.length", 1_000_000);
+    private static final long MILLISECONDS_PER_MINUTE = (1_000 * 60);
     private static final AtomicLong emailLastFired = new AtomicLong();
 
     private static final BlockingQueue<Runnable> backgroundTaskQueue = new LinkedBlockingQueue<>(backgroundQueueSize);
@@ -186,7 +187,7 @@ public class Spawn implements Codec.Codable {
     public static final String SPAWN_DATA_DIR = Parameter.value("SPAWN_DATA_DIR", "./data");
     public static final String SPAWN_STRUCTURED_LOG_DIR = Parameter.value("spawn.logger.bundle.dir", "./log/spawn-stats");
 
-    private static final int clientDropTimeMillis = Parameter.intValue("spawn.client.drop.time", 60000);
+    private static final int clientDropTimeMillis = Parameter.intValue("spawn.client.drop.time", 60_000);
     private static final int clientDropQueueSize = Parameter.intValue("spawn.client.drop.queue", 2000);
 
     // thread pool for running chore actions that we do not want running in the main thread of Spawn
