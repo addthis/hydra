@@ -1418,9 +1418,25 @@ public class Spawn implements Codec.Codable {
                     log.warn("[job.rebalance] promoting host " + host.getHostUuid() + " as live for " + task.getJobKey());
                     task.replaceReplica(host.getHostUuid(), task.getHostUUID());
                     task.setHostUUID(host.getHostUuid());
+                    replaceDownHosts(task);
                     copyTaskToReplicas(task);
                     succeeded = true;
                     break;
+                }
+            }
+        }
+        if (!succeeded) {
+            boolean foundLive = false;
+            for (HostState host : listHostStatus(null)) {
+                // Check all live hosts for a copy of the task
+                if (host.isUp() && !host.isDead() && host.hasLive(task.getJobKey())) {
+                    if (!foundLive) {
+                        task.setHostUUID(host.getHostUuid());
+                        foundLive = true;
+                        succeeded = true;
+                    } else {
+                        task.setReplicas(Arrays.asList(new JobTaskReplica(host.getHostUuid(), task.getJobUUID(), 0, 0)));
+                    }
                 }
             }
         }
@@ -2832,6 +2848,9 @@ public class Spawn implements Codec.Codable {
     public void queueJobTaskUpdateEvent(Job job) {
         jobLock.lock();
         try {
+            if (jobConfigManager != null) {
+                jobConfigManager.updateJob(job);
+            }
             jobUpdateQueue.add(job.getId());
         } finally {
             jobLock.unlock();
