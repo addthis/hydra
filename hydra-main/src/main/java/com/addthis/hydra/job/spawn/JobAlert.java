@@ -208,7 +208,7 @@ public class JobAlert implements Codec.Codable {
         this.canaryRops = canaryRops;
     }
 
-    public String getCanaryOps() { return canaryRops; }
+    public String getCanaryOps() { return canaryOps; }
 
     public void setCanaryOps(String canaryOps) {
         this.canaryOps = canaryOps;
