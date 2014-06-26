@@ -2848,9 +2848,6 @@ public class Spawn implements Codec.Codable {
     public void queueJobTaskUpdateEvent(Job job) {
         jobLock.lock();
         try {
-            if (jobConfigManager != null) {
-                jobConfigManager.updateJob(job);
-            }
             jobUpdateQueue.add(job.getId());
         } finally {
             jobLock.unlock();
