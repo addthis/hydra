@@ -117,12 +117,16 @@ public class SpawnBalancer implements Codec.Codable {
     private final Comparator<HostState> hostStateReplicationSuitabilityComparator = new Comparator<HostState>() {
         @Override
         public int compare(HostState hostState, HostState hostState1) {
-            boolean recentlyReplicatedTo = recentlyReplicatedToHosts.getIfPresent(hostState.getHostUuid()) != null;
-            boolean recentlyReplicatedTo1 = recentlyReplicatedToHosts.getIfPresent(hostState1.getHostUuid()) != null;
-            if (recentlyReplicatedTo != recentlyReplicatedTo1) {
-                return recentlyReplicatedTo ? 1 : -1;
+            // Treat recently-replicated-to hosts as having fewer than their reported available bytes
+            long availBytes = getAvailDiskBytes(hostState);
+            long availBytes1 = getAvailDiskBytes(hostState1);
+            if (recentlyReplicatedToHosts.getIfPresent(hostState.getHostUuid()) != null) {
+                availBytes /= 2;
             }
-            return -Double.compare(getAvailDiskBytes(hostState), getAvailDiskBytes(hostState1));
+            if (recentlyReplicatedToHosts.getIfPresent(hostState1.getHostUuid()) != null) {
+                availBytes1 /= 2;
+            }
+            return -Double.compare(availBytes, availBytes1);
         }
     };
 
