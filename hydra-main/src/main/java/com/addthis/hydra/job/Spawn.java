@@ -1945,7 +1945,7 @@ public class Spawn implements Codec.Codable {
             }
             spawnState.jobs.remove(jobUUID);
             spawnState.jobDependencies.removeNode(jobUUID);
-            log.warn("[job.delete] " + job.getId() + " >> " + job.getCopyOfTasks());
+            log.warn("[job.delete] " + job.getId());
             spawnMQ.sendControlMessage(new CommandTaskDelete(HostMessage.ALL_HOSTS, job.getId(), null, job.getRunCount()));
             sendJobUpdateEvent("job.delete", job);
             if (jobConfigManager != null) {

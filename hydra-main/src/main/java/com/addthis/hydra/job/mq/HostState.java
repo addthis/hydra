@@ -338,6 +338,9 @@ public class HostState implements HostMessage {
                 continue;
             }
             for (JobKey jobKey : source) {
+                if (jobKey == null) {
+                    continue;
+                }
                 Integer oldCount;
                 int newCount = ((oldCount = jobTaskCountMap.get(jobKey.getJobUuid())) != null ? 1 + oldCount : 1);
                 jobTaskCountMap.put(jobKey.getJobUuid(), newCount);
