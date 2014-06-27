@@ -192,10 +192,6 @@ public class Spawn implements Codec.Codable {
     private static final int clientDropTimeMillis = Parameter.intValue("spawn.client.drop.time", 60_000);
     private static final int clientDropQueueSize = Parameter.intValue("spawn.client.drop.queue", 2000);
 
-    // thread pool for running chore actions that we do not want running in the main thread of Spawn
-    private final ExecutorService choreExecutor = MoreExecutors.getExitingExecutorService(
-            new ThreadPoolExecutor(1, 4, 0L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(), new ThreadFactoryBuilder().setNameFormat("choreExecutor-%d").build()));
     // thread pool for expanding jobs and sending kick messages (outside of the main application threads)
     // - thread pool size of 10 chosen somewhat arbitrarily, most job expansions should be nearly instantaneous
     // - max queue size of 5000 was chosen as a generous upper bound for how many tasks may be queued at once (since the number of scheduled kicks is limited by queue size)
@@ -320,7 +316,7 @@ public class Spawn implements Codec.Codable {
             this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
             this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
         }
-        this.hostFailWorker = new HostFailWorker(this);
+        this.hostFailWorker = new HostFailWorker(this, scheduledExecutor);
         this.balancer = new SpawnBalancer(this);
         this.spawnMesh = new SpawnMesh(this);
         this.eventLog = new RollingLog(new File(logDir, "events-jobs"), "job", eventLogCompress, logMaxSize, logMaxAge);
@@ -377,7 +373,7 @@ public class Spawn implements Codec.Codable {
         this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
         this.aliasBiMap = new AliasBiMap(spawnDataStore);
         aliasBiMap.loadCurrentValues();
-        hostFailWorker = new HostFailWorker(this);
+        hostFailWorker = new HostFailWorker(this, scheduledExecutor);
         balancer = new SpawnBalancer(this);
         loadSpawnBalancerConfig();
         this.spawnMQ.connectToMQ(uuid);
@@ -3176,7 +3172,6 @@ public class Spawn implements Codec.Codable {
         shuttingDown.set(true);
         try {
             drainJobTaskUpdateQueue();
-            hostFailWorker.stop();
         } catch (Exception ex) {
             log.warn("", ex);
         }

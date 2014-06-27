@@ -26,9 +26,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
@@ -46,6 +46,8 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -130,15 +132,18 @@ public class SpawnBalancer implements Codec.Codable {
         }
     };
 
+    private final ScheduledExecutorService taskExecutor;
+
     public SpawnBalancer(Spawn spawn) {
         this.spawn = spawn;
-        Timer statUpdateTimer = new Timer(true);
-        statUpdateTimer.scheduleAtFixedRate(new AggregateStatUpdaterTask(), AGGREGATE_STAT_UPDATE_INTERVAL, AGGREGATE_STAT_UPDATE_INTERVAL);
+        taskExecutor = MoreExecutors.getExitingScheduledExecutorService(
+                new ScheduledThreadPoolExecutor(2, new ThreadFactoryBuilder().setNameFormat("spawnBalancer-%d").build()));
+        taskExecutor.scheduleAtFixedRate(new AggregateStatUpdaterTask(), AGGREGATE_STAT_UPDATE_INTERVAL, AGGREGATE_STAT_UPDATE_INTERVAL, TimeUnit.MILLISECONDS);
         this.taskSizer = new SpawnBalancerTaskSizer(spawn);
     }
 
     public void startTaskSizePolling() {
-        taskSizer.startPolling();
+        taskSizer.startPolling(taskExecutor);
     }
 
     /**
@@ -1299,7 +1304,7 @@ public class SpawnBalancer implements Codec.Codable {
     /**
      * Update aggregate cluster statistics periodically
      */
-    private class AggregateStatUpdaterTask extends TimerTask {
+    private class AggregateStatUpdaterTask implements Runnable {
 
         @Override
         public void run() {
@@ -1486,7 +1491,7 @@ public class SpawnBalancer implements Codec.Codable {
      */
     public synchronized void startAutobalanceTask() {
         if (autobalanceStarted.compareAndSet(false, true)) {
-            new Timer(true).scheduleAtFixedRate(new AutobalanceTimerTask(), config.getAutobalanceCheckInterval(), config.getAutobalanceCheckInterval());
+            taskExecutor.scheduleWithFixedDelay(new AutobalanceTask(), config.getAutobalanceCheckInterval(), config.getAutobalanceCheckInterval(), TimeUnit.MILLISECONDS);
         }
     }
 
@@ -1622,7 +1627,7 @@ public class SpawnBalancer implements Codec.Codable {
     /**
      * This class performs job/host rebalancing at specified intervals
      */
-    private class AutobalanceTimerTask extends TimerTask {
+    private class AutobalanceTask implements Runnable {
 
         private long lastJobAutobalanceTime = 0L;
         private long lastHostAutobalanceTime = 0L;
