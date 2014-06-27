@@ -70,7 +70,7 @@ public class HostState implements HostMessage {
     private JobKey incompleteReplicas[];
     @Codec.Set(codable = true)
     private JobKey queued[];
-    @Codec.Set(codable = true)
+    // Do not encode this derived, internal, non-typesafe field
     private HashMap<String, Integer> jobTaskCountMap;
     @Codec.Set(codable = true)
     private HostCapacity used;
