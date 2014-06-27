@@ -26,6 +26,7 @@ public class SpawnDataStoreKeys {
     public static final String MINION_DEAD_PATH = "/minion/dead";
     public static final String SPAWN_JOB_CONFIG_PATH = "/spawn/jobs";
     public static final String SPAWN_COMMON_ALERT_PATH = "/spawn/common/alerts";
+    public static final String SPAWN_JOB_CONFIG_HEARTBEAT_PATH = "/spawn/jobheartbeat";
 
     /* Marker to make sure we import legacy alerts from Jobs exactly once */
     public static final String SPAWN_COMMON_ALERT_LOADED_LEGACY = "/spawn/common/alerts/_loaded_legacy";

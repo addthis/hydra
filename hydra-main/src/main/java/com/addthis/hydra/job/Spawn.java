@@ -94,6 +94,7 @@ import com.addthis.hydra.job.spawn.SpawnService;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
+import com.addthis.hydra.job.store.SpawnDataStoreKeys;
 import com.addthis.hydra.query.spawndatastore.AliasBiMap;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
@@ -183,6 +184,9 @@ public class Spawn implements Codec.Codable {
     private static final Meter jobsCompletedPerHour = Metrics.newMeter(Spawn.class, "jobsCompletedPerHour", "jobsCompletedPerHour", TimeUnit.HOURS);
     private static final Counter nonConsumingClientDropCounter = Metrics.newCounter(Spawn.class, "clientDrops");
     private static final Counter nonHostTaskMessageCounter = Metrics.newCounter(Spawn.class, "nonHostTaskMessage");
+    private static final Meter jobTaskUpdateHeartbeatSuccessMeter = Metrics.newMeter(Spawn.class, "jobTaskUpdateHeartbeatSuccess", "jobTaskUpdateHeartbeatSuccess", TimeUnit.MINUTES);
+    private static final Counter jobTaskUpdateHeartbeatFailureCounter = Metrics.newCounter(Spawn.class, "jobTaskUpdateHeartbeatFailure");
+    private static final long JOB_TASK_UPDATE_HEARTBEAT_INTERVAL = Parameter.longValue("spawn.jobtask.update.interval", 30000);
 
     public static final String SPAWN_DATA_DIR = Parameter.value("SPAWN_DATA_DIR", "./data");
     public static final String SPAWN_STRUCTURED_LOG_DIR = Parameter.value("spawn.logger.bundle.dir", "./log/spawn-stats");
@@ -403,6 +407,12 @@ public class Spawn implements Codec.Codable {
                 drainJobTaskUpdateQueue();
             }
         }, TASK_QUEUE_DRAIN_INTERVAL, TASK_QUEUE_DRAIN_INTERVAL);
+        taskUpdateQueueDrainer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                jobTaskUpdateHeartbeatCheck();
+            }
+        }, JOB_TASK_UPDATE_HEARTBEAT_INTERVAL, JOB_TASK_UPDATE_HEARTBEAT_INTERVAL);
         //Start JobAlertManager
         this.jobAlertRunner = new JobAlertRunner(this);
         // start job scheduler
@@ -2844,7 +2854,7 @@ public class Spawn implements Codec.Codable {
         }
     }
 
-    public void drainJobTaskUpdateQueue() {
+    private void drainJobTaskUpdateQueue() {
         long start = System.currentTimeMillis();
         Set<String> jobIds = new HashSet<>();
         jobUpdateQueue.drainTo(jobIds);
@@ -2860,6 +2870,23 @@ public class Spawn implements Codec.Codable {
                 log.trace("[drain] Finished Draining " + jobIds.size() + " jobs from the update queue in " + (System.currentTimeMillis() - start) + "ms");
             }
         }
+    }
+
+    private synchronized void jobTaskUpdateHeartbeatCheck() {
+        try {
+            String now = Long.toString(System.currentTimeMillis());
+            spawnDataStore.put(SpawnDataStoreKeys.SPAWN_JOB_CONFIG_HEARTBEAT_PATH, now);
+            String received = spawnDataStore.get(SpawnDataStoreKeys.SPAWN_JOB_CONFIG_HEARTBEAT_PATH);
+            if (received != null && received.equals(now)) {
+                jobTaskUpdateHeartbeatSuccessMeter.mark();
+            } else {
+                jobTaskUpdateHeartbeatFailureCounter.inc();
+            }
+        } catch (Exception e) {
+            jobTaskUpdateHeartbeatFailureCounter.inc();
+            log.warn("Failed to perform jobtaskupdate heartbeat check", e);
+        }
+
     }
 
     public void sendJobUpdateEvent(String label, Job job) {
