@@ -73,12 +73,15 @@ import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Optional;
 
+import com.typesafe.config.ConfigException;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigOrigin;
+import com.typesafe.config.ConfigRenderOptions;
 import com.yammer.dropwizard.auth.Auth;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.type.TypeFactory;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 @Path("/job")
 public class JobsResource {
@@ -981,6 +984,7 @@ public class JobsResource {
 
     private Response validateExpandedConfigurationBody(String expandedConfig)
             throws JSONException {
+
         JSONArray lineErrors = new JSONArray();
         JSONArray lineColumns = new JSONArray();
 
@@ -989,16 +993,38 @@ public class JobsResource {
         try {
             jobJSON = new JSONObject(expandedConfig, false);
         } catch (JSONException ex) {
-            lineErrors.put(ex.getLine());
-            lineColumns.put(ex.getColumn());
-            return validateCreateError(ex.getMessage(), lineErrors, lineColumns, "postExpansionError");
+            if ((ex.getColumn() != 0) || (ex.getLine() != 0)) {
+                lineErrors.put(ex.getLine());
+                lineColumns.put(ex.getColumn());
+                return validateCreateError(ex.getMessage(), lineErrors, lineColumns, "postExpansionError");
+            }
+            try {
+                expandedConfig =
+                        ConfigFactory.parseString(expandedConfig).resolve().root()
+                                     .render(ConfigRenderOptions.defaults()
+                                                                .setOriginComments(false));
+            } catch (ConfigException hoconEx) {
+                ConfigOrigin origin = hoconEx.origin();
+                if (origin != null) {
+                    lineErrors.put(origin.lineNumber());
+                }
+                return validateCreateError(hoconEx.getMessage(), lineErrors, lineColumns,
+                                           "postExpansionError");
+            }
+            try {
+                jobJSON = new JSONObject(expandedConfig, false);
+            } catch (JSONException reEx) {
+                lineErrors.put(reEx.getLine());
+                lineColumns.put(reEx.getColumn());
+                return validateCreateError(ex.getMessage(), lineErrors, lineColumns, "postExpansionError");
+            }
         }
         try {
             JsonRunner.initClasses(jobJSON);
             jobJSON.remove("classes");
             List<CodecExceptionLineNumber> warnings = new ArrayList<>();
             CodecJSON.decodeObject(TaskRunnable.class, jobJSON, warnings);
-            if (warnings.size() > 0) {
+            if (!warnings.isEmpty()) {
                 StringBuilder message = new StringBuilder();
                 Iterator<CodecExceptionLineNumber> iter = warnings.iterator();
                 while (iter.hasNext()) {

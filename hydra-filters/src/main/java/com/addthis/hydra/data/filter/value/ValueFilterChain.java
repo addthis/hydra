@@ -35,6 +35,7 @@ import com.addthis.codec.Codec;
  * @user-reference
  * @hydra-name chain
  */
+@Codec.ArraySugar
 public class ValueFilterChain extends ValueFilter {
 
     /**

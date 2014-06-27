@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name chain
  */
+@Codec.ArraySugar
 public class BundleFilterChain extends BundleFilter {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilterChain.class);
@@ -38,7 +39,7 @@ public class BundleFilterChain extends BundleFilter {
      * The chain of bundle filters to execute.
      */
     @Codec.Set(codable = true, required = true)
-    private BundleFilter filter[];
+    private BundleFilter[] filter;
 
     /**
      * If true then stop execution on the failure of a filter. Default is true.
@@ -79,7 +80,8 @@ public class BundleFilterChain extends BundleFilter {
         for (BundleFilter f : filter) {
             if (!f.filterExec(row) && failStop) {
                 if (debug && bundleCounter.getAndIncrement() < debugMaxBundles) {
-                    log.warn("fail @ " + CodecJSON.encodeString(f) +" with " + BundlePrinter.printBundle(row));
+                    log.warn("fail @ " + CodecJSON.encodeString(f) + " with " +
+                             BundlePrinter.printBundle(row));
                 }
                 return failReturn;
             }

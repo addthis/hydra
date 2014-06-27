@@ -54,6 +54,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name chain
  */
+@Codec.ArraySugar
 public class TaskDataOutputChain extends DataOutputTypeList {
 
     private static final Logger log = LoggerFactory.getLogger(TaskDataOutputChain.class);
