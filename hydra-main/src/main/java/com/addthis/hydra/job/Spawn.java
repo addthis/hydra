@@ -107,6 +107,7 @@ import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -1334,33 +1335,30 @@ public class Spawn implements Codec.Codable {
      * @param orphansOnly     Whether to only delete orphans for idle tasks
      * @return A string description
      */
-    public String fixTaskDir(String jobId, int node, boolean ignoreTaskState, boolean orphansOnly) {
+    public JSONObject fixTaskDir(String jobId, int node, boolean ignoreTaskState, boolean orphansOnly) {
         jobLock.lock();
         try {
             Job job = getJob(jobId);
-            if (job == null) {
-                return "Null job";
-            }
             int numChanged = 0;
-            List<JobTask> tasks = node < 0 ? job.getCopyOfTasks() : Arrays.asList(job.getTask(node));
-            for (JobTask task : tasks) {
-                boolean shouldModifyTask = !spawnJobFixer.haveRecentlyFixedTask(task.getJobKey()) &&
-                        (ignoreTaskState || (task.getState() == JobTaskState.IDLE || (!orphansOnly && task.getState() == JobTaskState.ERROR)));
-                if (log.isDebugEnabled()) {
-                    log.debug("[fixTaskDir] considering modifying task " + task.getJobKey() + " shouldModifyTask=" + shouldModifyTask);
-                }
-                if (shouldModifyTask) {
-                    try {
-                        numChanged += resolveJobTaskDirectoryMatches(task, orphansOnly) ? 1 : 0;
-                        spawnJobFixer.markTaskRecentlyFixed(task.getJobKey());
-                    } catch (Exception ex) {
-                        log.warn("fixTaskDir exception " + ex, ex);
-                        return "fixTaskDir exception (see log for more details): " + ex;
-
+            if (job != null) {
+                List<JobTask> tasks = node < 0 ? job.getCopyOfTasks() : Arrays.asList(job.getTask(node));
+                for (JobTask task : tasks) {
+                    boolean shouldModifyTask = !spawnJobFixer.haveRecentlyFixedTask(task.getJobKey()) &&
+                                               (ignoreTaskState || (task.getState() == JobTaskState.IDLE || (!orphansOnly && task.getState() == JobTaskState.ERROR)));
+                    if (log.isDebugEnabled()) {
+                        log.debug("[fixTaskDir] considering modifying task " + task.getJobKey() + " shouldModifyTask=" + shouldModifyTask);
+                    }
+                    if (shouldModifyTask) {
+                        try {
+                            numChanged += resolveJobTaskDirectoryMatches(task, orphansOnly) ? 1 : 0;
+                            spawnJobFixer.markTaskRecentlyFixed(task.getJobKey());
+                        } catch (Exception ex) {
+                            log.warn("fixTaskDir exception " + ex, ex);
+                        }
                     }
                 }
             }
-            return "Changed " + numChanged + " tasks";
+            return new JSONObject(ImmutableMap.of("tasksChanged", numChanged));
         } finally {
             jobLock.unlock();
         }
