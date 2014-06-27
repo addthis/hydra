@@ -1375,6 +1375,9 @@ public class Spawn implements Codec.Codable {
         Set<String> expectedHostsWithTask = new HashSet<>();
         Set<String> expectedHostsMissingTask = new HashSet<>();
         Set<String> unexpectedHostsWithTask = new HashSet<>();
+        if (isNewTask(task)) {
+            System.out.println("IS NEW TASK: " + task.getJobKey());
+        }
         replaceDownHosts(task);
         for (HostState host : listHostStatus(null)) {
             if (hostSuitableForReplica(host)) {

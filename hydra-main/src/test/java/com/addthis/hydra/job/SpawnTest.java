@@ -143,6 +143,12 @@ public class SpawnTest extends ZkStartUtil {
         Job job = spawn.createJob("fsm", 3, Arrays.asList("host0"), "default", "c");
         job.setReplicas(1);
         spawn.rebalanceReplicas(job);
+        for (JobTask task : job.getCopyOfTasks()) {
+            // Convince spawn these tasks have data
+            task.setByteCount(1000l);
+            task.setFileCount(10);
+        }
+        spawn.updateJob(job);
         host0.setStopped(new JobKey[]{new JobKey(job.getId(), 0)});
         spawn.updateHostState(host0);
         host1.setStopped(new JobKey[]{new JobKey(job.getId(), 0), new JobKey(job.getId(), 1)});
