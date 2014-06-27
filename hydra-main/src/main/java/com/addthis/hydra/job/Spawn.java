@@ -1306,7 +1306,7 @@ public class Spawn implements Codec.Codable {
                 List<JobTaskDirectoryMatch> directoryMismatches = matchTaskToDirectories(task, false);
                 if (!directoryMismatches.isEmpty()) {
                     // If there are issues with a task's directories, resolve them.
-                    resolveJobTaskDirectoryMatches(job, task, directoryMismatches, false);
+                    resolveJobTaskDirectoryMatches(job, task, false);
                     allMismatches.addAll(directoryMismatches);
                 }
             }
@@ -1351,7 +1351,7 @@ public class Spawn implements Codec.Codable {
                 }
                 if (shouldModifyTask) {
                     try {
-                        numChanged += resolveJobTaskDirectoryMatches(job, task, matchTaskToDirectories(task, false), orphansOnly) ? 1 : 0;
+                        numChanged += resolveJobTaskDirectoryMatches(job, task, orphansOnly) ? 1 : 0;
                         spawnJobFixer.markTaskRecentlyFixed(task.getJobKey());
                     } catch (Exception ex) {
                         log.warn("fixTaskDir exception " + ex, ex);
@@ -1367,82 +1367,72 @@ public class Spawn implements Codec.Codable {
 
     }
 
-    public boolean resolveJobTaskDirectoryMatches(Job job, JobTask task, List<JobTaskDirectoryMatch> matches, boolean deleteOrphansOnly) throws Exception {
-        boolean changed = false;
-        for (JobTaskDirectoryMatch match : matches) {
-            boolean resolvedMissingLive = false;
-            switch (match.getType()) {
-                case MATCH:
-                    continue;
-                case MISMATCH_MISSING_LIVE:
-                    if (deleteOrphansOnly) {
-                        continue;
-                    }
-                    changed = true;
-                    resolveMissingLive(task);
-                    resolvedMissingLive = true; // Only need to resolve missing live once, since all replicas will be recopied
-                    break;
-                case ORPHAN_LIVE:
-                    changed = true;
-                    sendControlMessage(new CommandTaskDelete(match.getHostId(), job.getId(), task.getTaskID(), job.getRunCount()));
-                    break;
-                default:
-                    continue;
-            }
-            if (resolvedMissingLive) {
-                break;
-            }
-        }
-        return changed;
-    }
-
-    /**
-     * Handle the case where no living host has a copy of a task. Promote a replica if there is one, or recreate the task otherwise.
-     *
-     * @param task The task to modify.
-     */
-    private void resolveMissingLive(JobTask task) {
+    public boolean resolveJobTaskDirectoryMatches(Job job, JobTask task, boolean deleteOrphansOnly) throws Exception {
         HostState liveHost = getHostState(task.getHostUUID());
-        if (liveHost != null && liveHost.hasLive(task.getJobKey())) {
-            replaceDownHosts(task);
-            copyTaskToReplicas(task);
-            return;
-        }
-        boolean succeeded = false;
         List<JobTaskReplica> replicas = task.getReplicas();
-        if (replicas != null && !replicas.isEmpty()) {
-            HostState host;
-            for (JobTaskReplica replica : replicas) {
-                host = replica != null ? getHostState(replica.getHostUUID()) : null;
-                if (host != null && host.canMirrorTasks() && !host.isReadOnly() && host.hasLive(task.getJobKey())) {
-                    log.warn("[job.rebalance] promoting host " + host.getHostUuid() + " as live for " + task.getJobKey());
-                    task.replaceReplica(host.getHostUuid(), task.getHostUUID());
-                    task.setHostUUID(host.getHostUuid());
-                    replaceDownHosts(task);
-                    copyTaskToReplicas(task);
-                    succeeded = true;
-                    break;
+        if (!deleteOrphansOnly) {
+            if (liveHost != null && liveHost.hasLive(task.getJobKey())) {
+                if (replicas != null && !replicas.isEmpty()) {
+                    HostState host;
+                    boolean changed = replaceDownHosts(task);
+                    for (JobTaskReplica replica : replicas) {
+                        host = replica != null ? getHostState(replica.getHostUUID()) : null;
+                        if (host != null && !host.hasLive(task.getJobKey())) {
+                            copyTaskToReplicas(task);
+                            return true;
+                        }
+                    }
+                    return changed;
                 }
-            }
-        }
-        if (!succeeded) {
-            boolean foundLive = false;
-            for (HostState host : listHostStatus(null)) {
-                // Check all live hosts for a copy of the task
-                if (host.isUp() && !host.isDead() && host.hasLive(task.getJobKey())) {
-                    if (!foundLive) {
-                        task.setHostUUID(host.getHostUuid());
-                        foundLive = true;
-                        succeeded = true;
-                    } else {
-                        task.setReplicas(Arrays.asList(new JobTaskReplica(host.getHostUuid(), task.getJobUUID(), 0, 0)));
+            } else {
+                if (replicas != null && !replicas.isEmpty()) {
+                    HostState host;
+                    for (JobTaskReplica replica : replicas) {
+                        host = replica != null ? getHostState(replica.getHostUUID()) : null;
+                        if (host != null && host.canMirrorTasks() && !host.isReadOnly() && host.hasLive(task.getJobKey())) {
+                            log.warn("[job.rebalance] promoting host " + host.getHostUuid() + " as live for " + task.getJobKey());
+                            task.replaceReplica(host.getHostUuid(), task.getHostUUID());
+                            task.setHostUUID(host.getHostUuid());
+                            replaceDownHosts(task);
+                            copyTaskToReplicas(task);
+                            return true;
+                        }
+                    }
+                    boolean foundLive = false;
+                    List<JobTaskReplica> newReplicas = new ArrayList<>();
+                    for (HostState otherHost : listHostStatus(null)) {
+                        // Check all live hosts for a copy of the task
+                        if (otherHost != null && otherHost.isUp() && !otherHost.isDead() && otherHost.hasLive(task.getJobKey())) {
+                            if (!foundLive) {
+                                task.setHostUUID(otherHost.getHostUuid());
+                                foundLive = true;
+                            } else {
+                                newReplicas.add(new JobTaskReplica(otherHost.getHostUuid(), task.getJobUUID(), 0, 0));
+                            }
+                        }
+                    }
+                    if (foundLive) {
+                        task.setReplicas(newReplicas);
+                        replaceDownHosts(task);
+                        rebalanceReplicas(job, task.getTaskID(), false);
+                        copyTaskToReplicas(task);
+                        return true;
                     }
                 }
             }
-        }
-        if (!succeeded && getHostState(task.getHostUUID()) == null) {
-            // If no replica is found and the host doesn't exist, we must recreate the task somewhere else.
+            log.warn("Failed to find directories for task {}; recreating task", task.getJobKey());
             recreateTask(task);
+            return true;
+        } else {
+            for (HostState hostState : listHostStatus(null)) {
+                if (!hostState.isDead() && hostState.isUp() && hostState.hasLive(task.getJobKey())) {
+                    if (!task.getHostUUID().equals(hostState.getHostUuid()) && !task.hasReplicaOnHost(hostState.getHostUuid())) {
+                        deleteTask(task.getJobUUID(), hostState.getHostUuid(), task.getTaskID(), false);
+                    }
+                }
+            }
+            // Task itself has not changed
+            return false;
         }
     }
 
