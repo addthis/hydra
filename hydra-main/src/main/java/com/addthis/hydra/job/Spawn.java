@@ -1390,7 +1390,7 @@ public class Spawn implements Codec.Codable {
                 }
             }
         }
-        log.trace("fixTaskDirs found expectedWithTask {} expectedMissingTask {} unexpectedWithTask {} ");
+        log.trace("fixTaskDirs found expectedWithTask {} expectedMissingTask {} unexpectedWithTask {} ", expectedHostsWithTask, expectedHostsMissingTask, unexpectedHostsWithTask);
         if (deleteOrphansOnly) {
             // If we're only deleting orphans, ignore any expected hosts missing the task
             expectedHostsMissingTask = new HashSet<>();

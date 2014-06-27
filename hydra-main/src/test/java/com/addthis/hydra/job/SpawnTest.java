@@ -147,9 +147,26 @@ public class SpawnTest extends ZkStartUtil {
         spawn.updateHostState(host0);
         host1.setStopped(new JobKey[]{new JobKey(job.getId(), 0), new JobKey(job.getId(), 1)});
         spawn.updateHostState(host1);
+        HostState host2 = createHostState("host2");
+        host2.setStopped(new JobKey[] {new JobKey(job.getId(), 2)});
+        spawn.updateHostState(host2);
+        boolean hostsAreUp = false;
+        for (int i=0; i<10; i++) {
+            if (spawn.listHostStatus(null).size() < 3) {
+                Thread.sleep(1000); // Can take a little while for the hosts to appear as up
+            } else {
+                hostsAreUp = true;
+                break;
+            }
+        }
+        if (!hostsAreUp) {
+            throw new RuntimeException("Failed to find hosts after waiting");
+        }
         assertEquals("should not change task that is on on both hosts", 0, spawn.fixTaskDir(job.getId(), 0, false, false).get("tasksChanged"));
         assertEquals("should copy task that is on only one host", 1, spawn.fixTaskDir(job.getId(), 1, false, false).get("tasksChanged"));
         assertEquals("new home for task 1 should be the host that had the directory", "host1", spawn.getTask(job.getId(), 1).getHostUUID());
+        assertEquals("should copy task that is on an unexpected host", 1, spawn.fixTaskDir(job.getId(), 2, false, false).get("tasksChanged"));
+        assertEquals("new home for task 2 should be the unexpected host that had the directory", "host2", spawn.getTask(job.getId(), 2).getHostUUID());
     }
 
     private HostState createHostState(String hostUUID) throws Exception {
