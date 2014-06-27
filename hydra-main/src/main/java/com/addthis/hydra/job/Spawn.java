@@ -35,8 +35,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
@@ -206,7 +204,7 @@ public class Spawn implements Codec.Codable {
             new ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS, expandKickQueue,
                     new ThreadFactoryBuilder().setNameFormat("jobExpander-%d").build()));
     private final ScheduledExecutorService scheduledExecutor = MoreExecutors.getExitingScheduledExecutorService(
-            new ScheduledThreadPoolExecutor(2, new ThreadFactoryBuilder().setNameFormat("spawnScheduledTask-%d").build()));
+            new ScheduledThreadPoolExecutor(4, new ThreadFactoryBuilder().setNameFormat("spawnScheduledTask-%d").build()));
 
     private final Gauge<Integer> expandQueueGauge = Metrics.newGauge(Spawn.class, "expandKickExecutorQueue", new Gauge<Integer>() {
         public Integer value() {
@@ -384,40 +382,37 @@ public class Spawn implements Codec.Codable {
         loadSpawnBalancerConfig();
         this.spawnMQ.connectToMQ(uuid);
 
-        // request hosts to send their status
-        Timer timer = new Timer(true);
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                requestHostsUpdate();
-            }
-        }, hostStatusRequestInterval, hostStatusRequestInterval);
-        Timer taskQueueTimer = new Timer(true);
-        taskQueueTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                kickJobsOnQueue();
-                writeSpawnQueue();
-            }
-        }, queueKickInterval, queueKickInterval);
-        Timer taskUpdateQueueDrainer = new Timer(true);
-        taskUpdateQueueDrainer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                drainJobTaskUpdateQueue();
-            }
-        }, TASK_QUEUE_DRAIN_INTERVAL, TASK_QUEUE_DRAIN_INTERVAL);
-        taskUpdateQueueDrainer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                jobTaskUpdateHeartbeatCheck();
-            }
-        }, JOB_TASK_UPDATE_HEARTBEAT_INTERVAL, JOB_TASK_UPDATE_HEARTBEAT_INTERVAL);
         //Start JobAlertManager
         this.jobAlertRunner = new JobAlertRunner(this);
         // start job scheduler
         scheduledExecutor.scheduleWithFixedDelay(new UpdateEventRunnable(), 0, 1, TimeUnit.MINUTES);
         scheduledExecutor.scheduleWithFixedDelay(new JobRekickTask(), 0, 500, TimeUnit.MILLISECONDS);
+        scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                drainJobTaskUpdateQueue();
+            }
+        }, TASK_QUEUE_DRAIN_INTERVAL, TASK_QUEUE_DRAIN_INTERVAL, TimeUnit.MILLISECONDS);
+        scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                jobTaskUpdateHeartbeatCheck();
+            }
+        }, JOB_TASK_UPDATE_HEARTBEAT_INTERVAL, JOB_TASK_UPDATE_HEARTBEAT_INTERVAL, TimeUnit.MILLISECONDS);
+        // request hosts to send their status
+        scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                requestHostsUpdate();
+            }
+        }, hostStatusRequestInterval, hostStatusRequestInterval, TimeUnit.MILLISECONDS);
+        scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                kickJobsOnQueue();
+                writeSpawnQueue();
+            }
+        }, queueKickInterval, queueKickInterval, TimeUnit.MILLISECONDS);
         // start http commands listener(s)
         startSpawnWeb(dataDir, webDir);
         Runtime.getRuntime().addShutdownHook(new Thread() {
