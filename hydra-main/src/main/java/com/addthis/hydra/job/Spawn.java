@@ -1153,7 +1153,6 @@ public class Spawn implements Codec.Codable {
         }
         if (changed) {
             try {
-                this.rebalanceReplicas(job, false);
                 updateJob(job);
             } catch (Exception ex) {
                 log.warn("Failed to sent replication message for new task " + task.getJobKey() + ": " + ex, ex);
@@ -1306,7 +1305,7 @@ public class Spawn implements Codec.Codable {
                 List<JobTaskDirectoryMatch> directoryMismatches = matchTaskToDirectories(task, false);
                 if (!directoryMismatches.isEmpty()) {
                     // If there are issues with a task's directories, resolve them.
-                    resolveJobTaskDirectoryMatches(job, task, false);
+                    resolveJobTaskDirectoryMatches(task, false);
                     allMismatches.addAll(directoryMismatches);
                 }
             }
@@ -1351,7 +1350,7 @@ public class Spawn implements Codec.Codable {
                 }
                 if (shouldModifyTask) {
                     try {
-                        numChanged += resolveJobTaskDirectoryMatches(job, task, orphansOnly) ? 1 : 0;
+                        numChanged += resolveJobTaskDirectoryMatches(task, orphansOnly) ? 1 : 0;
                         spawnJobFixer.markTaskRecentlyFixed(task.getJobKey());
                     } catch (Exception ex) {
                         log.warn("fixTaskDir exception " + ex, ex);
@@ -1367,73 +1366,74 @@ public class Spawn implements Codec.Codable {
 
     }
 
-    public boolean resolveJobTaskDirectoryMatches(Job job, JobTask task, boolean deleteOrphansOnly) throws Exception {
-        HostState liveHost = getHostState(task.getHostUUID());
-        List<JobTaskReplica> replicas = task.getReplicas();
-        if (!deleteOrphansOnly) {
-            if (liveHost != null && liveHost.hasLive(task.getJobKey())) {
-                if (replicas != null && !replicas.isEmpty()) {
-                    HostState host;
-                    boolean changed = replaceDownHosts(task);
-                    for (JobTaskReplica replica : replicas) {
-                        host = replica != null ? getHostState(replica.getHostUUID()) : null;
-                        if (host != null && !host.hasLive(task.getJobKey())) {
-                            copyTaskToReplicas(task);
-                            return true;
-                        }
+    /**
+     * Go through the hosts in the cluster, making sure that a task has copies everywhere it should and doesn't have orphans living elsewhere
+     * @param task The task to examine
+     * @param deleteOrphansOnly Whether to ignore missing copies and only delete orphans
+     * @return True if the task was changed
+     */
+    public boolean resolveJobTaskDirectoryMatches(JobTask task, boolean deleteOrphansOnly) {
+        Set<String> expectedHostsWithTask = new HashSet<>();
+        Set<String> expectedHostsMissingTask = new HashSet<>();
+        Set<String> unexpectedHostsWithTask = new HashSet<>();
+        replaceDownHosts(task);
+        for (HostState host : listHostStatus(null)) {
+            if (hostSuitableForReplica(host)) {
+                String hostId = host.getHostUuid();
+                if (hostId.equals(task.getHostUUID()) || task.hasReplicaOnHost(hostId)) {
+                    if (host.hasLive(task.getJobKey())) {
+                        expectedHostsWithTask.add(hostId);
+                    } else {
+                        expectedHostsMissingTask.add(hostId);
                     }
-                    return changed;
-                }
-            } else {
-                if (replicas != null && !replicas.isEmpty()) {
-                    HostState host;
-                    for (JobTaskReplica replica : replicas) {
-                        host = replica != null ? getHostState(replica.getHostUUID()) : null;
-                        if (host != null && host.canMirrorTasks() && !host.isReadOnly() && host.hasLive(task.getJobKey())) {
-                            log.warn("[job.rebalance] promoting host " + host.getHostUuid() + " as live for " + task.getJobKey());
-                            task.replaceReplica(host.getHostUuid(), task.getHostUUID());
-                            task.setHostUUID(host.getHostUuid());
-                            replaceDownHosts(task);
-                            copyTaskToReplicas(task);
-                            return true;
-                        }
-                    }
-                    boolean foundLive = false;
-                    List<JobTaskReplica> newReplicas = new ArrayList<>();
-                    for (HostState otherHost : listHostStatus(null)) {
-                        // Check all live hosts for a copy of the task
-                        if (otherHost != null && otherHost.isUp() && !otherHost.isDead() && otherHost.hasLive(task.getJobKey())) {
-                            if (!foundLive) {
-                                task.setHostUUID(otherHost.getHostUuid());
-                                foundLive = true;
-                            } else {
-                                newReplicas.add(new JobTaskReplica(otherHost.getHostUuid(), task.getJobUUID(), 0, 0));
-                            }
-                        }
-                    }
-                    if (foundLive) {
-                        task.setReplicas(newReplicas);
-                        replaceDownHosts(task);
-                        rebalanceReplicas(job, task.getTaskID(), false);
-                        copyTaskToReplicas(task);
-                        return true;
-                    }
+                } else if (host.hasLive(task.getJobKey())) {
+                    unexpectedHostsWithTask.add(hostId);
                 }
             }
-            log.warn("Failed to find directories for task {}; recreating task", task.getJobKey());
-            recreateTask(task);
+        }
+        log.trace("fixTaskDirs found expectedWithTask {} expectedMissingTask {} unexpectedWithTask {} ");
+        if (deleteOrphansOnly) {
+            // If we're only deleting orphans, ignore any expected hosts missing the task
+            expectedHostsMissingTask = new HashSet<>();
+        }
+        return performTaskFixes(task, expectedHostsWithTask, expectedHostsMissingTask, unexpectedHostsWithTask);
+    }
+
+    private boolean performTaskFixes(JobTask task, Set<String> expectedHostsWithTask, Set<String> expectedHostsMissingTask, Set<String> unexpectedHostsWithTask) {
+        if (expectedHostsWithTask.isEmpty()) {
+            // No copies of the task were found on the expected live/replica hosts. Attempt to recover other copies from the cluster.
+            if (unexpectedHostsWithTask.isEmpty()) {
+                // No copies of the task were found anywhere in the cluster. Have to recreate it.
+                log.warn("No copies of {} were found. Recreating it on new hosts. ", task.getJobKey());
+                recreateTask(task);
+                return true;
+            }
+            // Found at least one host with data. Iterate through the hosts with data; first host becomes live, any others become replicas
+            Iterator<String> unexpectedHostsIter = unexpectedHostsWithTask.iterator();
+            List<JobTaskReplica> newReplicas = new ArrayList<>();
+            task.setHostUUID(unexpectedHostsIter.next());
+            while (unexpectedHostsIter.hasNext()) {
+                newReplicas.add(new JobTaskReplica(unexpectedHostsIter.next(), task.getJobUUID(), 0, 0));
+            }
+            task.setReplicas(newReplicas);
             return true;
         } else {
-            for (HostState hostState : listHostStatus(null)) {
-                if (!hostState.isDead() && hostState.isUp() && hostState.hasLive(task.getJobKey())) {
-                    if (!task.getHostUUID().equals(hostState.getHostUuid()) && !task.hasReplicaOnHost(hostState.getHostUuid())) {
-                        deleteTask(task.getJobUUID(), hostState.getHostUuid(), task.getTaskID(), false);
-                    }
-                }
+            // Found copies of task on expected hosts. Copy to any hosts missing the data, and delete from any unexpected hosts
+            boolean changed = false;
+            if (!expectedHostsMissingTask.isEmpty()) {
+                swapTask(task, expectedHostsWithTask.iterator().next(), false);
+                copyTaskToReplicas(task);
+                changed = true;
             }
-            // Task itself has not changed
-            return false;
+            for (String unexpectedHost : unexpectedHostsWithTask) {
+                deleteTask(task.getJobUUID(), unexpectedHost, task.getTaskID(), false);
+            }
+            return changed;
         }
+    }
+
+    private boolean hostSuitableForReplica(HostState host) {
+        return host != null && host.isUp() && !host.isDead();
     }
 
     private void copyTaskToReplicas(JobTask task) {
