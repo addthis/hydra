@@ -101,6 +101,9 @@ class SearchRunner implements Runnable {
         // Note that releasing our engine only decreases its open lease count.
         finally {
             MeshQuerySource.queryCount.dec();
+            if (queryOpProcessor != null) {
+                queryOpProcessor.close();
+            }
             if (finalEng != null) {
                 log.debug("Releasing engine: {}", finalEng);
                 finalEng.release();

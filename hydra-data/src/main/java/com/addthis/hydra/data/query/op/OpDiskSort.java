@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.data.query.op;
 
+import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -153,14 +154,14 @@ public class OpDiskSort extends AbstractRowOp {
 
     @Override
     public void close() throws IOException {
-        cleanup();
-    }
-
-    private void cleanup() {
-        if (Files.exists(tempDir)) {
-            boolean success = com.addthis.basis.util.Files.deleteDir(tempDir.toFile());
-            if (!success) {
-                log.warn("ERROR while deleting {} for disk sort", tempDir);
+        try {
+            mfm.waitForWriteClosure(0);
+        } finally {
+            if (Files.exists(tempDir)) {
+                boolean success = com.addthis.basis.util.Files.deleteDir(tempDir.toFile());
+                if (!success) {
+                    log.warn("ERROR while deleting {} for disk sort", tempDir);
+                }
             }
         }
     }
@@ -226,45 +227,41 @@ public class OpDiskSort extends AbstractRowOp {
                     break;
                 }
             }
-            cleanup();
             super.sendComplete();
             return;
         }
         if (!queryPromise.isDone()) {
             dumpBufferToMFM();
         } else {
-            cleanup();
             super.sendComplete();
             return;
         }
         int level = 0;
         /** progressively compact levels until only one chunk is emitted in a merge */
-        if (chunk > CHUNK_MERGES) {
-            while (mergeLevel(level++) > CHUNK_MERGES) {
-                if (queryPromise.isDone()) {
-                    break;
-                }
+        while (chunk > CHUNK_MERGES) {
+            chunk = mergeLevel(level++);
+            if (queryPromise.isDone()) {
+                break;
             }
         }
         if (queryPromise.isDone()) {
-            cleanup();
             super.sendComplete();
             return;
         }
         /** stream results from last round of merging */
-        SortedSource sortedSource = new SortedSource(level, 0, CHUNK_MERGES);
-        Bundle next = null;
-        int bundles = 0;
-        while ((next = sortedSource.next()) != null) {
-            if (!queryPromise.isDone()) {
-                getNext().send(next);
-                bundles++;
-            } else {
-                break;
+        try (SortedSource sortedSource = new SortedSource(level, 0, chunk)) {
+            Bundle next = null;
+            int bundles = 0;
+            while ((next = sortedSource.next()) != null) {
+                if (!queryPromise.isDone()) {
+                    getNext().send(next);
+                    bundles++;
+                } else {
+                    break;
+                }
             }
+            log.debug("finish read from level={} chunk=0 bundles={}", level, bundles);
         }
-        log.debug("finish read from level={} chunk=0 bundles={}", level, bundles);
-        cleanup();
         super.sendComplete();
     }
 
@@ -274,20 +271,21 @@ public class OpDiskSort extends AbstractRowOp {
     private int mergeLevel(int level) {
         int chunkOut = 0;
         int levelOut = level + 1;
-        int chunk = 0;
+        int nextChunk = 0;
         int merges = 0;
         int bundles = 0;
         while (true) {
-            SortedSource sortedSource = new SortedSource(level, chunk, CHUNK_MERGES);
-            int readers = sortedSource.getReaderCount();
-            log.debug("SourceSource({},{},{}) = {}", level, chunk, CHUNK_MERGES, readers);
-            if (readers == 0) {
-                log.debug("mergeLevel({})={} chunkIn={} bundles={}", level, merges, chunk, bundles);
-                return merges;
-            }
-            chunk += readers;
-            merges++;
-            try {
+            int chunksRemaining = chunk - nextChunk;
+            int chunksToMerge = Math.min(chunksRemaining, CHUNK_MERGES);
+            try (SortedSource sortedSource = new SortedSource(level, nextChunk, chunksToMerge)) {
+                int readers = sortedSource.getReaderCount();
+                log.debug("SourceSource({},{},{}) = {}", level, nextChunk, CHUNK_MERGES, readers);
+                if (readers == 0) {
+                    log.debug("mergeLevel({})={} chunkIn={} bundles={}", level, merges, nextChunk, bundles);
+                    return merges;
+                }
+                nextChunk += readers;
+                merges++;
                 MuxFile meta = mfm.openFile("l" + levelOut + "-c" + (chunkOut++), true);
                 log.debug(" output to level={} chunk={}", levelOut, chunkOut - 1);
                 try (OutputStream out = wrapOutputStream(meta.append());
@@ -301,7 +299,6 @@ public class OpDiskSort extends AbstractRowOp {
                 meta.sync();
                 log.debug(" output bundles={}", bundles);
             } catch (Exception ex) {
-                sortedSource.tryClean();
                 throw new RuntimeException(ex);
             }
         }
@@ -428,7 +425,7 @@ public class OpDiskSort extends AbstractRowOp {
         }
     }
 
-    private class SortedSource {
+    private final class SortedSource implements Closeable {
 
         private final TreeSet<SourceBundle> sorted = new TreeSet<>(new SourceBundleComparator());
         private final LinkedList<DataChannelReader> readers = new LinkedList<>();
@@ -453,21 +450,25 @@ public class OpDiskSort extends AbstractRowOp {
                     } else {
                         reader.close();
                     }
-                } catch (IOException e) {
-                    log.debug("swallowing mystery io exception", e);
-                    break;
+                } catch (RuntimeException e) {
+                    close();
+                    throw e;
+                } catch (Exception e) {
+                    close();
+                    throw new RuntimeException(e);
                 }
             }
             log.debug("SortedSource seeded with {} entries", sorted.size());
         }
 
-        public void tryClean() {
-            try {
-                for (DataChannelReader reader : readers) {
+        @Override
+        public void close() {
+            for (DataChannelReader reader : readers) {
+                try {
                     reader.close();
+                } catch (Exception ex) {
+                    log.warn("exception while trying to close disk sort readers", ex);
                 }
-            } catch (Exception ex) {
-                log.warn("exception while trying to close disk sort readers", ex);
             }
         }
 
@@ -538,6 +539,7 @@ public class OpDiskSort extends AbstractRowOp {
                 }
             }
         }
+
     }
 
     private static class SingleDirMuxyEventListener implements MuxyEventListener {
