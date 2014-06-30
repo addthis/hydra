@@ -49,7 +49,7 @@ public class HostFailWorker {
     private static final Logger log = LoggerFactory.getLogger(HostFailWorker.class);
     private final HostFailState hostFailState;
     private AtomicBoolean newAdditions = new AtomicBoolean(false); // True if a host has been recently added to the queue
-    private AtomicBoolean obeyTaskSlots = new AtomicBoolean(false); // Whether spawn should honor the max task slots when moving tasks to fail hosts
+    private AtomicBoolean obeyTaskSlots = new AtomicBoolean(true); // Whether spawn should honor the max task slots when moving tasks to fail hosts
     private final Spawn spawn;
 
     // Perform host-failure related operations at a given interval
