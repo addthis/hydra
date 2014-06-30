@@ -2502,14 +2502,16 @@ public class Spawn implements Codec.Codable {
                 job = getJob(replica.getJobUuid());
                 task = getTask(replica.getJobUuid(), replica.getNodeID());
                 if (task != null) {
-                    for (JobTaskReplica taskReplica : task.getReplicas()) {
-                        if (taskReplica.getHostUUID().equals(replica.getHostUuid())) {
-                            taskReplica.setVersion(replica.getVersion());
-                            taskReplica.setLastUpdate(replica.getUpdateTime());
+                    if (task.getReplicas() != null) {
+                        for (JobTaskReplica taskReplica : task.getReplicas()) {
+                            if (taskReplica.getHostUUID().equals(replica.getHostUuid())) {
+                                taskReplica.setVersion(replica.getVersion());
+                                taskReplica.setLastUpdate(replica.getUpdateTime());
+                            }
                         }
+                        log.info("[task.replica] version updated for " + job.getId() + "/" + task.getTaskID() + " ver " + task.getRunCount() + "/" + replica.getVersion());
+                        queueJobTaskUpdateEvent(job);
                     }
-                    log.info("[task.replica] version updated for " + job.getId() + "/" + task.getTaskID() + " ver " + task.getRunCount() + "/" + replica.getVersion());
-                    queueJobTaskUpdateEvent(job);
                 }
                 break;
             case STATUS_TASK_END:
