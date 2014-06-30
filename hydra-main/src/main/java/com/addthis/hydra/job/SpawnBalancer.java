@@ -698,7 +698,7 @@ public class SpawnBalancer implements Codec.Codable {
             double byteLimitFactor = 1 - ((double) (moveAssignments.getBytesUsed())) / config.getBytesMovedFullRebalance();
             moveAssignments.addAll(pushTasksOffHost(heavyHost, Arrays.asList(host), true, byteLimitFactor, config.getTasksMovedFullRebalance(), true));
         }
-        moveAssignments.addAll(purgeTasksForNonexistentJobs(host, 1));
+        moveAssignments.addAll(purgeMisplacedTasks(host, 1));
         return moveAssignments;
     }
 
@@ -709,7 +709,7 @@ public class SpawnBalancer implements Codec.Codable {
 
     /* Push/pull the tasks on a host to balance its disk, obeying an overall limit on the number of tasks/bytes to move */
     private List<JobTaskMoveAssignment> pushTasksOffHost(HostState host, List<HostState> otherHosts, boolean limitBytes, double byteLimitFactor, int moveLimit, boolean obeyDontAutobalanceMe) {
-        List<JobTaskMoveAssignment> rv = purgeTasksForNonexistentJobs(host, moveLimit);
+        List<JobTaskMoveAssignment> rv = purgeMisplacedTasks(host, moveLimit);
         if (rv.size() <= moveLimit) {
             long byteLimit = (long) (byteLimitFactor * config.getBytesMovedFullRebalance());
             List<HostState> hostsSorted = sortHostsByDiskSpace(otherHosts);
@@ -732,12 +732,20 @@ public class SpawnBalancer implements Codec.Codable {
         return rv;
     }
 
-    /* Look through a hoststate to find tasks that don't correspond to an actual job */
-    private List<JobTaskMoveAssignment> purgeTasksForNonexistentJobs(HostState host, int deleteLimit) {
+    /* Look through a hoststate to find tasks that don't correspond to an actual job or are on the wrong host */
+    private List<JobTaskMoveAssignment> purgeMisplacedTasks(HostState host, int deleteLimit) {
         List<JobTaskMoveAssignment> rv = new ArrayList<>();
         for (JobKey key : host.allJobKeys()) {
             if (spawn.getJob(key) == null) {
+                // Nonexistent job
                 rv.add(new JobTaskMoveAssignment(key, host.getHostUuid(), null, false, true));
+            } else  {
+                // Task has a copy on the wrong host. Do a fixTaskDir to ensure we aren't deleting the only remaining copy
+                JobTask task = spawn.getTask(key);
+                if (!host.getHostUuid().equals(task.getHostUUID()) && !task.hasReplicaOnHost(host.getHostUuid())) {
+                    spawn.fixTaskDir(key.getJobUuid(), key.getNodeNumber(), false, false);
+                    deleteLimit -= 1;
+                }
             }
             if (rv.size() >= deleteLimit) {
                 break;
@@ -766,8 +774,7 @@ public class SpawnBalancer implements Codec.Codable {
         String taskHost = task.getHostUUID();
         boolean live = task.getHostUUID().equals(fromHostId);
         if (!live && !task.hasReplicaOnHost(fromHostId)) {
-            // Task was found somewhere it didn't belong
-            return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, null, false, true);
+            return null;
         }
         while (hostStateIterator.hasNext()) {
             HostState next = hostStateIterator.next();
@@ -786,7 +793,7 @@ public class SpawnBalancer implements Codec.Codable {
         int totalTasksToMove = config.getTasksMovedFullRebalance();
         long totalBytesToMove = config.getBytesMovedFullRebalance();
         Set<String> activeJobs = findActiveJobIDs();
-        List<JobTaskMoveAssignment> rv = purgeTasksForNonexistentJobs(host, 1);
+        List<JobTaskMoveAssignment> rv = purgeMisplacedTasks(host, 1);
         String hostID = host.getHostUuid();
         for (String jobID : activeJobs) {
             spawn.acquireJobLock();
