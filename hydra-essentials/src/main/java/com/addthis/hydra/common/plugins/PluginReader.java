@@ -24,8 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.addthis.codec.Codec;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
@@ -112,26 +110,6 @@ public class PluginReader {
             log.warn(e.toString());
         }
         return result;
-    }
-
-    /**
-     * Reads all the the properties that match the specified suffix
-     * and load them into the class map.
-     *
-     * @param suffix
-     * @param map
-     * @param parentClass
-     */
-    public static void registerPlugin(@Nonnull String suffix,
-            @Nonnull Codec.ClassMap map, @Nonnull Class parentClass) {
-        List<String[]> filters = PluginReader.readProperties(suffix);
-        for (String[] filter : filters) {
-            if (filter.length >= 2) {
-                Class clazz = loadClass(suffix, filter[0],
-                        filter[1], parentClass, null);
-                map.add(filter[0], clazz);
-            }
-        }
     }
 
     private static Class loadClassHelper(String suffix, String key,

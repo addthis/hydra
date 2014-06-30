@@ -15,7 +15,7 @@ package com.addthis.hydra.task.source;
 
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.stream.StreamFileSource;
 import com.addthis.hydra.task.stream.StreamSourceFileList;
 
@@ -31,7 +31,7 @@ public class DataSourceStreamFiles extends DataSourceStreamList {
     /**
      * List of files to read.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String[] files;
 
     @Override

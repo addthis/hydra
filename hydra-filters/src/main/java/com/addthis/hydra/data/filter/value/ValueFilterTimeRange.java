@@ -21,7 +21,7 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -61,46 +61,47 @@ public class ValueFilterTimeRange extends ValueFilter {
 
     /**
      * The output format using the
-     * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html">DateTimeFormat</a>.
+     * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat
+     * .html">DateTimeFormat</a>.
      * This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String format;
 
     /**
      * Offset the input time by this number of days. Default is 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int offsetDays;
 
     /**
      * Offset the input time by this number of hours. Default is 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int offsetHours;
 
     /**
      * The number of days to return. Cannot be used together in conjunction with rangeHours.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int rangeDays;
 
     /**
      * The number of hours to return. Cannot be used together in conjunction with rangeDays.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int rangeHours;
 
     /**
      * If true, use the current time when the input is 0. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean defaultNow;
 
     /**
      * If true, then ignore the input value and use the current time. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean now;
 
     private DateTimeFormatter date;
@@ -126,7 +127,9 @@ public class ValueFilterTimeRange extends ValueFilter {
     public ValueObject filterValue(ValueObject value) {
         init();
         try {
-            long time = now ? JitterClock.globalTime() : ValueUtil.asNumberOrParseLong(value, 10).asLong().getLong();
+            long time = now ?
+                        JitterClock.globalTime() :
+                        ValueUtil.asNumberOrParseLong(value, 10).asLong().getLong();
             if (time == 0 && defaultNow) {
                 time = JitterClock.globalTime();
             }

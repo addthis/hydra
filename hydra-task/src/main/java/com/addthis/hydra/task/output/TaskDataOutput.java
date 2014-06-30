@@ -14,10 +14,7 @@
 package com.addthis.hydra.task.output;
 
 import com.addthis.bundle.channel.DataChannelOutput;
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.ClassMap;
-import com.addthis.codec.Codec.ClassMapFactory;
-import com.addthis.hydra.common.plugins.PluginReader;
+import com.addthis.codec.annotations.Pluggable;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 
@@ -29,39 +26,8 @@ import com.addthis.hydra.task.run.TaskRunConfig;
  * @user-reference
  * @hydra-category
  */
-@Codec.Set(classMapFactory = TaskDataOutput.CMAP.class)
+@Pluggable("output sink")
 public abstract class TaskDataOutput implements DataChannelOutput {
-
-    private static ClassMap cmap = new ClassMap() {
-        @Override
-        public String getClassField() {
-            return "type";
-        }
-
-        @Override
-        public String getCategory() {
-            return "output sink";
-        }
-    };
-
-    /**
-     * @exclude
-     */
-    public static class CMAP implements ClassMapFactory {
-
-        public ClassMap getClassMap() {
-            return cmap;
-        }
-    }
-
-    @SuppressWarnings("unused")
-    public static final void registerDataOutput(String type, Class<? extends TaskDataOutput> clazz) {
-        cmap.add(type, clazz);
-    }
-
-    static {
-        PluginReader.registerPlugin("-output-sinks.classmap", cmap, TaskDataOutput.class);
-    }
 
     protected abstract void open(TaskRunConfig config);
 

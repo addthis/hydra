@@ -17,7 +17,7 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns the modulo of the input</span>.
@@ -35,13 +35,13 @@ public class ValueFilterMod extends ValueFilter {
     /**
      * The modulus of the operation.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int mod = 1;
 
     /**
      * If true, then return the absolute value of the operation. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean abs = true;
 
     @Override

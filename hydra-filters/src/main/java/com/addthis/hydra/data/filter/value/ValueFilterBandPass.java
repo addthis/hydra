@@ -17,7 +17,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">filters values that occur fewer than {@link #minHits minHits} times
@@ -43,13 +43,14 @@ public class ValueFilterBandPass extends StringFilter {
     /**
      * The minimum number of times a value is observed before it is emitted. Default is 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int minHits;
 
     /**
-     * The maximum number of times a value can be observed. Default is 0 which disables the upper bound.
+     * The maximum number of times a value can be observed. Default is 0 which disables the upper
+     * bound.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int maxHits;
 
     /**
@@ -57,13 +58,13 @@ public class ValueFilterBandPass extends StringFilter {
      * When this threshold is exceeded, then the oldest observed value
      * resets its count information. Default is 0 which allows an unbounded number of keys.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int maxKeys;
 
     /**
      * Stores a set of values that are not to be filtered.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private HashSet<String> whitelist;
 
     private LinkedHashMap<String, Integer> map = new LinkedHashMap<String, Integer>() {

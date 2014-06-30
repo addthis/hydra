@@ -18,14 +18,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.ClassMap;
-import com.addthis.codec.Codec.ClassMapFactory;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.Pluggable;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.common.plugins.PluginReader;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * A bundle filter applies a transformation on a bundle and returns
@@ -34,49 +33,10 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-category
  */
-@Codec.Set(classMapFactory = BundleFilter.CMAP.class)
-public abstract class BundleFilter implements Codec.Codable {
+@Pluggable("bundle filter")
+public abstract class BundleFilter implements Codable {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilter.class);
-
-
-    public static final ClassMap cmap = new ClassMap() {
-        @Override
-        public String getClassField() {
-            return "op";
-        }
-
-        @Override
-        public String getCategory() {
-            return "bundle filter";
-        }
-
-        @Override
-        public ClassMap misnomerMap() {
-            return ValueFilter.cmap;
-        }
-    };
-
-    /**
-     * @exclude
-     */
-    public static class CMAP implements ClassMapFactory {
-
-        public ClassMap getClassMap() {
-            return cmap;
-        }
-    }
-
-    @SuppressWarnings("unused")
-    public static void registerFilter(String name, Class<? extends BundleFilter> clazz)
-    {
-        cmap.add(name, clazz);
-    }
-
-    /** register types */
-    static {
-        PluginReader.registerPlugin("-bundlefilters.classmap", cmap, BundleFilter.class);
-    }
 
     private AtomicBoolean init = new AtomicBoolean(false);
     private AtomicBoolean initing = new AtomicBoolean(false);

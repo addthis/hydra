@@ -15,7 +15,7 @@ package com.addthis.hydra.job.mq;
 
 import java.util.Arrays;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 
 public class CommandTaskReplicate extends AbstractJobMessage {
 
@@ -30,24 +30,24 @@ public class CommandTaskReplicate extends AbstractJobMessage {
         this.wasQueued = wasQueued;
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ReplicaTarget[] replicas;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String choreWatcherKey;
     // not all jobs replicate on every execution, if this value is true it will force the replica to occur
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean force;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     /* Whether the task was queued when the replication was done. If so, it will be re-queued on completion */
     private boolean wasQueued;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String jobCommand;
 
     /* For rebalances, these are the hosts that are gaining/losing a replica */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String rebalanceSource;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String rebalanceTarget;
 
     public ReplicaTarget[] getReplicas() {

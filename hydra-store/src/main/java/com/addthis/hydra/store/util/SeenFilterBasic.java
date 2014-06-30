@@ -18,7 +18,9 @@ import java.security.NoSuchAlgorithmException;
 
 import com.addthis.basis.util.Bytes;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
 
 /**
@@ -32,7 +34,7 @@ import com.addthis.hydra.common.hash.PluggableHashFunction;
  *
  * @user-reference
  */
-public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
+public class SeenFilterBasic<K> implements SeenFilter<K>, SuperCodable {
 
     public static final int HASH_HASHCODE = 0; /* mostly bad */
     public static final int HASH_HASHCODE_SHIFT_REV = 1; /* mostly bad */
@@ -58,7 +60,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
      * If this field is specified then the {@link #bitsfree} field
      * must also be specified.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int[] bitset;
 
     /**
@@ -66,7 +68,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
      * (total number of bits allocated to the filter).
      * This field must be 32 or greater. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private int bits;
 
     /**
@@ -74,7 +76,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
      * operation. This parameter is usually referred to as
      * the "k" parameter in the literature. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private int bitsper;
 
     /**
@@ -86,14 +88,14 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
      * <p>4 - HASH_PLUGGABLE_SHIFT : best blend of speed and accuracy
      * <p>This field is required. It is strongly recommended that you use "4".
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private int hash;
 
     /**
      * If {@link #bitset} is specified the you must populate
      * this field with the number of 0 bits in the initial bloom filter.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int bitsfree;
 
     public SeenFilterBasic() {

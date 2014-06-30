@@ -17,8 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
-import com.addthis.codec.CodecExceptionLineNumber;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecExceptionLineNumber;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.task.run.JsonRunner;
 import com.addthis.hydra.task.run.TaskRunnable;
 import com.addthis.maljson.JSONObject;

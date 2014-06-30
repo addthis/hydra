@@ -18,7 +18,7 @@ import java.util.List;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.Bundles;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 import org.slf4j.Logger;
@@ -62,13 +62,13 @@ public class TaskDataOutputChain extends DataOutputTypeList {
      * Sequence of output sinks. Each bundle is emitted to the first sink,
      * then the second sink, etc.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private TaskDataOutput outputs[];
 
     /**
      * If true then create copy of the bundle for each output. Default value is true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean copy = true;
 
     /**
@@ -76,7 +76,7 @@ public class TaskDataOutputChain extends DataOutputTypeList {
      * output sink. This may be useful when the child sink modifies
      * the bundle. Default value is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean immutableCopy = false;
 
     @Override

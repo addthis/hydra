@@ -17,7 +17,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 /**
@@ -56,25 +56,25 @@ public class BundleFilterValue extends BundleFilter {
     /**
      * The value to assign into a bundle field. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String value;
 
     /**
      * The bundle field name for the new value.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String to;
 
     /**
      * Optional filter to apply on the input value.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter filter;
 
     /**
      * If true then return false when the input value is null. Default is true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean nullFail = true;
 
     private String fields[];

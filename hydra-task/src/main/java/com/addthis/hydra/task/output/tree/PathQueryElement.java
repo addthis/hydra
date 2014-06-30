@@ -17,7 +17,7 @@ import java.util.ArrayList;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.query.FieldValueList;
 import com.addthis.hydra.data.query.QueryElement;
 import com.addthis.hydra.data.query.QueryElementProperty;
@@ -33,7 +33,7 @@ public class PathQueryElement extends QueryElement {
 
     private static Logger log = LoggerFactory.getLogger(PathQueryElement.class);
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ArrayList<PathQueryElementField> field;
 
     public void resolve(final TreeMapper mapper) {

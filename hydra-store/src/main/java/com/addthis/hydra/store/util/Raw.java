@@ -15,10 +15,12 @@ package com.addthis.hydra.store.util;
 
 import com.addthis.basis.util.Bytes;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.BytesCodable;
 
 
-public final class Raw implements Comparable<Raw>, Codec.BytesCodable {
+public final class Raw implements Comparable<Raw>, BytesCodable {
 
     private static boolean padprintable = System.getProperty("abyss.raw.padprintable", "0").equals("1");
     private static boolean longcompare = System.getProperty("abyss.raw.longcompare", "0").equals("1");
@@ -57,9 +59,9 @@ public final class Raw implements Comparable<Raw>, Codec.BytesCodable {
     public Raw() {
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private byte[] raw;
-    private int hashcode;
+    private int    hashcode;
     private long[] compare;
 
     @Override

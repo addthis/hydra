@@ -17,7 +17,7 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns a subset of the string or array input</span>.
@@ -36,19 +36,19 @@ public class ValueFilterSlice extends ValueFilter {
     /**
      * The start position of the subset in a 0-based offset (inclusive). Default is 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int from; // inclusive (defaults to start)
 
     /**
      * The end position of the subset in a 0-based offset (exclusive). Default is input length.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int to = -1; // exclusive (defaults to end)
 
     /**
      * The increment to traverse between 'from' and 'to'. Default is 1.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int inc = 1; // increment
 
     public ValueFilterSlice() {

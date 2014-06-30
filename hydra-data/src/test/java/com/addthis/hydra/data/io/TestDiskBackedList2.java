@@ -27,7 +27,8 @@ import java.util.Random;
 import com.addthis.basis.test.SlowTest;
 import com.addthis.basis.util.Bytes;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.io.DiskBackedList2.ItemCodec;
 
 import com.google.common.io.Files;
@@ -37,9 +38,6 @@ import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-
-import org.slf4j.LoggerFactory;
 @Category(SlowTest.class)
 public class TestDiskBackedList2 {
 
@@ -65,12 +63,12 @@ public class TestDiskBackedList2 {
         }
     }
 
-    public static final class TestValue implements Codec.Codable {
+    public static final class TestValue implements Codable {
 
         private static final Random random = new Random(1234);
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private long value;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private byte[] randomBytes;
 
         public TestValue() {

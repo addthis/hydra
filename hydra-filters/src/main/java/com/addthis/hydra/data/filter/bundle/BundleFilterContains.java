@@ -17,7 +17,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilterContains;
 
 
@@ -45,25 +45,25 @@ public class BundleFilterContains extends BundleFilter {
     /**
      * The input field to test. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String field;
 
     /**
      * An array of strings to test against the input field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String value[];
 
     /**
      * The target field to test against the input field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String from;
 
     /**
      * If true then return the negation of the contains operation. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean not;
 
     // Cache the value filter if-and-only-if the 'from' field is null.

@@ -22,9 +22,9 @@ import java.net.Socket;
 import java.util.IdentityHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.ClassMap;
-import com.addthis.codec.Codec.ClassMapFactory;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.Pluggable;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 
@@ -39,28 +39,8 @@ import com.addthis.hydra.task.run.TaskRunConfig;
  *
  * @user-reference
  */
-@Codec.Set(classMapFactory = FactoryInputStream.CMAP.class)
-public abstract class FactoryInputStream implements Codec.Codable {
-
-    private static ClassMap cmap = new ClassMap() {
-        @Override
-        public String getClassField() {
-            return "type";
-        }
-    };
-
-    public static class CMAP implements ClassMapFactory {
-
-        public ClassMap getClassMap() {
-            return cmap;
-        }
-    }
-
-    static {
-        cmap.add("file", FileInputStreamSource.class);
-        cmap.add("inject", InjectorStreamSource.class);
-        cmap.add("socket", SocketInputStreamSource.class);
-    }
+@Pluggable("factory input stream")
+public abstract class FactoryInputStream implements Codable {
 
     /**
      * @return an InputStream
@@ -73,7 +53,7 @@ public abstract class FactoryInputStream implements Codec.Codable {
      */
     public static final class FileInputStreamSource extends FactoryInputStream {
 
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String file;
 
         @Override
@@ -88,9 +68,9 @@ public abstract class FactoryInputStream implements Codec.Codable {
      */
     public static final class SocketInputStreamSource extends FactoryInputStream {
 
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String host;
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private int port;
 
         @Override
@@ -134,7 +114,7 @@ public abstract class FactoryInputStream implements Codec.Codable {
         /**
          * The default value is "secretDefaultInjectorKey".
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String key = DefautlInjectorKey;
 
         private LinkedBlockingQueue<InputStream> queue = null;

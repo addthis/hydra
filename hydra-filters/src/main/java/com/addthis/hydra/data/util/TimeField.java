@@ -20,7 +20,8 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -32,7 +33,7 @@ import org.slf4j.LoggerFactory;
 /**
  * @user-reference
  */
-public final class TimeField implements Codec.SuperCodable {
+public final class TimeField implements SuperCodable {
 
     private final Logger log = LoggerFactory.getLogger(TimeField.class);
 
@@ -67,7 +68,7 @@ public final class TimeField implements Codec.SuperCodable {
      * Field within the bundle to interpret as a time value.
      * This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String field;
 
     /**
@@ -76,19 +77,20 @@ public final class TimeField implements Codec.SuperCodable {
      * Specify "unixmillis:NN" for unix milliseconds
      * in base NN format. Otherwise interpret the
      * value as a
-     * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html">DateTimeFormat</a>.
+     * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat
+     * .html">DateTimeFormat</a>.
      * This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String format;
 
     /**
      * Optionally specify the timezone. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String timeZone;
 
-    private int radix;
+    private int               radix;
     private DateTimeFormatter formatter;
 
     public long toUnix(ValueObject val) {
@@ -99,7 +101,8 @@ public final class TimeField implements Codec.SuperCodable {
             try {
                 return formatter.parseDateTime(ValueUtil.asNativeString(val)).getMillis();
             } catch (IllegalArgumentException e) {
-                log.warn("unable to parse date time for val starting with : " + Strings.printable(Strings.trunc(ValueUtil.asNativeString(val), 256)));
+                log.warn("unable to parse date time for val starting with : " +
+                         Strings.printable(Strings.trunc(ValueUtil.asNativeString(val), 256)));
                 return -1;
             }
         }

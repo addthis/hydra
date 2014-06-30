@@ -21,7 +21,8 @@ import java.util.TreeMap;
 
 import com.addthis.basis.util.Varint;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.codables.BytesCodable;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IReadWeighable;
 import com.addthis.hydra.store.db.ReadPageDB;
@@ -66,7 +67,7 @@ public class MarkDB {
         }
     }
 
-    public static final class Record implements Codec.Codable, IReadWeighable, Codec.BytesCodable {
+    public static final class Record implements Codable, IReadWeighable, BytesCodable {
 
         public String val;
         public long index;
@@ -119,7 +120,7 @@ public class MarkDB {
 
     }
 
-    public static final class Mark implements Codec.Codable, Codec.BytesCodable, IReadWeighable {
+    public static final class Mark implements Codable, BytesCodable, IReadWeighable {
 
         public String value;
         public long index;

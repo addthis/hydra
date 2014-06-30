@@ -19,7 +19,8 @@ import java.util.Map.Entry;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.ReadTreeNode;
@@ -29,10 +30,8 @@ import com.addthis.hydra.data.tree.TreeNodeDataDeferredOperation;
 import com.addthis.hydra.data.util.KeyTopper;
 
 import org.slf4j.Logger;
-
-
 import org.slf4j.LoggerFactory;
-public class DataLimitTop extends TreeNodeData<DataLimitTop.Config> implements Codec.SuperCodable {
+public class DataLimitTop extends TreeNodeData<DataLimitTop.Config> implements SuperCodable {
 
     private static final Logger log = LoggerFactory.getLogger(DataLimitTop.class);
 
@@ -54,13 +53,13 @@ public class DataLimitTop extends TreeNodeData<DataLimitTop.Config> implements C
          * Maximum number of child nodes allowed.
          * This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private int size;
 
         /**
          * If true then output debugging information. Default is false.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private boolean test;
 
         @Override
@@ -73,11 +72,11 @@ public class DataLimitTop extends TreeNodeData<DataLimitTop.Config> implements C
         }
     }
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private KeyTopper top;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int size;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean test;
 
     @Override

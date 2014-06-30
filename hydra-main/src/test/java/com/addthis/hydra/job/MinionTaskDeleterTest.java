@@ -20,7 +20,7 @@ import java.util.List;
 
 import com.addthis.basis.util.Files;
 
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.backup.BackupToDelete;
 import com.addthis.hydra.job.backup.DailyBackup;
 import com.addthis.hydra.job.backup.GoldBackup;
@@ -95,7 +95,7 @@ public class MinionTaskDeleterTest {
         String backupPath = "some/othertask/path/" + goldBackup.generateCurrentName(true);
         del.submitPathToDelete(taskPath);
         del.submitBackupToDelete(backupPath, goldBackup);
-        CodecJSON codec = new CodecJSON();
+        CodecJSON codec = CodecJSON.INSTANCE;
         byte[] serBytes = codec.encode(del);
         MinionTaskDeleter del2 = new MinionTaskDeleter();
         codec.decode(del2, serBytes);

@@ -15,7 +15,7 @@ package com.addthis.hydra.data.filter.value;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns a constant value</span>.
@@ -33,7 +33,7 @@ public class ValueFilterSet extends ValueFilter {
     /**
      * The output value.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String value;
 
     private ValueObject cache;

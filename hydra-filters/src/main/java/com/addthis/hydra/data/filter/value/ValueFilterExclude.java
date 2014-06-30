@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.regex.Pattern;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.util.JSONFetcher;
 
 
@@ -41,61 +41,66 @@ public class ValueFilterExclude extends StringFilter {
     /**
      * A set of strings. The input must be an exact match to a member of this set to be accepted.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private HashSet<String> value;
 
     /**
-     * A url that points to a set of strings that are used in place of the {@link #value value} field.
+     * A url that points to a set of strings that are used in place of the {@link #value value}
+     * field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String valueURL;
 
     /**
-     * A set of regular expression strings. The entire input must match against a regular expression to be accepted.
+     * A set of regular expression strings. The entire input must match against a regular
+     * expression to be accepted.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private HashSet<String> match;
 
     /**
-     * A url that points to a set of strings that are used in place of the {@link #match match} field.
+     * A url that points to a set of strings that are used in place of the {@link #match match}
+     * field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String matchURL;
 
     /**
-     * A set of regular expression strings. The substring of the input must be found in a regular expression to be accepted.
+     * A set of regular expression strings. The substring of the input must be found in a regular
+     * expression to be accepted.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private HashSet<String> find;
 
     /**
      * A url that points to a set of strings that are used in place of the {@link #find find} field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String findURL;
 
     /**
      * A set of strings. The input must a substring of a member of the set to be accepted.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String contains[];
 
     /**
-     * A url that points to a set of strings that are used in place of the {@link #contains contains} field.
+     * A url that points to a set of strings that are used in place of the {@link #contains
+     * contains} field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String containsURL;
 
     /**
      * A timeout if any of the url fields are used.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int urlTimeout = 60000;
 
     /**
      * The number of connection retries if any of the url fields are used.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int urlRetries = 5;
 
     private ArrayList<Pattern> pattern;

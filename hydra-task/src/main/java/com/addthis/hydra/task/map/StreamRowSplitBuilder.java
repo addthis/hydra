@@ -17,19 +17,19 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 
 public class StreamRowSplitBuilder extends StreamBuilder {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String field;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter filter;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String[] splitOutputFields;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean dropFromOriginal;
 
     @Override

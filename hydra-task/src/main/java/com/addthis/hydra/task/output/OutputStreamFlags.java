@@ -15,7 +15,8 @@ package com.addthis.hydra.task.output;
 
 import com.addthis.basis.util.Numbers;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 
 /**
  * Specifies configuration flags for writing output to files.
@@ -37,46 +38,46 @@ import com.addthis.codec.Codec;
  *
  * @user-reference
  */
-public class OutputStreamFlags implements Codec.SuperCodable {
+public class OutputStreamFlags implements SuperCodable {
 
     /**
      * If true then compress the output files. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean compress;
 
     /**
      * If compress is true then specify the compression type.
      * 0 for gzip, 1 for lzf, 2 for snappy, 3 for bzip2, or 4 for lzma.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int compressType;
 
     /**
      * If true then do not append output to existing files. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean noAppend;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long graceTime;
 
     /**
      * Optionally specify max file size in bytes. Default is 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long maxFileSize;
 
     /**
      * Optionally specify max file size as human-readable text (eg 128MB). Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String maxSize;
 
     /**
      * Optionally write the following header at the top of the output file. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String header;
 
     public static final int WRITE_COMPRESS = 1 << 0;

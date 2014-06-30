@@ -32,7 +32,8 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueSimple;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.bundle.value.ValueTranslationException;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
@@ -43,7 +44,7 @@ import com.clearspring.analytics.stream.membership.BloomFilter;
 
 import org.apache.commons.codec.binary.Base64;
 
-public class DataBloom extends TreeNodeData<DataBloom.Config> implements Codec.SuperCodable {
+public class DataBloom extends TreeNodeData<DataBloom.Config> implements SuperCodable {
 
     private static final ValueObject present = ValueFactory.create(1);
 
@@ -85,21 +86,21 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements Codec.S
          * Bundle field name from which to draw bloom candidate values.
          * This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String key;
 
         /**
          * Maximum number of elements under which error guarantee is expected to hold.
          * This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private int max;
 
         /**
          * False positive probability.
          * Default is 0.1.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private double error = 0.1D;
 
         @Override
@@ -110,7 +111,7 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements Codec.S
         }
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private byte[] raw;
 
     private BloomFilter filter;

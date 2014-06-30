@@ -44,8 +44,8 @@ import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
-import com.addthis.codec.CodecExceptionLineNumber;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecExceptionLineNumber;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobExpand;
@@ -77,7 +77,6 @@ import com.yammer.dropwizard.auth.Auth;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.type.TypeFactory;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 @Path("/job")
 public class JobsResource {

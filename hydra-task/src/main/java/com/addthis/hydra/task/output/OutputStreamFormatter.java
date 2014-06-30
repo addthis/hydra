@@ -13,10 +13,7 @@
  */
 package com.addthis.hydra.task.output;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.ClassMap;
-import com.addthis.codec.Codec.ClassMapFactory;
-import com.addthis.hydra.common.plugins.PluginReader;
+import com.addthis.codec.annotations.Pluggable;
 
 /**
  * This section of the job specification handles formatting of output sinks.
@@ -26,26 +23,8 @@ import com.addthis.hydra.common.plugins.PluginReader;
  * @user-reference
  * @hydra-category
  */
-@Codec.Set(classMapFactory = OutputStreamFormatter.CMAP.class)
+@Pluggable("output stream formatter")
 public abstract class OutputStreamFormatter {
-
-    private static ClassMap cmap = new ClassMap() {
-        @Override
-        public String getClassField() {
-            return "type";
-        }
-    };
-
-    public static class CMAP implements ClassMapFactory {
-
-        public ClassMap getClassMap() {
-            return cmap;
-        }
-    }
-
-    static {
-        PluginReader.registerPlugin("-output-stream-formatters.classmap", cmap, OutputStreamFormatter.class);
-    }
 
     public abstract OutputStreamEmitter createEmitter();
 

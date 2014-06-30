@@ -31,9 +31,10 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueSimple;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.bundle.value.ValueTranslationException;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecBin1;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.binary.CodecBin2;
+import com.addthis.codec.codables.SuperCodable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
@@ -45,7 +46,7 @@ import com.addthis.hydra.store.util.SeenFilterBasic;
  * like DataBloom but better integrated to into query. over time we need to
  * resolve this.
  */
-public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.SuperCodable {
+public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCodable {
 
     /**
      * <p>This data attachment is a <span class="hydra-summary">bloom filter attached to a node</span>.
@@ -75,14 +76,14 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
          * Bundle field name from which to draw values.
          * This field is required.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String key;
 
         /**
          * Maximum number of elements that can be stored in the bloom filter.
          * This field is required.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int max;
 
         /**
@@ -90,7 +91,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
          * operation. This parameter is usually referred to as
          * the "k" parameter in the literature. Default value is 4.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int bitsPer = 4;
 
         /**
@@ -102,7 +103,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
          * <p>4 - HASH_PLUGGABLE_SHIFT : best blend of speed and accuracy
          * <p>Default value is 4.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int hash = 4;
 
         @Override
@@ -113,7 +114,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
         }
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private SeenFilterBasic<Raw> bloom;
 
     private BundleField keyAccess;
@@ -272,7 +273,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
         public ValueMap asMap() throws ValueTranslationException {
             try {
                 ValueMap map = ValueFactory.createMap();
-                map.put("b", ValueFactory.create(CodecBin1.encodeBytes(bloom)));
+                map.put("b", ValueFactory.create(CodecBin2.encodeBytes(bloom)));
                 return map;
             } catch (Exception ex) {
                 throw new ValueTranslationException(ex);
@@ -282,7 +283,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
         @Override
         public void setValues(ValueMap map) {
             try {
-                bloom = (SeenFilterBasic<?>) CodecBin1.decodeBytes(new SeenFilterBasic(), map.get("b").asBytes().getBytes());
+                bloom = (SeenFilterBasic<?>) CodecBin2.decodeBytes(new SeenFilterBasic(), map.get("b").asBytes().getBytes());
             } catch (Exception ex) {
                 throw new ValueTranslationException(ex);
             }

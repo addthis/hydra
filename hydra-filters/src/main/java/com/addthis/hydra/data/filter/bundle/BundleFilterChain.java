@@ -17,8 +17,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundlePrinter;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.json.CodecJSON;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,32 +37,32 @@ public class BundleFilterChain extends BundleFilter {
     /**
      * The chain of bundle filters to execute.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private BundleFilter filter[];
 
     /**
      * If true then stop execution on the failure of a filter. Default is true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean failStop = true;
 
     /**
      * The value to return on failure if {@link #failStop failStop} is true. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean failReturn = false;
 
     /**
      * If true then print out debugging information. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean debug;
 
     /**
      * Maximum number of bundles to print when
      * {@link #debug} is true. Default is 100.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long debugMaxBundles = 100;
 
     private final AtomicLong bundleCounter = new AtomicLong();
@@ -79,7 +79,8 @@ public class BundleFilterChain extends BundleFilter {
         for (BundleFilter f : filter) {
             if (!f.filterExec(row) && failStop) {
                 if (debug && bundleCounter.getAndIncrement() < debugMaxBundles) {
-                    log.warn("fail @ " + CodecJSON.encodeString(f) +" with " + BundlePrinter.printBundle(row));
+                    log.warn("fail @ " + CodecJSON.encodeString(f) + " with " +
+                             BundlePrinter.printBundle(row));
                 }
                 return failReturn;
             }

@@ -22,23 +22,23 @@ import com.addthis.basis.util.RollingLog;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 public class ValuesOutputFile extends ValuesOutput {
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private ValuesStreamFormatter format;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String dir;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String prefix = "values";
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String suffix;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean compress;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long maxSize;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long maxAge;
 
     private RollingLog log;

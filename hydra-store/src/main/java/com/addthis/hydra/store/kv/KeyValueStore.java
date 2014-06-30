@@ -13,10 +13,10 @@
  */
 package com.addthis.hydra.store.kv;
 
-import com.addthis.codec.Codec;
-
 import java.util.Iterator;
 import java.util.Map.Entry;
+
+import com.addthis.codec.codables.BytesCodable;
 
 /**
  * highest level abstraction for a lexicographically sorted key/value store implementation
@@ -24,7 +24,7 @@ import java.util.Map.Entry;
  * @param <K>
  * @param <V>
  */
-public interface KeyValueStore<K, V extends Codec.BytesCodable> {
+public interface KeyValueStore<K, V extends BytesCodable> {
 
     /**
      * @param key key for locating bound data

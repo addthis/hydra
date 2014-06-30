@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.spawn.JobAlert;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.maljson.JSONArray;
@@ -57,25 +57,29 @@ public class JobConfigManager {
 
     private static final Logger logger = LoggerFactory.getLogger(JobConfigManager.class);
 
-    private static final Codec codec = new CodecJSON();
+    private static final Codec codec = CodecJSON.INSTANCE;
 
     private SpawnDataStore spawnDataStore;
 
     /* metrics */
-    private final Histogram jobSizePersistHisto = Metrics.newHistogram(JobConfigManager.class, "jobSizePersistHisto");
-    private final Histogram jobTaskSizePersistHisto = Metrics.newHistogram(JobConfigManager.class, "jobTaskSizePersistHisto");
-    private final Timer addJobTimer = Metrics.newTimer(JobConfigManager.class, "addJobTimer");
-    private final Timer updateJobTimer = Metrics.newTimer(JobConfigManager.class, "updateJobTimer");
+    private final Histogram jobSizePersistHisto     =
+            Metrics.newHistogram(JobConfigManager.class, "jobSizePersistHisto");
+    private final Histogram jobTaskSizePersistHisto =
+            Metrics.newHistogram(JobConfigManager.class, "jobTaskSizePersistHisto");
+    private final Timer     addJobTimer             =
+            Metrics.newTimer(JobConfigManager.class, "addJobTimer");
+    private final Timer     updateJobTimer          =
+            Metrics.newTimer(JobConfigManager.class, "updateJobTimer");
 
-    private static final int loadThreads = Parameter.intValue("job.config.load.threads", 8);
+    private static final int loadThreads  = Parameter.intValue("job.config.load.threads", 8);
     private static final int jobChunkSize = Parameter.intValue("job.config.chunk.size", 30);
 
-    private static final String configChildName = "/config";
+    private static final String configChildName      = "/config";
     private static final String queryConfigChildName = "/queryconfig";
-    private static final String alertChildName = "/alerts";
-    private static final String tasksChildName = "/tasks";
-    private static final String brokerInfoChildName = "/brokerinfo";
-    private static final String taskChildName = "/task";
+    private static final String alertChildName       = "/alerts";
+    private static final String tasksChildName       = "/tasks";
+    private static final String brokerInfoChildName  = "/brokerinfo";
+    private static final String taskChildName        = "/task";
 
     public JobConfigManager(SpawnDataStore spawnDataStore) {
         this.spawnDataStore = spawnDataStore;
@@ -83,7 +87,7 @@ public class JobConfigManager {
 
     public void writeUpdateIfDataNotNull(String path, String data) throws Exception {
         if (data == null) {
-            logger.warn("Was going to update znode {} but data was null", new Object[] { path });
+            logger.warn("Was going to update znode {} but data was null", new Object[]{path});
         } else {
             spawnDataStore.put(path, data);
         }
@@ -99,9 +103,11 @@ public class JobConfigManager {
             jobSizePersistHisto.update(jobCodec.length());
             spawnDataStore.putAsChild(SPAWN_JOB_CONFIG_PATH, job.getId(), jobCodec);
             writeUpdateIfDataNotNull(jobPath + configChildName,
-                    job.getConfig() == null ? "" : job.getConfig());
+                                     job.getConfig() == null ? "" : job.getConfig());
             writeUpdateIfDataNotNull(jobPath + queryConfigChildName,
-                    job.getQueryConfig() == null ? "" : new String(codec.encode(job.getQueryConfig())));
+                                     job.getQueryConfig() == null ?
+                                     "" :
+                                     new String(codec.encode(job.getQueryConfig())));
             // this is just a marker so that we know to use the 'new' configuration
             spawnDataStore.put(jobPath + tasksChildName, "");
         } finally {

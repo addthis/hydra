@@ -16,7 +16,7 @@ package com.addthis.hydra.task.map;
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.closeablebundle.CloseableBundleFilter;
 
 import com.yammer.metrics.Metrics;
@@ -29,7 +29,7 @@ public class CloseableBundleFilterStreamBuilder extends StreamBuilder {
 
     private static final Logger log = LoggerFactory.getLogger(CloseableBundleFilterStreamBuilder.class);
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private CloseableBundleFilter cfilter;
 
     private final Meter filterPasses = Metrics.newMeter(getClass(), "filterPasses", "passes", TimeUnit.SECONDS);

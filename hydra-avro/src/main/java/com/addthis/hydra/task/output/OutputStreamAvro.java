@@ -33,8 +33,8 @@ import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.Set;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
@@ -48,17 +48,17 @@ import org.apache.avro.io.EncoderFactory;
  * @user-reference
  * @hydra-name avro
  */
-public class OutputStreamAvro extends OutputStreamFormatter implements Codec.SuperCodable {
+public class OutputStreamAvro extends OutputStreamFormatter implements SuperCodable {
 
-    @Set(codable = true)
+    @FieldConfig(codable = true)
     private HashSet<String> include;
-    @Set(codable = true)
+    @FieldConfig(codable = true)
     private HashSet<String> exclude;
-    @Set(codable = true, required = true)
-    private String schema;
+    @FieldConfig(codable = true, required = true)
+    private String          schema;
     // TODO: add support for specifying schema URL
 
-    private Schema outputSchema;
+    private Schema                     outputSchema;
     private DatumWriter<GenericRecord> datumWriter;
 
 

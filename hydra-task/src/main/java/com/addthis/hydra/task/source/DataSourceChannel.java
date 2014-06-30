@@ -24,7 +24,7 @@ import com.addthis.bundle.core.BundleFactory;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.io.DataChannelReader;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 /**
@@ -38,7 +38,7 @@ public class DataSourceChannel extends TaskDataSource implements BundleFactory {
     /**
      * This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     protected FactoryInputStream input;
 
     private final ListBundleFormat format = new ListBundleFormat();

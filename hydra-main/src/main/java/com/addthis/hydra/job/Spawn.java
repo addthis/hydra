@@ -65,7 +65,9 @@ import com.addthis.basis.util.TokenReplacerOverflowException;
 import com.addthis.bark.StringSerializer;
 import com.addthis.bark.ZkUtil;
 import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 import com.addthis.hydra.job.mq.CommandTaskDelete;
 import com.addthis.hydra.job.mq.CommandTaskKick;
@@ -138,87 +140,142 @@ import jsr166e.ConcurrentHashMapV8;
  * manages minions running on remote notes. runs master http server to
  * communicate with and control those instances.
  */
-public class Spawn implements Codec.Codable {
+public class Spawn implements Codable {
 
     private static final Logger log = LoggerFactory.getLogger(Spawn.class);
-    private static final boolean meshQueue = Parameter.boolValue("queue.mesh", false);
-    private static final boolean enableSpawn2 = Parameter.boolValue("spawn.v2.enable", true);
-    private static final String httpHost = Parameter.value("spawn.localhost");
-    private static final String clusterName = Parameter.value("cluster.name", "localhost");
-    private static final String queryHttpHost = Parameter.value("spawn.queryhost");
-    private static final int webPort = Parameter.intValue("spawn.http.port", 5050);
-    private static final int requestHeaderBufferSize = Parameter.intValue("spawn.http.bufsize", 8192);
-    private static final int hostStatusRequestInterval = Parameter.intValue("spawn.status.interval", 5_000);
-    private static final int queueKickInterval = Parameter.intValue("spawn.queue.kick.interval", 3_000);
-    private static final int backgroundThreads = Parameter.intValue("spawn.background.threads", 4);
-    private static final int backgroundQueueSize = Parameter.intValue("spawn.background.queuesize", 1_000);
-    private static final int backgroundHttpTimeout = Parameter.intValue("spawn.background.timeout", 300_000);
 
-    private static final int backgroundEmailMinute = Parameter.intValue("spawn.background.notification.interval.minutes", 60);
-    private static final String backgroundEmailAddress = Parameter.value("spawn.background.notification.address");
-    public  static final long inputMaxNumberOfCharacters = Parameter.longValue("spawn.input.max.length", 1_000_000);
-    private static final long MILLISECONDS_PER_MINUTE = (1_000 * 60);
+    private static final boolean meshQueue     = Parameter.boolValue("queue.mesh", false);
+    private static final boolean enableSpawn2  = Parameter.boolValue("spawn.v2.enable", true);
+    private static final String  httpHost      = Parameter.value("spawn.localhost");
+    private static final String  clusterName   = Parameter.value("cluster.name", "localhost");
+    private static final String  queryHttpHost = Parameter.value("spawn.queryhost");
+    private static final int     webPort       = Parameter.intValue("spawn.http.port", 5050);
+
+    private static final int requestHeaderBufferSize   =
+            Parameter.intValue("spawn.http.bufsize", 8192);
+    private static final int hostStatusRequestInterval =
+            Parameter.intValue("spawn.status.interval", 5_000);
+
+    private static final int queueKickInterval     =
+            Parameter.intValue("spawn.queue.kick.interval", 3_000);
+    private static final int backgroundThreads     =
+            Parameter.intValue("spawn.background.threads", 4);
+    private static final int backgroundQueueSize   =
+            Parameter.intValue("spawn.background.queuesize", 1_000);
+    private static final int backgroundHttpTimeout =
+            Parameter.intValue("spawn.background.timeout", 300_000);
+
+    private static final int    backgroundEmailMinute      =
+            Parameter.intValue("spawn.background.notification.interval.minutes", 60);
+    private static final String backgroundEmailAddress     =
+            Parameter.value("spawn.background.notification.address");
+    public static final  long   inputMaxNumberOfCharacters =
+            Parameter.longValue("spawn.input.max.length", 1_000_000);
+    private static final long   MILLISECONDS_PER_MINUTE    = (1_000 * 60);
+
     private static final AtomicLong emailLastFired = new AtomicLong();
 
-    private static final BlockingQueue<Runnable> backgroundTaskQueue = new LinkedBlockingQueue<>(backgroundQueueSize);
+    private static final BlockingQueue<Runnable> backgroundTaskQueue =
+            new LinkedBlockingQueue<>(backgroundQueueSize);
 
-    private static final ExecutorService backgroundService = MoreExecutors.getExitingExecutorService(
-            new ThreadPoolExecutor(backgroundThreads, backgroundThreads, 0L, TimeUnit.MILLISECONDS,
-                    backgroundTaskQueue), 100, TimeUnit.MILLISECONDS);
-    private static String debugOverride = Parameter.value("spawn.debug");
-    private static final boolean useStructuredLogger = Parameter.boolValue("spawn.logger.bundle.enable",
-            clusterName.equals("localhost")); // default to true if-and-only-if we are running local stack
-    private static final Codec codec = new CodecJSON();
+    private static final ExecutorService backgroundService   =
+            MoreExecutors.getExitingExecutorService(
+                    new ThreadPoolExecutor(backgroundThreads, backgroundThreads, 0L,
+                                           TimeUnit.MILLISECONDS, backgroundTaskQueue), 100,
+                    TimeUnit.MILLISECONDS);
+    private static       String          debugOverride       = Parameter.value("spawn.debug");
+    private static final boolean         useStructuredLogger =
+            Parameter.boolValue("spawn.logger.bundle.enable", clusterName.equals("localhost"));
+
+    // default to true if-and-only-if we are running local stack
+    private static final Codec   codec        = CodecJSON.INSTANCE;
     private static final Counter quiesceCount = Metrics.newCounter(Spawn.class, "quiesced");
-    private static final SettableGauge<Integer> runningTaskCount = SettableGauge.newSettableGauge(Spawn.class, "runningTasks", 0);
-    private static final SettableGauge<Integer> queuedTaskCount = SettableGauge.newSettableGauge(Spawn.class, "queuedTasks", 0);
-    private static final SettableGauge<Integer> failTaskCount = SettableGauge.newSettableGauge(Spawn.class, "failedTasks", 0);
-    private static final Meter tasksStartedPerHour = Metrics.newMeter(Spawn.class, "tasksStartedPerHour", "tasksStartedPerHour", TimeUnit.HOURS);
-    private static final Meter tasksCompletedPerHour = Metrics.newMeter(Spawn.class, "tasksCompletedPerHour", "tasksCompletedPerHour", TimeUnit.HOURS);
-    private static final SettableGauge<Integer> runningJobCount = SettableGauge.newSettableGauge(Spawn.class, "runningJobs", 0);
-    private static final SettableGauge<Integer> queuedJobCount = SettableGauge.newSettableGauge(Spawn.class, "queuedJobs", 0);
-    private static final SettableGauge<Integer> failJobCount = SettableGauge.newSettableGauge(Spawn.class, "failedJobs", 0);
-    private static final SettableGauge<Integer> hungJobCount = SettableGauge.newSettableGauge(Spawn.class, "hungJobs", 0);
-    private static final Meter jobsStartedPerHour = Metrics.newMeter(Spawn.class, "jobsStartedPerHour", "jobsStartedPerHour", TimeUnit.HOURS);
-    private static final Meter jobsCompletedPerHour = Metrics.newMeter(Spawn.class, "jobsCompletedPerHour", "jobsCompletedPerHour", TimeUnit.HOURS);
-    private static final Counter nonConsumingClientDropCounter = Metrics.newCounter(Spawn.class, "clientDrops");
-    private static final Counter nonHostTaskMessageCounter = Metrics.newCounter(Spawn.class, "nonHostTaskMessage");
-    private static final Meter jobTaskUpdateHeartbeatSuccessMeter = Metrics.newMeter(Spawn.class, "jobTaskUpdateHeartbeatSuccess", "jobTaskUpdateHeartbeatSuccess", TimeUnit.MINUTES);
-    private static final Counter jobTaskUpdateHeartbeatFailureCounter = Metrics.newCounter(Spawn.class, "jobTaskUpdateHeartbeatFailure");
-    private static final long JOB_TASK_UPDATE_HEARTBEAT_INTERVAL = Parameter.longValue("spawn.jobtask.update.interval", 30000);
 
-    public static final String SPAWN_DATA_DIR = Parameter.value("SPAWN_DATA_DIR", "./data");
-    public static final String SPAWN_STRUCTURED_LOG_DIR = Parameter.value("spawn.logger.bundle.dir", "./log/spawn-stats");
+    private static final SettableGauge<Integer> runningTaskCount =
+            SettableGauge.newSettableGauge(Spawn.class, "runningTasks", 0);
+    private static final SettableGauge<Integer> queuedTaskCount  =
+            SettableGauge.newSettableGauge(Spawn.class, "queuedTasks", 0);
+    private static final SettableGauge<Integer> failTaskCount    =
+            SettableGauge.newSettableGauge(Spawn.class, "failedTasks", 0);
+    private static final SettableGauge<Integer> runningJobCount  =
+            SettableGauge.newSettableGauge(Spawn.class, "runningJobs", 0);
+    private static final SettableGauge<Integer> queuedJobCount   =
+            SettableGauge.newSettableGauge(Spawn.class, "queuedJobs", 0);
+    private static final SettableGauge<Integer> failJobCount     =
+            SettableGauge.newSettableGauge(Spawn.class, "failedJobs", 0);
+    private static final SettableGauge<Integer> hungJobCount     =
+            SettableGauge.newSettableGauge(Spawn.class, "hungJobs", 0);
 
-    private static final int clientDropTimeMillis = Parameter.intValue("spawn.client.drop.time", 60_000);
-    private static final int clientDropQueueSize = Parameter.intValue("spawn.client.drop.queue", 2000);
+    private static final Meter   tasksStartedPerHour                  =
+            Metrics.newMeter(Spawn.class, "tasksStartedPerHour", "tasksStartedPerHour", TimeUnit.HOURS);
+    private static final Meter   tasksCompletedPerHour                =
+            Metrics.newMeter(Spawn.class, "tasksCompletedPerHour", "tasksCompletedPerHour", TimeUnit.HOURS);
+    private static final Meter   jobsStartedPerHour                   =
+            Metrics.newMeter(Spawn.class, "jobsStartedPerHour", "jobsStartedPerHour", TimeUnit.HOURS);
+    private static final Meter   jobsCompletedPerHour                 =
+            Metrics.newMeter(Spawn.class, "jobsCompletedPerHour", "jobsCompletedPerHour", TimeUnit.HOURS);
+    private static final Counter nonConsumingClientDropCounter        =
+            Metrics.newCounter(Spawn.class, "clientDrops");
+    private static final Counter nonHostTaskMessageCounter            =
+            Metrics.newCounter(Spawn.class, "nonHostTaskMessage");
+    private static final Meter   jobTaskUpdateHeartbeatSuccessMeter   =
+            Metrics.newMeter(Spawn.class, "jobTaskUpdateHeartbeatSuccess",
+                             "jobTaskUpdateHeartbeatSuccess", TimeUnit.MINUTES);
+    private static final Counter jobTaskUpdateHeartbeatFailureCounter =
+            Metrics.newCounter(Spawn.class, "jobTaskUpdateHeartbeatFailure");
 
-    // thread pool for expanding jobs and sending kick messages (outside of the main application threads)
-    // - thread pool size of 10 chosen somewhat arbitrarily, most job expansions should be nearly instantaneous
-    // - max queue size of 5000 was chosen as a generous upper bound for how many tasks may be queued at once (since the number of scheduled kicks is limited by queue size)
-    private final LinkedBlockingQueue<Runnable> expandKickQueue = new LinkedBlockingQueue<>(5000);
-    private final ExecutorService expandKickExecutor = MoreExecutors.getExitingExecutorService(
-            new ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS, expandKickQueue,
-                    new ThreadFactoryBuilder().setNameFormat("jobExpander-%d").build()));
-    private final ScheduledExecutorService scheduledExecutor = MoreExecutors.getExitingScheduledExecutorService(
-            new ScheduledThreadPoolExecutor(6, new ThreadFactoryBuilder().setNameFormat("spawnScheduledTask-%d").build()));
+    private static final long JOB_TASK_UPDATE_HEARTBEAT_INTERVAL =
+            Parameter.longValue("spawn.jobtask.update.interval", 30000);
 
-    private final Gauge<Integer> expandQueueGauge = Metrics.newGauge(Spawn.class, "expandKickExecutorQueue", new Gauge<Integer>() {
-        public Integer value() {
-            return expandKickQueue.size();
-        }
-    });
-    private final Gauge<Integer> backgroundQueueGauge = Metrics.newGauge(Spawn.class, "backgroundExecutorQueue", new Gauge<Integer>() {
-        public Integer value() {
-            return backgroundTaskQueue.size();
-        }
-    });
+    public static final String SPAWN_DATA_DIR           =
+            Parameter.value("SPAWN_DATA_DIR", "./data");
+    public static final String SPAWN_STRUCTURED_LOG_DIR =
+            Parameter.value("spawn.logger.bundle.dir", "./log/spawn-stats");
+
+    private static final int clientDropTimeMillis =
+            Parameter.intValue("spawn.client.drop.time", 60_000);
+    private static final int clientDropQueueSize  =
+            Parameter.intValue("spawn.client.drop.queue", 2000);
+
+    // thread pool for expanding jobs and sending kick messages (outside of the main application
+    // threads)
+    // - thread pool size of 10 chosen somewhat arbitrarily, most job expansions should be nearly
+    // instantaneous
+    // - max queue size of 5000 was chosen as a generous upper bound for how many tasks may be
+    // queued at once (since the number of scheduled kicks is limited by queue size)
+    private final LinkedBlockingQueue<Runnable> expandKickQueue    =
+            new LinkedBlockingQueue<>(5000);
+    private final ExecutorService               expandKickExecutor =
+            MoreExecutors.getExitingExecutorService(
+                    new ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS, expandKickQueue,
+                                           new ThreadFactoryBuilder().setNameFormat(
+                                                   "jobExpander-%d").build()));
+    private final ScheduledExecutorService      scheduledExecutor  =
+            MoreExecutors.getExitingScheduledExecutorService(
+                    new ScheduledThreadPoolExecutor(6, new ThreadFactoryBuilder().setNameFormat(
+                            "spawnScheduledTask-%d").build()));
+
+    private final Gauge<Integer> expandQueueGauge     =
+            Metrics.newGauge(Spawn.class, "expandKickExecutorQueue", new Gauge<Integer>() {
+                public Integer value() {
+                    return expandKickQueue.size();
+                }
+            });
+    private final Gauge<Integer> backgroundQueueGauge =
+            Metrics.newGauge(Spawn.class, "backgroundExecutorQueue", new Gauge<Integer>() {
+                public Integer value() {
+                    return backgroundTaskQueue.size();
+                }
+            });
     private final HostFailWorker hostFailWorker;
-    private final RollingLog eventLog;
-    private static final boolean eventLogCompress = Parameter.boolValue("spawn.eventlog.compress", true);
-    private static final int logMaxAge = Parameter.intValue("spawn.event.log.maxAge", 60 * 60 * 1000);
-    private static final int logMaxSize = Parameter.intValue("spawn.event.log.maxSize", 100 * 1024 * 1024);
-    private static final String logDir = Parameter.value("spawn.event.log.dir", "log");
+    private final RollingLog     eventLog;
+    private static final boolean eventLogCompress =
+            Parameter.boolValue("spawn.eventlog.compress", true);
+    private static final int     logMaxAge        =
+            Parameter.intValue("spawn.event.log.maxAge", 60 * 60 * 1000);
+    private static final int     logMaxSize       =
+            Parameter.intValue("spawn.event.log.maxSize", 100 * 1024 * 1024);
+    private static final String  logDir           = Parameter.value("spawn.event.log.dir", "log");
 
     public static void main(String args[]) throws Exception {
         Spawn spawn = new Spawn(
@@ -228,65 +285,70 @@ public class Spawn implements Codec.Codable {
         if (enableSpawn2) new SpawnService(spawn).start();
     }
 
-    private final File dataDir;
+    private final File                                           dataDir;
     private final ConcurrentHashMap<String, ClientEventListener> listeners;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String uuid;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String debug;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String queryHost;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String spawnHost;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int queryPort = 2222;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean quiesce;
-    @Codec.Set(codable = true)
-    private final HashSet<String> disabledHosts = new HashSet<>();
-    private final int defaultReplicaCount = Parameter.intValue("spawn.defaultReplicaCount", 1);
-    private static final int TASK_QUEUE_DRAIN_INTERVAL = Parameter.intValue("task.queue.drain.interval", 500);
-    private static final boolean ENABLE_JOB_STORE = Parameter.boolValue("job.store.enable", true);
-    private static final boolean ENABLE_JOB_FIXDIRS_ONCOMPLETE = Parameter.boolValue("job.fixdirs.oncomplete", true);
+    @FieldConfig(codable = true)
+    private final        HashSet<String> disabledHosts                 = new HashSet<>();
+    private final        int             defaultReplicaCount           =
+            Parameter.intValue("spawn.defaultReplicaCount", 1);
+    private static final int             TASK_QUEUE_DRAIN_INTERVAL     =
+            Parameter.intValue("task.queue.drain.interval", 500);
+    private static final boolean         ENABLE_JOB_STORE              =
+            Parameter.boolValue("job.store.enable", true);
+    private static final boolean         ENABLE_JOB_FIXDIRS_ONCOMPLETE =
+            Parameter.boolValue("job.fixdirs.oncomplete", true);
 
 
     private final ConcurrentHashMap<String, HostState> monitored;
     private final SpawnState spawnState = new SpawnState();
-    private final SpawnMesh spawnMesh;
+    private final SpawnMesh            spawnMesh;
     private final SpawnFormattedLogger spawnFormattedLogger;
 
-    private CuratorFramework zkClient;
-    private SpawnMQ spawnMQ;
-    private Server jetty;
-    private JobConfigManager jobConfigManager;
+    private CuratorFramework      zkClient;
+    private SpawnMQ               spawnMQ;
+    private Server                jetty;
+    private JobConfigManager      jobConfigManager;
     private SetMembershipListener minionMembers;
     private SetMembershipListener deadMinionMembers;
-    private AliasBiMap aliasBiMap;
-    private boolean useZk = true;
-    private final String stateFilePath = Parameter.value("spawn.state.file", "spawn.state");
-    private Gauge<Integer> minionsDown = Metrics.newGauge(Spawn.class, "minionsDown", new Gauge<Integer>() {
-        public Integer value() {
-            int total = 0;
-            if (monitored != null) {
-                synchronized (monitored) {
-                    total = monitored.size();
+    private AliasBiMap            aliasBiMap;
+    private       boolean        useZk         = true;
+    private final String         stateFilePath = Parameter.value("spawn.state.file", "spawn.state");
+    private       Gauge<Integer> minionsDown   =
+            Metrics.newGauge(Spawn.class, "minionsDown", new Gauge<Integer>() {
+                public Integer value() {
+                    int total = 0;
+                    if (monitored != null) {
+                        synchronized (monitored) {
+                            total = monitored.size();
+                        }
+                    }
+                    int up = minionMembers == null ? 0 : minionMembers.getMemberSetSize();
+                    return total - up;
                 }
-            }
-            int up = minionMembers == null ? 0 : minionMembers.getMemberSetSize();
-            return total - up;
-        }
-    });
+            });
 
     private SpawnBalancer balancer;
-    private SpawnQueuesByPriority taskQueuesByPriority = new SpawnQueuesByPriority();
-    private volatile int lastQueueSize = 0;
-    private final Lock jobLock = new ReentrantLock();
-    private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
-    private final LinkedBlockingQueue<String> jobUpdateQueue = new LinkedBlockingQueue<>();
-    private final SpawnJobFixer spawnJobFixer = new SpawnJobFixer(this);
+    private          SpawnQueuesByPriority       taskQueuesByPriority = new SpawnQueuesByPriority();
+    private volatile int                         lastQueueSize        = 0;
+    private final    Lock                        jobLock              = new ReentrantLock();
+    private final    AtomicBoolean               shuttingDown         = new AtomicBoolean(false);
+    private final    LinkedBlockingQueue<String> jobUpdateQueue       = new LinkedBlockingQueue<>();
+    private final    SpawnJobFixer               spawnJobFixer        = new SpawnJobFixer(this);
     private JobAlertRunner jobAlertRunner;
-    private JobStore jobStore;
+    private JobStore       jobStore;
     private SpawnDataStore spawnDataStore;
     //To track web socket connections
     private final WebSocketManager webSocketManager = new WebSocketManager();
@@ -307,7 +369,8 @@ public class Spawn implements Codec.Codable {
         this.monitored = new ConcurrentHashMap<>();
         this.useZk = zkClient != null;
         this.spawnFormattedLogger = useStructuredLogger ?
-                                    SpawnFormattedLogger.createFileBasedLogger(new File(SPAWN_STRUCTURED_LOG_DIR)) :
+                                    SpawnFormattedLogger.createFileBasedLogger(
+                                            new File(SPAWN_STRUCTURED_LOG_DIR)) :
                                     SpawnFormattedLogger.createNullLogger();
         if (useZk) {
             log.info("[init] starting zkclient, config manager, and listening for minions");
@@ -320,7 +383,9 @@ public class Spawn implements Codec.Codable {
         this.hostFailWorker = new HostFailWorker(this, scheduledExecutor);
         this.balancer = new SpawnBalancer(this);
         this.spawnMesh = new SpawnMesh(this);
-        this.eventLog = new RollingLog(new File(logDir, "events-jobs"), "job", eventLogCompress, logMaxSize, logMaxAge);
+        this.eventLog =
+                new RollingLog(new File(logDir, "events-jobs"), "job", eventLogCompress, logMaxSize,
+                               logMaxAge);
     }
 
     private Spawn(File dataDir, File webDir) throws Exception {
@@ -333,12 +398,17 @@ public class Spawn implements Codec.Codable {
         this.monitored = new ConcurrentHashMap<>();
         this.listeners = new ConcurrentHashMap<>();
         this.spawnFormattedLogger = useStructuredLogger ?
-                                    SpawnFormattedLogger.createFileBasedLogger(new File(SPAWN_STRUCTURED_LOG_DIR)) :
+                                    SpawnFormattedLogger.createFileBasedLogger(
+                                            new File(SPAWN_STRUCTURED_LOG_DIR)) :
                                     SpawnFormattedLogger.createNullLogger();
         this.zkClient = ZkUtil.makeStandardClient();
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
-        this.queryHost = (queryHttpHost != null ? queryHttpHost : InetAddress.getLocalHost().getHostAddress()) + ":" + queryPort;
-        this.spawnHost = (httpHost != null ? httpHost : InetAddress.getLocalHost().getHostAddress()) + ":" + webPort;
+        this.queryHost = (queryHttpHost != null ?
+                          queryHttpHost :
+                          InetAddress.getLocalHost().getHostAddress()) + ":" + queryPort;
+        this.spawnHost =
+                (httpHost != null ? httpHost : InetAddress.getLocalHost().getHostAddress()) + ":" +
+                webPort;
         if (uuid == null) {
             uuid = UUID.randomUUID().toString();
             log.warn("[init] uuid was null, creating new one: " + uuid);
@@ -369,7 +439,8 @@ public class Spawn implements Codec.Codable {
         // connect to mesh
         this.spawnMesh = new SpawnMesh(this);
         log.info("[init] connecting to message queue");
-        this.spawnMQ = meshQueue ? new SpawnMQImplMesh(zkClient, this) : new SpawnMQImpl(zkClient, this);
+        this.spawnMQ =
+                meshQueue ? new SpawnMQImplMesh(zkClient, this) : new SpawnMQImpl(zkClient, this);
         this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
         this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
         this.aliasBiMap = new AliasBiMap(spawnDataStore);
@@ -383,7 +454,8 @@ public class Spawn implements Codec.Codable {
         this.jobAlertRunner = new JobAlertRunner(this, scheduledExecutor);
         // start job scheduler
         scheduledExecutor.scheduleWithFixedDelay(new UpdateEventRunnable(), 0, 1, TimeUnit.MINUTES);
-        scheduledExecutor.scheduleWithFixedDelay(new JobRekickTask(), 0, 500, TimeUnit.MILLISECONDS);
+        scheduledExecutor.scheduleWithFixedDelay(new JobRekickTask(), 0, 500,
+                                                 TimeUnit.MILLISECONDS);
         scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
@@ -395,7 +467,8 @@ public class Spawn implements Codec.Codable {
             public void run() {
                 jobTaskUpdateHeartbeatCheck();
             }
-        }, JOB_TASK_UPDATE_HEARTBEAT_INTERVAL, JOB_TASK_UPDATE_HEARTBEAT_INTERVAL, TimeUnit.MILLISECONDS);
+        }, JOB_TASK_UPDATE_HEARTBEAT_INTERVAL, JOB_TASK_UPDATE_HEARTBEAT_INTERVAL,
+                                                 TimeUnit.MILLISECONDS);
         // request hosts to send their status
         scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
             @Override
@@ -426,7 +499,9 @@ public class Spawn implements Codec.Codable {
         if (ENABLE_JOB_STORE) {
             jobStore = new JobStore(new File(dataDir, "jobstore"));
         }
-        this.eventLog = new RollingLog(new File(logDir, "events-jobs"), "job", eventLogCompress, logMaxSize, logMaxAge);
+        this.eventLog =
+                new RollingLog(new File(logDir, "events-jobs"), "job", eventLogCompress, logMaxSize,
+                               logMaxAge);
     }
 
     private void writeState() {
@@ -443,7 +518,9 @@ public class Spawn implements Codec.Codable {
     }
 
     public void markHostsForFailure(String hostId, boolean deadFileSystem) {
-        markHostsForFailure(hostId, deadFileSystem ? HostFailWorker.FailState.FAILING_FS_DEAD : HostFailWorker.FailState.FAILING_FS_OKAY);
+        markHostsForFailure(hostId, deadFileSystem ?
+                                    HostFailWorker.FailState.FAILING_FS_DEAD :
+                                    HostFailWorker.FailState.FAILING_FS_OKAY);
     }
 
     public void unmarkHostsForFailure(String hostIds) {
@@ -523,10 +600,12 @@ public class Spawn implements Codec.Codable {
         }
     }
 
-    // TODO: It should be possible to reduce duplication between how commands and macros are handled.
+    // TODO: It should be possible to reduce duplication between how commands and macros are
+    // handled.
     @VisibleForTesting
     protected void loadCommands() throws Exception {
-        Map<String, String> loadedCommands = spawnDataStore.getAllChildren(SPAWN_COMMON_COMMAND_PATH);
+        Map<String, String> loadedCommands =
+                spawnDataStore.getAllChildren(SPAWN_COMMON_COMMAND_PATH);
         if (loadedCommands == null) {
             return;
         }
@@ -547,7 +626,8 @@ public class Spawn implements Codec.Codable {
             return;
         }
         try {
-            taskQueuesByPriority = new ObjectMapper().readValue(queueFromZk, SpawnQueuesByPriority.class);
+            taskQueuesByPriority =
+                    new ObjectMapper().readValue(queueFromZk, SpawnQueuesByPriority.class);
         } catch (Exception ex) {
             log.warn("[task.queue] exception during spawn queue deserialization: ", ex);
         }
@@ -558,7 +638,8 @@ public class Spawn implements Codec.Codable {
         try {
             taskQueuesByPriority.lock();
             try {
-                spawnDataStore.put(SPAWN_QUEUE_PATH, new String(om.writeValueAsBytes(taskQueuesByPriority)));
+                spawnDataStore.put(SPAWN_QUEUE_PATH,
+                                   new String(om.writeValueAsBytes(taskQueuesByPriority)));
             } finally {
                 taskQueuesByPriority.unlock();
             }
@@ -3822,7 +3903,7 @@ public class Spawn implements Codec.Codable {
     /**
      * event queued to a browser ClientListener
      */
-    public static final class ClientEvent implements Codec.Codable {
+    public static final class ClientEvent implements Codable {
 
         private String topic;
         private JSONObject message;
@@ -4032,7 +4113,7 @@ public class Spawn implements Codec.Codable {
     }
 
     @VisibleForTesting
-    protected static class SpawnState implements Codec.Codable {
+    protected static class SpawnState implements Codable {
 
         final ConcurrentMap<String, JobMacro> macros = new ConcurrentHashMapV8<>();
         final ConcurrentMap<String, JobCommand> commands = new ConcurrentHashMapV8<>();

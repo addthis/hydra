@@ -13,7 +13,13 @@
  */
 package com.addthis.hydra.data.tree.prop;
 
+import java.util.Arrays;
+import java.util.List;
+
+import java.nio.ByteBuffer;
+
 import com.addthis.basis.util.Strings;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
@@ -29,19 +35,17 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueSimple;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.bundle.value.ValueTranslationException;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.TreeNodeList;
+
 import com.clearspring.analytics.stream.quantile.TDigest;
 
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.List;
-
-public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Codec.SuperCodable {
+public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements SuperCodable {
 
     /**
      * <p>This data attachment is a <span class="hydra-summary">TDigest attached to a node</span></p>
@@ -90,7 +94,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Cod
          * Bundle field name from which to insert keys into the sketch.
          * This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String key;
 
         /**
@@ -101,7 +105,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Cod
          * quantiles.  Conversely, you should expect to track about 5 N centroids for this
          * accuracy.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int compression = 100;
 
         @Override
@@ -112,7 +116,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Cod
         }
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private byte[] raw;
 
     private TDigest filter;

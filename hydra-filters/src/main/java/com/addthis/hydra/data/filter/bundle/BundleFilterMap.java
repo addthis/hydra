@@ -14,7 +14,7 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">executes a sequence of {@link BundleFilterField BundleFilterField} operations</span>.
@@ -43,19 +43,20 @@ public class BundleFilterMap extends BundleFilter {
     /**
      * The sequence of field bundle filters to execute.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private BundleFilterField fields[];
 
     /**
      * If true then exit on first operation that fails and return false. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean exitFail;
 
     /**
-     * Specifies the {@link BundleFilterField#nullFail nullFail} field for all the component filters. Default is false.
+     * Specifies the {@link BundleFilterField#nullFail nullFail} field for all the component
+     * filters. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Boolean nullFail;
 
     @Override

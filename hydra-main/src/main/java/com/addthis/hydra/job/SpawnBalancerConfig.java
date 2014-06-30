@@ -15,21 +15,22 @@ package com.addthis.hydra.job;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 /**
  * This class stores various configuration parameters for spawn balancer, such as how many tasks to move, how many bytes to move, etc.
  */
-public class SpawnBalancerConfig implements Codec.Codable {
+public class SpawnBalancerConfig implements Codable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     // How aggressively balancing should be done. For now, 0=no rebalancing, 1=rebalance jobs that are over/under-allocated, 2=rebalance all jobs
     private int autoBalanceLevel = 0;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     // During reallocation, don't move more than this many tasks
     private int tasksMovedFullRebalance = Parameter.intValue("spawnbalance.tasks.fullbalance", 10);
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     // During reallocation, don't move more than this many bytes
     private long bytesMovedFullRebalance = Parameter.longValue("spawnbalance.bytes.fullbalance", 300L * 1000 * 1000 * 1000);
     // During host reallocation, a single moved task can only be this portion of the overall byte maximum
@@ -50,10 +51,10 @@ public class SpawnBalancerConfig implements Codec.Codable {
     private double alleviateHostPercentage = Double.parseDouble(Parameter.value("spawnbalance.alleviate.perc", ".2"));
 
     private int autobalanceCheckInterval = Parameter.intValue("spawnbalance.check.autobalance", 60 * 1000);
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     // Only do job autobalancing once per time interval
     private int jobAutobalanceIntervalMillis = Parameter.intValue("spawnbalance.interval.job.autobalance", 4 * 60 * 60 * 1000);
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     // Only do host autobalancing once per time interval
     private int hostAutobalanceIntervalMillis = Parameter.intValue("spawnbalance.interval.host.autobalance", 6 * 60 * 60 * 1000);
     // Track the last time a job autobalance was done

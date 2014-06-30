@@ -16,19 +16,20 @@ package com.addthis.hydra.data.util;
 
 import java.util.List;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
-public class IndexedFeaturesBucket implements Codec.Codable, FeaturesBucket {
+public class IndexedFeaturesBucket implements Codable, FeaturesBucket {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int[] featuresIndex;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int[] featuresWeight;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int SIZE = 1000;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int currentIndex = 0;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long hits = 0;
 
     public IndexedFeaturesBucket() {

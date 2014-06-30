@@ -24,7 +24,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.BytesCodable;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.PageDB;
 
@@ -180,12 +182,12 @@ public class DiskBackedMap<T extends DiskBackedMap.DiskObject> implements Map<St
 
     // funky non-static class to maintain compatibility with
     // DiskObject interface
-    public class CodableDiskObject implements Codec.SuperCodable, Codec.BytesCodable {
+    public class CodableDiskObject implements SuperCodable, BytesCodable {
 
         private DiskObject d;
 
-        @Codec.Set(codable = true)
-        private byte[]  bytes;
+        @FieldConfig(codable = true)
+        private byte[] bytes;
 
         public CodableDiskObject() {
         }

@@ -19,7 +19,7 @@ import java.util.Map;
 import com.addthis.basis.test.SlowTest;
 
 import com.addthis.bark.ZkStartUtil;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
@@ -51,7 +51,7 @@ public class SpawnTest extends ZkStartUtil {
         JobTask testTask = new JobTask();
         testTask.setTaskID(taskId);
         testTask.setJobUUID(jobId);
-        CodecJSON codec = new CodecJSON();
+        CodecJSON codec = CodecJSON.INSTANCE;
         byte[] encoded = codec.encode(testTask);
         JobTask decodedTask = new JobTask();
         codec.decode(decodedTask, encoded);

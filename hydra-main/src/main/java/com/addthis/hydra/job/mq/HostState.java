@@ -19,7 +19,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.job.Minion;
 
 import com.google.common.base.Objects;
@@ -32,70 +32,70 @@ public class HostState implements HostMessage {
 
     private static final long serialVersionUID = 7252930788607795642L;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String host;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int port;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String uuid;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String user;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String path;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String group;
     // Host State is determined by others zk group membership, by
     // definition it can not persist.
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean up;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long time;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long uptime;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int availableTaskSlots;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int maxTaskSlots;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private JobKey running[];
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private JobKey replicating[];
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private JobKey backingup[];
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private JobKey stopped[];
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private JobKey replicas[];
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private JobKey incompleteReplicas[];
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private JobKey queued[];
     // Do not encode this derived, internal, non-typesafe field
     private HashMap<String, Integer> jobTaskCountMap;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private HostCapacity used;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private HostCapacity max;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean dead;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long lastUpdateTime;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private double histQueueSize;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private double histWaitTime;
     //TODO:  remove but need this in for now because de-serialization fails without it
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private HashMap<String, Double> jobRuntimes = new HashMap<String, Double>();
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean readOnly;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean diskReadOnly;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean disabled;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private double meanActiveTasks;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String minionTypes;
 
     public HostState() {

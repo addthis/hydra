@@ -13,43 +13,43 @@
  */
 package com.addthis.hydra.job.mq;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 
 public class CommandTaskKick implements JobMessage {
 
     private static final long serialVersionUID = -7588140676324569250L;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String hostUuid;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private JobKey jobKey;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int priority;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int jobNodes;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long runTime;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Long submitTime;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int runCount;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String config;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String command;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String killSignal;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int hourlyBackups;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int dailyBackups;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int weeklyBackups;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int monthlyBackups;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ReplicaTarget replicas[];
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int retries;
 
     @Override

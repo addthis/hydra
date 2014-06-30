@@ -38,7 +38,8 @@ import com.addthis.basis.util.Strings;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.hydra.task.stream.StreamFile;
 import com.addthis.hydra.task.stream.StreamFileSource;
@@ -62,75 +63,75 @@ import lzma.streams.LzmaInputStream;
 /**
  * Iterates over a source list and returns them as a continuous stream.
  */
-public abstract class DataSourceStreamList extends TaskDataSource implements Codec.SuperCodable {
+public abstract class DataSourceStreamList extends TaskDataSource implements SuperCodable {
 
     private static final Logger log = LoggerFactory.getLogger(DataSourceStreamList.class);
 
     /**
      * Specifies conversion to bundles.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     protected TaskDataSource factory;
 
     /**
      * This field is unused.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected String injectKey = FactoryInputStream.InjectorStreamSource.DefautlInjectorKey;
 
     /**
      * Path to the mark directory.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String markDir = "marks";
 
     /**
      * Number of shards in the input source.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer shardTotal;
 
     /**
      * If specified then process only the shards specified in this array.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer shards[];
 
     /**
      * If true then generate a hash of the filename input rather than use the {{mod}} field. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean hash;
 
 
     /**
      * If true then set hash to true when shardTotal is null or 0. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean forceHashFalse;
 
     /**
      * If non-null, then inject the filename into the bundle field using this field name. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected String injectSourceName;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int maxCacheSize = 100;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int cacheFillInterval = 500;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int peekerThreads = 2;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int sourceInitThreads = 1;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int MAX_GET_NEXT_SOURCE_ATTEMPTS = 360000;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int maxReadyQueuePollAttempts = 500;
 
     private StreamFileSource sources;

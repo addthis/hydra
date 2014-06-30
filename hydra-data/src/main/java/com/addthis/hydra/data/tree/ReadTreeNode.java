@@ -13,16 +13,17 @@
  */
 package com.addthis.hydra.data.tree;
 
-import com.addthis.basis.util.ClosableIterator;
-import com.addthis.basis.util.MemoryCounter.Mem;
-import com.addthis.hydra.store.db.DBKey;
-import com.addthis.hydra.store.db.IPageDB.Range;
-import com.addthis.hydra.store.db.IReadWeighable;
-
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
+
+import com.addthis.basis.util.ClosableIterator;
+import com.addthis.basis.util.MemoryCounter.Mem;
+
+import com.addthis.hydra.store.db.DBKey;
+import com.addthis.hydra.store.db.IPageDB.Range;
+import com.addthis.hydra.store.db.IReadWeighable;
 
 
 /**
@@ -262,8 +263,7 @@ public class ReadTreeNode extends AbstractTreeNode implements IReadWeighable {
     }
 
     @Override
-    public boolean encodeLock() {
-        return true;
+    public void encodeLock() {
     }
 
     @Override

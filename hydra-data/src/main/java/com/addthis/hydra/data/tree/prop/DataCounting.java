@@ -15,6 +15,8 @@ package com.addthis.hydra.data.tree.prop;
 
 import java.io.IOException;
 
+import com.addthis.basis.util.Varint;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueArray;
@@ -30,13 +32,13 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueSimple;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.bundle.value.ValueTranslationException;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 
-import com.addthis.basis.util.Varint;
 import com.clearspring.analytics.stream.cardinality.AdaptiveCounting;
 import com.clearspring.analytics.stream.cardinality.CardinalityMergeException;
 import com.clearspring.analytics.stream.cardinality.CountThenEstimate;
@@ -45,11 +47,12 @@ import com.clearspring.analytics.stream.cardinality.HyperLogLogPlus;
 import com.clearspring.analytics.stream.cardinality.ICardinality;
 import com.clearspring.analytics.stream.cardinality.LinearCounting;
 import com.clearspring.analytics.stream.cardinality.LogLog;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
-public class DataCounting extends TreeNodeData<DataCounting.Config> implements Codec.SuperCodable {
+public class DataCounting extends TreeNodeData<DataCounting.Config> implements SuperCodable {
 
     private static final int VER_LOG = 0;
     private static final int VER_LINEAR = 1;
@@ -100,7 +103,7 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements C
         /**
          * Field to count or estimate cardinalities for. This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         String key;
 
         /**
@@ -118,47 +121,47 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements C
          * Default is ac (adaptive). Failure to use a recognized type will result in errors.
          * </pre>
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String ver = "ac";
 
         /**
          * Passed to ac, lc, and ll as k. Default is 0.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int size;
 
         /**
          * Used for ac, ce, and lc. Setting this to >=0 causes the size field to be ignored when applicable.
          * This is the maximum cardinality under which a one percent error rate is likely.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         int max = -1;
 
         /**
          * Used for ce. The point at which exact counting gives way to estimation. The default is 100.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int tip = 100;
 
         /**
          * Used for hll and ceh. The relative standard deviation for the counter -- smaller deviations
          * require more space. The default is 0.05.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private double rsd = 0.05;
 
         /**
          * Used in hyperloglog plus (hllp).  The precision is the number of bits used when the cardinality
          * is calculated using the normal mode. The default is 14.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int p = 14;
 
         /**
          * Used in hyperloglog plus (hllp).  The sparse precision is the number of bits used when the cardinality
          * is calculated using the sparse mode. The default is 25.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int sp = 25;
 
         @Override
@@ -224,9 +227,9 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements C
      * Max cardinality expected If merging estimators, this should be set to the
      * max cardinality expected after the merge
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int ver;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private byte[] M;
 
     private ICardinality ic;

@@ -13,40 +13,45 @@
  */
 package com.addthis.hydra.data.tree;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import java.nio.charset.Charset;
+
 import com.addthis.basis.util.Varint;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecBin2;
+
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.BytesCodable;
+import com.addthis.codec.codables.ConcurrentCodable;
+import com.addthis.codec.codables.SuperCodable;
+import com.addthis.codec.reflection.Fields;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
-import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.Map;
+public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, ConcurrentCodable,
+                                                  BytesCodable {
 
-public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodable, Codec.ConcurrentCodable, Codec.BytesCodable {
-
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected long hits;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int nodes;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected volatile Integer nodedb;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int bits;
     @SuppressWarnings("unchecked")
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected HashMap<String, TreeNodeData> data;
 
 
     @Override
     public byte[] bytesEncode(long version) {
         preEncode();
-        if (!encodeLock()) {
-            throw new RuntimeException("Unable to acquire encoding lock");
-        }
         byte[] returnBytes;
         ByteBuf b = PooledByteBufAllocator.DEFAULT.buffer();
+        encodeLock();
         try {
             Varint.writeUnsignedVarLong(hits, b);
             Varint.writeSignedVarInt(nodedb == null ? -1 : nodedb, b);
@@ -58,7 +63,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
                     byte[] keyBytes = entry.getKey().getBytes(Charset.forName("UTF-8"));
                     Varint.writeUnsignedVarInt(keyBytes.length, b);
                     b.writeBytes(keyBytes);
-                    String classInfo = CodecBin2.getClassFieldMap(entry.getValue().getClass()).getClassName(entry.getValue());
+                    String classInfo = Fields.getClassFieldMap(entry.getValue().getClass()).getClassName(entry.getValue());
                     byte[] classNameBytes = classInfo.getBytes(Charset.forName("UTF-8"));
                     Varint.writeUnsignedVarInt(classNameBytes.length, b);
                     b.writeBytes(classNameBytes);
@@ -101,7 +106,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, Codec.SuperCodab
                     String key = new String(buf.readBytes(kl).array(), Charset.forName("UTF-8"));
                     int cl = Varint.readUnsignedVarInt(buf);
                     String className = new String(buf.readBytes(cl).array(), Charset.forName("UTF-8"));
-                    TreeNodeData tn = (TreeNodeData) CodecBin2.getClassFieldMap(TreeNodeData.class).getClass(className).newInstance();
+                    TreeNodeData tn = (TreeNodeData) Fields.getClassFieldMap(TreeNodeData.class).getClass(className).newInstance();
                     int vl = Varint.readUnsignedVarInt(buf);
                     tn.bytesDecode(buf.readBytes(vl).array(), version);
                     dataMap.put(key, tn);

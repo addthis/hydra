@@ -14,17 +14,18 @@
 
 package com.addthis.hydra.query.aggregate;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
-public class TaskSourceInfo implements Codec.Codable {
+public class TaskSourceInfo implements Codable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public final boolean complete;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public final int lines;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public final long endTime;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public final TaskSourceOptionInfo[] options;
 
     public TaskSourceInfo(QueryTaskSource taskSource) {

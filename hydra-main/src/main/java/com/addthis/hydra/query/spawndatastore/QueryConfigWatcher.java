@@ -20,7 +20,7 @@ import java.util.concurrent.ExecutionException;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.bark.StringSerializer;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.JobQueryConfig;
 import com.addthis.hydra.job.store.AvailableCache;
 import com.addthis.hydra.job.store.SpawnDataStore;
@@ -37,16 +37,19 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PA
  */
 public class QueryConfigWatcher {
 
-    private static final CodecJSON codec = new CodecJSON();
+    private static final CodecJSON codec = CodecJSON.INSTANCE;
 
     /* How long job config data can live in the cache before being refreshed */
-    private static final long queryConfigRefreshMillis = Parameter.longValue("query.config.refresh.millis", 15000);
+    private static final long queryConfigRefreshMillis =
+            Parameter.longValue("query.config.refresh.millis", 15000);
     /* How many jobIds should be stored in the cache */
-    private static final int queryConfigCacheSize = Parameter.intValue("query.config.cache.size", 100);
+    private static final int  queryConfigCacheSize     =
+            Parameter.intValue("query.config.cache.size", 100);
 
     private static final Logger log = LoggerFactory.getLogger(QueryConfigWatcher.class);
 
-    /* A SpawnDataStore used to fetch the config data. Should be the same type (zookeeper/priam) as the one used by Spawn to store job data */
+    /* A SpawnDataStore used to fetch the config data. Should be the same type (zookeeper/priam)
+    as the one used by Spawn to store job data */
     private SpawnDataStore spawnDataStore;
 
     /* A LoadingCache used to save configs fetched from the SpawnDataStore */
@@ -54,8 +57,10 @@ public class QueryConfigWatcher {
 
     public QueryConfigWatcher(SpawnDataStore spawnDataStore) {
         this.spawnDataStore = spawnDataStore;
-        // This cache will not block on queryconfig fetches unless no data has been fetched for that job before
-        this.configCache = new AvailableCache<JobQueryConfig>(queryConfigRefreshMillis, -1, queryConfigCacheSize, 2) {
+        // This cache will not block on queryconfig fetches unless no data has been fetched for
+        // that job before
+        this.configCache = new AvailableCache<JobQueryConfig>(queryConfigRefreshMillis, -1,
+                                                              queryConfigCacheSize, 2) {
             @Override
             public JobQueryConfig fetchValue(String id) {
                 return fetchJobQueryConfig(id);

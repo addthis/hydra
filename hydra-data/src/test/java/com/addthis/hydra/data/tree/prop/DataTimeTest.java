@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.tree.prop;
 
-import com.addthis.codec.CodecBin2;
+import com.addthis.codec.binary.CodecBin2;
 import com.addthis.hydra.store.kv.KeyCoder;
 
 import junit.framework.TestCase;
@@ -28,7 +28,7 @@ public class DataTimeTest extends TestCase {
         time.setFirst(first);
         time.setLast(last);
         byte[] encoded = time.bytesEncode(KeyCoder.EncodeType.SPARSE.ordinal());
-        CodecBin2 codec = new CodecBin2();
+        CodecBin2 codec = CodecBin2.INSTANCE;
         byte[] codecEncoded = codec.encode(time);
         DataTime timeDecoded = new DataTime();
         timeDecoded.bytesDecode(encoded, KeyCoder.EncodeType.SPARSE.ordinal());

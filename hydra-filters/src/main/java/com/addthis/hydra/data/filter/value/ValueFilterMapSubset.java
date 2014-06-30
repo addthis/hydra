@@ -19,7 +19,7 @@ import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.bundle.value.ValueTranslationException;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,31 +60,31 @@ public class ValueFilterMapSubset extends ValueFilter {
     /**
      * A set of keys that are preserved by the filter.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String[] whitelist;
 
     /**
      * A set of keys that are excluded by the filter.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String[] blacklist;
 
     /**
      * If true, then convert the output to a string. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean toString;
 
     /**
      * If toString is true, then use this field as the delimiter between a key and a value.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String keySep = "=";
 
     /**
      * If toString is true, then use this field as the deliminator between two (key,value) pairs.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String valueSep = ",";
 
     private static final Logger log = LoggerFactory.getLogger(ValueFilterMapSubset.class);
@@ -139,7 +139,8 @@ public class ValueFilterMapSubset extends ValueFilter {
             if (sb.length() == 0) {
                 sb.append(valueMapEntry.getKey() + keySep + valueMapEntry.getValue().toString());
             } else {
-                sb.append(valueSep + valueMapEntry.getKey() + keySep + valueMapEntry.getValue().toString());
+                sb.append(valueSep + valueMapEntry.getKey() + keySep +
+                          valueMapEntry.getValue().toString());
             }
         }
 

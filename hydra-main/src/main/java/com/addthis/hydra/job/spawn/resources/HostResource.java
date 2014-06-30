@@ -22,7 +22,7 @@ import javax.ws.rs.core.Response;
 
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.RebalanceOutcome;
 import com.addthis.hydra.job.Spawn;
 import com.addthis.hydra.job.mq.HostState;

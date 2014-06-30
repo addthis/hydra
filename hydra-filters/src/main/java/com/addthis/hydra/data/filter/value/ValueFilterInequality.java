@@ -15,7 +15,7 @@ package com.addthis.hydra.data.filter.value;
 
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns those values that satisfies the specified inequalities</span>.
@@ -40,19 +40,19 @@ public class ValueFilterInequality extends ValueFilter {
     /**
      * The inequality to perform.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String iop;
 
     /**
      * The right-hand side as a long value.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Long rh;
 
     /**
      * The right-hand side as a double value.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Double rhd;
 
     // todo: int versus float, etc

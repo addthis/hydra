@@ -29,8 +29,10 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Multidict;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.common.hash.MD5HashFunction;
 
 import org.apache.http.client.methods.HttpGet;
@@ -41,43 +43,44 @@ import org.slf4j.LoggerFactory;
 
 public class ValueFilterHttpGet extends StringFilter {
 
-    private static final Logger log = LoggerFactory.getLogger(ValueFilterHttpGet.class);
-    private static final Codec codec = new CodecJSON();
+    private static final Logger log   = LoggerFactory.getLogger(ValueFilterHttpGet.class);
+    private static final Codec  codec = CodecJSON.INSTANCE;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int cacheSize = 1000;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long cacheAge;
-    @Codec.Set(codable = true)
-    private int timeout = 60000;
-    @Codec.Set(codable = true)
-    private int retry = 1;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
+    private int  timeout      = 60000;
+    @FieldConfig(codable = true)
+    private int  retry        = 1;
+    @FieldConfig(codable = true)
     private long retryTimeout = 1000;
-    @Codec.Set(codable = true, required = true)
-    private String template;
-    @Codec.Set(codable = true)
-    private String missValue;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true, required = true)
+    private String  template;
+    @FieldConfig(codable = true)
+    private String  missValue;
+    @FieldConfig(codable = true)
     private boolean trace;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean emptyOk = true;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean persist;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String persistDir = ".";
 
-    private HotMap<String, CacheObject> cache = new HotMap<String, CacheObject>(new ConcurrentHashMap());
-    private AtomicBoolean init = new AtomicBoolean(false);
+    private HotMap<String, CacheObject> cache =
+            new HotMap<String, CacheObject>(new ConcurrentHashMap());
+    private AtomicBoolean               init  = new AtomicBoolean(false);
     private File persistTo;
 
-    public static class CacheObject implements Codec.Codable, Comparable<CacheObject> {
+    public static class CacheObject implements Codable, Comparable<CacheObject> {
 
-        @Codec.Set(codable = true)
-        private long time;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
+        private long   time;
+        @FieldConfig(codable = true)
         private String key;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String data;
 
         private String hash;

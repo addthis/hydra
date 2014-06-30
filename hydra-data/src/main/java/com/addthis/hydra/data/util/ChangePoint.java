@@ -13,12 +13,12 @@
  */
 package com.addthis.hydra.data.util;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.codables.Codable;
 
 /**
  *         A class representing a significant change in an array of integers
  */
-public class ChangePoint implements Codec.Codable {
+public class ChangePoint implements Codable {
 
     private long size;
     private int index;

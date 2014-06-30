@@ -35,7 +35,7 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
 import com.addthis.hydra.data.util.DateUtil;
 import com.addthis.hydra.task.run.TaskRunConfig;
@@ -43,7 +43,6 @@ import com.addthis.hydra.task.run.TaskRunnable;
 
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * This Hydra job is <span class="hydra-summary">a bulk file loader for Hydra clusters</span>.
@@ -101,32 +100,32 @@ public class Hoover extends TaskRunnable implements Runnable {
      * Mapping from server aliases to server hostnames.
      * The serves alias will be substituted in place of the variable {{HOST}}.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private HashMap<String, String> hosts;
 
     /**
      * Mark file directory on the local machine. Default is "hoover.mark".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String markDir = "hoover.mark";
 
     /**
      * Output directory on the local machine. Default is "hoover.out".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String outDir = "hoover.out";
 
     /**
      * User name for accessing the remote servers.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String user;
 
     /**
      * Path on the remote servers for retrieving files.
      * This is a Unix path, so glob-matching (wildcard-matching) is allowed.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String path;
 
     /**
@@ -134,59 +133,59 @@ public class Hoover extends TaskRunnable implements Runnable {
      * a file path that match this regular expression.
      * Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String match;
 
     /**
      * Regular expression for extracting the date from the file name or path. Default is "(.*)".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String dateMatcher = "(.*)";
 
     /**
      * The <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html">DateTimeFormat</a>
      * for each date that is extracted from either the file name or the file path. Default is "yyyy-MM-dd".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String dateExtractor = "yyyy-MM-dd";
 
     /**
      * Start date and time for filtering.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String startDate;
 
     /**
      * End date and time for filtering.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String endDate;
 
     /**
      * The <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html">DateTimeFormat</a>
      * for the parameters 'startDate' and 'endDate'. Default is "yyyy-MM-dd-HH".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String startEndDateFormat = "yyyy-MM-dd-HH";
 
     /**
      * Execute this command to fetch the list of files on the remote machine.
      * Default is ["ssh", "{{USER}}@{{HOST}}", "ls", "{{PATH}}" ].
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String listCommand[] = new String[]{"ssh", "{{USER}}@{{HOST}}", "ls", "{{PATH}}"};
 
     /**
      * Execute this command to copy a file from the remote machine to the local machine.
      * <br>Default is ["rsync", "-av", "{{USER}}@{{HOST}}:{{REMOTEPATH}}", "{{LOCALPATH}}" ].
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String copyCommand[] = new String[]{"rsync", "-av", "{{USER}}@{{HOST}}:{{REMOTEPATH}}", "{{LOCALPATH}}"};
 
     /**
      * Optionally run this command at the completion of the file transfer. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String postCommand[];
 
     /**
@@ -194,7 +193,7 @@ public class Hoover extends TaskRunnable implements Runnable {
      * returns a non-zero value and the number of files in the output directory is zero.
      * Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean failOnPostIfOutEmpty = false;
 
 
@@ -205,58 +204,58 @@ public class Hoover extends TaskRunnable implements Runnable {
      * It is a bad idea to exclude "{{FILE}}" from this parameter.
      * Default is ["{{HOST}}-{{FILE}}"]
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String pathOut[] = new String[]{"{{HOST}}-{{FILE}}"};
 
     /**
      * If true then {{FILE}} is replaced with the file name.
      * Otherwise {{FILE}} is replaced with the whole path. Default is true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean useShortPath = true;
 
     /**
      * If true then show output of remote commands in the logger. Default is true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean verbose = true;
 
     /**
      * If true then perform gzip compression on the retrieved files. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean compress;
 
     /**
      * If true then emit additional logging information when
      * testing if a file is to be transferred. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean verboseCheck = false;
 
     /**
      * If true, log the stderr instead of stdout of the process
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean traceError = false;
 
     /**
      * Files that are older than this number of days will be deleted.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int purgeAfterDays = 30;
 
     /**
      * Command to be executed to delete files. Default is
      * <br>["find", "{{DIR}}", "-type", "f", "-mtime", "+{{DAYS}}", "-print", "-exec", "rm", "{}", ";"]</br>
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String purgeCommand[] = new String[]{"find", "{{DIR}}", "-type", "f", "-mtime", "+{{DAYS}}", "-print", "-exec", "rm", "{}", ";"};
 
     /**
      * If true then purge mark files that are older than purgeAfterDays days. Default is true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean purgeMarks = true;
 
     /**
@@ -264,20 +263,20 @@ public class Hoover extends TaskRunnable implements Runnable {
      * Otherwise extract the date from the file name.
      * Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean pathBasedDateMatching = false;
 
     /**
      * Optional file creator with (key,value) pairs of the format
      * <fileName or fileName;mode> : <"file string contents">
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private HashMap<String, String> staticFiles = new HashMap<String, String>();
 
     /**
      * Maximum number of attempts to retrieve files from remote hosts. Default is 5.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int maxFindAttempts = 5;
 
     private AtomicBoolean terminated = new AtomicBoolean(false);

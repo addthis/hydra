@@ -24,12 +24,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.codables.Codable;
 
 /**
  * A trending algorithm that recognises rising edge based on cumulative percentage change in hits
  */
-public class TrendingScore implements Codec.Codable {
+public class TrendingScore implements Codable {
 
     // 15 mins
     private static final long PERIOD_BETWEEN_RECALCULATION = 900000;

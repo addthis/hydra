@@ -14,7 +14,7 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 
 /**
@@ -36,7 +36,7 @@ public class BundleFilterLimit extends BundleFilter {
     /**
      * The number of rows to permit. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private int limit;
 
     @Override

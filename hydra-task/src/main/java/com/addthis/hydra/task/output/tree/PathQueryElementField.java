@@ -21,21 +21,20 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueTranslationException;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.query.BoundedValue;
 import com.addthis.hydra.data.query.QueryElementField;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeActor;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class PathQueryElementField extends QueryElementField {
 
     private static Logger log = LoggerFactory.getLogger(PathQueryElementField.class);
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public ResolvableBoundedValue keys[];
 
 
@@ -83,7 +82,7 @@ public class PathQueryElementField extends QueryElementField {
 
     public static class ResolvableBoundedValue extends BoundedValue {
 
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         public String key;
 
         private BundleField bundleField;
@@ -102,7 +101,8 @@ public class PathQueryElementField extends QueryElementField {
                 return pv;
             } catch (NullPointerException ex) {
                 try {
-                    log.warn("NPE: keyAccess=" + bundleField + " p=" + p + " in " + CodecJSON.encodeString(this));
+                    log.warn("NPE: keyAccess=" + bundleField + " p=" + p + " in " + CodecJSON.encodeString(
+                            this));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

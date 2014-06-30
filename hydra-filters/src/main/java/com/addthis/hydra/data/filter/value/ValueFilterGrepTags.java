@@ -19,7 +19,7 @@ import java.util.Map;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -34,19 +34,19 @@ public class ValueFilterGrepTags extends ValueFilter {
     /**
      * The set of values to match against.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String values[];
 
     /**
      * The tag name to search for
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String tagName;
 
     /**
      * The tag attribute to search for
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String tagAttr = "src";
 
     @Override

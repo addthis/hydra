@@ -17,7 +17,7 @@ import java.util.ArrayList;
 
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.TreeNodeList;
 
 
@@ -44,13 +44,13 @@ public final class PathBranch extends PathElement {
     /**
      * Sequence of path elements that will be placed as siblings in the tree.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private PathElement[] each;
 
     /**
      * Sequence of path element arrays that will be placed as siblings in the tree.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ArrayList<PathElement[]> list;
 
     private int count;

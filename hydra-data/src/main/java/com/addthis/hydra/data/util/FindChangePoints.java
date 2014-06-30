@@ -17,14 +17,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.codables.Codable;
 
 import org.apache.commons.lang3.ArrayUtils;
 
 /**
  *         Tools for finding change points in an integer array.
  */
-public class FindChangePoints implements Codec.Codable {
+public class FindChangePoints implements Codable {
 
     /**
      * Finds high points in an array of integers.

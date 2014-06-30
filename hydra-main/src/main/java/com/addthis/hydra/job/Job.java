@@ -23,11 +23,11 @@ import java.util.Set;
 
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
-
 import com.addthis.basis.util.RollingLog;
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.Codable;
-import com.addthis.codec.CodecJSON;
+
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.spawn.JobAlert;
 import com.addthis.hydra.util.LogUtil;
 import com.addthis.hydra.util.StringMapHelper;
@@ -38,8 +38,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
 import org.slf4j.Logger;
-
-
 import org.slf4j.LoggerFactory;
 /**
  * for job submission and tracking
@@ -56,117 +54,117 @@ public final class Job implements IJob, Codable {
     };
 
     /* what is the state of this job */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int state;
     /* how many tasks are active */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int countActiveTasks;
     /* who created this job */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String creator;
     /* who last modified this job */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String owner;
     /* purely ornamental description of this job */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String description;
     /* key used for storing / retrieving this job */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String id;
     /* higher means more important */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int priority;
     /* will stomp lower pri jobs to create capacity */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean stomp;
     /* Unix epoch offset of time job was created */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Long createTime;
     /* Unix epoch offset of time job was last submitted */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Long submitTime;
     /* Unix epoch offset of time first job node was assigned */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Long startTime;
     /* Unix epoch offset of time last job node completed */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Long endTime;
     /* hours between re-kicking */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Long rekickTimeout;
     /* minutes max time to allocate to job before it's interrupted */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Long maxRunTime;
     /* list of nodes and their state */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ArrayList<JobTask> nodes;
     /* JSON configuration url -- only read at submit time if conf empty */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String config;
     /* alerts on the job */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private List<JobAlert> alerts;
     /* URL for spawn to call on job complete. for automating workflows */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String onComplete;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String onError;
     /* timeout in seconds */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int onCompleteTimeout;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int onErrorTimeout;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int runCount;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long runTime;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String command;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String killSignal;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean disabled;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ArrayList<JobParameter> parameters;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int backups; //Leaving in for cutover
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer hourlyBackups;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer dailyBackups;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer weeklyBackups;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer monthlyBackups;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int replicas;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int readOnlyReplicas;
     // Unused
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int replicationFactor;
     /* restrict replicas to hosts in current job/task space */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean strictReplicas;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean dontAutoBalanceMe;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean dontDeleteMe;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private HashMap<String, String> properties;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean hadMoreData;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean wasStopped;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int maxSimulRunning;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String minionType;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int retries;
 
     // Query Config, eventually the job class needs to be teased apart.
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private JobQueryConfig queryConfig;
 
     private JobCommand submitCommand;

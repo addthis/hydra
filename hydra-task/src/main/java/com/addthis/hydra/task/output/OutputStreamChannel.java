@@ -24,7 +24,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.io.DataChannelCodec;
 import com.addthis.bundle.io.DataChannelCodec.ClassIndexMap;
 import com.addthis.bundle.io.DataChannelCodec.FieldIndexMap;
-import com.addthis.codec.Codec.Set;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * @user-reference
@@ -32,9 +32,9 @@ import com.addthis.codec.Codec.Set;
  */
 public class OutputStreamChannel extends OutputStreamFormatter {
 
-    @Set(codable = true)
+    @FieldConfig(codable = true)
     private HashSet<String> include;
-    @Set(codable = true)
+    @FieldConfig(codable = true)
     private HashSet<String> exclude;
 
     @Override

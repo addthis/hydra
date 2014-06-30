@@ -28,8 +28,8 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.task.stream.PersistentStreamFileSource;
 import com.addthis.hydra.task.stream.StreamFileUtil;
 import com.addthis.maljson.JSONObject;
@@ -69,32 +69,32 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
      * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html">DateTimeFormat</a>.
      * Default is either "source.mesh.date.format" configuration value or "YYMMdd".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String dateFormat = DEFAULT_DATE_FORMAT;
 
 
     /**
      * files that have been created before this date will not be processed. Default is {{last}}.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String startDate = TIME_NOW;
 
     /**
      * files that have been created after this date will not be processed. Default is {{now}}.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String endDate = TIME_NOW;
 
     /**
      * If true then process the dates from the most recent date to the earliest date. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean reverse;
 
     /**
      * list of file paths to process. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String[] files;
 
     /**
@@ -102,43 +102,43 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
      * or fetching the file paths then use this token as the path separator.
      * Default is "source.mesh.path.token" configuration value or "/". *
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String sortToken = DEFAULT_PATH_TOKEN;
 
     /**
      * shift the sorting suffix by this many characters. Default is 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int sortOffset;
 
     /**
      * skip this number of sortToken characters for the sorting suffix. Default is "source.mesh.sort.token.offset" configuration value or 5.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int sortTokenOffset = DEFAULT_SORT_TOKEN_OFFSET;
 
     /**
      * shift the generated file path by this many characters. Default is 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int pathOffset;
 
     /* skip this number of sortToken characters for generating file paths. Default is "source.mesh.path.token.offset" configuration value or 0. */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int pathTokenOffset = DEFAULT_PATH_TOKEN_OFFSET;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int jitterDays = 1;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String startDateBaseDir;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String dateIncrements;
 
     /* note: this is based on which files have been opened. If there is a large preOpen queue or many worker threads
      * then multiple days may be open at once, but this setting will assume that the latest day is the one to resume from. */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean autoResume;
 
     protected final LinkedList<DateTime> dates = new LinkedList<>();

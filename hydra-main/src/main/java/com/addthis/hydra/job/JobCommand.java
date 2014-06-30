@@ -15,8 +15,9 @@ package com.addthis.hydra.job;
 
 import java.util.Arrays;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Objects;
@@ -24,17 +25,17 @@ import com.google.common.base.Objects;
 /**
  * command run on minion to start each task in a job
  */
-public final class JobCommand implements Codec.Codable, Cloneable {
+public final class JobCommand implements Codable, Cloneable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String owner;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String command[];
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int reqCPU;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int reqMEM;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int reqIO;
 
     public JobCommand() {

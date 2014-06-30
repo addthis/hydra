@@ -20,14 +20,15 @@ import java.util.Map;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
 import com.addthis.maljson.JSONObject;
-
 import com.addthis.meshy.MeshyClient;
+
 import com.google.common.collect.ImmutableMap;
 
 import org.slf4j.Logger;
@@ -36,7 +37,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Bean to hold a job specific alert
  */
-public class JobAlert implements Codec.Codable {
+public class JobAlert implements Codable {
 
     private static final Logger log = LoggerFactory.getLogger(JobAlert.class);
 
@@ -49,29 +50,29 @@ public class JobAlert implements Codec.Codable {
     public static final int MAP_CANARY = 5;
     public static final int MAP_FILTER_CANARY = 6;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String alertId;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long lastAlertTime;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int type;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int timeout;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String email;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String[] jobIds;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String canaryPath;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String canaryRops;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String canaryOps;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String canaryFilter;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int canaryConfigThreshold;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String description;
 
     private String canaryOutputMessage;
@@ -83,7 +84,7 @@ public class JobAlert implements Codec.Codable {
     private static final int MINUTE = 60 * 1000;
 
     /* Map storing {job id : job description} for all alerted jobs the last time this alert was checked */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final HashMap<String, String> activeJobs;
 
     /* Map temporarily storing prior active jobs that have since cleared */

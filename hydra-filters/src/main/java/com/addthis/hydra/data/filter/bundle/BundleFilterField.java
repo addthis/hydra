@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.bundle;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 /**
@@ -62,31 +62,33 @@ public class BundleFilterField extends BundleFilter {
     /**
      * The input to the value filter. If the to field is null, then store the output in this field.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String from;
 
     /**
      * The destination field for the output of the value filter. Optional field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String to;
 
     /**
      * The filter to perform. Optional field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter filter;
 
     /**
-     * If true then do not assign the value filter when the output is null and return the value of the {@link #not not} field. Default is true.
+     * If true then do not assign the value filter when the output is null and return the value
+     * of the {@link #not not} field. Default is true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean nullFail = true;
 
     /**
-     * The value to return when nullFail is true and the value filter output is null. Default is false.
+     * The value to return when nullFail is true and the value filter output is null. Default is
+     * false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean not;
 
     private String fields[];

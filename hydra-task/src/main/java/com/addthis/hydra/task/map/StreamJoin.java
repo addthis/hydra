@@ -21,7 +21,7 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 
 import org.slf4j.Logger;
 
@@ -32,11 +32,11 @@ import org.slf4j.LoggerFactory;
  */
 public class StreamJoin extends StreamBuilder {
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String key;
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String[] fields;
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String hash;
 
     private Map<String, ListBundle> keyMap;

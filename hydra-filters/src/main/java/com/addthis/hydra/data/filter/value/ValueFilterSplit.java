@@ -23,7 +23,7 @@ import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
@@ -53,7 +53,7 @@ public class ValueFilterSplit extends ValueFilter {
      * elements in the input string.
      * Default is ",".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String split = ",";
 
     /**
@@ -62,20 +62,20 @@ public class ValueFilterSplit extends ValueFilter {
      * this delimiter between keys and values.
      * Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String keySplit;
 
     /**
      * An optional filter on elements of the output sequence. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter filter;
 
     /**
      * If keySplit is used, then this is an optional
      * filter on keys of the output map. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter keyFilter;
 
     /**
@@ -85,7 +85,7 @@ public class ValueFilterSplit extends ValueFilter {
      * into elements of equal length.
      * Default is -1.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int fixedLength = -1;
 
     public ValueFilterSplit setSplit(String split) {

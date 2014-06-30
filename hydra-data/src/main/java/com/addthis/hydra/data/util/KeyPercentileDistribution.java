@@ -16,7 +16,8 @@ package com.addthis.hydra.data.util;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 
 import com.yammer.metrics.stats.CodableUniformSample;
 import com.yammer.metrics.stats.Snapshot;
@@ -35,30 +36,30 @@ import static java.lang.Math.sqrt;
  * <p/>
  * Note:  Currently this class only supports uniform sampling.  The value input should be a long
  */
-public class KeyPercentileDistribution implements Codec.SuperCodable {
+public class KeyPercentileDistribution implements SuperCodable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final AtomicLong min = new AtomicLong(Long.MAX_VALUE);
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final AtomicLong max = new AtomicLong(Long.MIN_VALUE);
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final AtomicLong sum = new AtomicLong();
 
     // These are for the Welford algorithm for calculating running variance
     // without floating-point doom.
     private final AtomicReference<double[]> variance =
             new AtomicReference<>(new double[]{-1, 0}); // M, S
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final AtomicLong count = new AtomicLong();
     private final ArrayCache arrayCache = new ArrayCache();
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private CodableUniformSample sample;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private double[] arrayCacheValue;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private double[] varianceValues;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int sampleSize;
 
     public KeyPercentileDistribution setSampleSize(int sampleSize) {

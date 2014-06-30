@@ -18,7 +18,7 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
@@ -62,7 +62,7 @@ public class DataTime extends TreeNodeData<DataTime.Config> {
          * Bundle field name from which to draw values.
          * This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String key;
 
         @Override
@@ -71,9 +71,9 @@ public class DataTime extends TreeNodeData<DataTime.Config> {
         }
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long first = Long.MAX_VALUE;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long last = Long.MIN_VALUE;
 
     private BundleField keyAccess;

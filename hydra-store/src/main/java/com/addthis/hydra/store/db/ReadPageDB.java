@@ -23,8 +23,9 @@ import java.util.TreeMap;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecBin2;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.binary.CodecBin2;
+import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.ByteStore;
 import com.addthis.hydra.store.kv.ByteStoreBDB;
 import com.addthis.hydra.store.kv.MapDbByteStore;
@@ -43,22 +44,23 @@ import org.slf4j.LoggerFactory;
  * 2. a data range object that notably has RIGHT-side bounded iteration (left as well
  * but that is stolen from an iterator it wraps. There are like five nested iterators).
  */
-public class ReadPageDB<V extends IReadWeighable & Codec.BytesCodable> implements IPageDB<DBKey, V> {
+public class ReadPageDB<V extends IReadWeighable & BytesCodable> implements IPageDB<DBKey, V> {
 
     private static final Logger log = LoggerFactory.getLogger(ReadPageDB.class);
 
     static final String defaultDbName = Parameter.value("pagedb.dbname", "db.key");
 
-    private static final Codec codec = new CodecBin2();
-    private final Class<? extends V> clazz;
+    private static final Codec codec = CodecBin2.INSTANCE;
+    private final Class<? extends V>               clazz;
     private final ReadExternalPagedStore<DBKey, V> eps;
 
-    public ReadPageDB(File dir, Class<? extends V> clazz, int maxSize, int maxWeight) throws IOException {
+    public ReadPageDB(File dir, Class<? extends V> clazz, int maxSize, int maxWeight)
+            throws IOException {
         this(dir, clazz, maxSize, maxWeight, false);
     }
 
     public ReadPageDB(File dir, Class<? extends V> clazz, int maxSize,
-            int maxWeight, boolean metrics) throws IOException {
+                      int maxWeight, boolean metrics) throws IOException {
         this.clazz = clazz;
         String dbType = PageDB.getByteStoreNameForFile(dir);
         ByteStore store;
@@ -67,12 +69,14 @@ public class ReadPageDB<V extends IReadWeighable & Codec.BytesCodable> implement
                 store = new MapDbByteStore(dir, defaultDbName, true);
                 break;
             case PageDB.PAGED_BERK_DB:
-                // fall through -- the previous dbType was always something like 'pagedb' so this is expected
+                // fall through -- the previous dbType was always something like 'pagedb' so this
+                // is expected
             default:
                 store = new ByteStoreBDB(dir, defaultDbName, true);
                 break;
         }
-        this.eps = new ReadExternalPagedStore<>(new ReadDBKeyCoder<>(codec, clazz), store, maxSize, maxWeight, metrics);
+        this.eps = new ReadExternalPagedStore<>(new ReadDBKeyCoder<>(codec, clazz), store, maxSize,
+                                                maxWeight, metrics);
     }
 
     public String toString() {
@@ -86,7 +90,8 @@ public class ReadPageDB<V extends IReadWeighable & Codec.BytesCodable> implement
 
     public TreeMap<DBKey, V> toTreeMap() {
         try {
-            IPageDB.Range<DBKey, V> range = range(this.eps.getFirstKey(), new DBKey(Integer.MAX_VALUE, ""));
+            IPageDB.Range<DBKey, V> range =
+                    range(this.eps.getFirstKey(), new DBKey(Integer.MAX_VALUE, ""));
             Iterator<Map.Entry<DBKey, V>> iterator = range.iterator();
             TreeMap<DBKey, V> map = new TreeMap<>();
             while (iterator.hasNext()) {

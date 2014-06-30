@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.kvp.KVBundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 /**
@@ -37,7 +37,7 @@ public class DataSourceEmpty extends TaskDataSource {
      * Number of bundles that will be created.
      * Default is -1 which creates an infinite number of bundles.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long maxPackets = -1; // go forever
 
     private AtomicLong packetsCreated = new AtomicLong(0);

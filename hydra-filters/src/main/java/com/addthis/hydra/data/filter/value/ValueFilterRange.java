@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.filter.value;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns a substring of the string input</span>.
@@ -31,13 +31,13 @@ public class ValueFilterRange extends StringFilter {
     /**
      * The start position of the substring in a 0-based offset (inclusive). Default is 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int start;
 
     /**
      * The end position of the substring in a 0-based offset (exclusive). Default is string length.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int end;
 
     public ValueFilterRange setRange(int start, int end) {

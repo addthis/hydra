@@ -13,9 +13,9 @@
  */
 package com.addthis.hydra.store;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.codables.BytesCodable;
 
-public class DBValue implements Codec.BytesCodable {
+public class DBValue implements BytesCodable {
 
     private String val;
 

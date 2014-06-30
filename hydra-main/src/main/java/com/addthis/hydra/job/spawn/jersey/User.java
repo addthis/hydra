@@ -13,17 +13,18 @@
  */
 package com.addthis.hydra.job.spawn.jersey;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.maljson.JSONObject;
 
-public class User implements Codec.Codable {
+public class User implements Codable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final String username;
     private final String dn;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final boolean isAdmin;
 
     public User(String username, String dn) {

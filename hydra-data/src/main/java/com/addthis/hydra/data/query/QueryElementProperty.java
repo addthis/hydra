@@ -17,8 +17,9 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.ReadTreeNode;
 
@@ -31,12 +32,12 @@ import org.apache.commons.lang3.mutable.MutableInt;
  *
  * @user-reference
  */
-public class QueryElementProperty implements Codec.Codable {
+public class QueryElementProperty implements Codable {
 
     // output column this element is bound to 'show' (or null if dropped)
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String column;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public BoundedValue key;
 
     private BundleField field;

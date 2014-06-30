@@ -26,7 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.ConcurrentTree;
 import com.addthis.hydra.data.tree.ReadTree;
 import com.addthis.hydra.data.tree.TreeStatistics;
@@ -88,7 +88,7 @@ public class TreeStatisticsJob extends TaskRunnable implements Runnable {
     /**
      * Job ID of the input job. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String input;
 
     /**
@@ -97,7 +97,7 @@ public class TreeStatisticsJob extends TaskRunnable implements Runnable {
      * is read for every N leaf pages in the input tree.
      * Default is 100.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int sampleRate = 100;
 
     /**
@@ -107,14 +107,14 @@ public class TreeStatisticsJob extends TaskRunnable implements Runnable {
      * of the nodes but instead perform a sampling of the nodes.
      * Default is 100.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int children = 100;
 
     /**
      * Change this setting if you know what you're doing.
      * Default is "500MB".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String jeCacheSize = "500MB";
 
     private Thread thread;

@@ -28,7 +28,7 @@ import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.ByteStore;
 import com.addthis.hydra.store.kv.ConcurrentByteStoreBDB;
 import com.addthis.hydra.store.kv.MapDbByteStore;
@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
 /**
  * wrapper around ExternalPagedStore
  */
-public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
+public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
 
     private static final Logger log = LoggerFactory.getLogger(PageDB.class);
 
@@ -57,7 +57,7 @@ public class PageDB<V extends Codec.BytesCodable> implements IPageDB<DBKey, V> {
     private final DBKeyCoder<V> keyCoder;
     private final HashSet<DR> openRanges = new HashSet<>();
 
-    public static class Builder<V extends Codec.BytesCodable> {
+    public static class Builder<V extends BytesCodable> {
 
         // Required parameters
         protected final File dir;
