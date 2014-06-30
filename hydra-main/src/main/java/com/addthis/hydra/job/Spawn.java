@@ -201,7 +201,7 @@ public class Spawn implements Codec.Codable {
             new ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS, expandKickQueue,
                     new ThreadFactoryBuilder().setNameFormat("jobExpander-%d").build()));
     private final ScheduledExecutorService scheduledExecutor = MoreExecutors.getExitingScheduledExecutorService(
-            new ScheduledThreadPoolExecutor(4, new ThreadFactoryBuilder().setNameFormat("spawnScheduledTask-%d").build()));
+            new ScheduledThreadPoolExecutor(6, new ThreadFactoryBuilder().setNameFormat("spawnScheduledTask-%d").build()));
 
     private final Gauge<Integer> expandQueueGauge = Metrics.newGauge(Spawn.class, "expandKickExecutorQueue", new Gauge<Integer>() {
         public Integer value() {
@@ -380,7 +380,7 @@ public class Spawn implements Codec.Codable {
         this.spawnMQ.connectToMQ(uuid);
 
         //Start JobAlertManager
-        this.jobAlertRunner = new JobAlertRunner(this);
+        this.jobAlertRunner = new JobAlertRunner(this, scheduledExecutor);
         // start job scheduler
         scheduledExecutor.scheduleWithFixedDelay(new UpdateEventRunnable(), 0, 1, TimeUnit.MINUTES);
         scheduledExecutor.scheduleWithFixedDelay(new JobRekickTask(), 0, 500, TimeUnit.MILLISECONDS);
