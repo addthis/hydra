@@ -3544,7 +3544,12 @@ public class Spawn implements Codec.Codable {
         }
         List<HostState> possibleHosts = new ArrayList<>();
         if (allowSwap && isNewTask(task)) {
-            possibleHosts.addAll(listHostStatus(job.getMinionType()));
+            for (HostState state : listHostStatus(job.getMinionType())) {
+                // Don't swap new tasks onto hosts in the fs-okay queue.
+                if (hostFailWorker.getFailureState(state.getHostUuid()) == HostFailWorker.FailState.ALIVE) {
+                    possibleHosts.add(state);
+                }
+            }
         }
         else {
             possibleHosts.addAll(getHealthyHostStatesHousingTask(task, allowSwap));
