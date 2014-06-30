@@ -1036,7 +1036,20 @@ public class SpawnManager {
                 }
             }
         });
+        server.mapService("/jobs.saveall", new HTTPService() {
+            @Override
+            public void httpService(HTTPLink link) throws Exception {
+                try {
+                    // Primarily for use in emergencies where updates have not been sent to the data store for a while
+                    spawn.saveAllJobs();
+                    link.sendJSON(200, "OK", json("success", "job save operation complete"));
 
+                } catch (Exception ex) {
+                    link.sendJSON(500, "Server Error", json("error", ex.toString()));
+                    log.trace("Save all jobs exception", ex);
+                }
+            }
+        });
     }
 
     /**

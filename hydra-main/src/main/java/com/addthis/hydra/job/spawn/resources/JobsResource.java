@@ -1164,6 +1164,21 @@ public class JobsResource {
 
     }
 
+    @GET
+    @Path("/saveAllJobs")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response saveAllJobs() {
+        // Primarily for use in emergencies where updates have not been sent to the data store for a while
+        try {
+            spawn.saveAllJobs();
+            return Response.ok(("{\"operation\":\"sucess\"")).build();
+        } catch (Exception ex) {
+            log.trace("Save all jobs exception", ex);
+            return Response.ok("{\"operation\":\"failed: " + ex.toString() + "\"").build();
+        }
+
+    }
+
     private static void emitLogLineForAction(String user, String desc) {
         log.warn("User " + user + " initiated action: " + desc);
     }

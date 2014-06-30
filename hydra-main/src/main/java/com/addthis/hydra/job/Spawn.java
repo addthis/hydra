@@ -2866,6 +2866,22 @@ public class Spawn implements Codec.Codable {
         }
     }
 
+    /**
+     * Push all jobs to JobConfigManager. Primarily for use in extraordinary circumstances where job updates were not sent for a while.
+     */
+    public void saveAllJobs() {
+        jobLock.lock();
+        try {
+            for (Job job : listJobs()) {
+                if (job != null) {
+                    sendJobUpdateEvent(job);
+                }
+            }
+        } finally {
+            jobLock.unlock();
+        }
+    }
+
     private synchronized void jobTaskUpdateHeartbeatCheck() {
         try {
             String now = Long.toString(System.currentTimeMillis());
