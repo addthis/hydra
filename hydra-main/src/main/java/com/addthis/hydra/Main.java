@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
+import com.addthis.codec.plugins.PluginRegistry;
 import com.addthis.hydra.common.plugins.DynamicLoader;
 import com.addthis.hydra.common.plugins.PluginReader;
 import com.addthis.hydra.task.run.JsonRunner;
@@ -131,16 +132,12 @@ public class Main {
                         System.out.println(j.toString());
                         break;
                     default:
-                        String className = cmap.get(args[0]);
-                        if (className != null) {
-                            Class clazz = PluginReader.loadClass("-executables.classmap or dynamic loader",
-                                    args[0], className, Object.class, dlr.loader);
-                            if (clazz != null) {
-                                Method m = clazz.getDeclaredMethod("main", String[].class);
-                                m.invoke(null, (Object) cutargs(args));
-                            } else {
-                                usage();
-                            }
+                        Class clazz = PluginRegistry.defaultRegistry().asMap()
+                                                    .get("executables").asBiMap()
+                                                    .get(args[0]);
+                        if (clazz != null) {
+                            Method m = clazz.getDeclaredMethod("main", String[].class);
+                            m.invoke(null, (Object) cutargs(args));
                         } else {
                             usage();
                         }

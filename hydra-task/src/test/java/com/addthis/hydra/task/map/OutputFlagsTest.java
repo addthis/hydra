@@ -13,7 +13,6 @@
  */
 package com.addthis.hydra.task.map;
 
-import com.addthis.codec.plugins.PluginRegistry;
 import com.addthis.hydra.task.output.OutputStreamFlags;
 
 import org.junit.Test;
@@ -22,11 +21,6 @@ import static org.junit.Assert.assertEquals;
 
 
 public class OutputFlagsTest {
-
-    @Test
-    public void hackTest() throws Exception {
-        System.out.println(PluginRegistry.defaultRegistry().asMap().keySet());
-    }
 
     @Test
     public void testEquals_allFalse() throws Exception {
