@@ -17,8 +17,8 @@ import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.SuperCodable;
@@ -95,7 +95,7 @@ public final class TimeField implements SuperCodable {
 
     public long toUnix(ValueObject val) {
         if (radix > 0) {
-            ValueNumber num = ValueUtil.asNumberOrParseLong(val, radix);
+            Numeric<?> num = ValueUtil.asNumberOrParseLong(val, radix);
             return num != null ? num.asLong().getLong() : JitterClock.globalTime();
         } else {
             try {

@@ -13,20 +13,22 @@
  */
 package com.addthis.hydra.data.tree;
 
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
-import com.addthis.hydra.common.plugins.PluginReader;
-
+import com.addthis.hydra.data.tree.prop.DataLimitTop;
+import com.addthis.hydra.data.tree.prop.DataSum;
 
 /**
  * Data attachments are additional information that can be attached to tree nodes.
  * <p/>
- * <p>Data attachments can be purely informational (such as a {@link DataSum.Config sum}) or they can affect
- * the rest of a tree.  For example a {@link DataLimitTop.Config limit.top} attachment limits how many children
+ * <p>Data attachments can be purely informational (such as a {@link DataSum.Config sum}) or they
+ * can affect
+ * the rest of a tree.  For example a {@link DataLimitTop.Config limit.top} attachment limits how
+ * many children
  * a node can have.</p>
  * <p/>
- * <p>When querying a data attachment use either the "${name}={parameters}" or "%{name}={parameters}" syntax.
+ * <p>When querying a data attachment use either the "${name}={parameters}" or
+ * "%{name}={parameters}" syntax.
  * The "$" returns one or more values and the "%" returns a list of nodes.
  * The exact behavior of "$" and "%" are defined on a per data attachment basis.
  * For instance they may not be implemented for each type. The "%" notation may return either

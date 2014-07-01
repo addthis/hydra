@@ -29,6 +29,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFormatted;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
@@ -86,7 +87,7 @@ public class BundleCalculator {
     private BundleColumnBinder sourceBinder;
 
     public BundleCalculator(String args) {
-        String op[] = Strings.splitArray(args, ",");
+        String[] op = Strings.splitArray(args, ",");
         ops = new ArrayList<>(op.length);
         for (String o : op) {
             switch (o) {
@@ -225,22 +226,24 @@ public class BundleCalculator {
                     break;
                 default: {
                     if (o.startsWith("c")) {
-                        String cols[] = Strings.splitArray(o.substring(1), ":");
+                        String[] cols = Strings.splitArray(o.substring(1), ":");
                         for (String col : cols) {
                             ops.add(new MathOp(Operation.OP_COLVAL, ValueFactory.create(col)));
                         }
                     } else if (o.startsWith("C")) {
-                        String cols[] = Strings.splitArray(o.substring(1), ":");
+                        String[] cols = Strings.splitArray(o.substring(1), ":");
                         for (String col : cols) {
                             ops.add(new MathOp(Operation.OP_COLNAMEVAL, ValueFactory.create(col)));
                         }
                     } else if (o.startsWith("n")) {
-                        String nums[] = Strings.splitArray(o.substring(1), ":");
+                        String[] nums = Strings.splitArray(o.substring(1), ":");
                         for (String num : nums) {
                             if (num.indexOf(".") >= 0) {
-                                ops.add(new MathOp(Operation.OP_VAL, ValueFactory.create(Double.parseDouble(num))));
+                                ops.add(new MathOp(Operation.OP_VAL,
+                                                   ValueFactory.create(Double.parseDouble(num))));
                             } else {
-                                ops.add(new MathOp(Operation.OP_VAL, ValueFactory.create(Long.parseLong(num))));
+                                ops.add(new MathOp(Operation.OP_VAL,
+                                                   ValueFactory.create(Long.parseLong(num))));
                             }
                         }
                     } else if (o.startsWith("v")) {
@@ -255,7 +258,7 @@ public class BundleCalculator {
      * If the value object contains one or more "," characters then attempt
      * to parse it as an array. Otherwise assume the input is a number.
      */
-    private void insertNumbers(LinkedList<ValueNumber> stack, ValueObject input) {
+    private void insertNumbers(LinkedList<Numeric<?>> stack, ValueObject<?> input) {
         try {
             /**
              *  When all custom value types implement the asString() method correctly
@@ -276,10 +279,10 @@ public class BundleCalculator {
                         }
                     }
                 } else {
-                    stack.push(input.asNumber());
+                    stack.push(input.asNumeric());
                 }
             } else {
-                stack.push(input.asNumber());
+                stack.push(input.asNumeric());
             }
         } catch (ParseException ex) {
             throw new RuntimeException(ex);
@@ -287,10 +290,10 @@ public class BundleCalculator {
     }
 
     public Bundle calculate(Bundle line) {
-        LinkedList<ValueNumber> stack = new LinkedList<ValueNumber>();
+        LinkedList<Numeric<?>> stack = new LinkedList<>();
         long maxcol = line.getCount() - 1;
         for (MathOp op : ops) {
-            ValueNumber v1, v2;
+            Numeric<?> v1, v2;
             switch (op.type) {
                 case OP_ADD:
                     v1 = stack.pop();
@@ -376,7 +379,7 @@ public class BundleCalculator {
                     stack.push(ValueFactory.create(Math.sqrt(stack.pop().asDouble().getDouble())));
                     break;
                 case OP_VAL:
-                    stack.push(op.val.asNumber());
+                    stack.push(op.val.asNumeric());
                     break;
                 case OP_COLVAL: {
                     ValueObject target = getSourceColumnBinder(line).getColumn(line, (int) op.val.asLong().getLong());
@@ -486,7 +489,7 @@ public class BundleCalculator {
                     break;
                 case OP_SET:
                     int col = (int) stack.pop().asLong().getLong();
-                    ValueNumber val = stack.pop();
+                    Numeric<?> val = stack.pop();
                     if (col < 0 || col > maxcol) {
                         getSourceColumnBinder(line).appendColumn(line, val);
                     } else {
@@ -579,7 +582,7 @@ public class BundleCalculator {
     }
 
     /** */
-    private class MathOp {
+    private static class MathOp {
 
         private
         @Nonnull
@@ -604,7 +607,7 @@ public class BundleCalculator {
     /*
         Copied from AbstractQueryOp
      */
-    public BundleColumnBinder getSourceColumnBinder(BundleFormatted row, String fields[]) {
+    public BundleColumnBinder getSourceColumnBinder(BundleFormatted row, String[] fields) {
         if (sourceBinder == null) {
             sourceBinder = new BundleColumnBinder(row, fields);
         }

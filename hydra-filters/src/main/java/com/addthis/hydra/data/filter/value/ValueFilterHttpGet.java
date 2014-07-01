@@ -29,7 +29,7 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Multidict;
 
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.Codec;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
@@ -133,7 +133,7 @@ public class ValueFilterHttpGet extends StringFilter {
         cached.time = System.currentTimeMillis();
         cached.key = key;
         cached.data = value;
-        cached.hash = MD5HashFunction.hash(key);
+        cached.hash = MD5HashFunction.hashAsString(key);
         cache.put(cached.key, cached);
         try {
             Files.write(new File(persistTo, cached.hash), codec.encode(cached), false);

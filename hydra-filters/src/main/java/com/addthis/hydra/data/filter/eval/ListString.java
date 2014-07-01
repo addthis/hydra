@@ -85,14 +85,14 @@ public class ListString extends AbstractList<String> implements List<String> {
     public String get(int index) {
         ValueObject val = data.get(index);
         if (val == null) return null;
-        return val.asString().getString();
+        return val.asString().asNative();
     }
 
     @Override
     public String set(int index, String element) {
         ValueObject prev = data.set(index, ValueFactory.create(element));
         if (prev == null) return null;
-        return prev.asString().getString();
+        return prev.asString().asNative();
     }
 
     @Override
@@ -104,6 +104,6 @@ public class ListString extends AbstractList<String> implements List<String> {
     public String remove(int index) {
         ValueObject prev = data.remove(index);
         if (prev == null) return null;
-        return prev.asString().getString();
+        return prev.asString().asNative();
     }
 }

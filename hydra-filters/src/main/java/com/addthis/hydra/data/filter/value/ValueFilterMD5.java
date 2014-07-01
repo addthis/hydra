@@ -33,7 +33,7 @@ public class ValueFilterMD5 extends ValueFilter {
     @Override
     public ValueObject filterValue(ValueObject value) {
         if (value != null) {
-            value = ValueFactory.create(MD5HashFunction.hash(value.toString()));
+            value = ValueFactory.create(MD5HashFunction.hashAsString(value.toString()));
         }
         return value;
     }

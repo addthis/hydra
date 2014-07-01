@@ -20,6 +20,7 @@ import java.util.Iterator;
 
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
@@ -57,13 +58,13 @@ public class ValueFilterContains extends ValueFilter {
      * The set of values to match against.
      */
     @FieldConfig(codable = true)
-    private String value[];
+    private String[] value;
 
     /**
      * The set of keys to match against. Only applicable for map inputs.
      */
     @FieldConfig(codable = true)
-    private String key[];
+    private String[] key;
 
     /**
      * If true then return values that do not match. Default is false.
@@ -79,7 +80,7 @@ public class ValueFilterContains extends ValueFilter {
 
     private AhoCorasick dictionary;
 
-    public ValueFilterContains setValues(String value[]) {
+    public ValueFilterContains setValues(String[] value) {
         this.value = value;
         return this;
     }
@@ -117,8 +118,8 @@ public class ValueFilterContains extends ValueFilter {
         String match = null;
         ValueObject.TYPE type = input.getObjectType();
         if (type == ValueObject.TYPE.MAP) {
-            for (ValueMapEntry ent : input.asMap()) {
-                String cmp = ent.getKey();
+            ValueMap<?> inputAsMap = input.asMap();
+            for (String cmp : inputAsMap.keySet()) {
                 if (key != null && (match = checkContains(cmp, key)) != null) {
                     return not ? null : returnMatch ? ValueFactory.create(match) : input;
                 }
@@ -162,7 +163,7 @@ public class ValueFilterContains extends ValueFilter {
         return not ? input : null;
     }
 
-    private String checkContains(String cmp, String arr[]) {
+    private String checkContains(String cmp, String[] arr) {
         for (String val : arr) {
             if (cmp.equals(val)) {
                 return val;

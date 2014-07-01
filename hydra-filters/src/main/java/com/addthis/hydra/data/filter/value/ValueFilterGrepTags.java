@@ -54,7 +54,7 @@ public class ValueFilterGrepTags extends ValueFilter {
         Map<String, Integer> matches = new HashMap<>();
 
         if (value != null) {
-            String html = value.asString().getString();
+            String html = value.asString().asNative();
 
             if (html != null) {
                 Parser parser = Parser.htmlParser().setTrackErrors(0);

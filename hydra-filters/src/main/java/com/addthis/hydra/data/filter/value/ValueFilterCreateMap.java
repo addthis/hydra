@@ -85,7 +85,7 @@ public class ValueFilterCreateMap extends ValueFilter {
     }
 
     private void insertMapValue(ValueMap map, ValueObject vo) {
-        String valueString = vo.asString().getString();
+        String valueString = vo.asString().asNative();
         String[] elementArray = valueString.split(elementSeparator);
         for (String element : elementArray) {
             String[] keyValue = element.split(keySeparator);

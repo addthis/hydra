@@ -16,10 +16,11 @@ package com.addthis.hydra.task.output.tree;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueString;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.TreeNodeList;
@@ -182,7 +183,8 @@ public class PathValue extends PathElement {
                 }
             }
         } else if (name.getObjectType() == ValueObject.TYPE.MAP) {
-            for (ValueMapEntry e : name.asMap()) {
+            ValueMap<?> nameAsMap = name.asMap();
+            for (ValueMapEntry<?> e : nameAsMap) {
                 String key = e.getKey();
                 if (mapTo != null) {
                     state.getBundle().setValue(mapField, e.getValue());

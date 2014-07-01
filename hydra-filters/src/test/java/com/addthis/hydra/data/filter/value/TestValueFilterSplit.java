@@ -50,7 +50,7 @@ public class TestValueFilterSplit {
     @Test
     public void changeCase() {
         ValueArray t1 = getValueArray("foo", "bar");
-        assertEquals(t1, splitFilter(t1, ",", -1));
+        assertEquals(t1, splitFilter(new ValueFilterJoin().filter(t1), ",", -1));
         assertEquals(t1, splitFilter(ValueFactory.create("foo,bar"), ",", -1));
         assertEquals(t1, splitFilter(ValueFactory.create("foo | bar"), " | ", -1));
         assertEquals(t1, splitFilter(ValueFactory.create("foobar"), null, 3));

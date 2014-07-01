@@ -13,11 +13,8 @@
  */
 package com.addthis.hydra.common.hash;
 
-import java.util.List;
-
-import com.addthis.hydra.common.plugins.PluginReader;
-
-import com.google.common.hash.Hashing;
+import com.addthis.codec.plugins.PluginMap;
+import com.addthis.codec.plugins.PluginRegistry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,36 +26,21 @@ public class PluggableHashFunction {
     private static final StringAndByteHashFunction hasher;
 
     static {
-        StringAndByteHashFunction hashFunction;
-        hashFunction = new DefaultHashFunction();
+        StringAndByteHashFunction hashFunction = new Murmur3HashFunction();
         try {
-            List<String[]> filters = PluginReader.readProperties("pluggable-hash-function.property");
-            if (filters.size() > 0 && filters.get(0).length > 0) {
-                Class clazz = Class.forName(filters.get(0)[0]);
-                hashFunction = (StringAndByteHashFunction) clazz.newInstance();
+            PluginMap hashFunctions = PluginRegistry.defaultRegistry().asMap().get("hash function");
+            Class<?> defaultHashFunctionClass = hashFunctions.defaultSugar();
+            if (defaultHashFunctionClass != null) {
+                hashFunction = (StringAndByteHashFunction) defaultHashFunctionClass.newInstance();
+            } else {
+                log.warn("No default hash function was configured. Using Murmur Hash 3, but " +
+                         "even though this is the library default, this condition is not " +
+                         "expected. Check your configuration!");
             }
-        } catch (ClassNotFoundException|InstantiationException|IllegalAccessException ex) {
-            log.warn(ex.toString());
+        } catch (Exception ex) {
+            log.warn("Unexpected error trying to load a pluggable hash function", ex);
         }
         hasher = hashFunction;
-    }
-
-    public interface StringAndByteHashFunction {
-
-        public int hash(String input);
-
-        public int hash(byte[] input);
-    }
-
-    private static final class DefaultHashFunction implements StringAndByteHashFunction {
-
-        public int hash(String input) {
-            return Hashing.murmur3_32().hashUnencodedChars(input).asInt();
-        }
-
-        public int hash(byte[] input) {
-            return Hashing.murmur3_32().hashBytes(input).asInt();
-        }
     }
 
     public static int hash(String input) {

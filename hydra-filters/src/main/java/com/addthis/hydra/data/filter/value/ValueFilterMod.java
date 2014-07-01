@@ -14,10 +14,10 @@
 package com.addthis.hydra.data.filter.value;
 
 import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns the modulo of the input</span>.
@@ -47,7 +47,7 @@ public class ValueFilterMod extends ValueFilter {
     @Override
     public ValueObject filterValue(ValueObject value) {
         try {
-            ValueNumber lv = ValueUtil.asNumber(value);
+            Numeric<?> lv = ValueUtil.asNumber(value);
             if (lv != null) {
                 long v = lv.asLong().getLong();
                 if (abs) {

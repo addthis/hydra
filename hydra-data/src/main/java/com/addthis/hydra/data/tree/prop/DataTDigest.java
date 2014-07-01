@@ -23,14 +23,14 @@ import com.addthis.basis.util.Strings;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.AbstractCustom;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueBytes;
-import com.addthis.bundle.value.ValueCustom;
 import com.addthis.bundle.value.ValueDouble;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueMap;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueSimple;
 import com.addthis.bundle.value.ValueString;
@@ -139,7 +139,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
 
     @Override
     public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
-        String keys[] = Strings.splitArray(key, ",");
+        String[] keys = Strings.splitArray(key, ",");
         TreeNodeList list = new TreeNodeList(keys.length);
         for (String k : keys) {
             double quantile = filter.quantile(Double.valueOf(k));
@@ -158,7 +158,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
         if (valueAccess == null) {
             valueAccess = p.getFormat().getField(conf.key);
         }
-        ValueNumber o = ValueUtil.asNumberOrParseDouble(p.getValue(valueAccess));
+        Numeric<?> o = ValueUtil.asNumberOrParseDouble(p.getValue(valueAccess));
         if (o != null) {
             filter.add(o.asDouble().getDouble());
             return true;
@@ -181,28 +181,22 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
         }
     }
 
-    public static final class TDigestValue implements ValueCustom, ValueNumber {
+    public static final class TDigestValue extends AbstractCustom<TDigest> implements Numeric<TDigest> {
 
         enum OP {CDF, QUANTILE}
 
-        ;
-        private TDigest tdigest;
         private Double quantile;
         private OP op;
 
         /* required for codec */
         public TDigestValue() {
+            super(null);
         }
 
         public TDigestValue(TDigest tdigest, OP op, Double quantile) {
-            this.tdigest = tdigest;
+            super(tdigest);
             this.quantile = quantile;
             this.op = op;
-        }
-
-        @Override
-        public Class<? extends ValueCustom> getContainerClass() {
-            return TDigestValue.class;
         }
 
         @Override
@@ -221,19 +215,26 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
         }
 
         @Override
-        public ValueMap asMap() throws ValueTranslationException {
+        public ValueMap<?> asMap() throws ValueTranslationException {
             ValueMap map = ValueFactory.createMap();
-            int bound = tdigest.byteSize();
+            int bound = heldObject.byteSize();
             ByteBuffer buf = ByteBuffer.allocate(bound);
-            tdigest.asSmallBytes(buf);
+            heldObject.asSmallBytes(buf);
             map.put("q", ValueFactory.create(quantile));
             map.put("o", ValueFactory.create(op.toString()));
             map.put("b", ValueFactory.create(buf.array()));
             return map;
         }
 
+        @Override public void setValues(ValueMap<?> valueMapEntries) {
+                byte[] b = valueMapEntries.get("b").asBytes().asNative();
+                this.quantile = valueMapEntries.get("q").asDouble().getDouble();
+                this.op = OP.valueOf(valueMapEntries.get("o").asString().toString());
+                heldObject = TDigest.fromBytes(ByteBuffer.wrap(b));
+        }
+
         @Override
-        public ValueNumber asNumber() throws ValueTranslationException {
+        public Numeric<TDigest> asNumeric() throws ValueTranslationException {
             return this;
         }
 
@@ -246,11 +247,11 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
         public ValueDouble asDouble() {
             switch (op) {
                 case CDF:
-                    return ValueFactory.create(tdigest.cdf(quantile));
+                    return ValueFactory.create(heldObject.cdf(quantile));
                 case QUANTILE:
-                    return ValueFactory.create(tdigest.quantile(quantile));
+                    return ValueFactory.create(heldObject.quantile(quantile));
                 default:
-                    return ValueFactory.create(tdigest.quantile(quantile));
+                    return ValueFactory.create(heldObject.quantile(quantile));
             }
         }
 
@@ -260,54 +261,45 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
         }
 
         @Override
-        public ValueCustom asCustom() throws ValueTranslationException {
-            return this;
-        }
-
-        @Override
-        public void setValues(ValueMap valueMapEntries) {
-            byte b[] = valueMapEntries.get("b").asBytes().getBytes();
-            this.quantile = valueMapEntries.get("q").asDouble().getDouble();
-            this.op = OP.valueOf(valueMapEntries.get("o").asString().toString());
-            tdigest = TDigest.fromBytes(ByteBuffer.wrap(b));
-        }
-
-        @Override
-        public ValueSimple asSimple() {
+        public ValueSimple<Double> asSimple() {
             return asDouble();
         }
 
-        @Override
-        public ValueNumber sum(ValueNumber valueNumber) {
-            if (TDigestValue.class == valueNumber.getClass()) {
-                return new TDigestValue(TDigest.merge(tdigest.compression(),
-                        Arrays.asList(this.tdigest, ((TDigestValue) valueNumber).tdigest)), op, quantile);
+        @Override public <P extends Numeric<?>> Numeric<?> sum(P val) {
+            if (TDigestValue.class == val.getClass()) {
+                return new TDigestValue(TDigest.merge(heldObject.compression(),
+                        Arrays.asList(this.heldObject, ((TDigestValue) val).heldObject)), op, quantile);
             }
-            return asLong().sum(valueNumber.asLong());
+            return asLong().sum(val.asLong());
         }
 
         private long toLong() {
             return asLong().getLong();
         }
 
-        @Override
-        public ValueNumber diff(ValueNumber valueNumber) {
-            return sum(valueNumber).asDouble().diff(asDouble());
+        @Override public <P extends Numeric<?>> ValueDouble diff(P val) {
+            return sum(val).asDouble().diff(asDouble());
         }
 
         @Override
-        public ValueNumber avg(int count) {
+        public ValueDouble avg(int count) {
             return ValueFactory.create(asDouble().getDouble() / (double) count);
         }
 
-        @Override
-        public ValueNumber min(ValueNumber valueNumber) {
-            return valueNumber.asDouble().getDouble() < asDouble().getDouble() ? valueNumber : this;
+        @Override public <P extends Numeric<?>> Numeric<?> min(P val) {
+            if (val.asDouble().getDouble() < asDouble().getDouble()) {
+                return val;
+            } else {
+                return this;
+            }
         }
 
-        @Override
-        public ValueNumber max(ValueNumber valueNumber) {
-            return valueNumber.asDouble().getDouble() > asDouble().getDouble() ? valueNumber : this;
+        @Override public <P extends Numeric<?>> Numeric<?> max(P val) {
+            if (val.asDouble().getDouble() > asDouble().getDouble()) {
+                return val;
+            } else {
+                return this;
+            }
         }
 
         @Override

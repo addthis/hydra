@@ -14,10 +14,10 @@
 package com.addthis.hydra.data.filter.value;
 
 import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,7 +66,7 @@ public class ValueFilterIntBase extends ValueFilter {
             return value;
         }
         try {
-            ValueNumber num;
+            Numeric<?> num;
             if (!inDouble) {
                 num = ValueUtil.asNumberOrParseLong(value, in);
             } else {

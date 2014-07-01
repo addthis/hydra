@@ -94,8 +94,8 @@ public class ValueFilterMapSubset extends ValueFilter {
         ValueObject returnObject = null;
 
         if (value != null) {
-            ValueObject valueObject = null;
-            ValueMap map = null;
+            ValueObject<?> valueObject = null;
+            ValueMap<?> map = null;
             ValueMap subsetMap = ValueFactory.createMap();
 
             try {
@@ -132,7 +132,7 @@ public class ValueFilterMapSubset extends ValueFilter {
         return returnObject;
     }
 
-    private ValueString toString(ValueMap subsetMap) {
+    private ValueString toString(ValueMap<?> subsetMap) {
         StringBuffer sb = new StringBuffer();
 
         for (ValueMapEntry valueMapEntry : subsetMap) {

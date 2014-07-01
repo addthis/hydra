@@ -52,7 +52,7 @@ public class BundleFilterContains extends BundleFilter {
      * An array of strings to test against the input field.
      */
     @FieldConfig(codable = true)
-    private String value[];
+    private String[] value;
 
     /**
      * The target field to test against the input field.
@@ -69,7 +69,7 @@ public class BundleFilterContains extends BundleFilter {
     // Cache the value filter if-and-only-if the 'from' field is null.
     private ValueFilterContains filter;
 
-    private String fields[];
+    private String[] fields;
 
     @Override
     public void initialize() {
@@ -86,10 +86,10 @@ public class BundleFilterContains extends BundleFilter {
         if (row == null) {
             return not;
         }
-        BundleField bound[] = getBindings(row, fields);
+        BundleField[] bound = getBindings(row, fields);
         ValueObject target = row.getValue(bound[0]);
         if (from != null) {
-            String fieldString = target.asString().getString();
+            String fieldString = target.asString().asNative();
             String fromString = ValueUtil.asNativeString(row.getValue(bound[1]));
             boolean match = fieldString.contains(fromString);
             return not ? !match : match;

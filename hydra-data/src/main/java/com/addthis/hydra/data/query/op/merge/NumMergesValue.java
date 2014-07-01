@@ -15,8 +15,8 @@
 package com.addthis.hydra.data.query.op.merge;
 
 import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.op.MergedRow;
 
@@ -27,7 +27,7 @@ public class NumMergesValue extends AbstractMergedNumber {
     }
 
     @Override
-    protected ValueNumber doMerge(ValueNumber nextValue, ValueNumber value) {
+    protected Numeric<?> doMerge(Numeric<?> nextValue, Numeric<?> value) {
         throw new UnsupportedOperationException(
                 "This method should not be called. Merge(Bundle, MergedRow) should no-op");
     }

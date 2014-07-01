@@ -13,13 +13,14 @@
  */
 package com.addthis.hydra.data.filter.util;
 
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueBytes;
 import com.addthis.bundle.value.ValueCustom;
 import com.addthis.bundle.value.ValueDouble;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueMap;
-import com.addthis.bundle.value.ValueNumber;
+import com.addthis.bundle.value.ValueSimple;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.bundle.value.ValueTranslationException;
 
@@ -31,7 +32,7 @@ import com.addthis.bundle.value.ValueTranslationException;
  * IllegalStateException if any attempt is made to read a value from
  * the object.
  */
-class BundleCalculatorVector implements ValueNumber {
+class BundleCalculatorVector implements ValueCustom<Object>, Numeric<Object> {
 
     private static final BundleCalculatorVector singleton = new BundleCalculatorVector();
 
@@ -42,33 +43,37 @@ class BundleCalculatorVector implements ValueNumber {
     private BundleCalculatorVector() {}
 
     @Override
-    public ValueNumber sum(ValueNumber val) {
+    public <P extends Numeric<?>> Numeric<?> sum(P val) {
         throw new IllegalStateException();
     }
 
     @Override
-    public ValueNumber diff(ValueNumber val) {
+    public <P extends Numeric<?>> Numeric<?> diff(P val) {
         throw new IllegalStateException();
     }
 
     @Override
-    public ValueNumber avg(int count) {
+    public <P extends Numeric<?>> Numeric<?> min(P val) {
         throw new IllegalStateException();
     }
 
     @Override
-    public ValueNumber min(ValueNumber val) {
+    public <P extends Numeric<?>> Numeric<?> max(P val) {
         throw new IllegalStateException();
     }
 
     @Override
-    public ValueNumber max(ValueNumber val) {
+    public Numeric<?> avg(int count) {
         throw new IllegalStateException();
     }
 
     @Override
     public TYPE getObjectType() {
         return TYPE.CUSTOM;
+    }
+
+    @Override public Object asNative() {
+        throw new IllegalStateException();
     }
 
     @Override
@@ -86,8 +91,16 @@ class BundleCalculatorVector implements ValueNumber {
         throw new IllegalStateException();
     }
 
+    @Override public void setValues(ValueMap<?> map) {
+        throw new IllegalStateException();
+    }
+
+    @Override public ValueSimple<?> asSimple() {
+        throw new IllegalStateException();
+    }
+
     @Override
-    public ValueNumber asNumber() throws ValueTranslationException {
+    public Numeric<?> asNumeric() throws ValueTranslationException {
         throw new IllegalStateException();
     }
 

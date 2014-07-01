@@ -20,16 +20,14 @@ import com.addthis.basis.util.Strings;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.AbstractCustom;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueBytes;
-import com.addthis.bundle.value.ValueCustom;
 import com.addthis.bundle.value.ValueDouble;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueMap;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.bundle.value.ValueSimple;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.bundle.value.ValueTranslationException;
 import com.addthis.codec.annotations.FieldConfig;
@@ -121,7 +119,7 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements SuperCo
     public ValueObject getValue(String key) {
         if (key != null) {
 
-            String keys[] = Strings.splitArray(key, "~");
+            String[] keys = Strings.splitArray(key, "~");
             for (String k : keys) {
                 if (filter.isPresent(k)) {
                     return present;
@@ -134,7 +132,7 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements SuperCo
 
     @Override
     public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
-        String keys[] = Strings.splitArray(key, ",");
+        String[] keys = Strings.splitArray(key, ",");
         TreeNodeList list = new TreeNodeList(keys.length);
         for (String k : keys) {
             if (filter.isPresent(k)) {
@@ -172,42 +170,36 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements SuperCo
     }
 
 
-    public static final class FilterValue implements ValueCustom {
+    public static final class FilterValue extends AbstractCustom<BloomFilter> {
 
         private static final String key = "BLOOM";
 
         public FilterValue() {
+            super(null);
         }
 
         public FilterValue(BloomFilter bf) {
-            this.bf = bf;
-        }
-
-        private BloomFilter bf;
-
-        @Override
-        public Class<? extends ValueCustom> getContainerClass() {
-            return FilterValue.class;
+            super(bf);
         }
 
         @Override
-        public ValueMap asMap() throws ValueTranslationException {
-            ValueMap map = ValueFactory.createMap();
+        public ValueMap<byte[]> asMap() throws ValueTranslationException {
+            ValueMap<byte[]> map = ValueFactory.createMap();
             map.put(key, asBytes());
             return map;
         }
 
         @Override
-        public void setValues(ValueMap map) {
-            ValueObject vo = map.get(key);
+        public void setValues(ValueMap<?> map) {
+            ValueObject<?> vo = map.get(key);
             if (vo != null) {
-                BloomFilter.deserialize(vo.asBytes().getBytes());
+                BloomFilter.deserialize(vo.asBytes().asNative());
             }
         }
 
         @Override
-        public ValueSimple asSimple() {
-            return ValueFactory.create(Base64.encodeBase64String(asBytes().getBytes()));
+        public ValueString asSimple() {
+            return ValueFactory.create(Base64.encodeBase64String(asBytes().asNative()));
         }
 
         @Override
@@ -217,7 +209,7 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements SuperCo
 
         @Override
         public ValueBytes asBytes() throws ValueTranslationException {
-            return ValueFactory.create(BloomFilter.serialize(bf));
+            return ValueFactory.create(BloomFilter.serialize(heldObject));
         }
 
         @Override
@@ -228,7 +220,7 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements SuperCo
         }
 
         @Override
-        public ValueNumber asNumber() throws ValueTranslationException {
+        public ValueLong asNumeric() throws ValueTranslationException {
             return ValueFactory.create(-1L);
         }
 
@@ -244,12 +236,7 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements SuperCo
 
         @Override
         public ValueString asString() throws ValueTranslationException {
-            return ValueFactory.create(Base64.encodeBase64String(asBytes().getBytes()));
-        }
-
-        @Override
-        public ValueCustom asCustom() throws ValueTranslationException {
-            return this;
+            return ValueFactory.create(Base64.encodeBase64String(asBytes().asNative()));
         }
     }
 }

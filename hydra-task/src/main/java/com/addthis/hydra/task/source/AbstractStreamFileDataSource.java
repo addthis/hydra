@@ -40,11 +40,9 @@ import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueString;
-import com.addthis.codec.Codec;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
-import com.addthis.hydra.common.plugins.PluginReader;
 import com.addthis.hydra.data.filter.value.StringFilter;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.PageDB;
@@ -72,7 +70,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.SnappyInputStream;
 
-import javassist.ClassMap;
 import lzma.sdk.lzma.Decoder;
 import lzma.streams.LzmaInputStream;
 

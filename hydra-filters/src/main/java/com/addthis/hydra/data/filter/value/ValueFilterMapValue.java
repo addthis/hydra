@@ -43,7 +43,7 @@ public class ValueFilterMapValue extends ValueFilter {
             // TODO: log error
             return null;
         }
-        ValueMap mapValue = value.asMap();
+        ValueMap<?> mapValue = value.asMap();
         return mapValue.get(key);
     }
 }

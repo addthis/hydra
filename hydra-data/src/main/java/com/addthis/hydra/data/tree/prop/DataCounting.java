@@ -19,6 +19,8 @@ import com.addthis.basis.util.Varint;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.value.AbstractCustom;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueBytes;
 import com.addthis.bundle.value.ValueCustom;
@@ -27,7 +29,6 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueMapEntry;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueSimple;
 import com.addthis.bundle.value.ValueString;
@@ -283,8 +284,8 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
                 }
                 break;
             case MAP:
-                ValueMap map = value.asMap();
-                for (ValueMapEntry o : map) {
+                ValueMap<?> map = value.asMap();
+                for (ValueMapEntry<?> o : map) {
                     updateCounter(ValueFactory.create(o.getKey()));
                 }
                 break;
@@ -394,46 +395,53 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
         postDecode();
     }
 
-    public static final class LCValue implements ValueCustom, ValueNumber {
+    public static final class LCValue extends AbstractCustom<ICardinality> implements Numeric<ICardinality> {
 
         public LCValue() {
+            super(null);
         }
 
         public LCValue(ICardinality lc) {
-            this.lc = lc;
+            super(lc);
         }
 
-        private ICardinality lc;
-
         private long toLong() {
-            return lc.cardinality();
+            return heldObject.cardinality();
         }
 
         @Override
-        public ValueNumber avg(int count) {
+        public Numeric<?> avg(int count) {
             return ValueFactory.create(toLong() / count);
         }
 
         @Override
-        public ValueNumber diff(ValueNumber val) {
+        public <P extends Numeric<?>> Numeric<?> diff(P val) {
             return sum(val).asLong().diff(asLong());
         }
 
         @Override
-        public ValueNumber max(ValueNumber val) {
-            return val.asLong().getLong() > toLong() ? val : this;
+        public <P extends Numeric<?>> Numeric<?> max(P val) {
+            if (val.asLong().getLong() > toLong()) {
+                return val;
+            } else {
+                return this;
+            }
         }
 
         @Override
-        public ValueNumber min(ValueNumber val) {
-            return val.asLong().getLong() < toLong() ? val : this;
+        public <P extends Numeric<?>> Numeric<?> min(P val) {
+            if (val.asLong().getLong() < toLong()) {
+                return val;
+            } else {
+                return this;
+            }
         }
 
         @Override
-        public ValueNumber sum(ValueNumber val) {
+        public <P extends Numeric<?>> Numeric<?> sum(P val) {
             try {
                 if (val.getClass() == LCValue.class) {
-                    return new LCValue(lc.merge(((LCValue) val).lc));
+                    return new LCValue(heldObject.merge(((LCValue) val).heldObject));
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -443,7 +451,7 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
 
         @Override
         public String toString() {
-            return Long.toString(lc.cardinality());
+            return Long.toString(heldObject.cardinality());
         }
 
         @Override
@@ -462,18 +470,18 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
         }
 
         @Override
-        public ValueNumber asNumber() throws ValueTranslationException {
+        public Numeric<?> asNumeric() throws ValueTranslationException {
             return this;
         }
 
         @Override
         public ValueLong asLong() throws ValueTranslationException {
-            return ValueFactory.create(lc.cardinality());
+            return ValueFactory.create(heldObject.cardinality());
         }
 
         @Override
         public ValueDouble asDouble() throws ValueTranslationException {
-            return ValueFactory.create(lc.cardinality()).asDouble();
+            return ValueFactory.create(heldObject.cardinality()).asDouble();
         }
 
         @Override
@@ -487,26 +495,34 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
         }
 
         @Override
-        public Class<? extends ValueCustom> getContainerClass() {
-            return LCValue.class;
-        }
-
-        @Override
         public ValueMap asMap() throws ValueTranslationException {
             try {
-                Class<?> c = lc.getClass();
+                Class<?> c = heldObject.getClass();
                 // note we don't track VER_COUNTEST_HLL differently here because
                 // it gets treated the same as VER_COUNTEST
-                int ver = (c == LinearCounting.class ? VER_LINEAR
-                                                     : c == AdaptiveCounting.class ? VER_ADAPTIVE
-                                                                                   : c == CountThenEstimate.class ? VER_COUNTEST
-                                                                                                                  : c == LogLog.class ? VER_LOG
-                                                                                                                                      : c == HyperLogLog.class ? VER_HYPER_LOG_LOG
-                                                                                                                                                               : c == HyperLogLogPlus.class ? VER_HLL_PLUS
-                                                                                                                                                                                            : -1);
+                int ver;
+                if (c == LinearCounting.class) {
+                    ver = VER_LINEAR;
+                } else if (c == AdaptiveCounting.class) {
+                    ver = VER_ADAPTIVE;
+                } else if (c == LogLog.class) {
+                    if (c == CountThenEstimate.class) {
+                        ver = VER_COUNTEST;
+                    } else {
+                        ver = VER_LOG;
+                    }
+                } else if (c == CountThenEstimate.class) {
+                    ver = VER_COUNTEST;
+                } else if (c == HyperLogLog.class) {
+                    ver = VER_HYPER_LOG_LOG;
+                } else if (c == HyperLogLogPlus.class) {
+                    ver = VER_HLL_PLUS;
+                } else {
+                    ver = -1;
+                }
                 ValueMap map = ValueFactory.createMap();
                 map.put("t", ValueFactory.create(ver));
-                map.put("b", ValueFactory.create(lc.getBytes()));
+                map.put("b", ValueFactory.create(heldObject.getBytes()));
                 return map;
             } catch (Exception ex) {
                 throw new ValueTranslationException(ex);
@@ -514,36 +530,36 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
         }
 
         @Override
-        public void setValues(ValueMap map) {
-            byte b[] = map.get("b").asBytes().getBytes();
+        public void setValues(ValueMap<?> map) {
+            byte[] b = map.get("b").asBytes().asNative();
             switch ((int) map.get("t").asLong().getLong()) {
                 case VER_LINEAR:
-                    lc = new LinearCounting(b);
+                    heldObject = new LinearCounting(b);
                     break;
                 case VER_ADAPTIVE:
-                    lc = new AdaptiveCounting(b);
+                    heldObject = new AdaptiveCounting(b);
                     break;
                 case VER_COUNTEST:
                 case VER_COUNTEST_HLL:
                     try {
-                        lc = new CountThenEstimate(b);
+                        heldObject = new CountThenEstimate(b);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                     break;
                 case VER_LOG:
-                    lc = new LogLog(b);
+                    heldObject = new LogLog(b);
                     break;
                 case VER_HYPER_LOG_LOG:
                     try {
-                        lc = HyperLogLog.Builder.build(b);
+                        heldObject = HyperLogLog.Builder.build(b);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
                     break;
                 case VER_HLL_PLUS:
                     try {
-                        lc = HyperLogLogPlus.Builder.build(b);
+                        heldObject = HyperLogLogPlus.Builder.build(b);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }

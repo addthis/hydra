@@ -18,14 +18,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
-import com.addthis.hydra.common.plugins.PluginReader;
-import com.addthis.hydra.data.filter.value.ValueFilter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * A bundle filter applies a transformation on a bundle and returns
  * true or false to indicate whether the transformation was successful.
@@ -38,7 +36,7 @@ public abstract class BundleFilter implements Codable {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilter.class);
 
-    private AtomicBoolean init = new AtomicBoolean(false);
+    private AtomicBoolean init    = new AtomicBoolean(false);
     private AtomicBoolean initing = new AtomicBoolean(false);
 
     /**
@@ -46,11 +44,11 @@ public abstract class BundleFilter implements Codable {
      * @param bindTargets use the same object or re-binding will occur
      * @return bound field wrappers
      */
-    protected final BundleField[] getBindings(final Bundle bundle, final String bindTargets[]) {
-        BundleField boundFields[] = null;
+    protected final BundleField[] getBindings(final Bundle bundle, final String[] bindTargets) {
+        BundleField[] boundFields = null;
         if (bindTargets != null) {
             BundleFormat format = bundle.getFormat();
-            BundleField bindings[] = new BundleField[bindTargets.length];
+            BundleField[] bindings = new BundleField[bindTargets.length];
             for (int i = 0; i < bindTargets.length; i++) {
                 if (bindTargets[i] != null) {
                     bindings[i] = format.getField(bindTargets[i]);

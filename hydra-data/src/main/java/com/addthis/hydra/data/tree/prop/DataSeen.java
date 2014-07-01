@@ -19,6 +19,8 @@ import com.addthis.basis.util.Strings;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.AbstractCustom;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueBytes;
 import com.addthis.bundle.value.ValueCustom;
@@ -26,7 +28,6 @@ import com.addthis.bundle.value.ValueDouble;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueMap;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueSimple;
 import com.addthis.bundle.value.ValueString;
@@ -130,7 +131,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
         } else if (key.startsWith("ck-")) {
             return ValueFactory.create(bloom.getSeen(Raw.get(Bytes.urldecode(key.substring(3)))) ? 1 : 0);
         } else if (key.startsWith("st-")) {
-            long set[] = bloom.getHashSet(Raw.get(Bytes.urldecode(key.substring(3))));
+            long[] set = bloom.getHashSet(Raw.get(Bytes.urldecode(key.substring(3))));
             boolean seen = bloom.checkHashSet(set);
             bloom.updateHashSet(set);
             return ValueFactory.create(seen ? 1 : 0);
@@ -163,42 +164,42 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
     /**
      * for working with bloom filters
      */
-    public static final class ValueBloom implements ValueCustom, ValueNumber {
-
-        private SeenFilterBasic<?> bloom;
+    public static final class ValueBloom extends AbstractCustom<SeenFilterBasic<?>>
+            implements Numeric<SeenFilterBasic<?>> {
 
         public ValueBloom() {
+            super(null);
         }
 
         public ValueBloom(SeenFilterBasic<?> bloom) {
-            this.bloom = bloom;
+            super(bloom);
         }
 
         @Override
         public String toString() {
             try {
-                return CodecJSON.encodeString(bloom);
+                return CodecJSON.encodeString(heldObject);
             } catch (Exception e) {
                 return super.toString();
             }
         }
 
         public long toLong() {
-            return bloom.getSaturation();
+            return heldObject.getSaturation();
         }
 
         @Override
-        public ValueNumber avg(int count) {
+        public Numeric<?> avg(int count) {
             return this;
         }
 
         @Override
-        public ValueNumber diff(ValueNumber val) {
+        public <P extends Numeric<?>> Numeric<?> diff(P val) {
             return this;
         }
 
         @Override
-        public ValueNumber max(ValueNumber val) {
+        public <P extends Numeric<?>> Numeric<?> max(P val) {
             if (val.getClass() == getClass()) {
                 ValueBloom b = (ValueBloom) val;
                 return b.toLong() > toLong() ? b : this;
@@ -207,7 +208,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
         }
 
         @Override
-        public ValueNumber min(ValueNumber val) {
+        public <P extends Numeric<?>> Numeric<?> min(P val) {
             if (val.getClass() == getClass()) {
                 ValueBloom b = (ValueBloom) val;
                 return b.toLong() < toLong() ? b : this;
@@ -216,10 +217,10 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
         }
 
         @Override
-        public ValueNumber sum(ValueNumber val) {
+        public <P extends Numeric<?>> Numeric<?> sum(P val) {
             if (val.getClass() == getClass()) {
                 ValueBloom b = (ValueBloom) val;
-                return new ValueBloom(b.bloom.mergeSeen(bloom));
+                return new ValueBloom(b.heldObject.mergeSeen(heldObject));
             }
             return this;
         }
@@ -240,7 +241,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
         }
 
         @Override
-        public ValueNumber asNumber() throws ValueTranslationException {
+        public Numeric<?> asNumeric() throws ValueTranslationException {
             return this;
         }
 
@@ -265,15 +266,10 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
         }
 
         @Override
-        public Class<? extends ValueCustom> getContainerClass() {
-            return ValueBloom.class;
-        }
-
-        @Override
         public ValueMap asMap() throws ValueTranslationException {
             try {
                 ValueMap map = ValueFactory.createMap();
-                map.put("b", ValueFactory.create(CodecBin2.encodeBytes(bloom)));
+                map.put("b", ValueFactory.create(CodecBin2.encodeBytes(heldObject)));
                 return map;
             } catch (Exception ex) {
                 throw new ValueTranslationException(ex);
@@ -281,9 +277,10 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
         }
 
         @Override
-        public void setValues(ValueMap map) {
+        public void setValues(ValueMap<?> map) {
             try {
-                bloom = (SeenFilterBasic<?>) CodecBin2.decodeBytes(new SeenFilterBasic(), map.get("b").asBytes().getBytes());
+                heldObject = (SeenFilterBasic<?>) CodecBin2.decodeBytes(
+                        new SeenFilterBasic(), map.get("b").asBytes().asNative());
             } catch (Exception ex) {
                 throw new ValueTranslationException(ex);
             }
@@ -291,7 +288,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
 
         @Override
         public ValueSimple asSimple() {
-            return ValueFactory.create(bloom.getSaturation());
+            return ValueFactory.create(heldObject.getSaturation());
         }
     }
 }

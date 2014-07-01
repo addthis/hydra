@@ -114,6 +114,11 @@
       <artifactId>codec</artifactId>
       <version>${hydra.dep.codec.version}</version>
     </dependency>
+    <dependency>
+      <groupId>com.addthis</groupId>
+      <artifactId>bundle</artifactId>
+      <version>2.2.8-SNAPSHOT</version>
+    </dependency>
     <!-- end test deps -->
   </dependencies>
 

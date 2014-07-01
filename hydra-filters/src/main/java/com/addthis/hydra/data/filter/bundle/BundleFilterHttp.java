@@ -162,7 +162,7 @@ public class BundleFilterHttp extends BundleFilter {
         cached.time = System.currentTimeMillis();
         cached.key = key;
         cached.data = value;
-        cached.hash = MD5HashFunction.hash(key);
+        cached.hash = MD5HashFunction.hashAsString(key);
         ocache.put(cached.key, cached);
         CacheObject old;
         if (cache.dir != null) {

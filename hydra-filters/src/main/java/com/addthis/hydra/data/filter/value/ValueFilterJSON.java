@@ -60,8 +60,8 @@ public class ValueFilterJSON extends ValueFilter implements SuperCodable {
 
     @Override
     public ValueObject filterValue(ValueObject value) {
-        if (value == null || (value.getObjectType() == ValueObject.TYPE.STRING &&
-                              value.asString().getString().length() == 0)) {
+        if ((value == null) || ((value.getObjectType() == ValueObject.TYPE.STRING) &&
+                                value.asString().asNative().isEmpty())) {
             return value;
         }
         String sv = value.toString();

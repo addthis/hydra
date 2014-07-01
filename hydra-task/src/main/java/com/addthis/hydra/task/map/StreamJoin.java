@@ -21,10 +21,9 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * This is a util to join 2 datasets with similar keys
@@ -53,8 +52,8 @@ public class StreamJoin extends StreamBuilder {
 
     @Override
     public void process(Bundle row, StreamEmitter emitter) {
-        String keyValue = row.getValue(row.getFormat().getField(key)).asString().getString();
-        String hashValue = row.getValue(row.getFormat().getField(hash)).asString().getString();
+        String keyValue = row.getValue(row.getFormat().getField(key)).asString().asNative();
+        String hashValue = row.getValue(row.getFormat().getField(hash)).asString().asNative();
 
         if (keyValue != null) {
             if (currentHash != null && hashValue != null && !currentHash.equals(hashValue)) {

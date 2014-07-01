@@ -100,24 +100,24 @@ public class OutputStreamAvro extends OutputStreamFormatter implements SuperCoda
                             val = list;
                             break;
                         case MAP:
-                            ValueMap map = value.asMap();
+                            ValueMap<?> map = value.asMap();
                             Map<String, String> avroMap = new HashMap<>();
-                            for (ValueMapEntry valueMapEntry : map) {
+                            for (ValueMapEntry<?> valueMapEntry : map) {
                                 avroMap.put(valueMapEntry.getKey(), valueMapEntry.getValue().toString());
                             }
                             val = avroMap;
                             break;
                         case STRING:
-                            val = value.asString().getString();
+                            val = value.asString().asNative();
                             break;
                         case INT:
-                            val = value.asNumber().asLong().getLong();
+                            val = value.asNumeric().asLong().getLong();
                             break;
                         case FLOAT:
                             val = value.asDouble().getDouble();
                             break;
                         case BYTES:
-                            val = value.asBytes().getBytes();
+                            val = value.asBytes().asNative();
                             break;
                     }
 
