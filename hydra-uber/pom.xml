@@ -90,6 +90,10 @@
                   <resource>reference.conf</resource>
                 </transformer>
                 <transformer
+                implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>application.conf</resource>
+                </transformer>
+                <transformer
                 implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <manifestEntries>
                     <Main-Class>com.addthis.hydra.Main</Main-Class>
