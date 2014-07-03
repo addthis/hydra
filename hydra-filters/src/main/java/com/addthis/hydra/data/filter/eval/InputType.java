@@ -22,10 +22,10 @@ package com.addthis.hydra.data.filter.eval;
  * @user-reference
  */
 public enum InputType {
-    STRING("String", ".asString().getString()", Category.PRIMITIVE),
-    LONG("long", ".asLong().getLong()", Category.PRIMITIVE),
-    DOUBLE("double", ".asLong().getLong()", Category.PRIMITIVE),
-    BYTES("byte[]", ".asBytes().getBytes()", Category.PRIMITIVE),
+    STRING("String", ".asString().asNative()", Category.PRIMITIVE),
+    LONG("long", ".asLong().asNative()", Category.PRIMITIVE),
+    DOUBLE("double", ".asLong().asNative()", Category.PRIMITIVE),
+    BYTES("byte[]", ".asBytes().asNative()", Category.PRIMITIVE),
     LIST_STRING("List<String>", "ListString", Category.LIST),
     LIST_LONG("List<Long>", "ListLong", Category.LIST),
     LIST_DOUBLE("List<Double>", "ListDouble", Category.LIST),
