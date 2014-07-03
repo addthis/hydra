@@ -72,7 +72,6 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
     @FieldConfig(codable = true)
     private String dateFormat = DEFAULT_DATE_FORMAT;
 
-
     /**
      * files that have been created before this date will not be processed. Default is {{last}}.
      */
@@ -94,7 +93,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
     /**
      * list of file paths to process. This field is required.
      */
-    @FieldConfig(codable = true, required = true)
+    @FieldConfig(codable = true, required = true, autocollection = true)
     private String[] files;
 
     /**
