@@ -15,6 +15,9 @@ package com.addthis.hydra.task.run;
 
 import java.util.regex.Pattern;
 
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+
 public enum TaskRunnerType {
     JSON("(?!)"), // should never match
     HOCON("input\\s*:\\s*(hocon|com\\.typesafe\\.config)");
@@ -39,7 +42,8 @@ public enum TaskRunnerType {
                 JsonRunner.runTask(config, args);
                 break;
             case HOCON:
-                HoconRunner.runTask(config, args);
+                Config configObject = ConfigFactory.parseString(config);
+                HoconRunner.runTask(configObject, args);
                 break;
         }
     }

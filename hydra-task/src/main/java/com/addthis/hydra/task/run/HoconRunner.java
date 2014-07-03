@@ -18,6 +18,8 @@ import java.io.File;
 
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.codec.config.CodecConfig;
+
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
@@ -34,21 +36,53 @@ public class HoconRunner {
     static final boolean keepComments = Parameter.boolValue("task.hocon.keepComments", false);
     static final boolean debugComments = Parameter.boolValue("task.hocon.debugComments", false);
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         if (args.length < 1) {
             System.out.println("usage: hocon <config> <nodes> <node> [jobid] [threads]");
             return;
         }
         String fileName = args[0];
-        String configString = TaskRunner.loadStringFromFile(fileName);
-        if (args.length < 2) {
-            loadHoconAndPrintVarious(configString);
-        } else {
-            runTask(configString, args);
-        }
+        Config config = ConfigFactory.parseFile(new File(fileName));
+        runTask(config, args);
     }
 
-    static void runTask(String config, String[] args) throws Exception {
+    static void runTask(Config config, String[] args) throws Exception {
+        if (!JsonRunner.checkArgs(args)) return;
+        int nodeCount = Integer.parseInt(args[1]);
+        int thisNode = Integer.parseInt(args[2]);
+        String jobId = (args.length > 3) ? args[3] : null;
+        int commandLineThreads = (args.length > 4) ? Integer.parseInt(args[4]) : TaskRunner.defaultThreads;
+        runTask(config, nodeCount, thisNode, jobId, commandLineThreads);
+    }
+
+    static void runTask(String configString, int nodeCount, int thisNode,
+                        String jobId, int commandLineThreads) throws Exception {
+        Config config = ConfigFactory.parseString(configString);
+        runTask(config, nodeCount, thisNode, jobId, commandLineThreads);
+    }
+
+    static void runTask(Config config, int nodeCount, int thisNode,
+                        String jobId, int commandLineThreads) throws Exception {
+
+        final TaskRunnable task = CodecConfig.getDefault().decodeObject(TaskRunnable.class, config);
+        TaskRunConfig taskRunConfig = new TaskRunConfig(thisNode, nodeCount, jobId);
+        if (config.hasPath("taskthreads")) {
+            taskRunConfig.setThreadCount(config.getInt("taskthreads"));
+        } else {
+            taskRunConfig.setThreadCount(commandLineThreads);
+        }
+        task.init(taskRunConfig);
+        task.exec();
+
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                task.terminate();
+                task.waitExit();
+            }
+        });
+    }
+
+    static void runCompatTask(String config, String[] args) throws Exception {
         String json = loadHoconAndPrintJson(config);
         JsonRunner.runTask(json, args);
     }

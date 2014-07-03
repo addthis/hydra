@@ -44,6 +44,7 @@ import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
+import com.addthis.codec.config.CodecConfig;
 import com.addthis.codec.json.CodecExceptionLineNumber;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.IJob;
@@ -72,6 +73,10 @@ import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Optional;
 
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigException;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigOrigin;
 import com.yammer.dropwizard.auth.Auth;
 
 import org.codehaus.jackson.map.ObjectMapper;
@@ -962,20 +967,41 @@ public class JobsResource {
         return Response.ok().entity(error.toString()).build();
     }
 
-    private Response validateExpandedConfigurationBody(String expandedConfig)
-            throws JSONException {
-        JSONArray lineErrors = new JSONArray();
-        JSONArray lineColumns = new JSONArray();
-
-        JSONObject jobJSON;
-
+    private Response validateExpandedConfigurationBody(String expandedConfig) throws JSONException {
         try {
-            jobJSON = new JSONObject(expandedConfig, false);
+            JSONObject jobJSON = new JSONObject(expandedConfig, false);
+            return validateJsonConfig(jobJSON);
         } catch (JSONException ex) {
+            if ((ex.getColumn() == 0) && (ex.getLine() == 0)) {
+                return validateHoconConfig(expandedConfig);
+            }
+            JSONArray lineErrors = new JSONArray();
+            JSONArray lineColumns = new JSONArray();
             lineErrors.put(ex.getLine());
             lineColumns.put(ex.getColumn());
             return validateCreateError(ex.getMessage(), lineErrors, lineColumns, "postExpansionError");
         }
+    }
+
+    private Response validateHoconConfig(String expandedConfig) throws JSONException {
+        Config config = ConfigFactory.parseString(expandedConfig);
+        try {
+            final TaskRunnable task = CodecConfig.getDefault().decodeObject(TaskRunnable.class, config);
+        } catch (ConfigException ex) {
+            JSONArray lineErrors = new JSONArray();
+            JSONArray lineColumns = new JSONArray();
+            ConfigOrigin exceptionOrigin = ex.origin();
+            if (exceptionOrigin != null) {
+                lineErrors.put(exceptionOrigin.lineNumber());
+            }
+            return validateCreateError(ex.getMessage(), lineErrors, lineColumns, "postExpansionError");
+        }
+        return Response.ok(new JSONObject().put("result", "valid").toString()).build();
+    }
+
+    private Response validateJsonConfig(JSONObject jobJSON) throws JSONException {
+        JSONArray lineErrors = new JSONArray();
+        JSONArray lineColumns = new JSONArray();
         try {
             JsonRunner.initClasses(jobJSON);
             jobJSON.remove("classes");
@@ -1005,7 +1031,6 @@ public class JobsResource {
             lineColumns.put(ex.getColumn());
             return validateCreateError(ex.getMessage(), lineErrors, lineColumns, "postExpansionError");
         }
-
         return Response.ok(new JSONObject().put("result", "valid").toString()).build();
     }
 

@@ -40,7 +40,7 @@ import com.addthis.maljson.JSONObject;
  */
 public class JsonRunner {
 
-    private static boolean checkArgs(String[] args) {
+    static boolean checkArgs(String[] args) {
         if (args.length < 2) {
             System.out.println("usage: run <config> <nodes> <node> [jobid] [threads]");
             return false;
@@ -68,7 +68,17 @@ public class JsonRunner {
             String jobId, int commandLineThreads) throws Exception {
 
         String json = subAt(configString);
-        JSONObject jo = new JSONObject(json);
+        JSONObject jo;
+        try {
+            jo = new JSONObject(json);
+        } catch (JSONException ex) {
+            if ((ex.getColumn() == 0) && (ex.getLine() == 0)) {
+                HoconRunner.runTask(json, nodeCount, thisNode, jobId, commandLineThreads);
+                return;
+            } else {
+                throw ex;
+            }
+        }
         preload(jo);
 
         initClasses(jo);
@@ -157,7 +167,7 @@ public class JsonRunner {
         JSONArray classes = o.optJSONArray("jar-classes");
         // load jars and classes
         if (jars != null && classes != null) {
-            URL u[] = new URL[jars.length()];
+            URL[] u = new URL[jars.length()];
             for (int i = 0; i < u.length; i++) {
                 u[i] = new URL(jars.getString(i));
             }
