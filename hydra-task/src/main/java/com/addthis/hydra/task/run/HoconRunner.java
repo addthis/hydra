@@ -60,7 +60,8 @@ public class HoconRunner {
         if (config.hasPath("global")) {
             jobConfig = config.withoutPath("global");
             Config globalDefaults = config.getConfig("global")
-                                          .withFallback(ConfigFactory.load());
+                                          .withFallback(ConfigFactory.load())
+                                          .resolve();
             jobConfig = jobConfig.resolveWith(globalDefaults);
             codec = new CodecConfig(globalDefaults);
         } else {
