@@ -65,6 +65,23 @@ public class MacroResource {
     }
 
     @GET
+    @Path("/map")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response mapMacros() {
+        JSONObject macros = new JSONObject();
+        try {
+            for (String key : spawn.listMacros()) {
+                JobMacro macro = spawn.getMacro(key);
+                macros.put(key, macro.toJSON());
+            }
+            return Response.ok(macros.toString()).build();
+        } catch (Exception ex)  {
+            log.warn("", ex);
+            return Response.serverError().entity(ex.toString()).build();
+        }
+    }
+
+    @GET
     @Path("/get")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getMacros(@QueryParam("label") String label) throws Exception {
