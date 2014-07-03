@@ -46,6 +46,30 @@ public class HoconRunner {
         runTask(config, args);
     }
 
+    /**
+     * Creates a TaskRunnable using CodecConfig and a little custom handling. At the root
+     * level object, if there is a field named "global", then that sub tree is hoisted
+     * up to override system properties (removing it from the root of the job config).
+     * Either way, the job config will also then be resolved against config defaults/ system
+     * properties for the purposes of variable substitution. This will not merge them entirely
+     * though and so the job config will be otherwise unaffected.
+     */
+    public static TaskRunnable makeTask(Config config) {
+        Config jobConfig = config;
+        CodecConfig codec;
+        if (config.hasPath("global")) {
+            jobConfig = config.withoutPath("global");
+            Config globalDefaults = config.getConfig("global")
+                                          .withFallback(ConfigFactory.load());
+            jobConfig = jobConfig.resolveWith(globalDefaults);
+            codec = new CodecConfig(globalDefaults);
+        } else {
+            jobConfig = jobConfig.resolveWith(ConfigFactory.load());
+            codec = CodecConfig.getDefault();
+        }
+        return codec.decodeObject(TaskRunnable.class, jobConfig);
+    }
+
     static void runTask(Config config, String[] args) throws Exception {
         if (!JsonRunner.checkArgs(args)) return;
         int nodeCount = Integer.parseInt(args[1]);
@@ -64,7 +88,7 @@ public class HoconRunner {
     static void runTask(Config config, int nodeCount, int thisNode,
                         String jobId, int commandLineThreads) throws Exception {
 
-        final TaskRunnable task = CodecConfig.getDefault().decodeObject(TaskRunnable.class, config);
+        final TaskRunnable task = makeTask(config);
         TaskRunConfig taskRunConfig = new TaskRunConfig(thisNode, nodeCount, jobId);
         if (config.hasPath("taskthreads")) {
             taskRunConfig.setThreadCount(config.getInt("taskthreads"));

@@ -64,6 +64,7 @@ import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.JobAlert;
 import com.addthis.hydra.job.spawn.JobAlertRunner;
 import com.addthis.hydra.job.spawn.jersey.User;
+import com.addthis.hydra.task.run.HoconRunner;
 import com.addthis.hydra.task.run.JsonRunner;
 import com.addthis.hydra.task.run.TaskRunnable;
 import com.addthis.hydra.util.DirectedGraph;
@@ -986,7 +987,7 @@ public class JobsResource {
     private Response validateHoconConfig(String expandedConfig) throws JSONException {
         Config config = ConfigFactory.parseString(expandedConfig);
         try {
-            final TaskRunnable task = CodecConfig.getDefault().decodeObject(TaskRunnable.class, config);
+            HoconRunner.makeTask(config);
         } catch (ConfigException ex) {
             JSONArray lineErrors = new JSONArray();
             JSONArray lineColumns = new JSONArray();
