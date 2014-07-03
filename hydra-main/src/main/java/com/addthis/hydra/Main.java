@@ -15,6 +15,7 @@ package com.addthis.hydra;
 
 import java.io.File;
 
+import java.io.FileInputStream;
 import java.lang.reflect.Method;
 
 import java.net.InetAddress;
@@ -51,6 +52,7 @@ public class Main {
     private static final String METRICS_REPORTER_CONFIG_FILE = Parameter.value("metrics.reporter.config", "");
     private static final boolean GANGLIA_SHORT_NAMES = Parameter.boolValue("ganglia.useShortNames", false);
     private static final boolean ANNOUNCE_LOG_INIT = Parameter.boolValue("init.log4j.verbose", false);
+    private static final String PROPERTIES_FILE = Parameter.value("hydra.properties", null);
 
     public static final Map<String, String> cmap = new HashMap<>();
     public static final DynamicLoader.DynamicLoaderResult dlr;
@@ -63,6 +65,8 @@ public class Main {
         dlr =  DynamicLoader.readDynamicClasses("hydra.loader");
         PluginReader.registerLazyPlugin("-executables.classmap", cmap);
         cmap.putAll(dlr.executables);
+        /** load properties from specified file */
+        loadProperties(PROPERTIES_FILE);
     }
 
     @SuppressWarnings("unused")
@@ -189,7 +193,9 @@ public class Main {
         }
     }
 
-    // Addapted from CassandraDaemon:initLog4j
+    /**
+     * Adapted from CassandraDaemon:initLog4j
+     */
     public static void initLog4j()
     {
         if (!isClassAvailable("org.apache.log4j.PropertyConfigurator")) {
@@ -248,4 +254,26 @@ public class Main {
         }
     }
 
+    /**
+     * Merges resources from the supplied fileName into System properties.
+     * Does nothing if fileName is null. Emits a log warning if specified
+     * file does not exist.
+     *
+     * @param fileName name of file from which to load Properties
+     */
+    public static void loadProperties(final String fileName) {
+        if (fileName != null) {
+            File file = new File(fileName);
+            if (file.exists() && file.isFile()) {
+                try (FileInputStream in = new FileInputStream(file)) {
+                    log.info("loading properties from {}", file);
+                    System.getProperties().load(in);
+                } catch (Exception ex) {
+                    log.error("", ex);
+                }
+            } else {
+                log.warn("invalid properties file: {}", fileName);
+            }
+        }
+    }
 }
