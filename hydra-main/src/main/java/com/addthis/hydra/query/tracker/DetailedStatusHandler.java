@@ -16,7 +16,7 @@ package com.addthis.hydra.query.tracker;
 
 import java.nio.CharBuffer;
 
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.query.aggregate.DetailedStatusTask;
 import com.addthis.hydra.query.aggregate.TaskSourceInfo;
 import com.addthis.hydra.query.web.HttpUtils;

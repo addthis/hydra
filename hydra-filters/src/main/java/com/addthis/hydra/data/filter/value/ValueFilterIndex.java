@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.value;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns the <i>i</i><sup>th</sup> element of an array</span>.
@@ -41,12 +41,12 @@ public class ValueFilterIndex extends ValueFilter {
     /**
      * The array offset of the element to return.
      */
-    @Codec.Set(codable = true)
-    private int index;
+    @FieldConfig(codable = true)
+    private int     index;
     /**
      * If true, then return null when the index is out of bounds. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean toNull;
 
     public ValueFilterIndex setIndex(int index) {

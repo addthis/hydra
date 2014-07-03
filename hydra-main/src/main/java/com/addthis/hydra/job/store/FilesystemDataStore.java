@@ -13,15 +13,8 @@
  */
 package com.addthis.hydra.job.store;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
-import com.addthis.basis.util.Parameter;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
+
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -29,7 +22,18 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class FilesystemDataStore implements SpawnDataStore, Codec.Codable {
+import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.Files;
+import com.addthis.basis.util.Parameter;
+
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class FilesystemDataStore implements SpawnDataStore, Codable {
     private static final Logger log = LoggerFactory.getLogger(FilesystemDataStore.class);
     private static final boolean debug = Parameter.boolValue("spawn.datastore.fs.debug",false);
 
@@ -38,7 +42,7 @@ public class FilesystemDataStore implements SpawnDataStore, Codec.Codable {
     private File file;
     private long lastMod;
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private TreeMap<String,String> map = new TreeMap<>();
 
     public FilesystemDataStore(final File file) throws Exception {

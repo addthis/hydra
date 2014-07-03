@@ -15,12 +15,12 @@ package com.addthis.hydra.task.map;
 
 import java.io.File;
 
-import java.text.SimpleDateFormat;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
@@ -30,8 +30,9 @@ import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.filter.bundle.BundleFilterDebugPrint;
 import com.addthis.hydra.data.filter.value.ValueFilter;
@@ -51,7 +52,6 @@ import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Meter;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * <p>This is <span class="hydra-summary">the most common form of Hydra job (either a split job or a map job)</span>. It is specified with
@@ -96,19 +96,19 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
     /**
      * The data source for this job.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private TaskDataSource source;
 
     /**
      * The transformations to apply onto the data.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private MapDef map;
 
     /**
      * The data sink for emitting the result of the transformations.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private TaskDataOutput output;
 
     /**
@@ -116,19 +116,19 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
      * where one or more bundles roll up into a single bundle or a single bundle causes
      * the emission of multiple bundles.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private StreamBuilder builder;
 
     /**
      * Print to the console statistics while processing the data. Default is <code>true</code>.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean stats = true;
 
     /**
      * Optionally extract bundle time and print average of bundles processed since last log line
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private TimeField timeField;
 
     private final AtomicLong totalEmit = new AtomicLong(0);
@@ -180,24 +180,24 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
      *
      * @user-reference
      */
-    public static final class MapDef implements Codec.Codable {
+    public static final class MapDef implements Codable {
 
         /**
          * The filter to apply before field transformation.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private BundleFilter filterIn;
 
         /**
          * The filter to apply after field transformation.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private BundleFilter filterOut;
 
         /**
          * The mapping of fields from the input source into the bundle.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private FieldFilter[] fields;
     }
 
@@ -219,30 +219,30 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
      *
      * @user-reference
      */
-    public static final class FieldFilter implements Codec.Codable {
+    public static final class FieldFilter implements Codable {
 
         /**
          * The name of the bundle field source. This is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String from;
 
         /**
          * The name of the bundle field destination. If not specified then use the 'from' field.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String to;
 
         /**
          * Optionally apply a filter onto the field.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private ValueFilter filter;
 
         /**
          * If true then emit null values to the destination field. The default is false.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private boolean toNull;
     }
 
@@ -390,7 +390,7 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
                 exitState.setInput(totalInputCountMetric.count());
                 exitState.setTotalEmitted(totalEmit.get());
                 exitState.setMeanRate(processedMeterMetric.meanRate());
-                Files.write(new CodecJSON().encode(exitState), new File("job.exit"));
+                Files.write(CodecJSON.INSTANCE.encode(exitState), new File("job.exit"));
             } catch (Exception ex) {
                 log.error("", ex);
             }

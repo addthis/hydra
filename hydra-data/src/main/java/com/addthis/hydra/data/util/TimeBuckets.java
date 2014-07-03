@@ -22,20 +22,21 @@ import java.util.TreeMap;
 
 import java.text.SimpleDateFormat;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 
 /**
  *         A class to store time values in buckets of variable size.
  */
-public class TimeBuckets implements Codec.Codable {
+public class TimeBuckets implements Codable {
 
     /**
      * @param args
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private TreeMap<Long, Long> map;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long blockSize;
 
     public TimeBuckets() {

@@ -22,7 +22,7 @@ import com.addthis.basis.util.JitterClock;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.channel.DataChannelOutput;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.meshy.ChannelMaster;

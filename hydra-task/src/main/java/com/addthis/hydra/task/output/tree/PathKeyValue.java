@@ -16,8 +16,8 @@ package com.addthis.hydra.task.output.tree;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 /**
@@ -54,7 +54,7 @@ public class PathKeyValue extends PathValue {
      * Name of the bundle field that is used
      * to populate the constructed nodes.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected String key;
 
     /**
@@ -62,7 +62,7 @@ public class PathKeyValue extends PathValue {
      * onto the values before construction
      * of the nodes. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected ValueFilter prefilter;
 
     private BundleField keyAccess;
@@ -99,7 +99,8 @@ public class PathKeyValue extends PathValue {
             return pv;
         } catch (NullPointerException ex) {
             try {
-                log.warn("NPE: keyAccess=" + keyAccess + " p=" + p + " in " + CodecJSON.encodeString(this));
+                log.warn("NPE: keyAccess=" + keyAccess + " p=" + p + " in " + CodecJSON.encodeString(
+                        this));
             } catch (Exception e) {
                 e.printStackTrace();
             }

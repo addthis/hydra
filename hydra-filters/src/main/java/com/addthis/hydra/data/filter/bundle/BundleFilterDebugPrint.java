@@ -20,7 +20,7 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundlePrinter;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,26 +50,26 @@ public class BundleFilterDebugPrint extends BundleFilter {
     /**
      * A string prefix to pre-append to the debugging information. Default is "".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String prefix = "";
 
     /**
      * If true then this filter returns false. Default is false (ie. the filter returns true).
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean fail = false;
 
     /**
      * Maximum number of bundles to print. Default is 100.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long maxBundles = 100;
 
     /**
      * Optionally specify to print a bundle every N seconds if
      * parameter is a positive integer. Default is 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long every = 0;
 
     private final AtomicLong bundleCounter = new AtomicLong();

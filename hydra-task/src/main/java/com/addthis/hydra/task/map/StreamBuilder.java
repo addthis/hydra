@@ -14,35 +14,10 @@
 package com.addthis.hydra.task.map;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.ClassMap;
-import com.addthis.codec.Codec.ClassMapFactory;
-import com.addthis.hydra.common.plugins.PluginReader;
+import com.addthis.codec.annotations.Pluggable;
 
-@Codec.Set(classMapFactory = StreamBuilder.CMAP.class)
+@Pluggable("stream builder")
 public abstract class StreamBuilder {
-
-    private static ClassMap cmap = new ClassMap() {
-        @Override
-        public String getClassField() {
-            return "type";
-        }
-    };
-
-    public static class CMAP implements ClassMapFactory {
-
-        public ClassMap getClassMap() {
-            return cmap;
-        }
-    }
-
-    static {
-        PluginReader.registerPlugin("-stream-builder.classmap", cmap, StreamBuilder.class);
-    }
-
-    public static final void registerBuilder(String name, Class<? extends StreamBuilder> clazz) {
-        cmap.add(name, clazz);
-    }
 
     public abstract void init();
 

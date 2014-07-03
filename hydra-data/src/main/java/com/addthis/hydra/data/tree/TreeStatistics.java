@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.ClosableIterator;
 
-import com.addthis.codec.CodableStatistics;
+import com.addthis.codec.util.CodableStatistics;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.kv.ReadExternalPagedStore;
 import com.addthis.hydra.store.kv.metrics.ExternalPagedStoreMetrics;
@@ -37,7 +37,6 @@ import com.addthis.hydra.util.Histogram;
 import com.yammer.metrics.stats.Snapshot;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class TreeStatistics {
 

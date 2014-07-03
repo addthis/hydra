@@ -16,7 +16,7 @@ package com.addthis.hydra.task.output.tree;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.util.ValueUtil;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.query.FieldValueList;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeUtil;
@@ -43,7 +43,7 @@ public final class PathQuery extends PathOp {
     /**
      * Path traversal to the target node. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private PathValue path[];
 
     /**
@@ -53,10 +53,10 @@ public final class PathQuery extends PathOp {
      * current location. Default is zero.
      * Default is zero.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int relativeUp;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private PathQueryElement values;
 
     /**
@@ -64,7 +64,7 @@ public final class PathQuery extends PathOp {
      * debugging output after N bundles
      * have been observed. Default is zero.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int debug;
 
     /**
@@ -72,7 +72,7 @@ public final class PathQuery extends PathOp {
      * append this prefix to the debugging
      * output. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String debugKey;
 
     private int match;

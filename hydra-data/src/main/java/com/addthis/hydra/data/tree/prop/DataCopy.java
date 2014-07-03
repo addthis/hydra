@@ -21,7 +21,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
@@ -62,7 +62,7 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
          * names and stored under the label. This field
          * is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private HashMap<String, String> key;
 
         /**
@@ -70,7 +70,7 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
          * if it has a value filter then the filter is applied.
          * The default is no filters.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private HashMap<String, ValueFilter> op;
 
         @Override
@@ -81,7 +81,7 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
         }
     }
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private HashMap<String, String> dat;
 
     private HashMap<String, BundleField> keyAccess;

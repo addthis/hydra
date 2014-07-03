@@ -20,7 +20,7 @@ import java.util.List;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">randomly selects an input field and copies it to an output field</span>.
@@ -42,12 +42,12 @@ public class BundleFilterRandomField extends BundleFilter {
     /**
      * The possible input bundle fields from which one will be selected. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String inFields[];
     /**
      * The name of the output bundle field. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String out;
 
     public BundleFilterRandomField() {

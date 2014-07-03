@@ -13,17 +13,20 @@
  */
 package com.addthis.hydra.data.filter.value;
 
-import com.addthis.bundle.util.ValueUtil;
-import com.addthis.bundle.value.ValueFactory;
-import com.addthis.bundle.value.ValueMapEntry;
-import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
-import org.arabidopsis.ahocorasick.AhoCorasick;
-import org.arabidopsis.ahocorasick.SearchResult;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.util.Iterator;
+
+import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueMap;
+import com.addthis.bundle.value.ValueMapEntry;
+import com.addthis.bundle.value.ValueObject;
+import com.addthis.codec.annotations.FieldConfig;
+
+import org.arabidopsis.ahocorasick.AhoCorasick;
+import org.arabidopsis.ahocorasick.SearchResult;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">checks for strings, arrays or maps
@@ -54,30 +57,30 @@ public class ValueFilterContains extends ValueFilter {
     /**
      * The set of values to match against.
      */
-    @Codec.Set(codable = true)
-    private String value[];
+    @FieldConfig(codable = true)
+    private String[] value;
 
     /**
      * The set of keys to match against. Only applicable for map inputs.
      */
-    @Codec.Set(codable = true)
-    private String key[];
+    @FieldConfig(codable = true)
+    private String[] key;
 
     /**
      * If true then return values that do not match. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean not;
 
     /**
      * If true then matched value is returned v/s the input
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean returnMatch;
 
     private AhoCorasick dictionary;
 
-    public ValueFilterContains setValues(String value[]) {
+    public ValueFilterContains setValues(String[] value) {
         this.value = value;
         return this;
     }
@@ -115,8 +118,8 @@ public class ValueFilterContains extends ValueFilter {
         String match = null;
         ValueObject.TYPE type = input.getObjectType();
         if (type == ValueObject.TYPE.MAP) {
-            for (ValueMapEntry ent : input.asMap()) {
-                String cmp = ent.getKey();
+            ValueMap<?> inputAsMap = input.asMap();
+            for (String cmp : inputAsMap.keySet()) {
                 if (key != null && (match = checkContains(cmp, key)) != null) {
                     return not ? null : returnMatch ? ValueFactory.create(match) : input;
                 }
@@ -160,7 +163,7 @@ public class ValueFilterContains extends ValueFilter {
         return not ? input : null;
     }
 
-    private String checkContains(String cmp, String arr[]) {
+    private String checkContains(String cmp, String[] arr) {
         for (String val : arr) {
             if (cmp.equals(val)) {
                 return val;

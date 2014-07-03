@@ -61,32 +61,50 @@
   <build>
     <plugins>
       <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.4</version>
-        <configuration>
-          <descriptors>
-            <descriptor>src/main/resources/executable.xml</descriptor>
-          </descriptors>
-          <archive>
-            <manifest>
-              <mainClass>com.addthis.hydra.Main</mainClass>
-            </manifest>
-            <manifestEntries>
-              <Premain-Class>com.addthis.basis.util.MemoryCounter</Premain-Class>
-              <Agent-Class>com.addthis.basis.util.MemoryCounter</Agent-Class>
-              <Can-Redefine-Classes>true</Can-Redefine-Classes>
-              <Can-Retransform-Classes>true</Can-Retransform-Classes>
-            </manifestEntries>
-          </archive>
-        </configuration>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.3</version>
         <executions>
           <execution>
-            <id>make-assembly</id>
-            <!-- this is used for inheritance merges -->
             <phase>package</phase>
             <goals>
-              <goal>single</goal>
+              <goal>shade</goal>
             </goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <shadedClassifierName>exec</shadedClassifierName>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+              <transformers>
+                <transformer
+                implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>reference.conf</resource>
+                </transformer>
+                <transformer
+                implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>application.conf</resource>
+                </transformer>
+                <transformer
+                implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <manifestEntries>
+                    <Main-Class>com.addthis.hydra.Main</Main-Class>
+                    <Premain-Class>com.addthis.basis.util.MemoryCounter</Premain-Class>
+                    <Agent-Class>com.addthis.basis.util.MemoryCounter</Agent-Class>
+                    <Can-Redefine-Classes>true</Can-Redefine-Classes>
+                    <Can-Retransform-Classes>true</Can-Retransform-Classes>
+                  </manifestEntries>
+                </transformer>
+              </transformers>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -116,22 +134,6 @@
             <dirty>DIRTY</dirty>
             <forceLongFormat>true</forceLongFormat>
           </gitDescribe>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>1.2.1</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <executable>${basedir}/bin/testPlugins.sh</executable>
         </configuration>
       </plugin>
     </plugins>

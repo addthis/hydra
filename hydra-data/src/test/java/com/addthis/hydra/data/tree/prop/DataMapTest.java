@@ -15,7 +15,7 @@ package com.addthis.hydra.data.tree.prop;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.CodecBin2;
+import com.addthis.codec.binary.CodecBin2;
 import com.addthis.hydra.store.kv.KeyCoder;
 
 import org.junit.Test;
@@ -47,7 +47,7 @@ public class DataMapTest extends TestCase {
         for (int i = 0; i < size; i++) {
             dataMap.put("key:" + i, ValueFactory.create(initValue + i));
         }
-        CodecBin2 codec = new CodecBin2();
+        CodecBin2 codec = CodecBin2.INSTANCE;
         byte[] codecBytes = codec.encode(dataMap);
         byte[] customBytes = dataMap.bytesEncode(KeyCoder.EncodeType.SPARSE.ordinal());
         assertTrue(customBytes.length < codecBytes.length);

@@ -15,7 +15,7 @@ package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">returns true if a specified field is not set</span>.
@@ -38,7 +38,7 @@ public class BundleFilterNot extends BundleFilter {
     /**
      * The field to test. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String field;
 
     private String fields[];

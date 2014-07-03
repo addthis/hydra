@@ -17,7 +17,7 @@ import java.io.File;
 
 import com.addthis.basis.test.SlowTest;
 
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 
 import com.google.common.io.Files;
 
@@ -34,7 +34,10 @@ public class TestValueFilterHttpGet {
 
             // FIXME: neuon or some other 'traditional' test domain
             ValueFilterHttpGet filter = CodecJSON.decodeString(new ValueFilterHttpGet(),
-                    "{cacheSize:5,cacheAge:10000,persist:true,persistDir:'" + tmpDir + "',template:'http://www.google.com/search?sclient=psy&hl=en&site=&source=hp&q={{}}&btnG=Search'}");
+                                                               "{cacheSize:5,cacheAge:10000," +
+                                                               "persist:true,persistDir:'" +
+                                                               tmpDir +
+                                                               "',template:'http://www.google.com/search?sclient=psy&hl=en&site=&source=hp&q={{}}&btnG=Search'}");
             for (int i = 0; i < 5; i++) {
                 String search = filter.filter("hello+world+" + i);
                 System.out.println("#" + i + " >> " + (search != null ? search.length() : "null"));

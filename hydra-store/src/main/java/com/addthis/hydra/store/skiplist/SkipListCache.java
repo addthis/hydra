@@ -13,26 +13,10 @@
  */
 package com.addthis.hydra.store.skiplist;
 
-import com.addthis.basis.util.MemoryCounter;
-import com.addthis.basis.util.Parameter;
-import com.addthis.codec.Codec;
-import com.addthis.hydra.store.db.CloseOperation;
-import com.addthis.hydra.store.kv.ByteStore;
-import com.addthis.hydra.store.kv.KeyCoder;
-import com.addthis.hydra.store.kv.PagedKeyValueStore;
-import com.addthis.hydra.store.util.MetricsUtil;
-import com.addthis.hydra.store.util.NamedThreadFactory;
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Gauge;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufOutputStream;
-import io.netty.buffer.PooledByteBufAllocator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -49,6 +33,27 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import com.addthis.basis.util.MemoryCounter;
+import com.addthis.basis.util.Parameter;
+
+import com.addthis.codec.codables.BytesCodable;
+import com.addthis.hydra.store.db.CloseOperation;
+import com.addthis.hydra.store.kv.ByteStore;
+import com.addthis.hydra.store.kv.KeyCoder;
+import com.addthis.hydra.store.kv.PagedKeyValueStore;
+import com.addthis.hydra.store.util.MetricsUtil;
+import com.addthis.hydra.store.util.NamedThreadFactory;
+
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Gauge;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.PooledByteBufAllocator;
 
 /**
  * ::TWO INVARIANTS TO AVOID DEADLOCK AND MAINTAIN CONSISTENCY::
@@ -80,7 +85,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @param <K>
  * @param <V>
  */
-public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyValueStore<K, V> {
+public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueStore<K, V> {
 
     private static final Logger log = LoggerFactory.getLogger(SkipListCache.class);
 
@@ -165,7 +170,7 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
      * ''Effective Java, Second Edition.'' Item 2 - "Consider a builder when
      * faced with many constructor parameters."
      */
-    public static class Builder<K, V extends Codec.BytesCodable> {
+    public static class Builder<K, V extends BytesCodable> {
 
         // Required parameters
         protected final int maxPageSize;
@@ -1256,7 +1261,7 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
      * If the input page is null then do nothing. Otherwise
      * unlock the page. Always return null.
      */
-    private static <K, V extends Codec.BytesCodable> Page<K, V> unlockAndNull(Page<K, V> input, LockMode mode) {
+    private static <K, V extends BytesCodable> Page<K, V> unlockAndNull(Page<K, V> input, LockMode mode) {
         if (input == null) {
             return null;
         }
@@ -1264,7 +1269,7 @@ public class SkipListCache<K, V extends Codec.BytesCodable> implements PagedKeyV
         return null;
     }
 
-    private static <K, V extends Codec.BytesCodable> Page<K, V> writeUnlockAndNull(Page<K, V> input) {
+    private static <K, V extends BytesCodable> Page<K, V> writeUnlockAndNull(Page<K, V> input) {
         return unlockAndNull(input, LockMode.WRITEMODE);
     }
 

@@ -21,17 +21,17 @@ import java.util.zip.GZIPOutputStream;
 import com.addthis.basis.util.MemoryCounter;
 import com.addthis.basis.util.Numbers;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecBin2;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.binary.CodecBin2;
+import com.addthis.codec.json.CodecJSON;
 
 import org.junit.Test;
 
 
 public class TestSeenFilterSize {
 
-    private static final Codec codec = new CodecBin2();
-    private static final Codec codecJSON = new CodecJSON();
+    private static final Codec codec     = CodecBin2.INSTANCE;
+    private static final Codec codecJSON = CodecJSON.INSTANCE;
 
     @Test
     public void noop() {
@@ -47,7 +47,8 @@ public class TestSeenFilterSize {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        System.out.printf("Compression ratio %f\n", (1.0f * content.length / byteArrayOutputStream.size()));
+        System.out.printf("Compression ratio %f\n",
+                          (1.0f * content.length / byteArrayOutputStream.size()));
         return byteArrayOutputStream.toByteArray();
     }
 

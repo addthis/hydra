@@ -13,7 +13,8 @@
  */
 package com.addthis.hydra.job;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 import com.google.common.base.Objects;
 
@@ -21,15 +22,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public final class JobQueryConfig implements Codec.Codable, Cloneable {
+public final class JobQueryConfig implements Codable, Cloneable {
 
     private static Logger log = LoggerFactory.getLogger(JobQueryConfig.class);
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean canQuery;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int queryTraceLevel;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int consecutiveFailureThreshold;
 
     public JobQueryConfig() {

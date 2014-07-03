@@ -15,7 +15,7 @@ package com.addthis.hydra.data.filter.value;
 
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns the passed value if it is empty or null otherwise</span>.
@@ -41,7 +41,7 @@ public class ValueFilterEmpty extends ValueFilter {
     /**
      * If true then return all non-empty elements. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean not;
 
     @Override

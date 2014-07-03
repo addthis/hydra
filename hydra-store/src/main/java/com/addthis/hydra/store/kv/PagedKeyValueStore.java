@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.store.kv;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.db.CloseOperation;
 
 /**
@@ -24,7 +24,7 @@ import com.addthis.hydra.store.db.CloseOperation;
  * @param <K>
  * @param <V>
  */
-public interface PagedKeyValueStore<K, V extends Codec.BytesCodable> extends KeyValueStore<K, V> {
+public interface PagedKeyValueStore<K, V extends BytesCodable> extends KeyValueStore<K, V> {
 
     public void setMaxPages(int maxPages);
 

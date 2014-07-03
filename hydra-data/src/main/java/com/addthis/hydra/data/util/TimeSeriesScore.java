@@ -31,12 +31,12 @@ import java.util.TreeSet;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.codables.Codable;
 
 /**
  * Class that will assign a score to a Url based on its trend over time
  */
-public class TimeSeriesScore implements Codec.Codable {
+public class TimeSeriesScore implements Codable {
 
     double alpha = 0.3;
 

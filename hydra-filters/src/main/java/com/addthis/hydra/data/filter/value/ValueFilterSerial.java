@@ -15,7 +15,7 @@ package com.addthis.hydra.data.filter.value;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">auto-generates key sequences</span>.
@@ -40,31 +40,31 @@ public class ValueFilterSerial extends ValueFilter {
     /**
      * If non-null, then append this prefix onto the output. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String prefix;
 
     /**
      * The starting value for the key sequence.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long seed;
 
     /**
      * If set to a positive integer, then the output will be in the range [0, mod). Default is 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long mod;
 
     /**
      * If set to a positive integer, then the output will be rounded down to the nearest N units. Default is 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long round;
 
     /**
      * The radix for the output string.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int base;
 
     @Override

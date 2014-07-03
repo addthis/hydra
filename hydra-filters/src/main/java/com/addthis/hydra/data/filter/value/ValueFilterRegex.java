@@ -20,7 +20,7 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">performs regular expression matching on the input string</span>.
@@ -60,13 +60,13 @@ public class ValueFilterRegex extends ValueFilter {
     /**
      * Regular expression to match against. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String pattern;
 
     /**
      * If non-null, then replace all matches with this string. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String replace;
 
     private volatile Pattern compiled;

@@ -13,9 +13,10 @@
  */
 package com.addthis.hydra.store.db;
 
-import com.addthis.codec.CodableStatistics;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecBin2;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.binary.CodecBin2;
+import com.addthis.codec.codables.BytesCodable;
+import com.addthis.codec.util.CodableStatistics;
 import com.addthis.hydra.store.kv.KeyCoder;
 import com.addthis.hydra.store.util.Raw;
 
@@ -23,10 +24,10 @@ import com.google.common.base.Objects;
 
 /**
  */
-class DBKeyCoder<V extends Codec.BytesCodable> implements KeyCoder<DBKey, V> {
+class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
 
     protected final Codec codec;
-    protected final static CodecBin2 codecBin2 = new CodecBin2();
+    protected final static CodecBin2 codecBin2 = CodecBin2.INSTANCE;
     protected final Class<? extends V> clazz;
 
     private static final byte[] zero = new byte[0];

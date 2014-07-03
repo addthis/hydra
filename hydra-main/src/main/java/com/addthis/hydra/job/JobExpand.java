@@ -27,7 +27,8 @@ import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacer;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
-import com.addthis.hydra.common.plugins.PluginReader;
+import com.addthis.codec.plugins.PluginMap;
+import com.addthis.codec.plugins.PluginRegistry;
 import com.addthis.hydra.data.util.CommentTokenizer;
 
 import com.google.common.base.Joiner;
@@ -115,14 +116,11 @@ public class JobExpand {
     private static Map<String, JobConfigExpander> expanders = new HashMap<>();
 
     static {
-        List<String[]> expanders = PluginReader.readProperties("-jobexpand.classmap");
-        for(String[] expander : expanders) {
-            if (expander.length >= 2) {
-                try {
-                    registerExpander(expander[0], (Class<? extends JobConfigExpander>) Class.forName(expander[1]));
-                } catch(ClassNotFoundException|ClassCastException e) {
-                    log.warn(e.toString());
-                }
+        PluginMap expanderMap = PluginRegistry.defaultRegistry().asMap().get("job expander");
+        if (expanderMap != null) {
+            for (Map.Entry<String, Class<?>> expanderPlugin : expanderMap.asBiMap().entrySet()) {
+                registerExpander(expanderPlugin.getKey(),
+                                 (Class<? extends JobConfigExpander>) expanderPlugin.getValue());
             }
         }
     }
@@ -201,7 +199,7 @@ public class JobExpand {
 
     private static void addParameter(String paramString, Map<String, JobParameter> params) {
         JobParameter param = new JobParameter();
-        String tokens[] = paramString.split(":", 2);
+        String[] tokens = paramString.split(":", 2);
         param.setName(tokens[0]);
         if (tokens.length > 1) {
             param.setDefaultValue(tokens[1]);

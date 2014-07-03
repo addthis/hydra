@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.value;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 
 /**
@@ -43,13 +43,14 @@ public class ValueFilterDefault extends StringFilter {
     /**
      * The value to return for a null input or an empty string.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String value;
 
     /**
-     * If set to true, then the default value is the current wall clock in unix milliseconds. Default is false.
+     * If set to true, then the default value is the current wall clock in unix milliseconds.
+     * Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean time;
 
     public ValueFilterDefault setDefault(String dv) {

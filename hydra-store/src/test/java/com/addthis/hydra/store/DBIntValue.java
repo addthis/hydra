@@ -13,11 +13,11 @@
  */
 package com.addthis.hydra.store;
 
-import com.addthis.codec.Codec;
-
 import java.nio.ByteBuffer;
 
-public class DBIntValue implements Codec.BytesCodable {
+import com.addthis.codec.codables.BytesCodable;
+
+public class DBIntValue implements BytesCodable {
 
     private Integer val;
 

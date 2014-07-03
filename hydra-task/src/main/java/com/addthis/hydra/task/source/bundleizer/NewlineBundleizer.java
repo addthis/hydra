@@ -21,7 +21,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFactory;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.task.source.AbstractStreamFileDataSource.Bundleizer;
 import com.addthis.hydra.task.source.AbstractStreamFileDataSource.BundleizerFactory;
@@ -33,7 +33,7 @@ import com.addthis.hydra.task.source.AbstractStreamFileDataSource.BundleizerFact
  */
 public abstract class NewlineBundleizer extends BundleizerFactory {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter lineFilter;
 
     @Override

@@ -17,7 +17,7 @@ import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 /**
@@ -31,13 +31,13 @@ public final class DataSourcePrefetch extends TaskDataSource {
     /**
      * Number of bundles to prefetch.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int size;
 
     /**
      * Underlying data source. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     protected TaskDataSource source;
 
     protected final LinkedList<Bundle> prefetch = new LinkedList<Bundle>();

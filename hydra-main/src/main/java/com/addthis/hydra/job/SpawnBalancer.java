@@ -36,7 +36,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.mq.CommandTaskStop;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
@@ -51,18 +52,19 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * A class in charge of balancing load among spawn's hosts.
  * General assumptions:
  * The boxes are not so asymmetrical that running a job on three boxes is slower than running it on a single box.
  * Jobs run faster when they have as few tasks grouped together on individual boxes as possible.
  */
-public class SpawnBalancer implements Codec.Codable {
+public class SpawnBalancer implements Codable {
 
     private final Spawn spawn;
     private static final Logger log = LoggerFactory.getLogger(SpawnBalancer.class);
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private SpawnBalancerConfig config = new SpawnBalancerConfig();
 
     // How often to update aggregate host statistics

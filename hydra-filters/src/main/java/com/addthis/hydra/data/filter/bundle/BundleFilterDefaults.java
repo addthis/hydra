@@ -21,7 +21,7 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueString;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">sets bundle values to defaults if they are null or missing</span>.
@@ -39,7 +39,7 @@ public class BundleFilterDefaults extends BundleFilter {
     /**
      * A mapping of bundle fields to default bundle values. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private HashMap<String, String> values;
 
     private HashMap<BundleField, ValueString> defaults;

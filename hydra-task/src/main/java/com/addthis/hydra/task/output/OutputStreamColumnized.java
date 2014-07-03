@@ -23,7 +23,8 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.util.ValueUtil;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.filter.value.StringFilter;
 
 /**
@@ -32,19 +33,19 @@ import com.addthis.hydra.data.filter.value.StringFilter;
  * @user-reference
  * @hydra-name column
  */
-public class OutputStreamColumnized extends OutputStreamFormatter implements Codec.SuperCodable {
+public class OutputStreamColumnized extends OutputStreamFormatter implements SuperCodable {
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String columns[];
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String stringQuote;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String separator = "\t";
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String eol = "\n";
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private StringFilter filter;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String nameSeparator;
 
     private byte[] sepB;

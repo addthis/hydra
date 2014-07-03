@@ -19,6 +19,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractRowOp;
@@ -214,13 +215,13 @@ public class OpRoll extends AbstractRowOp {
     private final boolean inPlace;
     private final boolean summary;
 
-    private ValueNumber[] state;
+    private Numeric<?>[] state;
     private BundleField[] colIn;
     private BundleField[] colOut;
     private BundleField[] colKeys;
     private int rows;
     private String lastKey;
-    private ValueNumber[] oldvals;
+    private Numeric<?>[] oldvals;
     private Bundle lastRow;
 
     public OpRoll(String args, OP op, ChannelProgressivePromise queryPromise) {
@@ -246,7 +247,7 @@ public class OpRoll extends AbstractRowOp {
         this.asInt = asInt;
     }
 
-    private final ValueNumber toType(ValueObject vo) {
+    private final Numeric<?> toType(ValueObject vo) {
         if (asInt) {
             return ValueUtil.asNumberOrParseLong(vo, 10);
         } else {
@@ -294,7 +295,7 @@ public class OpRoll extends AbstractRowOp {
             } else {
                 switch (op) {
                     case DELTA:
-                        ValueNumber newval = toType(row.getValue(colIn[i]));
+                        Numeric<?> newval = toType(row.getValue(colIn[i]));
                         state[i] = newval.diff(oldvals[i]);
                         oldvals[i] = newval;
                         break;

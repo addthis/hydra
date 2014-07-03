@@ -19,7 +19,8 @@ import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueTranslationException;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 import org.slf4j.Logger;
@@ -61,16 +62,16 @@ public class BundleFilterMapExtract extends BundleFilter {
     /**
      * The name of the field that contains the ValueMap object. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String field;
 
     /**
      * The mapping from the ValueMap to the bundle format. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
-    private XMap map[];
+    @FieldConfig(codable = true, required = true)
+    private XMap[] map;
 
-    private String fields[];
+    private String[] fields;
 
     @Override
     public void initialize() {
@@ -79,12 +80,12 @@ public class BundleFilterMapExtract extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         ValueObject value = bundle.getValue(bound[0]);
         if (value == null) {
             return true;
         }
-        ValueMap mapValue;
+        ValueMap<?> mapValue;
         try {
             mapValue = value.asMap();
         } catch (ValueTranslationException vte) {
@@ -99,7 +100,7 @@ public class BundleFilterMapExtract extends BundleFilter {
             String key = me.from;
             for (int i = 0; i < me.indirection && key != null; i++) {
                 if (format.hasField(key)) {
-                    key = bundle.getValue(format.getField(key)).asString().getString();
+                    key = bundle.getValue(format.getField(key)).asString().asNative();
                 } else {
                     key = null;
                 }
@@ -131,38 +132,40 @@ public class BundleFilterMapExtract extends BundleFilter {
      * <p>Examples:</p>
      * <pre>
      *     {from:"uid"}, // copy value of "uid" key from map into "uid" field in the bundle
-     *     {from:"uid", indirection:1}, // copy value of key specified in "uid" bundle into "uid" field in the bundle
+     *     {from:"uid", indirection:1}, // copy value of key specified in "uid" bundle into "uid"
+     *     field in the bundle
      *     {from:"ln", to:"LANGUAGE"}, // copy value of "ln" key from map into "LANGUAGE" field in the bundle
      *     {from:"uf", to:"UID_FLAGS", filter:{op:"default",value:"notset"}},
      * </pre>
      *
      * @user-reference
      */
-    public static final class XMap implements Codec.Codable {
+    public static final class XMap implements Codable {
 
         /**
          * The name of the key in the {@link ValueMap ValueMap}.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String from;
 
         /**
          * If non-null then assign the value to this field of the bundle.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String to;
 
         /**
-         * If non-null then apply this filter on the value retrieved from the ValueMap. Default is null.
+         * If non-null then apply this filter on the value retrieved from the ValueMap. Default
+         * is null.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private ValueFilter filter;
 
         /**
          * A non-negative integer specifying the level of indirection.
          * Default is zero.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int indirection = 0;
 
         XMap setIndirection(int indirection) {

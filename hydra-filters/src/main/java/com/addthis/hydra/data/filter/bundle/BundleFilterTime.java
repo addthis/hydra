@@ -18,7 +18,7 @@ import com.addthis.basis.util.JitterClock;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.util.TimeField;
 
 import org.slf4j.Logger;
@@ -45,17 +45,16 @@ public class BundleFilterTime extends BundleFilter {
 
     private final Logger log = LoggerFactory.getLogger(BundleFilterTime.class);
 
-
     /**
      * Date and time to convert.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private TimeField src;
 
     /**
      * Output time format.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private TimeField dst;
 
     public BundleFilterTime setInput(TimeField src) {

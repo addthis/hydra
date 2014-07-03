@@ -23,7 +23,8 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.mq.CommandTaskKick;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.MeshyClientConnector;
@@ -31,7 +32,6 @@ import com.addthis.meshy.service.message.MessageFileProvider;
 import com.addthis.meshy.service.message.MessageListener;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * Date: 10/22/12
@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 public class SpawnMesh implements MessageListener {
 
     private static Logger log = LoggerFactory.getLogger(SpawnMesh.class);
-    private static Codec codec = new CodecJSON();
+    private static Codec codec = CodecJSON.INSTANCE;
 
     private static final String meshHost = Parameter.value("mesh.host", "localhost");
     private static final int meshPort = Parameter.intValue("mesh.port", 0);
@@ -156,7 +156,7 @@ public class SpawnMesh implements MessageListener {
         }
     }
 
-    private void send(OutputStream out, Codec.Codable msg) {
+    private void send(OutputStream out, Codable msg) {
         try {
             out.write(codec.encode(msg));
             out.write('\n');

@@ -13,17 +13,18 @@
  */
 package com.addthis.hydra.job.spawn.entities;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.maljson.JSONObject;
 
-public class TopicEvent implements Codec.Codable {
+public class TopicEvent implements Codable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     String topic;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     Object message;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     long time;
 
     public TopicEvent(String topic, Object message) {

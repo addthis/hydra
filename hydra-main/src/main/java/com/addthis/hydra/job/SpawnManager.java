@@ -35,7 +35,7 @@ import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.bark.StringSerializer;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.Spawn.ClientEvent;
 import com.addthis.hydra.job.Spawn.ClientEventListener;
 import com.addthis.hydra.job.Spawn.Settings;

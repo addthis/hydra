@@ -26,9 +26,8 @@ import java.util.Set;
 
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
-import com.addthis.basis.util.Parameter;
 
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;

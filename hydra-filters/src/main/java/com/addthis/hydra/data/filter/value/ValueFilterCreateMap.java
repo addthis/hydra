@@ -17,7 +17,7 @@ import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">extracts a map from a string</span>.
@@ -43,25 +43,25 @@ public class ValueFilterCreateMap extends ValueFilter {
     /**
      * This field is never used. Do with it what you want.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String input;
 
     /**
      * The deliminator between a key and a value. Default is "=" .
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String keySeparator = "=";
 
     /**
      * The deliminator between (key,value) pairs. Default is "," .
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String elementSeparator = ",";
 
     /**
      * If true then include null values into the map. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean includeNullValues = false;
 
 
@@ -85,7 +85,7 @@ public class ValueFilterCreateMap extends ValueFilter {
     }
 
     private void insertMapValue(ValueMap map, ValueObject vo) {
-        String valueString = vo.asString().getString();
+        String valueString = vo.asString().asNative();
         String[] elementArray = valueString.split(elementSeparator);
         for (String element : elementArray) {
             String[] keyValue = element.split(keySeparator);

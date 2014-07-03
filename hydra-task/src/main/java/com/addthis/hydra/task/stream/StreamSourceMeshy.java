@@ -38,7 +38,7 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.source.AbstractPersistentStreamSource;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
@@ -127,56 +127,56 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
     /**
      * the percentage of peers that must respond before the finder returns
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private double meshPeerThreshold = 0.95;
 
     /**
      * if true the finder may return before 100% of peers have responded
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean meshShortCircuit = DEFAULT_MESH_SHORT_CIRCUIT;
 
     /**
      * the amount of time the mesh finder will wait before potentially returning
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int meshTimeOut = DEFAULT_MESH_TIMEOUT;
 
     /**
      * Hostname of the meshy server. Default is either "source.mesh.host" configuration value or "localhost".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String meshHost = DEFAULT_MESH_HOST;
 
     /**
      * Port number of the meshy server. Default is either "source.mesh.port" configuration value or 5000.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int meshPort = DEFAULT_MESH_PORT;
 
     /**
      * Default mesh node cache per stream in size of (meshStreamCacheUnits * bytes).
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int meshStreamCache;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int maxRangeDays;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int maxRangeHours;
 
     /**
      * Number of byte units for meshStreamCache parameter.
      * Default is either "source.mesh.cache_units" configuration value or 1 MB (2<sup>20</sup> bytes)
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int meshStreamCacheUnits = DEFAULT_MESH_CACHE_UNITS;
 
     /**
      * Length of time to wait before possibly short circuiting mesh lookups
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int meshShortCircuitWaitTime = 5000;
 
 

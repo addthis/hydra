@@ -15,7 +15,7 @@ package com.addthis.hydra.data.filter.value;
 
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns the value associated with a specific key
@@ -34,7 +34,7 @@ public class ValueFilterMapValue extends ValueFilter {
     /**
      * The key to match from the input map.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String key;
 
     @Override
@@ -43,7 +43,7 @@ public class ValueFilterMapValue extends ValueFilter {
             // TODO: log error
             return null;
         }
-        ValueMap mapValue = value.asMap();
+        ValueMap<?> mapValue = value.asMap();
         return mapValue.get(key);
     }
 }

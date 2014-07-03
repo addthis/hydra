@@ -15,11 +15,11 @@ package com.addthis.hydra.job;
 
 import java.util.List;
 
+import com.addthis.codec.annotations.Pluggable;
 import com.addthis.hydra.job.store.SpawnDataStore;
 
-
+@Pluggable("job expander")
 public interface JobConfigExpander {
-
+    /** Creates or transforms a job config. */
     public String expand(SpawnDataStore spawnDataStore, String jobId, List<String> tokens);
-
 }

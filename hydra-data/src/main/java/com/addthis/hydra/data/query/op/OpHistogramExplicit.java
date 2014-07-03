@@ -14,14 +14,12 @@
 package com.addthis.hydra.data.query.op;
 
 import java.util.Arrays;
-import java.util.Map;
-import java.util.Map.Entry;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.hydra.data.query.AbstractRowOp;
 
 import io.netty.channel.ChannelProgressivePromise;
@@ -105,7 +103,7 @@ public class OpHistogramExplicit extends AbstractRowOp {
             binder = getSourceColumnBinder(row);
             rowFactory = row.createBundle();
         }
-        ValueNumber value = ValueUtil.asNumberOrParse(binder.getColumn(row, column));
+        Numeric<?> value = ValueUtil.asNumberOrParse(binder.getColumn(row, column));
         if (mode == Mode.FLOAT) {
             float target = (float) value.asDouble().getDouble();
             int position = Arrays.binarySearch(keys, target);

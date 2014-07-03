@@ -29,7 +29,7 @@ import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 import org.apache.avro.Schema;
@@ -51,20 +51,20 @@ public class DataSourceAvro extends TaskDataSource implements BundleFactory {
     /**
      * This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     protected FactoryInputStream input;
-    @Codec.Set(codable = true, required = true)
-    private String schema;
-    @Codec.Set(codable = true, required = true)
-    private HashSet<String> fields;
+    @FieldConfig(codable = true, required = true)
+    private   String             schema;
+    @FieldConfig(codable = true, required = true)
+    private   HashSet<String>    fields;
 
     private GenericDatumReader<GenericRecord> datumReader;
 
     private final ListBundleFormat format = new ListBundleFormat();
     private GenericRecord peekRecord;
-    private Bundle peek;
-    private Decoder decoder;
-    private InputStream inputStream;
+    private Bundle        peek;
+    private Decoder       decoder;
+    private InputStream   inputStream;
 
     @Override
     protected void open(TaskRunConfig config, AtomicBoolean errored) {
@@ -108,7 +108,9 @@ public class DataSourceAvro extends TaskDataSource implements BundleFactory {
         return peek;
     }
 
-    protected ValueObject getValueObject(GenericRecord genericRecord, String fieldName, GenericData genericData) throws IOException {
+    protected ValueObject getValueObject(GenericRecord genericRecord,
+                                         String fieldName,
+                                         GenericData genericData) throws IOException {
         Schema.Field field = genericRecord.getSchema().getField(fieldName);
         if (field == null) {
             return null;

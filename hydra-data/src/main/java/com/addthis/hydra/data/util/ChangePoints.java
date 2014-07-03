@@ -17,12 +17,12 @@ import java.util.ArrayList;
 import java.util.Random;
 import java.util.TreeMap;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.codables.Codable;
 
 /**
  *         Tools for finding change points in an integer array.
  */
-public class ChangePoints implements Codec.Codable {
+public class ChangePoints implements Codable {
 
     /**
      * Finds statistically significant changes in an Integer Array

@@ -19,7 +19,7 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.data.tree.TreeNodeList;
 import com.addthis.hydra.data.util.Tokenizer;
@@ -51,13 +51,13 @@ public final class PathFile extends PathKeyValue {
      * hierarchy terminated with the file.
      * Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean expand;
 
     /**
      * If 'expand' is true then do something here. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private PathKeyValue each;
 
     /**
@@ -65,7 +65,7 @@ public final class PathFile extends PathKeyValue {
      * filter to each token produced by the path tokenizer.
      * Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter tokenFilter;
 
     /**
@@ -73,7 +73,7 @@ public final class PathFile extends PathKeyValue {
      * as a path separator. This parameter is ignored if the
      * 'tokens' parameter is non-null. Default is "/".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String separator = "/";
 
     /**
@@ -82,7 +82,7 @@ public final class PathFile extends PathKeyValue {
      * use the default tokenizer.
      * Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Tokenizer tokens;
 
     /**
@@ -90,13 +90,13 @@ public final class PathFile extends PathKeyValue {
      * a maximum depth of the generated subtrees.
      * Default is zero.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int depth;
 
     /**
      * Default is "TEMP".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String tempKey = "TEMP";
     // treat file token same as dir token
 
@@ -105,7 +105,7 @@ public final class PathFile extends PathKeyValue {
      * tokens and directory tokens in the same manner.
      * Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean same;
 
     /**
@@ -113,13 +113,13 @@ public final class PathFile extends PathKeyValue {
      * of null to terminate descent.
      * Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean termFilter;
 
     /**
      * Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean inheritData;
 
     private BundleField tempAccess;

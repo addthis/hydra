@@ -15,22 +15,23 @@ package com.addthis.hydra.job.mq;
 
 import java.io.Serializable;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 
-public class ReplicaTarget implements Codec.Codable, Serializable {
+public class ReplicaTarget implements Codable, Serializable {
 
     private static final long serialVersionUID = -6611767753530890758L;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String host;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String hostUuid;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String user;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String baseDir;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int replicationFactor;
 
     public ReplicaTarget() {

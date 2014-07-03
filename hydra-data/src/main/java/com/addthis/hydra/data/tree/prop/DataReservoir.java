@@ -25,7 +25,8 @@ import com.addthis.basis.util.Varint;
 
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
@@ -45,7 +46,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
-public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements Codec.BytesCodable {
+public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements BytesCodable {
 
     private static final Logger log = LoggerFactory.getLogger(DataReservoir.class);
 
@@ -78,14 +79,14 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
          * Bundle field name from which to draw the epoch.
          * This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String epochField;
 
         /**
          * Size of the reservoir. This field is required.
          * @return
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private int size;
 
         @Override
@@ -94,7 +95,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         }
     }
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private int[] reservoir;
 
     /**
@@ -103,7 +104,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * of state from older epochs. All effort is made to increment the
      * value as little as possible.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private long minEpoch;
 
     private BundleField keyAccess;

@@ -15,7 +15,8 @@ package com.addthis.hydra.data.filter.value;
 
 
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.util.TimeField;
 
 /**
@@ -29,33 +30,35 @@ import com.addthis.hydra.data.util.TimeField;
  * @user-reference
  * @hydra-name time-format
  */
-public class ValueFilterTimeFormat extends ValueFilter implements Codec.SuperCodable {
+public class ValueFilterTimeFormat extends ValueFilter implements SuperCodable {
 
     /**
      * The input format using the
-     * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html">DateTimeFormat</a>.
+     * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat
+     * .html">DateTimeFormat</a>.
      * Default is "native".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String formatIn = "native";
 
     /**
      * The input time zone. This field must be specified.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String timeZoneIn;
 
     /**
      * The output format using the
-     * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html">DateTimeFormat</a>.
+     * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat
+     * .html">DateTimeFormat</a>.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String formatOut;
 
     /**
      * The output time zone.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String timeZoneOut;
 
     private TimeField in;

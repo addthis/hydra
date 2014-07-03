@@ -32,7 +32,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.task.map.DataPurgeConfig;
 import com.addthis.hydra.task.map.DataPurgeService;
@@ -51,7 +51,7 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
 
     private final Logger log = LoggerFactory.getLogger(AbstractDataOutput.class);
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean enableJmx = Parameter.boolValue("split.minion.usejmx", true);
 
     /**
@@ -59,7 +59,7 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
      * See above for variable substitutions.
      * This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String[] path;
 
     /**
@@ -67,7 +67,7 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
      * Only bundles from the stream that return true
      * are emitted to the output. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private BundleFilter filter;
 
     /**
@@ -75,7 +75,7 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
      * Purging is based on the date of the data.
      * This field is optional.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private DataPurgeConfig dataPurgeConfig;
 
     private MBeanRemotingSupport jmxremote;

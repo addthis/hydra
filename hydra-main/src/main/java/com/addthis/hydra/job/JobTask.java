@@ -20,8 +20,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.maljson.JSONObject;
 
@@ -35,52 +36,52 @@ import org.slf4j.LoggerFactory;
 /**
  * smallest unit of a job assigned to a host
  */
-public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTask> {
+public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
 
     private static Logger log = LoggerFactory.getLogger(JobTask.class);
 
-    @Codec.Set(codable = true)
-    private String hostUuid;
-    @Codec.Set(codable = true)
-    private String jobUuid;
-    @Codec.Set(codable = true)
-    private int node;
-    @Codec.Set(codable = true)
-    private int state;
-    @Codec.Set(codable = true)
-    private int runCount;
-    @Codec.Set(codable = true)
-    private int starts;
-    @Codec.Set(codable = true)
-    private int errors;
-    @Codec.Set(codable = true)
-    private long fileCount;
-    @Codec.Set(codable = true)
-    private long fileBytes;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
+    private String                    hostUuid;
+    @FieldConfig(codable = true)
+    private String                    jobUuid;
+    @FieldConfig(codable = true)
+    private int                       node;
+    @FieldConfig(codable = true)
+    private int                       state;
+    @FieldConfig(codable = true)
+    private int                       runCount;
+    @FieldConfig(codable = true)
+    private int                       starts;
+    @FieldConfig(codable = true)
+    private int                       errors;
+    @FieldConfig(codable = true)
+    private long                      fileCount;
+    @FieldConfig(codable = true)
+    private long                      fileBytes;
+    @FieldConfig(codable = true)
     private ArrayList<JobTaskReplica> replicas;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ArrayList<JobTaskReplica> readOnlyReplicas;
-    @Codec.Set(codable = true)
-    private int port;
-    @Codec.Set(codable = true)
-    private int replicationFactor;
-    @Codec.Set(codable = true)
-    private int errorCode;
-    @Codec.Set(codable = true)
-    private boolean wasStopped;
-    @Codec.Set(codable = true)
-    private int preFailErrorCode;
-    @Codec.Set(codable = true)
-    private long input;
-    @Codec.Set(codable = true)
-    private double meanRate;
-    @Codec.Set(codable = true)
-    private long totalEmitted;
-    @Codec.Set(codable = true)
-    private String rebalanceSource;
-    @Codec.Set(codable = true)
-    private String rebalanceTarget;
+    @FieldConfig(codable = true)
+    private int                       port;
+    @FieldConfig(codable = true)
+    private int                       replicationFactor;
+    @FieldConfig(codable = true)
+    private int                       errorCode;
+    @FieldConfig(codable = true)
+    private boolean                   wasStopped;
+    @FieldConfig(codable = true)
+    private int                       preFailErrorCode;
+    @FieldConfig(codable = true)
+    private long                      input;
+    @FieldConfig(codable = true)
+    private double                    meanRate;
+    @FieldConfig(codable = true)
+    private long                      totalEmitted;
+    @FieldConfig(codable = true)
+    private String                    rebalanceSource;
+    @FieldConfig(codable = true)
+    private String                    rebalanceTarget;
 
     private volatile JobKey jobKey;
 
@@ -102,7 +103,7 @@ public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTa
     public JobTask clone() {
         try {
             return (JobTask) super.clone();
-        } catch (CloneNotSupportedException e)  {
+        } catch (CloneNotSupportedException e) {
             log.warn("", e);
             return null;
         }
@@ -112,8 +113,10 @@ public final class JobTask implements Codec.Codable, Cloneable, Comparable<JobTa
 
     static {
         nonRunningStates = ImmutableSet.copyOf(Arrays.asList(JobTaskState.IDLE, JobTaskState.ERROR,
-                JobTaskState.ALLOCATED, JobTaskState.REBALANCE, JobTaskState.QUEUED_HOST_UNAVAIL,
-                JobTaskState.QUEUED));
+                                                             JobTaskState.ALLOCATED,
+                                                             JobTaskState.REBALANCE,
+                                                             JobTaskState.QUEUED_HOST_UNAVAIL,
+                                                             JobTaskState.QUEUED));
     }
 
     public boolean isRunning() {

@@ -13,23 +13,23 @@
  */
 package com.addthis.hydra.job;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * A class describing the outcome of a rebalancing action.
  */
-public class RebalanceOutcome implements Codec.Codable {
+public class RebalanceOutcome implements Codable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String errMsg;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String dirCorrectionMsg;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String dirOptimizationMsg;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String id;
     private static Logger log = LoggerFactory.getLogger(RebalanceOutcome.class);
 

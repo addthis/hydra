@@ -17,7 +17,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.util.BundleCalculator;
 
 
@@ -307,13 +307,13 @@ public class BundleFilterNum extends BundleFilter {
     /**
      * Sequence of commands to execute (comma-delimited)
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String define;
 
     /**
      * Subset of fields from the bundle filter that are used in calculation.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String[] columns;
 
     private BundleCalculator calculator;

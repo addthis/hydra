@@ -30,7 +30,7 @@ import java.text.SimpleDateFormat;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskState;
@@ -73,7 +73,7 @@ public class JobAlertRunner {
 
     private final ConcurrentHashMap<String, JobAlert> alertMap;
 
-    private static final CodecJSON codec = new CodecJSON();
+    private static final CodecJSON codec = CodecJSON.INSTANCE;
 
     private boolean alertsEnabled;
 

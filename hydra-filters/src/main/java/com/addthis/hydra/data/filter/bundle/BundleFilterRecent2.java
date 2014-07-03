@@ -24,7 +24,7 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">allows filtering on keys occurring within a sliding time window</span>.
@@ -42,23 +42,23 @@ import com.addthis.codec.Codec;
  */
 public final class BundleFilterRecent2 extends BundleFilter {
 
-    @Codec.Set(codable = true, required = true)
-    private String time;
-    @Codec.Set(codable = true, required = true)
-    private String field;
-    @Codec.Set(codable = true, required = true)
-    private int keys; // number of unique entries to track
-    @Codec.Set(codable = true, required = true)
-    private long timeWindow; // max time window over which events are measured
-    @Codec.Set(codable = true, required = true)
-    private int minPoints; // number of data points required for each entry
-    @Codec.Set(codable = true)
-    private long minAvgTime; // true under average minTime
-    @Codec.Set(codable = true)
-    private long maxOccurrence; // true if count achieved in time window
-    @Codec.Set(codable = true)
-    private boolean defaultExit;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true, required = true)
+    private String          time;
+    @FieldConfig(codable = true, required = true)
+    private String          field;
+    @FieldConfig(codable = true, required = true)
+    private int             keys; // number of unique entries to track
+    @FieldConfig(codable = true, required = true)
+    private long            timeWindow; // max time window over which events are measured
+    @FieldConfig(codable = true, required = true)
+    private int             minPoints; // number of data points required for each entry
+    @FieldConfig(codable = true)
+    private long            minAvgTime; // true under average minTime
+    @FieldConfig(codable = true)
+    private long            maxOccurrence; // true if count achieved in time window
+    @FieldConfig(codable = true)
+    private boolean         defaultExit;
+    @FieldConfig(codable = true)
     private HashSet<String> exclude;
 
     @SuppressWarnings("unchecked")
@@ -101,7 +101,8 @@ public final class BundleFilterRecent2 extends BundleFilter {
         if (avtime == 0) {
             return defaultExit;
         }
-        return (minAvgTime > 0 && avtime <= minAvgTime) || (maxOccurrence > 0 && v.times.size() >= maxOccurrence);
+        return (minAvgTime > 0 && avtime <= minAvgTime) ||
+               (maxOccurrence > 0 && v.times.size() >= maxOccurrence);
     }
 
     /** */

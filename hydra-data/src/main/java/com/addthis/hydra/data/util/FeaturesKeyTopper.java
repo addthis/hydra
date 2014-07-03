@@ -19,22 +19,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 
 /**
  * Class that helps maintain a top N list for any String Map TODO should move
  * into basis libraries
  */
-public final class FeaturesKeyTopper implements Codec.Codable {
+public final class FeaturesKeyTopper implements Codable {
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private HashMap<String, ReplaceableFeaturesBucket> featuresMap;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long minVal;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String minKey;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean lossy;
 
     public FeaturesKeyTopper() {

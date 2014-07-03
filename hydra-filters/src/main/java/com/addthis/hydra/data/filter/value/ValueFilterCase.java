@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.filter.value;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">converts a value to lowercase or uppercase letters</span>.
@@ -36,13 +36,13 @@ public class ValueFilterCase extends StringFilter {
     /**
      * If <code>true</code>, then convert to lowercase letters.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean lower;
 
     /**
      * If <code>true</code>, then convert to uppercase letters.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean upper;
 
     @Override

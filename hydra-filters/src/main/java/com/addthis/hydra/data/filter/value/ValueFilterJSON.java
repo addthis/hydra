@@ -21,7 +21,8 @@ import com.addthis.basis.collect.HotMap;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
@@ -37,21 +38,21 @@ import com.addthis.maljson.JSONObject;
  * @user-reference
  * @hydra-name json
  */
-public class ValueFilterJSON extends ValueFilter implements Codec.SuperCodable {
+public class ValueFilterJSON extends ValueFilter implements SuperCodable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int cacheSize = 1000;
 
     /**
      * If true, then remove whitespace from the beginning and end of the input. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean trim;
 
     /**
      * TODO: write down the purpose of this field.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String query;
 
     private HotMap<String, Object> cache = new HotMap<String, Object>(new ConcurrentHashMap());
@@ -59,7 +60,8 @@ public class ValueFilterJSON extends ValueFilter implements Codec.SuperCodable {
 
     @Override
     public ValueObject filterValue(ValueObject value) {
-        if (value == null || (value.getObjectType() == ValueObject.TYPE.STRING && value.asString().getString().length() == 0)) {
+        if ((value == null) || ((value.getObjectType() == ValueObject.TYPE.STRING) &&
+                                value.asString().asNative().isEmpty())) {
             return value;
         }
         String sv = value.toString();

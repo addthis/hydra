@@ -20,7 +20,8 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
@@ -29,9 +30,10 @@ import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.util.KeyPercentileDistribution;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
-public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistribution.Config> implements Codec.Codable {
+
+public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistribution.Config>
+        implements Codable {
 
     private static Logger log = LoggerFactory.getLogger(DataPercentileDistribution.class);
 
@@ -70,20 +72,20 @@ public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistr
         /**
          * Name of the field to monitor. This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String key;
 
         /**
          * Sample size. Default is 1024.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int sampleSize = 1024;
 
         /**
          * Optionally apply a filter before recording the data.
          * Default is null.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private ValueFilter filter;
 
         @Override
@@ -97,11 +99,11 @@ public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistr
     }
 
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String key;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter filter;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private KeyPercentileDistribution histogram;
 
     private BundleField keyAccess;

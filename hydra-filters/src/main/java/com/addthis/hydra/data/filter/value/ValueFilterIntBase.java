@@ -14,10 +14,10 @@
 package com.addthis.hydra.data.filter.value;
 
 import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,25 +39,25 @@ public class ValueFilterIntBase extends ValueFilter {
     /**
      * The radix of the input value. Must be specified if <code>inDouble</code> is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int in;
 
     /**
      * The radix of the output value. Must be specified if <code>outAsLong</code> is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int out;
 
     /**
      * If true, then return the output as a long. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean outAsLong = false;
 
     /**
      * If true, then the input is parsed as a double value. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean inDouble = false;
 
     @Override
@@ -66,7 +66,7 @@ public class ValueFilterIntBase extends ValueFilter {
             return value;
         }
         try {
-            ValueNumber num;
+            Numeric<?> num;
             if (!inDouble) {
                 num = ValueUtil.asNumberOrParseLong(value, in);
             } else {

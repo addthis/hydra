@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.bundle;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueLong;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -43,45 +43,46 @@ import org.joda.time.format.DateTimeFormatter;
  */
 public class BundleFilterTimeRange extends BundleFilter {
 
-    private static DateTimeFormatter ymd = DateTimeFormat.forPattern("yyMMdd");
-    private static DateTimeFormatter ymdh = DateTimeFormat.forPattern("yyMMddHH");
+    private static DateTimeFormatter ymd   = DateTimeFormat.forPattern("yyMMdd");
+    private static DateTimeFormatter ymdh  = DateTimeFormat.forPattern("yyMMddHH");
     private static DateTimeFormatter ymdhm = DateTimeFormat.forPattern("yyMMddHHmm");
 
     /**
      * The date/time input as expressed in UNIX milliseconds.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String time;
 
     /**
      * If non-null then filter out all date/time values that occur later than this value.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String before;
 
     /**
      * If non-null then filter out all date/time values that occur earlier than this value.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String after;
 
     /**
      * The value to return when a date/time value is within the filter(s). Default is true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean defaultExit = true;
 
     /**
      * If non-null then parse the 'before' and 'after' fields using this
-     * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html">DateTimeFormat</a>.
+     * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat
+     * .html">DateTimeFormat</a>.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String timeFormat;
 
-    private long tbefore;
-    private long tafter;
+    private long              tbefore;
+    private long              tafter;
     private DateTimeFormatter format;
-    private String fields[];
+    private String            fields[];
 
     @Override
     public void initialize() {

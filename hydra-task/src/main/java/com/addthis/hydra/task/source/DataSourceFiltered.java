@@ -17,7 +17,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
@@ -67,13 +67,13 @@ public class DataSourceFiltered extends TaskDataSource {
     /**
      * Underlying data source from which data is fetched. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private TaskDataSource stream;
 
     /**
      * Apply this filter to each bundle that is retrieved to the data source. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private BundleFilter filter;
 
     private Bundle peek;

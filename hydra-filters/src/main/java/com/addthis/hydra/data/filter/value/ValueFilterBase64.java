@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.value;
 import com.addthis.basis.util.Base64;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">encodes or decodes a value to
@@ -41,13 +41,13 @@ public class ValueFilterBase64 extends StringFilter {
     /**
      * if <code>true</code> then encode the value
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean encode;
 
     /**
      * if <code>true</code> then decode the value
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean decode;
 
     @Override

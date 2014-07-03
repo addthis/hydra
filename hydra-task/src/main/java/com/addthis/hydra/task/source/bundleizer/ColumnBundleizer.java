@@ -18,7 +18,7 @@ import java.util.List;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.data.util.Tokenizer;
 
@@ -30,11 +30,11 @@ import com.addthis.hydra.data.util.Tokenizer;
  */
 public class ColumnBundleizer extends NewlineBundleizer {
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String[] columns;
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private Tokenizer tokens;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter tokenFilter;
 
     @Override

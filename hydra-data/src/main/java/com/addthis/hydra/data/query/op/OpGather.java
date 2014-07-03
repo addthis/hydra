@@ -30,7 +30,7 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.util.ValueUtil;
-import com.addthis.bundle.value.ValueNumber;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractQueryOp;
 import com.addthis.hydra.data.query.DiskBackedMap;
@@ -92,8 +92,8 @@ import io.netty.channel.ChannelProgressivePromise;
  */
 public class OpGather extends AbstractQueryOp {
 
-    public static ValueNumber num(ValueObject o) {
-        ValueNumber num = ValueUtil.asNumberOrParseLong(o, 10);
+    public static Numeric<?> num(ValueObject<?> o) {
+        Numeric<?> num = ValueUtil.asNumberOrParseLong(o, 10);
         return num != null ? num : ZERO;
     }
 
@@ -164,7 +164,7 @@ public class OpGather extends AbstractQueryOp {
         if (topColumn >= 0) {
             BundleField topColumnTo = conf[topColumn].getTo();
             if (topColumnTo != null) {
-                ValueNumber num = num(merge.getValue(topColumnTo));
+                Numeric num = num(merge.getValue(topColumnTo));
                 if (num == null) {
                     return;
                 }

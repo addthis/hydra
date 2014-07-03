@@ -22,15 +22,12 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.hydra.common.plugins.DynamicLoader;
-import com.addthis.hydra.common.plugins.PluginReader;
+import com.addthis.codec.plugins.PluginRegistry;
 import com.addthis.hydra.task.run.JsonRunner;
 import com.addthis.maljson.JSONObject;
 import com.addthis.metrics.reporter.config.ReporterConfig;
@@ -52,25 +49,13 @@ public class Main {
     private static final boolean GANGLIA_SHORT_NAMES = Parameter.boolValue("ganglia.useShortNames", false);
     private static final boolean ANNOUNCE_LOG_INIT = Parameter.boolValue("init.log4j.verbose", false);
 
-    public static final Map<String, String> cmap = new HashMap<>();
-    public static final DynamicLoader.DynamicLoaderResult dlr;
-
     static {
         /** force log4j init before first logger is created */
         initLog4j();
         log = LoggerFactory.getLogger(Main.class);
-        /** register types */
-        dlr =  DynamicLoader.readDynamicClasses("hydra.loader");
-        PluginReader.registerLazyPlugin("-executables.classmap", cmap);
-        cmap.putAll(dlr.executables);
     }
 
-    @SuppressWarnings("unused")
-    public static void registerFilter(String name, String clazz) {
-        cmap.put(name, clazz);
-    }
-
-    public static void main(String args[]) {
+    public static void main(String[] args) {
         initLog4j();
         if (args.length > 0) {
             if (GANGLIA_ENABLE) {
@@ -131,16 +116,12 @@ public class Main {
                         System.out.println(j.toString());
                         break;
                     default:
-                        String className = cmap.get(args[0]);
-                        if (className != null) {
-                            Class clazz = PluginReader.loadClass("-executables.classmap or dynamic loader",
-                                    args[0], className, Object.class, dlr.loader);
-                            if (clazz != null) {
-                                Method m = clazz.getDeclaredMethod("main", String[].class);
-                                m.invoke(null, (Object) cutargs(args));
-                            } else {
-                                usage();
-                            }
+                        Class clazz = PluginRegistry.defaultRegistry().asMap()
+                                                    .get("executables").asBiMap()
+                                                    .get(args[0]);
+                        if (clazz != null) {
+                            Method m = clazz.getDeclaredMethod("main", String[].class);
+                            m.invoke(null, (Object) cutargs(args));
                         } else {
                             usage();
                         }
@@ -167,7 +148,7 @@ public class Main {
         return hostName;
     }
 
-    private static String[] cutargs(String args[]) {
+    private static String[] cutargs(String[] args) {
         String[] ns = new String[args.length - 1];
         System.arraycopy(args, 1, ns, 0, args.length - 1);
         return ns;

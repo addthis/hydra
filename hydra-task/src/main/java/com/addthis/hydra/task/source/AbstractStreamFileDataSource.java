@@ -40,8 +40,9 @@ import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueString;
-import com.addthis.codec.Codec;
-import com.addthis.hydra.common.plugins.PluginReader;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.Pluggable;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.filter.value.StringFilter;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.PageDB;
@@ -120,63 +121,63 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
      * null (false), then the file is skipped. Otherwise, it uses whatever string the filter
      * returns. Anything that isn't a StringFilter throws a runtime error.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private StringFilter filter;
 
     /**
      * Specifies conversion to bundles.
      * The default is type "channel".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private BundleizerFactory format = new ChannelBundleizer();
 
     /**
      * Path to the mark directory.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String markDir = "marks";
 
     /**
      * Ignore the mark directory
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean ignoreMarkDir;
 
     /**
      * Enable metrics visible only from jmx
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean jmxMetrics;
 
     /**
      * Number of shards in the input source.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected Integer shardTotal;
 
     /**
      * If specified then process only the shards specified in this array.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected Integer shards[];
 
     /**
      * If true then generate a hash of the filename input rather than use the {{mod}} field. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean hash;
 
     /**
      * If true then allow all of the Hydra nodes to process all the data when
      * the hash field is false and the filename does not have {{mode}}. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean processAllData;
 
     /**
      * If non-null, then inject the filename into the bundle field using this field name. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String injectSourceName;
 
     /**
@@ -186,35 +187,35 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
      * potential performance gains you might try increasing this. 25 is a good place
      * to start, I think. The default is 1.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int multiBundleReads = 1;
 
     /**
      * Number of bundles to fetch prior to starting the worker threads.
      * Default is either "dataSourceMeshy2.preopen" configuration value or 2.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int preOpen = DEFAULT_PREOPEN;
 
     /**
      * Trigger an error when the number of skipped sources is greater than this value.
      * Default is either "dataSourceMeshy2.skipSourceExit" configuration value  or 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int skipSourceExit = DEFAULT_SKIP_SOURCE_EXIT;
 
     /**
      * Maximum size of the queue that stores bundles prior to their processing.
      * Default is either "dataSourceMeshy2.buffer" configuration value or 128.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int buffer = DEFAULT_BUFFER;
 
     /**
      * Number of worker threads that request data from the meshy source.
      * Default is either "dataSourceMeshy2.workers" configuration value or 2.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int workers = DEFAULT_WORKERS;
 
     /**
@@ -227,7 +228,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
      * In more detail: Any non-null value will use legacy marks and anything beginning with
      * 'stream' will trim the starting '/' in a mesh path.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String legacyMode;
 
     private final ListBundleFormat bundleFormat = new ListBundleFormat();
@@ -747,31 +748,8 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
      *
      * @user-reference
      */
-    @Codec.Set(classMapFactory = BundleizerFactory.CMAP.class)
-    public abstract static class BundleizerFactory implements Codec.Codable {
-
-        private static Codec.ClassMap cmap = new Codec.ClassMap() {
-            @Override
-            public String getClassField() {
-                return "type";
-            }
-        };
-
-        public static class CMAP implements Codec.ClassMapFactory {
-
-            public Codec.ClassMap getClassMap() {
-                return cmap;
-            }
-        }
-
-        static {
-            PluginReader.registerPlugin("-stream-bundleizer.classmap", cmap, BundleizerFactory.class);
-        }
-
-        @SuppressWarnings("unused")
-        public static void registerBundleizer(String name, Class<? extends BundleizerFactory> clazz) {
-            cmap.add(name, clazz);
-        }
+    @Pluggable("stream bundleizer")
+    public abstract static class BundleizerFactory implements Codable {
 
         public abstract Bundleizer createBundleizer(InputStream input, BundleFactory factory);
     }
@@ -799,7 +777,8 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                     if (!multiFill(wrap, multiBundleReads)) {
                         wrap = nextWrappedSource();
                     }
-                    if (wrap != null) //May be null from nextWrappedSource -> decreases size of preOpened
+                    if (wrap !=
+                        null) //May be null from nextWrappedSource -> decreases size of preOpened
                     {
                         preOpened.put(wrap);
                     }
@@ -855,7 +834,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                  * to ensure it is invoked at most once.
                  */
                 if (runningThreadCountDownLatch.getCount() == 0) {
-                    log.info("No more workers are running. One or more threads will attempt to call shutdown.");
+                    log.info(
+                            "No more workers are running. One or more threads will attempt to " +
+                            "call shutdown.");
                     shutdown();
                 }
             }

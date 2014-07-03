@@ -13,24 +13,28 @@
  */
 package com.addthis.hydra.task.source;
 
-import com.addthis.codec.Codec;
 import com.addthis.basis.util.Varint;
+
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.BytesCodable;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.task.stream.StreamFile;
 
 import com.google.common.base.Objects;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
 
 /** */
-public class SimpleMark implements Codec.Codable, Codec.BytesCodable {
+public class SimpleMark implements Codable, BytesCodable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String val;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long index;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean end;
 
     public SimpleMark set(String val, long index) {

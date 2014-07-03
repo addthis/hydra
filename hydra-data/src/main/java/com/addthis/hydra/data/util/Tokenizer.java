@@ -18,7 +18,8 @@ import java.util.List;
 
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 
 /**
@@ -32,30 +33,30 @@ import com.addthis.codec.Codec;
  *
  * @user-reference
  */
-public class Tokenizer implements Codec.Codable {
+public class Tokenizer implements Codable {
 
     /**
      * This string is the deliminator between two fields in the input string. Default is ",".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String separator = ",";
 
     /**
      * Any of these strings can be used to combine strings that would otherwise be split across tokens.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String group[];
 
     /**
      * If true then pack all the tokens into a single field. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean pack;
 
     /**
      * Extract the first character of this string and use it as an escape character. Default is "\".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String escape = "\\";
 
     private int maxColCount;

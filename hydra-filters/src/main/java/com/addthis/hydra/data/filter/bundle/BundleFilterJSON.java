@@ -24,7 +24,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
@@ -49,15 +49,15 @@ public class BundleFilterJSON extends BundleFilter {
         return bfj;
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int cache = 100;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean trim;
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String json;
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String set;
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private BundleFilterTemplate query;
 
     private HotMap<String, Object> objCache;

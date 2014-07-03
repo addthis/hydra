@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 import org.slf4j.Logger;
@@ -76,7 +76,7 @@ public class AggregateTaskDataSource extends TaskDataSource {
     /**
      * an ordered sequence of data sources. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private TaskDataSource[] sources;
 
     private TaskDataSource currentSource;

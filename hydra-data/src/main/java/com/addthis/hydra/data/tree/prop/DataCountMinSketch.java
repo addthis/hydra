@@ -23,7 +23,8 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueTranslationException;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
@@ -34,7 +35,8 @@ import com.clearspring.analytics.stream.frequency.CountMinSketch;
 
 import com.google.common.annotations.VisibleForTesting;
 
-public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> implements Codec.SuperCodable {
+public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> implements
+                                                                                SuperCodable {
 
     /**
      * <p>This data attachment is a <span class="hydra-summary">count-min sketch attached to a node</span>.
@@ -93,19 +95,19 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
          * Bundle field name from which to insert keys into the sketch.
          * This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String key;
 
         /**
          * Optionally specify the depth of the sketch. Default is 10.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int depth = 10;
 
         /**
          * Width of the sketch in bits. This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private int width;
 
         /**
@@ -113,7 +115,7 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
          * that are to be associated with each key. If not specified then
          * each key instance is assumed to have a count of 1.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String count;
 
         @Override
@@ -124,7 +126,7 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
         }
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private byte[] raw;
 
     private CountMinSketch sketch;

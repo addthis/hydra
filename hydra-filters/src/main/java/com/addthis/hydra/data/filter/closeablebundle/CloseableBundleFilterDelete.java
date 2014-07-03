@@ -17,7 +17,7 @@ import java.io.File;
 import java.io.IOException;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 
 import org.apache.commons.io.FileUtils;
 
@@ -27,9 +27,9 @@ import org.slf4j.LoggerFactory;
 
 public class CloseableBundleFilterDelete extends CloseableBundleFilter {
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String fileName;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean pre = false;
 
     private Logger log = LoggerFactory.getLogger(CloseableBundleFilterDelete.class);

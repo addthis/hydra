@@ -14,13 +14,13 @@
 
 package com.addthis.hydra.data.query.op.merge;
 
-import com.addthis.bundle.value.ValueNumber;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.hydra.data.query.op.MergedRow;
 
 public class AverageValue extends SumValue {
 
     @Override
-    public ValueNumber doEmit(ValueNumber value, MergedRow mergedRow) {
+    public Numeric<?> doEmit(Numeric<?> value, MergedRow mergedRow) {
         return value.avg(mergedRow.getMergedCount());
     }
 }

@@ -19,6 +19,8 @@ import com.addthis.basis.util.Strings;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.AbstractCustom;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueBytes;
 import com.addthis.bundle.value.ValueCustom;
@@ -26,14 +28,14 @@ import com.addthis.bundle.value.ValueDouble;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueMap;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueSimple;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.bundle.value.ValueTranslationException;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecBin1;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.binary.CodecBin2;
+import com.addthis.codec.codables.SuperCodable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
@@ -45,7 +47,7 @@ import com.addthis.hydra.store.util.SeenFilterBasic;
  * like DataBloom but better integrated to into query. over time we need to
  * resolve this.
  */
-public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.SuperCodable {
+public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCodable {
 
     /**
      * <p>This data attachment is a <span class="hydra-summary">bloom filter attached to a node</span>.
@@ -75,14 +77,14 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
          * Bundle field name from which to draw values.
          * This field is required.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String key;
 
         /**
          * Maximum number of elements that can be stored in the bloom filter.
          * This field is required.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int max;
 
         /**
@@ -90,7 +92,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
          * operation. This parameter is usually referred to as
          * the "k" parameter in the literature. Default value is 4.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int bitsPer = 4;
 
         /**
@@ -102,7 +104,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
          * <p>4 - HASH_PLUGGABLE_SHIFT : best blend of speed and accuracy
          * <p>Default value is 4.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int hash = 4;
 
         @Override
@@ -113,7 +115,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
         }
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private SeenFilterBasic<Raw> bloom;
 
     private BundleField keyAccess;
@@ -129,7 +131,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
         } else if (key.startsWith("ck-")) {
             return ValueFactory.create(bloom.getSeen(Raw.get(Bytes.urldecode(key.substring(3)))) ? 1 : 0);
         } else if (key.startsWith("st-")) {
-            long set[] = bloom.getHashSet(Raw.get(Bytes.urldecode(key.substring(3))));
+            long[] set = bloom.getHashSet(Raw.get(Bytes.urldecode(key.substring(3))));
             boolean seen = bloom.checkHashSet(set);
             bloom.updateHashSet(set);
             return ValueFactory.create(seen ? 1 : 0);
@@ -162,42 +164,42 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
     /**
      * for working with bloom filters
      */
-    public static final class ValueBloom implements ValueCustom, ValueNumber {
-
-        private SeenFilterBasic<?> bloom;
+    public static final class ValueBloom extends AbstractCustom<SeenFilterBasic<?>>
+            implements Numeric<SeenFilterBasic<?>> {
 
         public ValueBloom() {
+            super(null);
         }
 
         public ValueBloom(SeenFilterBasic<?> bloom) {
-            this.bloom = bloom;
+            super(bloom);
         }
 
         @Override
         public String toString() {
             try {
-                return CodecJSON.encodeString(bloom);
+                return CodecJSON.encodeString(heldObject);
             } catch (Exception e) {
                 return super.toString();
             }
         }
 
         public long toLong() {
-            return bloom.getSaturation();
+            return heldObject.getSaturation();
         }
 
         @Override
-        public ValueNumber avg(int count) {
+        public Numeric<?> avg(int count) {
             return this;
         }
 
         @Override
-        public ValueNumber diff(ValueNumber val) {
+        public <P extends Numeric<?>> Numeric<?> diff(P val) {
             return this;
         }
 
         @Override
-        public ValueNumber max(ValueNumber val) {
+        public <P extends Numeric<?>> Numeric<?> max(P val) {
             if (val.getClass() == getClass()) {
                 ValueBloom b = (ValueBloom) val;
                 return b.toLong() > toLong() ? b : this;
@@ -206,7 +208,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
         }
 
         @Override
-        public ValueNumber min(ValueNumber val) {
+        public <P extends Numeric<?>> Numeric<?> min(P val) {
             if (val.getClass() == getClass()) {
                 ValueBloom b = (ValueBloom) val;
                 return b.toLong() < toLong() ? b : this;
@@ -215,10 +217,10 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
         }
 
         @Override
-        public ValueNumber sum(ValueNumber val) {
+        public <P extends Numeric<?>> Numeric<?> sum(P val) {
             if (val.getClass() == getClass()) {
                 ValueBloom b = (ValueBloom) val;
-                return new ValueBloom(b.bloom.mergeSeen(bloom));
+                return new ValueBloom(b.heldObject.mergeSeen(heldObject));
             }
             return this;
         }
@@ -239,7 +241,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
         }
 
         @Override
-        public ValueNumber asNumber() throws ValueTranslationException {
+        public Numeric<?> asNumeric() throws ValueTranslationException {
             return this;
         }
 
@@ -264,15 +266,10 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
         }
 
         @Override
-        public Class<? extends ValueCustom> getContainerClass() {
-            return ValueBloom.class;
-        }
-
-        @Override
         public ValueMap asMap() throws ValueTranslationException {
             try {
                 ValueMap map = ValueFactory.createMap();
-                map.put("b", ValueFactory.create(CodecBin1.encodeBytes(bloom)));
+                map.put("b", ValueFactory.create(CodecBin2.encodeBytes(heldObject)));
                 return map;
             } catch (Exception ex) {
                 throw new ValueTranslationException(ex);
@@ -280,9 +277,10 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
         }
 
         @Override
-        public void setValues(ValueMap map) {
+        public void setValues(ValueMap<?> map) {
             try {
-                bloom = (SeenFilterBasic<?>) CodecBin1.decodeBytes(new SeenFilterBasic(), map.get("b").asBytes().getBytes());
+                heldObject = (SeenFilterBasic<?>) CodecBin2.decodeBytes(
+                        new SeenFilterBasic(), map.get("b").asBytes().asNative());
             } catch (Exception ex) {
                 throw new ValueTranslationException(ex);
             }
@@ -290,7 +288,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements Codec.Sup
 
         @Override
         public ValueSimple asSimple() {
-            return ValueFactory.create(bloom.getSaturation());
+            return ValueFactory.create(heldObject.getSaturation());
         }
     }
 }

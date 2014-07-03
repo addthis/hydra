@@ -15,15 +15,15 @@
 package com.addthis.hydra.data.query.op.merge;
 
 import com.addthis.bundle.util.ValueUtil;
-import com.addthis.bundle.value.ValueNumber;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractQueryOp;
 
-public abstract class AbstractMergedNumber extends AbstractMergedValue<ValueNumber> {
+public abstract class AbstractMergedNumber extends AbstractMergedValue<Numeric<?>> {
 
     @Override
-    protected ValueNumber convert(ValueObject nextValue) {
-        ValueNumber num = ValueUtil.asNumberOrParseLong(nextValue, 10);
+    protected Numeric<?> convert(ValueObject<?> nextValue) {
+        Numeric<?> num = ValueUtil.asNumberOrParseLong(nextValue, 10);
         return (num != null) ? num : AbstractQueryOp.ZERO;
     }
 }

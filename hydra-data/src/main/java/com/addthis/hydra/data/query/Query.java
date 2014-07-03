@@ -23,8 +23,9 @@ import com.addthis.basis.util.RollingLog;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.channel.DataChannelOutput;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
@@ -36,7 +37,7 @@ import io.netty.channel.ChannelProgressivePromise;
 /**
  * Object representation of a tree query.
  */
-public class Query implements Codec.Codable {
+public class Query implements Codable {
 
     private static final Logger log              = LoggerFactory.getLogger(Query.class);
     private static final int    MAX_PRINT_LENGTH = 3000;
@@ -46,22 +47,22 @@ public class Query implements Codec.Codable {
 
     protected static RollingLog traceLog;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String[] paths;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String[] ops;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String   job;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean  trace;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String   sessionId;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long     queryId;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private HashMap<String, String> params = new HashMap<>();
 
-    @Codec.Set(codable = false)
+    @FieldConfig(codable = false)
     public ChannelProgressivePromise queryPromise = null;
 
     // for codec

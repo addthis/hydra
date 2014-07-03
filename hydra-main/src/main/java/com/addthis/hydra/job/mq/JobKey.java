@@ -15,17 +15,18 @@ package com.addthis.hydra.job.mq;
 
 import java.io.Serializable;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 import org.codehaus.jackson.annotate.JsonIgnore;
 
-public class JobKey implements Codec.Codable, Serializable {
+public class JobKey implements Codable, Serializable {
 
     private static final long serialVersionUID = -7403399606713468228L;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String jobUuid;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer nodeNumber;
 
     public JobKey() {

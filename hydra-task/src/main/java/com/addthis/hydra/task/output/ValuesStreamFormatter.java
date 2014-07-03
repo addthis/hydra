@@ -16,47 +16,15 @@ package com.addthis.hydra.task.output;
 import java.io.OutputStream;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.ClassMap;
-import com.addthis.codec.Codec.ClassMapFactory;
+import com.addthis.codec.annotations.Pluggable;
+import com.addthis.codec.codables.Codable;
 
+@Pluggable("values stream formatter")
+public abstract class ValuesStreamFormatter implements Codable {
 
-@Codec.Set(classMapFactory = ValuesStreamFormatter.CMAP.class)
-public abstract class ValuesStreamFormatter implements Codec.Codable {
-
-    private static ClassMap cmap = new ClassMap() {
-        @Override
-        public String getClassField() {
-            return "type";
-        }
-    };
-
-    /**
-     * handles serialization maps
-     */
-    public static class CMAP implements ClassMapFactory {
-
-        public ClassMap getClassMap() {
-            return cmap;
-        }
-    }
-
-    public static void registerClass(String name, Class<? extends ValuesStreamFormatter> clazz) {
-        cmap.add(name, clazz);
-    }
-
-    /** setup default serialization types */
-    static {
-        registerClass("kv", ValueStreamFormatKV.class);
-        registerClass("tsv", ValueStreamFormatTSV.class);
-    }
-
-    /** */
     public abstract void init(OutputStream out) throws Exception;
 
-    /** */
     public abstract void output(Bundle row) throws Exception;
 
-    /** */
     public abstract void flush();
 }

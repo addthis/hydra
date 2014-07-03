@@ -85,14 +85,14 @@ public class ListBytes extends AbstractList<byte[]> implements List<byte[]> {
     public byte[] get(int index) {
         ValueObject val = data.get(index);
         if (val == null) return null;
-        return val.asBytes().getBytes();
+        return val.asBytes().asNative();
     }
 
     @Override
     public byte[] set(int index, byte[] element) {
         ValueObject prev = data.set(index, ValueFactory.create(element));
         if (prev == null) return null;
-        return prev.asBytes().getBytes();
+        return prev.asBytes().asNative();
     }
 
     @Override
@@ -104,7 +104,7 @@ public class ListBytes extends AbstractList<byte[]> implements List<byte[]> {
     public byte[] remove(int index) {
         ValueObject prev = data.remove(index);
         if (prev == null) return null;
-        return prev.asBytes().getBytes();
+        return prev.asBytes().asNative();
     }
 }
 

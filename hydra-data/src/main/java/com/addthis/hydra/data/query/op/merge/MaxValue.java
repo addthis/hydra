@@ -14,12 +14,12 @@
 
 package com.addthis.hydra.data.query.op.merge;
 
-import com.addthis.bundle.value.ValueNumber;
+import com.addthis.bundle.value.Numeric;
 
 public class MaxValue extends AbstractMergedNumber {
 
     @Override
-    protected ValueNumber doMerge(ValueNumber nextValue, ValueNumber value) {
+    protected Numeric<?> doMerge(Numeric<?> nextValue, Numeric<?> value) {
         return value.max(nextValue);
     }
 }

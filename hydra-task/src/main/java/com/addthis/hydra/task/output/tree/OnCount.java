@@ -13,7 +13,8 @@
  */
 package com.addthis.hydra.task.output.tree;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 /**
  * This class represents possible triggering value changes.
@@ -21,15 +22,15 @@ import com.addthis.codec.Codec;
  * match is a single value to match.
  * mad is matched whenever the value % mod == 0
  */
-public final class OnCount implements Codec.Codable {
+public final class OnCount implements Codable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long anyof[];
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long match;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long mod;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private PathElement exec;
 
     public void resolve(TreeMapper mapper) {

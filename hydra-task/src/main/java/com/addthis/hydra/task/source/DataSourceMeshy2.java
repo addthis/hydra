@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.task.source;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.stream.PersistentStreamFileSource;
 import com.addthis.hydra.task.stream.StreamSourceMeshy;
 
@@ -49,7 +49,7 @@ public class DataSourceMeshy2 extends AbstractStreamFileDataSource {
     /**
      * Mesh configuration parameters.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private StreamSourceMeshy mesh;
 
     @Override

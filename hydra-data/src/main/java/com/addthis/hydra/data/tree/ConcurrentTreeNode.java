@@ -562,9 +562,8 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     }
 
     @Override
-    public boolean encodeLock() {
+    public void encodeLock() {
         lock.readLock().lock();
-        return true;
     }
 
     @Override

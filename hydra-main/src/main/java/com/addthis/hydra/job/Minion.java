@@ -62,8 +62,9 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.bark.ZkGroupMembership;
 import com.addthis.bark.ZkUtil;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.backup.DailyBackup;
 import com.addthis.hydra.job.backup.GoldBackup;
 import com.addthis.hydra.job.backup.HourlyBackup;
@@ -143,7 +144,7 @@ import org.slf4j.LoggerFactory;
 /**
  * TODO implement APIs for extended probing, sanity, clearing of job state
  */
-public class Minion extends AbstractHandler implements MessageListener, Codec.Codable {
+public class Minion extends AbstractHandler implements MessageListener, Codable {
 
     private static Logger log = LoggerFactory.getLogger(Minion.class);
     private static boolean meshQueue = Parameter.boolValue("queue.mesh", false);
@@ -199,7 +200,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                     new LinkedBlockingQueue<Runnable>(),
                     new ThreadFactoryBuilder().setNameFormat("rabbitMQConnectionService-%d").build()));
     private Lock minionStateLock = new ReentrantLock();
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private MinionTaskDeleter minionTaskDeleter;
     // Historical metrics
     private Timer fileStatsTimer;
@@ -258,13 +259,13 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
     private MinionWriteableDiskCheck diskHealthCheck;
     private int minionPid = -1;
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String uuid;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ConcurrentHashMap<String, Integer> stopped = new ConcurrentHashMap<>();
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final ArrayList<CommandTaskKick> jobQueue = new ArrayList<>(10);
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String minionTypes;
 
     private Histogram activeTaskHistogram;
@@ -1145,46 +1146,46 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
     /**
      * for tracking state
      */
-    public class JobTask implements Codec.Codable {
+    public class JobTask implements Codable {
 
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String id;
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private Integer node;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private Integer nodeCount;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private CommandTaskKick kick;
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private int runCount;
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private long runTime;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private long startTime;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private boolean monitored = true;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private long fileCount;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private long fileBytes;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private volatile boolean deleted;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int retries;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private boolean wasQueued;
 
         private volatile ReplicaTarget[] failureRecoveryReplicas;
         private volatile ReplicaTarget[] replicas;
 
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private long replicateStartTime;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private long backupStartTime;
 
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String rebalanceSource;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String rebalanceTarget;
 
         private Process process;
@@ -1344,7 +1345,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             File jobExit = new File(jobDir, "job.exit");
             if (jobExit.exists() && jobExit.canRead()) {
                 try {
-                    new CodecJSON().decode(exitState, Files.read(jobExit));
+                    CodecJSON.INSTANCE.decode(exitState, Files.read(jobExit));
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }

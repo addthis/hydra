@@ -15,7 +15,7 @@ package com.addthis.hydra.store.util;
 
 import com.addthis.basis.test.SlowTest;
 
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

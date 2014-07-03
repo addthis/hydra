@@ -14,37 +14,38 @@
 
 package com.addthis.hydra.query.tracker;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.query.aggregate.TaskSourceInfo;
 
-public class QueryEntryInfo implements Codec.Codable {
+public class QueryEntryInfo implements Codable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public String[] paths;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public long uuid;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public String alias;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public String sources;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public String remoteip;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public String sender;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public String job;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public String[] ops;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public long startTime;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public long runTime;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public long lines;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public long sentLines;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public QueryState state;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public TaskSourceInfo[] tasks;
 }

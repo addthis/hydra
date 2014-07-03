@@ -23,7 +23,7 @@ import com.addthis.bundle.core.BundleComparator;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 /**
@@ -37,19 +37,19 @@ public class SortedTaskDataSource extends TaskDataSource {
     /**
      * Underlying data source that will be sorted. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private TaskDataSource source;
 
     /**
      * How to sort the underlying data source. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private BundleComparator comparator;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer elements;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String onField;
 
     private final TreeMap<Bundle, Bundle> sorted;

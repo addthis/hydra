@@ -18,11 +18,9 @@ import java.util.ArrayList;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 import org.slf4j.Logger;
-
-
 import org.slf4j.LoggerFactory;
 public class BundleFilterTemplate extends BundleFilter {
 
@@ -35,13 +33,13 @@ public class BundleFilterTemplate extends BundleFilter {
         return bft;
     }
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String tokens[];
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String set;
 
     private String fieldSet[];
-    private Token tokenSet[];
+    private Token  tokenSet[];
 
     @Override
     public void initialize() {
@@ -71,7 +69,7 @@ public class BundleFilterTemplate extends BundleFilter {
             }
             bundle.setValue(bound[bound.length - 1], ValueFactory.create(sb.toString()));
             return true;
-        } catch (Exception e)  {
+        } catch (Exception e) {
             log.warn("", e);
             return false;
         }

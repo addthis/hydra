@@ -17,7 +17,7 @@ import java.util.List;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
@@ -38,7 +38,7 @@ public class FilteredDataOutput extends TaskDataOutput {
      * Underlying output sink to which data is written.
      * This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private TaskDataOutput output;
 
     /**
@@ -46,7 +46,7 @@ public class FilteredDataOutput extends TaskDataOutput {
      * prior to writing to output.
      * This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private BundleFilter filter;
 
     @Override

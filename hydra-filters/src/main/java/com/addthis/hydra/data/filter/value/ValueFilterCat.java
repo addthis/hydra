@@ -15,7 +15,7 @@ package com.addthis.hydra.data.filter.value;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">perform pre- or post- string concatenation</span>.
@@ -33,13 +33,13 @@ public class ValueFilterCat extends ValueFilter {
     /**
      * If non-null, then prefix this string onto the beginning of the input.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String pre;
 
     /**
      * If non-null, then postfix this string onto the end of the input.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String post;
 
     @Override
