@@ -31,7 +31,6 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueString;
 

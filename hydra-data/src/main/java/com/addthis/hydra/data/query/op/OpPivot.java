@@ -37,7 +37,6 @@ import com.addthis.bundle.value.ValueDouble;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueMap;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueSimple;
 import com.addthis.bundle.value.ValueString;

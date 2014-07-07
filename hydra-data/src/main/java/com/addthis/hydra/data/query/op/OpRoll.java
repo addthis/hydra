@@ -20,7 +20,6 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.Numeric;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractRowOp;
 
@@ -260,8 +259,8 @@ public class OpRoll extends AbstractRowOp {
         if (state == null) {
             colIn = new BundleColumnBinder(row, Strings.splitArray(args[0], ",")).getFields();
             colKeys = args.length > 1 ? new BundleColumnBinder(row, Strings.splitArray(args[1], ",")).getFields() : null;
-            state = new ValueNumber[colIn.length];
-            oldvals = new ValueNumber[colIn.length];
+            state = new Numeric[colIn.length];
+            oldvals = new Numeric[colIn.length];
             if (inPlace || summary) {
                 colOut = colIn;
                 if (summary) {
