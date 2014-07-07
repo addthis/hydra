@@ -32,7 +32,6 @@ import com.addthis.basis.util.MemoryCounter;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Varint;
 
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.KeyCoder;
 

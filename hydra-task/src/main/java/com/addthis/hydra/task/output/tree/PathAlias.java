@@ -16,7 +16,7 @@ package com.addthis.hydra.task.output.tree;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.util.ValueUtil;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeInitializer;
 import com.addthis.hydra.data.tree.DataTreeUtil;

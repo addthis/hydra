@@ -18,11 +18,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * This data source <span class="hydra-summary">aggregates data from one or more data sources</span>.

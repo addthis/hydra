@@ -16,7 +16,6 @@ package com.addthis.hydra.util;
 import java.io.OutputStreamWriter;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 
 /**

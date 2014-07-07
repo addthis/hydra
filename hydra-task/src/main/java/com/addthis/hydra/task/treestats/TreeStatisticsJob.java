@@ -26,7 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.ConcurrentTree;
 import com.addthis.hydra.data.tree.ReadTree;
 import com.addthis.hydra.data.tree.TreeStatistics;
@@ -36,7 +36,6 @@ import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.hydra.task.run.TaskRunnable;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * This Hydra job is <span class="hydra-summary">a diagnostic utility for map jobs</span>.

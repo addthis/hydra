@@ -37,7 +37,6 @@ import com.yammer.metrics.core.Counter;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketHandler;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * This class is a jetty request handler that opens web sockets with clients upon request, and keeps a set of open web sockets

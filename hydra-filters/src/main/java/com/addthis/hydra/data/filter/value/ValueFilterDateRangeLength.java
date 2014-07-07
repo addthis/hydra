@@ -20,7 +20,7 @@ import com.addthis.basis.time.DTimeUnit;
 import com.addthis.basis.time.Dates;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 
 import org.joda.time.DateTime;
 import org.joda.time.Interval;

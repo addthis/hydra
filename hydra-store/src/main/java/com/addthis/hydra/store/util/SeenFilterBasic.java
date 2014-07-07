@@ -18,7 +18,6 @@ import java.security.NoSuchAlgorithmException;
 
 import com.addthis.basis.util.Bytes;
 
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.common.hash.PluggableHashFunction;

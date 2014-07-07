@@ -21,7 +21,7 @@ import java.util.zip.GZIPOutputStream;
 import com.addthis.basis.util.MemoryCounter;
 import com.addthis.basis.util.Numbers;
 
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.Codec;
 import com.addthis.codec.binary.CodecBin2;
 import com.addthis.codec.json.CodecJSON;
 

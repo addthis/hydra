@@ -13,11 +13,6 @@
  */
 package com.addthis.hydra.data.tree;
 
-import com.addthis.basis.util.ClosableIterator;
-import com.addthis.basis.util.MemoryCounter.Mem;
-import com.addthis.hydra.store.db.DBKey;
-import com.addthis.hydra.store.db.IPageDB.Range;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -30,6 +25,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import com.addthis.basis.util.ClosableIterator;
+import com.addthis.basis.util.MemoryCounter.Mem;
+
+import com.addthis.hydra.store.db.DBKey;
+import com.addthis.hydra.store.db.IPageDB.Range;
 
 
 /**

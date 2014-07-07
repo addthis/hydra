@@ -27,8 +27,6 @@ import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeNodeList;
 
 import org.slf4j.Logger;
-
-
 import org.slf4j.LoggerFactory;
 @SuppressWarnings("serial")
 public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInitializer, BundleFactory, BundleFormatted {

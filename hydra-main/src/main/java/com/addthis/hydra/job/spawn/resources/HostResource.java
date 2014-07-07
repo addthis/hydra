@@ -33,7 +33,6 @@ import com.addthis.maljson.JSONObject;
 import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 @Path("/host")
 public class HostResource {

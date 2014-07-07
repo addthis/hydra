@@ -36,7 +36,6 @@ import com.addthis.hydra.job.spawn.jersey.User;
 import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * This resource serves, HTML, CSS, JS, IMG, and any other files that are in spawn's web directory

@@ -14,7 +14,7 @@
 package com.addthis.hydra.task.map;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 
 public class StreamChain extends StreamBuilder {
 

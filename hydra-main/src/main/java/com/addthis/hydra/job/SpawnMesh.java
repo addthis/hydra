@@ -23,8 +23,8 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.Codec;
-import com.addthis.codec.json.CodecJSON;
 import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.mq.CommandTaskKick;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.MeshyClientConnector;

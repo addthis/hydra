@@ -18,7 +18,7 @@ import java.util.Map;
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.JitterClock;
 
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.TreeNodeList;

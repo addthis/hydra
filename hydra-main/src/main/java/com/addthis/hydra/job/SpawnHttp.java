@@ -45,8 +45,6 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.slf4j.Logger;
-
-
 import org.slf4j.LoggerFactory;
 public class SpawnHttp extends AbstractHandler {
 

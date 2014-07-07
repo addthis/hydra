@@ -16,14 +16,13 @@ package com.addthis.hydra.task.map;
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.closeablebundle.CloseableBundleFilter;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Meter;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class CloseableBundleFilterStreamBuilder extends StreamBuilder {
 

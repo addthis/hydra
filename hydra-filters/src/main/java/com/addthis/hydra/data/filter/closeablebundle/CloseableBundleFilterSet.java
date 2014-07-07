@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.closeablebundle;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 
 
 public class CloseableBundleFilterSet extends CloseableBundleFilter {

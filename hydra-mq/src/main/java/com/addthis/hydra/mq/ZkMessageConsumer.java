@@ -13,21 +13,24 @@
  */
 package com.addthis.hydra.mq;
 
+import java.io.IOException;
+import java.io.Serializable;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import com.addthis.bark.StringSerializer;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
+
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 public class ZkMessageConsumer<T extends Serializable> implements MessageConsumer {
 

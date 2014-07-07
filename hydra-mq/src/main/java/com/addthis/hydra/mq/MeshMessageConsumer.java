@@ -14,27 +14,30 @@
 
 package com.addthis.hydra.mq;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
-import com.addthis.meshy.MeshyClient;
-import com.addthis.meshy.service.file.FileReference;
-import com.addthis.meshy.service.message.MessageFileProvider;
-import org.jboss.netty.channel.ChannelException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.Parameter;
+import com.addthis.basis.util.Strings;
+
+import com.addthis.meshy.MeshyClient;
+import com.addthis.meshy.service.file.FileReference;
+import com.addthis.meshy.service.message.MessageFileProvider;
+
+import org.jboss.netty.channel.ChannelException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MeshMessageConsumer implements MessageConsumer {
 

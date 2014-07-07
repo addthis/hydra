@@ -32,16 +32,8 @@ import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.imps.CuratorFrameworkState;
-import org.apache.curator.retry.RetryOneTime;
-import org.apache.curator.test.InstanceSpec;
-import org.apache.curator.test.QuorumConfigBuilder;
-import org.apache.curator.test.TestingServer;
-import org.apache.curator.test.TestingZooKeeperServer;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.server.NettyServerCnxnFactory;
+
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;

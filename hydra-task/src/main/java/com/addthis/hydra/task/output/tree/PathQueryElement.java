@@ -17,14 +17,13 @@ import java.util.ArrayList;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.query.FieldValueList;
 import com.addthis.hydra.data.query.QueryElement;
 import com.addthis.hydra.data.query.QueryElementProperty;
 import com.addthis.hydra.data.tree.DataTreeNode;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * @user-reference

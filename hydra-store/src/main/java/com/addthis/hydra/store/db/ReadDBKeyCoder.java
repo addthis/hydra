@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.store.db;
 
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.Codec;
 import com.addthis.codec.codables.BytesCodable;
 
 /**

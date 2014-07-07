@@ -18,8 +18,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.RandomAccessFile;
 
-import java.net.SocketTimeoutException;
-
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import java.nio.channels.FileLock;
@@ -35,7 +33,6 @@ import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.meshy.service.stream.StreamService;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * tracks and auto-indexes (when possible) SourceTypeStateful sources

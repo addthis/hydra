@@ -13,6 +13,11 @@
  */
 package com.addthis.hydra.job;
 
+import java.io.IOException;
+import java.io.Serializable;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
 import com.addthis.hydra.job.mq.CoreMessage;
 import com.addthis.hydra.job.mq.HostMessage;
 import com.addthis.hydra.job.mq.HostState;
@@ -22,15 +27,14 @@ import com.addthis.hydra.mq.MessageConsumer;
 import com.addthis.hydra.mq.MessageProducer;
 import com.addthis.hydra.mq.ZkMessageConsumer;
 import com.addthis.meshy.MeshyClient;
+
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Gauge;
+
 import org.apache.curator.framework.CuratorFramework;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class SpawnMQImplMesh implements SpawnMQ {
 

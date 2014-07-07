@@ -32,7 +32,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.task.map.DataPurgeConfig;
 import com.addthis.hydra.task.map.DataPurgeService;
@@ -44,7 +44,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 
 public abstract class AbstractDataOutput extends DataOutputTypeList {

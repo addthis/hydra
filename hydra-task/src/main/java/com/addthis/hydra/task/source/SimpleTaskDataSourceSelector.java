@@ -16,7 +16,6 @@ package com.addthis.hydra.task.source;
 import java.util.Collection;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class SimpleTaskDataSourceSelector implements TaskDataSourceSelector {
 

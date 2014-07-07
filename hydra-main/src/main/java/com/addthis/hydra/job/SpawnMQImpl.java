@@ -13,7 +13,13 @@
  */
 package com.addthis.hydra.job;
 
+import java.io.IOException;
+import java.io.Serializable;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
 import com.addthis.basis.util.Parameter;
+
 import com.addthis.hydra.job.mq.CoreMessage;
 import com.addthis.hydra.job.mq.HostMessage;
 import com.addthis.hydra.job.mq.HostState;
@@ -23,15 +29,14 @@ import com.addthis.hydra.mq.RabbitMQUtil;
 import com.addthis.hydra.mq.RabbitMessageConsumer;
 import com.addthis.hydra.mq.RabbitMessageProducer;
 import com.addthis.hydra.mq.ZkMessageConsumer;
+
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
+
 import org.apache.curator.framework.CuratorFramework;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.concurrent.atomic.AtomicInteger;
 public class SpawnMQImpl implements SpawnMQ {
 
     private static Logger log = LoggerFactory.getLogger(SpawnMQImpl.class);

@@ -27,7 +27,7 @@ import com.addthis.basis.util.Files;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.Codec;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;

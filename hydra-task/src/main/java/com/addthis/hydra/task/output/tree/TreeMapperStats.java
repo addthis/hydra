@@ -20,8 +20,6 @@ import com.addthis.basis.jmx.WrappingDynamicMBean;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
-
-import org.slf4j.LoggerFactory;
 /**
  * Encapsulation of statistics about a running hydra instance.  Registered
  * in JMX so people can look in on a Hydra remotely.

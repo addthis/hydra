@@ -13,10 +13,14 @@
  */
 package com.addthis.hydra.job;
 
-import com.addthis.bark.ZkStartUtil;
 import com.addthis.basis.test.SlowTest;
+
+import com.addthis.bark.ZkStartUtil;
+
 import com.google.common.collect.ImmutableSet;
+
 import org.apache.zookeeper.CreateMode;
+
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 

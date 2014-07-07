@@ -15,7 +15,7 @@ package com.addthis.hydra.task.source;
 
 import com.addthis.basis.util.Varint;
 
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 
 import com.google.common.base.Objects;
 

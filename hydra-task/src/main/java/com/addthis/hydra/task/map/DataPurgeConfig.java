@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.task.map;
 
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * @user-reference

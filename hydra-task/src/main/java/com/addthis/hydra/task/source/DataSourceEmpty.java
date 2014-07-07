@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.kvp.KVBundle;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 /**

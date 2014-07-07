@@ -24,8 +24,6 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 import org.slf4j.Logger;
-
-
 import org.slf4j.LoggerFactory;
 /**
  * Wraps n DataChannelSource objects.  Clients can use this class to pull data

@@ -44,7 +44,6 @@ import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
-import com.addthis.codec.config.CodecConfig;
 import com.addthis.codec.json.CodecExceptionLineNumber;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.IJob;

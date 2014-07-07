@@ -46,7 +46,6 @@ import org.eclipse.jgit.treewalk.AbstractTreeIterator;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * A class for storing/retrieving files from a git repository.

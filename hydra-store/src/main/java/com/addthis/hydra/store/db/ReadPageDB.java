@@ -23,7 +23,7 @@ import java.util.TreeMap;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.Codec;
 import com.addthis.codec.binary.CodecBin2;
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.ByteStore;

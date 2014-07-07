@@ -34,8 +34,6 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueString;
 
-import com.google.common.primitives.Doubles;
-
 public class BundleCalculator {
 
     private static final BundleCalculatorVector vector = BundleCalculatorVector.getSingleton();

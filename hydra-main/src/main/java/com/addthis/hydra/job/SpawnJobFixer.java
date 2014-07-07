@@ -24,7 +24,6 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * A class in charge of performing common fixes when tasks go into error state.

@@ -22,7 +22,7 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 
 
 public class ValueStreamFormatTSV extends ValuesStreamFormatter {

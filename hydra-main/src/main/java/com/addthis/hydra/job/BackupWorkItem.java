@@ -16,7 +16,6 @@ package com.addthis.hydra.job;
 import java.io.File;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class BackupWorkItem extends MinionWorkItem {
 

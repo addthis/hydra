@@ -15,12 +15,10 @@ package com.addthis.hydra.util;
 
 import com.addthis.basis.util.RollingLog;
 import com.addthis.basis.util.Strings;
+
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
-
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 public class LogUtil {
 

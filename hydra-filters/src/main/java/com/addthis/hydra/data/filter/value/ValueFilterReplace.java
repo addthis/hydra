@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.value;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">performs string replacement with optional regular expression matching</span>.

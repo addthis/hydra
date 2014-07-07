@@ -17,7 +17,7 @@ import java.io.File;
 import java.io.IOException;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 
 import org.apache.commons.io.FileUtils;
 

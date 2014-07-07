@@ -15,7 +15,7 @@ package com.addthis.hydra.job.mq;
 
 import java.util.Arrays;
 
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 
 public class CommandTaskReplicate extends AbstractJobMessage {
 

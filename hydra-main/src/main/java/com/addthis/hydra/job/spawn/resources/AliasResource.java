@@ -38,7 +38,6 @@ import com.google.common.collect.Lists;
 import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 @Path("/alias")
 public class AliasResource {

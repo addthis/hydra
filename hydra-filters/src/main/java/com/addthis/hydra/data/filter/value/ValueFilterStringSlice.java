@@ -18,7 +18,7 @@ import java.util.List;
 
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec; import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.FieldConfig;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;

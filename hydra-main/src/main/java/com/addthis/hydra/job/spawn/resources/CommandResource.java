@@ -33,7 +33,6 @@ import com.addthis.maljson.JSONArray;
 import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 @Path("/command")
 public class CommandResource {

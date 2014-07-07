@@ -26,7 +26,6 @@ import com.addthis.basis.util.Parameter;
 import com.google.common.collect.ImmutableMap;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * This class represents types of backups that happen on time schedules (daily, weekly, etc.) and also gold backups.
