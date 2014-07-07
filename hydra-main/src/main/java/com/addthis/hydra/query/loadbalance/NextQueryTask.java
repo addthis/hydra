@@ -17,6 +17,7 @@ package com.addthis.hydra.query.loadbalance;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
 
+import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.hydra.query.web.HttpUtils;
 
 import com.google.common.base.Throwables;
@@ -126,6 +127,9 @@ public class NextQueryTask implements Runnable, ChannelFutureListener {
     }
 
     private static String logAndFormatErrorDetail(Throwable cause) {
+        if ((cause instanceof DataChannelError) && (cause.getCause() != null)) {
+            cause = cause.getCause();
+        }
         if (cause == null) {
             log.warn("query call errored with an empty cause");
             return "unknown query error";
