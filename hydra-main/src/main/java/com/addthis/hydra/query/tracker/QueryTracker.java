@@ -19,7 +19,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -87,7 +89,9 @@ public class QueryTracker {
         this.recentlyCompleted = CacheBuilder.newBuilder()
                 .maximumSize(MAX_FINISHED_CACHE_SIZE).build();
         // start timeoutWatcher
-        this.timeoutWatcherService.scheduleWithFixedDelay(new TimeoutWatcher(running), 5, 5, TimeUnit.SECONDS);
+        ScheduledFuture<?> watcherFuture = this.timeoutWatcherService.scheduleWithFixedDelay(
+                new TimeoutWatcher(running), 5, 5, TimeUnit.SECONDS);
+        checkForErrors(watcherFuture);
     }
 
     public int getRunningCount() {
@@ -131,5 +135,25 @@ public class QueryTracker {
     void log(StringMapHelper output) {
         output.add("timestamp", format.format(new Date()));
         eventLog.writeLine(output.createKVPairs().toString());
+    }
+
+    // makes sure the future object doesn't swallow any executor-startup related errors
+    private static void checkForErrors(ScheduledFuture<?> future) {
+        if (future.isDone()) {
+            try {
+                future.get();
+            } catch (InterruptedException e) {
+                throw new IllegalStateException("either inexplicably had to wait for an already " +
+                                                "complete future or thread triggered an unexpected" +
+                                                " and pre-existing interrupt condition.", e);
+            } catch (ExecutionException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof RuntimeException) {
+                    throw (RuntimeException) cause;
+                } else {
+                    throw new RuntimeException(cause);
+                }
+            }
+        }
     }
 }
