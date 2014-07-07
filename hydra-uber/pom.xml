@@ -16,7 +16,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>4.2.13-SNAPSHOT</version>
+    <version>4.2.14</version>
   </parent>
 
   <artifactId>hydra-uber</artifactId>
@@ -85,16 +85,13 @@
                 </filter>
               </filters>
               <transformers>
-                <transformer
-                implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                   <resource>reference.conf</resource>
                 </transformer>
-                <transformer
-                implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                   <resource>application.conf</resource>
                 </transformer>
-                <transformer
-                implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <manifestEntries>
                     <Main-Class>com.addthis.hydra.Main</Main-Class>
                     <Premain-Class>com.addthis.basis.util.MemoryCounter</Premain-Class>
