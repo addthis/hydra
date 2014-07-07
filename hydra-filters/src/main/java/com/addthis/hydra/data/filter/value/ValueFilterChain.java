@@ -41,7 +41,7 @@ public class ValueFilterChain extends ValueFilter {
      * The value filters to be performed in a chain.
      */
     @FieldConfig(codable = true, required = true)
-    private ValueFilter filter[];
+    private ValueFilter[] filter;
 
     /**
      * If true, then terminate chain on first null output. Default is true.

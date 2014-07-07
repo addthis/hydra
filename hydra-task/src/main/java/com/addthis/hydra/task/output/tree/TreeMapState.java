@@ -61,7 +61,7 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
     }
 
     /** */
-    public TreeMapState(TreeMapper processor, DataTreeNode rootNode, PathElement path[], Bundle bundle) {
+    public TreeMapState(TreeMapper processor, DataTreeNode rootNode, PathElement[] path, Bundle bundle) {
         this.path = path;
         this.bundle = bundle;
         this.processor = processor;
@@ -220,12 +220,12 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
      * called from PathCall.processNode(), PathCombo.processNode() and
      * PathEach.processNode()
      */
-    public TreeNodeList processPath(PathElement path[]) {
+    public TreeNodeList processPath(PathElement[] path) {
         return processPath(path, 0);
     }
 
     /** */
-    private TreeNodeList processPath(PathElement path[], int index) {
+    private TreeNodeList processPath(PathElement[] path, int index) {
         if (path == null || path.length <= index) {
             return null;
         }

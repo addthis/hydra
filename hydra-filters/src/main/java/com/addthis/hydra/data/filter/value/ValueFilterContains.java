@@ -57,13 +57,13 @@ public class ValueFilterContains extends ValueFilter {
     /**
      * The set of values to match against.
      */
-    @FieldConfig(codable = true)
+    @FieldConfig(codable = true, autocollection = true)
     private String[] value;
 
     /**
      * The set of keys to match against. Only applicable for map inputs.
      */
-    @FieldConfig(codable = true)
+    @FieldConfig(codable = true, autocollection = true)
     private String[] key;
 
     /**

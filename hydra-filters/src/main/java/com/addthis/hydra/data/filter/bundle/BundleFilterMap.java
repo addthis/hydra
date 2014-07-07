@@ -44,7 +44,7 @@ public class BundleFilterMap extends BundleFilter {
      * The sequence of field bundle filters to execute.
      */
     @FieldConfig(codable = true, required = true)
-    private BundleFilterField fields[];
+    private BundleFilterField[] fields;
 
     /**
      * If true then exit on first operation that fails and return false. Default is false.

@@ -16,14 +16,13 @@ package com.addthis.hydra.task.run;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
 
-
 /**
  * This is the specification for a Hydra job.
  *
  * @user-reference
  * @hydra-category
  */
-@Pluggable("Hydra job")
+@Pluggable("task")
 public abstract class TaskRunnable implements Codable {
 
     public abstract void init(TaskRunConfig config);

@@ -91,24 +91,25 @@ public class BundleFilterField extends BundleFilter {
     @FieldConfig(codable = true)
     private boolean not;
 
-    private String fields[];
+    @Override public void initialize() { }
 
     @Override
-    public void initialize() {
-        fields = new String[]{from, to};
-    }
-
-    @Override
-    public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
-        ValueObject val = bundle.getValue(bound[0]);
+    public boolean filterExec(Bundle row) {
+        BundleField fromField = row.getFormat().getField(from);
+        BundleField toField;
+        if (to != null) {
+            toField = row.getFormat().getField(to);
+        } else {
+            toField = fromField;
+        }
+        ValueObject<?> val = row.getValue(fromField);
         if (filter != null) {
             val = filter.filter(val);
         }
-        if (nullFail && val == null) {
+        if (nullFail && (val == null)) {
             return not;
         }
-        bundle.setValue(to == null ? bound[0] : bound[1], val);
+        row.setValue(toField, val);
         return !not;
     }
 }
