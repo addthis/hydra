@@ -205,16 +205,13 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
      * This section specifies how fields of the input source are transformed into a mapped bundle.
      * <p/>
      * <p>Fields are moved from a specified field in the job {@link StreamMapper#source source}
-     * to a destination field in the mapped bundle. If the 'to' field is not specified then
-     * the destination field is assumed to have the same name as the 'from' field. By default
-     * null values are not written into the mapped bundle. This behavior can be changed by
-     * setting the toNull field to true.</p>
+     * to a destination field in the mapped bundle. By default null values are not written into
+     * the mapped bundle. This behavior can be changed by setting the toNull field to true.</p>
      * <p/>
      * <p>Example:</p>
      * <pre>fields:[
      *    {from:"TIME", to:"TIME"},
      *    {from:"SOURCE", to:"SOURCE"},
-     *    {from:"QUERY_PARAMS"},
      * ]</pre>
      *
      * @user-reference
@@ -228,9 +225,9 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         private String from;
 
         /**
-         * The name of the bundle field destination. If not specified then use the 'from' field.
+         * The name of the bundle field destination.
          */
-        @FieldConfig(codable = true)
+        @FieldConfig(codable = true, required = true)
         private String to;
 
         /**
