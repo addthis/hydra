@@ -33,25 +33,5 @@
       <version>${hydra.dep.codec.version}</version>
     </dependency>
     <!-- end addthis deps -->
-
-    <!-- 3rd party -->
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-core</artifactId>
-      <version>${hydra.dep.spring.version}</version>
-      <exclusions>
-        <!-- spring-core uses an older version of commons-logging -->
-        <exclusion>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>net.sf.supercsv</groupId>
-      <artifactId>super-csv</artifactId>
-      <version>2.1.0</version>
-    </dependency>
-    <!-- end 3rd party -->
   </dependencies>
 </project>

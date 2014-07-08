@@ -45,7 +45,6 @@
     <module>hydra-uber</module>
   </modules>
 
-
   <properties>
     <!-- surefire junit properties -->
     <hydra.test.excluded.groups>com.addthis.basis.test.SlowTest,com.addthis.hydra.common.test.LocalStackTest</hydra.test.excluded.groups>
