@@ -52,6 +52,9 @@ public final class PathChild extends PathElement {
     @Override
     public TreeNodeList getNextNodeList(TreeMapState state) {
         TreeNodeList res = state.processPath(layers);
+        if (res == null) {
+            res = new TreeNodeList(0);
+        }
         if (!res.isEmpty() || op) {
             return res;
         } else {
