@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueArray;
@@ -51,14 +52,9 @@ import org.slf4j.LoggerFactory;
  */
 public class ValueFilterSplit extends ValueFilter {
 
-    private static final Logger log = LoggerFactory.getLogger(ValueFilterMapSubset.class);
+    private static final Logger log = LoggerFactory.getLogger(ValueFilterSplit.class);
+    private static final boolean ERROR_ON_ARRAY = Parameter.boolValue("hydra.filter.split.error", false);
 
-    /**
-     * Use this field as a delimiter in between
-     * elements in the input string.
-     * Default is ",".
-     */
-    @FieldConfig(codable = true)
     private String split = ",";
 
     /**
@@ -131,21 +127,24 @@ public class ValueFilterSplit extends ValueFilter {
 
     @Override
     public ValueObject filter(ValueObject value) {
-        if (value != null && value.getObjectType() == ValueObject.TYPE.ARRAY && !warnedOnArrayInput) {
+        if ((value != null) && (value.getObjectType() == ValueObject.TYPE.ARRAY) && !warnedOnArrayInput) {
             log.warn("Input value to 'split' ValueFilter is an array: {}. It may not be what you intended.", value);
+            if (ERROR_ON_ARRAY) {
+                throw new IllegalArgumentException("hydra.filter.split.error set to true and tried to split an array");
+            }
             warnedOnArrayInput = true;
         }
 
         String string = ValueUtil.asNativeString(value);
-        if (string == null || string.isEmpty()) {
+        if ((string == null) || string.isEmpty()) {
             return null;
         }
-        String token[];
+        String[] token;
         if (fixedLength > 0) {
             token = splitFixedLength(string, fixedLength);
         } else if (value.getObjectType() == ValueObject.TYPE.ARRAY && ",".equals(split)) {
             // XXX Make sure applying this filter on an array field still works.
-            // ValueArray had a custom toString that produced a comma delimited string, so splitting
+            // DefaultArray had a custom toString that produced a comma delimited string, so splitting
             // an array field on "," would work (albeit that might not be the job writer's 
             // intention). The custom toString has been removed in bundle v2.2.8, so the string 
             // value has the extra enclosing square brackets: [foo,bar], causing the split filter to
