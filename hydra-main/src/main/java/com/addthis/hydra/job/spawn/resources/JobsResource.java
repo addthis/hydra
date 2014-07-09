@@ -75,6 +75,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigOrigin;
+import com.typesafe.config.ConfigRenderOptions;
 import com.yammer.dropwizard.auth.Auth;
 
 import org.codehaus.jackson.map.ObjectMapper;
@@ -139,20 +140,74 @@ public class JobsResource {
         }
     }
 
+    /**
+     * expand the job's macros and send the text to the user
+     */
+    @GET
+    @Path("/expand")
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    public Response expandJobGet(@QueryParam("id") @DefaultValue("") String id,
+                                 @QueryParam("format") String format) {
+        if (id.isEmpty()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .header("topic", "Expansion Error")
+                           .entity("{error:'unable to expand job, job id must be non null and not empty'}")
+                           .build();
+        } else {
+            try {
+                String expandedJobConfig = spawn.expandJob(id);
+                return formatConfig(format, expandedJobConfig);
+            } catch (Exception ex) {
+                return buildServerError(ex);
+            }
+        }
+    }
+
     @POST
     @Path("/expand")
     @Produces(MediaType.APPLICATION_JSON)
     public Response expandJobPost(@QueryParam("pairs") KVPairs kv) throws Exception {
         try {
+            String format = kv.takeValue("format");
             String expandedConfig = configExpansion(kv);
-
-            return Response.ok("attachment; filename=expanded_job.json", MediaType.APPLICATION_OCTET_STREAM)
-                           .entity(expandedConfig)
-                           .header("topic", "expanded_job")
-                           .build();
-
+            return formatConfig(format, expandedConfig);
         } catch (Exception ex) {
             return buildServerError(ex);
+        }
+    }
+
+    private Response formatConfig(String format, String configBody) {
+        if (format == null) {
+            return Response.ok("attachment; filename=expanded_job.json", MediaType.APPLICATION_OCTET_STREAM)
+                           .entity(configBody)
+                           .header("topic", "expanded_job")
+                           .build();
+        }
+        String normalizedFormat = format.toLowerCase();
+        String formattedConfig;
+        switch (normalizedFormat) {
+            case "json":
+                // auto json/hocon + json output
+                try {
+                    formattedConfig = new JSONObject(configBody).toString();
+                } catch (JSONException ignored) {
+                    formattedConfig = ConfigFactory.parseString(configBody).root().render(
+                            ConfigRenderOptions.concise().setFormatted(true));
+                }
+                return Response.ok("attachment; filename=expanded_job.json", MediaType.APPLICATION_JSON)
+                               .entity(formattedConfig)
+                               .header("topic", "expanded_job")
+                               .build();
+            case "hocon":
+                // hocon parse + non-json output
+                formattedConfig = ConfigFactory.parseString(configBody).root().render(
+                        ConfigRenderOptions.defaults().setJson(false));
+                return Response.ok("attachment; filename=expanded_job.json", MediaType.APPLICATION_OCTET_STREAM)
+                               .entity(formattedConfig)
+                               .header("topic", "expanded_job")
+                               .build();
+            default:
+                throw new IllegalArgumentException("invalid config format specified: " + normalizedFormat);
         }
     }
 
@@ -182,37 +237,10 @@ public class JobsResource {
         return expandedConfig;
     }
 
-
-    /**
-     * expand the job's macros and send the text to the user
-     */
-    @GET
-    @Path("/expand")
-    @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    public Response expandJobGet(@QueryParam("id") @DefaultValue("") String id) {
-        if ("".equals(id)) {
-            return Response.status(Response.Status.NOT_FOUND)
-                           .header("topic", "Expansion Error")
-                           .entity("{error:'unable to expand job, job id must be non null and not empty'}")
-                           .build();
-        } else {
-            try {
-                String expandedJobConfig = spawn.expandJob(id);
-                return Response.ok("attachment; filename=expanded_job.json", MediaType.APPLICATION_OCTET_STREAM)
-                               .entity(expandedJobConfig)
-                               .header("topic", "expanded_job")
-                               .build();
-            } catch (Exception ex) {
-                return buildServerError(ex);
-            }
-        }
-    }
-
-
+    /** url called via ajax by client to rebalance a job */
     @GET
     @Path("/synchronize")
     @Produces(MediaType.APPLICATION_JSON)
-    /** url called via ajax by client to rebalance a job */
     public Response synchronizeJob(@QueryParam("id") @DefaultValue("") String id,
                                    @QueryParam("user") Optional<String> user) {
         emitLogLineForAction(user.or(DEFAULT_USER), "job synchronize on " + id);
