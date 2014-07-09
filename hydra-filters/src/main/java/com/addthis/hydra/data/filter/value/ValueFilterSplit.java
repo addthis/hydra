@@ -28,6 +28,9 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">splits the input into an array or a map</span>.
  * <p/>
@@ -47,6 +50,8 @@ import com.google.common.collect.Iterables;
  * @exclude-fields once
  */
 public class ValueFilterSplit extends ValueFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(ValueFilterMapSubset.class);
 
     /**
      * Use this field as a delimiter in between
@@ -87,6 +92,8 @@ public class ValueFilterSplit extends ValueFilter {
      */
     @FieldConfig(codable = true)
     private int fixedLength = -1;
+    
+    private boolean warnedOnArrayInput = false;
 
     public ValueFilterSplit setSplit(String split) {
         this.split = split;
@@ -107,6 +114,11 @@ public class ValueFilterSplit extends ValueFilter {
         this.keyFilter = keyFilter;
         return this;
     }
+    
+    public ValueFilterSplit setFixedLength(int fixedLength) {
+        this.fixedLength = fixedLength;
+        return this;
+    }
 
     @Override
     public ValueObject filterValue(ValueObject value) {
@@ -119,6 +131,11 @@ public class ValueFilterSplit extends ValueFilter {
 
     @Override
     public ValueObject filter(ValueObject value) {
+        if (value != null && value.getObjectType() == ValueObject.TYPE.ARRAY && !warnedOnArrayInput) {
+            log.warn("Input value to 'split' ValueFilter is an array: {}. It may not be what you intended.", value);
+            warnedOnArrayInput = true;
+        }
+
         String string = ValueUtil.asNativeString(value);
         if (string == null || string.isEmpty()) {
             return null;
@@ -126,6 +143,14 @@ public class ValueFilterSplit extends ValueFilter {
         String token[];
         if (fixedLength > 0) {
             token = splitFixedLength(string, fixedLength);
+        } else if (value.getObjectType() == ValueObject.TYPE.ARRAY && ",".equals(split)) {
+            // XXX Make sure applying this filter on an array field still works.
+            // ValueArray had a custom toString that produced a comma delimited string, so splitting
+            // an array field on "," would work (albeit that might not be the job writer's 
+            // intention). The custom toString has been removed in bundle v2.2.8, so the string 
+            // value has the extra enclosing square brackets: [foo,bar], causing the split filter to
+            // produce "[foo" and "bar]". This is special handling to deal with that
+            token = extractArray(value.asArray());
         } else {
             token = Strings.splitArray(string, split);
         }
@@ -163,5 +188,14 @@ public class ValueFilterSplit extends ValueFilter {
         List<String> tok = new ArrayList<>();
         Iterables.addAll(tok, splitIter);
         return Iterables.toArray(tok, String.class);
+    }
+
+    private String[] extractArray(ValueArray va) {
+        int size = va.size();
+        String[] arr = new String[size];
+        for (int i = 0; i < size; i++) {
+            arr[i] = va.get(i).toString();
+        }
+        return arr;
     }
 }
