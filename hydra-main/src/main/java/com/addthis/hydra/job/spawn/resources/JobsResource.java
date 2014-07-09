@@ -29,7 +29,6 @@ import java.io.StringWriter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -61,7 +60,6 @@ import com.addthis.hydra.job.SpawnHttp;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.JobAlert;
-import com.addthis.hydra.job.spawn.JobAlertRunner;
 import com.addthis.hydra.job.spawn.jersey.User;
 import com.addthis.hydra.task.run.HoconRunner;
 import com.addthis.hydra.task.run.JsonRunner;
@@ -83,41 +81,30 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.type.TypeFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 @Path("/job")
 public class JobsResource {
+    private static final Logger log = LoggerFactory.getLogger(JobsResource.class);
 
-    private static Logger log = LoggerFactory.getLogger(JobsResource.class);
+    private static final Pattern COMMENTS_REGEX = Pattern.compile("(?m)^\\s*//\\s*host(?:s)?\\s*:\\s*(.*?)$");
+    private static final String DEFAULT_USER = "UNKNOWN_USER";
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final Spawn spawn;
-    private JobAlertRunner jobAlertRunner;
-    private static final ObjectMapper mapper = new ObjectMapper();
-
-    private static final String defaultUser = "UNKNOWN_USER";
-
-    private static final Pattern comments = Pattern.compile("(?m)^\\s*//\\s*host(?:s)?\\s*:\\s*(.*?)$");
 
     public JobsResource(Spawn spawn) {
         this.spawn = spawn;
-    }
-
-    private static Response buildServerError(Exception exception) {
-        log.warn("", exception);
-        String message = exception.getMessage();
-        if (message == null) {
-            message = exception.toString();
-        }
-        return Response.serverError().entity(message).build();
     }
 
     @GET
     @Path("/enable")
     @Produces(MediaType.APPLICATION_JSON)
     public Response enableJob(@QueryParam("jobs") String jobarg,
-            @QueryParam("enable") @DefaultValue("1") String enableParam,
-            @Auth User user) {
+                              @QueryParam("enable") @DefaultValue("1") String enableParam,
+                              @Auth User user) {
         boolean enable = enableParam.equals("1");
         if (jobarg != null) {
-            String joblist[] = Strings.splitArray(jobarg, ",");
+            String[] joblist = Strings.splitArray(jobarg, ",");
             emitLogLineForAction(user.getUsername(), (enable ? "enable" : "disable") + " jobs " + jobarg);
             for (String jobid : joblist) {
                 IJob job = spawn.getJob(jobid);
@@ -138,13 +125,15 @@ public class JobsResource {
     @GET
     @Path("/rebalance")
     @Produces(MediaType.TEXT_PLAIN)
-    public Response rebalanceJob(@QueryParam("id") String id, @Auth User user, @QueryParam("tasksToMove") @DefaultValue("-1") Integer tasksToMove) {
+    public Response rebalanceJob(@QueryParam("id") String id,
+                                 @Auth User user,
+                                 @QueryParam("tasksToMove") @DefaultValue("-1") Integer tasksToMove) {
         emitLogLineForAction(user.getUsername(), "job rebalance on " + id + " tasksToMove=" + tasksToMove);
         try {
             RebalanceOutcome ro = spawn.rebalanceJob(id, tasksToMove);
             String outcome = ro.toString();
             return Response.ok(outcome).build();
-        } catch (Exception ex)  {
+        } catch (Exception ex) {
             log.warn("", ex);
             return Response.serverError().entity("Rebalance Error: " + ex.getMessage()).build();
         }
@@ -157,11 +146,10 @@ public class JobsResource {
         try {
             String expandedConfig = configExpansion(kv);
 
-            return Response.ok("attachment; filename=expanded_job.json",
-                    MediaType.APPLICATION_OCTET_STREAM)
-                    .entity(expandedConfig)
-                    .header("topic", "expanded_job")
-                    .build();
+            return Response.ok("attachment; filename=expanded_job.json", MediaType.APPLICATION_OCTET_STREAM)
+                           .entity(expandedConfig)
+                           .header("topic", "expanded_job")
+                           .build();
 
         } catch (Exception ex) {
             return buildServerError(ex);
@@ -169,13 +157,11 @@ public class JobsResource {
     }
 
     private String configExpansion(KVPairs kv) throws TokenReplacerOverflowException {
-        String id, jobConfig, expandedConfig;
-
         KVPair idPair = kv.removePair("id");
-        id = (idPair == null) ? null : idPair.getValue();
-        jobConfig = kv.removePair("config").getValue();
+        String id = (idPair == null) ? null : idPair.getValue();
+        String jobConfig = kv.removePair("config").getValue();
 
-        expandedConfig = JobExpand.macroExpand(spawn, jobConfig);
+        String expandedConfig = JobExpand.macroExpand(spawn, jobConfig);
         Map<String, JobParameter> parameters = JobExpand.macroFindParameters(expandedConfig);
 
         for (KVPair pair : kv) {
@@ -206,16 +192,16 @@ public class JobsResource {
     public Response expandJobGet(@QueryParam("id") @DefaultValue("") String id) {
         if ("".equals(id)) {
             return Response.status(Response.Status.NOT_FOUND)
-                    .header("topic", "Expansion Error")
-                    .entity("{error:'unable to expand job, job id must be non null and not empty'}")
-                    .build();
+                           .header("topic", "Expansion Error")
+                           .entity("{error:'unable to expand job, job id must be non null and not empty'}")
+                           .build();
         } else {
             try {
                 String expandedJobConfig = spawn.expandJob(id);
                 return Response.ok("attachment; filename=expanded_job.json", MediaType.APPLICATION_OCTET_STREAM)
-                        .entity(expandedJobConfig)
-                        .header("topic", "expanded_job")
-                        .build();
+                               .entity(expandedJobConfig)
+                               .header("topic", "expanded_job")
+                               .build();
             } catch (Exception ex) {
                 return buildServerError(ex);
             }
@@ -228,16 +214,16 @@ public class JobsResource {
     @Produces(MediaType.APPLICATION_JSON)
     /** url called via ajax by client to rebalance a job */
     public Response synchronizeJob(@QueryParam("id") @DefaultValue("") String id,
-            @QueryParam("user") Optional<String> user) {
-        emitLogLineForAction(user.or(defaultUser), "job synchronize on " + id);
+                                   @QueryParam("user") Optional<String> user) {
+        emitLogLineForAction(user.or(DEFAULT_USER), "job synchronize on " + id);
         if (spawn.synchronizeJobState(id)) {
             return Response.ok("{id:'" + id + "',action:'synchronzied'}").build();
         } else {
-            log.warn("[job.synchronize] " + id + " unable to synchronize job");
+            log.warn("[job.synchronize] {} unable to synchronize job", id);
             return Response.status(Response.Status.NOT_FOUND)
-                    .header("topic", "Synchronize Error")
-                    .entity("{error:'unable to synchronize job, check spawn log file for more details'}")
-                    .build();
+                           .header("topic", "Synchronize Error")
+                           .entity("{error:'unable to synchronize job, check spawn log file for more details'}")
+                           .build();
         }
     }
 
@@ -245,20 +231,20 @@ public class JobsResource {
     @Path("/delete") //TODO: should this be a @delete?
     @Produces(MediaType.APPLICATION_JSON)
     public Response deleteJob(@QueryParam("id") @DefaultValue("") String id,
-            @QueryParam("user") Optional<String> user) {
+                              @QueryParam("user") Optional<String> user) {
         Job job = spawn.getJob(id);
 
-        if (job != null && !job.getState().equals(JobState.IDLE)) {
+        if ((job != null) && (job.getState() != JobState.IDLE)) {
             return Response.serverError().entity("A non IDLE job cannot be deleted").build();
         } else {
-            emitLogLineForAction(user.or(defaultUser), "job delete on " + id);
+            emitLogLineForAction(user.or(DEFAULT_USER), "job delete on " + id);
             try {
                 Spawn.DeleteStatus status = spawn.deleteJob(id);
                 switch (status) {
                     case SUCCESS:
                         return Response.ok().build();
                     case JOB_MISSING:
-                        log.warn("[job.delete] " + id + " missing job");
+                        log.warn("[job.delete] {} missing job", id);
                         return Response.status(Response.Status.NOT_FOUND).build();
                     case JOB_DO_NOT_DELETE:
                         return Response.status(Response.Status.NOT_MODIFIED).build();
@@ -294,14 +280,14 @@ public class JobsResource {
         }
     }
 
-    private JSONObject dependencyGraphNode(@Nonnull IJob job) throws Exception {
+    private static JSONObject dependencyGraphNode(@Nonnull IJob job) throws Exception {
         JSONObject newNode = job.toJSON();
         newNode.remove("config");
         newNode.remove("nodes");
         return newNode;
     }
 
-    private JSONObject dependencyGraphEdge(@Nonnull String source, @Nonnull String sink)
+    private static JSONObject dependencyGraphEdge(@Nonnull String source, @Nonnull String sink)
             throws JSONException {
         JSONObject newEdge = new JSONObject();
         newEdge.put("source", source);
@@ -446,7 +432,7 @@ public class JobsResource {
                 spawn.disableAlerts();
             }
         } catch (Exception e) {
-            log.warn("Failed to toggle alerts due to : " + e.getMessage());
+            log.warn("Failed to toggle alerts", e);
             return Response.ok("false").build();
         }
 
@@ -462,7 +448,8 @@ public class JobsResource {
             if (job != null) {
                 JSONObject jobobj = job.toJSON();
                 if (field.isPresent()) {
-                    Object fieldObject = "config".equals(field.get()) ? spawn.getJobConfig(id) : jobobj.get(field.get());
+                    Object fieldObject =
+                            "config".equals(field.get()) ? spawn.getJobConfig(id) : jobobj.get(field.get());
                     if (fieldObject != null) {
                         return Response.ok(fieldObject.toString()).build();
                     }
@@ -470,9 +457,9 @@ public class JobsResource {
                 return Response.ok(jobobj.toString()).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND)
-                        .header("topic", "No Job")
-                        .entity("no such job found with id " + id)
-                        .build();
+                               .header("topic", "No Job")
+                               .entity("no such job found with id " + id)
+                               .build();
             }
         } catch (Exception ex) {
             return buildServerError(ex);
@@ -482,7 +469,7 @@ public class JobsResource {
     @POST
     @Path("/save")
     @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_FORM_URLENCODED, MediaType.WILDCARD})
-    @Produces({MediaType.APPLICATION_JSON})
+    @Produces(MediaType.APPLICATION_JSON)
     public Response saveJob(@QueryParam("pairs") KVPairs kv, @Auth User user) throws Exception {
         IJob job;
         if (!kv.hasKey("id") || Strings.isEmpty(kv.getValue("id"))) {
@@ -559,7 +546,7 @@ public class JobsResource {
         /** copy values existing in job parameters */
         if (job.getParameters() != null) {
             // remove specified parameters
-            for (Iterator<JobParameter> jp = job.getParameters().iterator(); jp.hasNext();) {
+            for (Iterator<JobParameter> jp = job.getParameters().iterator(); jp.hasNext(); ) {
                 JobParameter param = jp.next();
                 if (kv.hasKey("rp_" + param.getName())) {
                     jp.remove();
@@ -593,7 +580,7 @@ public class JobsResource {
         /** set params from hash and build new param set */
         String expandedConfig = JobExpand.macroExpand(spawn, spawn.getJobConfig(job.getId()));
         Map<String, JobParameter> macroParams = JobExpand.macroFindParameters(expandedConfig);
-        ArrayList<JobParameter> newparams = new ArrayList<>(macroParams.size());
+        List<JobParameter> newparams = new ArrayList<>(macroParams.size());
         for (JobParameter param : macroParams.values()) {
             String name = param.getName();
             String value = setParams.get(name);
@@ -607,11 +594,11 @@ public class JobsResource {
     @Path("/revert")
     @Produces(MediaType.APPLICATION_JSON)
     public Response revertJob(@QueryParam("id") String id,
-            @QueryParam("type") @DefaultValue("gold") String type,
-            @QueryParam("revision") @DefaultValue("-1") Integer revision,
-            @QueryParam("node") @DefaultValue("-1") Integer node,
-            @QueryParam("time") @DefaultValue("-1") Long time,
-            @Auth User user) {
+                              @QueryParam("type") @DefaultValue("gold") String type,
+                              @QueryParam("revision") @DefaultValue("-1") Integer revision,
+                              @QueryParam("node") @DefaultValue("-1") Integer node,
+                              @QueryParam("time") @DefaultValue("-1") Long time,
+                              @Auth User user) {
         try {
             emitLogLineForAction(user.getUsername(), "job revert on " + id + " of type " + type);
             IJob job = spawn.getJob(id);
@@ -626,15 +613,19 @@ public class JobsResource {
     @GET
     @Path("/backups.list")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getRevisions(@QueryParam("id") String id, @QueryParam("node") @DefaultValue("-1") int node, @Auth User user) {
+    public Response getRevisions(@QueryParam("id") String id,
+                                 @QueryParam("node") @DefaultValue("-1") int node,
+                                 @Auth User user) {
         try {
             if (spawn.isSpawnMeshAvailable()) {
                 IJob job = spawn.getJob(id);
                 Map<ScheduledBackupType, SortedSet<Long>> backupDates = spawn.getJobBackups(job.getId(), node);
-                String jsonString = mapper.writeValueAsString(backupDates);
+                String jsonString = MAPPER.writeValueAsString(backupDates);
                 return Response.ok(jsonString).build();
             } else {
-                return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Spawn Mesh is not available.").build();
+                return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                               .entity("Spawn Mesh is not available.")
+                               .build();
             }
         } catch (Exception ex) {
             return buildServerError(ex);
@@ -701,12 +692,12 @@ public class JobsResource {
     @Path("/start")
     @Produces(MediaType.APPLICATION_JSON)
     public Response submitJob(@QueryParam("jobid") Optional<String> jobIds,
-            @QueryParam("select") @DefaultValue("-1") int select,
-            @QueryParam("id") Optional<String> id,
-            @QueryParam("task") @DefaultValue("-1") int task) {
+                              @QueryParam("select") @DefaultValue("-1") int select,
+                              @QueryParam("id") Optional<String> id,
+                              @QueryParam("task") @DefaultValue("-1") int task) {
         try {
             if (jobIds.isPresent()) {
-                String joblist[] = Strings.splitArray(jobIds.get(), ",");
+                String[] joblist = Strings.splitArray(jobIds.get(), ",");
                 for (String aJob : joblist) {
                     submitJobHelper(aJob, select);
                 }
@@ -780,13 +771,13 @@ public class JobsResource {
     }
 
     private String[] generateHosts(String hosts, String config) {
-        if (hosts.equals("") && (config != null)) {
-            Matcher matcher = comments.matcher(config);
+        if (hosts.isEmpty() && (config != null)) {
+            Matcher matcher = COMMENTS_REGEX.matcher(config);
             while (matcher.find()) {
                 String ids = matcher.group(1);
                 try {
                     if (ids.length() > 1) {
-                        if (ids.charAt(0) == '"' && ids.charAt(ids.length() - 1) == '"') {
+                        if ((ids.charAt(0) == '"') && (ids.charAt(ids.length() - 1) == '"')) {
                             String[] retval = new String[1];
                             retval[0] = ids.substring(1, ids.length() - 1);
                             return retval;
@@ -800,7 +791,7 @@ public class JobsResource {
                         }
                     }
                 } catch (JSONException ex) {
-                    log.warn("Failed to parse input " + ids);
+                    log.warn("Failed to parse input {}", ids, ex);
                 }
             }
         }
@@ -812,13 +803,13 @@ public class JobsResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response submitJob(@QueryParam("pairs") KVPairs kv, @Auth User user) {
         try {
-            if (log.isDebugEnabled()) log.debug("job.submit --> " + kv.toString());
+            log.debug("job.submit --> {}", kv);
             if (kv.count() > 0) {
                 boolean schedule = kv.getValue("spawn", "0").equals("1");
                 boolean manual = kv.getValue("manual", "0").equals("1");
                 String id = kv.getValue("id", "");
                 String config = kv.getValue("config");
-                if (config != null && config.length() > Spawn.inputMaxNumberOfCharacters) {
+                if ((config != null) && (config.length() > Spawn.inputMaxNumberOfCharacters)) {
                     throw new IllegalArgumentException("Job config length of " + config.length()
                                                        + " characters is greater than max length of "
                                                        + Spawn.inputMaxNumberOfCharacters);
@@ -852,9 +843,7 @@ public class JobsResource {
     }
 
     private void updateJobFromCall(KVPairs kv) throws Exception {
-        if (log.isDebugEnabled()) {
-            log.debug("[job.update] " + kv);
-        }
+        log.debug("[job.update] {}", kv);
         String id = kv.getValue("id", kv.getValue("job"));
         SpawnHttp.HTTPService.require(id != null, "missing job id");
         IJob job = spawn.getJob(id);
@@ -889,9 +878,11 @@ public class JobsResource {
         job.setStomp(kv.getIntValue("stomp", job.getStomp() ? 1 : 0) == 1);
         job.setRetries(kv.getIntValue("retries", job.getRetries()));
         //for deprecation purposes
-        boolean dontDelete = kv.getValue("dontDeleteMe", "false").equals("true") || kv.getValue("dontDeleteMe", "0").equals("1");
+        boolean dontDelete =
+                kv.getValue("dontDeleteMe", "false").equals("true") || kv.getValue("dontDeleteMe", "0").equals("1");
         job.setDontDeleteMe(dontDelete);
-        boolean dontAutoBalance = kv.getValue("dontAutoBalanceMe", "false").equals("true") || kv.getValue("dontAutoBalanceMe", "0").equals("1");
+        boolean dontAutoBalance = kv.getValue("dontAutoBalanceMe", "false").equals("true") ||
+                                  kv.getValue("dontAutoBalanceMe", "0").equals("1");
         job.setDontAutoBalanceMe(dontAutoBalance);
         if (kv.hasKey("maxRunTime")) {
             job.setMaxRunTime(SpawnHttp.HTTPService.getValidLong(kv, "maxRunTime", job.getMaxRunTime()));
@@ -905,7 +896,9 @@ public class JobsResource {
         }
         if (kv.hasKey("alerts")) {
             String alertJson = kv.getValue("alerts");
-            List<JobAlert> alerts = mapper.readValue(alertJson, TypeFactory.defaultInstance().constructParametricType(List.class, JobAlert.class));
+            List<JobAlert> alerts = MAPPER.readValue(alertJson, TypeFactory.defaultInstance()
+                                                                           .constructParametricType(List.class,
+                                                                                                    JobAlert.class));
             job.setAlerts(alerts);
         }
 
@@ -935,7 +928,7 @@ public class JobsResource {
         /** copy values existing in job parameters */
         if (job.getParameters() != null) {
             // remove specified parameters
-            for (Iterator<JobParameter> jp = job.getParameters().iterator(); jp.hasNext();) {
+            for (Iterator<JobParameter> jp = job.getParameters().iterator(); jp.hasNext(); ) {
                 JobParameter param = jp.next();
                 if (kv.hasKey("rp_" + param.getName())) {
                     jp.remove();
@@ -960,8 +953,8 @@ public class JobsResource {
         spawn.submitConfigUpdate(id, kv.getValue("commit"));
     }
 
-    private Response validateCreateError(String message, JSONArray lines,
-            JSONArray columns, String errorType) throws JSONException {
+    private static Response validateCreateError(String message, JSONArray lines,
+                                                JSONArray columns, String errorType) throws JSONException {
         JSONObject error = new JSONObject();
         error.put("message", message).put("lines", lines).put("columns", columns).put("result", errorType);
         return Response.ok().entity(error.toString()).build();
@@ -1007,7 +1000,7 @@ public class JobsResource {
             jobJSON.remove("classes");
             List<CodecExceptionLineNumber> warnings = new ArrayList<>();
             CodecJSON.decodeObject(TaskRunnable.class, jobJSON, warnings);
-            if (warnings.size() > 0) {
+            if (!warnings.isEmpty()) {
                 StringBuilder message = new StringBuilder();
                 Iterator<CodecExceptionLineNumber> iter = warnings.iterator();
                 while (iter.hasNext()) {
@@ -1041,9 +1034,9 @@ public class JobsResource {
         try {
             if ("".equals(id)) {
                 return Response.status(Response.Status.NOT_FOUND)
-                        .header("topic", "Expansion Error")
-                        .entity("{error:'unable to expand job, job id must be non null and not empty'}")
-                        .build();
+                               .header("topic", "Expansion Error")
+                               .entity("{error:'unable to expand job, job id must be non null and not empty'}")
+                               .build();
             } else {
                 String expandedConfig;
                 try {
@@ -1112,8 +1105,8 @@ public class JobsResource {
     }
 
     boolean stopJobHelper(String id, Optional<Boolean> cancelParam,
-            Optional<Boolean> forceParam,
-            int nodeId) throws Exception {
+                          Optional<Boolean> forceParam,
+                          int nodeId) throws Exception {
         IJob job = spawn.getJob(id);
         if (job == null) {
             return false;
@@ -1124,7 +1117,7 @@ public class JobsResource {
         if (cancelRekick) {
             job.setRekickTimeout(null);
         }
-        log.warn("[job.stop] " + job.getId() + "/" + nodeId + ", cancel=" + cancelRekick + ", force=" + force);
+        log.warn("[job.stop] {}/{}, cancel={}, force={}", job.getId(), nodeId, cancelRekick, force);
         // broadcast to all hosts if no node specified
         if (nodeId < 0) {
             if (force) {
@@ -1150,22 +1143,22 @@ public class JobsResource {
     @Path("/stop")
     @Produces(MediaType.APPLICATION_JSON)
     public Response stopJob(@QueryParam("jobid") Optional<String> jobIds,
-            @QueryParam("cancel") Optional<Boolean> cancelParam,
-            @QueryParam("force") Optional<Boolean> forceParam,
-            @QueryParam("node") @DefaultValue("-1") int nodeParam,
-            @QueryParam("id") Optional<String> id,
-            @QueryParam("task") @DefaultValue("-1") int task) {
+                            @QueryParam("cancel") Optional<Boolean> cancelParam,
+                            @QueryParam("force") Optional<Boolean> forceParam,
+                            @QueryParam("node") @DefaultValue("-1") int nodeParam,
+                            @QueryParam("id") Optional<String> id,
+                            @QueryParam("task") @DefaultValue("-1") int task) {
         try {
             if (jobIds.isPresent()) {
                 String ids = jobIds.get();
-                String joblist[] = Strings.splitArray(ids, ",");
+                String[] joblist = Strings.splitArray(ids, ",");
                 for (String jobName : joblist) {
                     boolean status = stopJobHelper(jobName, cancelParam, forceParam, nodeParam);
                     if (!status) {
                         return Response.status(Response.Status.NOT_FOUND)
-                                .header("topic", "Invalid ID")
-                                .entity("{error:'no such job'}")
-                                .build();
+                                       .header("topic", "Invalid ID")
+                                       .entity("{error:'no such job'}")
+                                       .build();
                     }
                 }
                 return Response.ok("{\"id\":\"" + ids + "\",\"action\":\"stopped\"}").build();
@@ -1173,9 +1166,9 @@ public class JobsResource {
                 boolean status = stopJobHelper(id.get(), cancelParam, forceParam, task);
                 if (!status) {
                     return Response.status(Response.Status.NOT_FOUND)
-                            .header("topic", "Invalid ID")
-                            .entity("{error:'no such job'}")
-                            .build();
+                                   .header("topic", "Invalid ID")
+                                   .entity("{error:'no such job'}")
+                                   .build();
                 } else {
                     return Response.ok("{\"id\":\"" + id.get() + "\",\"action\":\"stopped\"}").build();
                 }
@@ -1203,19 +1196,16 @@ public class JobsResource {
 
     }
 
-    private static void emitLogLineForAction(String user, String desc) {
-        log.warn("User " + user + " initiated action: " + desc);
-    }
-
-    public static HashSet<String> csvListToSet(String list) {
-        if (list != null) {
-            HashSet<String> set = new HashSet<String>();
-            for (String s : Strings.splitArray(list, ",")) {
-                set.add(s);
-            }
-            return set;
+    private static Response buildServerError(Exception exception) {
+        log.warn("", exception);
+        String message = exception.getMessage();
+        if (message == null) {
+            message = exception.toString();
         }
-        return null;
+        return Response.serverError().entity(message).build();
     }
 
+    private static void emitLogLineForAction(String user, String desc) {
+        log.warn("User {} initiated action: {}", user, desc);
+    }
 }
