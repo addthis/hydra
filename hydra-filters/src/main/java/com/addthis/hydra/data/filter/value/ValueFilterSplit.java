@@ -55,6 +55,8 @@ public class ValueFilterSplit extends ValueFilter {
     private static final Logger log = LoggerFactory.getLogger(ValueFilterSplit.class);
     private static final boolean ERROR_ON_ARRAY = Parameter.boolValue("hydra.filter.split.error", false);
 
+    /** Use this field as a delimiter in between * elements in the input string. Default is ",". */
+    @FieldConfig(codable = true)
     private String split = ",";
 
     /**
