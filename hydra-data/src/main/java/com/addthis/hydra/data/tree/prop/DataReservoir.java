@@ -24,6 +24,7 @@ import java.math.RoundingMode;
 import com.addthis.basis.util.Varint;
 
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.BytesCodable;
@@ -63,12 +64,15 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * the current epoch. The counter stored within this epoch is incremented. Older
      * epochs are dropped as newer epochs are encountered.
      *
-     * <p>The data attachment is queried with the notation {@code /+%name=epoch=N~sigma=N.N~obs=N}.
-     * Epoch determines the epoch to be tested. sigma is the number of standard deviations
+     * <p>The data attachment is queried with either the notation
+     * {@code /+%name=epoch=N~percentile=N~obs=N~min=N~mode=modelfit}
+     * Epoch determines the epoch to be tested. percentile is the Nth percentile
      * to use as a threshold. obs specifies how many previous observations to use. All these
      * fields are required. Specifying min=N is an optional parameter for a minimum number
-     * of observations that must be detected. The output returned is of the form
-     * {@code /delta:+hits/measurement:+hits/mean:+hits/stddev:+hits/threshold:+hits}.
+     * of observations that must be detected.
+     *
+     * <p>The output returned is of the form
+     * {@code /delta:+hits/measurement:+hits/mean:+hits/stddev:+hits/mode:+hits/percentile:+hits}.
      *
      * @user-reference
      * @hydra-name reservoir
@@ -242,7 +246,16 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
 
     @Override
     public ValueObject getValue(String key) {
-        return null;
+        if (key == null) {
+            return null;
+        } else if (key.startsWith("get(") && key.endsWith(")")) {
+            String input = key.substring(4, key.length() - 1);
+            long epoch = Long.parseLong(input);
+            long result = retrieveCount(epoch);
+            return ValueFactory.create(Math.max(0, result));
+        } else {
+            return null;
+        }
     }
 
     /**
