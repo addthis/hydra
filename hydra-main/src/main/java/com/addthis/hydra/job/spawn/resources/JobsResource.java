@@ -43,6 +43,8 @@ import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
+import com.addthis.codec.config.CodecConfig;
+import com.addthis.codec.config.Configs;
 import com.addthis.codec.json.CodecExceptionLineNumber;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.IJob;
@@ -75,6 +77,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigOrigin;
+import com.typesafe.config.ConfigParseOptions;
 import com.typesafe.config.ConfigRenderOptions;
 import com.yammer.dropwizard.auth.Auth;
 
@@ -191,8 +194,12 @@ public class JobsResource {
                 try {
                     formattedConfig = new JSONObject(configBody).toString();
                 } catch (JSONException ignored) {
-                    formattedConfig = ConfigFactory.parseString(configBody).root().render(
-                            ConfigRenderOptions.concise().setFormatted(true));
+                    Config jobConfig = ConfigFactory.parseString(configBody,
+                                                                 ConfigParseOptions.defaults()
+                                                                                   .setOriginDescription("job.conf"));
+                    jobConfig = Configs.expandSugar(TaskRunnable.class, jobConfig.root(), CodecConfig.getDefault())
+                                       .toConfig();
+                    formattedConfig = jobConfig.root().render(ConfigRenderOptions.concise().setFormatted(true));
                 }
                 return Response.ok("attachment; filename=expanded_job.json", MediaType.APPLICATION_JSON)
                                .entity(formattedConfig)
@@ -200,8 +207,12 @@ public class JobsResource {
                                .build();
             case "hocon":
                 // hocon parse + non-json output
-                formattedConfig = ConfigFactory.parseString(configBody).root().render(
-                        ConfigRenderOptions.defaults().setJson(false));
+                Config jobConfig = ConfigFactory.parseString(configBody,
+                                                             ConfigParseOptions.defaults()
+                                                                               .setOriginDescription("job.conf"));
+                jobConfig = Configs.expandSugar(TaskRunnable.class, jobConfig.root(), CodecConfig.getDefault())
+                                   .toConfig();
+                formattedConfig = jobConfig.root().render(ConfigRenderOptions.defaults());
                 return Response.ok("attachment; filename=expanded_job.json", MediaType.APPLICATION_OCTET_STREAM)
                                .entity(formattedConfig)
                                .header("topic", "expanded_job")
