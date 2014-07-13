@@ -30,6 +30,7 @@ import com.addthis.bundle.core.BundleFormatted;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.Numeric;
+import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueString;
@@ -45,7 +46,9 @@ public class BundleCalculator {
         OP_MULT,
         OP_REM,
         OP_SET,
+        OP_POP,
         OP_COLVAL,
+        OP_COLARRAY,
         OP_VAL,
         OP_SWAP,
         OP_GT,
@@ -123,6 +126,10 @@ public class BundleCalculator {
                 case "s":
                 case "set":
                     ops.add(new MathOp(Operation.OP_SET, null));
+                    break;
+                case "pop":
+                case "drop":
+                    ops.add(new MathOp(Operation.OP_POP, null));
                     break;
                 case "x":
                 case "swap":
@@ -222,7 +229,12 @@ public class BundleCalculator {
                     ops.add(new MathOp(Operation.OP_VECTOR, null));
                     break;
                 default: {
-                    if (o.startsWith("c")) {
+                    if (o.startsWith("a")) {
+                        String[] cols = Strings.splitArray(o.substring(1), ":");
+                        for (String col : cols) {
+                            ops.add(new MathOp(Operation.OP_COLARRAY, ValueFactory.create(col)));
+                        }
+                    } else if (o.startsWith("c")) {
                         String[] cols = Strings.splitArray(o.substring(1), ":");
                         for (String col : cols) {
                             ops.add(new MathOp(Operation.OP_COLVAL, ValueFactory.create(col)));
@@ -383,6 +395,15 @@ public class BundleCalculator {
                     insertNumbers(stack, target);
                     break;
                 }
+                case OP_COLARRAY: {
+                    ValueObject target = getSourceColumnBinder(line).getColumn(line, (int) op.val.asLong().getLong());
+                    ValueArray array = target.asArray();
+                    int size = array.size();
+                    for (int i = 0; i < size; i++) {
+                        stack.push(array.get(i).asNumeric());
+                    }
+                    break;
+                }
                 case OP_COLNAMEVAL: {
                     ValueObject target = line.getValue(line.getFormat().getField(op.val.toString()));
                     insertNumbers(stack, target);
@@ -492,6 +513,9 @@ public class BundleCalculator {
                     } else {
                         getSourceColumnBinder(line).setColumn(line, col, val);
                     }
+                    break;
+                case OP_POP:
+                    stack.pop();
                     break;
                 case OP_MIN:
                     v1 = stack.pop();

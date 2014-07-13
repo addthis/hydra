@@ -113,6 +113,12 @@ import io.netty.channel.ChannelProgressivePromise;
  * <td>0</td>
  * </tr>
  * <tr>
+ * <td>"pop" or "drop"</td>
+ * <td>1</td>
+ * <td>pop the top element off the stack</td>
+ * <td>0</td>
+ * </tr>
+ * <tr>
  * <td>"x" or "swap"</td>
  * <td>2</td>
  * <td>swap the positions of a and b</td>
@@ -261,6 +267,12 @@ import io.netty.channel.ChannelProgressivePromise;
  * <td>ALL</td>
  * <td>consumes all values on the stack and returns the (population) variance</td>
  * <td>1</td>
+ * </tr>
+ * <tr>
+ * <td>"aX:Y:Z..."</td>
+ * <td>0</td>
+ * <td>push the arrays in columns X, Y, Z,... onto the stack</td>
+ * <td>array length</td>
  * </tr>
  * <tr>
  * <td>"cX:Y:Z..."</td>
