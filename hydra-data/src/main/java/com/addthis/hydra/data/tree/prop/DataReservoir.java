@@ -440,7 +440,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
                         value.raw, value.sigma, value.minMeasurement);
             case "modelfit":
                 return modelFitAnomalyDetection(value.targetEpoch, value.numObservations, value.doubleToLongBits,
-                        value.raw, value.percentile);
+                        value.raw, value.percentile, value.minMeasurement);
             default:
                 throw new RuntimeException("Unknown mode type '" + value.mode + "'");
         }
@@ -481,7 +481,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
 
     @VisibleForTesting
     List<DataTreeNode> modelFitAnomalyDetection(long targetEpoch, int numObservations,
-            boolean doubleToLongBits, boolean raw, double percentile) {
+            boolean doubleToLongBits, boolean raw, double percentile, int minMeasurement) {
         int measurement;
         int count = 0;
         int min = Integer.MAX_VALUE;
@@ -590,7 +590,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         List<DataTreeNode> result = new ArrayList<>();
         VirtualTreeNode vchild, vparent;
 
-        if (measurement > threshold || percentile == 0.0) {
+        if (measurement >= minMeasurement && (measurement > threshold || percentile == 0.0)) {
             vchild = new VirtualTreeNode("gaussianNegative",
                     doubleToLong(gaussianNegative, doubleToLongBits));
             vparent = new VirtualTreeNode("percentile",

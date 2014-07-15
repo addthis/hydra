@@ -424,7 +424,7 @@ public class DataReservoirTest {
         reservoir.updateReservoir(8, 10, 0);
         reservoir.updateReservoir(9, 10, 1);
         reservoir.updateReservoir(10, 10, 1);
-        List<DataTreeNode> result = reservoir.modelFitAnomalyDetection(10, 9, true, true, 0);
+        List<DataTreeNode> result = reservoir.modelFitAnomalyDetection(10, 9, true, true, 0, 0);
         DataTreeNode percentile = retrieveNode(result.iterator(), percentilePath);
         assertTrue(Double.longBitsToDouble(percentile.getCounter()) > 90.0);
         reservoir = new DataReservoir();
@@ -438,7 +438,7 @@ public class DataReservoirTest {
         reservoir.updateReservoir(8, 10, 10);
         reservoir.updateReservoir(9, 10, 9);
         reservoir.updateReservoir(10, 10, 11);
-        result = reservoir.modelFitAnomalyDetection(10, 9, true, true, 0);
+        result = reservoir.modelFitAnomalyDetection(10, 9, true, true, 0, 0);
         percentile = retrieveNode(result.iterator(), percentilePath);
         assertTrue(Double.longBitsToDouble(percentile.getCounter()) > 90.0);
     }
