@@ -171,7 +171,7 @@ public class BundleFilterJSON extends BundleFilter {
         return tokens;
     }
 
-    private class QueryToken {
+    private static class QueryToken {
 
         String field;
         Integer index;

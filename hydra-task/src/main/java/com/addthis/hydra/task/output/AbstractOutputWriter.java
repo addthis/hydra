@@ -305,7 +305,7 @@ public abstract class AbstractOutputWriter implements SuperCodable {
         }
     }
 
-    protected final class WriteTuple {
+    protected static final class WriteTuple {
 
         public final String fileName;
         public final Bundle bundle;

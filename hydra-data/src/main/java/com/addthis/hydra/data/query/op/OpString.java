@@ -255,7 +255,7 @@ public class OpString extends AbstractRowOp {
     }
 
     /** */
-    private class StringOp {
+    private static class StringOp {
 
         private int type;
         private ValueObject val;

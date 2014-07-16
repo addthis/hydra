@@ -167,7 +167,7 @@ public class MeshQueryWorker {
      * <p/>
      * Does not currently support setting variables -- would need some kind of concurrency enforcement probably.
      */
-    private class ReflectionServlet extends HttpServlet {
+    private static class ReflectionServlet extends HttpServlet {
 
         public ReflectionServlet() {
 

@@ -86,7 +86,7 @@ public class BundleFilterTemplate extends BundleFilter {
         public String value(Bundle bundle, BundleField[] fields);
     }
 
-    class StaticToken implements Token {
+    static class StaticToken implements Token {
 
         private String value;
 
@@ -99,7 +99,7 @@ public class BundleFilterTemplate extends BundleFilter {
         }
     }
 
-    class FieldToken implements Token {
+    static class FieldToken implements Token {
 
         private int pos;
 

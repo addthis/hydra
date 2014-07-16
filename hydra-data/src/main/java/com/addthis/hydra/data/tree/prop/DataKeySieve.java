@@ -242,7 +242,7 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
     /**
      * phantom node created for reporting
      */
-    private class MyTreeNode extends ConcurrentTreeNode {
+    private static class MyTreeNode extends ConcurrentTreeNode {
 
         MyTreeNode(String name, long hits) {
             this.name = name;

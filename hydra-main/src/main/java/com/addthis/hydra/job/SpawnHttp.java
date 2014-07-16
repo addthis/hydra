@@ -75,7 +75,7 @@ public class SpawnHttp extends AbstractHandler {
     /**
      * simple kvpairs wrapper service
      */
-    public abstract class KVService extends HTTPService {
+    public abstract static class KVService extends HTTPService {
 
         public abstract void kvCall(KVPairs kv) throws Exception;
 

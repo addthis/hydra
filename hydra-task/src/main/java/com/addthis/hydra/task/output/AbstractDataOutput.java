@@ -213,7 +213,7 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
     /**
      * for associating a bundle field with a mutable string index
      */
-    class TokenIndex {
+    static class TokenIndex {
 
         TokenIndex(BundleField field, int index) {
             this.field = field;

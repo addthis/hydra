@@ -280,7 +280,7 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
     /**
      * for debugging
      */
-    class DebugList extends LinkedList<DataTreeNode> {
+    static class DebugList extends LinkedList<DataTreeNode> {
 
         @Override
         public void finalize() {

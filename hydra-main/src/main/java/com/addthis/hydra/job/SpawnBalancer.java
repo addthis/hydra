@@ -582,7 +582,7 @@ public class SpawnBalancer implements Codable {
     }
 
     /* A class for storing a task and its live/replica status */
-    private class JobTaskItem {
+    private static class JobTaskItem {
 
         private final JobTask task;
 
@@ -1446,7 +1446,7 @@ public class SpawnBalancer implements Codable {
         return new HostScore(meanActive, usedDiskPercent, score);
     }
 
-    private class HostScore {
+    private static class HostScore {
 
         private final double meanActiveTasks;
         private final double usedDiskPercent;

@@ -202,7 +202,7 @@ public class MeshMessageConsumer implements MessageConsumer {
     }
 
     /* timed task that can be "bumped" to run now */
-    abstract class IntervalTimer extends Thread {
+    abstract static class IntervalTimer extends Thread {
 
         IntervalTimer(final String name, final long timeout) {
             super(name);

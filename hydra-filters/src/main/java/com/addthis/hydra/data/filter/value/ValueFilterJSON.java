@@ -139,7 +139,7 @@ public class ValueFilterJSON extends ValueFilter implements SuperCodable {
     public void preEncode() {
     }
 
-    private class QueryToken {
+    private static class QueryToken {
 
         String field;
         Integer index;

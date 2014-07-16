@@ -71,7 +71,7 @@ public class TestDiskBackedMap {
         }
     }
 
-    private class MergedRowFactory implements DiskBackedMap.DiskObjectFactory {
+    private static class MergedRowFactory implements DiskBackedMap.DiskObjectFactory {
 
         @Override
         public DiskBackedMap.DiskObject fromBytes(byte[] bytes) {

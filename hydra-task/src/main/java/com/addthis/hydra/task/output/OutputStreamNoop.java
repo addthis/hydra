@@ -30,7 +30,7 @@ public class OutputStreamNoop extends OutputStreamFormatter {
     }
 
 
-    private class NoopOut extends OutputStreamEmitter {
+    private static class NoopOut extends OutputStreamEmitter {
 
         private NoopOut() {
         }

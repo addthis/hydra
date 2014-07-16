@@ -54,7 +54,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestValueFilterCounter {
 
-    public class CounterThread extends Thread {
+    public static class CounterThread extends Thread {
 
         final ValueFilterCounter counter;
         final int iterations;
