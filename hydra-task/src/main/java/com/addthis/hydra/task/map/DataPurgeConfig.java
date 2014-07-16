@@ -23,8 +23,7 @@ public class DataPurgeConfig {
     /**
      * Base directory to search for data to purge. This field is required.
      */
-    @FieldConfig(codable = true, required = true)
-
+    @FieldConfig(codable = true, required = true, autocollection = true)
     private String[] directoryPrefix;
 
     /**
