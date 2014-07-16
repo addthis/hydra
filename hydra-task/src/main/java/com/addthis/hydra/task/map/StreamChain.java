@@ -22,7 +22,7 @@ public class StreamChain extends StreamBuilder {
      * The chain of stream builders to execute.
      */
     @FieldConfig(codable = true, required = true)
-    private StreamBuilder builders[];
+    private StreamBuilder[] builders;
 
     @Override
     public void init() {

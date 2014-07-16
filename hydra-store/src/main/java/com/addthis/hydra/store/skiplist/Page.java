@@ -311,8 +311,8 @@ public class Page<K, V extends BytesCodable> {
                 rawValues = new ArrayList<>(size);
 
                 for (int i = 0; i < entries; i++) {
-                    byte kb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
-                    byte vb[] = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                    byte[] kb = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                    byte[] vb = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
                     bytes += kb.length + vb.length;
                     keys.add(keyCoder.keyDecode(kb));
                     values.add(null);
@@ -342,8 +342,8 @@ public class Page<K, V extends BytesCodable> {
                 rawValues = new ArrayList<>(size);
 
                 for (int i = 0; i < entries; i++) {
-                    byte kb[] = Bytes.readBytes(in);
-                    byte vb[] = Bytes.readBytes(in);
+                    byte[] kb = Bytes.readBytes(in);
+                    byte[] vb = Bytes.readBytes(in);
                     bytes += kb.length + vb.length;
                     keys.add(keyCoder.keyDecode(kb));
                     values.add(null);

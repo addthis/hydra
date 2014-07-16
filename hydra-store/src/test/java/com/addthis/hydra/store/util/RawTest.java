@@ -49,7 +49,7 @@ public class RawTest {
 
     public void sort(boolean longCompare) {
         Raw.useLongCompare(longCompare);
-        String s[] = new String[]{
+        String[] s = new String[]{
                 "acbd",
                 "zyx",
                 "abcd",
@@ -64,7 +64,7 @@ public class RawTest {
                 "abcde123ijklmnop",
                 "acb",
         };
-        Raw r[] = new Raw[s.length];
+        Raw[] r = new Raw[s.length];
         for (int i = 0; i < r.length; i++) {
             r[i] = Raw.get(s[i]);
         }

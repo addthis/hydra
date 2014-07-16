@@ -72,7 +72,7 @@ public final class KeyTopper implements Codable {
      */
     @SuppressWarnings("unchecked")
     public Map.Entry<String, Long>[] getSortedEntries() {
-        Map.Entry e[] = new Map.Entry[map.size()];
+        Map.Entry[] e = new Map.Entry[map.size()];
         e = map.entrySet().toArray(e);
         Arrays.sort(e, new Comparator() {
             public int compare(Object arg0, Object arg1) {

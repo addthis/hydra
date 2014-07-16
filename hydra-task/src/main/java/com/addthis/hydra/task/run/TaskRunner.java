@@ -64,7 +64,7 @@ public class TaskRunner {
      * @param args
      * @throws Exception
      */
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         if (args.length < 1) {
             System.out.println("error: no arguments specified. Must specify at least one argument.");
             return;

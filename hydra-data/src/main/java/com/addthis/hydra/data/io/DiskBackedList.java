@@ -43,7 +43,7 @@ public class DiskBackedList<K> implements List<K> {
     /** */
     public static interface ItemCodec<K> {
 
-        public K decode(byte row[]) throws IOException;
+        public K decode(byte[] row) throws IOException;
 
         public byte[] encode(K row) throws IOException;
     }
@@ -424,7 +424,7 @@ public class DiskBackedList<K> implements List<K> {
     /**
      * allocate a new Entry based on raw data and prev/next pointers
      */
-    private DiskBackedListEntry allocate(byte data[], DiskBackedListEntry next) throws Exception {
+    private DiskBackedListEntry allocate(byte[] data, DiskBackedListEntry next) throws Exception {
         return accessFileHandler.writeToAccess(data, next);
     }
 
@@ -614,7 +614,7 @@ public class DiskBackedList<K> implements List<K> {
             }
         }
 
-        public void write(byte data[]) throws IOException {
+        public void write(byte[] data) throws IOException {
             access.seek(off);
             access.writeLong(next);
             numSeeks += 1;

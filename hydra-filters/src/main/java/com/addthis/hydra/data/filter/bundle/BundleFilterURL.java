@@ -190,7 +190,7 @@ public final class BundleFilterURL extends BundleFilter {
     @FieldConfig(codable = true)
     private boolean invalidExit;
 
-    private String fields[];
+    private String[] fields;
 
     private Pattern hostNormalPattern;
 
@@ -234,7 +234,7 @@ public final class BundleFilterURL extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         String pv = ValueUtil.asNativeString(bundle.getValue(bound[0]));
         if (!asFile) {
             if (pv == null || pv.length() < 7) {

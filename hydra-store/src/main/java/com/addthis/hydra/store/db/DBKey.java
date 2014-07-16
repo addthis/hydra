@@ -32,7 +32,7 @@ public final class DBKey implements IPageDB.Key, Comparable<DBKey> {
     private final int id;
     private final Raw key;
 
-    public DBKey(byte raw[]) {
+    public DBKey(byte[] raw) {
         id = Bytes.toInt(raw, 0, 4);
         key = Raw.get(Bytes.cut(raw, 4, raw.length - 4));
     }

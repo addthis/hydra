@@ -408,8 +408,8 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         return bundleTime;
     }
 
-    static final String padOpt[] = {"K", "M", "B", "T"};
-    static final DecimalFormat padDCO[] = {new DecimalFormat("0.00"), new DecimalFormat("0.0"), new DecimalFormat("0")};
+    static final String[] padOpt = {"K", "M", "B", "T"};
+    static final DecimalFormat[] padDCO = {new DecimalFormat("0.00"), new DecimalFormat("0.0"), new DecimalFormat("0")};
     /**
      * number right pad utility for log data
      */

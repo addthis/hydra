@@ -105,7 +105,7 @@ public class IndexedFeaturesBucket implements Codable, FeaturesBucket {
         return sb.toString();
     }
 
-    public static void main(String args[]) {
+    public static void main(String[] args) {
         IndexedFeaturesBucket featuresBucket = new IndexedFeaturesBucket();
         featuresBucket.addFeature("1");
         featuresBucket.addFeature("1");

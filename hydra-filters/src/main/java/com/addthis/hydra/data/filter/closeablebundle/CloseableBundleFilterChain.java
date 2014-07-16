@@ -30,7 +30,7 @@ public class CloseableBundleFilterChain extends CloseableBundleFilter {
     private static final Logger log = LoggerFactory.getLogger(CloseableBundleFilterChain.class);
 
     @FieldConfig(codable = true, required = true)
-    private CloseableBundleFilter filter[];
+    private CloseableBundleFilter[] filter;
     @FieldConfig(codable = true)
     private boolean failStop   = true;
     @FieldConfig(codable = true)

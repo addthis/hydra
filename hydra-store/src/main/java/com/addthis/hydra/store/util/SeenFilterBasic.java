@@ -157,8 +157,8 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, SuperCodable {
                 long lhc = (long) o.hashCode();
                 return lhc | Bytes.reverseBits(lhc);
             case HASH_MD5:
-                byte r1[] = generatePreHash(o);
-                byte r2[] = new byte[r1.length];
+                byte[] r1 = generatePreHash(o);
+                byte[] r2 = new byte[r1.length];
                 for (int i = 0; i < r1.length; i++) {
                     r2[r2.length - i - 1] = (byte) (r1[i] ^ index);
                 }
@@ -226,7 +226,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, SuperCodable {
      * generate a bit hash offset set
      */
     public long[] getHashSet(K o) {
-        long bs[] = new long[bitsper];
+        long[] bs = new long[bitsper];
         for (int i = 0; i < bitsper; i++) {
             bs[i] = Math.abs(generateHash(o, i));
         }
@@ -236,7 +236,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, SuperCodable {
     /**
      * return true (seen) if all bits set
      */
-    public boolean checkHashSet(long bs[]) {
+    public boolean checkHashSet(long[] bs) {
         for (long l : bs) {
             if (!getBit(Math.abs((int) (l % bits)))) {
                 return false;
@@ -248,7 +248,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, SuperCodable {
     /**
      * warning: like setHashSet but does not update bitsfee
      */
-    public void updateHashSet(long bs[]) {
+    public void updateHashSet(long[] bs) {
         for (int i = 0; i < bitsper; i++) {
             long hash = bs[i];
             int offset = (int) (hash % bits);
@@ -261,7 +261,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, SuperCodable {
     /**
      * set all bits from this hash offset set
      */
-    public void setHashSet(long bs[]) {
+    public void setHashSet(long[] bs) {
         for (long l : bs) {
             setBit(Math.abs((int) (l % bits)));
         }

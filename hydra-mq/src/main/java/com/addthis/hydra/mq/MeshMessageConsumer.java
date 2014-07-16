@@ -58,7 +58,7 @@ public class MeshMessageConsumer implements MessageConsumer {
 
     private volatile LinkedList<FileReference> fileSources = new LinkedList<>();
     private MessageFileProvider provider;
-    private String findPaths[];
+    private String[] findPaths;
 
    public MeshMessageConsumer(final MeshyClient mesh, final String topic, final String uuid) {
         this.mesh = mesh;

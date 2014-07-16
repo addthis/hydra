@@ -44,7 +44,7 @@ public final class PathQuery extends PathOp {
      * Path traversal to the target node. This field is required.
      */
     @FieldConfig(codable = true, required = true)
-    private PathValue path[];
+    private PathValue[] path;
 
     /**
      * When traversing the tree in search of the target node,
@@ -94,7 +94,7 @@ public final class PathQuery extends PathOp {
 
     @Override
     public TreeNodeList getNextNodeList(TreeMapState state) {
-        String p[] = new String[path.length];
+        String[] p = new String[path.length];
         for (int i = 0; i < p.length; i++) {
             p[i] = ValueUtil.asNativeString(path[i].getPathValue(state));
             if (p[i] == null) {

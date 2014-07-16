@@ -81,7 +81,7 @@ public final class FeaturesKeyTopper implements Codable {
             summaryMap.put(id + ">" + bucket.toString(), new Long(bucket.getHits()));
         }
 
-        Map.Entry e[] = new Map.Entry[summaryMap.size()];
+        Map.Entry[] e = new Map.Entry[summaryMap.size()];
         e = summaryMap.entrySet().toArray(e);
 
         Arrays.sort(e, new Comparator() {
@@ -205,7 +205,7 @@ public final class FeaturesKeyTopper implements Codable {
         return removed;
     }
 
-    public static void main(String args[]) {
+    public static void main(String[] args) {
         FeaturesKeyTopper keyTopper = new FeaturesKeyTopper();
         keyTopper.init().setLossy(true);
         keyTopper.increment("1", 10000, new String[]{"foo", "bar"});

@@ -36,7 +36,7 @@ import com.addthis.hydra.data.filter.value.StringFilter;
 public class OutputStreamColumnized extends OutputStreamFormatter implements SuperCodable {
 
     @FieldConfig(codable = true, required = true)
-    private String columns[];
+    private String[] columns;
     @FieldConfig(codable = true)
     private String stringQuote;
     @FieldConfig(codable = true)
@@ -60,13 +60,13 @@ public class OutputStreamColumnized extends OutputStreamFormatter implements Sup
     private class TokenOut extends OutputStreamEmitter {
 
         private BundleFormat format;
-        private BundleField fields[];
+        private BundleField[] fields;
 
         @Override
         public void write(OutputStream out, Bundle row) throws IOException {
             BundleFormat rowFormat = row.getFormat();
             if (fields == null || rowFormat != format) {
-                BundleField newFields[] = new BundleField[columns.length];
+                BundleField[] newFields = new BundleField[columns.length];
                 for (int i = 0; i < columns.length; i++) {
                     newFields[i] = rowFormat.getField(columns[i]);
                 }

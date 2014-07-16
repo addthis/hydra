@@ -82,7 +82,7 @@ public class CommandResource {
             if (label == null || command.length() == 0) {
                 throw new Exception("missing required field");
             }
-            String cmdtok[] = Strings.splitArray(command, ",");
+            String[] cmdtok = Strings.splitArray(command, ",");
             for (int i = 0; i < cmdtok.length; i++) {
                 cmdtok[i] = Bytes.urldecode(cmdtok[i]);
             }

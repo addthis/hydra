@@ -35,7 +35,7 @@ public class DataSourceStreamFiles extends DataSourceStreamList {
     private String[] files;
 
     @Override
-    public StreamFileSource getSourceList(Integer shard[]) {
+    public StreamFileSource getSourceList(Integer[] shard) {
         return new StreamSourceFileList(Strings.join(files, "\n"));
     }
 }

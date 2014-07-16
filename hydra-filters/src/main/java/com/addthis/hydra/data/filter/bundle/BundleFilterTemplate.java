@@ -26,7 +26,7 @@ public class BundleFilterTemplate extends BundleFilter {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilterTemplate.class);
 
-    public static BundleFilterTemplate create(String tokens[], String set) {
+    public static BundleFilterTemplate create(String[] tokens, String set) {
         BundleFilterTemplate bft = new BundleFilterTemplate();
         bft.tokens = tokens;
         bft.set = set;
@@ -34,12 +34,12 @@ public class BundleFilterTemplate extends BundleFilter {
     }
 
     @FieldConfig(codable = true, required = true)
-    private String tokens[];
+    private String[] tokens;
     @FieldConfig(codable = true, required = true)
     private String set;
 
-    private String fieldSet[];
-    private Token  tokenSet[];
+    private String[] fieldSet;
+    private Token[]  tokenSet;
 
     @Override
     public void initialize() {
@@ -62,7 +62,7 @@ public class BundleFilterTemplate extends BundleFilter {
     @Override
     public boolean filterExec(Bundle bundle) {
         try {
-            BundleField bound[] = getBindings(bundle, fieldSet);
+            BundleField[] bound = getBindings(bundle, fieldSet);
             StringBuilder sb = new StringBuilder();
             for (Token token : tokenSet) {
                 sb.append(token.value(bundle, bound));
@@ -77,13 +77,13 @@ public class BundleFilterTemplate extends BundleFilter {
 
     public String template(Bundle bundle) {
         filter(bundle);
-        BundleField bound[] = getBindings(bundle, fieldSet);
+        BundleField[] bound = getBindings(bundle, fieldSet);
         return bundle.getValue(bound[bound.length - 1]).toString();
     }
 
     interface Token {
 
-        public String value(Bundle bundle, BundleField fields[]);
+        public String value(Bundle bundle, BundleField[] fields);
     }
 
     class StaticToken implements Token {
@@ -94,7 +94,7 @@ public class BundleFilterTemplate extends BundleFilter {
             this.value = value;
         }
 
-        public String value(Bundle bundle, BundleField fields[]) {
+        public String value(Bundle bundle, BundleField[] fields) {
             return value;
         }
     }
@@ -108,7 +108,7 @@ public class BundleFilterTemplate extends BundleFilter {
         }
 
         @Override
-        public String value(Bundle bundle, BundleField fields[]) {
+        public String value(Bundle bundle, BundleField[] fields) {
             return bundle.getValue(fields[pos]).toString();
         }
     }

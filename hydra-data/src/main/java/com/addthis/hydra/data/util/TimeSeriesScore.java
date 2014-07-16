@@ -121,7 +121,7 @@ public class TimeSeriesScore implements Codable {
             }
         }
 
-        Map.Entry e[] = new Map.Entry[map.size()];
+        Map.Entry[] e = new Map.Entry[map.size()];
 
         e = map.entrySet().toArray(e);
         Arrays.sort(e, new Comparator() {

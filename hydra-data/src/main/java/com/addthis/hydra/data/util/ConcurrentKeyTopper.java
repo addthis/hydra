@@ -124,7 +124,7 @@ public final class ConcurrentKeyTopper implements SuperCodable, BytesCodable {
 
         try {
             int size = map.size();
-            Map.Entry e[] = new Map.Entry[size];
+            Map.Entry[] e = new Map.Entry[size];
             e = map.entrySet().toArray(e);
             Arrays.sort(e, new Comparator() {
                 public int compare(Object arg0, Object arg1) {

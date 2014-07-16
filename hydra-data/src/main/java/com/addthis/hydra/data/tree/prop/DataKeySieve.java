@@ -52,7 +52,7 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
         @FieldConfig(codable = true, required = true)
         private String key;
         @FieldConfig(codable = true, required = true)
-        private SeenFilterBasic<String> tiers[];
+        private SeenFilterBasic<String>[] tiers;
         @FieldConfig(codable = true)
         private int maxCount;
 
@@ -82,9 +82,9 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
     }
 
     @FieldConfig(codable = true, required = true)
-    private SeenFilterBasic<String> tiers[];
+    private SeenFilterBasic<String>[] tiers;
     @FieldConfig(codable = true)
-    private DataCounting counts[];
+    private DataCounting[] counts;
 
     private BundleField keyAccess;
     private DataCounting.Config template;
@@ -212,7 +212,7 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
             }
             return list;
         }
-        String keys[] = Strings.splitArray(key, ",");
+        String[] keys = Strings.splitArray(key, ",");
         ArrayList<DataTreeNode> list = new ArrayList<>(keys.length);
         synchronized (this) {
             keyloop:

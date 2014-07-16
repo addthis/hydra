@@ -85,7 +85,7 @@ public class ValueFilterSeen extends ValueFilter {
             SeenFilterBasic<Raw> newbloom = new SeenFilterBasic<Raw>();
             String raw;
             try {
-                byte bytes[] = ValueFilterHttpGet.httpGet(url, null, null, 30000, false);
+                byte[] bytes = ValueFilterHttpGet.httpGet(url, null, null, 30000, false);
                 if (bytes == null) {
                     System.err.println("url " + url + " empty.  killing bloom filter");
                     url = null;

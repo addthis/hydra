@@ -59,7 +59,7 @@ public class PathAlias extends PathKeyValue {
      * Path traversal to the target node. This field is required.
      */
     @FieldConfig(codable = true, required = true)
-    protected PathValue path[];
+    protected PathValue[] path;
 
     /**
      * When traversing the tree in search of the target node,
@@ -111,7 +111,7 @@ public class PathAlias extends PathKeyValue {
     public PathAlias() {
     }
 
-    public PathAlias(PathValue path[]) {
+    public PathAlias(PathValue[] path) {
         this.path = path;
     }
 
@@ -131,7 +131,7 @@ public class PathAlias extends PathKeyValue {
                 return node;
             }
         }
-        String p[] = new String[path.length];
+        String[] p = new String[path.length];
         for (int i = 0; i < p.length; i++) {
             p[i] = ValueUtil.asNativeString(path[i].getFilteredValue(state));
         }

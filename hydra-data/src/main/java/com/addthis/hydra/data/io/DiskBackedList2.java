@@ -52,7 +52,7 @@ public class DiskBackedList2<K> implements List<K> {
 
     public static interface ItemCodec<K> {
 
-        public K decode(byte row[]) throws IOException;
+        public K decode(byte[] row) throws IOException;
 
         public byte[] encode(K row) throws IOException;
     }

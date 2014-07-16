@@ -95,7 +95,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
      * If specified then process only the shards specified in this array.
      */
     @FieldConfig(codable = true)
-    private Integer shards[];
+    private Integer[] shards;
 
     /**
      * If true then generate a hash of the filename input rather than use the {{mod}} field. Default is false.
@@ -165,7 +165,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
      */
     private final Set<SourceWrapper> closeSet = new HashSet<SourceWrapper>();
 
-    public abstract StreamFileSource getSourceList(Integer shards[]);
+    public abstract StreamFileSource getSourceList(Integer[] shards);
 
     protected DataSourceStreamList() {
         Runtime.getRuntime().addShutdownHook(new Thread() {

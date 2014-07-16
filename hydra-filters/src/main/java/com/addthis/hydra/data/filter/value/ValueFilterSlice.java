@@ -126,8 +126,8 @@ public class ValueFilterSlice extends ValueFilter {
                     return null;
                 }
             } else {
-                char ch[] = new char[Math.abs(t - f)];
-                char src[] = str.toCharArray();
+                char[] ch = new char[Math.abs(t - f)];
+                char[] src = str.toCharArray();
                 if (i > 0) {
                     for (int x = f; x < t; x += i) {
                         ch[x - f] = src[x];

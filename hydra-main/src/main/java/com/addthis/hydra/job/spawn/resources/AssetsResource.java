@@ -80,7 +80,7 @@ public class AssetsResource {
             try {
                 OutputStream out = response.getOutputStream();
                 InputStream in = new FileInputStream(file);
-                byte buf[] = new byte[1024];
+                byte[] buf = new byte[1024];
                 int read = 0;
                 while ((read = in.read(buf)) >= 0) {
                     out.write(buf, 0, read);

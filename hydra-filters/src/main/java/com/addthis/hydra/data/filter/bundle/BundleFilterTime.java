@@ -91,7 +91,7 @@ public class BundleFilterTime extends BundleFilter {
     @Override
     public boolean filterExec(Bundle row) {
         if (dst != null) {
-            BundleField bound[] = getBindings(row, fields);
+            BundleField[] bound = getBindings(row, fields);
             long unixTime;
             if (src != null) {
                 ValueObject in = row.getValue(bound[0]);

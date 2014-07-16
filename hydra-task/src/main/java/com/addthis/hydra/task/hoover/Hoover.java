@@ -173,20 +173,20 @@ public class Hoover extends TaskRunnable implements Runnable {
      * Default is ["ssh", "{{USER}}@{{HOST}}", "ls", "{{PATH}}" ].
      */
     @FieldConfig(codable = true)
-    private String listCommand[] = new String[]{"ssh", "{{USER}}@{{HOST}}", "ls", "{{PATH}}"};
+    private String[] listCommand = new String[]{"ssh", "{{USER}}@{{HOST}}", "ls", "{{PATH}}"};
 
     /**
      * Execute this command to copy a file from the remote machine to the local machine.
      * <br>Default is ["rsync", "-av", "{{USER}}@{{HOST}}:{{REMOTEPATH}}", "{{LOCALPATH}}" ].
      */
     @FieldConfig(codable = true)
-    private String copyCommand[] = new String[]{"rsync", "-av", "{{USER}}@{{HOST}}:{{REMOTEPATH}}", "{{LOCALPATH}}"};
+    private String[] copyCommand = new String[]{"rsync", "-av", "{{USER}}@{{HOST}}:{{REMOTEPATH}}", "{{LOCALPATH}}"};
 
     /**
      * Optionally run this command at the completion of the file transfer. Default is null.
      */
     @FieldConfig(codable = true)
-    private String postCommand[];
+    private String[] postCommand;
 
     /**
      * If this flag is set, then fail this job when the the post command
@@ -205,7 +205,7 @@ public class Hoover extends TaskRunnable implements Runnable {
      * Default is ["{{HOST}}-{{FILE}}"]
      */
     @FieldConfig(codable = true)
-    private String pathOut[] = new String[]{"{{HOST}}-{{FILE}}"};
+    private String[] pathOut = new String[]{"{{HOST}}-{{FILE}}"};
 
     /**
      * If true then {{FILE}} is replaced with the file name.
@@ -250,7 +250,7 @@ public class Hoover extends TaskRunnable implements Runnable {
      * <br>["find", "{{DIR}}", "-type", "f", "-mtime", "+{{DAYS}}", "-print", "-exec", "rm", "{}", ";"]</br>
      */
     @FieldConfig(codable = true)
-    private String purgeCommand[] = new String[]{"find", "{{DIR}}", "-type", "f", "-mtime", "+{{DAYS}}", "-print", "-exec", "rm", "{}", ";"};
+    private String[] purgeCommand = new String[]{"find", "{{DIR}}", "-type", "f", "-mtime", "+{{DAYS}}", "-print", "-exec", "rm", "{}", ";"};
 
     /**
      * If true then purge mark files that are older than purgeAfterDays days. Default is true.
@@ -284,7 +284,7 @@ public class Hoover extends TaskRunnable implements Runnable {
     private Pattern datePattern;
     private TaskRunConfig config;
     private Thread thread;
-    private Integer mods[];
+    private Integer[] mods;
     private File markRoot;
     private DateTime jodaStartDate = null;
     private DateTime jodaEndDate = null;
@@ -317,10 +317,10 @@ public class Hoover extends TaskRunnable implements Runnable {
         log.info("init job=" + config.jobId + " mods=" + Strings.join(mods, ",") + " node=" + config.node + " of " + config.nodeCount);
         /* create job files from map if not already existing or changed */
         for (Map.Entry<String, String> file : staticFiles.entrySet()) {
-            String fileName[] = Strings.splitArray(file.getKey(), ";");
+            String[] fileName = Strings.splitArray(file.getKey(), ";");
             String mode = fileName.length > 1 ? fileName[1] : "755";
             File out = new File(fileName[0]);
-            byte raw[] = Bytes.toBytes(file.getValue());
+            byte[] raw = Bytes.toBytes(file.getValue());
             if (out.exists() && out.isFile() && out.length() == raw.length) {
                 continue;
             }
@@ -547,7 +547,7 @@ public class Hoover extends TaskRunnable implements Runnable {
      */
     private Collection<MarkFile> findFiles(String hostNickname, String host) {
         LinkedList<MarkFile> files = new LinkedList<>();
-        String newCmd[] = new String[listCommand.length];
+        String[] newCmd = new String[listCommand.length];
         for (int i = 0; i < newCmd.length; i++) {
             newCmd[i] = listCommand[i].replace("{{USER}}", user).replace("{{HOST}}", host).replace("{{PATH}}", path);
         }
@@ -573,7 +573,7 @@ public class Hoover extends TaskRunnable implements Runnable {
     }
 
     private boolean fetchFile(MarkFile markFile, String host) {
-        String path[] = new String[pathOut.length];
+        String[] path = new String[pathOut.length];
         for (int i = 0; i < path.length; i++) {
             path[i] = pathOut[i].replace("{{HOST}}", markFile.host).replace("{{FILE}}", markFile.name());
             if (markFile.dateYear != null) {
@@ -585,7 +585,7 @@ public class Hoover extends TaskRunnable implements Runnable {
             }
         }
         String pathString = outDir + "/" + Strings.join(path, "/");
-        String newCmd[] = new String[copyCommand.length];
+        String[] newCmd = new String[copyCommand.length];
         File fileOut = new File(pathString);
         File fileDir = Files.initDirectory(fileOut.getParentFile());
         if (verboseCheck || log.isDebugEnabled()) log.info("fileDir=" + fileDir + " fileOut=" + fileOut+" outDir="+fileDir+", "+fileDir.exists());
@@ -630,7 +630,7 @@ public class Hoover extends TaskRunnable implements Runnable {
 
     private boolean purgeDir(String dir, int days) {
         if (days <= 0) return true;
-        String newCmd[] = new String[purgeCommand.length];
+        String[] newCmd = new String[purgeCommand.length];
         for (int i = 0; i < newCmd.length; i++) {
             newCmd[i] = purgeCommand[i].replace("{{DIR}}", dir).replace("{{DAYS}}", Integer.toString(days));
         }

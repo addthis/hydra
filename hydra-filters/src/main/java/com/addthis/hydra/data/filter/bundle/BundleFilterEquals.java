@@ -69,7 +69,7 @@ public class BundleFilterEquals extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         ValueObject lv = bundle.getValue(bound[0]);
         ValueObject rv = bundle.getValue(bound[1]);
         if (lv == null && rv == null) {

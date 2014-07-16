@@ -30,7 +30,7 @@ public class StreamSourceHashed implements StreamFileSource {
         this(wrap, shards, mod, false);
     }
 
-    public StreamSourceHashed(StreamFileSource wrap, Integer shards[], int mod, boolean legacy) {
+    public StreamSourceHashed(StreamFileSource wrap, Integer[] shards, int mod, boolean legacy) {
         this.wrap = wrap;
         this.shards = shards;
         this.mod = mod;

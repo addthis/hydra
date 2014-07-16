@@ -46,7 +46,7 @@ public final class PathCall extends PathOp {
     @FieldConfig(codable = true, writeonly = true)
     private String printableRule;
 
-    private PathElement ppath[];
+    private PathElement[] ppath;
 
     public PathCall() {
     }

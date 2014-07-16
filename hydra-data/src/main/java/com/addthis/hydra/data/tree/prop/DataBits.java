@@ -93,7 +93,7 @@ public class DataBits extends TreeNodeData<DataBits.Config> {
     }
 
     @FieldConfig(codable = true)
-    private long bits[];
+    private long[] bits;
 
     private BundleField keyAccess;
 

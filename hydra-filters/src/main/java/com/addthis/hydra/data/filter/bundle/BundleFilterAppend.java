@@ -127,7 +127,7 @@ public class BundleFilterAppend extends BundleFilter {
     @FieldConfig(codable = true)
     private int size = 5;
 
-    private String fields[];
+    private String[] fields;
 
     @Override
     public void initialize() {
@@ -146,7 +146,7 @@ public class BundleFilterAppend extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         ValueObject toVal = bundle.getValue(bound[0]);
         ValueArray arr = null;
         if (toVal == null) {

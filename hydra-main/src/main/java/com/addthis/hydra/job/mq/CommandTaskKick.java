@@ -48,7 +48,7 @@ public class CommandTaskKick implements JobMessage {
     @FieldConfig(codable = true)
     private int monthlyBackups;
     @FieldConfig(codable = true)
-    private ReplicaTarget replicas[];
+    private ReplicaTarget[] replicas;
     @FieldConfig(codable = true)
     private int retries;
 
@@ -66,7 +66,7 @@ public class CommandTaskKick implements JobMessage {
 
     public CommandTaskKick(String host, JobKey jobKey, int priority, int jobNodes, long runTime,
             int runCount, String config, String command, String killSignal, int hourlyBackups,
-            int dailyBackups, int weeklyBackups, int monthlyBackups, ReplicaTarget replicas[]) {
+            int dailyBackups, int weeklyBackups, int monthlyBackups, ReplicaTarget[] replicas) {
         this.hostUuid = host;
         this.jobKey = jobKey;
         this.priority = priority;

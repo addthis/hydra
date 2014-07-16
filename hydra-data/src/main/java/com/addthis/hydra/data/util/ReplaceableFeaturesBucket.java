@@ -85,7 +85,7 @@ public class ReplaceableFeaturesBucket implements Codable {
         return sb.toString();
     }
 
-    public static void main(String args[]) {
+    public static void main(String[] args) {
         ReplaceableFeaturesBucket featuresBucket = new ReplaceableFeaturesBucket();
         featuresBucket.addFeature("foo");
         featuresBucket.addFeature("bar");

@@ -36,7 +36,7 @@ public class TestValueFilterReverse {
         return f.filter(value);
     }
 
-    private ValueArray create(ValueObject value[]) {
+    private ValueArray create(ValueObject[] value) {
         ValueArray a = ValueFactory.createArray(value.length);
         for (ValueObject v : value) {
             a.add(v);

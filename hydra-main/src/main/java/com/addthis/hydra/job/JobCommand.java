@@ -30,7 +30,7 @@ public final class JobCommand implements Codable, Cloneable {
     @FieldConfig(codable = true)
     private String owner;
     @FieldConfig(codable = true)
-    private String command[];
+    private String[] command;
     @FieldConfig(codable = true)
     private int reqCPU;
     @FieldConfig(codable = true)
@@ -41,7 +41,7 @@ public final class JobCommand implements Codable, Cloneable {
     public JobCommand() {
     }
 
-    public JobCommand(String owner, String command[], int cpu, int mem, int io) {
+    public JobCommand(String owner, String[] command, int cpu, int mem, int io) {
         this.owner = owner;
         this.command = command;
         this.reqCPU = cpu;

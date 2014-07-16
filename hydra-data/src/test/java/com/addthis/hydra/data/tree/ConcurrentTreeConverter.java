@@ -24,7 +24,7 @@ import com.addthis.hydra.store.db.CloseOperation;
 
 public class ConcurrentTreeConverter {
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         int maxNodes = (args.length >= 3) ? Integer.parseInt(args[2]) : -1;
         new ConcurrentTreeConverter(new File(args[0]), new File(args[1]), maxNodes);
     }

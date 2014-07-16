@@ -366,7 +366,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
 
     /** */
     public String[] getDateTemplatedFileList(DateTime timeToLoad) {
-        String fileList[] = new String[files.length];
+        String[] fileList = new String[files.length];
         for (int i = 0; i < files.length; i++) {
             fileList[i] = replaceDateElements(timeToLoad, files[i]);
         }

@@ -39,7 +39,7 @@ public class MeshQueryClient {
 
     private static final int maxQueryTime = Parameter.intValue("meshQueryClient.maxListFilesTime", 60);
 
-    public static void main(String args[]) throws IOException {
+    public static void main(String[] args) throws IOException {
         MeshyClient meshyClient = new MeshyClient(args[0], Integer.parseInt(args[1]));
         MeshQueryClient queryClient = new MeshQueryClient();
         try {

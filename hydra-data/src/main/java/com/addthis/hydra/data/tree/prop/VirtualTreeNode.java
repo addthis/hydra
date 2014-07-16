@@ -29,14 +29,14 @@ public final class VirtualTreeNode extends ConcurrentTreeNode {
         this(name, hits, null);
     }
 
-    public VirtualTreeNode(final String name, final long hits, final VirtualTreeNode children[]) {
+    public VirtualTreeNode(final String name, final long hits, final VirtualTreeNode[] children) {
         this.name = name;
         this.hits = hits;
         this.nodes = children != null ? children.length : 0;
         this.children = children;
     }
 
-    private final VirtualTreeNode children[];
+    private final VirtualTreeNode[] children;
 
     @Override
     public ClosableIterator<DataTreeNode> getNodeIterator() {

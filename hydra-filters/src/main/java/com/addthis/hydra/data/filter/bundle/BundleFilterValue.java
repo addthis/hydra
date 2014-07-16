@@ -77,7 +77,7 @@ public class BundleFilterValue extends BundleFilter {
     @FieldConfig(codable = true)
     private boolean nullFail = true;
 
-    private String fields[];
+    private String[] fields;
 
     @Override
     public void initialize() {
@@ -86,7 +86,7 @@ public class BundleFilterValue extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         ValueObject val = ValueFactory.create(value);
         if (filter != null) {
             val = filter.filter(val);

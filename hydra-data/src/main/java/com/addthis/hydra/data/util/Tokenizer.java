@@ -45,7 +45,7 @@ public class Tokenizer implements Codable {
      * Any of these strings can be used to combine strings that would otherwise be split across tokens.
      */
     @FieldConfig(codable = true)
-    private String group[];
+    private String[] group;
 
     /**
      * If true then pack all the tokens into a single field. Default is false.
@@ -81,7 +81,7 @@ public class Tokenizer implements Codable {
         return this;
     }
 
-    public Tokenizer setGrouping(String group[]) {
+    public Tokenizer setGrouping(String[] group) {
         this.group = group;
         return this;
     }

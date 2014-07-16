@@ -38,7 +38,7 @@ public class BundleFilterChain extends BundleFilter {
      * The chain of bundle filters to execute.
      */
     @FieldConfig(codable = true, required = true)
-    private BundleFilter filter[];
+    private BundleFilter[] filter;
 
     /**
      * If true then stop execution on the failure of a filter. Default is true.

@@ -74,8 +74,8 @@ public final class TaskFeeder extends Thread {
     private final TaskRunTarget task;
     private final int readers;
 
-    private final Thread threads[];
-    private final BlockingQueue<Bundle> queues[];
+    private final Thread[] threads;
+    private final BlockingQueue<Bundle>[] queues;
     private volatile boolean queuesInit;
     private final AtomicBoolean errored;
     private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -375,7 +375,7 @@ public final class TaskFeeder extends Thread {
                     log.warn("[oomer] starting in " + oomAfter + " ms");
                     Thread.sleep(oomAfter);
                     log.warn("[oomer] starting. alloc=" + oomAlloc);
-                    long arr[];
+                    long[] arr;
                     long next = 0;
                     while (true) {
                         arr = new long[oomAlloc];

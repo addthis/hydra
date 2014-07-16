@@ -160,12 +160,12 @@ public class DataPurgeServiceImpl implements DataPurgeService {
         }
         File cur = path.startsWith(dirSeperator) ? new File(dirSeperator) : new File(".");
         LinkedList<File> list = new LinkedList<File>();
-        String tokens[] = Strings.splitArray(path, dirRegexSeperator);
+        String[] tokens = Strings.splitArray(path, dirRegexSeperator);
         expandPrefix(list, cur, tokens, 0);
         return list;
     }
 
-    protected void expandPrefix(List<File> list, File cur, String tokens[], int index) {
+    protected void expandPrefix(List<File> list, File cur, String[] tokens, int index) {
         if (index == tokens.length) {
             if (cur.isDirectory() && cur.exists()) {
                 list.add(cur);
@@ -175,7 +175,7 @@ public class DataPurgeServiceImpl implements DataPurgeService {
         String tok = tokens[index];
         if (tok.indexOf('*') >= 0) {
             FileFilter fileFilter = new WildcardFileFilter(tok);
-            File find[] = cur.listFiles(fileFilter);
+            File[] find = cur.listFiles(fileFilter);
 
             if (find != null) {
                 for (File found : find) {

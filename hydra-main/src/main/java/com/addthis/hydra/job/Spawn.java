@@ -277,7 +277,7 @@ public class Spawn implements Codable {
             Parameter.intValue("spawn.event.log.maxSize", 100 * 1024 * 1024);
     private static final String  logDir           = Parameter.value("spawn.event.log.dir", "log");
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         Spawn spawn = new Spawn(
                 new File(args.length > 0 ? args[0] : "etc"),
                 new File(args.length > 1 ? args[1] : "web")
@@ -3311,7 +3311,7 @@ public class Spawn implements Codable {
                  */
                 try {
                     if (!quiesce) {
-                        String jobids[] = null;
+                        String[] jobids = null;
                         jobLock.lock();
                         try {
                             jobids = new String[spawnState.jobs.size()];
@@ -3371,7 +3371,7 @@ public class Spawn implements Codable {
     }
 
     private ReplicaTarget[] getTaskReplicaTargets(JobTask task, List<JobTaskReplica> replicaList) {
-        ReplicaTarget replicas[] = null;
+        ReplicaTarget[] replicas = null;
         if (replicaList != null) {
             int next = 0;
             replicas = new ReplicaTarget[replicaList.size()];

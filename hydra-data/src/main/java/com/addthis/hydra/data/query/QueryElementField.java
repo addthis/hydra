@@ -46,7 +46,7 @@ public class QueryElementField implements Codable {
     @FieldConfig(codable = true)
     public String name;
     @FieldConfig(codable = true)
-    public BoundedValue keys[];
+    public BoundedValue[] keys;
 
     private BundleField field;
 
@@ -63,10 +63,10 @@ public class QueryElementField implements Codable {
             tok = tok.substring(1);
             keys = memKey;
         }
-        String kv[] = Strings.splitArray(Bytes.urldecode(tok), "=");
+        String[] kv = Strings.splitArray(Bytes.urldecode(tok), "=");
         if (kv.length == 2) {
             name = kv[0];
-            String keyarr[] = Strings.splitArray(kv[1], ",");
+            String[] keyarr = Strings.splitArray(kv[1], ",");
             keys = new BoundedValue[keyarr.length];
             for (int i = 0; i < keyarr.length; i++) {
                 keys[i] = new BoundedValue().parse(keyarr[i], nextColumn);

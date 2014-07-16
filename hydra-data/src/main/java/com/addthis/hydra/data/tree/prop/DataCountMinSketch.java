@@ -158,7 +158,7 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
         if (key == null) {
             throw new IllegalArgumentException("No key arguments entered");
         }
-        String keys[] = Strings.splitArray(key, "~");
+        String[] keys = Strings.splitArray(key, "~");
         TreeNodeList list = new TreeNodeList(keys.length);
         for (String k : keys) {
             long count = sketch.estimateCount(k);

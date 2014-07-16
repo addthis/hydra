@@ -118,7 +118,7 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
             purgeData();
         }
         LinkedList<TokenIndex> vt = new LinkedList<TokenIndex>();
-        String ft[] = new String[path.length];
+        String[] ft = new String[path.length];
         for (int i = 0; i < ft.length; i++) {
             if (path[i].startsWith("[[") && path[i].endsWith("]]")) {
                 String tok = path[i].substring(2, path[i].length() - 2);
@@ -151,7 +151,7 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
             if (filter != null && !filter.filter(bundle)) {
                 return;
             }
-            String tok[] = new String[fileToken.length];
+            String[] tok = new String[fileToken.length];
             for (int i = 0; i < tok.length; i++) {
                 tok[i] = fileToken[i];
             }

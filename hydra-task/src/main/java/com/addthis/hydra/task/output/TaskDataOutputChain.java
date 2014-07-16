@@ -61,7 +61,7 @@ public class TaskDataOutputChain extends DataOutputTypeList {
      * then the second sink, etc.
      */
     @FieldConfig(codable = true, required = true)
-    private TaskDataOutput outputs[];
+    private TaskDataOutput[] outputs;
 
     /**
      * If true then create copy of the bundle for each output. Default value is true.

@@ -73,7 +73,7 @@ public class BundleFilterHttp extends BundleFilter {
     private String               set;
 
     private File                        persistTo;
-    private String                      fields[];
+    private String[]                      fields;
     private HotMap<String, CacheObject> ocache;
 
     public static class CacheConfig {
@@ -141,7 +141,7 @@ public class BundleFilterHttp extends BundleFilter {
                 }
             }
             // sort so that hot map has the most recent inserted last
-            CacheObject sort[] = new CacheObject[list.size()];
+            CacheObject[] sort = new CacheObject[list.size()];
             list.toArray(sort);
             Arrays.sort(sort);
             for (CacheObject cached : sort) {
@@ -204,7 +204,7 @@ public class BundleFilterHttp extends BundleFilter {
             int retries = http.retries;
             while (retries-- > 0) {
                 try {
-                    byte val[] = httpGet(urlValue, null, null, http.timeout, trace);
+                    byte[] val = httpGet(urlValue, null, null, http.timeout, trace);
                     if (val != null && val.length >= 0) {
                         cached = cachePut(urlValue, Bytes.toString(val));
                         break;

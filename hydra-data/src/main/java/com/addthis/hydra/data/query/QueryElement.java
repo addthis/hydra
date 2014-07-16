@@ -131,7 +131,7 @@ public class QueryElement implements SuperCodable {
     public QueryElement parse(String q, MutableInt nextColumn) {
         int pos = 0;
         if (q.startsWith("(") && (pos = q.indexOf(")")) > 0) {
-            String range[] = Strings.splitArray(q.substring(1, pos), "-");
+            String[] range = Strings.splitArray(q.substring(1, pos), "-");
             if (range.length == 1) {
                 limit = Integer.parseInt(range[0]);
             } else {
@@ -153,7 +153,7 @@ public class QueryElement implements SuperCodable {
                 if (st.hasMoreTokens()) {
                     tok = st.nextToken();
                     if (sep.equals(":")) {
-                        String ps[] = Strings.splitArray(tok, ",");
+                        String[] ps = Strings.splitArray(tok, ",");
                         if (prop == null) {
                             prop = new ArrayList<>(ps.length);
                         }

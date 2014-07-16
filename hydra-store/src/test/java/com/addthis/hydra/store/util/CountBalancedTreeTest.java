@@ -29,7 +29,7 @@ public class CountBalancedTreeTest {
     public void dummyTest() {
     }
 
-    public static void main(String args[]) {
+    public static void main(String[] args) {
         CountBalancedTree<DBKey, Integer> at = new CountBalancedTree<DBKey, Integer>();
         JSONArray hist = new JSONArray();
         ArrayList<String> list = getList();

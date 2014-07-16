@@ -57,19 +57,19 @@ public class HostState implements HostMessage {
     @FieldConfig(codable = true)
     private int maxTaskSlots;
     @FieldConfig(codable = true)
-    private JobKey running[];
+    private JobKey[] running;
     @FieldConfig(codable = true)
-    private JobKey replicating[];
+    private JobKey[] replicating;
     @FieldConfig(codable = true)
-    private JobKey backingup[];
+    private JobKey[] backingup;
     @FieldConfig(codable = true)
-    private JobKey stopped[];
+    private JobKey[] stopped;
     @FieldConfig(codable = true)
-    private JobKey replicas[];
+    private JobKey[] replicas;
     @FieldConfig(codable = true)
-    private JobKey incompleteReplicas[];
+    private JobKey[] incompleteReplicas;
     @FieldConfig(codable = true)
-    private JobKey queued[];
+    private JobKey[] queued;
     // Do not encode this derived, internal, non-typesafe field
     private HashMap<String, Integer> jobTaskCountMap;
     @FieldConfig(codable = true)

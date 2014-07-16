@@ -172,7 +172,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
             if (conf.splitRegex != null) {
                 // System.out.println("SPLITTING:" + val + ":" +
                 // conf.splitRegex);
-                String split[] = val.toString().split(conf.splitRegex);
+                String[] split = val.toString().split(conf.splitRegex);
                 // System.out.println(Arrays.toString(split));
                 for (int i = 0; i < split.length; i++) {
                     top.increment(split[i], size);
@@ -262,7 +262,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
                 return ret;
             }
         } else if (key != null) {
-            String keys[] = Strings.splitArray(key, ":");
+            String[] keys = Strings.splitArray(key, ":");
             ArrayList<DataTreeNode> list = new ArrayList<>(keys.length);
             for (String k : keys) {
                 Long v = top.get(k);

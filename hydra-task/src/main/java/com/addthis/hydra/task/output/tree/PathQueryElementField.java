@@ -35,7 +35,7 @@ public class PathQueryElementField extends QueryElementField {
     private static Logger log = LoggerFactory.getLogger(PathQueryElementField.class);
 
     @FieldConfig(codable = true)
-    public ResolvableBoundedValue keys[];
+    public ResolvableBoundedValue[] keys;
 
 
     public void resolve(TreeMapper mapper) {

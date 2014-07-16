@@ -50,7 +50,7 @@ public class HostResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response rebalanceHost(@QueryParam("id") String hostUuid, @Auth User user) throws Exception {
         try {
-            String hostUuids[] = Strings.splitArray(hostUuid, ",");
+            String[] hostUuids = Strings.splitArray(hostUuid, ",");
             JSONArray outcomes = new JSONArray();
             for (String uuid : hostUuids) {
                 emitLogLineForAction(user.getUsername(), "host rebalance on " + hostUuid);
@@ -115,7 +115,7 @@ public class HostResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response dropHosts(@QueryParam("id") String hostUuid, @Auth User user) throws Exception {
         try {
-            String hostUuids[] = Strings.splitArray(hostUuid, ",");
+            String[] hostUuids = Strings.splitArray(hostUuid, ",");
             JSONArray outcomes = new JSONArray();
             for (String uuid : hostUuids) {
                 emitLogLineForAction(user.getUsername(), "delete host on " + uuid);

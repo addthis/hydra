@@ -90,7 +90,7 @@ public class MeshQueryWorker {
      */
     private static final JsonFactory factory = new JsonFactory(new ObjectMapper());
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         //start jetty and metrics servlet
         MeshQueryWorker qs = new MeshQueryWorker();
         //run meshy as per current standard

@@ -128,7 +128,7 @@ public class SpawnManager {
                 String jobarg = kv.getValue("jobs");
                 boolean enable = kv.getValue("enable", "1").equals("1");
                 if (jobarg != null) {
-                    String joblist[] = Strings.splitArray(jobarg, ",");
+                    String[] joblist = Strings.splitArray(jobarg, ",");
                     emitLogLineForAction(kv, (enable ? "enable" : "disable") + " jobs " + jobarg);
                     for (String jobid : joblist) {
                         IJob job = spawn.getJob(jobid);
@@ -199,7 +199,7 @@ public class SpawnManager {
                 String type = kv.getValue("type", "x-www-form-urlencoded");
                 String post = kv.getValue("post", "");
                 int timeout = kv.getIntValue("timeout", 10000);
-                byte res[] = null;
+                byte[] res = null;
                 HttpResponse response = HttpUtil.execute(HttpUtil.makePost(url, type, Bytes.toBytes(post)), timeout);
                 if (response.getStatus() == 200) {
                     res = response.getBody();
@@ -281,7 +281,7 @@ public class SpawnManager {
                 String owner = kv.getValue("owner", "unknown").trim();
                 require(label != null, "missing label");
                 require(command.length() > 0, "missing command");
-                String cmdtok[] = Strings.splitArray(command, ",");
+                String[] cmdtok = Strings.splitArray(command, ",");
                 for (int i = 0; i < cmdtok.length; i++) {
                     cmdtok[i] = Bytes.urldecode(cmdtok[i]);
                 }
@@ -932,7 +932,7 @@ public class SpawnManager {
                 KVPairs kv = link.getRequestValues();
                 try {
                     InputStream in = spawn.getMeshyClient().readFile(kv.getValue("uuid", "-"), kv.getValue("path", "-"));
-                    byte data[] = Bytes.readFully(in);
+                    byte[] data = Bytes.readFully(in);
                     String value = Bytes.toString(data);
                     link.sendShortReply(200, "OK", value.length() > 0 ? value : "");
                 } catch (Exception e) {

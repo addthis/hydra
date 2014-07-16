@@ -107,7 +107,7 @@ public class TimeBuckets implements Codable {
 
     @SuppressWarnings("unchecked")
     public Map.Entry<String, Long>[] getEntries() {
-        Map.Entry e[] = new Map.Entry[map.size()];
+        Map.Entry[] e = new Map.Entry[map.size()];
         e = map.entrySet().toArray(e);
         return e;
     }

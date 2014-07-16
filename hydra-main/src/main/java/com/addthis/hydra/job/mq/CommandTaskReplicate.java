@@ -21,7 +21,7 @@ public class CommandTaskReplicate extends AbstractJobMessage {
 
     private static final long serialVersionUID = 3232052848594886109L;
 
-    public CommandTaskReplicate(String hostUuid, String job, int node, ReplicaTarget replicas[], String jobCommand, String choreWatcherKey, boolean force, boolean wasQueued) {
+    public CommandTaskReplicate(String hostUuid, String job, int node, ReplicaTarget[] replicas, String jobCommand, String choreWatcherKey, boolean force, boolean wasQueued) {
         super(hostUuid, job, node);
         this.replicas = replicas;
         this.choreWatcherKey = choreWatcherKey;

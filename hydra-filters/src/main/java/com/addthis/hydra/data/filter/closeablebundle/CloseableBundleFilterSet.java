@@ -30,7 +30,7 @@ public class CloseableBundleFilterSet extends CloseableBundleFilter {
     @FieldConfig(codable = true)
     private boolean not;
 
-    private String fields[];
+    private String[] fields;
 
     @Override
     public void initialize() {
@@ -50,7 +50,7 @@ public class CloseableBundleFilterSet extends CloseableBundleFilter {
     @Override
     public boolean filterExec(Bundle bundle) {
         boolean success = true;
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
 
         if (filter != null) {
             success = filter.filter(bundle);

@@ -625,7 +625,7 @@ public class TreeStatistics {
 
     }
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         if (args.length != 2) {
             System.err.println("usage: [read tree root] [write tree root]");
             System.exit(2);

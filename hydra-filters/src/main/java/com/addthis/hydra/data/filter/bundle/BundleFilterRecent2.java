@@ -63,7 +63,7 @@ public final class BundleFilterRecent2 extends BundleFilter {
 
     @SuppressWarnings("unchecked")
     private HotMap<String, Mark> cache = new HotMap<String, Mark>(new HashMap());
-    private String fields[];
+    private String[] fields;
 
     @Override
     public void initialize() {
@@ -72,7 +72,7 @@ public final class BundleFilterRecent2 extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         ValueLong time = bundle.getValue(bound[0]).asLong();
         return time != null ? accept(time.getLong(), bundle.getValue(bound[1])) : false;
     }

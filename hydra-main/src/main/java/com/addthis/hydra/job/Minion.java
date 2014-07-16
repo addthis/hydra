@@ -235,7 +235,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         }
     }
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         new Minion(new File(args.length > 0 ? args[0] : dataDir), args.length > 2 ? Integer.parseInt(args[1]) : webPort);
     }
 
@@ -1089,7 +1089,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                                 } else if (size > 4096) {
                                     log.warn("[warning] searching > 4k space @ " + size);
                                 }
-                                byte scan[] = new byte[(int) size];
+                                byte[] scan = new byte[(int) size];
                                 access.seek(start);
                                 access.readFully(scan);
                                 log.warn("scan of " + Bytes.toString(scan));
@@ -2356,7 +2356,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                         }
                     }
                     bytesRead = (int) (len - off);
-                    byte buf[] = new byte[bytesRead];
+                    byte[] buf = new byte[bytesRead];
                     raf.read(buf);
                     content = Bytes.toString(buf);
                     endOffset = len;
@@ -2370,7 +2370,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                         }
                     }
                     bytesRead = (int) (off - startOffset);
-                    byte buf[] = new byte[bytesRead];
+                    byte[] buf = new byte[bytesRead];
                     raf.seek(startOffset);
                     raf.read(buf);
                     content = Bytes.toString(buf);
@@ -2403,7 +2403,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                         lines--;
                     }
                 }
-                byte buf[] = new byte[(int) (len - off)];
+                byte[] buf = new byte[(int) (len - off)];
                 raf.read(buf);
                 return Bytes.toString(buf);
             } catch (Exception e) {
@@ -2425,7 +2425,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                         lines--;
                     }
                 }
-                byte buf[] = new byte[(int) off];
+                byte[] buf = new byte[(int) off];
                 raf.seek(0);
                 raf.read(buf);
                 return Bytes.toString(buf);

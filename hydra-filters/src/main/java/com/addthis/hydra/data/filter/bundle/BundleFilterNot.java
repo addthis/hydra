@@ -41,7 +41,7 @@ public class BundleFilterNot extends BundleFilter {
     @FieldConfig(codable = true, required = true)
     private String field;
 
-    private String fields[];
+    private String[] fields;
 
     @Override
     public void initialize() {
@@ -50,7 +50,7 @@ public class BundleFilterNot extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         return bundle.getValue(bound[0]) == null;
     }
 }

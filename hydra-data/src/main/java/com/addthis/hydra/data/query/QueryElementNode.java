@@ -51,9 +51,9 @@ public class QueryElementNode implements Codable {
     private static String memKey = "";
 
     @FieldConfig(codable = true)
-    public String match[];
+    public String[] match;
     @FieldConfig(codable = true)
-    public String trap[];
+    public String[] trap;
     @FieldConfig(codable = true)
     public String data;
     @FieldConfig(codable = true)
@@ -72,7 +72,7 @@ public class QueryElementNode implements Codable {
     @FieldConfig(codable = true)
     public Boolean not;
     @FieldConfig(codable = true)
-    public String path[];
+    public String[] path;
     @FieldConfig(codable = true)
     public Boolean up;
 
@@ -112,7 +112,7 @@ public class QueryElementNode implements Codable {
 
         QueryElementNode.MODE mode = MODE.MATCH;
 
-        String list[] = Strings.splitArray(tok, ",");
+        String[] list = Strings.splitArray(tok, ",");
         for (String component : list) {
             if (component.startsWith("*")) {
                 component = component.substring(1);
@@ -146,7 +146,7 @@ public class QueryElementNode implements Codable {
                 continue;
             }
             if (component.startsWith("%") && !(component.startsWith("%2d") || component.startsWith("%2c"))) {
-                String kv[] = Bytes.urldecode(component.substring(1)).split("=", 2);
+                String[] kv = Bytes.urldecode(component.substring(1)).split("=", 2);
                 if (kv.length == 2) {
                     data = kv[0];
                     dataKey = kv[1];
@@ -173,7 +173,7 @@ public class QueryElementNode implements Codable {
             }
         }
         if (matchList.size() > 0) {
-            String out[] = new String[matchList.size()];
+            String[] out = new String[matchList.size()];
             match = matchList.toArray(out);
             if (tok.startsWith(",")) {
                 TreeSet<String> sorted = new TreeSet<>();
@@ -260,7 +260,7 @@ public class QueryElementNode implements Codable {
         return not != null && not;
     }
 
-    private DataTreeNode followPath(DataTreeNode from, String path[]) {
+    private DataTreeNode followPath(DataTreeNode from, String[] path) {
         DataTreeNode node = from;
         for (String name : path) {
             node = node.getNode(name);

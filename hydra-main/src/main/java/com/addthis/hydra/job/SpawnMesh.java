@@ -166,7 +166,7 @@ public class SpawnMesh implements MessageListener {
         }
     }
 
-    private void send(OutputStream out, byte msg[]) {
+    private void send(OutputStream out, byte[] msg) {
         try {
             out.write(msg);
             out.close();

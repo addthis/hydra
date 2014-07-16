@@ -62,7 +62,7 @@ public class BundleFilterJSON extends BundleFilter {
 
     private HotMap<String, Object> objCache;
     private HotMap<String, ArrayList<QueryToken>> tokCache;
-    private String fields[];
+    private String[] fields;
 
     @Override
     public void initialize() {
@@ -73,7 +73,7 @@ public class BundleFilterJSON extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         ValueObject bundleValue = bundle.getValue(bound[0]);
         switch (bundleValue.getObjectType()) {
             case STRING:

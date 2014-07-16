@@ -39,11 +39,11 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
         return new Raw(s);
     }
 
-    public static final Raw get(char c[]) {
+    public static final Raw get(char[] c) {
         return new Raw(Bytes.toBytes(c));
     }
 
-    public static final Raw get(byte b[]) {
+    public static final Raw get(byte[] b) {
         return new Raw(b);
     }
 
@@ -51,7 +51,7 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
         this.raw = Bytes.toBytes(s);
     }
 
-    private Raw(byte b[]) {
+    private Raw(byte[] b) {
         this.raw = b;
     }
 
@@ -67,7 +67,7 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
     public int hashCode() {
         if (hashcode == 0) {
             int h = 0;
-            byte val[] = raw;
+            byte[] val = raw;
             for (int i = 0, l = val.length; i < l; i++) {
                 h = 31 * h + val[i];
             }
@@ -87,7 +87,7 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
     }
 
     // compare in reverse
-    private static boolean revsame(byte a[], byte b[]) {
+    private static boolean revsame(byte[] a, byte[] b) {
         if (a == null || b == null) {
             return a == b;
         }
@@ -103,7 +103,7 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
     }
 
     // compare forward
-    private static boolean fwdsame(byte a[], byte b[]) {
+    private static boolean fwdsame(byte[] a, byte[] b) {
         if (a.length != b.length) {
             return false;
         }
@@ -142,7 +142,7 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
         return raw;
     }
 
-    public Raw cat(byte b[]) {
+    public Raw cat(byte[] b) {
         return get(Bytes.cat(raw, b));
     }
 
@@ -168,7 +168,7 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
         return compare;
     }
 
-    private int compare(long a[], long b[]) {
+    private int compare(long[] a, long[] b) {
         for (int al = a.length, bl = b.length, i = 0; i < al; i++) {
             if (bl <= i) {
                 return 1;
@@ -185,11 +185,11 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
         return a.length == b.length ? 0 : -1;
     }
 
-    private long[] bytesToLong(byte data[]) {
+    private long[] bytesToLong(byte[] data) {
         if (data.length % 8 != 0) {
             data = Bytes.cat(data, new byte[8 - (data.length % 8)]);
         }
-        long l[] = new long[data.length / 8];
+        long[] l = new long[data.length / 8];
         for (int i = 0; i < l.length; i++) {
             int off = i * 8;
             l[i] = (long) (

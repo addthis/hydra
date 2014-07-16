@@ -150,7 +150,7 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codable {
     @FieldConfig(codable = true)
     private Recent recent;
     @FieldConfig(codable = true, required = true)
-    private int limits[];
+    private int[] limits;
 
     private boolean increment;
 

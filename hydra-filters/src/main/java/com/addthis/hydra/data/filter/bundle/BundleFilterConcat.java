@@ -41,7 +41,7 @@ public class BundleFilterConcat extends BundleFilter {
      * An array of fields to concatenate. This field is required.
      */
     @FieldConfig(codable = true, required = true)
-    private String in[];
+    private String[] in;
 
     /**
      * The destination for the output string. This field is required.
@@ -55,7 +55,7 @@ public class BundleFilterConcat extends BundleFilter {
     @FieldConfig(codable = true)
     private String join;
 
-    private String fields[];
+    private String[] fields;
 
     public void setIn(String[] in) {
         this.in = in;
@@ -82,7 +82,7 @@ public class BundleFilterConcat extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         StringBuilder sb = new StringBuilder();
         int end = bound.length - 1;
         for (int i = 0; i < end; i++) {

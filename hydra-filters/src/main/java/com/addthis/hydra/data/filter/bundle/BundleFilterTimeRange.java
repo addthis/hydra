@@ -82,7 +82,7 @@ public class BundleFilterTimeRange extends BundleFilter {
     private long              tbefore;
     private long              tafter;
     private DateTimeFormatter format;
-    private String            fields[];
+    private String[]            fields;
 
     @Override
     public void initialize() {
@@ -100,7 +100,7 @@ public class BundleFilterTimeRange extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         ValueLong timeValue = bundle.getValue(bound[0]).asLong();
         if (timeValue == null) {
             return defaultExit;

@@ -25,7 +25,7 @@ import com.addthis.codec.codables.Codable;
 public final class OnCount implements Codable {
 
     @FieldConfig(codable = true)
-    private long anyof[];
+    private long[] anyof;
     @FieldConfig(codable = true)
     private long match;
     @FieldConfig(codable = true)

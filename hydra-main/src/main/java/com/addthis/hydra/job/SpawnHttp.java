@@ -186,7 +186,7 @@ public class SpawnHttp extends AbstractHandler {
         private HttpServletRequest request;
         private HttpServletResponse response;
         private KVPairs params;
-        private byte post[];
+        private byte[] post;
 
         HTTPLink(String target, HttpServletRequest request, HttpServletResponse response) {
             this.target = target;
@@ -310,7 +310,7 @@ public class SpawnHttp extends AbstractHandler {
                 if (file.exists() && file.isFile()) {
                     OutputStream out = httpServletResponse.getOutputStream();
                     InputStream in = new FileInputStream(file);
-                    byte buf[] = new byte[1024];
+                    byte[] buf = new byte[1024];
                     int read = 0;
                     while ((read = in.read(buf)) >= 0) {
                         out.write(buf, 0, read);

@@ -45,7 +45,7 @@ public class BundleFilterFirstValue extends BundleFilter {
      * An array of bundle field names to search. This field is required.
      */
     @FieldConfig(codable = true, required = true)
-    private String in[];
+    private String[] in;
 
     /**
      * Output destination field. This field is required.
@@ -60,7 +60,7 @@ public class BundleFilterFirstValue extends BundleFilter {
     @FieldConfig(codable = true)
     private String which;
 
-    private String fields[];
+    private String[] fields;
 
     public void setIn(String[] in) {
         this.in = in;
@@ -92,7 +92,7 @@ public class BundleFilterFirstValue extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         int end = (which == null) ? (bound.length - 1) : (bound.length - 2);
         for (int i = 0; i < end; i++) {
             ValueObject v = bundle.getValue(bound[i]);

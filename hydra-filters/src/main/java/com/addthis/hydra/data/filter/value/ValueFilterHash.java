@@ -83,7 +83,7 @@ public class ValueFilterHash extends ValueFilter {
                 try {
                     MessageDigest md = MessageDigest.getInstance("SHA");
                     md.update(Bytes.toBytes(sv));
-                    byte b[] = md.digest();
+                    byte[] b = md.digest();
                     for (int i = 0; i < b.length && i < 8; i++) {
                         hash = (hash << 8) | (b[i] & 0xff);
                     }

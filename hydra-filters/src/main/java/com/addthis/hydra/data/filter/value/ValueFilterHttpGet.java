@@ -111,7 +111,7 @@ public class ValueFilterHttpGet extends StringFilter {
                     }
                 }
                 // sort so that hot map has the most recent inserted last
-                CacheObject sort[] = new CacheObject[list.size()];
+                CacheObject[] sort = new CacheObject[list.size()];
                 list.toArray(sort);
                 Arrays.sort(sort);
                 for (CacheObject cached : sort) {
@@ -167,7 +167,7 @@ public class ValueFilterHttpGet extends StringFilter {
             int retries = retry;
             while (retries-- > 0) {
                 try {
-                    byte val[] = httpGet(template.replace("{{}}", sv), null, null, timeout, trace);
+                    byte[] val = httpGet(template.replace("{{}}", sv), null, null, timeout, trace);
                     if (val != null && (emptyOk || val.length > 0)) {
                         cached = cachePut(sv, Bytes.toString(val));
                         break;
