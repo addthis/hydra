@@ -19,8 +19,6 @@ import java.io.InputStream;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFactory;
 import com.addthis.bundle.io.DataChannelReader;
-import com.addthis.hydra.task.source.AbstractStreamFileDataSource.Bundleizer;
-import com.addthis.hydra.task.source.AbstractStreamFileDataSource.BundleizerFactory;
 
 
 /**

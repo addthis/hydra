@@ -13,7 +13,6 @@
  */
 package com.addthis.hydra.task.source;
 
-
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.bundle.channel.DataChannelSource;

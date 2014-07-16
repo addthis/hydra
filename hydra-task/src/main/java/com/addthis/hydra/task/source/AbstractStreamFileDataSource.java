@@ -41,13 +41,13 @@ import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.codec.annotations.Pluggable;
-import com.addthis.codec.codables.Codable;
+import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.data.filter.value.StringFilter;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.PageDB;
 import com.addthis.hydra.task.run.TaskRunConfig;
-import com.addthis.hydra.task.source.bundleizer.ChannelBundleizer;
+import com.addthis.hydra.task.source.bundleizer.Bundleizer;
+import com.addthis.hydra.task.source.bundleizer.BundleizerFactory;
 import com.addthis.hydra.task.stream.PersistentStreamFileSource;
 import com.addthis.hydra.task.stream.StreamFile;
 import com.addthis.hydra.task.stream.StreamFileSource;
@@ -104,17 +104,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     private static final Logger log = LoggerFactory.getLogger(AbstractStreamFileDataSource.class);
 
     // note that some parameters have 'mesh' in the name.  Leaving intact for backwards compatibility
-    private static final int POLL_INTERVAL = Parameter.intValue("dataSourceMeshy2.pollInterval", 1000);
-    private static final int POLL_COUNTDOWN = Parameter.intValue("dataSourceMeshy2.pollCountdown", 1800); // 30 minutes
-    private static final int DEFAULT_PREOPEN = Parameter.intValue("dataSourceMeshy2.preopen", 1);
-    private static final int DEFAULT_SKIP_SOURCE_EXIT = Parameter.intValue("dataSourceMeshy2.skipSourceExit", 0);
     private static final int MARK_PAGES = Parameter.intValue("source.meshy.mark.pages", 1000);
     private static final int MARK_PAGE_SIZE = Parameter.intValue("source.meshy.mark.pageSize", 20);
-    private static final int DEFAULT_WORKERS = Parameter.intValue("dataSourceMeshy2.workers", 2);
-    private static final int DEFAULT_BUFFER = Parameter.intValue("dataSourceMeshy2.buffer", 128);
-    private static final int DEFAULT_COUNTDOWN_LATCH_TIMEOUT = Parameter.intValue("dataSourceMeshy2.timeout.sec", 30);
     private static final boolean IGNORE_MARKS_ERRORS = Parameter.boolValue("hydra.markdb.error.ignore", false);
-    private static final int DEFAULT_MAGIC_MARKS_NUM = 42;
 
     /**
      * A StringFilter that processes file names as a string bundle field. If the filter returns
@@ -124,18 +116,29 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     @FieldConfig(codable = true)
     private StringFilter filter;
 
+    @FieldConfig
+    @Time(TimeUnit.MILLISECONDS)
+    private int pollInterval;
+
+    @FieldConfig
+    private int pollCountdown;
+
+    @FieldConfig
+    @Time(TimeUnit.SECONDS)
+    private int latchTimeout;
+
     /**
      * Specifies conversion to bundles.
      * The default is type "channel".
      */
     @FieldConfig(codable = true)
-    private BundleizerFactory format = new ChannelBundleizer();
+    private BundleizerFactory format;
 
     /**
      * Path to the mark directory.
      */
     @FieldConfig(codable = true)
-    private String markDir = "marks";
+    private String markDir;
 
     /**
      * Ignore the mark directory
@@ -159,7 +162,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
      * If specified then process only the shards specified in this array.
      */
     @FieldConfig(codable = true)
-    protected Integer shards[];
+    protected Integer[] shards;
 
     /**
      * If true then generate a hash of the filename input rather than use the {{mod}} field. Default is false.
@@ -188,35 +191,35 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
      * to start, I think. The default is 1.
      */
     @FieldConfig(codable = true)
-    private int multiBundleReads = 1;
+    private int multiBundleReads;
 
     /**
      * Number of bundles to fetch prior to starting the worker threads.
      * Default is either "dataSourceMeshy2.preopen" configuration value or 2.
      */
     @FieldConfig(codable = true)
-    private int preOpen = DEFAULT_PREOPEN;
+    private int preOpen;
 
     /**
      * Trigger an error when the number of skipped sources is greater than this value.
      * Default is either "dataSourceMeshy2.skipSourceExit" configuration value  or 0.
      */
     @FieldConfig(codable = true)
-    private int skipSourceExit = DEFAULT_SKIP_SOURCE_EXIT;
+    private int skipSourceExit;
 
     /**
      * Maximum size of the queue that stores bundles prior to their processing.
      * Default is either "dataSourceMeshy2.buffer" configuration value or 128.
      */
-    @FieldConfig(codable = true)
-    private int buffer = DEFAULT_BUFFER;
+    @FieldConfig(codable = true, required = true)
+    private int buffer;
 
     /**
      * Number of worker threads that request data from the meshy source.
      * Default is either "dataSourceMeshy2.workers" configuration value or 2.
      */
-    @FieldConfig(codable = true)
-    private int workers = DEFAULT_WORKERS;
+    @FieldConfig(codable = true, required = true)
+    private int workers;
 
     /**
      * Set to enable marks compatibility mode with older source types. eg. 'mesh' for mesh1 and
@@ -230,6 +233,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
      */
     @FieldConfig(codable = true)
     private String legacyMode;
+
+    @FieldConfig(codable = true, required = true)
+    private int magicMarksNumber;
 
     private final ListBundleFormat bundleFormat = new ListBundleFormat();
     private final Bundle termBundle = new ListBundle(bundleFormat);
@@ -272,7 +278,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     private PageDB<SimpleMark> markDB;
     private BundleField injectSourceField;
     private File markDirFile;
-    private int magicMarksNumber = DEFAULT_MAGIC_MARKS_NUM;
     private boolean useSimpleMarks = false;
     private boolean useLegacyStreamPath = false;
 
@@ -414,9 +419,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         if (runningThreadCountDownLatch != null) {
             boolean success = false;
             log.info("Waiting up to {} seconds for outstanding threads to complete.",
-                    DEFAULT_COUNTDOWN_LATCH_TIMEOUT);
+                    latchTimeout);
             try {
-                success = runningThreadCountDownLatch.await(DEFAULT_COUNTDOWN_LATCH_TIMEOUT,
+                success = runningThreadCountDownLatch.await(latchTimeout,
                         TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 log.warn("", e);
@@ -643,10 +648,10 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             throw new DataChannelError("skipped too many sources: " + skipSourceExit + ".  please check your job config.");
         }
         try {
-            int countdown = POLL_COUNTDOWN;
-            while ((localInitialized || waitForInitialized()) && POLL_COUNTDOWN == 0 || countdown-- > 0) {
+            int countdown = pollCountdown;
+            while (((localInitialized || waitForInitialized()) && (pollCountdown == 0)) || (countdown-- > 0)) {
                 long startTime = jmxMetrics ? System.currentTimeMillis() : 0;
-                Bundle next = queue.poll(POLL_INTERVAL, TimeUnit.MILLISECONDS);
+                Bundle next = queue.poll(pollInterval, TimeUnit.MILLISECONDS);
                 if (jmxMetrics) {
                     readTimer.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
                 }
@@ -662,7 +667,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 if (done.get()) {
                     return null;
                 }
-                if (POLL_COUNTDOWN > 0) {
+                if (pollCountdown > 0) {
                     log.info("next polled null, retrying {} more times. done={} exiting={}", countdown, done.get(), exiting.get());
                 }
                 log.info(fileStatsToString("null poll "));
@@ -727,31 +732,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     @Override
     public Bundle createBundle() {
         return new ListBundle(bundleFormat);
-    }
-
-    /**
-     * chops inputstreams into bundles
-     */
-    public interface Bundleizer {
-
-        public Bundle next() throws Exception;
-    }
-
-    /**
-     * Specifies the conversion into bundles (this is specific to mesh2).
-     * <p>The following factories are available:
-     * <ul>
-     * <li>{@link ChannelBundleizer channel}</li>
-     * <li>{@link com.addthis.hydra.task.source.bundleizer.ColumnBundleizer column}</li>
-     * <li>{@link com.addthis.hydra.task.source.bundleizer.KVBundleizer kv}</li>
-     * </ul>
-     *
-     * @user-reference
-     */
-    @Pluggable("stream bundleizer")
-    public abstract static class BundleizerFactory implements Codable {
-
-        public abstract Bundleizer createBundleizer(InputStream input, BundleFactory factory);
     }
 
     private class SourceWorker implements Runnable {
