@@ -32,7 +32,7 @@ import com.addthis.hydra.task.run.TaskRunConfig;
  * @hydra-category
  * @exclude-fields shardField, enabled
  */
-@Pluggable("input source")
+@Pluggable("input-source")
 public abstract class TaskDataSource implements Codable, DataChannelSource, Cloneable {
 
     /**

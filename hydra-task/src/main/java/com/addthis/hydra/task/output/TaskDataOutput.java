@@ -26,7 +26,7 @@ import com.addthis.hydra.task.run.TaskRunConfig;
  * @user-reference
  * @hydra-category
  */
-@Pluggable("output sink")
+@Pluggable("output-sink")
 public abstract class TaskDataOutput implements DataChannelOutput {
 
     protected abstract void open(TaskRunConfig config);

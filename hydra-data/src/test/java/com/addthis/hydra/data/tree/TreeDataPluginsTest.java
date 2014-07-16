@@ -32,7 +32,7 @@ public class TreeDataPluginsTest {
         PluginRegistry pluginRegistry = new PluginRegistry(testPluginConfig);
         Map<String, PluginMap> mapping = pluginRegistry.asMap();
         Assert.assertNotEquals(0, mapping.size());
-        Assert.assertNotEquals(0, mapping.get("data attachment").asBiMap().size());
+        Assert.assertNotEquals(0, mapping.get("data-attachment").asBiMap().size());
         Assert.assertNotEquals(0, mapping.get("tree node data").asBiMap().size());
     }
 

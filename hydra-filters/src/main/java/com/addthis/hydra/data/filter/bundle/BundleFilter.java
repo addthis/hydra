@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-category
  */
-@Pluggable("bundle filter")
+@Pluggable("bundle-filter")
 public abstract class BundleFilter implements Codable {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilter.class);

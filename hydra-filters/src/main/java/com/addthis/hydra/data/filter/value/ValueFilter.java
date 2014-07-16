@@ -30,7 +30,7 @@ import com.addthis.codec.codables.Codable;
  * @hydra-category
  * @exclude-fields once, nullAccept
  */
-@Pluggable("value filter")
+@Pluggable("value-filter")
 public abstract class ValueFilter implements Codable {
 
     /**
