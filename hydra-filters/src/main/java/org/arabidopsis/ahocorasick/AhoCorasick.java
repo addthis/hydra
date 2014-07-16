@@ -352,8 +352,8 @@ public class AhoCorasick implements Serializable {
 
 	private TokensInformation extractTokensInformation(char[] chars) {
 		TokensInformation result = new TokensInformation();
-		List<Integer> starts = new ArrayList<Integer>();
-		List<Integer> ends = new ArrayList<Integer>();
+		List<Integer> starts = new ArrayList<>();
+		List<Integer> ends = new ArrayList<>();
 		Tokenizer tokenizer = createTokenizer(chars);
 		OffsetAttribute offsetAttribute = tokenizer
 				.addAttribute(OffsetAttribute.class);
@@ -395,7 +395,7 @@ public class AhoCorasick implements Serializable {
 		Integer startIndex;
 		SearchResult searchResult;
 		TokensInformation tokensInformation = null;
-		List<OutputResult> result = new ArrayList<OutputResult>();
+		List<OutputResult> result = new ArrayList<>();
 
 		if (onlyTokens) {
 			tokensInformation = extractTokensInformation(chars);

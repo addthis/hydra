@@ -36,7 +36,7 @@ public class RabbitMessageConsumer extends DefaultConsumer implements MessageCon
     private String exchange;
     private String[] routingKeys;
     private String queueName;
-    private final Set<MessageListener> messageListeners = new HashSet<MessageListener>();
+    private final Set<MessageListener> messageListeners = new HashSet<>();
 
     public RabbitMessageConsumer(Channel channel, String exchange, String queueName, MessageListener messageListener, String... routingKey) {
         super(channel);

@@ -29,7 +29,7 @@ public class StringFeaturesBucket implements Codable, FeaturesBucket {
     private long hits = 0;
 
     public StringFeaturesBucket() {
-        features = new HashMap<String, Double>();
+        features = new HashMap<>();
     }
 
     public void addFeature(String feature) {

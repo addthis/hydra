@@ -47,7 +47,7 @@ public class StreamJoin extends StreamBuilder {
     @Override
     public void init() {
         numExpectedFields = fields.length;
-        keyMap = new HashMap<String, ListBundle>(10000, 0.75f);
+        keyMap = new HashMap<>(10000, 0.75f);
     }
 
     @Override
@@ -73,7 +73,7 @@ public class StreamJoin extends StreamBuilder {
             }
         }
 
-        keyMap = new HashMap<String, ListBundle>(10000, 0.75f);
+        keyMap = new HashMap<>(10000, 0.75f);
     }
 
     private void joinAndEmit(String keyValue, Bundle row, StreamEmitter emitter) {

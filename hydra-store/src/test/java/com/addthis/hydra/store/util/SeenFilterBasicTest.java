@@ -37,7 +37,7 @@ public class SeenFilterBasicTest {
     }
 
     private SeenFilterBasic<String> genFilter() {
-        SeenFilterBasic<String> filter = new SeenFilterBasic<String>(20000, 4, 4);
+        SeenFilterBasic<String> filter = new SeenFilterBasic<>(20000, 4, 4);
         for (int i = 0; i < 1000; i++) {
             filter.setSeen(i + "=" + i);
         }

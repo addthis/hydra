@@ -139,7 +139,7 @@ public class JSONFetcher {
                 String list = Bytes.toString(raw);
 
                 if (set == null) {
-                    set = new HashSet<String>();
+                    set = new HashSet<>();
                 }
 
                 Scanner in = new Scanner(list);

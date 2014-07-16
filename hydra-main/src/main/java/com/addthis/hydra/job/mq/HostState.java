@@ -86,7 +86,7 @@ public class HostState implements HostMessage {
     private double histWaitTime;
     //TODO:  remove but need this in for now because de-serialization fails without it
     @FieldConfig(codable = true)
-    private HashMap<String, Double> jobRuntimes = new HashMap<String, Double>();
+    private HashMap<String, Double> jobRuntimes = new HashMap<>();
     @FieldConfig(codable = true)
     private boolean readOnly;
     @FieldConfig(codable = true)
@@ -321,7 +321,7 @@ public class HostState implements HostMessage {
 
     public Integer addJob(String jobId) {
         if (this.jobTaskCountMap == null) {
-            jobTaskCountMap = new HashMap<String, Integer>();
+            jobTaskCountMap = new HashMap<>();
         }
         int currentCount = 0;
         if (jobTaskCountMap.containsKey(jobId)) {

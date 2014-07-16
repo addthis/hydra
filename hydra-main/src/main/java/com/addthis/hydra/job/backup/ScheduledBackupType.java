@@ -179,7 +179,7 @@ public abstract class ScheduledBackupType {
     public List<String> oldBackupsToDelete(String[] allBackups, String[] completeBackups, int max) {
         List<String> validBackupsOfThisType = getSortedListBackupsOfThisType(completeBackups);
         List<String> allBackupsOfThisType = getSortedListBackupsOfThisType(allBackups);
-        List<String> rv = new ArrayList<String>();
+        List<String> rv = new ArrayList<>();
         if (max < 0) // Indicator that we're not sure how many backups should be created
         {
             return rv;
@@ -213,7 +213,7 @@ public abstract class ScheduledBackupType {
      * @return List all valid names
      */
     protected List<String> getSortedListBackupsOfThisType(String[] existingBackups) {
-        List<String> backupsBelongingToThisType = new ArrayList<String>(existingBackups.length);
+        List<String> backupsBelongingToThisType = new ArrayList<>(existingBackups.length);
         for (String str : existingBackups) {
             if (isValidName(str)) {
                 backupsBelongingToThisType.add(str);

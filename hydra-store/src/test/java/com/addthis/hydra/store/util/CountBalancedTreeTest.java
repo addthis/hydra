@@ -30,7 +30,7 @@ public class CountBalancedTreeTest {
     }
 
     public static void main(String[] args) {
-        CountBalancedTree<DBKey, Integer> at = new CountBalancedTree<DBKey, Integer>();
+        CountBalancedTree<DBKey, Integer> at = new CountBalancedTree<>();
         JSONArray hist = new JSONArray();
         ArrayList<String> list = getList();
         Random r = new Random(1234);
@@ -120,7 +120,7 @@ public class CountBalancedTreeTest {
         size = 0;
         at.clear();
         list = getList();
-        LinkedList<JSONArray> rr = new LinkedList<JSONArray>();
+        LinkedList<JSONArray> rr = new LinkedList<>();
         rr.add(at.toJSON());
         for (int i = 0; i < 100000; i++) {
             try {
@@ -162,7 +162,7 @@ public class CountBalancedTreeTest {
     }
 
     private static ArrayList<String> getList() {
-        ArrayList<String> list = new ArrayList<String>();
+        ArrayList<String> list = new ArrayList<>();
         for (int i = 0; i < 64; i += 2) {
             list.add(new String(new char[]{(char) ('a' + (i / 16)), (char) ('a' + (i % 16))}));
         }

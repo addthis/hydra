@@ -49,7 +49,7 @@ public class WebSocketManager extends WebSocketHandler {
     /**
      * A threadsafe list of open WebSockets
      */
-    private final Set<MQWebSocket> webSockets = new CopyOnWriteArraySet<MQWebSocket>();
+    private final Set<MQWebSocket> webSockets = new CopyOnWriteArraySet<>();
 
     /**
      * A json factory for any json serializing
@@ -226,7 +226,7 @@ public class WebSocketManager extends WebSocketHandler {
         /**
          * A queue of events to queue up and push to websockets at intervals
          */
-        private final LinkedBlockingQueue<Spawn.ClientEvent> eventQueue = new LinkedBlockingQueue<Spawn.ClientEvent>();
+        private final LinkedBlockingQueue<Spawn.ClientEvent> eventQueue = new LinkedBlockingQueue<>();
 
         public MQWebSocket(String username, String remoteAddress) {
             this.username = username;

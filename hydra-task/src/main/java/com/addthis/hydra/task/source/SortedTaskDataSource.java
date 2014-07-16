@@ -57,7 +57,7 @@ public class SortedTaskDataSource extends TaskDataSource {
     private ValueObject lastValue;
 
     public SortedTaskDataSource() {
-        sorted = new TreeMap<Bundle, Bundle>(comparator);
+        sorted = new TreeMap<>(comparator);
     }
 
     @Override

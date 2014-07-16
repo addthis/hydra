@@ -795,7 +795,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         status.setBackingUp(backingUp.toArray(new JobKey[backingUp.size()]));
         status.setStopped(stoppedTasks.toArray(new JobKey[stoppedTasks.size()]));
         status.setIncompleteReplicas(incompleteReplicas.toArray(new JobKey[incompleteReplicas.size()]));
-        LinkedList<JobKey> queued = new LinkedList<JobKey>();
+        LinkedList<JobKey> queued = new LinkedList<>();
         minionStateLock.lock();
         try {
             for (CommandTaskKick kick : jobQueue) {
@@ -1477,7 +1477,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         }
 
         private List<String> assembleReplicateCommandAndInformSpawn(ReplicaTarget replica, boolean replicateAllBackups) throws IOException {
-            List<String> rv = new ArrayList<String>();
+            List<String> rv = new ArrayList<>();
             if (replica == null || !shouldExecuteReplica(replica)) {
                 return null;
             }
@@ -1520,7 +1520,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         }
 
         private List<String> assembleBackupCommandsForHost(boolean local, ReplicaTarget replica, List<String> symlinkCommands, List<String> deleteCommands, long time) {
-            List<String> copyCommands = new ArrayList<String>();
+            List<String> copyCommands = new ArrayList<>();
             for (ScheduledBackupType type : ScheduledBackupType.getBackupTypes().values()) {
                 String[] allBackups = local ? findLocalBackups(false) : findRemoteBackups(false, replica);
                 String backupName = type.generateNameForTime(time, true);
@@ -1624,7 +1624,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                 String lsResult = execCommandReturnStdOut(remoteConnectMethod + " " + userAT + " " + lscmd + " " + baseDir);
                 String[] lines = lsResult.split("\n");
                 if (completeOnly) {
-                    List<String> rv = new ArrayList<String>(lines.length);
+                    List<String> rv = new ArrayList<>(lines.length);
                     for (String line : lines) {
                         String[] splitLine = line.split("/");
                         if (splitLine.length > 2) {

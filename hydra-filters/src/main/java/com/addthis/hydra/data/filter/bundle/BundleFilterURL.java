@@ -54,7 +54,7 @@ import com.google.common.net.InternetDomainName;
  */
 public final class BundleFilterURL extends BundleFilter {
 
-    private static final HotMap<String, String> iphost = new HotMap<String, String>(new ConcurrentHashMap<String, String>());
+    private static final HotMap<String, String> iphost = new HotMap<>(new ConcurrentHashMap<String, String>());
     private static final int maxhostcache = Integer.parseInt(System.getProperty("packet.cachehost.max", "4000"));
     private static final boolean debugMalformed = System.getProperty("path.debug.malformed", "0").equals("1");
 

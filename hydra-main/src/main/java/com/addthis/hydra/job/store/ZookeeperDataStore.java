@@ -65,7 +65,7 @@ public class ZookeeperDataStore implements SpawnDataStore {
 
     @Override
     public Map<String, String> get(String[] paths) {
-        Map<String, String> rv = new HashMap<String, String>();
+        Map<String, String> rv = new HashMap<>();
         for (String path : paths) {
             String val = get(path);
             if (val != null) {

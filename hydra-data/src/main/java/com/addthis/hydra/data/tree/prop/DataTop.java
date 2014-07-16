@@ -241,14 +241,14 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codable {
             return ret;
         } else if (key.equals("vhit") && topHit != null) {
             Entry<String, Long>[] top = topHit.getSortedEntries();
-            ArrayList<DataTreeNode> ret = new ArrayList<DataTreeNode>(top.length);
+            ArrayList<DataTreeNode> ret = new ArrayList<>(top.length);
             for (Entry<String, Long> e : top) {
                 ret.add(new VirtualTreeNode(e.getKey(), e.getValue()));
             }
             return ret;
         } else if (key.equals("phit") && topHit != null) {
             Entry<String, Long>[] top = topHit.getSortedEntries();
-            ArrayList<DataTreeNode> ret = new ArrayList<DataTreeNode>(top.length);
+            ArrayList<DataTreeNode> ret = new ArrayList<>(top.length);
             for (Entry<String, Long> e : top) {
                 DataTreeNode node = parent.getNode(e.getKey());
                 if (node != null) {

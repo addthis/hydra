@@ -62,7 +62,7 @@ public class TestSeenFilterSize {
         if (args.length > 1) bitsper = Numbers.parseInt(args[1], bitsper, 10);
         if (args.length > 2) hash = Numbers.parseInt(args[2], hash, 10);
 
-        SeenFilter<String> sf = new SeenFilterBasic<String>(bits, bitsper, hash);
+        SeenFilter<String> sf = new SeenFilterBasic<>(bits, bitsper, hash);
         long memSize = MemoryCounter.estimateSize(sf);
         System.out.println("MemorySize: " + memSize);
         byte[] encodedBytes = codec.encode(sf);

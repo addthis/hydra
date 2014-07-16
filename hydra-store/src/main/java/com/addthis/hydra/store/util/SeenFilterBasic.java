@@ -317,7 +317,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, SuperCodable {
         if (!(filterMerge.hash == hash && filterMerge.bits == bits)) {
             throw new IllegalArgumentException(merge + " settings differ from " + this);
         }
-        SeenFilterBasic<K> filterNew = new SeenFilterBasic<K>();
+        SeenFilterBasic<K> filterNew = new SeenFilterBasic<>();
         if (filterMerge.bits != bits || filterMerge.bitsper != bitsper || filterMerge.bitset.length != bitset.length) {
             throw new IllegalArgumentException("cannot merge dissimilar blooms");
         }

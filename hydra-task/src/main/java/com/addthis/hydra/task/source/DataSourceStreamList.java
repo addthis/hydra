@@ -153,17 +153,17 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
     /**
      * a queue of sources that have a bundle that is ready for use
      */
-    private final BlockingQueue<SourceWrapper> readyQueue = new LinkedBlockingQueue<SourceWrapper>();
+    private final BlockingQueue<SourceWrapper> readyQueue = new LinkedBlockingQueue<>();
 
     /**
      * a list of all source wrappers we are currently tracking, used to detect exit conditions.
      */
-    private final List<SourceWrapper> wrapperList = new ArrayList<SourceWrapper>();
+    private final List<SourceWrapper> wrapperList = new ArrayList<>();
 
     /**
      * a set of sources that should be closed on exit
      */
-    private final Set<SourceWrapper> closeSet = new HashSet<SourceWrapper>();
+    private final Set<SourceWrapper> closeSet = new HashSet<>();
 
     public abstract StreamFileSource getSourceList(Integer[] shards);
 

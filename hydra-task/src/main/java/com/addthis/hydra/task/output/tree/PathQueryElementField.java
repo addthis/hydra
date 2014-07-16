@@ -48,9 +48,9 @@ public class PathQueryElementField extends QueryElementField {
 
     public List<ValueObject> getValues(DataTreeNode node, TreeMapState state) {
         if (keys == null) {
-            return new ArrayList<ValueObject>();
+            return new ArrayList<>();
         }
-        ArrayList<ValueObject> ret = new ArrayList<ValueObject>(keys.length);
+        ArrayList<ValueObject> ret = new ArrayList<>(keys.length);
 
         DataTreeNodeActor actor = node.getData(name);
         if (actor != null && keys != null) {

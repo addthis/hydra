@@ -46,7 +46,7 @@ public final class KeyTopper implements Codable {
     }
 
     public KeyTopper init() {
-        map = new HashMap<String, Long>();
+        map = new HashMap<>();
         return this;
     }
 

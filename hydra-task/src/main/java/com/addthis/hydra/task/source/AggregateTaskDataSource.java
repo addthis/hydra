@@ -79,7 +79,7 @@ public class AggregateTaskDataSource extends TaskDataSource {
     private TaskDataSource[] sources;
 
     private TaskDataSource currentSource;
-    private final LinkedList<TaskDataSource> sourceList = new LinkedList<TaskDataSource>();
+    private final LinkedList<TaskDataSource> sourceList = new LinkedList<>();
 
     // to support test cases
     protected void setSources(TaskDataSource[] sources) {

@@ -48,7 +48,7 @@ public final class FeaturesKeyTopper implements Codable {
     }
 
     public FeaturesKeyTopper init() {
-        featuresMap = new HashMap<String, ReplaceableFeaturesBucket>();
+        featuresMap = new HashMap<>();
         return this;
     }
 
@@ -74,7 +74,7 @@ public final class FeaturesKeyTopper implements Codable {
      */
     @SuppressWarnings("unchecked")
     public Map.Entry<String, Long>[] getSortedEntries() {
-        Map<String, Long> summaryMap = new HashMap<String, Long>();
+        Map<String, Long> summaryMap = new HashMap<>();
 
         for (String id : featuresMap.keySet()) {
             ReplaceableFeaturesBucket bucket = featuresMap.get(id);

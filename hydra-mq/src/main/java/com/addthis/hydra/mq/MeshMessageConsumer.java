@@ -49,10 +49,10 @@ public class MeshMessageConsumer implements MessageConsumer {
     private final MeshyClient mesh;
     private final String uuid;
     private final String topic;
-    private final HashSet<MessageListener> listeners = new HashSet<MessageListener>();
+    private final HashSet<MessageListener> listeners = new HashSet<>();
     private final HashSet<String> routingKeys = new HashSet<>();
-    private final HashSet<String> targets = new HashSet<String>();
-    private final HashSet<String> sources = new HashSet<String>();
+    private final HashSet<String> targets = new HashSet<>();
+    private final HashSet<String> sources = new HashSet<>();
     private final IntervalTimer scanner;
     private final IntervalTimer poller;
 
@@ -124,7 +124,7 @@ public class MeshMessageConsumer implements MessageConsumer {
     }
 
     private void poll(final FileReference fileRef) {
-        HashMap<String,String> options = new HashMap<String,String>();
+        HashMap<String,String> options = new HashMap<>();
         options.put("fetch","100");
         try {
             if (debug) log.info("polling ref={} options={}", fileRef, options);

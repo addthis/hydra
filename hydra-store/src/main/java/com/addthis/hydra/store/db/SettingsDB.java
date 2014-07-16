@@ -23,7 +23,7 @@ public class SettingsDB {
     public static final String TRUE = "true";
     public static final String FALSE = "false";
 
-    private HashMap<String, String> map = new HashMap<String, String>();
+    private HashMap<String, String> map = new HashMap<>();
 
     public void setDefaults(Map<String, String> map) {
         this.map.putAll(map);

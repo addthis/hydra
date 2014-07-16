@@ -33,7 +33,7 @@ public class TestValueFilterRequire {
 
     @Test
     public void exactMatch() {
-        HashSet<String> exactValues = new HashSet<String>();
+        HashSet<String> exactValues = new HashSet<>();
         exactValues.add("bar");
         exactValues.add("bax");
         assertEquals(null, requireFilter("foo", exactValues, null, null, null));
@@ -50,7 +50,7 @@ public class TestValueFilterRequire {
 
     @Test
     public void matches() {
-        HashSet<String> matches = new HashSet<String>();
+        HashSet<String> matches = new HashSet<>();
         matches.add("\\d\\d");
         matches.add(".*addthis.com.*");
         assertEquals(null, requireFilter("foo", null, matches, null, null));
@@ -60,7 +60,7 @@ public class TestValueFilterRequire {
 
     @Test
     public void find() {
-        HashSet<String> find = new HashSet<String>();
+        HashSet<String> find = new HashSet<>();
         find.add("^[a-z0-9]*$");
         assertEquals(null, requireFilter("-123", null, null, find, null));
         assertEquals("abcd", requireFilter("abcd", null, null, find, null));
@@ -68,11 +68,11 @@ public class TestValueFilterRequire {
 
     @Test
     public void multiple() {
-        HashSet<String> exactValues = new HashSet<String>();
+        HashSet<String> exactValues = new HashSet<>();
         exactValues.add("bar");
         exactValues.add("bax");
         String[] contains = new String[]{"fuz", "baz"};
-        HashSet<String> matches = new HashSet<String>();
+        HashSet<String> matches = new HashSet<>();
         matches.add("\\d\\d");
         matches.add(".*addthis.com.*");
         assertEquals("s7.addthis.com/live", requireFilter("s7.addthis.com/live", exactValues, matches, null, null));

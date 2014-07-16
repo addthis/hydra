@@ -40,7 +40,7 @@ public final class DataSourcePrefetch extends TaskDataSource {
     @FieldConfig(codable = true, required = true)
     protected TaskDataSource source;
 
-    protected final LinkedList<Bundle> prefetch = new LinkedList<Bundle>();
+    protected final LinkedList<Bundle> prefetch = new LinkedList<>();
 
 
     public DataSourcePrefetch setup(TaskDataSource source, int size) {

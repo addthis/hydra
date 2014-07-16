@@ -57,7 +57,7 @@ public class BundleFilterAppend extends BundleFilter {
     }
 
     public BundleFilterAppend setValues(HashSet<String> values) {
-        this.values = new ArrayList<String>(values.size());
+        this.values = new ArrayList<>(values.size());
         for (String val : values) {
             this.values.add(val);
         }

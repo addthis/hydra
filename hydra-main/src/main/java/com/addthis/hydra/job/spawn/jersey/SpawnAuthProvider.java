@@ -48,6 +48,6 @@ public class SpawnAuthProvider<T> implements InjectableProvider<Auth, Parameter>
     public Injectable<?> getInjectable(ComponentContext ic,
             Auth a,
             Parameter c) {
-        return new SpawnAuthInjectable<T>(authenticator, realm, a.required());
+        return new SpawnAuthInjectable<>(authenticator, realm, a.required());
     }
 }

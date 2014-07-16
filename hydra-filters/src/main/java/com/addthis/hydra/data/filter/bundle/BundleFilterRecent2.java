@@ -62,7 +62,7 @@ public final class BundleFilterRecent2 extends BundleFilter {
     private HashSet<String> exclude;
 
     @SuppressWarnings("unchecked")
-    private HotMap<String, Mark> cache = new HotMap<String, Mark>(new HashMap());
+    private HotMap<String, Mark> cache = new HotMap<>(new HashMap());
     private String[] fields;
 
     @Override
@@ -108,7 +108,7 @@ public final class BundleFilterRecent2 extends BundleFilter {
     /** */
     private class Mark {
 
-        public TreeMap<Long, Long> times = new TreeMap<Long, Long>();
+        public TreeMap<Long, Long> times = new TreeMap<>();
 
         long averageTime(long time) {
             times.put(time, time);

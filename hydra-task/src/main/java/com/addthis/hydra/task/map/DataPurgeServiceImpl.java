@@ -82,7 +82,7 @@ public class DataPurgeServiceImpl implements DataPurgeService {
     }
 
     protected List<File> generateDirectoryList(String prefixDirectory) {
-        List<File> directoryList = new LinkedList<File>();
+        List<File> directoryList = new LinkedList<>();
         for (File directory : expandPrefix(prefixDirectory)) {
             logger.trace("prefix expanded {} to {}", prefixDirectory, directory);
             getSubdirectoryList(directory, directoryList);
@@ -154,12 +154,12 @@ public class DataPurgeServiceImpl implements DataPurgeService {
 
     protected List<File> expandPrefix(String path) {
         if (path.indexOf('*') == -1) {
-            LinkedList<File> list = new LinkedList<File>();
+            LinkedList<File> list = new LinkedList<>();
             list.add(new File(path));
             return list;
         }
         File cur = path.startsWith(dirSeperator) ? new File(dirSeperator) : new File(".");
-        LinkedList<File> list = new LinkedList<File>();
+        LinkedList<File> list = new LinkedList<>();
         String[] tokens = Strings.splitArray(path, dirRegexSeperator);
         expandPrefix(list, cur, tokens, 0);
         return list;
@@ -194,7 +194,7 @@ public class DataPurgeServiceImpl implements DataPurgeService {
      */
     protected List<File> getSubdirectoryList(File current, List<File> directoryList) {
         if (directoryList == null) {
-            directoryList = new ArrayList<File>();
+            directoryList = new ArrayList<>();
         }
         directoryList.add(current);
         if (current.isDirectory()) {

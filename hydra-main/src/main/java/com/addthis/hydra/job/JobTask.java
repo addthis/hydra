@@ -289,7 +289,7 @@ public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
     }
 
     public List<JobTaskReplica> getAllReplicas() {
-        List<JobTaskReplica> replicaList = new ArrayList<JobTaskReplica>();
+        List<JobTaskReplica> replicaList = new ArrayList<>();
         if (replicas != null) {
             replicaList.addAll(replicas);
         }
@@ -364,7 +364,7 @@ public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
     }
 
     public Set<String> getAllTaskHosts() {
-        Set<String> rv = new HashSet<String>();
+        Set<String> rv = new HashSet<>();
         rv.add(hostUuid);
         if (getAllReplicas() != null) {
             for (JobTaskReplica replica : getAllReplicas()) {

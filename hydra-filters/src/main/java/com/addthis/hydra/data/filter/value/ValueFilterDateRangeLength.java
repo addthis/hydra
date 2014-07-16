@@ -115,7 +115,7 @@ public class ValueFilterDateRangeLength extends StringFilter {
     protected int countDays(String dates) {
         DateTimeFormatter dtf = DateTimeFormat.forPattern(dateFormat);
         String[] datesSplit = toArray(dates);
-        SortedSet<DateTime> dateSet = new TreeSet<DateTime>();
+        SortedSet<DateTime> dateSet = new TreeSet<>();
         for (String strVal : datesSplit) {
             if (strVal.indexOf(dateSep) < 0) {
                 dateSet.add(dtf.parseDateTime(strVal));

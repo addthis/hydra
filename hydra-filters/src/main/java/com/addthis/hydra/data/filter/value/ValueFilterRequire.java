@@ -231,14 +231,14 @@ public class ValueFilterRequire extends StringFilter {
             contains = tmp.toArray(new String[tmp.size()]);
         }
         if (match != null) {
-            ArrayList<Pattern> np = new ArrayList<Pattern>();
+            ArrayList<Pattern> np = new ArrayList<>();
             for (String s : match) {
                 np.add(Pattern.compile(s));
             }
             this.pattern = np;
         }
         if (find != null) {
-            ArrayList<Pattern> np = new ArrayList<Pattern>();
+            ArrayList<Pattern> np = new ArrayList<>();
             for (String s : find) {
                 np.add(Pattern.compile(s));
             }

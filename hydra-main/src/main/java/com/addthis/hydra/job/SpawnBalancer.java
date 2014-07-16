@@ -516,7 +516,7 @@ public class SpawnBalancer implements Codable {
         }
 
         public List<String> generateHostsSorted() {
-            List<String> rv = new ArrayList<String>(this.keySet());
+            List<String> rv = new ArrayList<>(this.keySet());
             Collections.sort(rv, new Comparator<String>() {
                 @Override
                 public int compare(String s, String s1) {
@@ -886,7 +886,7 @@ public class SpawnBalancer implements Codable {
      */
     @VisibleForTesting
     protected List<HostState> sortHostsByActiveTasks(Collection<HostState> hosts) {
-        List<HostState> hostList = new ArrayList<HostState>(hosts);
+        List<HostState> hostList = new ArrayList<>(hosts);
         removeDownHosts(hostList);
         Collections.sort(hostList, new Comparator<HostState>() {
             @Override

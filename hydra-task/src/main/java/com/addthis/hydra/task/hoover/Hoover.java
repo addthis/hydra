@@ -271,7 +271,7 @@ public class Hoover extends TaskRunnable implements Runnable {
      * <fileName or fileName;mode> : <"file string contents">
      */
     @FieldConfig(codable = true)
-    private HashMap<String, String> staticFiles = new HashMap<String, String>();
+    private HashMap<String, String> staticFiles = new HashMap<>();
 
     /**
      * Maximum number of attempts to retrieve files from remote hosts. Default is 5.

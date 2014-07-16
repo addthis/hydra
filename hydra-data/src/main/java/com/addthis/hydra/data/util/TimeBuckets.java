@@ -44,7 +44,7 @@ public class TimeBuckets implements Codable {
 
     public TimeBuckets init(long size) {
         blockSize = size;
-        map = new TreeMap<Long, Long>();
+        map = new TreeMap<>();
         return this;
     }
 
@@ -113,7 +113,7 @@ public class TimeBuckets implements Codable {
     }
 
     public TreeMap<String, Long> getChangeTimes(double minRatio, int minSize, double minZScore, int inactiveThreshold, int windowSize) {
-        TreeMap<String, Long> rv = new TreeMap<String, Long>();
+        TreeMap<String, Long> rv = new TreeMap<>();
         Long[] counts = this.getCounts();
         double mean = FindChangePoints.mean(counts);
         if (mean > 10) {
@@ -130,7 +130,7 @@ public class TimeBuckets implements Codable {
     public Map<Long, Long> getPeaks(int maxWidth, int minHt) {
         Long[] counts = this.getCounts();
         List<ChangePoint> peaks = FindChangePoints.findHighPoints(counts, maxWidth, minHt);
-        Map<Long, Long> rv = new HashMap<Long, Long>();
+        Map<Long, Long> rv = new HashMap<>();
         for (ChangePoint peak : peaks) {
             int index = peak.getIndex();
             Long peakTime = (Long) map.keySet().toArray()[index];

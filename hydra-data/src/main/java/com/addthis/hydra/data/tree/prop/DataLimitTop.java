@@ -199,7 +199,7 @@ public class DataLimitTop extends TreeNodeData<DataLimitTop.Config> implements S
         if (key.equals("hit") || key.equals("node")) {
             KeyTopper map = top;
             Entry<String, Long>[] top = map.getSortedEntries();
-            ArrayList<DataTreeNode> ret = new ArrayList<DataTreeNode>(top.length);
+            ArrayList<DataTreeNode> ret = new ArrayList<>(top.length);
             for (Entry<String, Long> e : top) {
                 DataTreeNode node = parent.getNode(e.getKey());
                 if (node != null) {
@@ -209,14 +209,14 @@ public class DataLimitTop extends TreeNodeData<DataLimitTop.Config> implements S
             return ret;
         } else if (key.equals("vhit")) {
             Entry<String, Long>[] list = top.getSortedEntries();
-            ArrayList<DataTreeNode> ret = new ArrayList<DataTreeNode>(list.length);
+            ArrayList<DataTreeNode> ret = new ArrayList<>(list.length);
             for (Entry<String, Long> e : list) {
                 ret.add(new VirtualTreeNode(e.getKey(), e.getValue()));
             }
             return ret;
         } else if (key.equals("phit")) {
             Entry<String, Long>[] list = top.getSortedEntries();
-            ArrayList<DataTreeNode> ret = new ArrayList<DataTreeNode>(list.length);
+            ArrayList<DataTreeNode> ret = new ArrayList<>(list.length);
             for (Entry<String, Long> e : list) {
                 DataTreeNode node = parent.getNode(e.getKey());
                 if (node != null) {

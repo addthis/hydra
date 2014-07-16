@@ -46,7 +46,7 @@ public class MeshMessageProducer implements MessageProducer {
 
     private final MeshyClient mesh;
     private final String topic;
-    private final HashMap<String,HaveTargets> consumers = new HashMap<String,HaveTargets>();
+    private final HashMap<String,HaveTargets> consumers = new HashMap<>();
 
     private MessageFileProvider provider;
 

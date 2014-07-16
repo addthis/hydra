@@ -54,8 +54,8 @@ public class SpawnHttp extends AbstractHandler {
 
     private final Spawn spawn;
     private final File webDir;
-    private final ConcurrentHashMap<String, JSONObject> auth = new ConcurrentHashMap<String, JSONObject>();
-    private final LinkedList<Runnable> onStopList = new LinkedList<Runnable>();
+    private final ConcurrentHashMap<String, JSONObject> auth = new ConcurrentHashMap<>();
+    private final LinkedList<Runnable> onStopList = new LinkedList<>();
     private final ServletHandler metricsHandler;
 
     public SpawnHttp(final Spawn spawn, final File webDir) {
@@ -110,7 +110,7 @@ public class SpawnHttp extends AbstractHandler {
     /**
      * hack layer to make Jetty look a litle more like HTTPServer for this migration
      */
-    private HashMap<String, HTTPService> serviceMap = new HashMap<String, HTTPService>();
+    private HashMap<String, HTTPService> serviceMap = new HashMap<>();
 
     public void mapService(String path, HTTPService service) {
         serviceMap.put(path, service);
@@ -170,7 +170,7 @@ public class SpawnHttp extends AbstractHandler {
 
         public static HashSet<String> csvListToSet(String list) {
             if (list != null) {
-                HashSet<String> set = new HashSet<String>();
+                HashSet<String> set = new HashSet<>();
                 for (String s : Strings.splitArray(list, ",")) {
                     set.add(s);
                 }

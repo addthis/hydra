@@ -100,7 +100,7 @@ public class TestDiskBackedMap {
         // Create a diskbackedmap
         MergedRowFactory mergedRowFactory = new MergedRowFactory();
         Files.deleteDir(new File("/tmp/testDiskBackedMap"));
-        DiskBackedMap<MergedRow> diskBackedMap = new DiskBackedMap<MergedRow>("/tmp/testDiskBackedMap",
+        DiskBackedMap<MergedRow> diskBackedMap = new DiskBackedMap<>("/tmp/testDiskBackedMap",
                 mergedRowFactory, 16 * 1024 * 1024L);
 
         MergedRow row1 = new MergedRow();

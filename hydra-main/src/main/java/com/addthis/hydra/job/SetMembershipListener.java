@@ -44,8 +44,8 @@ public class SetMembershipListener implements PathChildrenCacheListener {
     private final ReentrantLock membershipLock = new ReentrantLock();
     private final CuratorFramework zkClient;
     private final PathChildrenCache cache;
-    private final List<SetMembershipAdditionListener> setMembershipAdditionListeners = new CopyOnWriteArrayList<SetMembershipAdditionListener>();
-    private final List<SetMembershipRemovalListener> setMembershipRemovedListeners = new CopyOnWriteArrayList<SetMembershipRemovalListener>();
+    private final List<SetMembershipAdditionListener> setMembershipAdditionListeners = new CopyOnWriteArrayList<>();
+    private final List<SetMembershipRemovalListener> setMembershipRemovedListeners = new CopyOnWriteArrayList<>();
 
 
     public SetMembershipListener(CuratorFramework zkClient, String path) {

@@ -40,7 +40,7 @@ public final class TreeMapperPathReference implements Codable {
 
     @Override
     public String toString() {
-        ArrayList<String> l = new ArrayList<String>();
+        ArrayList<String> l = new ArrayList<>();
         if (path != null) {
             l.add("path=" + path);
         }

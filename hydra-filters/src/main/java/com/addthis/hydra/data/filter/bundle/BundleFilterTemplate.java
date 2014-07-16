@@ -43,8 +43,8 @@ public class BundleFilterTemplate extends BundleFilter {
 
     @Override
     public void initialize() {
-        ArrayList<Token> newtokens = new ArrayList<Token>();
-        ArrayList<String> newfields = new ArrayList<String>();
+        ArrayList<Token> newtokens = new ArrayList<>();
+        ArrayList<String> newfields = new ArrayList<>();
         int pos = 0;
         for (String tok : tokens) {
             if (tok.startsWith("{{") && tok.endsWith("}}")) {

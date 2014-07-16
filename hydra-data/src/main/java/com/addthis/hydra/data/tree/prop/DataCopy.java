@@ -90,7 +90,7 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode tn, DataCopy.Config conf) {
         Bundle p = state.getBundle();
         if (keyAccess == null) {
-            keyAccess = new HashMap<String, BundleField>();
+            keyAccess = new HashMap<>();
             for (Entry<String, String> s : conf.key.entrySet()) {
                 keyAccess.put(s.getKey(), p.getFormat().getField(s.getValue()));
             }

@@ -51,7 +51,7 @@ public class TaskRunConfig {
     }
 
     public Integer[] calcShardList(int shardTotal) {
-        List<Integer> list = new ArrayList<Integer>(nodeCount);
+        List<Integer> list = new ArrayList<>(nodeCount);
         for (int off = node; off < shardTotal; off += nodeCount) {
             list.add(off);
         }

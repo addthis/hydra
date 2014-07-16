@@ -70,7 +70,7 @@ public class ValueFilterHttpGet extends StringFilter {
     private String persistDir = ".";
 
     private HotMap<String, CacheObject> cache =
-            new HotMap<String, CacheObject>(new ConcurrentHashMap());
+            new HotMap<>(new ConcurrentHashMap());
     private AtomicBoolean               init  = new AtomicBoolean(false);
     private File persistTo;
 
@@ -95,7 +95,7 @@ public class ValueFilterHttpGet extends StringFilter {
         if (init.compareAndSet(false, true)) {
             if (persist) {
                 persistTo = Files.initDirectory(persistDir);
-                LinkedList<CacheObject> list = new LinkedList<CacheObject>();
+                LinkedList<CacheObject> list = new LinkedList<>();
                 for (File file : persistTo.listFiles()) {
                     if (file.isFile()) {
                         try {

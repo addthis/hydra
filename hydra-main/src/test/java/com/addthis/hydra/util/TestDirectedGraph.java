@@ -95,7 +95,7 @@ public class TestDirectedGraph {
         graph.addEdge("B", "G");
 
         String[] resultArray = {"D", "F", "G", "H"};
-        Set<String> results = new HashSet<String>(Arrays.asList(resultArray));
+        Set<String> results = new HashSet<>(Arrays.asList(resultArray));
         assertEquals(results, graph.sinksClosure("D"));
     }
 
@@ -111,7 +111,7 @@ public class TestDirectedGraph {
         graph.addEdge("B", "G");
 
         String[] resultArray = {"A", "B", "G", "D"};
-        Set<String> results = new HashSet<String>(Arrays.asList(resultArray));
+        Set<String> results = new HashSet<>(Arrays.asList(resultArray));
         assertEquals(results, graph.sourcesClosure("G"));
     }
 
@@ -137,10 +137,10 @@ public class TestDirectedGraph {
         String[] component2 = {"E", "G"};
         String[] component3 = {"H"};
         String[] component4 = {"D", "F"};
-        assertTrue(components.contains(new HashSet<String>(Arrays.asList(component1))));
-        assertTrue(components.contains(new HashSet<String>(Arrays.asList(component2))));
-        assertTrue(components.contains(new HashSet<String>(Arrays.asList(component3))));
-        assertTrue(components.contains(new HashSet<String>(Arrays.asList(component4))));
+        assertTrue(components.contains(new HashSet<>(Arrays.asList(component1))));
+        assertTrue(components.contains(new HashSet<>(Arrays.asList(component2))));
+        assertTrue(components.contains(new HashSet<>(Arrays.asList(component3))));
+        assertTrue(components.contains(new HashSet<>(Arrays.asList(component4))));
     }
 
     @Test
@@ -164,9 +164,9 @@ public class TestDirectedGraph {
         String[] component1 = {"C", "B", "A"};
         String[] component2 = {"E", "G"};
         String[] component3 = {"D", "F"};
-        assertTrue(components.contains(new HashSet<String>(Arrays.asList(component1))));
-        assertTrue(components.contains(new HashSet<String>(Arrays.asList(component2))));
-        assertTrue(components.contains(new HashSet<String>(Arrays.asList(component3))));
+        assertTrue(components.contains(new HashSet<>(Arrays.asList(component1))));
+        assertTrue(components.contains(new HashSet<>(Arrays.asList(component2))));
+        assertTrue(components.contains(new HashSet<>(Arrays.asList(component3))));
     }
 
     @Test
@@ -181,7 +181,7 @@ public class TestDirectedGraph {
         Set<Set<String>> components = graph.sourcesCycles("A");
         assertEquals(1, components.size());
         String[] component1 = {"D", "E"};
-        assertTrue(components.contains(new HashSet<String>(Arrays.asList(component1))));
+        assertTrue(components.contains(new HashSet<>(Arrays.asList(component1))));
     }
 
 

@@ -82,7 +82,7 @@ public class ValueFilterSeen extends ValueFilter {
 
     private boolean initialize() {
         if (bloom == null && url != null) {
-            SeenFilterBasic<Raw> newbloom = new SeenFilterBasic<Raw>();
+            SeenFilterBasic<Raw> newbloom = new SeenFilterBasic<>();
             String raw;
             try {
                 byte[] bytes = ValueFilterHttpGet.httpGet(url, null, null, 30000, false);

@@ -35,7 +35,7 @@ public class FindChangePoints implements Codable {
      * @return A list of pairs of integers of the form (index, size)
      */
     public static List<ChangePoint> findHighPoints(Long[] data, int max_width, int min_height) {
-        List<ChangePoint> rv = new ArrayList<ChangePoint>();
+        List<ChangePoint> rv = new ArrayList<>();
         int currIndex = 0;
         long currHt = data[0];
         int currWidth = 0;
@@ -73,7 +73,7 @@ public class FindChangePoints implements Codable {
      * @return A list of pairs of integers of the form (index, size)
      */
     public static List<ChangePoint> findSignificantPoints(Long[] data, int minChange, double minRatio, double minZScore, int inactiveThreshold, int windowSize) {
-        List<ChangePoint> rv = new ArrayList<ChangePoint>();
+        List<ChangePoint> rv = new ArrayList<>();
         rv.addAll(findAndSmoothOverPeaks(data, minChange, minZScore, windowSize));
         rv.addAll(findChangePoints(data, minChange, minRatio, minZScore, inactiveThreshold, windowSize));
         return rv;
@@ -81,7 +81,7 @@ public class FindChangePoints implements Codable {
 
     private static List<ChangePoint> findChangePoints(Long[] data, int minChange, double minRatio, double minZScore, int inactiveThreshold, int windowSize) {
         List<Long> dataList = Arrays.asList(data);
-        ArrayList<ChangePoint> rvList = new ArrayList<ChangePoint>();
+        ArrayList<ChangePoint> rvList = new ArrayList<>();
         for (int i = 2; i < data.length; i++) {
             int startIndex = Math.max(i - windowSize + 1, 0);
             Long[] currSlice = dataList.subList(startIndex, i).toArray(new Long[]{});

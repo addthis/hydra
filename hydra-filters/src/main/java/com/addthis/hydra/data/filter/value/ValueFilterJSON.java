@@ -55,7 +55,7 @@ public class ValueFilterJSON extends ValueFilter implements SuperCodable {
     @FieldConfig(codable = true, required = true)
     private String query;
 
-    private HotMap<String, Object> cache = new HotMap<String, Object>(new ConcurrentHashMap());
+    private HotMap<String, Object> cache = new HotMap<>(new ConcurrentHashMap());
     private ArrayList<QueryToken> tokens;
 
     @Override
@@ -113,7 +113,7 @@ public class ValueFilterJSON extends ValueFilter implements SuperCodable {
 
     @Override
     public void postDecode() {
-        tokens = new ArrayList<QueryToken>();
+        tokens = new ArrayList<>();
         QueryToken current = new QueryToken();
         StringTokenizer st = new StringTokenizer(query, ".[", true);
         while (st.hasMoreTokens()) {

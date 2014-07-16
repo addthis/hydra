@@ -76,7 +76,7 @@ public class BundleFilterRandomField extends BundleFilter {
         BundleField[] bound = getBindings(bundle, fields);
         BundleField[] inBound = new BundleField[inFields.length];
         System.arraycopy(bound, 0, inBound, 0, inBound.length);
-        List<BundleField> inBoundShuffle = new ArrayList<BundleField>(Arrays.asList(inBound));
+        List<BundleField> inBoundShuffle = new ArrayList<>(Arrays.asList(inBound));
         Collections.shuffle(inBoundShuffle);
 
         for (BundleField bf : inBoundShuffle) {

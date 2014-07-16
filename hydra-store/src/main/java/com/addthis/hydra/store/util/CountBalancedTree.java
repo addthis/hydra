@@ -57,7 +57,7 @@ public final class CountBalancedTree<K extends Comparable<K>, V> implements Sort
      */
     public String debug(boolean brief) {
         LevelIterator s = new LevelIterator(root);
-        TreeMap<ANode<K, V>, Integer> leafs = new TreeMap<ANode<K, V>, Integer>();
+        TreeMap<ANode<K, V>, Integer> leafs = new TreeMap<>();
         ANode<K, V> maxTilt = null;
         int scanned = 0;
         while (s.hasNext()) {
@@ -125,7 +125,7 @@ public final class CountBalancedTree<K extends Comparable<K>, V> implements Sort
      * remove and return the larger branch off the root node as a separate tree
      */
     public synchronized CountBalancedTree<K, V> split() {
-        CountBalancedTree<K, V> at = new CountBalancedTree<K, V>();
+        CountBalancedTree<K, V> at = new CountBalancedTree<>();
         if (root == null || root.left == null || root.right == null) {
             log.warn("anomalous split on " + debug(true) + " " + at.toJSON());
             if ((root.left == null || root.right == null) && size() > 2) {
@@ -143,7 +143,7 @@ public final class CountBalancedTree<K extends Comparable<K>, V> implements Sort
         root.right = null;
         root.leftnodes = 0;
         root.rightnodes = 0;
-        ATrack<K, V> track = new ATrack<K, V>();
+        ATrack<K, V> track = new ATrack<>();
         insert(root.leftnodes > root.rightnodes ? right : left, root, track);
         root = left;
 
@@ -301,7 +301,7 @@ public final class CountBalancedTree<K extends Comparable<K>, V> implements Sort
         if (root == null) {
             return false;
         }
-        LinkedList<ANode<K, V>> queue = new LinkedList<ANode<K, V>>();
+        LinkedList<ANode<K, V>> queue = new LinkedList<>();
         queue.add(root);
         while (queue.size() > 0) {
             ANode<K, V> node = queue.remove();
@@ -431,10 +431,10 @@ public final class CountBalancedTree<K extends Comparable<K>, V> implements Sort
 
     @Override
     public synchronized V put(final K key, final V value) {
-        ANode<K, V> node = new ANode<K, V>();
+        ANode<K, V> node = new ANode<>();
         node.key = key;
         node.value = value;
-        ATrack<K, V> track = new ATrack<K, V>();
+        ATrack<K, V> track = new ATrack<>();
         ANode<K, V> old = insert(root, node, track);
         track.clear();
         if (debug) debug(true);
@@ -591,8 +591,8 @@ public final class CountBalancedTree<K extends Comparable<K>, V> implements Sort
      */
     class LevelIterator implements Iterator<ANode<K, V>> {
 
-        LinkedList<ANode<K, V>> current = new LinkedList<ANode<K, V>>();
-        LinkedList<ANode<K, V>> next = new LinkedList<ANode<K, V>>();
+        LinkedList<ANode<K, V>> current = new LinkedList<>();
+        LinkedList<ANode<K, V>> next = new LinkedList<>();
         ANode<K, V> last;
         int level = 0;
 
@@ -783,7 +783,7 @@ final class ANode<K extends Comparable<K>, V> implements Comparable<ANode<K, V>>
     }
 
     protected synchronized void remove(final CountBalancedTree<K, V> ctx) {
-        ATrack<K, V> track = new ATrack<K, V>();
+        ATrack<K, V> track = new ATrack<>();
         incpath(track, -1);
         if (left == right) {
             updateParentChild(ctx, null);

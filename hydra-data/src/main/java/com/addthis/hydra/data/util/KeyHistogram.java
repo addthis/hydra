@@ -37,7 +37,7 @@ public class KeyHistogram implements SuperCodable {
     private int scale = 10;
 
     public KeyHistogram init() {
-        map = new HashMap<Long, Long>();
+        map = new HashMap<>();
         return this;
     }
 
@@ -54,7 +54,7 @@ public class KeyHistogram implements SuperCodable {
     }
 
     public Map<Long, Long> getSortedHistogram() {
-        TreeMap<Long, Long> sort = new TreeMap<Long, Long>();
+        TreeMap<Long, Long> sort = new TreeMap<>();
         for (Entry<Long, Long> e : map.entrySet()) {
             sort.put(e.getKey(), e.getValue());
         }

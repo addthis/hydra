@@ -67,8 +67,8 @@ public class BundleFilterJSON extends BundleFilter {
     @Override
     public void initialize() {
         fields = new String[]{json, set};
-        objCache = new HotMap<String, Object>(new ConcurrentHashMap());
-        tokCache = new HotMap<String, ArrayList<QueryToken>>(new ConcurrentHashMap());
+        objCache = new HotMap<>(new ConcurrentHashMap());
+        tokCache = new HotMap<>(new ConcurrentHashMap());
     }
 
     @Override
@@ -148,7 +148,7 @@ public class BundleFilterJSON extends BundleFilter {
     }
 
     private ArrayList<QueryToken> tokenize(String query) {
-        ArrayList<QueryToken> tokens = new ArrayList<QueryToken>();
+        ArrayList<QueryToken> tokens = new ArrayList<>();
         QueryToken current = new QueryToken();
         StringTokenizer st = new StringTokenizer(query, ".[", true);
         while (st.hasMoreTokens()) {

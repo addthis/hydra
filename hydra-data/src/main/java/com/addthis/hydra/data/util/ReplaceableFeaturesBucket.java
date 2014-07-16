@@ -30,7 +30,7 @@ public class ReplaceableFeaturesBucket implements Codable {
     private long hits = 0;
 
     public ReplaceableFeaturesBucket() {
-        featuresMap = new HashMap<String, Double>();
+        featuresMap = new HashMap<>();
     }
 
     public void addFeature(String feature, double initialWeight) {

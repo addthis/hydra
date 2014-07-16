@@ -102,7 +102,7 @@ public class StreamTokenizer extends Tokenizer {
             return null;
         }
         if (line.length() == 0) {
-            return new ArrayList<String>(0);
+            return new ArrayList<>(0);
         }
         return tokenize(line);
     }

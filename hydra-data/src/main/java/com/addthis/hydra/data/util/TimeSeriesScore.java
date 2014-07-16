@@ -61,7 +61,7 @@ public class TimeSeriesScore implements Codable {
         Date lastTS = format.parse(lastStr, new ParsePosition(0));
         int totalBins = (int) ((lastTS.getTime() - firstTS.getTime()) / 3600000) + 1;
 
-        Map<String, Integer> timeBinLookup = new HashMap<String, Integer>();
+        Map<String, Integer> timeBinLookup = new HashMap<>();
         timeBinLookup.put(firstStr, 1);
         timeBinLookup.put(lastStr, totalBins);
 
@@ -74,9 +74,9 @@ public class TimeSeriesScore implements Codable {
             timeBinLookup.put(format.format(currenthour), i);
         }
 
-        List<KeyTopper> arrKT = new ArrayList<KeyTopper>();
+        List<KeyTopper> arrKT = new ArrayList<>();
         Map.Entry<String, Long>[] KTmap;
-        Set<String> urls = new HashSet<String>();
+        Set<String> urls = new HashSet<>();
 
         Iterator<Entry<String, KeyTopper>> it = timeSeriesMap.entrySet().iterator();
         while (it.hasNext()) {
@@ -89,7 +89,7 @@ public class TimeSeriesScore implements Codable {
         }
 
 
-        Map<String, Long> map = new HashMap<String, Long>();
+        Map<String, Long> map = new HashMap<>();
         Iterator<String> itr = urls.iterator();
         while (itr.hasNext()) {
             String urlItr = itr.next();
@@ -155,8 +155,8 @@ public class TimeSeriesScore implements Codable {
      */
     public Map<String, KeyTopper> getSortedTimeSeriesMap(Map<String, KeyTopper> timeSeriesMap) {
 
-        Map<String, KeyTopper> sortedTimeSeriesMap = new LinkedHashMap<String, KeyTopper>();
-        TreeSet<String> keys = new TreeSet<String>(timeSeriesMap.keySet());
+        Map<String, KeyTopper> sortedTimeSeriesMap = new LinkedHashMap<>();
+        TreeSet<String> keys = new TreeSet<>(timeSeriesMap.keySet());
         for (String key : keys) {
             KeyTopper value = timeSeriesMap.get(key);
             if (value != null) {

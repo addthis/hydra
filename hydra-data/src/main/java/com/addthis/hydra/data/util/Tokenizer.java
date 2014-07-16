@@ -171,7 +171,7 @@ public class Tokenizer implements Codable {
             return null;
         }
 
-        List<String> ret = new ArrayList<String>(maxColCount);
+        List<String> ret = new ArrayList<>(maxColCount);
 
         int inGroup = -1;
         boolean isEscaped = false;

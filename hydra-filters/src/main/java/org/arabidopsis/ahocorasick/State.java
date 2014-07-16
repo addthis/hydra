@@ -54,7 +54,7 @@ class State implements Serializable {
 		this.depth = depth;
 		this.edgeList = new SparseEdgeList();
 		this.fail = null;
-		this.outputs = new HashSet<Object>();
+		this.outputs = new HashSet<>();
 	}
 
 	public State extend(char c) {

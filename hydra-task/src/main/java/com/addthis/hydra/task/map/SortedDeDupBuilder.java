@@ -40,7 +40,7 @@ import com.yammer.metrics.core.Counter;
  */
 public class SortedDeDupBuilder extends StreamBuilder {
 
-    private final ConcurrentSkipListMap<String, Bundle> sortedMap = new ConcurrentSkipListMap<String, Bundle>();
+    private final ConcurrentSkipListMap<String, Bundle> sortedMap = new ConcurrentSkipListMap<>();
     private final Counter dropCounter = Metrics.newCounter(this.getClass(), "dropCounter");
     private final Lock flushLock = new ReentrantLock();
 

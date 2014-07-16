@@ -42,7 +42,7 @@ public class ZkMessageConsumer<T extends Serializable> implements MessageConsume
     private String path;
     private Class<T> clazz;
     private TypeReference typeReference;
-    private final Set<MessageListener> messageListeners = new HashSet<MessageListener>();
+    private final Set<MessageListener> messageListeners = new HashSet<>();
     private PathChildrenCache cache;
 
     public ZkMessageConsumer(CuratorFramework zkClient, String path, MessageListener messageListener, final TypeReference<T> typeReference) {

@@ -20,7 +20,7 @@ import com.addthis.basis.util.Parameter;
 
 public class RecentReplicaMap {
 
-    private final HashMap<String, Integer> replicaMap = new HashMap<String, Integer>();
+    private final HashMap<String, Integer> replicaMap = new HashMap<>();
 
     private final int ALLOWED_REPLICAS_ABOVE_AVERAGE = Parameter.intValue("spawnbalance.recentreplica.replicas.aa", 3);
     private final long RECENT_REPLICA_RESET_MILLIS = Parameter.longValue("spawnbalance.recentreplica.reset", 5 * 60 * 1000);

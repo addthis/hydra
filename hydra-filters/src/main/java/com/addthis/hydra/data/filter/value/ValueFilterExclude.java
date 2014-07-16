@@ -186,14 +186,14 @@ public class ValueFilterExclude extends StringFilter {
             contains = tmp.toArray(new String[tmp.size()]);
         }
         if (match != null) {
-            ArrayList<Pattern> newpat = new ArrayList<Pattern>();
+            ArrayList<Pattern> newpat = new ArrayList<>();
             for (String s : match) {
                 newpat.add(Pattern.compile(s));
             }
             pattern = newpat;
         }
         if (find != null) {
-            ArrayList<Pattern> newpat = new ArrayList<Pattern>();
+            ArrayList<Pattern> newpat = new ArrayList<>();
             for (String s : find) {
                 newpat.add(Pattern.compile(s));
             }

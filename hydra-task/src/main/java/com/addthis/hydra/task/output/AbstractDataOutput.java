@@ -117,7 +117,7 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
         if (dataPurgeConfig != null) {
             purgeData();
         }
-        LinkedList<TokenIndex> vt = new LinkedList<TokenIndex>();
+        LinkedList<TokenIndex> vt = new LinkedList<>();
         String[] ft = new String[path.length];
         for (int i = 0; i < ft.length; i++) {
             if (path[i].startsWith("[[") && path[i].endsWith("]]")) {

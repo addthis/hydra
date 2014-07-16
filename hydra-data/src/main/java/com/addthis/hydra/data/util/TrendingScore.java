@@ -67,7 +67,7 @@ public class TrendingScore implements Codable {
         if (trends != null && trends.size() > 0) {
             int results = 0;
             // create a list of unique urls
-            Set<String> urls = new HashSet<String>();
+            Set<String> urls = new HashSet<>();
             // create a map of time --> (url, hits)
             Map<String, Map<String, Long>> trendingMap = buildTrendingMap(trends, urls);
 
@@ -126,7 +126,7 @@ public class TrendingScore implements Codable {
         Map trendingMap = new TreeMap<String, Map<String, Long>>();
 
         for (String ts : timeSeriesMap.keySet()) {
-            Map<String, Long> urlCount = new HashMap<String, Long>();
+            Map<String, Long> urlCount = new HashMap<>();
             trendingMap.put(ts, urlCount);
 
             for (Map.Entry<String, Long> url : timeSeriesMap.get(ts).getSortedEntries()) {
@@ -139,7 +139,7 @@ public class TrendingScore implements Codable {
     }
 
     public static List<URLTree.TreeObject.TreeValue> sortByValue(URLTree tree) {
-        List<URLTree.TreeObject.TreeValue> list = new LinkedList<URLTree.TreeObject.TreeValue>(tree.getBranches(DEFAULT_URL_SEP));
+        List<URLTree.TreeObject.TreeValue> list = new LinkedList<>(tree.getBranches(DEFAULT_URL_SEP));
 
         Collections.sort(list, new Comparator<URLTree.TreeObject.TreeValue>() {
             @Override

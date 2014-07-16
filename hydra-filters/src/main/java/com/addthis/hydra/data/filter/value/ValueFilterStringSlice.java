@@ -90,7 +90,7 @@ public class ValueFilterStringSlice extends StringFilter {
             joinStr = sep;
         }
 
-        List<String> splitList = new ArrayList<String>();
+        List<String> splitList = new ArrayList<>();
         Iterators.addAll(splitList, Splitter.on(sep).split(value).iterator());
 
         if (toIndex == null) {

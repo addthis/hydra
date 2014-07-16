@@ -32,7 +32,7 @@ public class TestValueFilterMap {
 
     @Test
     public void simpleReplace() {
-        HashMap<String, String> map = new HashMap<String, String>();
+        HashMap<String, String> map = new HashMap<>();
         map.put("up", "down");
         map.put("charm", "strange");
         map.put("huh", null);

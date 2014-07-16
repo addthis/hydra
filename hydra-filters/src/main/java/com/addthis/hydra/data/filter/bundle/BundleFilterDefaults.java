@@ -52,7 +52,7 @@ public class BundleFilterDefaults extends BundleFilter {
     @Override
     public boolean filterExec(Bundle row) {
         if (!initialized) {
-            HashMap<BundleField, ValueString> map = new HashMap<BundleField, ValueString>();
+            HashMap<BundleField, ValueString> map = new HashMap<>();
             for (Entry<String, String> e : values.entrySet()) {
                 BundleField f = row.getFormat().getField(e.getKey());
                 ValueString v = ValueFactory.create(e.getValue());

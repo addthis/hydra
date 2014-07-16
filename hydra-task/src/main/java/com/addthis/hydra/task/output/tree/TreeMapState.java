@@ -64,7 +64,7 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         this.bundle = bundle;
         this.processor = processor;
         this.countValue = 1;
-        this.stack = new LinkedList<DataTreeNode>();
+        this.stack = new LinkedList<>();
         this.thread = Thread.currentThread();
         this.profiling = processor != null ? processor.isProfiling() : false;
         push(rootNode);

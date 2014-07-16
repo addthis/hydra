@@ -855,10 +855,10 @@ public class Spawn implements Codable {
      * @throws IOException thrown if mesh client times out, ParseException thrown if filename does not meet valid format
      */
     public Map<ScheduledBackupType, SortedSet<Long>> getJobBackups(String jobUUID, int nodeId) throws IOException, ParseException {
-        Map<ScheduledBackupType, SortedSet<Long>> fileDates = new HashMap<ScheduledBackupType, SortedSet<Long>>();
+        Map<ScheduledBackupType, SortedSet<Long>> fileDates = new HashMap<>();
         for (ScheduledBackupType backupType : ScheduledBackupType.getBackupTypes().values()) {
             final String typePrefix = "*/" + jobUUID + "/" + ((nodeId < 0) ? "*" : Integer.toString(nodeId)) + "/" + backupType.getPrefix() + "*";
-            List<FileReference> files = new ArrayList<FileReference>(spawnMesh.getClient().listFiles(new String[]{typePrefix}));
+            List<FileReference> files = new ArrayList<>(spawnMesh.getClient().listFiles(new String[]{typePrefix}));
             fileDates.put(backupType, new TreeSet<Long>(Collections.reverseOrder()));
             for (FileReference file : files) {
                 String filename = file.name.split("/")[4];
@@ -3894,7 +3894,7 @@ public class Spawn implements Codable {
     public static class ClientEventListener {
 
         public long lastSeen;
-        public LinkedBlockingQueue<ClientEvent> events = new LinkedBlockingQueue<ClientEvent>();
+        public LinkedBlockingQueue<ClientEvent> events = new LinkedBlockingQueue<>();
     }
 
     /**
@@ -3962,7 +3962,7 @@ public class Spawn implements Codable {
     }
 
     public List<String> getJobsToAutobalance() {
-        List<String> rv = new ArrayList<String>();
+        List<String> rv = new ArrayList<>();
         List<Job> autobalanceJobs = balancer.getJobsToAutobalance(listHostStatus(null));
         if (autobalanceJobs == null) {
             return rv;
