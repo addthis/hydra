@@ -27,7 +27,7 @@ import com.google.common.base.Objects;
 class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
 
     protected final Codec codec;
-    protected final static CodecBin2 codecBin2 = CodecBin2.INSTANCE;
+    protected static final CodecBin2 codecBin2 = CodecBin2.INSTANCE;
     protected final Class<? extends V> clazz;
 
     private static final byte[] zero = new byte[0];

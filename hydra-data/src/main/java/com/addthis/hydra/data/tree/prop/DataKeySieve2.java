@@ -39,7 +39,7 @@ import com.addthis.hydra.store.util.SeenFilterBasic;
 public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> implements
                                                                             SuperCodable {
 
-    private final static int targetSaturation = Integer.parseInt(System.getProperty("datakeysieve2.saturation", "20"));
+    private static final int targetSaturation = Integer.parseInt(System.getProperty("datakeysieve2.saturation", "20"));
 
     /**
      * This data attachment <span class="hydra-summary">keeps a sieve of encountered values</span>.
@@ -100,7 +100,7 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
      * @user-reference
      * @hydra-name key.sieve2
      */
-    public final static class Config extends TreeDataParameters<DataKeySieve2> {
+    public static final class Config extends TreeDataParameters<DataKeySieve2> {
 
         /**
          * Bundle field name from which to draw values.
@@ -307,7 +307,7 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
     /**
      * for stacking
      */
-    public final static class Sieve {
+    public static final class Sieve {
 
         @FieldConfig(codable = true, required = true)
         private SeenFilterBasic<String> tiers[];

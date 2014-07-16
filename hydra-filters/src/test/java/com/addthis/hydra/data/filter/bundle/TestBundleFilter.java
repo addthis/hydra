@@ -63,7 +63,7 @@ public class TestBundleFilter {
      * @param fileLocation
      * @return String
      */
-    static public String getContents(String fileLocation) {
+    public static String getContents(String fileLocation) {
         StringBuilder contents = new StringBuilder();
         InputStream inputStream = TestBundleFilter.class.getClassLoader()
                 .getResourceAsStream(fileLocation);

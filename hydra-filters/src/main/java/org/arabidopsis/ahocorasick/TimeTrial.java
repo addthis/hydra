@@ -43,7 +43,7 @@ import java.io.InputStreamReader;
  * AhoCorasick tree out of all the words in <tt>/usr/share/dict/words</tt>.
  */
 public class TimeTrial {
-	static public void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException {
 		long startTime = System.currentTimeMillis();
 		AhoCorasick tree = new AhoCorasick();
 		BufferedReader reader = new BufferedReader(new InputStreamReader(
