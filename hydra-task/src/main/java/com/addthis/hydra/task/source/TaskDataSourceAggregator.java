@@ -18,7 +18,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map.Entry;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.task.run.TaskRunConfig;
@@ -40,7 +39,7 @@ public class TaskDataSourceAggregator extends TaskDataSource {
     private SourceTracker tracker;
 
     public TaskDataSourceAggregator(Collection<TaskDataSource> sourceList, TaskDataSourceSelector sourceSelector,
-            SourceTracker tracker, AtomicBoolean errored) {
+                                    SourceTracker tracker) {
         if (sourceList == null || sourceSelector == null) {
             throw new NullPointerException();
         }
@@ -52,7 +51,7 @@ public class TaskDataSourceAggregator extends TaskDataSource {
 
         for (TaskDataSource taskDataSource : sourceList) {
             if (this.tracker != null) {
-                TaskDataSource tracked = tracker.openAndInit(taskDataSource, errored);
+                TaskDataSource tracked = tracker.openAndInit(taskDataSource);
                 this.sources.put(taskDataSource, (tracked != null) ? tracked : taskDataSource);
             } else {
                 this.sources.put(taskDataSource, taskDataSource);

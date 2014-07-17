@@ -18,8 +18,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.RandomAccessFile;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import java.nio.channels.FileLock;
 
 import com.addthis.basis.util.Files;
@@ -159,7 +157,7 @@ public class SourceTracker {
      * @param source source to index and track
      * @return wrapped source or null if it could not be tracked
      */
-    public TaskDataSource openAndInit(final TaskDataSource source, AtomicBoolean errored) {
+    public TaskDataSource openAndInit(final TaskDataSource source) {
         open(source);
         return init(source);
     }

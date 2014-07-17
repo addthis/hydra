@@ -21,6 +21,7 @@ import org.junit.Test;
 
 public class AggregateTaskDataSourceTest {
 
+
     @Test
     public void testOpen() throws Exception {
         AggregateTaskDataSource aggregateTaskDataSource = new AggregateTaskDataSource();

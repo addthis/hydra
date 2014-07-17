@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.source.bundleizer;
 
+import java.io.IOException;
+
 import com.addthis.bundle.core.Bundle;
 
 /**
@@ -20,5 +22,5 @@ import com.addthis.bundle.core.Bundle;
  */
 public interface Bundleizer {
 
-    public Bundle next() throws Exception;
+    public Bundle next() throws IOException;
 }

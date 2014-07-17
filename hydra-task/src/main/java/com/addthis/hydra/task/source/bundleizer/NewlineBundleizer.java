@@ -14,6 +14,7 @@
 package com.addthis.hydra.task.source.bundleizer;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
@@ -40,7 +41,7 @@ public abstract class NewlineBundleizer extends BundleizerFactory {
             private final BundleFactory factory = factoryArg;
 
             @Override
-            public Bundle next() throws Exception {
+            public Bundle next() throws IOException {
                 String line;
                 while (true) {
                     line = reader.readLine();
