@@ -197,7 +197,7 @@ public final class TaskFeeder extends Thread {
             }
             if (errored.get()) {
                 log.warn("fill buffer exited in error state");
-            } else if (log.isDebugEnabled()) {
+            } else {
                 log.debug("fill buffer exited");
             }
             joinProcessors();

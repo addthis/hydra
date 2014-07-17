@@ -251,7 +251,7 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         if (map == null) {
             map = new MapDef();
         }
-        getSource().init(config, errored);
+        getSource().init(config);
         getOutput().init(config);
         if (builder != null) {
             builder.init();

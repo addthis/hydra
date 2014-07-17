@@ -14,7 +14,6 @@
 package com.addthis.hydra.task.source;
 
 import java.util.LinkedList;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
@@ -50,8 +49,8 @@ public final class DataSourcePrefetch extends TaskDataSource {
     }
 
     @Override
-    public void init(TaskRunConfig config, AtomicBoolean errored) {
-        source.init(config, errored);
+    public void init(TaskRunConfig config) {
+        source.init(config);
     }
 
     @Override

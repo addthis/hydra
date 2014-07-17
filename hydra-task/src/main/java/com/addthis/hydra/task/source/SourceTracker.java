@@ -69,8 +69,8 @@ public class SourceTracker {
         }
     }
 
-    public void open(final TaskDataSource source, AtomicBoolean errored) {
-        source.init(sourceConfig, errored);
+    public void open(final TaskDataSource source) {
+        source.init(sourceConfig);
     }
 
     /**
@@ -160,7 +160,7 @@ public class SourceTracker {
      * @return wrapped source or null if it could not be tracked
      */
     public TaskDataSource openAndInit(final TaskDataSource source, AtomicBoolean errored) {
-        open(source, errored);
+        open(source);
         return init(source);
     }
 

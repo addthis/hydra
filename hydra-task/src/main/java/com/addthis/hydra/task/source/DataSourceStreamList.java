@@ -27,7 +27,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -180,15 +179,15 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
     }
 
     @Override
-    public void init(TaskRunConfig config, AtomicBoolean errored) {
+    public void init(TaskRunConfig config) {
         try {
-            doOpen(config, errored);
+            doOpen(config);
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
     }
 
-    private void doOpen(TaskRunConfig config, AtomicBoolean errored) throws Exception {
+    private void doOpen(TaskRunConfig config) throws Exception {
         tracker = new SourceTracker(markDir, config);
         if (shardTotal == null || shardTotal == 0) {
             shardTotal = config.nodeCount;
@@ -203,7 +202,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
         if (hash) {
             sources = new StreamSourceHashed(sources, shards, shardTotal);
         }
-        cacheFillerService.execute(new CacheFiller(errored));
+        cacheFillerService.execute(new CacheFiller());
         log.warn("shards=[" + Strings.join(shards, ",") + " of " + shardTotal + "] sources=" + sources + " peekers=" + peekerThreads + " maxCache=" + maxCacheSize);
     }
 
@@ -357,7 +356,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
         }
     }
 
-    private void fillInputStreamCache(AtomicBoolean errored) throws InterruptedException {
+    private void fillInputStreamCache() throws InterruptedException {
         try {
             while (wrapperList.size() < maxCacheSize && queuedSourceInitTasks.get() < maxCacheSize && !finished) {
                 if (exiting) {
@@ -381,7 +380,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
                     continue;
                 }
 
-                sourceInitService.execute(new SourceInitializer(queuedSourceInitTasks.incrementAndGet(), nextStream, ostream, errored));
+                sourceInitService.execute(new SourceInitializer(queuedSourceInitTasks.incrementAndGet(), nextStream, ostream));
             }
         } catch (Exception ex) {
             log.warn("Unexpected Exception filling cacheList: " + ex.getMessage(), ex);
@@ -428,13 +427,11 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
         private final StreamFile streamFile;
         private final TaskDataSource source;
         private final int initId;
-        private final AtomicBoolean errored;
 
-        private SourceInitializer(int initId, StreamFile streamFile, TaskDataSource source, AtomicBoolean errored) {
+        private SourceInitializer(int initId, StreamFile streamFile, TaskDataSource source) {
             this.initId = initId;
             this.streamFile = streamFile;
             this.source = source;
-            this.errored = errored;
         }
 
         @Override
@@ -459,7 +456,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
                     sourceOpenLock.lock();
                     try {
                         FactoryInputStream.InjectorStreamSource.inject(FactoryInputStream.InjectorStreamSource.DefautlInjectorKey, is);
-                        tracker.open(source, errored);
+                        tracker.open(source);
                     } finally {
                         sourceOpenLock.unlock();
                     }
@@ -500,17 +497,11 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
      */
     private class CacheFiller implements Runnable {
 
-        final AtomicBoolean errored;
-
-        public CacheFiller(AtomicBoolean errored) {
-            this.errored = errored;
-        }
-
         @Override
         public void run() {
             try {
                 while (!exiting && !finished) {
-                    fillInputStreamCache(errored);
+                    fillInputStreamCache();
                     Thread.sleep(cacheFillInterval);
                 }
             } catch (InterruptedException e) {

@@ -20,7 +20,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
@@ -66,7 +65,7 @@ public class DataSourceAvro extends TaskDataSource implements BundleFactory {
     private Decoder       decoder;
     private InputStream   inputStream;
 
-    @Override public void init(TaskRunConfig config, AtomicBoolean errored) {
+    @Override public void init(TaskRunConfig config) {
         setDatumReader(new GenericDatumReader<GenericRecord>(new Schema.Parser().parse(schema)));
         try {
             setInputStream(input.createInputStream(config));

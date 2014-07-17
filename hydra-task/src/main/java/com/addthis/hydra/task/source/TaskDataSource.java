@@ -13,8 +13,6 @@
  */
 package com.addthis.hydra.task.source;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.addthis.bundle.channel.DataChannelSource;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.codec.annotations.FieldConfig;
@@ -64,7 +62,7 @@ public abstract class TaskDataSource implements Codable, DataChannelSource, Clon
         return false;
     }
 
-    public abstract void init(TaskRunConfig config, AtomicBoolean errored);
+    public abstract void init(TaskRunConfig config);
 
     public final BundleField getShardField() {
         return shardField;

@@ -13,8 +13,6 @@
  */
 package com.addthis.hydra.task.source;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 import org.easymock.EasyMock;
@@ -30,8 +28,8 @@ public class AggregateTaskDataSourceTest {
         TaskDataSource mockDS2 = EasyMock.createMock(TaskDataSource.class);
         aggregateTaskDataSource.setSources(new TaskDataSource[]{mockDS1, mockDS2});
 
-        mockDS1.init(EasyMock.isA(TaskRunConfig.class), EasyMock.isA(AtomicBoolean.class));
-        mockDS2.init(EasyMock.isA(TaskRunConfig.class), EasyMock.isA(AtomicBoolean.class));
+        mockDS1.init(EasyMock.isA(TaskRunConfig.class));
+        mockDS2.init(EasyMock.isA(TaskRunConfig.class));
 
         EasyMock.expect(mockDS1.isEnabled()).andReturn(true);
         EasyMock.expect(mockDS2.isEnabled()).andReturn(true);
@@ -40,7 +38,7 @@ public class AggregateTaskDataSourceTest {
         EasyMock.expect(mockDS2.peek()).andReturn(null);
 
         EasyMock.replay(mockDS1, mockDS2);
-        aggregateTaskDataSource.init(new TaskRunConfig(3, 9, "foo"), new AtomicBoolean());
+        aggregateTaskDataSource.init(new TaskRunConfig(3, 9, "foo"));
         EasyMock.verify(mockDS1, mockDS2);
     }
 
@@ -51,8 +49,8 @@ public class AggregateTaskDataSourceTest {
         TaskDataSource mockDS2 = EasyMock.createMock(TaskDataSource.class);
         aggregateTaskDataSource.setSources(new TaskDataSource[]{mockDS1, mockDS2});
 
-        mockDS1.init(EasyMock.isA(TaskRunConfig.class), EasyMock.isA(AtomicBoolean.class));
-        mockDS2.init(EasyMock.isA(TaskRunConfig.class), EasyMock.isA(AtomicBoolean.class));
+        mockDS1.init(EasyMock.isA(TaskRunConfig.class));
+        mockDS2.init(EasyMock.isA(TaskRunConfig.class));
 
         EasyMock.expect(mockDS1.isEnabled()).andReturn(true);
         EasyMock.expect(mockDS2.isEnabled()).andReturn(true);
@@ -61,7 +59,7 @@ public class AggregateTaskDataSourceTest {
         EasyMock.expect(mockDS2.peek()).andReturn(null);
 
         EasyMock.replay(mockDS1, mockDS2);
-        aggregateTaskDataSource.init(new TaskRunConfig(3, 9, "foo"), new AtomicBoolean());
+        aggregateTaskDataSource.init(new TaskRunConfig(3, 9, "foo"));
         aggregateTaskDataSource.peek();
         EasyMock.verify(mockDS1, mockDS2);
     }

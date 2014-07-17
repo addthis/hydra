@@ -16,8 +16,6 @@ package com.addthis.hydra.task.source;
 import java.io.EOFException;
 import java.io.IOException;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFactory;
@@ -45,7 +43,7 @@ public class DataSourceChannel extends TaskDataSource implements BundleFactory {
     private DataChannelReader reader;
     private Bundle peek;
 
-    @Override public void init(TaskRunConfig config, AtomicBoolean errored) {
+    @Override public void init(TaskRunConfig config) {
         try {
             reader = new DataChannelReader(this, input.createInputStream(config));
         } catch (IOException e) {

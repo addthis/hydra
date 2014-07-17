@@ -270,6 +270,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     private final LinkedBlockingQueue<Wrap> preOpened = new LinkedBlockingQueue<>();
     protected final AtomicBoolean done = new AtomicBoolean(false);
     protected final AtomicBoolean exiting = new AtomicBoolean(false);
+    protected final AtomicBoolean errored = new AtomicBoolean(false);
     private final AtomicBoolean shutdown = new AtomicBoolean(false);
     private CountDownLatch initialized = new CountDownLatch(1);
     private boolean localInitialized = false;
@@ -329,7 +330,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         }
     }
 
-    @Override public void init(TaskRunConfig config, AtomicBoolean errored) {
+    @Override public void init(TaskRunConfig config) {
         if (legacyMode != null) {
             magicMarksNumber = 0;
             useSimpleMarks = true;
@@ -405,7 +406,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
          * SourceWorker to be a non-static inner class and
          * we have static fields.
          */
-        SourceWorker sourceWorker = new SourceWorker(errored);
+        Runnable sourceWorker = new SourceWorker();
         int workerId = workers;
         while (workerId-- > 0) {
             workerThreadPool.execute(sourceWorker);
@@ -619,7 +620,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         return new Wrap(stream);
     }
 
-    private boolean multiFill(Wrap wrap, int fillCount) throws Exception {
+    private boolean multiFill(Wrap wrap, int fillCount) throws IOException, InterruptedException {
         for (int i = 0; i < fillCount; i++) {
             Bundle next = wrap.next();
             if (next == null) //is source exhausted?
@@ -649,6 +650,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         try {
             int countdown = pollCountdown;
             while (((localInitialized || waitForInitialized()) && (pollCountdown == 0)) || (countdown-- > 0)) {
+                if (errored.get()) {
+                    throw new RuntimeException("source workers ran into problems");
+                }
                 long startTime = jmxMetrics ? System.currentTimeMillis() : 0;
                 Bundle next = queue.poll(pollInterval, TimeUnit.MILLISECONDS);
                 if (jmxMetrics) {
@@ -726,6 +730,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             log.info("close() called. done={} queue={}", done, queue.size());
         }
         done.set(true);
+        if (errored.get()) {
+            throw new RuntimeException("source workers ran into problems");
+        }
     }
 
     @Override
@@ -739,13 +746,8 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
          * generateThreadIDs should be a static field but inner classes cannot have static fields.
          */
         private final AtomicInteger generateThreadIDs = new AtomicInteger(0);
-        private final AtomicBoolean errored;
 
-        public SourceWorker(AtomicBoolean errored) {
-            this.errored = errored;
-        }
-
-        private void fill(int threadID) {
+        private void fill(int threadID) throws Exception {
             Wrap wrap = null;
             try {
                 while (!done.get() && !exiting.get()) {
@@ -756,19 +758,12 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                     if (!multiFill(wrap, multiBundleReads)) {
                         wrap = nextWrappedSource();
                     }
-                    if (wrap !=
-                        null) //May be null from nextWrappedSource -> decreases size of preOpened
-                    {
+                    if (wrap != null) { //May be null from nextWrappedSource -> decreases size of preOpened
                         preOpened.put(wrap);
                     }
                     wrap = null;
                 }
                 log.debug("[{}] read", threadID);
-            } catch (Exception ex) {
-                log.warn("", ex);
-                if (!IGNORE_MARKS_ERRORS) {
-                    errored.set(true);
-                }
             } finally {
                 if (wrap != null) {
                     try {
