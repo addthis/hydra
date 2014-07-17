@@ -370,7 +370,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
                     finished = true;
                     break;
                 }
-                TaskDataSource ostream = new SourceTypeStreamFile(factory.clone(), nextStream);
+                TaskDataSource ostream = new SourceTypeStreamFile(factory, nextStream);
                 if (log.isDebugEnabled()) log.debug("[fillCache] init/init stream " + nextStream);
                 if (exiting) {
                     // check to make sure we aren't exiting before trying to init source

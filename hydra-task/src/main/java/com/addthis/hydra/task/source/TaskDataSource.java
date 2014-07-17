@@ -67,12 +67,4 @@ public abstract class TaskDataSource implements Codable, DataChannelSource, Clon
     public final BundleField getShardField() {
         return shardField;
     }
-
-    public TaskDataSource clone() {
-        try {
-            return (TaskDataSource) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new RuntimeException(e);
-        }
-    }
 }
