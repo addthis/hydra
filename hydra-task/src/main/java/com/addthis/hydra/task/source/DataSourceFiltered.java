@@ -79,8 +79,8 @@ public class DataSourceFiltered extends TaskDataSource {
     private Bundle peek;
 
     @Override
-    public void open(TaskRunConfig config, AtomicBoolean errored) {
-        stream.open(config, errored);
+    public void init(TaskRunConfig config, AtomicBoolean errored) {
+        stream.init(config, errored);
     }
 
     @Override

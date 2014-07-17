@@ -329,8 +329,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         }
     }
 
-    @Override
-    protected void open(TaskRunConfig config, AtomicBoolean errored) {
+    @Override public void init(TaskRunConfig config, AtomicBoolean errored) {
         if (legacyMode != null) {
             magicMarksNumber = 0;
             useSimpleMarks = true;
@@ -492,7 +491,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 } else {
                     mark = new Mark().set(stateValue, 0);
                 }
-                log.debug("mark.open {} / {}", mark, stream);
+                log.debug("mark.init {} / {}", mark, stream);
                 openNew.inc();
                 opening.inc();
                 input = stream.getInputStream();
@@ -790,7 +789,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 int preOpenSize = Math.max(1, preOpen / workers);
                 for (int i = 0; i < preOpenSize; i++) {
                     Wrap preOpenedWrap = nextWrappedSource();
-                    log.debug("pre-open {}", preOpenedWrap);
+                    log.debug("pre-init {}", preOpenedWrap);
                     if (preOpenedWrap == null) {
                         break;
                     }

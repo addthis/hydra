@@ -45,8 +45,7 @@ public class DataSourceChannel extends TaskDataSource implements BundleFactory {
     private DataChannelReader reader;
     private Bundle peek;
 
-    @Override
-    protected void open(TaskRunConfig config, AtomicBoolean errored) {
+    @Override public void init(TaskRunConfig config, AtomicBoolean errored) {
         try {
             reader = new DataChannelReader(this, input.createInputStream(config));
         } catch (IOException e) {

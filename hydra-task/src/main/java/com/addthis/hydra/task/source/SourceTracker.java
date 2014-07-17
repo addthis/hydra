@@ -70,7 +70,7 @@ public class SourceTracker {
     }
 
     public void open(final TaskDataSource source, AtomicBoolean errored) {
-        source.open(sourceConfig, errored);
+        source.init(sourceConfig, errored);
     }
 
     /**
@@ -78,11 +78,11 @@ public class SourceTracker {
      * failure to close() will result in a loss of tracking state.  close()
      * can be called on a wrapped/tracked source even if next() fails.
      * <p/>
-     * this method is responsible for open()ing the source because
+     * this method is responsible for init()ing the source because
      * some sources may be skipped and not opened.  closing a source that
      * didn't need to be opened is wasteful.
      * <p/>
-     * NOTE:  the source must be open before calling this method
+     * NOTE:  the source must be init before calling this method
      *
      * @param source source to index and track
      * @return wrapped source or null if it could not be tracked
@@ -152,7 +152,7 @@ public class SourceTracker {
      * failure to close() will result in a loss of tracking state.  close()
      * can be called on a wrapped/tracked source even if next() fails.
      * <p/>
-     * this method is responsible for open()ing the source because
+     * this method is responsible for init()ing the source because
      * some sources may be skipped and not opened.  closing a source that
      * didn't need to be opened is wasteful.
      *

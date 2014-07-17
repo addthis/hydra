@@ -50,8 +50,8 @@ public final class DataSourcePrefetch extends TaskDataSource {
     }
 
     @Override
-    public void open(TaskRunConfig config, AtomicBoolean errored) {
-        source.open(config, errored);
+    public void init(TaskRunConfig config, AtomicBoolean errored) {
+        source.init(config, errored);
     }
 
     @Override

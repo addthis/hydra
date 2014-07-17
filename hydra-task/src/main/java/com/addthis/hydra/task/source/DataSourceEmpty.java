@@ -49,7 +49,7 @@ public class DataSourceEmpty extends TaskDataSource {
     }
 
     @Override
-    public void open(TaskRunConfig config, AtomicBoolean errored) {
+    public void init(TaskRunConfig config, AtomicBoolean errored) {
     }
 
     @Override

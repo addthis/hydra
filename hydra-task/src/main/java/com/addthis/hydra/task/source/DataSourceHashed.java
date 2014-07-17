@@ -52,9 +52,9 @@ public class DataSourceHashed extends TaskDataSource {
     private Integer[] shards;
 
     @Override
-    public void open(TaskRunConfig config, AtomicBoolean errored) {
+    public void init(TaskRunConfig config, AtomicBoolean errored) {
         shards = config.calcShardList(shardTotal);
-        stream.open(config, errored);
+        stream.init(config, errored);
     }
 
     @Override

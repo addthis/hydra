@@ -70,9 +70,8 @@ public class DataSourceRange extends TaskDataSource {
         source.close();
     }
 
-    @Override
-    protected void open(TaskRunConfig config, AtomicBoolean errored) {
-        source.open(config, errored);
+    @Override public void init(TaskRunConfig config, AtomicBoolean errored) {
+        source.init(config, errored);
     }
 
 }

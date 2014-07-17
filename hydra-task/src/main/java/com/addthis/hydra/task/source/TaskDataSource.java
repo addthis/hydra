@@ -64,11 +64,7 @@ public abstract class TaskDataSource implements Codable, DataChannelSource, Clon
         return false;
     }
 
-    protected abstract void open(TaskRunConfig config, AtomicBoolean errored);
-
-    public final void init(TaskRunConfig config, AtomicBoolean errored) {
-        open(config, errored);
-    }
+    public abstract void init(TaskRunConfig config, AtomicBoolean errored);
 
     public final BundleField getShardField() {
         return shardField;

@@ -43,8 +43,8 @@ public abstract class AbstractDataSourceWrapper extends TaskDataSource {
     }
 
     @Override
-    public void open(TaskRunConfig config, AtomicBoolean errored) throws DataChannelError {
-        source.open(config, errored);
+    public void init(TaskRunConfig config, AtomicBoolean errored) throws DataChannelError {
+        source.init(config, errored);
     }
 
     @Override

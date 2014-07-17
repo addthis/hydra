@@ -66,9 +66,7 @@ public class DataSourceAvro extends TaskDataSource implements BundleFactory {
     private Decoder       decoder;
     private InputStream   inputStream;
 
-    @Override
-    protected void open(TaskRunConfig config, AtomicBoolean errored) {
-
+    @Override public void init(TaskRunConfig config, AtomicBoolean errored) {
         setDatumReader(new GenericDatumReader<GenericRecord>(new Schema.Parser().parse(schema)));
         try {
             setInputStream(input.createInputStream(config));

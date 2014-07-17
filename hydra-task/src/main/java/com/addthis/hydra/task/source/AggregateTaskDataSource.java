@@ -99,11 +99,11 @@ public class AggregateTaskDataSource extends TaskDataSource {
     }
 
     @Override
-    public void open(TaskRunConfig config, AtomicBoolean errored) {
+    public void init(TaskRunConfig config, AtomicBoolean errored) {
         for (TaskDataSource source : sources) {
             if (source.isEnabled()) {
-                log.debug("open {}", source);
-                source.open(config, errored);
+                log.debug("init {}", source);
+                source.init(config, errored);
                 sourceList.add(source);
             } else {
                 log.debug("disabled {}", source);

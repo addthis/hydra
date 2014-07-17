@@ -180,7 +180,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
     }
 
     @Override
-    public void open(TaskRunConfig config, AtomicBoolean errored) {
+    public void init(TaskRunConfig config, AtomicBoolean errored) {
         try {
             doOpen(config, errored);
         } catch (Exception ex) {
@@ -372,7 +372,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
                     break;
                 }
                 TaskDataSource ostream = new SourceTypeStreamFile(factory.clone(), nextStream);
-                if (log.isDebugEnabled()) log.debug("[fillCache] open/init stream " + nextStream);
+                if (log.isDebugEnabled()) log.debug("[fillCache] init/init stream " + nextStream);
                 if (exiting) {
                     // check to make sure we aren't exiting before trying to init source
                     break;

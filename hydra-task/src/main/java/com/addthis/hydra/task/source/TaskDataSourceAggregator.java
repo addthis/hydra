@@ -66,8 +66,7 @@ public class TaskDataSourceAggregator extends TaskDataSource {
         return sourceSelector.selectSource(sourceList, currentSource);
     }
 
-    @Override
-    protected void open(TaskRunConfig config, AtomicBoolean errored) {
+    @Override public void init(TaskRunConfig config, AtomicBoolean errored) {
         // nothing to do
     }
 
