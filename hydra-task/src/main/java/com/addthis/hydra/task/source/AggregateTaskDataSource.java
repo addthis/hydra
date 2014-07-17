@@ -23,6 +23,7 @@ import com.addthis.hydra.task.run.TaskRunConfig;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * This data source <span class="hydra-summary">aggregates data from one or more data sources</span>.
  * <p/>
@@ -79,6 +80,7 @@ public class AggregateTaskDataSource extends TaskDataSource {
     private TaskDataSource[] sources;
 
     private TaskDataSource currentSource;
+
     private final LinkedList<TaskDataSource> sourceList = new LinkedList<>();
 
     // to support test cases
@@ -98,14 +100,13 @@ public class AggregateTaskDataSource extends TaskDataSource {
 
     @Override
     public void open(TaskRunConfig config, AtomicBoolean errored) {
-        for (int i = 0; i < sources.length; i++) {
-            TaskDataSource source = sources[i];
+        for (TaskDataSource source : sources) {
             if (source.isEnabled()) {
-                if (log.isDebugEnabled()) log.debug("open " + source);
+                log.debug("open {}", source);
                 source.open(config, errored);
                 sourceList.add(source);
             } else {
-                if (log.isDebugEnabled()) log.debug("disabled " + source);
+                log.debug("disabled {}", source);
             }
         }
         requireValidSource();
@@ -114,24 +115,24 @@ public class AggregateTaskDataSource extends TaskDataSource {
     @Override
     public void close() {
         for (TaskDataSource source : sources) {
-            if (source != null && source.isEnabled()) {
-                if (log.isDebugEnabled()) log.debug("close " + source);
+            if ((source != null) && source.isEnabled()) {
+                log.debug("close {}", source);
                 source.close();
             }
         }
     }
 
     private void resetCurrentSource() {
-        if (log.isDebugEnabled()) log.debug("resetCurrentSource " + currentSource);
+        log.debug("resetCurrentSource {}", currentSource);
         currentSource = null;
     }
 
     private boolean requireValidSource() {
-        while (currentSource == null && sourceList.size() > 0) {
+        while ((currentSource == null) && !sourceList.isEmpty()) {
             currentSource = sourceList.removeFirst();
-            if (log.isDebugEnabled()) log.debug("nextSource = " + currentSource);
+            log.debug("nextSource = {}", currentSource);
             if (currentSource.peek() != null) {
-                if (log.isDebugEnabled()) log.debug("setSource " + currentSource);
+                log.debug("setSource {}", currentSource);
                 return true;
             }
             currentSource = null;
@@ -143,7 +144,7 @@ public class AggregateTaskDataSource extends TaskDataSource {
     public Bundle next() throws DataChannelError {
         while (requireValidSource()) {
             Bundle next = currentSource.next();
-            if (log.isDebugEnabled()) log.debug("next " + next);
+            log.debug("next {}", next);
             if (next != null) {
                 return next;
             }
@@ -156,7 +157,7 @@ public class AggregateTaskDataSource extends TaskDataSource {
     public Bundle peek() throws DataChannelError {
         while (requireValidSource()) {
             Bundle peek = currentSource.peek();
-            if (log.isDebugEnabled()) log.debug("peek " + peek);
+            log.debug("peek {}", peek);
             if (peek != null) {
                 return peek;
             }
