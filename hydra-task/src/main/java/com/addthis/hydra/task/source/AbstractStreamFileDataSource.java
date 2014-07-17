@@ -307,8 +307,8 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         if (queue != null) {
             boolean setDone = done.compareAndSet(false, true);
             boolean pushedTerm = queue.offer(termBundle);
-            log.info("initiating shutdown(). setDone={} done={} preOpened={} exiting={} pushedTerm={} queue={} moreData={}",
-                    setDone, done.get(), preOpened.size(), exiting.get(), pushedTerm, queue.size(), hadMoreData());
+            log.info("initiating shutdown(). setDone={} done={} preOpened={} exiting={} pushedTerm={} queue={}",
+                    setDone, done.get(), preOpened.size(), exiting.get(), pushedTerm, queue.size());
         }
     }
 

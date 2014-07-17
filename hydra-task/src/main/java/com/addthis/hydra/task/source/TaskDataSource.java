@@ -39,32 +39,17 @@ public abstract class TaskDataSource implements Codable, DataChannelSource, Clon
     @FieldConfig(codable = true)
     private BundleField shardField;
 
-    /**
-     * If false then disable this data source. Default is true.
-     */
+    /** If false then disable this data source. Default is true. */
     @FieldConfig(codable = true)
     private boolean enabled = true;
-
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    /**
-     * sources are not required to implement this.  it is a hint to the job
-     * manager that this source could be used again (task re-kicked) and that
-     * more data would be available.  StreamSourceMeshy returns true when a
-     * max data range for a single run has been reached.  It is only valid to
-     * call this once next() has returned null.
-     *
-     * @return true if source exited prematurely (returned null on next()) but had more data.
-     */
-    public boolean hadMoreData() {
-        return false;
-    }
 
     public abstract void init(TaskRunConfig config);
 
     public final BundleField getShardField() {
         return shardField;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
     }
 }

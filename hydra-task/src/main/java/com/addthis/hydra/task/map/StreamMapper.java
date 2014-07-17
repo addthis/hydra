@@ -383,7 +383,6 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         if (emitTaskState) {
             try {
                 TaskExitState exitState = new TaskExitState();
-                exitState.setHadMoreData(source.hadMoreData());
                 exitState.setInput(totalInputCountMetric.count());
                 exitState.setTotalEmitted(totalEmit.get());
                 exitState.setMeanRate(processedMeterMetric.meanRate());

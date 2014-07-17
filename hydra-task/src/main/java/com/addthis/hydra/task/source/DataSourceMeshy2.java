@@ -53,11 +53,6 @@ public class DataSourceMeshy2 extends AbstractStreamFileDataSource {
     private StreamSourceMeshy mesh;
 
     @Override
-    public boolean hadMoreData() {
-        return mesh != null && mesh.hasMoreData();
-    }
-
-    @Override
     protected PersistentStreamFileSource getSource() {
         return mesh;
     }

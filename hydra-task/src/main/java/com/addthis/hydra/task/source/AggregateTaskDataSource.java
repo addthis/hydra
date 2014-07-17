@@ -88,16 +88,6 @@ public class AggregateTaskDataSource extends TaskDataSource {
     }
 
     @Override
-    public boolean hadMoreData() {
-        for (TaskDataSource source : sources) {
-            if (source.hadMoreData()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Override
     public void init(TaskRunConfig config) {
         for (TaskDataSource source : sources) {
             if (source.isEnabled()) {
