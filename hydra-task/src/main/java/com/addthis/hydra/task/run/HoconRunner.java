@@ -76,26 +76,20 @@ public class HoconRunner {
         int nodeCount = Integer.parseInt(args[1]);
         int thisNode = Integer.parseInt(args[2]);
         String jobId = (args.length > 3) ? args[3] : null;
-        int commandLineThreads = (args.length > 4) ? Integer.parseInt(args[4]) : TaskRunner.defaultThreads;
-        runTask(config, nodeCount, thisNode, jobId, commandLineThreads);
+        runTask(config, nodeCount, thisNode, jobId);
     }
 
     static void runTask(String configString, int nodeCount, int thisNode,
-                        String jobId, int commandLineThreads) throws Exception {
+                        String jobId) throws Exception {
         Config config = ConfigFactory.parseString(configString);
-        runTask(config, nodeCount, thisNode, jobId, commandLineThreads);
+        runTask(config, nodeCount, thisNode, jobId);
     }
 
     static void runTask(Config config, int nodeCount, int thisNode,
-                        String jobId, int commandLineThreads) throws Exception {
+                        String jobId) throws Exception {
 
         final TaskRunnable task = makeTask(config);
         TaskRunConfig taskRunConfig = new TaskRunConfig(thisNode, nodeCount, jobId);
-        if (config.hasPath("taskthreads")) {
-            taskRunConfig.setThreadCount(config.getInt("taskthreads"));
-        } else {
-            taskRunConfig.setThreadCount(commandLineThreads);
-        }
         task.init(taskRunConfig);
         task.exec();
 

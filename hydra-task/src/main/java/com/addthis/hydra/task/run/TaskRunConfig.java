@@ -16,14 +16,14 @@ package com.addthis.hydra.task.run;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.base.Objects;
+
 public class TaskRunConfig {
 
     public final int node;
     public final int nodeCount;
     public final String jobId;
     public final String dir;
-
-    private int threadCount = 1;
 
     public TaskRunConfig(int node, int nodeCount, String jobid) {
         this(node, nodeCount, jobid, ".");
@@ -36,28 +36,20 @@ public class TaskRunConfig {
         this.dir = dir;
     }
 
-    @Override
-    public String toString() {
-        if (jobId != null) {
-            return "task[" + node + " of " + nodeCount + (" / " + jobId) + "]";
-        } else {
-            return "task[" + node + " of " + nodeCount + "]";
-        }
-    }
-
-    public int getThreadCount() {
-        return threadCount;
-    }
-
-    public void setThreadCount(int threads) {
-        this.threadCount = threads;
-    }
-
     public Integer[] calcShardList(int shardTotal) {
         List<Integer> list = new ArrayList<>(nodeCount);
         for (int off = node; off < shardTotal; off += nodeCount) {
             list.add(off);
         }
         return list.toArray(new Integer[list.size()]);
+    }
+
+    @Override public String toString() {
+        return Objects.toStringHelper(this)
+                      .add("node", node)
+                      .add("nodeCount", nodeCount)
+                      .add("jobId", jobId)
+                      .add("dir", dir)
+                      .toString();
     }
 }

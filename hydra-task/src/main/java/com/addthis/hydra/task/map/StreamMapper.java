@@ -131,6 +131,9 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
     @FieldConfig(codable = true)
     private TimeField timeField;
 
+    @FieldConfig(required = true)
+    private int threads;
+
     private final AtomicLong totalEmit = new AtomicLong(0);
     private final AtomicBoolean emitGate = new AtomicBoolean(false);
     private final AtomicBoolean errored = new AtomicBoolean(false);
@@ -262,7 +265,7 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
 
     @Override
     public void exec() {
-        feeder = new TaskFeeder(this, config.getThreadCount());
+        feeder = new TaskFeeder(this, threads);
     }
 
     @Override

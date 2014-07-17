@@ -60,12 +60,11 @@ public class JsonRunner {
         int nodeCount = Integer.parseInt(args[1]);
         int thisNode = Integer.parseInt(args[2]);
         String jobId = (args.length > 3) ? args[3] : null;
-        int commandLineThreads = (args.length > 4) ? Integer.parseInt(args[4]) : TaskRunner.defaultThreads;
-        runTask(config, nodeCount, thisNode, jobId, commandLineThreads);
+        runTask(config, nodeCount, thisNode, jobId);
     }
 
     static void runTask(String configString, int nodeCount, int thisNode,
-            String jobId, int commandLineThreads) throws Exception {
+            String jobId) throws Exception {
 
         String json = subAt(configString);
         JSONObject jo;
@@ -73,7 +72,7 @@ public class JsonRunner {
             jo = new JSONObject(json);
         } catch (JSONException ex) {
             if ((ex.getColumn() == 0) && (ex.getLine() == 0)) {
-                HoconRunner.runTask(json, nodeCount, thisNode, jobId, commandLineThreads);
+                HoconRunner.runTask(json, nodeCount, thisNode, jobId);
                 return;
             } else {
                 throw ex;
@@ -83,9 +82,7 @@ public class JsonRunner {
 
         initClasses(jo);
         final TaskRunnable task = CodecJSON.decodeObject(TaskRunnable.class, jo);
-        TaskRunConfig config = new TaskRunConfig(thisNode,
-                nodeCount, jobId);
-        config.setThreadCount(jo.optInt("taskthreads", commandLineThreads));
+        TaskRunConfig config = new TaskRunConfig(thisNode, nodeCount, jobId);
         task.init(config);
         task.exec();
 
