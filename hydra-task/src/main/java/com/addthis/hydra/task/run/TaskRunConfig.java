@@ -16,7 +16,6 @@ package com.addthis.hydra.task.run;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class TaskRunConfig {
 
     public final int node;
@@ -26,20 +25,24 @@ public class TaskRunConfig {
 
     private int threadCount = 1;
 
-    public TaskRunConfig(int seven, int ofNine, String jobid) {
-        this(seven, ofNine, jobid, ".");
+    public TaskRunConfig(int node, int nodeCount, String jobid) {
+        this(node, nodeCount, jobid, ".");
     }
 
-    public TaskRunConfig(int seven, int ofNine, String jobid, String dir) {
-        node = seven;
-        nodeCount = ofNine;
-        jobId = jobid;
+    public TaskRunConfig(int node, int nodeCount, String jobid, String dir) {
+        this.node = node;
+        this.nodeCount = nodeCount;
+        this.jobId = jobid;
         this.dir = dir;
     }
 
     @Override
     public String toString() {
-        return "task[" + node + " of " + nodeCount + (jobId != null ? " / " + jobId : "") + "]";
+        if (jobId != null) {
+            return "task[" + node + " of " + nodeCount + (" / " + jobId) + "]";
+        } else {
+            return "task[" + node + " of " + nodeCount + "]";
+        }
     }
 
     public int getThreadCount() {
