@@ -1466,7 +1466,7 @@ public class Spawn implements Codable {
                     } else {
                         expectedHostsMissingTask.add(hostId);
                     }
-                } else if (host.hasLive(task.getJobKey())) {
+                } else if (host.hasLive(task.getJobKey()) || host.hasIncompleteReplica(task.getJobKey())) {
                     unexpectedHostsWithTask.add(hostId);
                 }
             }
