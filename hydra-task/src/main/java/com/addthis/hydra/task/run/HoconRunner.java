@@ -23,6 +23,7 @@ import com.addthis.codec.config.CodecConfig;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
+import com.typesafe.config.ConfigResolveOptions;
 
 /**
  * Main method invoked when running tasks.
@@ -58,14 +59,15 @@ public class HoconRunner {
         Config jobConfig = config;
         CodecConfig codec;
         if (config.hasPath("global")) {
-            jobConfig = config.withoutPath("global");
+            jobConfig = config.withoutPath("global").resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true));
             Config globalDefaults = config.getConfig("global")
                                           .withFallback(ConfigFactory.load())
                                           .resolve();
             jobConfig = jobConfig.resolveWith(globalDefaults);
             codec = new CodecConfig(globalDefaults);
         } else {
-            jobConfig = jobConfig.resolveWith(ConfigFactory.load());
+            jobConfig = jobConfig.resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true))
+                                 .resolveWith(ConfigFactory.load());
             codec = CodecConfig.getDefault();
         }
         return codec.decodeObject(TaskRunnable.class, jobConfig);

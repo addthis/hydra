@@ -79,6 +79,7 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigOrigin;
 import com.typesafe.config.ConfigParseOptions;
 import com.typesafe.config.ConfigRenderOptions;
+import com.typesafe.config.ConfigResolveOptions;
 import com.typesafe.config.ConfigValue;
 import com.yammer.dropwizard.auth.Auth;
 
@@ -197,6 +198,16 @@ public class JobsResource {
                 } catch (JSONException ignored) {
                     Config jobConfig = ConfigFactory.parseString(
                             configBody, ConfigParseOptions.defaults().setOriginDescription("job.conf"));
+                    if (jobConfig.hasPath("global")) {
+                        jobConfig = jobConfig.withoutPath("global").resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true));
+                        Config globalDefaults = jobConfig.getConfig("global")
+                                                         .withFallback(ConfigFactory.load())
+                                                         .resolve();
+                        jobConfig = jobConfig.resolveWith(globalDefaults);
+                    } else {
+                        jobConfig = jobConfig.resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true))
+                                             .resolveWith(ConfigFactory.load());
+                    }
                     ConfigValue expandedConfig = Configs.expandSugar(
                             TaskRunnable.class, jobConfig.root(), CodecConfig.getDefault());
                     formattedConfig = expandedConfig.render(ConfigRenderOptions.concise().setFormatted(true));
@@ -209,6 +220,16 @@ public class JobsResource {
                 // hocon parse + non-json output
                 Config jobConfig = ConfigFactory.parseString(
                         configBody, ConfigParseOptions.defaults().setOriginDescription("job.conf"));
+                if (jobConfig.hasPath("global")) {
+                    jobConfig = jobConfig.withoutPath("global").resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true));
+                    Config globalDefaults = jobConfig.getConfig("global")
+                                                     .withFallback(ConfigFactory.load())
+                                                     .resolve();
+                    jobConfig = jobConfig.resolveWith(globalDefaults);
+                } else {
+                    jobConfig = jobConfig.resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true))
+                                         .resolveWith(ConfigFactory.load());
+                }
                 ConfigValue expandedConfig = Configs.expandSugar(
                         TaskRunnable.class, jobConfig.root(), CodecConfig.getDefault());
                 formattedConfig = expandedConfig.render(ConfigRenderOptions.defaults());
