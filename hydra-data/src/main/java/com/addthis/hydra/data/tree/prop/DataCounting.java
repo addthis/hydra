@@ -165,6 +165,38 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
         @FieldConfig(codable = true)
         private int sp = 25;
 
+        public void setKey(String key) {
+            this.key = key;
+        }
+
+        public void setVer(String ver) {
+            this.ver = ver;
+        }
+
+        public void setSize(int size) {
+            this.size = size;
+        }
+
+        public void setMax(int max) {
+            this.max = max;
+        }
+
+        public void setTip(int tip) {
+            this.tip = tip;
+        }
+
+        public void setRsd(double rsd) {
+            this.rsd = rsd;
+        }
+
+        public void setP(int p) {
+            this.p = p;
+        }
+
+        public void setSp(int sp) {
+            this.sp = sp;
+        }
+
         @Override
         public DataCounting newInstance() {
             DataCounting dc = new DataCounting();
@@ -574,4 +606,5 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
             return asLong();
         }
     }
+
 }

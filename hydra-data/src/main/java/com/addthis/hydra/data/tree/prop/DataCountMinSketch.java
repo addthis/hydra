@@ -99,16 +99,32 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
         private String key;
 
         /**
-         * Optionally specify the depth of the sketch. Default is 10.
+         * Optionally specify the depth of the sketch.
+         * If 'confidence' is specified then ignore this value. Default is 10.
          */
         @FieldConfig(codable = true)
         private int depth = 10;
 
         /**
-         * Width of the sketch in bits. This field is required.
+         * Confidence that the error tolerance is satisfied.
+         * If 'confidence' is specified then ignore 'depth' parameter.
+         * Expressed as a fraction.
          */
-        @FieldConfig(codable = true, required = true)
+        private double confidence;
+
+        /**
+         * Width of the sketch in bits.
+         * Either 'width' or 'percentage' are required.
+         */
+        @FieldConfig(codable = true)
         private int width;
+
+        /**
+         * Maximum error tolerated as percentage of cardinality.
+         * Either 'width' or 'percentage' are required.
+         */
+        @FieldConfig(codable = true)
+        private double percentage;
 
         /**
          * Optional bundle field name for the non-negative integer values
@@ -118,10 +134,51 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
         @FieldConfig(codable = true)
         private String count;
 
+        public void setKey(String key) {
+            this.key = key;
+        }
+
+        public void setDepth(int depth) {
+            this.depth = depth;
+        }
+
+        public void setConfidence(double confidence) {
+            this.confidence = confidence;
+        }
+
+        public void setWidth(int width) {
+            this.width = width;
+        }
+
+        public void setPercentage(double percentage) {
+            this.percentage = percentage;
+        }
+
+        public void setCount(String count) {
+            this.count = count;
+        }
+
         @Override
         public DataCountMinSketch newInstance() {
             DataCountMinSketch db = new DataCountMinSketch();
-            db.sketch = new CountMinSketch(depth, width, 0);
+            if ((width == 0) && (percentage == 0.0)) {
+                throw new IllegalArgumentException("Either 'width' or " +
+                                                   "'percentage' must be specified.");
+            } else if ((width > 0) && (percentage > 0.0)) {
+                throw new IllegalArgumentException("Either 'width' or " +
+                                                   "'percentage' must be specified.");
+            } else if (confidence < 0.0 || confidence >= 1.0) {
+                throw new IllegalArgumentException("'confidence' must be between 0 and 1");
+            }
+            int calcWidth = width;
+            int calcDepth = depth;
+            if (calcWidth == 0) {
+                calcWidth =  (int) Math.ceil(Math.E / percentage);
+            }
+            if (confidence > 0.0) {
+                calcDepth = (int) Math.ceil(-Math.log(1.0 - confidence));
+            }
+            db.sketch = new CountMinSketch(calcDepth, calcWidth, 0);
             return db;
         }
     }
@@ -213,8 +270,12 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
         raw = CountMinSketch.serialize(sketch);
     }
 
-    @VisibleForTesting
     public void add(String val, long count) {
         sketch.add(val, count);
     }
+
+    long estimateCount(String item) {
+        return sketch.estimateCount(item);
+    }
+
 }
