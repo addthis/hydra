@@ -24,20 +24,18 @@ import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.codec.config.ConfigCodable;
 import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.hydra.task.source.bundleizer.Bundleizer;
 import com.addthis.hydra.task.source.bundleizer.BundleizerFactory;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigObject;
 import com.typesafe.config.ConfigRenderOptions;
+import com.typesafe.config.ConfigValue;
 
 public class DataSourceHttp extends TaskDataSource {
 
     @FieldConfig(required = true) private BundleizerFactory format;
     @FieldConfig(required = true) private String url;
-    @FieldConfig private ConfigHolder content;
+    @FieldConfig(required = true) private ConfigValue content;
 
     private Bundleizer bundleizer;
     private Bundle nextBundle;
@@ -50,14 +48,7 @@ public class DataSourceHttp extends TaskDataSource {
             conn.setDoOutput(true);
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");
-            String configAsJsonString;
-            if (content.heldConfig.root().containsKey("_heldValue")) {
-                configAsJsonString = content.heldConfig.root().get("_heldValue")
-                                            .render(ConfigRenderOptions.concise());
-            } else {
-                configAsJsonString = content.heldConfig.root().render(ConfigRenderOptions.concise());
-            }
-
+            String configAsJsonString = content.render(ConfigRenderOptions.concise());
             try (OutputStream os = conn.getOutputStream()) {
                 os.write(configAsJsonString.getBytes());
                 os.flush();
@@ -99,18 +90,6 @@ public class DataSourceHttp extends TaskDataSource {
             underlyingInputStream.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    public static class ConfigHolder implements ConfigCodable {
-        private Config heldConfig;
-
-        @Override public ConfigObject toConfigObject() {
-            throw new UnsupportedOperationException("only meant for decoding");
-        }
-
-        @Override public void fromConfigObject(ConfigObject config, ConfigObject defaults) {
-            heldConfig = config.toConfig();
         }
     }
 }
