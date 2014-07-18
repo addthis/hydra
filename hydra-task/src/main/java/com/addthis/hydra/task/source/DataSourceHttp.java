@@ -20,6 +20,9 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
@@ -28,14 +31,19 @@ import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.hydra.task.source.bundleizer.Bundleizer;
 import com.addthis.hydra.task.source.bundleizer.BundleizerFactory;
 
+import com.google.common.escape.Escaper;
+import com.google.common.net.UrlEscapers;
+
 import com.typesafe.config.ConfigRenderOptions;
 import com.typesafe.config.ConfigValue;
+import com.typesafe.config.ConfigValueType;
 
 public class DataSourceHttp extends TaskDataSource {
 
     @FieldConfig(required = true) private BundleizerFactory format;
     @FieldConfig(required = true) private String url;
-    @FieldConfig(required = true) private ConfigValue content;
+    @FieldConfig(required = true) private ConfigValue data;
+    @FieldConfig(required = true) private Map<String, String> params = new HashMap<>();
 
     private Bundleizer bundleizer;
     private Bundle nextBundle;
@@ -43,17 +51,29 @@ public class DataSourceHttp extends TaskDataSource {
 
     @Override public void init(TaskRunConfig config) {
         try {
-            URL url = new URL(this.url);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            StringBuilder urlMaker = new StringBuilder(url);
+            if (!params.isEmpty()) {
+                Escaper escaper = UrlEscapers.urlPathSegmentEscaper();
+                urlMaker.append('?');
+                for (Map.Entry<String, String> entry : params.entrySet()) {
+                    urlMaker.append(escaper.escape(entry.getKey()));
+                    urlMaker.append('=');
+                    urlMaker.append(escaper.escape(entry.getValue()));
+                    urlMaker.append('&');
+                }
+            }
+            URL javaUrl = new URL(urlMaker.toString());
+            HttpURLConnection conn = (HttpURLConnection) javaUrl.openConnection();
             conn.setDoOutput(true);
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");
-            String configAsJsonString = content.render(ConfigRenderOptions.concise());
             try (OutputStream os = conn.getOutputStream()) {
-                os.write(configAsJsonString.getBytes());
+                if (data.valueType() != ConfigValueType.NULL) {
+                    String configAsJsonString = data.render(ConfigRenderOptions.concise());
+                    os.write(configAsJsonString.getBytes());
+                }
                 os.flush();
             }
-
             underlyingInputStream = conn.getInputStream();
             bundleizer = format.createBundleizer(underlyingInputStream, new ListBundle());
         } catch (Exception e) {
