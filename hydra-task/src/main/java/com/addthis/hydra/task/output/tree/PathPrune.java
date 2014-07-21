@@ -14,11 +14,13 @@
 package com.addthis.hydra.task.output.tree;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.JitterClock;
 
 import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.TreeNodeList;
@@ -50,6 +52,7 @@ public class PathPrune extends PathElement {
     /**
      * Maximum age in milliseconds.
      */
+    @Time(TimeUnit.MILLISECONDS)
     @FieldConfig(codable = true)
     private long ttl;
 
