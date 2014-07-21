@@ -18,12 +18,12 @@ import java.util.TreeMap;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleComparator;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
+import com.addthis.hydra.task.util.BundleComparator;
 
 /**
  * This {@link TaskDataSource source} <span class="hydra-summary">sorts an underlying data source</span>.
