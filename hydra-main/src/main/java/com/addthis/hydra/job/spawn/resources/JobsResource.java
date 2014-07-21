@@ -196,20 +196,22 @@ public class JobsResource {
                 try {
                     formattedConfig = new JSONObject(configBody).toString();
                 } catch (JSONException ignored) {
-                    Config jobConfig = ConfigFactory.parseString(
+                    Config config = ConfigFactory.parseString(
                             configBody, ConfigParseOptions.defaults().setOriginDescription("job.conf"));
-                    if (jobConfig.hasPath("global")) {
-                        jobConfig = jobConfig.withoutPath("global").resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true));
-                        Config globalDefaults = jobConfig.getConfig("global")
-                                                         .withFallback(ConfigFactory.load())
-                                                         .resolve();
-                        jobConfig = jobConfig.resolveWith(globalDefaults);
+                    Config jobConfig = config;
+                    CodecConfig codec;
+                    if (config.hasPath("global")) {
+                        Config globalDefaults = config.getConfig("global")
+                                                      .withFallback(ConfigFactory.load())
+                                                      .resolve();
+                        codec = new CodecConfig(globalDefaults);
+                        jobConfig = config.withoutPath("global");
                     } else {
-                        jobConfig = jobConfig.resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true))
-                                             .resolveWith(ConfigFactory.load());
+                        codec = CodecConfig.getDefault();
                     }
-                    ConfigValue expandedConfig = Configs.expandSugar(
-                            TaskRunnable.class, jobConfig.root(), CodecConfig.getDefault());
+                    jobConfig = jobConfig.resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true))
+                                         .resolveWith(codec.globalConfig());
+                    ConfigValue expandedConfig = Configs.expandSugar(TaskRunnable.class, jobConfig.root(), codec);
                     formattedConfig = expandedConfig.render(ConfigRenderOptions.concise().setFormatted(true));
                 }
                 return Response.ok("attachment; filename=expanded_job.json", MediaType.APPLICATION_JSON)
@@ -218,20 +220,22 @@ public class JobsResource {
                                .build();
             case "hocon":
                 // hocon parse + non-json output
-                Config jobConfig = ConfigFactory.parseString(
+                Config config = ConfigFactory.parseString(
                         configBody, ConfigParseOptions.defaults().setOriginDescription("job.conf"));
-                if (jobConfig.hasPath("global")) {
-                    jobConfig = jobConfig.withoutPath("global").resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true));
-                    Config globalDefaults = jobConfig.getConfig("global")
-                                                     .withFallback(ConfigFactory.load())
-                                                     .resolve();
-                    jobConfig = jobConfig.resolveWith(globalDefaults);
+                Config jobConfig = config;
+                CodecConfig codec;
+                if (config.hasPath("global")) {
+                    Config globalDefaults = config.getConfig("global")
+                                                  .withFallback(ConfigFactory.load())
+                                                  .resolve();
+                    codec = new CodecConfig(globalDefaults);
+                    jobConfig = config.withoutPath("global");
                 } else {
-                    jobConfig = jobConfig.resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true))
-                                         .resolveWith(ConfigFactory.load());
+                    codec = CodecConfig.getDefault();
                 }
-                ConfigValue expandedConfig = Configs.expandSugar(
-                        TaskRunnable.class, jobConfig.root(), CodecConfig.getDefault());
+                jobConfig = jobConfig.resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true))
+                                     .resolveWith(codec.globalConfig());
+                ConfigValue expandedConfig = Configs.expandSugar(TaskRunnable.class, jobConfig.root(), codec);
                 formattedConfig = expandedConfig.render(ConfigRenderOptions.defaults());
                 return Response.ok("attachment; filename=expanded_job.json", MediaType.APPLICATION_OCTET_STREAM)
                                .entity(formattedConfig)
