@@ -20,11 +20,11 @@ import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.JitterClock;
 
-import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.query.MeshQueryMaster;
+import com.addthis.hydra.data.util.BundleUtils;
 import com.addthis.meshy.ChannelMaster;
 
 import org.slf4j.Logger;
@@ -164,18 +164,10 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
             consumer.sendComplete();
         } else {
             stopSources(future.cause().getMessage());
-            consumer.sourceError(promoteHackForThrowables(future.cause()));
+            consumer.sourceError(BundleUtils.promoteHackForThrowables(future.cause()));
             if (!future.isCancelled()) {
                 meshQueryMaster.handleError(query);
             }
-        }
-    }
-
-    private static DataChannelError promoteHackForThrowables(Throwable cause) {
-        if (cause instanceof DataChannelError) {
-            return (DataChannelError) cause;
-        } else {
-            return new DataChannelError(cause);
         }
     }
 
