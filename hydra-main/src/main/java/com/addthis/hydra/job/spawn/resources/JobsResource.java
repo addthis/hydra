@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.addthis.basis.kv.KVPair;
@@ -833,34 +832,6 @@ public class JobsResource {
         return Response.ok(spawn.diff(id, commit)).build();
     }
 
-    private String[] generateHosts(String hosts, String config) {
-        if (hosts.isEmpty() && (config != null)) {
-            Matcher matcher = COMMENTS_REGEX.matcher(config);
-            while (matcher.find()) {
-                String ids = matcher.group(1);
-                try {
-                    if (ids.length() > 1) {
-                        if ((ids.charAt(0) == '"') && (ids.charAt(ids.length() - 1) == '"')) {
-                            String[] retval = new String[1];
-                            retval[0] = ids.substring(1, ids.length() - 1);
-                            return retval;
-                        } else if (ids.charAt(0) == '[') {
-                            JSONArray json = new JSONArray(ids);
-                            String[] retval = new String[json.length()];
-                            for (int i = 0; i < retval.length; i++) {
-                                retval[i] = json.getString(i);
-                            }
-                            return retval;
-                        }
-                    }
-                } catch (JSONException ex) {
-                    log.warn("Failed to parse input {}", ids, ex);
-                }
-            }
-        }
-        return Strings.splitArray(hosts, ",");
-    }
-
     @POST
     @Path("/submit")
     @Produces(MediaType.APPLICATION_JSON)
@@ -879,7 +850,7 @@ public class JobsResource {
                 }
 //              emitLogLineForAction(kv, "submit job " + id);
                 if (Strings.isEmpty(id) && !schedule) {
-                    String[] hosts = generateHosts(kv.getValue("hosts", ""), config);
+                    String[] hosts = Strings.splitArray(kv.getValue("hosts", ""), ",");
                     IJob job = spawn.createJob(
                             kv.getValue("owner", user.getUsername()),
                             kv.getIntValue("nodes", -1),
