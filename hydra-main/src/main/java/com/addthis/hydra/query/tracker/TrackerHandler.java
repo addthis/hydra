@@ -92,7 +92,7 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
             throw new QueryException("Query uuid somehow already in use : " + query.uuid());
         }
 
-        log.debug("Executing.... {} {}", query.uuid(), queryEntry.queryDetails);
+        log.debug("Executing.... {} {}", query.uuid(), queryEntry);
 
         ctx.pipeline().remove(this);
 

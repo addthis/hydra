@@ -14,10 +14,13 @@
 
 package com.addthis.hydra.query.tracker;
 
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.query.aggregate.TaskSourceInfo;
+
+import com.google.common.base.Objects;
 
 public class QueryEntry {
 
@@ -25,7 +28,6 @@ public class QueryEntry {
     final AtomicInteger preOpLines;
     final AtomicInteger postOpLines;
     final int waitTime;
-    final String queryDetails;
     final String[] opsLog;
     final TrackerHandler trackerHandler;
 
@@ -41,8 +43,6 @@ public class QueryEntry {
         this.trackerHandler = trackerHandler;
         this.preOpLines = new AtomicInteger();
         this.postOpLines = new AtomicInteger();
-        this.queryDetails = query.getJob() + "--" +
-                            (query.getOps() == null ? "" : query.getOps());
 
         final String timeoutInSeconds = query.getParameter("timeout");
         this.startTime = System.currentTimeMillis();
@@ -80,11 +80,6 @@ public class QueryEntry {
         return (runTime > 0) ? runTime : (System.currentTimeMillis() - startTime);
     }
 
-    @Override
-    public String toString() {
-        return "QT:" + query.uuid() + ":" + startTime + ":" + runTime + " lines: " + preOpLines;
-    }
-
     /**
      * cancels query if it's still running
      * otherwise, it's a null-op.
@@ -105,5 +100,19 @@ public class QueryEntry {
         success |= trackerHandler.opPromise.tryFailure(cause);
         success |= trackerHandler.requestPromise.tryFailure(cause);
         return success;
+    }
+
+    @Override public String toString() {
+        return Objects.toStringHelper(this)
+                      .add("query", query)
+                      .add("preOpLines", preOpLines)
+                      .add("postOpLines", postOpLines)
+                      .add("waitTime", waitTime)
+                      .add("opsLog", opsLog)
+                      .add("runTime", runTime)
+                      .add("startTime", startTime)
+                      .add("lastSourceInfo", Arrays.toString(lastSourceInfo))
+                      .add("queryState", queryState)
+                      .toString();
     }
 }
