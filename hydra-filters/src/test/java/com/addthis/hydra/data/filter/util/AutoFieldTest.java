@@ -31,9 +31,9 @@ public class AutoFieldTest {
         BundleField a = bundle.getFormat().getField("a");
         BundleField b = bundle.getFormat().getField("b");
         bundle.setValue(a, ValueFactory.create("SANDWICH"));
-        filter.filterExec(bundle);
-        filter.filterExec(bundle);
-        filter.filterExec(bundle);
+        filter.filter(bundle);
+        filter.filter(bundle);
+        filter.filter(bundle);
         Assert.assertEquals("SANDWICH", bundle.getValue(b).toString());
     }
 

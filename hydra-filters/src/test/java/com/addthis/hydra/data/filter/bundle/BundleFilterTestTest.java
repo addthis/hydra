@@ -25,6 +25,6 @@ public class BundleFilterTestTest {
         Bundle bundle = new ListBundle();
         BundleFilterTest filter = Configs.decodeObject(
                 BundleFilterTest.class, "test = [], onTrue = [], onFalse = []");
-        filter.filterExec(bundle);
+        filter.filter(bundle);
     }
 }
