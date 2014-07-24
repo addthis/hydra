@@ -88,8 +88,11 @@ public class TaskDataOutputChain extends DataOutputTypeList {
 
     public void send(Bundle row) throws DataChannelError {
         if (!copy && !immutableCopy) {
+            Bundle withPreviousFormat = row;
             for (TaskDataOutput output : outputs) {
-                output.send(row);
+                // preserves all mutations, but maintains the typical (admittedly horrible) format behavior
+                withPreviousFormat = Bundles.shallowCopyBundle(withPreviousFormat, output.createBundle());
+                output.send(withPreviousFormat);
             }
         } else if (immutableCopy) {
             for (TaskDataOutput output : outputs) {
