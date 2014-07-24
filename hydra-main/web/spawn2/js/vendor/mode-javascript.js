@@ -185,10 +185,6 @@ var JavaScriptHighlightRules = function() {
                 next : "comment"
             }, {
                 token : "string",
-                regex : "'(?=.)",
-                next  : "qstring"
-            }, {
-                token : "string",
                 regex : '"(?=.)',
                 next  : "qqstring"
             }, {
