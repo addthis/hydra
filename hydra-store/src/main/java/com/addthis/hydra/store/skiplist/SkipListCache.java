@@ -942,17 +942,17 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
      * page.
      */
     private void loadFromExternalStore() {
+        byte[] encodedFirstKey = externalStore.firstKey();
         Page<K, V> leftSentinel = pageFactory.generateEmptyPage(this, negInf, KeyCoder.EncodeType.SPARSE);
         ByteBufOutputStream byteBufOutputStream = null;
         try {
-            if (externalStore.count() == 0) {
+            if (encodedFirstKey == null) { // effectively externalStore.isEmpty() but more efficient than using count()
                 byteBufOutputStream = new ByteBufOutputStream(PooledByteBufAllocator.DEFAULT.buffer());
                 leftSentinel.initialize();
                 byte[] encodeKey = keyCoder.keyEncode(negInf);
                 byte[] encodePage = leftSentinel.encode(byteBufOutputStream);
                 externalStore.put(encodeKey, encodePage);
             } else {
-                byte[] encodedFirstKey = externalStore.firstKey();
                 K firstKey = keyCoder.keyDecode(encodedFirstKey);
                 byte[] page = externalStore.get(encodedFirstKey);
 
