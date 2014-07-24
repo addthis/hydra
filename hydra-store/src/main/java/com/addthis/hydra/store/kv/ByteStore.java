@@ -72,6 +72,9 @@ public interface ByteStore {
      */
     public void close(boolean cleanLog);
 
+    /**
+     * This should be should be considered a fairly expensive operation.
+     **/
     long count();
 }
 
