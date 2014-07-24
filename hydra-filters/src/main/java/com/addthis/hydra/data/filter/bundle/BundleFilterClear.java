@@ -74,6 +74,9 @@ public class BundleFilterClear extends BundleFilter {
     @FieldConfig(codable = true)
     private boolean nullFail = true;
 
+    /** If true then remove the field rather than set it to null. Default is false. */
+    @FieldConfig private boolean removes = false;
+
     private String[] fields;
 
     @Override
@@ -91,7 +94,11 @@ public class BundleFilterClear extends BundleFilter {
         if (nullFail && val == null) {
             return false;
         }
-        bundle.setValue(bound[0], null);
+        if (removes) {
+            bundle.removeValue(bound[0]);
+        } else {
+            bundle.setValue(bound[0], null);
+        }
         return true;
     }
 }
