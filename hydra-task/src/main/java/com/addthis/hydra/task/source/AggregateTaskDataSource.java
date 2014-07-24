@@ -13,9 +13,11 @@
  */
 package com.addthis.hydra.task.source;
 
-import java.util.LinkedList;
+import javax.annotation.Nullable;
 
-import com.addthis.bundle.channel.DataChannelError;
+import java.util.LinkedList;
+import java.util.NoSuchElementException;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
@@ -129,10 +131,17 @@ public class AggregateTaskDataSource extends TaskDataSource {
         return currentSource != null;
     }
 
+    @Nullable
     @Override
-    public Bundle next() throws DataChannelError {
+    public Bundle next() {
         while (requireValidSource()) {
-            Bundle next = currentSource.next();
+            @Nullable Bundle next;
+            try {
+                next = currentSource.next();
+            } catch (NoSuchElementException ignored) {
+                // some legacy sources throw this exception instead of returning null
+                next = null;
+            }
             log.debug("next {}", next);
             if (next != null) {
                 return next;
@@ -142,8 +151,9 @@ public class AggregateTaskDataSource extends TaskDataSource {
         return null;
     }
 
+    @Nullable
     @Override
-    public Bundle peek() throws DataChannelError {
+    public Bundle peek() {
         while (requireValidSource()) {
             Bundle peek = currentSource.peek();
             log.debug("peek {}", peek);
