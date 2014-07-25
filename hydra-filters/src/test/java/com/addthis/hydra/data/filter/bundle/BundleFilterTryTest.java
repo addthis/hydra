@@ -25,21 +25,21 @@ public class BundleFilterTryTest {
     @Test public void failThenPass() {
         Bundle bundle = new ListBundle();
         BundleFilterTry filter = (BundleFilterTry) Configs.decodeObject(
-                BundleFilter.class, "try: {fail {}}, except: {true {}}");
+                BundleFilter.class, "try: {fail {}}");
         Assert.assertTrue(filter.filter(bundle));
     }
 
     @Test public void failThenFail() {
         Bundle bundle = new ListBundle();
         BundleFilterTry filter = (BundleFilterTry) Configs.decodeObject(
-                BundleFilter.class, "try: {fail {}}, except: {fail {}}");
+                BundleFilter.class, "try: {fail {}}, catch: {fail {}}");
         Assert.assertFalse(filter.filter(bundle));
     }
 
     @Test public void passThenFail() {
         Bundle bundle = new ListBundle();
         BundleFilterTry filter = (BundleFilterTry) Configs.decodeObject(
-                BundleFilter.class, "try: {true {}}, except: {fail {}}");
+                BundleFilter.class, "try: {true {}}, catch: {fail {}}");
         Assert.assertTrue(filter.filter(bundle));
     }
 

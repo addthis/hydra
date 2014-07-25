@@ -17,29 +17,28 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * Performs the required filter tryDo (or sometimes try). If and only if it fails,
- * then the except filter is performed and its result is returned instead. The default
- * is usually to set except to a no-op filter that always returns true. Reasonable
+ * Performs the required filter try (or sometimes 'tryDo'). If and only if it fails,
+ * then the catch filter is performed and its result is returned instead. The default
+ * is usually to set catchDo to a no-op filter that always returns true. Reasonable
  * alternatives include logging (via filter debug or setting a specific field),
  * conditionally rethrowing with a filter that may fail, and imagination.
  */
 public class BundleFilterTry extends BundleFilter {
 
-    // try and catch are java reserved words -- maybe need to rethink supporting field aliases
     @FieldConfig(required = true) BundleFilter tryDo;
-    @FieldConfig(required = true) BundleFilter except;
+    @FieldConfig(required = true) BundleFilter catchDo;
 
     @Override
     public void initialize() {
         tryDo.initOnceOnly();
-        if (except != null) {
-            except.initOnceOnly();
+        if (catchDo != null) {
+            catchDo.initOnceOnly();
         }
     }
 
     @Override
     public boolean filterExec(Bundle row) {
         boolean tryResult = tryDo.filter(row);
-        return tryResult || (except == null) || except.filter(row);
+        return tryResult || (catchDo == null) || catchDo.filter(row);
     }
 }

@@ -32,7 +32,7 @@ public class BundleFilterUnaryTest {
     @Test public void isNotAlias() {
         Bundle bundle = new ListBundle();
         BundleFilterUnary filter = (BundleFilterUnary) Configs.decodeObject(
-                BundleFilter.class, "is not {filter.false {}}");
+                BundleFilter.class, "is not {false {}}");
         Assert.assertTrue(filter.filter(bundle));
     }
 }
