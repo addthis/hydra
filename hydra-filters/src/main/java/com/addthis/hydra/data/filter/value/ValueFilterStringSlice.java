@@ -18,7 +18,7 @@ import java.util.List;
 
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
@@ -44,25 +44,25 @@ public class ValueFilterStringSlice extends StringFilter {
     /**
      * The input sequence string deliminator.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String sep;
 
     /**
      * The output sequence string deliminator. Defaults to {@link #sep sep} if joinStr is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String joinStr;
 
     /**
      * The start position of the sequence in a 0-based offset (inclusive). Default is 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer fromIndex;
 
     /**
      * The end position of the sequence in a 0-based offset (exclusive). Default is sequence length.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer toIndex;
 
     public ValueFilterStringSlice() {
@@ -90,7 +90,7 @@ public class ValueFilterStringSlice extends StringFilter {
             joinStr = sep;
         }
 
-        List<String> splitList = new ArrayList<String>();
+        List<String> splitList = new ArrayList<>();
         Iterators.addAll(splitList, Splitter.on(sep).split(value).iterator());
 
         if (toIndex == null) {

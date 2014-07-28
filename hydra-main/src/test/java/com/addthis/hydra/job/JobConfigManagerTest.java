@@ -21,7 +21,7 @@ import com.addthis.basis.test.SlowTest;
 import com.addthis.bark.StringSerializer;
 import com.addthis.bark.ZkStartUtil;
 import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
 
@@ -42,7 +42,7 @@ import static org.junit.Assert.assertNull;
 @Category(SlowTest.class)
 public class JobConfigManagerTest extends ZkStartUtil {
 
-    private static final Codec codec = new CodecJSON();
+    private static final Codec codec = CodecJSON.INSTANCE;
     private JobConfigManager jobConfigManager;
     private SpawnDataStore spawnDataStore;
 

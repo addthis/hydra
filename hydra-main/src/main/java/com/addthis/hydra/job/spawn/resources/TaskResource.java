@@ -22,7 +22,7 @@ import javax.ws.rs.core.Response;
 
 import java.util.List;
 
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.Spawn;
@@ -31,7 +31,6 @@ import com.addthis.maljson.JSONObject;
 import com.google.common.base.Optional;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 @Path("/task")
 public class TaskResource {

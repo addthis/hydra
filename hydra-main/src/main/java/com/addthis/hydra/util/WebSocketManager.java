@@ -37,7 +37,6 @@ import com.yammer.metrics.core.Counter;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketHandler;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * This class is a jetty request handler that opens web sockets with clients upon request, and keeps a set of open web sockets
@@ -50,7 +49,7 @@ public class WebSocketManager extends WebSocketHandler {
     /**
      * A threadsafe list of open WebSockets
      */
-    private final Set<MQWebSocket> webSockets = new CopyOnWriteArraySet<MQWebSocket>();
+    private final Set<MQWebSocket> webSockets = new CopyOnWriteArraySet<>();
 
     /**
      * A json factory for any json serializing
@@ -227,7 +226,7 @@ public class WebSocketManager extends WebSocketHandler {
         /**
          * A queue of events to queue up and push to websockets at intervals
          */
-        private final LinkedBlockingQueue<Spawn.ClientEvent> eventQueue = new LinkedBlockingQueue<Spawn.ClientEvent>();
+        private final LinkedBlockingQueue<Spawn.ClientEvent> eventQueue = new LinkedBlockingQueue<>();
 
         public MQWebSocket(String username, String remoteAddress) {
             this.username = username;

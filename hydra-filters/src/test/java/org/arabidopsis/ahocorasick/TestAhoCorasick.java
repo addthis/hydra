@@ -41,6 +41,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -260,7 +261,7 @@ public class TestAhoCorasick extends TestCase {
 		}
 		tree.prepare();
 
-		Set<Object> termsThatHit = new HashSet<Object>();
+		Set<Object> termsThatHit = new HashSet<>();
 		for (Iterator<SearchResult> iter = tree.progressiveSearch(text.toCharArray()); iter
 				.hasNext();) {
 			SearchResult result = (SearchResult) iter.next();
@@ -277,7 +278,7 @@ public class TestAhoCorasick extends TestCase {
 	
 	// Without overlapping
 	public void testRemoveOverlapping1() {
-		List<OutputResult> outputResults = new ArrayList<OutputResult>();
+		List<OutputResult> outputResults = new ArrayList<>();
 		outputResults.add(new OutputResult(new Integer(0), 0, 2));
 		outputResults.add(new OutputResult(new Integer(1), 2, 4));
 		outputResults.add(new OutputResult(new Integer(2), 5, 6));
@@ -289,7 +290,7 @@ public class TestAhoCorasick extends TestCase {
 	
 	// With a clear overlapping
 	public void testRemoveOverlapping2() {
-		List<OutputResult> outputResults = new ArrayList<OutputResult>();
+		List<OutputResult> outputResults = new ArrayList<>();
 		outputResults.add(new OutputResult(new Integer(0), 0, 2));
 		outputResults.add(new OutputResult(new Integer(1), 1, 4));
 		outputResults.add(new OutputResult(new Integer(2), 5, 6));
@@ -303,7 +304,7 @@ public class TestAhoCorasick extends TestCase {
 	
 	// With two overlapping, one with the same start index
 	public void testRemoveOverlapping3() {
-		List<OutputResult> outputResults = new ArrayList<OutputResult>();
+		List<OutputResult> outputResults = new ArrayList<>();
 		outputResults.add(new OutputResult(new Integer(0), 0, 2));
 		outputResults.add(new OutputResult(new Integer(1), 0, 4));
 		outputResults.add(new OutputResult(new Integer(2), 3, 6));

@@ -16,7 +16,7 @@ package com.addthis.hydra.task.output.tree;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.util.ValueUtil;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeInitializer;
 import com.addthis.hydra.data.tree.DataTreeUtil;
@@ -58,8 +58,8 @@ public class PathAlias extends PathKeyValue {
     /**
      * Path traversal to the target node. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
-    protected PathValue path[];
+    @FieldConfig(codable = true, required = true)
+    protected PathValue[] path;
 
     /**
      * When traversing the tree in search of the target node,
@@ -68,7 +68,7 @@ public class PathAlias extends PathKeyValue {
      * current location. If {@linkplain #peer} is true
      * then this parameter is ignored. Default is zero.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int relativeUp;
 
     /**
@@ -76,7 +76,7 @@ public class PathAlias extends PathKeyValue {
      * if this flag is true then begin the traversal at
      * current location. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean peer;
 
     /**
@@ -90,19 +90,19 @@ public class PathAlias extends PathKeyValue {
      * should set this parameter to true for improved performance.
      * Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean hard;
 
     /**
      * Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int debug;
 
     /**
      * Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String debugKey;
 
     private int match;
@@ -111,7 +111,7 @@ public class PathAlias extends PathKeyValue {
     public PathAlias() {
     }
 
-    public PathAlias(PathValue path[]) {
+    public PathAlias(PathValue[] path) {
         this.path = path;
     }
 
@@ -131,7 +131,7 @@ public class PathAlias extends PathKeyValue {
                 return node;
             }
         }
-        String p[] = new String[path.length];
+        String[] p = new String[path.length];
         for (int i = 0; i < p.length; i++) {
             p[i] = ValueUtil.asNativeString(path[i].getFilteredValue(state));
         }

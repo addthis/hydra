@@ -17,7 +17,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 
 /**
@@ -25,11 +25,11 @@ import com.addthis.hydra.data.filter.bundle.BundleFilter;
  */
 public class EachStreamBuilder extends StreamBuilder {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String fromArrayField;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String toField;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private BundleFilter emitFilter;
 
     @Override

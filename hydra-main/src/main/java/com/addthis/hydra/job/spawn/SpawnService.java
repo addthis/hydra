@@ -36,8 +36,8 @@ import com.addthis.hydra.util.WebSocketManager;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 import com.yammer.dropwizard.auth.Authenticator;
-
 import com.yammer.metrics.reporting.MetricsServlet;
+
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -45,7 +45,6 @@ import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class SpawnService {
 

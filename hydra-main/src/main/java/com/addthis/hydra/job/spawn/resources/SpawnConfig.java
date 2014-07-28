@@ -28,7 +28,7 @@ public class SpawnConfig extends ScanningResourceConfig {
     private Set<HttpServlet> servlets;
 
     public SpawnConfig() {
-        servlets = new HashSet<HttpServlet>();
+        servlets = new HashSet<>();
         //Automatic json conversion from resources
         getFeatures().put(JSONConfiguration.FEATURE_POJO_MAPPING, Boolean.TRUE);
     }

@@ -16,10 +16,11 @@ package com.addthis.hydra.task.output.tree;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueString;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.TreeNodeList;
@@ -59,34 +60,34 @@ public class PathValue extends PathElement {
     /**
      * Value to be stored in the constructed node.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected String value;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected String set;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected ValueFilter vfilter;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean sync;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean create = true;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean once;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected String mapTo;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean delete;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean push;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected PathElement each;
 
     private ValueString valueString;
@@ -182,7 +183,8 @@ public class PathValue extends PathElement {
                 }
             }
         } else if (name.getObjectType() == ValueObject.TYPE.MAP) {
-            for (ValueMapEntry e : name.asMap()) {
+            ValueMap<?> nameAsMap = name.asMap();
+            for (ValueMapEntry<?> e : nameAsMap) {
                 String key = e.getKey();
                 if (mapTo != null) {
                     state.getBundle().setValue(mapField, e.getValue());

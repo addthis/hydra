@@ -16,6 +16,7 @@ package com.addthis.hydra.task.run;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.base.Objects;
 
 public class TaskRunConfig {
 
@@ -24,37 +25,31 @@ public class TaskRunConfig {
     public final String jobId;
     public final String dir;
 
-    private int threadCount = 1;
-
-    public TaskRunConfig(int seven, int ofNine, String jobid) {
-        this(seven, ofNine, jobid, ".");
+    public TaskRunConfig(int node, int nodeCount, String jobid) {
+        this(node, nodeCount, jobid, ".");
     }
 
-    public TaskRunConfig(int seven, int ofNine, String jobid, String dir) {
-        node = seven;
-        nodeCount = ofNine;
-        jobId = jobid;
+    public TaskRunConfig(int node, int nodeCount, String jobid, String dir) {
+        this.node = node;
+        this.nodeCount = nodeCount;
+        this.jobId = jobid;
         this.dir = dir;
     }
 
-    @Override
-    public String toString() {
-        return "task[" + node + " of " + nodeCount + (jobId != null ? " / " + jobId : "") + "]";
-    }
-
-    public int getThreadCount() {
-        return threadCount;
-    }
-
-    public void setThreadCount(int threads) {
-        this.threadCount = threads;
-    }
-
     public Integer[] calcShardList(int shardTotal) {
-        List<Integer> list = new ArrayList<Integer>(nodeCount);
+        List<Integer> list = new ArrayList<>(nodeCount);
         for (int off = node; off < shardTotal; off += nodeCount) {
             list.add(off);
         }
         return list.toArray(new Integer[list.size()]);
+    }
+
+    @Override public String toString() {
+        return Objects.toStringHelper(this)
+                      .add("node", node)
+                      .add("nodeCount", nodeCount)
+                      .add("jobId", jobId)
+                      .add("dir", dir)
+                      .toString();
     }
 }

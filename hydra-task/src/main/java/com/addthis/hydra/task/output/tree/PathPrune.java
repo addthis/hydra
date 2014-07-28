@@ -14,11 +14,13 @@
 package com.addthis.hydra.task.output.tree;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.JitterClock;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.TreeNodeList;
@@ -50,13 +52,14 @@ public class PathPrune extends PathElement {
     /**
      * Maximum age in milliseconds.
      */
-    @Codec.Set(codable = true)
+    @Time(TimeUnit.MILLISECONDS)
+    @FieldConfig(codable = true)
     private long ttl;
 
     /**
      * Property key name for extracting the time stamp of a node. Default is "time".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String timePropKey = "time";
 
     /**
@@ -65,7 +68,7 @@ public class PathPrune extends PathElement {
      * the traversal this many levels lower than the
      * current location. Default is zero.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int relativeDown = 0;
 
 

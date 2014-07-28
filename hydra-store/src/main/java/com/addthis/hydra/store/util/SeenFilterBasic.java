@@ -18,7 +18,8 @@ import java.security.NoSuchAlgorithmException;
 
 import com.addthis.basis.util.Bytes;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
 
 /**
@@ -32,7 +33,7 @@ import com.addthis.hydra.common.hash.PluggableHashFunction;
  *
  * @user-reference
  */
-public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
+public class SeenFilterBasic<K> implements SeenFilter<K>, SuperCodable {
 
     public static final int HASH_HASHCODE = 0; /* mostly bad */
     public static final int HASH_HASHCODE_SHIFT_REV = 1; /* mostly bad */
@@ -58,7 +59,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
      * If this field is specified then the {@link #bitsfree} field
      * must also be specified.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int[] bitset;
 
     /**
@@ -66,7 +67,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
      * (total number of bits allocated to the filter).
      * This field must be 32 or greater. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private int bits;
 
     /**
@@ -74,7 +75,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
      * operation. This parameter is usually referred to as
      * the "k" parameter in the literature. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private int bitsper;
 
     /**
@@ -86,14 +87,14 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
      * <p>4 - HASH_PLUGGABLE_SHIFT : best blend of speed and accuracy
      * <p>This field is required. It is strongly recommended that you use "4".
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private int hash;
 
     /**
      * If {@link #bitset} is specified the you must populate
      * this field with the number of 0 bits in the initial bloom filter.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int bitsfree;
 
     public SeenFilterBasic() {
@@ -156,8 +157,8 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
                 long lhc = (long) o.hashCode();
                 return lhc | Bytes.reverseBits(lhc);
             case HASH_MD5:
-                byte r1[] = generatePreHash(o);
-                byte r2[] = new byte[r1.length];
+                byte[] r1 = generatePreHash(o);
+                byte[] r2 = new byte[r1.length];
                 for (int i = 0; i < r1.length; i++) {
                     r2[r2.length - i - 1] = (byte) (r1[i] ^ index);
                 }
@@ -225,7 +226,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
      * generate a bit hash offset set
      */
     public long[] getHashSet(K o) {
-        long bs[] = new long[bitsper];
+        long[] bs = new long[bitsper];
         for (int i = 0; i < bitsper; i++) {
             bs[i] = Math.abs(generateHash(o, i));
         }
@@ -235,7 +236,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
     /**
      * return true (seen) if all bits set
      */
-    public boolean checkHashSet(long bs[]) {
+    public boolean checkHashSet(long[] bs) {
         for (long l : bs) {
             if (!getBit(Math.abs((int) (l % bits)))) {
                 return false;
@@ -247,7 +248,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
     /**
      * warning: like setHashSet but does not update bitsfee
      */
-    public void updateHashSet(long bs[]) {
+    public void updateHashSet(long[] bs) {
         for (int i = 0; i < bitsper; i++) {
             long hash = bs[i];
             int offset = (int) (hash % bits);
@@ -260,7 +261,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
     /**
      * set all bits from this hash offset set
      */
-    public void setHashSet(long bs[]) {
+    public void setHashSet(long[] bs) {
         for (long l : bs) {
             setBit(Math.abs((int) (l % bits)));
         }
@@ -316,7 +317,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, Codec.SuperCodable {
         if (!(filterMerge.hash == hash && filterMerge.bits == bits)) {
             throw new IllegalArgumentException(merge + " settings differ from " + this);
         }
-        SeenFilterBasic<K> filterNew = new SeenFilterBasic<K>();
+        SeenFilterBasic<K> filterNew = new SeenFilterBasic<>();
         if (filterMerge.bits != bits || filterMerge.bitsper != bitsper || filterMerge.bitset.length != bitset.length) {
             throw new IllegalArgumentException("cannot merge dissimilar blooms");
         }

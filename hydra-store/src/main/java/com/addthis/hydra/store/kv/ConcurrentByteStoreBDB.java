@@ -412,6 +412,9 @@ public class ConcurrentByteStoreBDB implements ByteStore {
         bdb_env.close();
     }
 
+    /**
+     * This should be should be considered a fairly expensive operation.
+     **/
     @Override
     public long count() {
         return bdb.count();

@@ -38,12 +38,11 @@ import com.google.common.collect.Lists;
 import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 @Path("/alias")
 public class AliasResource {
 
-    private static Logger log = LoggerFactory.getLogger(JobsResource.class);
+    private static Logger log = LoggerFactory.getLogger(AliasResource.class);
 
     private final Spawn spawn;
 
@@ -66,6 +65,25 @@ public class AliasResource {
                     aliasJobs.put(key);
                 }
                 aliases.put(aliasJson.put("name", alias.getKey()).put("jobs", aliasJobs));
+            }
+            return Response.ok().entity(aliases.toString()).build();
+        } catch (Exception ex) {
+            return Response.serverError().entity(ex.getMessage()).build();
+        }
+    }
+
+    @GET
+    @Path("/map")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response mapAliases(@QueryParam("id") String id) {
+        try {
+            JSONObject aliases = new JSONObject();
+            for (Map.Entry<String, List<String>> alias : spawn.getAliases().entrySet()) {
+                JSONArray aliasJobs = new JSONArray();
+                for (String key : alias.getValue()) {
+                    aliasJobs.put(key);
+                }
+                aliases.put(alias.getKey(), aliasJobs);
             }
             return Response.ok().entity(aliases.toString()).build();
         } catch (Exception ex) {

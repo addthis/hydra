@@ -14,15 +14,15 @@
 package com.addthis.hydra.task.map;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 public class StreamChain extends StreamBuilder {
 
     /**
      * The chain of stream builders to execute.
      */
-    @Codec.Set(codable = true, required = true)
-    private StreamBuilder builders[];
+    @FieldConfig(codable = true, required = true)
+    private StreamBuilder[] builders;
 
     @Override
     public void init() {

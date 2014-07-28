@@ -13,7 +13,6 @@
  */
 package com.addthis.hydra.task.output;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -25,7 +24,7 @@ import com.addthis.basis.io.IOWrap;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.muxy.MuxFileDirectory;
 import com.addthis.muxy.MuxFileDirectoryCache;
 
@@ -71,7 +70,7 @@ public class OutputWrapperFactory {
     /**
      * Path to the root directory of the output files.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String dir;
 
     /**
@@ -79,19 +78,19 @@ public class OutputWrapperFactory {
      * to represent a large number of small files.
      * See comment above. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean multiplex;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int multiplexMaxFileSize;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int multiplexMaxBlockSize;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int multiplexWriteThashold;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int multiplexLogCloseTimeout;
 
     /**

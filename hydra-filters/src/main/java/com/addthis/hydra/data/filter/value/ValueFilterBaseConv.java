@@ -17,7 +17,7 @@ import com.addthis.basis.util.NumberUtils;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * Convert between bases with custom alphabet choices. Here "decode" means
@@ -25,12 +25,12 @@ import com.addthis.codec.Codec;
  */
 public class ValueFilterBaseConv extends ValueFilter {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean decode;
-    @Codec.Set(codable = true)
-    private String baseType;
-    @Codec.Set(codable = true)
-    private String defaultValue;
+    @FieldConfig(codable = true)
+    private String  baseType;
+    @FieldConfig(codable = true)
+    private String  defaultValue;
 
     public ValueFilterBaseConv() {
     }

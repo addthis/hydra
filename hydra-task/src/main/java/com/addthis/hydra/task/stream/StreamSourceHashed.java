@@ -16,7 +16,6 @@ package com.addthis.hydra.task.stream;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class StreamSourceHashed implements StreamFileSource {
 
@@ -31,7 +30,7 @@ public class StreamSourceHashed implements StreamFileSource {
         this(wrap, shards, mod, false);
     }
 
-    public StreamSourceHashed(StreamFileSource wrap, Integer shards[], int mod, boolean legacy) {
+    public StreamSourceHashed(StreamFileSource wrap, Integer[] shards, int mod, boolean legacy) {
         this.wrap = wrap;
         this.shards = shards;
         this.mod = mod;

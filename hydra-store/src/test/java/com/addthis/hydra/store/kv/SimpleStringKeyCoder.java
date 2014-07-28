@@ -14,6 +14,7 @@
 package com.addthis.hydra.store.kv;
 
 import com.addthis.basis.util.Bytes;
+
 import com.addthis.hydra.store.DBValue;
 
 class SimpleStringKeyCoder implements KeyCoder<String, DBValue> {

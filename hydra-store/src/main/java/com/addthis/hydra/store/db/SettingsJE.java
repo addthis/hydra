@@ -43,7 +43,7 @@ public class SettingsJE extends SettingsDB {
     });
 
     public static Map<String, Object> dumpState(Database db) {
-        TreeMap<String, Object> map = new TreeMap<String, Object>();
+        TreeMap<String, Object> map = new TreeMap<>();
         DatabaseConfig dc = db.getConfig();
         EnvironmentConfig ec = db.getEnvironment().getConfig();
         map.put("cacheMode", dc.getCacheMode());
@@ -63,7 +63,7 @@ public class SettingsJE extends SettingsDB {
     }
 
     public static String dumpDebug(Database db) {
-        LinkedList<String> list = new LinkedList<String>();
+        LinkedList<String> list = new LinkedList<>();
         for (Entry<String, Object> e : dumpState(db).entrySet()) {
             list.add("[" + e.getKey() + "=" + e.getValue() + "]");
         }

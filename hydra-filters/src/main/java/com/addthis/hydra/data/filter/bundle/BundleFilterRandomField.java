@@ -20,7 +20,7 @@ import java.util.List;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">randomly selects an input field and copies it to an output field</span>.
@@ -42,23 +42,23 @@ public class BundleFilterRandomField extends BundleFilter {
     /**
      * The possible input bundle fields from which one will be selected. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
-    private String inFields[];
+    @FieldConfig(codable = true, required = true)
+    private String[] inFields;
     /**
      * The name of the output bundle field. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String out;
 
     public BundleFilterRandomField() {
     }
 
-    public BundleFilterRandomField(String inFields[], String out) {
+    public BundleFilterRandomField(String[] inFields, String out) {
         this.inFields = inFields;
         this.out = out;
     }
 
-    private String fields[];
+    private String[] fields;
 
     public String[] getFields() {
         return fields;
@@ -73,10 +73,10 @@ public class BundleFilterRandomField extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
-        BundleField inBound[] = new BundleField[inFields.length];
+        BundleField[] bound = getBindings(bundle, fields);
+        BundleField[] inBound = new BundleField[inFields.length];
         System.arraycopy(bound, 0, inBound, 0, inBound.length);
-        List<BundleField> inBoundShuffle = new ArrayList<BundleField>(Arrays.asList(inBound));
+        List<BundleField> inBoundShuffle = new ArrayList<>(Arrays.asList(inBound));
         Collections.shuffle(inBoundShuffle);
 
         for (BundleField bf : inBoundShuffle) {

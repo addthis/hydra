@@ -14,10 +14,9 @@
 package com.addthis.hydra.data.filter.closeablebundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
-import com.addthis.hydra.data.filter.bundle.BundleFilterChain;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,15 +27,15 @@ import org.slf4j.LoggerFactory;
  */
 public class CloseableBundleFilterChain extends CloseableBundleFilter {
 
-    private static final Logger log = LoggerFactory.getLogger(BundleFilterChain.class);
+    private static final Logger log = LoggerFactory.getLogger(CloseableBundleFilterChain.class);
 
-    @Codec.Set(codable = true, required = true)
-    private CloseableBundleFilter filter[];
-    @Codec.Set(codable = true)
-    private boolean failStop = true;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true, required = true)
+    private CloseableBundleFilter[] filter;
+    @FieldConfig(codable = true)
+    private boolean failStop   = true;
+    @FieldConfig(codable = true)
     private boolean failReturn = false;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean debug;
 
     @Override

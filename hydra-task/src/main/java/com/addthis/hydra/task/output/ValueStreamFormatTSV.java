@@ -22,7 +22,7 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 
 public class ValueStreamFormatTSV extends ValuesStreamFormatter {
@@ -30,13 +30,13 @@ public class ValueStreamFormatTSV extends ValuesStreamFormatter {
     private OutputStream out;
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String token = "\t";
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String replace = "_";
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String eol = "\n";
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean urlencode;
 
     byte[] byteToken;

@@ -17,7 +17,7 @@ import java.util.ArrayList;
 
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.TreeNodeList;
 
 
@@ -44,13 +44,13 @@ public final class PathBranch extends PathElement {
     /**
      * Sequence of path elements that will be placed as siblings in the tree.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private PathElement[] each;
 
     /**
      * Sequence of path element arrays that will be placed as siblings in the tree.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ArrayList<PathElement[]> list;
 
     private int count;
@@ -58,7 +58,7 @@ public final class PathBranch extends PathElement {
     public PathBranch() {
     }
 
-    public PathBranch(PathElement each[]) {
+    public PathBranch(PathElement[] each) {
         this.each = each;
     }
 
@@ -67,7 +67,7 @@ public final class PathBranch extends PathElement {
         return "[PathEach each=" + (each != null ? Strings.join(each, ",") : "null") + " list=" + list + "]";
     }
 
-    public void setEach(PathElement each[]) {
+    public void setEach(PathElement[] each) {
         if (count > 0) {
             throw new IllegalArgumentException("setEach only valid before resolving");
         }
@@ -91,7 +91,7 @@ public final class PathBranch extends PathElement {
             count += each.length;
         }
         if (list != null) {
-            for (PathElement pe[] : list) {
+            for (PathElement[] pe : list) {
                 for (PathElement p : pe) {
                     p.resolve(mapper);
                 }
@@ -104,15 +104,19 @@ public final class PathBranch extends PathElement {
     public TreeNodeList getNextNodeList(TreeMapState state) {
         TreeNodeList res = new TreeNodeList(count);
         if (each != null) {
-            for (int i = 0, ps = each.length; i < ps; i++) {
-                res.addAll(state.processPathElement(each[i]));
+            for (PathElement anEach : each) {
+                res.addAll(state.processPathElement(anEach));
             }
         }
         if (list != null) {
-            for (PathElement pe[] : list) {
+            for (PathElement[] pe : list) {
                 res.addAll(state.processPath(pe));
             }
         }
-        return res.size() > 0 || op ? res : null;
+        if (!res.isEmpty() || op) {
+            return res;
+        } else {
+            return null;
+        }
     }
 }

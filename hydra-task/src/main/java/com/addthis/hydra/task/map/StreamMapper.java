@@ -34,8 +34,9 @@ import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.filter.bundle.BundleFilterDebugPrint;
 import com.addthis.hydra.data.filter.value.ValueFilter;
@@ -102,19 +103,19 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
     /**
      * The data source for this job.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private TaskDataSource source;
 
     /**
      * The transformations to apply onto the data.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private MapDef map;
 
     /**
      * The data sink for emitting the result of the transformations.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private TaskDataOutput output;
 
     /**
@@ -122,31 +123,33 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
      * where one or more bundles roll up into a single bundle or a single bundle causes
      * the emission of multiple bundles.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private StreamBuilder builder;
 
     /**
      * Print to the console statistics while processing the data. Default is <code>true</code>.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean stats = true;
 
     /**
      * Optionally extract bundle time and print average of bundles processed since last log line
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private TimeField timeField;
 
-    @Codec.Set(codable = true)
+    @FieldConfig
     private boolean enableJmx = Parameter.boolValue("split.minion.usejmx", true);
 
-    private final AtomicLong    totalEmit = new AtomicLong(0);
-    private final AtomicBoolean emitGate  = new AtomicBoolean(false);
-    private final AtomicBoolean errored   = new AtomicBoolean(false);
-    private final long          startTime = JitterClock.globalTime();
+    @FieldConfig(required = true)
+    private int threads;
 
-    private long          lastMark;
+    private final AtomicLong totalEmit = new AtomicLong(0);
+    private final AtomicBoolean emitGate = new AtomicBoolean(false);
+    private final AtomicBoolean errored = new AtomicBoolean(false);
+    private final long startTime = JitterClock.globalTime();
     private MBeanRemotingSupport jmxremote;
+    private long lastMark;
     private TaskRunConfig config;
     private TaskFeeder    feeder;
 
@@ -193,24 +196,24 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
      *
      * @user-reference
      */
-    public static final class MapDef implements Codec.Codable {
+    public static final class MapDef implements Codable {
 
         /**
          * The filter to apply before field transformation.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private BundleFilter filterIn;
 
         /**
          * The filter to apply after field transformation.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private BundleFilter filterOut;
 
         /**
          * The mapping of fields from the input source into the bundle.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private FieldFilter[] fields;
     }
 
@@ -218,44 +221,41 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
      * This section specifies how fields of the input source are transformed into a mapped bundle.
      * <p/>
      * <p>Fields are moved from a specified field in the job {@link StreamMapper#source source}
-     * to a destination field in the mapped bundle. If the 'to' field is not specified then
-     * the destination field is assumed to have the same name as the 'from' field. By default
-     * null values are not written into the mapped bundle. This behavior can be changed by
-     * setting the toNull field to true.</p>
+     * to a destination field in the mapped bundle. By default null values are not written into
+     * the mapped bundle. This behavior can be changed by setting the toNull field to true.</p>
      * <p/>
      * <p>Example:</p>
      * <pre>fields:[
      *    {from:"TIME", to:"TIME"},
      *    {from:"SOURCE", to:"SOURCE"},
-     *    {from:"QUERY_PARAMS"},
      * ]</pre>
      *
      * @user-reference
      */
-    public static final class FieldFilter implements Codec.Codable {
+    public static final class FieldFilter implements Codable {
 
         /**
          * The name of the bundle field source. This is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String from;
 
         /**
-         * The name of the bundle field destination. If not specified then use the 'from' field.
+         * The name of the bundle field destination.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true, required = true)
         private String to;
 
         /**
          * Optionally apply a filter onto the field.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private ValueFilter filter;
 
         /**
          * If true then emit null values to the destination field. The default is false.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private boolean toNull;
     }
 
@@ -267,7 +267,7 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         if (map == null) {
             map = new MapDef();
         }
-        getSource().init(config, errored);
+        getSource().init(config);
         getOutput().init(config);
         if (builder != null) {
             builder.init();
@@ -302,7 +302,7 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
 
     @Override
     public void exec() {
-        feeder = new TaskFeeder(this, config.getThreadCount());
+        feeder = new TaskFeeder(this, threads);
     }
 
     @Override
@@ -423,11 +423,10 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         if (emitTaskState) {
             try {
                 TaskExitState exitState = new TaskExitState();
-                exitState.setHadMoreData(source.hadMoreData());
                 exitState.setInput(totalInputCountMetric.count());
                 exitState.setTotalEmitted(totalEmit.get());
                 exitState.setMeanRate(processedMeterMetric.meanRate());
-                Files.write(new CodecJSON().encode(exitState), new File("job.exit"));
+                Files.write(CodecJSON.INSTANCE.encode(exitState), new File("job.exit"));
             } catch (Exception ex) {
                 log.error("", ex);
             }
@@ -448,8 +447,8 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         return bundleTime;
     }
 
-    final static String padOpt[] = {"K", "M", "B", "T"};
-    final static DecimalFormat padDCO[] = {new DecimalFormat("0.00"), new DecimalFormat("0.0"), new DecimalFormat("0")};
+    static final String[] padOpt = {"K", "M", "B", "T"};
+    static final DecimalFormat[] padDCO = {new DecimalFormat("0.00"), new DecimalFormat("0.0"), new DecimalFormat("0")};
     /**
      * number right pad utility for log data
      */

@@ -19,7 +19,7 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">concatenates one or more fields in a bundle</span>.
@@ -40,22 +40,22 @@ public class BundleFilterConcat extends BundleFilter {
     /**
      * An array of fields to concatenate. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
-    private String in[];
+    @FieldConfig(codable = true, required = true)
+    private String[] in;
 
     /**
      * The destination for the output string. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String out;
 
     /**
      * An optional separator to place in between elements of the output string.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String join;
 
-    private String fields[];
+    private String[] fields;
 
     public void setIn(String[] in) {
         this.in = in;
@@ -82,7 +82,7 @@ public class BundleFilterConcat extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         StringBuilder sb = new StringBuilder();
         int end = bound.length - 1;
         for (int i = 0; i < end; i++) {

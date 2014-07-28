@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.filter.value;
 
-import java.lang.reflect.Field;
+import static org.junit.Assert.assertEquals;
 
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
@@ -21,24 +21,10 @@ import com.addthis.bundle.value.ValueObject;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-
 public class TestValueFilterSplit {
 
     private ValueObject splitFilter(ValueObject val, String split, int fixedLength) {
-        ValueFilterSplit vfc = new ValueFilterSplit();
-        try {
-            Field splitField = vfc.getClass().getDeclaredField("split");
-            splitField.setAccessible(true);
-            splitField.set(vfc, split);
-
-            Field fixedLengthField = vfc.getClass().getDeclaredField("fixedLength");
-            fixedLengthField.setAccessible(true);
-            fixedLengthField.set(vfc, fixedLength);
-        } catch (NoSuchFieldException e) {
-        } catch (IllegalAccessException e) {
-        }
-
+        ValueFilterSplit vfc = new ValueFilterSplit().setSplit(split).setFixedLength(fixedLength);
         return vfc.filter(val);
     }
 
@@ -50,10 +36,16 @@ public class TestValueFilterSplit {
     @Test
     public void changeCase() {
         ValueArray t1 = getValueArray("foo", "bar");
-        assertEquals(t1, splitFilter(t1, ",", -1));
+        assertEquals(t1, splitFilter(new ValueFilterJoin().filter(t1), ",", -1));
         assertEquals(t1, splitFilter(ValueFactory.create("foo,bar"), ",", -1));
         assertEquals(t1, splitFilter(ValueFactory.create("foo | bar"), " | ", -1));
         assertEquals(t1, splitFilter(ValueFactory.create("foobar"), null, 3));
+    }
+    
+    @Test
+    public void splitArray() {
+        ValueArray t1 = getValueArray("foo", "bar");
+        assertEquals(t1, splitFilter(t1, ",", -1));
     }
 
     private ValueArray getValueArray(String... values) {

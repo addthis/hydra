@@ -13,15 +13,11 @@
  */
 package com.addthis.hydra.task.source;
 
-
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.addthis.bundle.channel.DataChannelSource;
 import com.addthis.bundle.core.BundleField;
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.ClassMap;
-import com.addthis.codec.Codec.ClassMapFactory;
-import com.addthis.hydra.common.plugins.PluginReader;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.Pluggable;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 /**
@@ -33,87 +29,27 @@ import com.addthis.hydra.task.run.TaskRunConfig;
  * @hydra-category
  * @exclude-fields shardField, enabled
  */
-@Codec.Set(classMapFactory = TaskDataSource.CMAP.class)
-public abstract class TaskDataSource implements Codec.Codable, DataChannelSource, Cloneable {
-
-    private static ClassMap cmap = new ClassMap() {
-        @Override
-        public String getClassField() {
-            return "type";
-        }
-
-        @Override
-        public String getCategory() {
-            return "input source";
-        }
-
-    };
-
-    /**
-     * @exclude
-     */
-    public static class CMAP implements ClassMapFactory {
-
-        public ClassMap getClassMap() {
-            return cmap;
-        }
-    }
-
-    @SuppressWarnings("unused")
-    public final static void registerDataSource(String type, Class<? extends TaskDataSource> clazz)
-    {
-        cmap.add(type, clazz);
-    }
-
-    static {
-        PluginReader.registerPlugin("-input-sources.classmap", cmap, TaskDataSource.class);
-    }
+@Pluggable("input-source")
+public abstract class TaskDataSource implements Codable, DataChannelSource, Cloneable {
 
     /**
      * Optionally specify a field that will be used as input to a
      * hash function to determine which input processing thread to use. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private BundleField shardField;
 
-    /**
-     * If false then disable this data source. Default is true.
-     */
-    @Codec.Set(codable = true)
+    /** If false then disable this data source. Default is true. */
+    @FieldConfig(codable = true)
     private boolean enabled = true;
 
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    /**
-     * sources are not required to implement this.  it is a hint to the job
-     * manager that this source could be used again (task re-kicked) and that
-     * more data would be available.  StreamSourceMeshy returns true when a
-     * max data range for a single run has been reached.  It is only valid to
-     * call this once next() has returned null.
-     *
-     * @return true if source exited prematurely (returned null on next()) but had more data.
-     */
-    public boolean hadMoreData() {
-        return false;
-    }
-
-    protected abstract void open(TaskRunConfig config, AtomicBoolean errored);
-
-    public final void init(TaskRunConfig config, AtomicBoolean errored) {
-        open(config, errored);
-    }
+    public abstract void init(TaskRunConfig config);
 
     public final BundleField getShardField() {
         return shardField;
     }
 
-    public TaskDataSource clone() {
-        try {
-            return (TaskDataSource) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new RuntimeException(e);
-        }
+    public boolean isEnabled() {
+        return enabled;
     }
 }

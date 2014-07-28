@@ -13,15 +13,16 @@
  */
 package com.addthis.hydra.mq;
 
+import java.io.IOException;
+
 import com.rabbitmq.client.Connection;
+
 import net.jodah.lyra.ConnectionOptions;
 import net.jodah.lyra.Connections;
 import net.jodah.lyra.config.Config;
 import net.jodah.lyra.config.RecoveryPolicy;
 import net.jodah.lyra.config.RetryPolicies;
 import net.jodah.lyra.util.Duration;
-
-import java.io.IOException;
 
 public class RabbitMQUtil {
 

@@ -13,17 +13,20 @@
  */
 package com.addthis.hydra.job;
 
+import java.util.Arrays;
 import java.util.Map;
 
 import com.addthis.basis.test.SlowTest;
 
 import com.addthis.bark.ZkStartUtil;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
 
 import org.apache.zookeeper.CreateMode;
+
+import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -48,7 +51,7 @@ public class SpawnTest extends ZkStartUtil {
         JobTask testTask = new JobTask();
         testTask.setTaskID(taskId);
         testTask.setJobUUID(jobId);
-        CodecJSON codec = new CodecJSON();
+        CodecJSON codec = CodecJSON.INSTANCE;
         byte[] encoded = codec.encode(testTask);
         JobTask decodedTask = new JobTask();
         codec.decode(decodedTask, encoded);
@@ -126,6 +129,50 @@ public class SpawnTest extends ZkStartUtil {
         params = JobExpand.macroFindParameters(jobConfig);
         output = JobExpand.macroTemplateParams(jobConfig, params.values());
         assertEquals("foo ", output);
+    }
+
+    @Test
+    public void fixDirsTest() throws Exception {
+        Spawn spawn = new Spawn(zkClient);
+        spawn.setSpawnMQ(EasyMock.createNiceMock(SpawnMQImpl.class));
+        HostState host0 = createHostState("host0");
+        spawn.updateHostState(host0);
+        HostState host1 = createHostState("host1");
+        spawn.updateHostState(host1);
+        spawn.putCommand("c", new JobCommand(), false);
+        Job job = spawn.createJob("fsm", 3, Arrays.asList("host0"), "default", "c");
+        job.setReplicas(1);
+        spawn.rebalanceReplicas(job);
+        for (JobTask task : job.getCopyOfTasks()) {
+            // Convince spawn these tasks have data
+            task.setByteCount(1000l);
+            task.setFileCount(10);
+        }
+        spawn.updateJob(job);
+        host0.setStopped(new JobKey[]{new JobKey(job.getId(), 0)});
+        spawn.updateHostState(host0);
+        host1.setStopped(new JobKey[]{new JobKey(job.getId(), 0), new JobKey(job.getId(), 1)});
+        spawn.updateHostState(host1);
+        HostState host2 = createHostState("host2");
+        host2.setStopped(new JobKey[] {new JobKey(job.getId(), 2)});
+        spawn.updateHostState(host2);
+        boolean hostsAreUp = false;
+        for (int i=0; i<10; i++) {
+            if (spawn.listHostStatus(null).size() < 3) {
+                Thread.sleep(1000); // Can take a little while for the hosts to appear as up
+            } else {
+                hostsAreUp = true;
+                break;
+            }
+        }
+        if (!hostsAreUp) {
+            throw new RuntimeException("Failed to find hosts after waiting");
+        }
+        assertEquals("should not change task that is on on both hosts", 0, spawn.fixTaskDir(job.getId(), 0, false, false).get("tasksChanged"));
+        assertEquals("should copy task that is on only one host", 1, spawn.fixTaskDir(job.getId(), 1, false, false).get("tasksChanged"));
+        assertEquals("new home for task 1 should be the host that had the directory", "host1", spawn.getTask(job.getId(), 1).getHostUUID());
+        assertEquals("should copy task that is on an unexpected host", 1, spawn.fixTaskDir(job.getId(), 2, false, false).get("tasksChanged"));
+        assertEquals("new home for task 2 should be the unexpected host that had the directory", "host2", spawn.getTask(job.getId(), 2).getHostUUID());
     }
 
     private HostState createHostState(String hostUUID) throws Exception {

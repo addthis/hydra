@@ -38,7 +38,7 @@ import com.addthis.meshy.service.stream.StreamSource;
  */
 public class BundleStreamPeeker {
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         Meshy meshy = null;
         String file = null;
         String mesh = null;
@@ -68,7 +68,7 @@ public class BundleStreamPeeker {
         try {
 
             if (mesh != null) {
-                String hostPort[] = Strings.splitArray(mesh, ":");
+                String[] hostPort = Strings.splitArray(mesh, ":");
                 meshy = new MeshyClient(hostPort[0], Integer.parseInt(hostPort[1]));
                 FileSource src = new FileSource(meshy, new String[]{file});
                 src.waitComplete();

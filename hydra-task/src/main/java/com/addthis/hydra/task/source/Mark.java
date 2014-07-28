@@ -15,7 +15,7 @@ package com.addthis.hydra.task.source;
 
 import com.addthis.basis.util.Varint;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 import com.google.common.base.Objects;
 
@@ -28,7 +28,7 @@ import io.netty.buffer.Unpooled;
  */
 public final class Mark extends SimpleMark {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int error;
 
     @Override

@@ -14,7 +14,7 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">provides if/then/else branching logic with optional looping</span>.
@@ -37,25 +37,26 @@ public class BundleFilterTest extends BundleFilter {
     /**
      * The bundle filter that is queried for a true or false return value. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private BundleFilter test;
 
     /**
      * The bundle filter that is executed when test returns true. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private BundleFilter onTrue;
 
     /**
      * The bundle filter that is executed when test returns false. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private BundleFilter onFalse;
 
     /**
-     * The maximum number of iterations to perform. Use -1 to iterate up to {@link Integer#MAX_VALUE} times. Default is 1.
+     * The maximum number of iterations to perform. Use -1 to iterate up to {@link
+     * Integer#MAX_VALUE} times. Default is 1.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int loop = 1;
 
     @Override

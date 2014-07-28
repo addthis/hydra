@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * A codable version of Sample from CodaHales metrics project
@@ -28,11 +28,11 @@ public class CodableUniformSample implements Sample {
 
     private static final int BITS_PER_LONG = 63;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private AtomicLong count = new AtomicLong();
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int reservoirSize;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private AtomicLong[] values;
 
     public CodableUniformSample init(int reservoirSize) {
@@ -91,7 +91,7 @@ public class CodableUniformSample implements Sample {
     @Override
     public Snapshot getSnapshot() {
         final int s = size();
-        final List<Long> copy = new ArrayList<Long>(s);
+        final List<Long> copy = new ArrayList<>(s);
         for (int i = 0; i < s; i++) {
             copy.add(values[i].get());
         }

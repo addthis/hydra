@@ -27,7 +27,7 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.ConcurrentTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
@@ -47,13 +47,13 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
      * @user-reference
      * @hydra-name key.sieve
      */
-    public final static class Config extends TreeDataParameters<DataKeySieve> {
+    public static final class Config extends TreeDataParameters<DataKeySieve> {
 
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String key;
-        @Codec.Set(codable = true, required = true)
-        private SeenFilterBasic<String> tiers[];
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true, required = true)
+        private SeenFilterBasic<String>[] tiers;
+        @FieldConfig(codable = true)
         private int maxCount;
 
         private DataCounting.Config template;
@@ -81,10 +81,10 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
         }
     }
 
-    @Codec.Set(codable = true, required = true)
-    private SeenFilterBasic<String> tiers[];
-    @Codec.Set(codable = true)
-    private DataCounting counts[];
+    @FieldConfig(codable = true, required = true)
+    private SeenFilterBasic<String>[] tiers;
+    @FieldConfig(codable = true)
+    private DataCounting[] counts;
 
     private BundleField keyAccess;
     private DataCounting.Config template;
@@ -212,7 +212,7 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
             }
             return list;
         }
-        String keys[] = Strings.splitArray(key, ",");
+        String[] keys = Strings.splitArray(key, ",");
         ArrayList<DataTreeNode> list = new ArrayList<>(keys.length);
         synchronized (this) {
             keyloop:
@@ -242,7 +242,7 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
     /**
      * phantom node created for reporting
      */
-    private class MyTreeNode extends ConcurrentTreeNode {
+    private static class MyTreeNode extends ConcurrentTreeNode {
 
         MyTreeNode(String name, long hits) {
             this.name = name;

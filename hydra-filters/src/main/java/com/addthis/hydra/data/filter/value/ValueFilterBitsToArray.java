@@ -17,7 +17,7 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">converts the input into an array of
@@ -40,25 +40,25 @@ public class ValueFilterBitsToArray extends ValueFilter {
     /**
      * If non-zero, then only return the bits from the mask.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long mask;
 
     /**
      * If the input is a string, then use this radix to convert into a long.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int radix;
 
     /**
      * If non-zero, then only produce output when the input is equal to matchMask.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long matchMask;
 
     /**
      * If non-zero, then do not produce output when the input is equal to filterMask.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long filterMask;
 
     private long getBitValue(ValueObject value) {

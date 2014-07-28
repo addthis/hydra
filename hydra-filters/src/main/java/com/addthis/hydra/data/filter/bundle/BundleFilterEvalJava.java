@@ -26,7 +26,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.compiler.JavaSimpleCompiler;
 import com.addthis.hydra.data.filter.eval.InputType;
 
@@ -76,7 +76,7 @@ public class BundleFilterEvalJava extends BundleFilter {
      * fields will be available in the filter
      * for processing and output. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String[] fields;
 
     /**
@@ -85,7 +85,7 @@ public class BundleFilterEvalJava extends BundleFilter {
      * length as {@link #fields fields}.
      * This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String[] variables;
 
     /**
@@ -98,7 +98,7 @@ public class BundleFilterEvalJava extends BundleFilter {
      * Must be equal length as {@link #fields fields}.
      * This field is required and case sensitive.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private InputType[] types;
 
     /**
@@ -109,14 +109,14 @@ public class BundleFilterEvalJava extends BundleFilter {
      * place the entire contents of the function body into
      * an array of a single element. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String[] body;
 
     /**
      * Optional. A set of import statements that are included
      * at the top of the generated class.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String[] imports;
 
     /**
@@ -124,7 +124,7 @@ public class BundleFilterEvalJava extends BundleFilter {
      * then this field specifies whether to process a copy of the
      * input or not. Default is true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean copyInput = true;
 
     /**
@@ -206,7 +206,9 @@ public class BundleFilterEvalJava extends BundleFilter {
                 filter = (BundleFilter) compiler.getDefaultInstance(className, BundleFilter.class);
             } catch (ClassNotFoundException | MalformedURLException |
                     InstantiationException | IllegalAccessException ex) {
-                String msg = "Exception occurred while attempting to classload 'eval-java' generated class.";
+                String msg =
+                        "Exception occurred while attempting to classload 'eval-java' generated " +
+                        "class.";
                 msg += ex.toString();
                 log.warn("Attempting to compile the following class.");
                 log.warn("\n" + classDeclString);

@@ -57,7 +57,7 @@ public class OpFrequencyTable extends AbstractTableOp {
 
         String[] pcols = Strings.splitArray(tuple[2], ",");
 
-        List<Double> percentiles = new ArrayList<Double>();
+        List<Double> percentiles = new ArrayList<>();
         for (int i = 0; i < pcols.length; i++) {
             if ("total".equals(pcols[i])) {
                 appendTotal = true;
@@ -171,7 +171,7 @@ public class OpFrequencyTable extends AbstractTableOp {
 
         public FTable() {
             totalEntries = 0;
-            freqMap = new TreeMap<Long, Long>();
+            freqMap = new TreeMap<>();
         }
 
         public void update(Long value, Long freq) {

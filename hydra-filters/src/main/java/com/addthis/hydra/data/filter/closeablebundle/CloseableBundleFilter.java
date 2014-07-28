@@ -13,34 +13,13 @@
  */
 package com.addthis.hydra.data.filter.closeablebundle;
 
-import com.addthis.codec.Codec;
-import com.addthis.hydra.common.plugins.PluginReader;
+import com.addthis.codec.annotations.Pluggable;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 
-@Codec.Set(classMapFactory = CloseableBundleFilter.CMAP.class)
-public abstract class CloseableBundleFilter extends BundleFilter implements Codec.Codable {
-
-    private static Codec.ClassMap cmap = new Codec.ClassMap() {
-        @Override
-        public String getClassField() {
-            return "op";
-        }
-    };
-
-    public static class CMAP implements Codec.ClassMapFactory {
-
-        public Codec.ClassMap getClassMap() {
-            return cmap;
-        }
-    }
-
-    /** register types */
-    static {
-        PluginReader.registerPlugin("-closeablefilters.classmap", cmap, CloseableBundleFilter.class);
-    }
+@Pluggable("closeable bundle filter")
+public abstract class CloseableBundleFilter extends BundleFilter implements Codable {
 
     /* Filters can implement this if they want to save their data somehow after a job finishes */
     public abstract void close();
-
-
 }

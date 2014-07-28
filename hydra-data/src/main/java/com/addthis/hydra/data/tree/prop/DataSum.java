@@ -17,14 +17,13 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class DataSum extends TreeNodeData<DataSum.Config> {
 
@@ -67,27 +66,27 @@ public class DataSum extends TreeNodeData<DataSum.Config> {
         /**
          * The target field for calculating statistics.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String key;
 
         /**
          * The radix of the values stored in the key field. If this value is 0 then
          * use the String length of the target field. Default is 10.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int base = 10;
 
         /**
          * If countMissing is true then use this stand-in value when there is a null
          * stored in the target field. Default is 0.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int value = 0;
 
         /**
          * If true then use the 'value' field when there is a null in the target field. Default is true.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private boolean countMissing = true;
 
         @Override
@@ -97,9 +96,9 @@ public class DataSum extends TreeNodeData<DataSum.Config> {
         }
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long sum;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long num;
 
     private BundleField keyField;

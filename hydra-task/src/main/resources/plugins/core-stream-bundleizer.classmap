@@ -1,4 +1,0 @@
-"channel", com.addthis.hydra.task.source.bundleizer.ChannelBundleizer
-"column", com.addthis.hydra.task.source.bundleizer.ColumnBundleizer
-"json", com.addthis.hydra.task.source.bundleizer.JSONBundleizer
-"kv", com.addthis.hydra.task.source.bundleizer.KVBundleizer

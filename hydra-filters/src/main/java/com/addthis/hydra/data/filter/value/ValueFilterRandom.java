@@ -19,7 +19,7 @@ import java.text.DecimalFormat;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns a random number</span>.
@@ -45,43 +45,46 @@ public class ValueFilterRandom extends ValueFilter {
     /**
      * The number of digits to produce if the output is a string.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int size = 7;
 
     /**
-     * If gaussian is false, then this is the upper bound for the uniform distribution. Default is 1,000,000.
+     * If gaussian is false, then this is the upper bound for the uniform distribution. Default
+     * is 1,000,000.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int max = 1000000;
 
     /**
-     * If true, then generate a double value from a normal (or gaussian) distribution. Default is false.
+     * If true, then generate a double value from a normal (or gaussian) distribution. Default is
+     * false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean gaussian;
 
     /**
      * If true, then return a long value from the uniform distribution [0, max). Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean asLong;
 
     /**
      * The mean value for the gaussian distribution.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int mu;
 
     /**
      * The standard deviation for the gaussian distribution.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private float sigma;
 
     /**
-     * If true, then return a floating point number from the uniform distribution [0, 1). Default is false.
+     * If true, then return a floating point number from the uniform distribution [0,
+     * 1). Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean asFloat;
 
     private DecimalFormat format;

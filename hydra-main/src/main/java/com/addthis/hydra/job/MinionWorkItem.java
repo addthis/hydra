@@ -24,7 +24,6 @@ import com.addthis.basis.util.Strings;
 import com.addthis.hydra.job.mq.CommandTaskKick;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public abstract class MinionWorkItem implements Runnable {
 

@@ -32,7 +32,6 @@ import com.addthis.maljson.JSONObject;
 import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 @Path("/macro")
 public class MacroResource {
@@ -56,6 +55,23 @@ public class MacroResource {
             for (String key : spawn.listMacros()) {
                 JobMacro macro = spawn.getMacro(key);
                 macros.put(macro.toJSON().put("macro", "").put("name", key));
+            }
+            return Response.ok(macros.toString()).build();
+        } catch (Exception ex)  {
+            log.warn("", ex);
+            return Response.serverError().entity(ex.toString()).build();
+        }
+    }
+
+    @GET
+    @Path("/map")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response mapMacros() {
+        JSONObject macros = new JSONObject();
+        try {
+            for (String key : spawn.listMacros()) {
+                JobMacro macro = spawn.getMacro(key);
+                macros.put(key, macro.toJSON());
             }
             return Response.ok(macros.toString()).build();
         } catch (Exception ex)  {
@@ -89,6 +105,11 @@ public class MacroResource {
             String description = kv.getValue("description", oldMacro != null ? oldMacro.getDescription() : null);
             String owner = kv.getValue("owner", oldMacro != null ? oldMacro.getOwner() : user.getUsername());
             String macro = kv.getValue("macro", oldMacro != null ? oldMacro.getMacro() : null);
+            if (macro != null && macro.length() > Spawn.inputMaxNumberOfCharacters) {
+                throw new IllegalArgumentException("Macro length of " + macro.length()
+                                                   + " characters is greater than max length of "
+                                                   + Spawn.inputMaxNumberOfCharacters);
+            }
             JobMacro jobMacro = new JobMacro(owner, description, macro);
             spawn.putMacro(label, jobMacro, true);
             return Response.ok().entity(jobMacro.toJSON().put("macro", "").put("name", label).toString()).build();

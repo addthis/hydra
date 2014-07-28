@@ -248,7 +248,7 @@ public class ByteStoreBDB implements ByteStore {
                 byte[] rval = entry.getValue();
                 gets.incrementAndGet();
                 bytesIn.addAndGet(rkey.length + rval.length);
-                return new AbstractMap.SimpleImmutableEntry<byte[], byte[]>(rkey, rval);
+                return new AbstractMap.SimpleImmutableEntry<>(rkey, rval);
             } else {
                 return null;
             }
@@ -486,6 +486,9 @@ public class ByteStoreBDB implements ByteStore {
         bdb_env.close();
     }
 
+    /**
+     * This should be should be considered a fairly expensive operation.
+     **/
     @Override
     public long count() {
         return bdb.count();

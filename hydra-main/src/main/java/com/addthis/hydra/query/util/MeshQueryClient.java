@@ -39,7 +39,7 @@ public class MeshQueryClient {
 
     private static final int maxQueryTime = Parameter.intValue("meshQueryClient.maxListFilesTime", 60);
 
-    public static void main(String args[]) throws IOException {
+    public static void main(String[] args) throws IOException {
         MeshyClient meshyClient = new MeshyClient(args[0], Integer.parseInt(args[1]));
         MeshQueryClient queryClient = new MeshQueryClient();
         try {
@@ -61,7 +61,7 @@ public class MeshQueryClient {
         if (fileReference == null) {
             throw new DataChannelError("FileReference was null, unable to run query: " + queryPath);
         }
-        HashMap<String, String> options = new HashMap<String, String>();
+        HashMap<String, String> options = new HashMap<>();
         options.put("path", queryPath);
         options.put("ops", queryOps);
         try {
@@ -75,7 +75,7 @@ public class MeshQueryClient {
         try {
             // sample of async / first-responder
             final Semaphore gate = new Semaphore(1);
-            final AtomicReference<FileReference> fileRef = new AtomicReference<FileReference>(null);
+            final AtomicReference<FileReference> fileRef = new AtomicReference<>(null);
             gate.acquire();
             meshyClient.listFiles(new String[]{prefix}, new ListCallback() {
                 @Override

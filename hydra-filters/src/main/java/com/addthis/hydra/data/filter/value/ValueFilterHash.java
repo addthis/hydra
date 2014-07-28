@@ -21,7 +21,7 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
 
 import org.apache.commons.codec.binary.Hex;
@@ -53,13 +53,13 @@ public class ValueFilterHash extends ValueFilter {
     /**
      * The type of hashing method to use. Default is 1.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int type = 1;
 
     /**
      * If true, then return the absolute value of the calculated hash. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean abs;
 
     @Override
@@ -83,7 +83,7 @@ public class ValueFilterHash extends ValueFilter {
                 try {
                     MessageDigest md = MessageDigest.getInstance("SHA");
                     md.update(Bytes.toBytes(sv));
-                    byte b[] = md.digest();
+                    byte[] b = md.digest();
                     for (int i = 0; i < b.length && i < 8; i++) {
                         hash = (hash << 8) | (b[i] & 0xff);
                     }

@@ -18,7 +18,9 @@ import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -72,15 +74,14 @@ public class QueryTracker implements Closeable {
 
     public QueryTracker() {
         this.recentlyCompleted = CacheBuilder.newBuilder()
-                                             .maximumSize(MAX_FINISHED_CACHE_SIZE)
-                                             .build();
-
-        this.timeoutWatcherService.scheduleWithFixedDelay(
+                .maximumSize(MAX_FINISHED_CACHE_SIZE).build();
+        // start timeoutWatcher
+        ScheduledFuture<?> watcherFuture = this.timeoutWatcherService.scheduleWithFixedDelay(
                 new TimeoutWatcher(running), 5, 5, TimeUnit.SECONDS);
+        checkForErrors(watcherFuture);
         this.eventLog = LogUtil.newBundleOutputFromConfig("queries");
     }
 
-    @Override
     public void close() {
         eventLog.sendComplete();
     }
@@ -120,6 +121,26 @@ public class QueryTracker implements Closeable {
         } else {
             log.warn("QT could not get entry from running -- was null : {}", key);
             return false;
+        }
+    }
+
+    // makes sure the future object doesn't swallow any executor-startup related errors
+    private static void checkForErrors(ScheduledFuture<?> future) {
+        if (future.isDone()) {
+            try {
+                future.get();
+            } catch (InterruptedException e) {
+                throw new IllegalStateException("either inexplicably had to wait for an already " +
+                                                "complete future or thread triggered an unexpected" +
+                                                " and pre-existing interrupt condition.", e);
+            } catch (ExecutionException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof RuntimeException) {
+                    throw (RuntimeException) cause;
+                } else {
+                    throw new RuntimeException(cause);
+                }
+            }
         }
     }
 }

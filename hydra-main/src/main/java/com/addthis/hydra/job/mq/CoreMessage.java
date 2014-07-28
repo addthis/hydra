@@ -15,9 +15,9 @@ package com.addthis.hydra.job.mq;
 
 import java.io.Serializable;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.codables.Codable;
 
-public interface CoreMessage extends Codec.Codable, Serializable {
+public interface CoreMessage extends Codable, Serializable {
 
     public enum TYPE {
         STATUS_HOST_INFO,

@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.value;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">applies the filter argument to each element of the input list</span>.
@@ -34,7 +34,7 @@ public class ValueFilterListApply extends ValueFilter {
     /**
      * The filter to be applied to each element of the input list.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private ValueFilter elementFilter;
 
     @Override

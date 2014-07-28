@@ -45,8 +45,6 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.slf4j.Logger;
-
-
 import org.slf4j.LoggerFactory;
 public class SpawnHttp extends AbstractHandler {
 
@@ -56,8 +54,8 @@ public class SpawnHttp extends AbstractHandler {
 
     private final Spawn spawn;
     private final File webDir;
-    private final ConcurrentHashMap<String, JSONObject> auth = new ConcurrentHashMap<String, JSONObject>();
-    private final LinkedList<Runnable> onStopList = new LinkedList<Runnable>();
+    private final ConcurrentHashMap<String, JSONObject> auth = new ConcurrentHashMap<>();
+    private final LinkedList<Runnable> onStopList = new LinkedList<>();
     private final ServletHandler metricsHandler;
 
     public SpawnHttp(final Spawn spawn, final File webDir) {
@@ -77,7 +75,7 @@ public class SpawnHttp extends AbstractHandler {
     /**
      * simple kvpairs wrapper service
      */
-    public abstract class KVService extends HTTPService {
+    public abstract static class KVService extends HTTPService {
 
         public abstract void kvCall(KVPairs kv) throws Exception;
 
@@ -112,7 +110,7 @@ public class SpawnHttp extends AbstractHandler {
     /**
      * hack layer to make Jetty look a litle more like HTTPServer for this migration
      */
-    private HashMap<String, HTTPService> serviceMap = new HashMap<String, HTTPService>();
+    private HashMap<String, HTTPService> serviceMap = new HashMap<>();
 
     public void mapService(String path, HTTPService service) {
         serviceMap.put(path, service);
@@ -172,7 +170,7 @@ public class SpawnHttp extends AbstractHandler {
 
         public static HashSet<String> csvListToSet(String list) {
             if (list != null) {
-                HashSet<String> set = new HashSet<String>();
+                HashSet<String> set = new HashSet<>();
                 for (String s : Strings.splitArray(list, ",")) {
                     set.add(s);
                 }
@@ -188,7 +186,7 @@ public class SpawnHttp extends AbstractHandler {
         private HttpServletRequest request;
         private HttpServletResponse response;
         private KVPairs params;
-        private byte post[];
+        private byte[] post;
 
         HTTPLink(String target, HttpServletRequest request, HttpServletResponse response) {
             this.target = target;
@@ -312,7 +310,7 @@ public class SpawnHttp extends AbstractHandler {
                 if (file.exists() && file.isFile()) {
                     OutputStream out = httpServletResponse.getOutputStream();
                     InputStream in = new FileInputStream(file);
-                    byte buf[] = new byte[1024];
+                    byte[] buf = new byte[1024];
                     int read = 0;
                     while ((read = in.read(buf)) >= 0) {
                         out.write(buf, 0, read);

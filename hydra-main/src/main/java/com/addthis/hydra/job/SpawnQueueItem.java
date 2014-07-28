@@ -13,15 +13,16 @@
  */
 package com.addthis.hydra.job;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.mq.JobKey;
 
 /**
  * A class representing an item that can sit on Spawn's queue.
  */
-public class SpawnQueueItem extends JobKey implements Codec.Codable {
+public class SpawnQueueItem extends JobKey implements Codable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean ignoreQuiesce; // Whether this task is allowed to kick even if Spawn is quiesced
 
     private final long creationTime; // When this task was added to the queue

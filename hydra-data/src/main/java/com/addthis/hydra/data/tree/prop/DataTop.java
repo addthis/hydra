@@ -24,7 +24,8 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.ReadTreeNode;
@@ -38,7 +39,7 @@ import com.addthis.hydra.data.util.KeyTopper;
  *         TODO split into 'top.hits', 'top.nodes', 'recent' and 'recent.ext'
  *         TODO have recent list fabricate TreeNodes with values
  */
-public class DataTop extends TreeNodeData<DataTop.Config> implements Codec.Codable {
+public class DataTop extends TreeNodeData<DataTop.Config> implements Codable {
 
     /**
      * This data attachment <span class="hydra-summary">keeps a record of the top N children
@@ -95,7 +96,7 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codec.Codab
          * according to the number of hits for each node.
          * Default is zero.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int hit;
 
         /**
@@ -103,14 +104,14 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codec.Codab
          * according to the number of children for each node.
          * Default is zero.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int node;
 
         /**
          * If non-zero then store the store the N most recent nodes.
          * Default is zero.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int recent;
 
         /**
@@ -119,10 +120,10 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codec.Codab
          * true then {@link #hit} and {@link #node} behave identically.
          * Default is false.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private boolean increment;
 
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private boolean lossy;
 
         @Override
@@ -142,14 +143,14 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codec.Codab
         }
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private KeyTopper topHit;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private KeyTopper topNode;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Recent recent;
-    @Codec.Set(codable = true, required = true)
-    private int limits[];
+    @FieldConfig(codable = true, required = true)
+    private int[] limits;
 
     private boolean increment;
 
@@ -240,14 +241,14 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codec.Codab
             return ret;
         } else if (key.equals("vhit") && topHit != null) {
             Entry<String, Long>[] top = topHit.getSortedEntries();
-            ArrayList<DataTreeNode> ret = new ArrayList<DataTreeNode>(top.length);
+            ArrayList<DataTreeNode> ret = new ArrayList<>(top.length);
             for (Entry<String, Long> e : top) {
                 ret.add(new VirtualTreeNode(e.getKey(), e.getValue()));
             }
             return ret;
         } else if (key.equals("phit") && topHit != null) {
             Entry<String, Long>[] top = topHit.getSortedEntries();
-            ArrayList<DataTreeNode> ret = new ArrayList<DataTreeNode>(top.length);
+            ArrayList<DataTreeNode> ret = new ArrayList<>(top.length);
             for (Entry<String, Long> e : top) {
                 DataTreeNode node = parent.getNode(e.getKey());
                 if (node != null) {

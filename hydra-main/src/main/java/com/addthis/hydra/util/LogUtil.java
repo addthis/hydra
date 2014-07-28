@@ -16,8 +16,8 @@ package com.addthis.hydra.util;
 import com.addthis.basis.util.RollingLog;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.CodecExceptionLineNumber;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecExceptionLineNumber;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.task.output.TaskDataOutput;
 import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.maljson.JSONException;

@@ -28,12 +28,12 @@ import com.addthis.bundle.value.ValueObject;
 
 public class MapStringLong extends AbstractMap<String, Long> implements Map<String, Long> {
 
-    private final ValueMap data;
+    private final ValueMap<Long> data;
 
-    public MapStringLong(ValueMap map, boolean copy) {
+    public MapStringLong(ValueMap<Long> map, boolean copy) {
         if (copy) {
             this.data = ValueFactory.createMap();
-            for (ValueMapEntry entry : map) {
+            for (ValueMapEntry<Long> entry : map) {
                 this.data.put(entry.getKey(), entry.getValue());
             }
         } else {
@@ -41,11 +41,11 @@ public class MapStringLong extends AbstractMap<String, Long> implements Map<Stri
         }
     }
 
-    public static ValueMap create(Map<String, Long> input) {
+    public static ValueMap<Long> create(Map<String, Long> input) {
         if (input instanceof MapStringLong) {
             return ((MapStringLong) input).getData();
         } else {
-            ValueMap output = ValueFactory.createMap();
+            ValueMap<Long> output = ValueFactory.createMap();
             for (Map.Entry<String, Long> entry : input.entrySet()) {
                 output.put(entry.getKey(), ValueFactory.create(entry.getValue()));
             }
@@ -53,7 +53,7 @@ public class MapStringLong extends AbstractMap<String, Long> implements Map<Stri
         }
     }
 
-    public ValueMap getData() {
+    public ValueMap<Long> getData() {
         return data;
     }
 
@@ -91,9 +91,9 @@ public class MapStringLong extends AbstractMap<String, Long> implements Map<Stri
 
     private static class ViewIterator implements Iterator<Entry<String, Long>> {
 
-        private final Iterator<Entry<String, ValueObject>> iterator;
+        private final Iterator<Entry<String, ValueObject<Long>>> iterator;
 
-        private ViewIterator(Iterator<Entry<String, ValueObject>> iterator) {
+        private ViewIterator(Iterator<Entry<String, ValueObject<Long>>> iterator) {
             this.iterator = iterator;
         }
 
@@ -104,7 +104,7 @@ public class MapStringLong extends AbstractMap<String, Long> implements Map<Stri
 
         @Override
         public Entry<String, Long> next() {
-            Entry<String, ValueObject> input = iterator.next();
+            Entry<String, ValueObject<Long>> input = iterator.next();
             return new SimpleEntry<>(input.getKey(),
                     input.getValue().asLong().getLong());
         }
@@ -117,9 +117,9 @@ public class MapStringLong extends AbstractMap<String, Long> implements Map<Stri
 
     private static class View extends AbstractSet<Entry<String, Long>> implements Set<Entry<String, Long>> {
 
-        private final Set<Entry<String, ValueObject>> set;
+        private final Set<Entry<String, ValueObject<Long>>> set;
 
-        private View(Set<Entry<String, ValueObject>> set) {
+        private View(Set<Entry<String, ValueObject<Long>>> set) {
             this.set = set;
         }
 

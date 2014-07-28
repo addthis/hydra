@@ -25,7 +25,6 @@ import java.nio.file.Path;
 import com.addthis.basis.util.Parameter;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class SymlinkHealthCheck extends CountingHealthCheck {
 

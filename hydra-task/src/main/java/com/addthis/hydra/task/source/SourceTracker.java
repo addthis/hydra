@@ -18,10 +18,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.RandomAccessFile;
 
-import java.net.SocketTimeoutException;
-
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import java.nio.channels.FileLock;
 
 import com.addthis.basis.util.Files;
@@ -35,7 +31,6 @@ import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.meshy.service.stream.StreamService;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * tracks and auto-indexes (when possible) SourceTypeStateful sources
@@ -72,8 +67,8 @@ public class SourceTracker {
         }
     }
 
-    public void open(final TaskDataSource source, AtomicBoolean errored) {
-        source.open(sourceConfig, errored);
+    public void open(final TaskDataSource source) {
+        source.init(sourceConfig);
     }
 
     /**
@@ -81,11 +76,11 @@ public class SourceTracker {
      * failure to close() will result in a loss of tracking state.  close()
      * can be called on a wrapped/tracked source even if next() fails.
      * <p/>
-     * this method is responsible for open()ing the source because
+     * this method is responsible for init()ing the source because
      * some sources may be skipped and not opened.  closing a source that
      * didn't need to be opened is wasteful.
      * <p/>
-     * NOTE:  the source must be open before calling this method
+     * NOTE:  the source must be init before calling this method
      *
      * @param source source to index and track
      * @return wrapped source or null if it could not be tracked
@@ -155,15 +150,15 @@ public class SourceTracker {
      * failure to close() will result in a loss of tracking state.  close()
      * can be called on a wrapped/tracked source even if next() fails.
      * <p/>
-     * this method is responsible for open()ing the source because
+     * this method is responsible for init()ing the source because
      * some sources may be skipped and not opened.  closing a source that
      * didn't need to be opened is wasteful.
      *
      * @param source source to index and track
      * @return wrapped source or null if it could not be tracked
      */
-    public TaskDataSource openAndInit(final TaskDataSource source, AtomicBoolean errored) {
-        open(source, errored);
+    public TaskDataSource openAndInit(final TaskDataSource source) {
+        open(source);
         return init(source);
     }
 

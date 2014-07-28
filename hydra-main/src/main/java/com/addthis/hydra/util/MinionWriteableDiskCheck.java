@@ -24,7 +24,6 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.hydra.job.Minion;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class MinionWriteableDiskCheck extends WriteableDiskCheck {
 

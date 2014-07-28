@@ -15,10 +15,11 @@ package com.addthis.hydra.store.util;
 
 import com.addthis.basis.util.Bytes;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.BytesCodable;
 
 
-public final class Raw implements Comparable<Raw>, Codec.BytesCodable {
+public final class Raw implements Comparable<Raw>, BytesCodable {
 
     private static boolean padprintable = System.getProperty("abyss.raw.padprintable", "0").equals("1");
     private static boolean longcompare = System.getProperty("abyss.raw.longcompare", "0").equals("1");
@@ -38,11 +39,11 @@ public final class Raw implements Comparable<Raw>, Codec.BytesCodable {
         return new Raw(s);
     }
 
-    public static final Raw get(char c[]) {
+    public static final Raw get(char[] c) {
         return new Raw(Bytes.toBytes(c));
     }
 
-    public static final Raw get(byte b[]) {
+    public static final Raw get(byte[] b) {
         return new Raw(b);
     }
 
@@ -50,23 +51,23 @@ public final class Raw implements Comparable<Raw>, Codec.BytesCodable {
         this.raw = Bytes.toBytes(s);
     }
 
-    private Raw(byte b[]) {
+    private Raw(byte[] b) {
         this.raw = b;
     }
 
     public Raw() {
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private byte[] raw;
-    private int hashcode;
+    private int    hashcode;
     private long[] compare;
 
     @Override
     public int hashCode() {
         if (hashcode == 0) {
             int h = 0;
-            byte val[] = raw;
+            byte[] val = raw;
             for (int i = 0, l = val.length; i < l; i++) {
                 h = 31 * h + val[i];
             }
@@ -86,7 +87,7 @@ public final class Raw implements Comparable<Raw>, Codec.BytesCodable {
     }
 
     // compare in reverse
-    private static boolean revsame(byte a[], byte b[]) {
+    private static boolean revsame(byte[] a, byte[] b) {
         if (a == null || b == null) {
             return a == b;
         }
@@ -102,7 +103,7 @@ public final class Raw implements Comparable<Raw>, Codec.BytesCodable {
     }
 
     // compare forward
-    private static boolean fwdsame(byte a[], byte b[]) {
+    private static boolean fwdsame(byte[] a, byte[] b) {
         if (a.length != b.length) {
             return false;
         }
@@ -141,7 +142,7 @@ public final class Raw implements Comparable<Raw>, Codec.BytesCodable {
         return raw;
     }
 
-    public Raw cat(byte b[]) {
+    public Raw cat(byte[] b) {
         return get(Bytes.cat(raw, b));
     }
 
@@ -167,7 +168,7 @@ public final class Raw implements Comparable<Raw>, Codec.BytesCodable {
         return compare;
     }
 
-    private int compare(long a[], long b[]) {
+    private int compare(long[] a, long[] b) {
         for (int al = a.length, bl = b.length, i = 0; i < al; i++) {
             if (bl <= i) {
                 return 1;
@@ -184,11 +185,11 @@ public final class Raw implements Comparable<Raw>, Codec.BytesCodable {
         return a.length == b.length ? 0 : -1;
     }
 
-    private long[] bytesToLong(byte data[]) {
+    private long[] bytesToLong(byte[] data) {
         if (data.length % 8 != 0) {
             data = Bytes.cat(data, new byte[8 - (data.length % 8)]);
         }
-        long l[] = new long[data.length / 8];
+        long[] l = new long[data.length / 8];
         for (int i = 0; i < l.length; i++) {
             int off = i * 8;
             l[i] = (long) (

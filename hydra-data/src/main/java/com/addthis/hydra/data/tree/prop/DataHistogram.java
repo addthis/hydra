@@ -21,7 +21,8 @@ import java.util.Map.Entry;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
@@ -32,7 +33,7 @@ import com.addthis.hydra.data.util.KeyHistogram;
 /**
  * keep a histogram of the counts of nodes with bucketed # of hits
  */
-public class DataHistogram extends TreeNodeData<DataHistogram.Config> implements Codec.Codable {
+public class DataHistogram extends TreeNodeData<DataHistogram.Config> implements Codable {
 
     /**
      * This data attachment <span class="hydra-summary">keeps a histogram of the counts of child nodes</span>.
@@ -74,7 +75,7 @@ public class DataHistogram extends TreeNodeData<DataHistogram.Config> implements
          * A positive integer greater than one.
          * This field is required.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int scale;
 
         @Override
@@ -85,7 +86,7 @@ public class DataHistogram extends TreeNodeData<DataHistogram.Config> implements
         }
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private KeyHistogram histo;
 
     @Override

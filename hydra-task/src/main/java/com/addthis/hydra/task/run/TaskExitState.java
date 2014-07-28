@@ -15,20 +15,21 @@ package com.addthis.hydra.task.run;
 
 import java.io.Serializable;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 
-public class TaskExitState implements Codec.Codable, Serializable {
+public class TaskExitState implements Codable, Serializable {
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private boolean hadMoreData;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean wasStopped;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long input;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private double meanRate;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long totalEmitted;
 
     public void setHadMoreData(boolean hadMoreData) {

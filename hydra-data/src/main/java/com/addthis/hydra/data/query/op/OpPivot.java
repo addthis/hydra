@@ -29,6 +29,7 @@ import com.addthis.bundle.table.DataTable;
 import com.addthis.bundle.table.DataTableFactory;
 import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueBytes;
 import com.addthis.bundle.value.ValueCustom;
@@ -36,7 +37,6 @@ import com.addthis.bundle.value.ValueDouble;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueMap;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueSimple;
 import com.addthis.bundle.value.ValueString;
@@ -102,29 +102,32 @@ public class OpPivot extends AbstractQueryOp {
 
     private BundleColumnBinder rowbinder;
     private BundleColumnBinder colbinder;
-    private BundleField cellField;
-    private BundleField labelCol;
-    private BundleField sumCol;
+    private BundleField        cellField;
+    private BundleField        labelCol;
+    private BundleField        sumCol;
     private PivotOp cellop = PivotOp.SUM;
-    private PivotOp rowop;
-    private PivotOp colop;
-    private SortOp sortop;
+    private PivotOp   rowop;
+    private PivotOp   colop;
+    private SortOp    sortop;
     private DataTable output;
 
     private final LinkedHashMap<String, BundleField> outCellField = new LinkedHashMap<>();
-    private final SortedMap<String, Bundle> pivot = new TreeMap<>();
-    private final DataTableFactory tableFactory;
-    private final String rowkeys[];
-    private final String colkeys[];
-    private final String cellkey;
+    private final SortedMap<String, Bundle>          pivot        = new TreeMap<>();
+
+    private final DataTableFactory          tableFactory;
+    private final String[]                  rowkeys;
+    private final String[]                  colkeys;
+    private final String                    cellkey;
     private final ChannelProgressivePromise queryPromise;
 
-    public OpPivot(DataTableFactory tableFactory, String args, ChannelProgressivePromise queryPromise) {
+    public OpPivot(DataTableFactory tableFactory,
+                   String args,
+                   ChannelProgressivePromise queryPromise) {
         super(queryPromise);
         this.tableFactory = tableFactory;
         this.output = tableFactory.createTable(0);
         this.queryPromise = queryPromise;
-        String parg[] = Strings.splitArray(args, ",");
+        String[] parg = Strings.splitArray(args, ",");
         rowkeys = Strings.splitArray(parg[0], ":");
         colkeys = Strings.splitArray(parg[1], ":");
         cellkey = parg[2];
@@ -171,7 +174,7 @@ public class OpPivot extends AbstractQueryOp {
         }
     }
 
-    private ValueNumber doOp(PivotOp op, ValueNumber accum, ValueNumber cell) {
+    private Numeric<?> doOp(PivotOp op, Numeric<?> accum, Numeric<?> cell) {
         if (accum == null || cell == null) {
             //System.out.println("accum = " + accum + "  cell = " + cell);
             return accum != null ? accum : cell;
@@ -249,8 +252,8 @@ public class OpPivot extends AbstractQueryOp {
             Bundle row = ent.getValue();
             // do rowop and/or colop if present
             if (rowop != null || colop != null) {
-                ValueNumber rowaccum = null;
-                ValueNumber colaccum;
+                Numeric<?> rowaccum = null;
+                Numeric<?> colaccum;
                 for (BundleField col : row.getFormat()) {
                     if (col == labelCol || col == sumCol) {
                         continue;
@@ -335,23 +338,13 @@ public class OpPivot extends AbstractQueryOp {
     public static class PivotMarkMax extends PivotMarkMin {
 
         @Override
-        public ValueNumber max(ValueNumber val) {
+        public <P extends Numeric<?>> PivotMarkMax max(P val) {
             return this;
         }
 
         @Override
-        public ValueNumber min(ValueNumber val) {
+        public <P extends Numeric<?>> P min(P val) {
             return val;
-        }
-
-        @Override
-        public Long toLong() {
-            return Long.MAX_VALUE;
-        }
-
-        @Override
-        public Class<? extends ValueCustom> getContainerClass() {
-            return PivotMarkMax.class;
         }
     }
 
@@ -360,7 +353,7 @@ public class OpPivot extends AbstractQueryOp {
      * must be ValueCustom instead of ValueObect
      * so that it survives serialization
      */
-    public static class PivotMarkMin implements ValueCustom, ValueNumber {
+    public static class PivotMarkMin implements ValueCustom<Long>, Numeric<Long> {
 
         @Override
         public String toString() {
@@ -368,27 +361,27 @@ public class OpPivot extends AbstractQueryOp {
         }
 
         @Override
-        public ValueNumber avg(int count) {
+        public PivotMarkMin avg(int count) {
             return this;
         }
 
         @Override
-        public ValueNumber diff(ValueNumber val) {
+        public <P extends Numeric<?>> P diff(P val) {
             return val;
         }
 
         @Override
-        public ValueNumber max(ValueNumber val) {
+        public <P extends Numeric<?>> Numeric<?> max(P val) {
             return val;
         }
 
         @Override
-        public ValueNumber min(ValueNumber val) {
+        public <P extends Numeric<?>> Numeric<?> min(P val) {
             return this;
         }
 
         @Override
-        public ValueNumber sum(ValueNumber val) {
+        public <P extends Numeric<?>> P sum(P val) {
             return val;
         }
 
@@ -411,6 +404,10 @@ public class OpPivot extends AbstractQueryOp {
             return TYPE.CUSTOM;
         }
 
+        @Override public Long asNative() {
+            return Long.MAX_VALUE;
+        }
+
         @Override
         public ValueBytes asBytes() throws ValueTranslationException {
             throw new ValueTranslationException();
@@ -422,7 +419,7 @@ public class OpPivot extends AbstractQueryOp {
         }
 
         @Override
-        public ValueNumber asNumber() throws ValueTranslationException {
+        public Numeric<?> asNumeric() throws ValueTranslationException {
             return this;
         }
 
@@ -434,11 +431,6 @@ public class OpPivot extends AbstractQueryOp {
         @Override
         public ValueCustom asCustom() throws ValueTranslationException {
             return this;
-        }
-
-        @Override
-        public Class<? extends ValueCustom> getContainerClass() {
-            return PivotMarkMin.class;
         }
 
         @Override
@@ -459,12 +451,12 @@ public class OpPivot extends AbstractQueryOp {
     /**
      * for doing averages
      */
-    private class PivotAvg implements ValueNumber {
+    private static class PivotAvg implements Numeric<Numeric<?>> {
 
-        private ValueNumber orig;
+        private Numeric<?> orig;
         private int ops;
 
-        PivotAvg(ValueObject orig) {
+        PivotAvg(ValueObject<?> orig) {
             this.orig = ValueUtil.asNumberOrParseLong(orig, 10);
             this.ops = 1;
         }
@@ -475,33 +467,33 @@ public class OpPivot extends AbstractQueryOp {
         }
 
         @Override
-        public ValueNumber avg(int count) {
+        public Numeric<?> avg(int count) {
             return orig.avg(ops);
         }
 
         @Override
-        public ValueNumber diff(ValueNumber val) {
+        public <P extends Numeric<?>> PivotAvg diff(P val) {
             ops++;
             orig = orig.diff(val);
             return this;
         }
 
         @Override
-        public ValueNumber max(ValueNumber val) {
+        public <P extends Numeric<?>> PivotAvg max(P val) {
             ops++;
             orig = orig.max(val);
             return this;
         }
 
         @Override
-        public ValueNumber min(ValueNumber val) {
+        public <P extends Numeric<?>> PivotAvg min(P val) {
             ops++;
             orig = orig.min(val);
             return this;
         }
 
         @Override
-        public ValueNumber sum(ValueNumber val) {
+        public <P extends Numeric<?>> PivotAvg sum(P val) {
             ops++;
             orig = orig.sum(val);
             return this;
@@ -527,6 +519,10 @@ public class OpPivot extends AbstractQueryOp {
             return orig.getObjectType();
         }
 
+        @Override public Numeric<?> asNative() {
+            return orig;
+        }
+
         @Override
         public ValueBytes asBytes() throws ValueTranslationException {
             throw new ValueTranslationException();
@@ -543,7 +539,7 @@ public class OpPivot extends AbstractQueryOp {
         }
 
         @Override
-        public ValueNumber asNumber() throws ValueTranslationException {
+        public PivotAvg asNumeric() throws ValueTranslationException {
             return this;
         }
 
@@ -551,6 +547,5 @@ public class OpPivot extends AbstractQueryOp {
         public ValueCustom asCustom() throws ValueTranslationException {
             throw new ValueTranslationException();
         }
-
     }
 }

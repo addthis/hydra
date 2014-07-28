@@ -14,6 +14,7 @@
 package com.addthis.hydra.data.tree.prop;
 
 import java.io.UnsupportedEncodingException;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -22,21 +23,23 @@ import java.util.Map.Entry;
 
 import com.addthis.basis.collect.HotMap;
 import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.Varint;
 
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
-import com.addthis.basis.util.Varint;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
-public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.SuperCodable {
+public class DataMap extends TreeNodeData<DataMap.Config> implements SuperCodable {
 
     static final boolean IGNORE_DESERIALIZATION_ERROR = Boolean.getBoolean("hydra.tree.data.map");
 
@@ -58,20 +61,20 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
         /**
          * Field to get the map key from. This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String key;
 
         /**
          * Field to get the mapped value from. This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String val;
 
         /**
          * Size of the map. When a new key would be placed into the map, and it would put the size over this value,
          * the oldest entry is evicted. This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private Integer size;
 
         @Override
@@ -115,11 +118,11 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements Codec.Super
         vals = newVals;
     }
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String[] keys;
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String[] vals;
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private int size;
 
     private BundleField keyAccess;

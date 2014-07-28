@@ -18,9 +18,12 @@ import java.io.File;
 
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.codec.config.CodecConfig;
+
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
+import com.typesafe.config.ConfigResolveOptions;
 
 /**
  * Main method invoked when running tasks.
@@ -34,21 +37,73 @@ public class HoconRunner {
     static final boolean keepComments = Parameter.boolValue("task.hocon.keepComments", false);
     static final boolean debugComments = Parameter.boolValue("task.hocon.debugComments", false);
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         if (args.length < 1) {
             System.out.println("usage: hocon <config> <nodes> <node> [jobid] [threads]");
             return;
         }
         String fileName = args[0];
-        String configString = TaskRunner.loadStringFromFile(fileName);
-        if (args.length < 2) {
-            loadHoconAndPrintVarious(configString);
-        } else {
-            runTask(configString, args);
-        }
+        Config config = ConfigFactory.parseFile(new File(fileName));
+        runTask(config, args);
     }
 
-    static void runTask(String config, String[] args) throws Exception {
+    /**
+     * Creates a TaskRunnable using CodecConfig and a little custom handling. At the root
+     * level object, if there is a field named "global", then that sub tree is hoisted
+     * up to override system properties (removing it from the root of the job config).
+     * Either way, the job config will also then be resolved against config defaults/ system
+     * properties for the purposes of variable substitution. This will not merge them entirely
+     * though and so the job config will be otherwise unaffected.
+     */
+    public static TaskRunnable makeTask(Config config) {
+        Config jobConfig = config;
+        CodecConfig codec;
+        if (config.hasPath("global")) {
+            jobConfig = config.withoutPath("global").resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true));
+            Config globalDefaults = config.getConfig("global")
+                                          .withFallback(ConfigFactory.load())
+                                          .resolve();
+            jobConfig = jobConfig.resolveWith(globalDefaults);
+            codec = new CodecConfig(globalDefaults);
+        } else {
+            jobConfig = jobConfig.resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true))
+                                 .resolveWith(ConfigFactory.load());
+            codec = CodecConfig.getDefault();
+        }
+        return codec.decodeObject(TaskRunnable.class, jobConfig);
+    }
+
+    static void runTask(Config config, String[] args) throws Exception {
+        if (!JsonRunner.checkArgs(args)) return;
+        int nodeCount = Integer.parseInt(args[1]);
+        int thisNode = Integer.parseInt(args[2]);
+        String jobId = (args.length > 3) ? args[3] : null;
+        runTask(config, nodeCount, thisNode, jobId);
+    }
+
+    static void runTask(String configString, int nodeCount, int thisNode,
+                        String jobId) throws Exception {
+        Config config = ConfigFactory.parseString(configString);
+        runTask(config, nodeCount, thisNode, jobId);
+    }
+
+    static void runTask(Config config, int nodeCount, int thisNode,
+                        String jobId) throws Exception {
+
+        final TaskRunnable task = makeTask(config);
+        TaskRunConfig taskRunConfig = new TaskRunConfig(thisNode, nodeCount, jobId);
+        task.init(taskRunConfig);
+        task.exec();
+
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                task.terminate();
+                task.waitExit();
+            }
+        });
+    }
+
+    static void runCompatTask(String config, String[] args) throws Exception {
         String json = loadHoconAndPrintJson(config);
         JsonRunner.runTask(json, args);
     }

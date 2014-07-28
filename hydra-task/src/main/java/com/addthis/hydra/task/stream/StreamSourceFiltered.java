@@ -19,7 +19,6 @@ import java.io.InputStream;
 import com.addthis.hydra.data.filter.value.StringFilter;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class StreamSourceFiltered implements StreamFileSource {
 

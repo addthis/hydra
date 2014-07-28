@@ -17,12 +17,12 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.table.DataTable;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.query.AbstractTableOp;
 import com.addthis.hydra.data.query.QueryElement;
-import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.QueryOp;
 import com.addthis.hydra.data.query.QueryOpProcessor;
+import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.TreeNodeList;
 import com.addthis.hydra.task.output.ValuesOutput;
@@ -42,31 +42,31 @@ public class PathOutput extends PathElement {
      * If non-null then use this value in the
      * {@link Object#toString() toString()} method. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String description;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private QueryElement[] query;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private QueryOp[] ops;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String queryString;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String opsString;
 
     /**
      * This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private ValuesOutput output;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int maxmem;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean debug;
 
     private QueryEngine engine;

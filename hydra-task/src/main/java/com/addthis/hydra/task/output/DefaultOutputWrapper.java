@@ -26,7 +26,6 @@ import java.util.zip.GZIPOutputStream;
 import com.addthis.bundle.core.Bundle;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class DefaultOutputWrapper implements OutputWrapper {
 

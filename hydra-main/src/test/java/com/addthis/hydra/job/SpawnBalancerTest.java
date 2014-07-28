@@ -32,16 +32,8 @@ import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.imps.CuratorFrameworkState;
-import org.apache.curator.retry.RetryOneTime;
-import org.apache.curator.test.InstanceSpec;
-import org.apache.curator.test.QuorumConfigBuilder;
-import org.apache.curator.test.TestingServer;
-import org.apache.curator.test.TestingZooKeeperServer;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.server.NettyServerCnxnFactory;
+
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;
@@ -120,7 +112,7 @@ public class SpawnBalancerTest extends ZkStartUtil {
         fullHost.setUsed(new HostCapacity(0, 0, 0, 9998));
         fullHost.setMax(new HostCapacity(0, 0, 0, 10_000));
         int numLightHosts = 9;
-        ArrayList<String> hostIDs = new ArrayList<String>(numLightHosts + 1);
+        ArrayList<String> hostIDs = new ArrayList<>(numLightHosts + 1);
         hostIDs.add(fullHostID);
         for (int i = 0; i < numLightHosts; i++) {
             String hostID = "light" + i;
@@ -132,7 +124,7 @@ public class SpawnBalancerTest extends ZkStartUtil {
         Job job = createJobAndUpdateHosts(spawn, numLightHosts + 1, hostIDs, now, 1000, 0);
         job.setReplicas(1);
         Map<Integer, List<String>> assignments = bal.getAssignmentsForNewReplicas(job, false);
-        HashSet<String> usedHosts = new HashSet<String>(numLightHosts);
+        HashSet<String> usedHosts = new HashSet<>(numLightHosts);
         for (List<String> targets : assignments.values()) {
             assertEquals("should make one replica per task", 1, targets.size());
             assertTrue("should not put replicas on full host", !targets.contains(fullHostID));
@@ -295,7 +287,7 @@ public class SpawnBalancerTest extends ZkStartUtil {
         Job smallJob = createJobAndUpdateHosts(spawn, 6, Arrays.asList(heavyHostUUID), now, 1000, 0);
         List<JobTaskMoveAssignment> assignments = bal.getAssignmentsForJobReallocation(smallJob, -1, hosts);
         assertEquals("should move 4 tasks total for small job", 4, assignments.size());
-        List<String> assignedHosts = new ArrayList<String>();
+        List<String> assignedHosts = new ArrayList<>();
         for (JobTaskMoveAssignment assignment : assignments) {
             assignedHosts.add(assignment.getTargetUUID());
         }
@@ -403,8 +395,8 @@ public class SpawnBalancerTest extends ZkStartUtil {
     public void dontDoPointlessMovesTest() throws Exception {
         // Suppose we have a cluster that is essentially balanced. Rebalancing it shouldn't do anything.
         int numHosts = 3;
-        List<HostState> hosts = new ArrayList<HostState>(numHosts);
-        List<String> hostNames = new ArrayList<String>(numHosts);
+        List<HostState> hosts = new ArrayList<>(numHosts);
+        List<String> hostNames = new ArrayList<>(numHosts);
         for (int i = 0; i < numHosts; i++) {
             String hostName = "host" + i;
             hostNames.add(hostName);
@@ -472,7 +464,7 @@ public class SpawnBalancerTest extends ZkStartUtil {
         // Then if we add two hosts and rebalance the job, we should move tasks onto each.
         spawn.setSpawnMQ(EasyMock.createMock(SpawnMQ.class));
         bal.setAllowSameHostReplica(true);
-        ArrayList<String> hosts = new ArrayList<String>();
+        ArrayList<String> hosts = new ArrayList<>();
         for (int i = 0; i < 8; i++) {
             installHostStateWithUUID("h" + i, spawn, true);
             hosts.add("h" + i);
@@ -608,7 +600,7 @@ public class SpawnBalancerTest extends ZkStartUtil {
     }
 
     private JobKey[] simulateJobKeys(Job... jobs) {
-        ArrayList<JobKey> keyList = new ArrayList<JobKey>();
+        ArrayList<JobKey> keyList = new ArrayList<>();
         JobKey[] sampleArray = {new JobKey("", 0)};
         for (Job job : jobs) {
             for (int i = 0; i < job.getCopyOfTasks().size(); i++) {

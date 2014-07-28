@@ -23,7 +23,7 @@ import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueString;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 /**
@@ -57,7 +57,7 @@ public class BundleFilterAppend extends BundleFilter {
     }
 
     public BundleFilterAppend setValues(HashSet<String> values) {
-        this.values = new ArrayList<String>(values.size());
+        this.values = new ArrayList<>(values.size());
         for (String val : values) {
             this.values.add(val);
         }
@@ -87,46 +87,47 @@ public class BundleFilterAppend extends BundleFilter {
     /**
      * Both the start of the array and the destination field. Required field.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String to;
 
     /**
      * A field to append at the end of the array.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String from;
 
     /**
      * A list of values to append in between the 'to' and 'from' fields.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true, autocollection = true)
     private ArrayList<String> values;
 
     /**
      * An optional filter to apply on the 'values' field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter filter;
 
     /**
      * If true, then return a value of false if the 'to' field is null. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean nullFail;
 
     /**
-     * If true, then append only values that are not already a members of the array. Default is false.
+     * If true, then append only values that are not already a members of the array. Default is
+     * false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean unique;
 
     /**
      * Optional param to hint at expected array size. Default is 5.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int size = 5;
 
-    private String fields[];
+    private String[] fields;
 
     @Override
     public void initialize() {
@@ -145,7 +146,7 @@ public class BundleFilterAppend extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         ValueObject toVal = bundle.getValue(bound[0]);
         ValueArray arr = null;
         if (toVal == null) {

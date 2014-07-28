@@ -57,13 +57,18 @@ public class MysqlDataStore implements SpawnDataStore {
 
     /* The maximum allowable length for 'path' and 'child' values. */
     private static final int maxPathLength = Parameter.intValue("sql.datastore.max.path.length", 150);
+
     /* Configuration parameters for the jdbc connection pool. */
     private static final int minPoolSize = Parameter.intValue("sql.datastore.minpoolsize", 5);
     private static final int maxPoolSize = Parameter.intValue("sql.datastore.maxpoolsize", 10);
     /* Number of times to retry inserts after a rollback exception */
-    private static final int insertRetries = Parameter.intValue("sql.datastore.insertretries", 5);
+    private static final int insertRetries = Parameter.intValue("sql.datastore.insertRetries", 5);
+    /* Parameters to retry and retire connections */
+    private static final int acquireRetries = Parameter.intValue("sql.datastore.acquireRetries", 10);
+    private static final int acquireDelay = Parameter.intValue("sql.datastore.acquireDelay", 5000); // ms
+    private static final int maxConnectionAge = Parameter.intValue("sql.datastore.maxConnectionAgeSeconds", 300); // = 5 minutes
 
-    /* Column names. Using default parameters, path and child are VARCHAR(200) and value is a BLOB. */
+    /* Column names. Using default parameters, path and child are VARCHAR(150) and value is a BLOB. */
     private static final String pathKey = "path";
     private static final String valueKey = "val";
     private static final String childKey = "child";
@@ -103,6 +108,9 @@ public class MysqlDataStore implements SpawnDataStore {
         cpds.setInitialPoolSize(minPoolSize);
         cpds.setMinPoolSize(minPoolSize);
         cpds.setMaxPoolSize(maxPoolSize);
+        cpds.setAcquireRetryDelay(acquireDelay);
+        cpds.setAcquireRetryAttempts(acquireRetries);
+        cpds.setMaxConnectionAge(maxConnectionAge);
         cpds.setProperties(properties);
         // Next create the data table within the database.
         runSetupTableCommand();

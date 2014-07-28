@@ -24,7 +24,7 @@ class TimeoutWatcher implements Runnable {
 
     static final Logger log = LoggerFactory.getLogger(TimeoutWatcher.class);
 
-    ConcurrentMap<String, QueryEntry> running;
+    private final ConcurrentMap<String, QueryEntry> running;
 
     TimeoutWatcher(ConcurrentMap<String, QueryEntry> running) {
         this.running = running;
@@ -32,27 +32,31 @@ class TimeoutWatcher implements Runnable {
 
     @Override
     public void run() {
-        long currentTime = System.currentTimeMillis();
-        for (QueryEntry queryEntry : running.values()) {
-            if (queryEntry.waitTime <= 0) {
-                continue;
-            }
-            long queryDuration = currentTime - queryEntry.startTime;
-            // wait time is in seconds
-            double queryDurationInSeconds = queryDuration / 1000.0;
-            if (queryDurationInSeconds < queryEntry.waitTime) {
-                log.info("query: {} running for: {} timeout is: {}",
-                        queryEntry.query.uuid(), queryDurationInSeconds, queryEntry.waitTime);
-            } else {
-                log.warn("QUERY TIMEOUT query: {} running for: {} timeout is: {}",
-                        queryEntry.query.uuid(), queryDurationInSeconds, queryEntry.waitTime);
-                // sanity check duration
-                if (queryDurationInSeconds > (2 * queryEntry.waitTime)) {
-                    log.warn("query: {} query duration was insane, resetting to waitTime for logging. startTime: {}",
-                            queryEntry.query.uuid(), queryEntry.startTime);
+        try {
+            long currentTime = System.currentTimeMillis();
+            for (QueryEntry queryEntry : running.values()) {
+                if (queryEntry.waitTime <= 0) {
+                    continue;
                 }
-                sendTimeout(queryEntry, queryEntry.waitTime);
+                long queryDuration = currentTime - queryEntry.startTime;
+                // wait time is in seconds
+                double queryDurationInSeconds = queryDuration / 1000.0;
+                if (queryDurationInSeconds < queryEntry.waitTime) {
+                    log.info("query: {} running for: {} timeout is: {}",
+                             queryEntry.query.uuid(), queryDurationInSeconds, queryEntry.waitTime);
+                } else {
+                    log.warn("QUERY TIMEOUT query: {} running for: {} timeout is: {}",
+                             queryEntry.query.uuid(), queryDurationInSeconds, queryEntry.waitTime);
+                    // sanity check duration
+                    if (queryDurationInSeconds > (2 * queryEntry.waitTime)) {
+                        log.warn("query: {} query duration was insane, resetting to waitTime for logging. startTime: {}",
+                                 queryEntry.query.uuid(), queryEntry.startTime);
+                    }
+                    sendTimeout(queryEntry, queryEntry.waitTime);
+                }
             }
+        } catch (Throwable ex) {
+            log.error("error while running timeout watcher; swallowing to keep thread alive", ex);
         }
     }
 

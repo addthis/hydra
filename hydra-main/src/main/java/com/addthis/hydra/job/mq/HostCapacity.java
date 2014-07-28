@@ -15,20 +15,21 @@ package com.addthis.hydra.job.mq;
 
 import java.io.Serializable;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 
-public class HostCapacity implements Codec.Codable, Serializable {
+public class HostCapacity implements Codable, Serializable {
 
     private static final long serialVersionUID = -8791328421008641045L;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int mem;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int cpu;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int io;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long disk;
 
     public HostCapacity() {

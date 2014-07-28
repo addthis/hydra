@@ -22,7 +22,7 @@ import javax.ws.rs.core.Response;
 
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.RebalanceOutcome;
 import com.addthis.hydra.job.Spawn;
 import com.addthis.hydra.job.mq.HostState;
@@ -33,7 +33,6 @@ import com.addthis.maljson.JSONObject;
 import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 @Path("/host")
 public class HostResource {
@@ -51,7 +50,7 @@ public class HostResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response rebalanceHost(@QueryParam("id") String hostUuid, @Auth User user) throws Exception {
         try {
-            String hostUuids[] = Strings.splitArray(hostUuid, ",");
+            String[] hostUuids = Strings.splitArray(hostUuid, ",");
             JSONArray outcomes = new JSONArray();
             for (String uuid : hostUuids) {
                 emitLogLineForAction(user.getUsername(), "host rebalance on " + hostUuid);
@@ -116,7 +115,7 @@ public class HostResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response dropHosts(@QueryParam("id") String hostUuid, @Auth User user) throws Exception {
         try {
-            String hostUuids[] = Strings.splitArray(hostUuid, ",");
+            String[] hostUuids = Strings.splitArray(hostUuid, ",");
             JSONArray outcomes = new JSONArray();
             for (String uuid : hostUuids) {
                 emitLogLineForAction(user.getUsername(), "delete host on " + uuid);

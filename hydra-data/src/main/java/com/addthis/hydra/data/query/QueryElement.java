@@ -24,15 +24,16 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.DataTreeNode;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
 
-public class QueryElement implements Codec.SuperCodable {
+public class QueryElement implements SuperCodable {
 
     private static final boolean debug = System.getProperty("query.path.debug", "0").equals("1");
 
@@ -45,37 +46,37 @@ public class QueryElement implements Codec.SuperCodable {
     /**
      * Node names to iterate over.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private QueryElementNode node;
 
     /**
      * For each node the field values to collect.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ArrayList<QueryElementField> field;
 
     /**
      * For each node the property values to collect.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ArrayList<QueryElementProperty> prop;
 
     /**
      * If true then do not fail when a node or property is missing. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Boolean nullok;
 
     /**
      * Skip the first N nodes for this element.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer skip;
 
     /**
      * Limit the total number of nodes for this element.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer limit;
 
     // internal state
@@ -130,7 +131,7 @@ public class QueryElement implements Codec.SuperCodable {
     public QueryElement parse(String q, MutableInt nextColumn) {
         int pos = 0;
         if (q.startsWith("(") && (pos = q.indexOf(")")) > 0) {
-            String range[] = Strings.splitArray(q.substring(1, pos), "-");
+            String[] range = Strings.splitArray(q.substring(1, pos), "-");
             if (range.length == 1) {
                 limit = Integer.parseInt(range[0]);
             } else {
@@ -152,7 +153,7 @@ public class QueryElement implements Codec.SuperCodable {
                 if (st.hasMoreTokens()) {
                     tok = st.nextToken();
                     if (sep.equals(":")) {
-                        String ps[] = Strings.splitArray(tok, ",");
+                        String[] ps = Strings.splitArray(tok, ",");
                         if (prop == null) {
                             prop = new ArrayList<>(ps.length);
                         }

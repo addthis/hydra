@@ -22,8 +22,6 @@ import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 
-import com.google.common.primitives.Longs;
-
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">sorts an array</span>.
  * <p/>
@@ -41,7 +39,7 @@ public class ValueFilterSort extends ValueFilter {
             }
             switch (o1.getObjectType()) {
                 case STRING:
-                    return o1.asString().getString().compareTo(o2.asString().getString());
+                    return o1.asString().asNative().compareTo(o2.asString().asNative());
                 case INT:
                     return Long.compare(o1.asLong().getLong(), o2.asLong().getLong()); // DefaultLong.TYPE = INT, go figure
                 case FLOAT:

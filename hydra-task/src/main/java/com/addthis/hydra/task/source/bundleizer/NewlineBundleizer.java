@@ -14,6 +14,7 @@
 package com.addthis.hydra.task.source.bundleizer;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
@@ -21,11 +22,8 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFactory;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
-import com.addthis.hydra.task.source.AbstractStreamFileDataSource.Bundleizer;
-import com.addthis.hydra.task.source.AbstractStreamFileDataSource.BundleizerFactory;
-
 
 
 /**
@@ -33,7 +31,7 @@ import com.addthis.hydra.task.source.AbstractStreamFileDataSource.BundleizerFact
  */
 public abstract class NewlineBundleizer extends BundleizerFactory {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter lineFilter;
 
     @Override
@@ -43,7 +41,7 @@ public abstract class NewlineBundleizer extends BundleizerFactory {
             private final BundleFactory factory = factoryArg;
 
             @Override
-            public Bundle next() throws Exception {
+            public Bundle next() throws IOException {
                 String line;
                 while (true) {
                     line = reader.readLine();

@@ -58,11 +58,13 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.kvp.KVBundle;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.codables.SuperCodable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.QueryException;
+import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.source.LiveMeshyServer;
 import com.addthis.hydra.data.query.source.LiveQueryReference;
 import com.addthis.hydra.data.query.source.QueryHandle;
@@ -123,7 +125,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  * @user-reference
  * @hydra-name tree
  */
-public final class TreeMapper extends DataOutputTypeList implements QuerySource, Codec.SuperCodable {
+public final class TreeMapper extends DataOutputTypeList implements QuerySource, SuperCodable {
 
     private static final Logger log = LoggerFactory.getLogger(TreeMapper.class);
     private static final DecimalFormat percent = new DecimalFormat("00.0%");
@@ -140,50 +142,50 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
     /**
      * Default is either "mapper.http" configuration value or true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean enableHttp = Parameter.boolValue("mapper.http", true);
 
     /**
      * Default is either "mapper.query" configuration value or false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean enableQuery = Parameter.boolValue("mapper.query", false);
 
 
     /**
      * Default is either "mapper.minion.usejmx" configuration value or true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean enableJmx = Parameter.boolValue("mapper.minion.usejmx", true);
 
     /**
      * Default is either "mapper.printinterval" configuration value or 1000.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long printinterval = Parameter.longValue("mapper.printinterval", 1000L);
 
     /**
      * Default is "mapper.localhost" configuration value.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String localhost = Parameter.value("mapper.localhost");
 
     /**
      * Default is either "mapper.port" configuration value or 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int port = Parameter.intValue("mapper.port", 0);
 
     /**
      * Default is either "batch.brokerHost" configuration value or "localhost".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
 
     /**
      * Default is either "batch.brokerPort" configuration value or 5672.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String batchBrokerPort = Parameter.value("batch.brokerPort", "5672");
 
     /**
@@ -191,7 +193,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
      * Consists of a mapping from a name to one or more path elements.
      * One of these path elements will serve as the root of the tree.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private HashMap<String, PathElement[]> paths;
 
     /**
@@ -199,13 +201,13 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
      * at the beginning of execution.
      * The input to this path is an empty bundle.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private TreeMapperPathReference pre;
 
     /**
      * Path that will serve as the root of the output tree.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private TreeMapperPathReference root;
 
     /**
@@ -213,7 +215,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
      * at the end of execution.
      * The input to this path is an empty bundle.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private TreeMapperPathReference post;
 
     /**
@@ -227,7 +229,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
      * In the event of invalid tree pages the correct action
      * is to revert the task.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValidateMode validateTree = ValidateMode.NONE;
 
     /**
@@ -236,7 +238,7 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
      * repairs will be made when an error is detected.
      * Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean repairTree = false;
 
     /**
@@ -245,87 +247,87 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
      * than one than apply once every N runs.
      * Default is one.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int postRate = 1;
 
     /**
      * One or more queries that are executed
      * after the tree has been constructed.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private PathOutput[] outputs;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean live = Parameter.boolValue("mapper.live", false);
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String liveHost = Parameter.value("mapper.live.host", "localhost");
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int livePort = Parameter.intValue("mapper.live.port", -1);
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer nodeCache;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer trashInterval;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer trashTimeLimit;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private TimeField timeField;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean stats = true;
 
     /**
      * Set of strings that enumerate the features to process.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private HashSet<String> features;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private StoreConfig storage;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int maxErrors = 0;
 
-    private final ConcurrentMap<String, BundleField> fields = new ConcurrentHashMap<>();
-    private final IndexHash<PathElement[]> pathIndex = new IndexHash();
+    private final ConcurrentMap<String, BundleField> fields    = new ConcurrentHashMap<>();
+    private final IndexHash<PathElement[]>           pathIndex = new IndexHash();
 
     private DataTree tree;
-    private Bench bench;
-    private Server jetty;
-    private long startTime;
+    private Bench    bench;
+    private Server   jetty;
+    private long     startTime;
 
-    private ObjectName jmxname;
+    private ObjectName           jmxname;
     private MBeanRemotingSupport jmxremote;
 
-    private QueryEngine queryEngine;
-    private MeshyServer liveQueryServer;
+    private QueryEngine     queryEngine;
+    private MeshyServer     liveQueryServer;
     private TreeMapperStats mapstats;
-    private TaskRunConfig config;
+    private TaskRunConfig   config;
 
-    private final AtomicLong lastHeaderTime = new AtomicLong(JitterClock.globalTime());
-    private final AtomicLong benchCalls = new AtomicLong(0);
-    private final AtomicLong streamWaitime = new AtomicLong(0);
-    private final AtomicLong streamReadCount = new AtomicLong(0);
-    private final AtomicLong streamReadTotal = new AtomicLong(0);
-    private final AtomicLong mapWriteTime = new AtomicLong(0);
-    private final AtomicLong processed = new AtomicLong(0);
-    private final AtomicLong processNodes = new AtomicLong(0);
-    private final AtomicBoolean calledExit = new AtomicBoolean(false);
-    private final AtomicBoolean forceExit = new AtomicBoolean(false);
-    private final AtomicBoolean profiling = new AtomicBoolean(false);
-    private int bundleErrors = 0;
-    private final AtomicLong lastBundleTime = new AtomicLong(0);
+    private final AtomicLong    lastHeaderTime  = new AtomicLong(JitterClock.globalTime());
+    private final AtomicLong    benchCalls      = new AtomicLong(0);
+    private final AtomicLong    streamWaitime   = new AtomicLong(0);
+    private final AtomicLong    streamReadCount = new AtomicLong(0);
+    private final AtomicLong    streamReadTotal = new AtomicLong(0);
+    private final AtomicLong    mapWriteTime    = new AtomicLong(0);
+    private final AtomicLong    processed       = new AtomicLong(0);
+    private final AtomicLong    processNodes    = new AtomicLong(0);
+    private final AtomicBoolean calledExit      = new AtomicBoolean(false);
+    private final AtomicBoolean forceExit       = new AtomicBoolean(false);
+    private final AtomicBoolean profiling       = new AtomicBoolean(false);
+    private       int           bundleErrors    = 0;
+    private final AtomicLong    lastBundleTime  = new AtomicLong(0);
 
     /** */
     private static class IndexHash<V> {
 
-        private HashMap<String, Integer> map = new HashMap<>();
-        private ArrayList<V> list = new ArrayList<>(64);
+        private HashMap<String, Integer> map  = new HashMap<>();
+        private ArrayList<V>             list = new ArrayList<>(64);
 
         public int add(String key, V value) {
             int pos = list.size();
@@ -348,17 +350,17 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
     }
 
     /** */
-    public static final class StoreConfig implements Codec.Codable {
+    public static final class StoreConfig implements Codable {
 
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         Integer memSample;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         Integer maxCacheSize;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         Integer maxPageSize;
-        @Codec.Set(codable = true)
-        Long maxCacheMem;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
+        Long    maxCacheMem;
+        @FieldConfig(codable = true)
         Integer maxPageMem;
     }
 
@@ -424,18 +426,25 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
         if (trashInterval != null) TreeCommonParameters.setDefaultTrashInterval(trashInterval);
         if (trashTimeLimit != null) TreeCommonParameters.setDefaultTrashTimeLimit(trashTimeLimit);
         if (storage != null) {
-            if (storage.maxCacheSize != null) TreeCommonParameters.setDefaultMaxCacheSize(storage.maxCacheSize);
-            if (storage.maxCacheMem != null) TreeCommonParameters.setDefaultMaxCacheMem(storage.maxCacheMem);
-            if (storage.maxPageSize != null) TreeCommonParameters.setDefaultMaxPageSize(storage.maxCacheSize);
-            if (storage.maxPageMem != null) TreeCommonParameters.setDefaultMaxPageMem(storage.maxPageMem);
-            if (storage.memSample != null) TreeCommonParameters.setDefaultMemSample(storage.memSample);
+            if (storage.maxCacheSize != null)
+                TreeCommonParameters.setDefaultMaxCacheSize(storage.maxCacheSize);
+            if (storage.maxCacheMem != null)
+                TreeCommonParameters.setDefaultMaxCacheMem(storage.maxCacheMem);
+            if (storage.maxPageSize != null)
+                TreeCommonParameters.setDefaultMaxPageSize(storage.maxCacheSize);
+            if (storage.maxPageMem != null)
+                TreeCommonParameters.setDefaultMaxPageMem(storage.maxPageMem);
+            if (storage.memSample != null)
+                TreeCommonParameters.setDefaultMemSample(storage.memSample);
         }
 
         if (Strings.isEmpty(localhost)) {
             localhost = InetAddress.getLocalHost().getHostAddress();
         }
-        log.info("[init] java=" + System.getProperty("java.vm.version") + " query=" + enableQuery + " http=" + enableHttp + " jmx=" + enableJmx + " live=" + live);
-        log.info("[init] host=" + localhost + " port=" + port + " target=" + root + " job=" + config.jobId);
+        log.info("[init] java=" + System.getProperty("java.vm.version") + " query=" + enableQuery +
+                 " http=" + enableHttp + " jmx=" + enableJmx + " live=" + live);
+        log.info("[init] host=" + localhost + " port=" + port + " target=" + root + " job=" +
+                 config.jobId);
 
         Path treePath = Paths.get(runConfig.dir, "data");
         tree = new ConcurrentTree(Files.initDirectory(treePath.toFile()));

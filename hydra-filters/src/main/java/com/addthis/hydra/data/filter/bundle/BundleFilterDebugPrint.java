@@ -13,6 +13,9 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.basis.util.JitterClock;
@@ -20,7 +23,11 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundlePrinter;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.config.ConfigCodable;
+
+import com.typesafe.config.ConfigObject;
+import com.typesafe.config.ConfigValueFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,33 +50,33 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name debug
  */
-public class BundleFilterDebugPrint extends BundleFilter {
+public class BundleFilterDebugPrint extends BundleFilter implements ConfigCodable {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilterDebugPrint.class);
 
     /**
      * A string prefix to pre-append to the debugging information. Default is "".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String prefix = "";
 
     /**
      * If true then this filter returns false. Default is false (ie. the filter returns true).
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean fail = false;
 
     /**
      * Maximum number of bundles to print. Default is 100.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long maxBundles = 100;
 
     /**
      * Optionally specify to print a bundle every N seconds if
      * parameter is a positive integer. Default is 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long every = 0;
 
     private final AtomicLong bundleCounter = new AtomicLong();
@@ -132,5 +139,18 @@ public class BundleFilterDebugPrint extends BundleFilter {
         }
 
         return !fail;
+    }
+
+    @Nullable @Override public ConfigObject fromConfigObject(@Nonnull ConfigObject config,
+                                                             @Nonnull ConfigObject defaults) {
+        if (config.containsKey("prefix")) {
+            String currentPrefix = (String) config.get("prefix").unwrapped();
+            // due to the way typesafe-config decides to merge origins, less helpful than id like
+            if ("line".equals(currentPrefix)) {
+                return config.withValue("prefix", ConfigValueFactory.fromAnyRef(
+                        config.origin().description()));
+            }
+        }
+        return config;
     }
 }

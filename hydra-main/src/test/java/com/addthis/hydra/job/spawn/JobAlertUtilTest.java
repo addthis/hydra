@@ -13,12 +13,11 @@
  */
 package com.addthis.hydra.job.spawn;
 
-import static org.junit.Assert.*;
-
 import com.addthis.hydra.data.util.DateUtil;
 
-import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 public class JobAlertUtilTest {
 

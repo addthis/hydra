@@ -18,16 +18,16 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 public class CommandTaskUpdateReplicas extends AbstractJobMessage {
 
     private static final long serialVersionUID = -293871238710982L;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final Set<String> failedHosts;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final List<ReplicaTarget> newReplicaHosts;
 
     public CommandTaskUpdateReplicas(String hostUuid, String job, Integer node, Set<String> failedHosts, List<ReplicaTarget> newReplicaHosts) {

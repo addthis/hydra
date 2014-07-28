@@ -28,15 +28,13 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Gauge;
 
 import org.slf4j.Logger;
-
-
 import org.slf4j.LoggerFactory;
 /**
  * <p>Specifies configuration parameters for writing output to files.
@@ -68,24 +66,24 @@ public class OutputWriter extends AbstractOutputWriter {
      * Configuration flags for writing to files.
      * This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private OutputStreamFlags flags;
 
     /**
      * Options for file layout within the file system.
      * This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private OutputWrapperFactory factory;
 
     /**
      * Maximum number of files that can be open
      * at any time. Default is 320.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int maxOpen = 320;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String outputList;
 
     private File modifiedFileTracker;

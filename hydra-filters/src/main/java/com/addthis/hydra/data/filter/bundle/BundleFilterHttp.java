@@ -28,12 +28,13 @@ import com.addthis.basis.util.Files;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.common.hash.MD5HashFunction;
 import com.addthis.hydra.data.filter.value.ValueFilterHttpGet;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">does something with http</span>.
@@ -55,53 +56,53 @@ public class BundleFilterHttp extends BundleFilter {
         return bfh;
     }
 
-    private static final Logger log = LoggerFactory.getLogger(BundleFilterHttp.class);
-    private static final Codec codec = new CodecJSON();
+    private static final Logger log   = LoggerFactory.getLogger(BundleFilterHttp.class);
+    private static final Codec  codec = CodecJSON.INSTANCE;
 
-    @Codec.Set(codable = true)
-    private CacheConfig cache;
-    @Codec.Set(codable = true)
-    private HttpConfig http;
-    @Codec.Set(codable = true)
-    private String defaultValue;
-    @Codec.Set(codable = true)
-    private boolean trace;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
+    private CacheConfig          cache;
+    @FieldConfig(codable = true)
+    private HttpConfig           http;
+    @FieldConfig(codable = true)
+    private String               defaultValue;
+    @FieldConfig(codable = true)
+    private boolean              trace;
+    @FieldConfig(codable = true)
     private BundleFilterTemplate url;
-    @Codec.Set(codable = true)
-    private String set;
+    @FieldConfig(codable = true)
+    private String               set;
 
-    private File persistTo;
-    private String fields[];
+    private File                        persistTo;
+    private String[]                      fields;
     private HotMap<String, CacheObject> ocache;
 
     public static class CacheConfig {
 
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int size = 1000;
-        @Codec.Set(codable = true)
-        private long age;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
+        private long   age;
+        @FieldConfig(codable = true)
         private String dir;
     }
 
     public static class HttpConfig {
 
-        @Codec.Set(codable = true)
-        private int timeout = 60000;
-        @Codec.Set(codable = true)
-        private int retries = 1;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
+        private int  timeout      = 60000;
+        @FieldConfig(codable = true)
+        private int  retries      = 1;
+        @FieldConfig(codable = true)
         private long retryTimeout = 1000;
     }
 
-    public static class CacheObject implements Codec.Codable, Comparable<CacheObject> {
+    public static class CacheObject implements Codable, Comparable<CacheObject> {
 
-        @Codec.Set(codable = true)
-        private long time;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
+        private long   time;
+        @FieldConfig(codable = true)
         private String key;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String data;
 
         private String hash;
@@ -140,7 +141,7 @@ public class BundleFilterHttp extends BundleFilter {
                 }
             }
             // sort so that hot map has the most recent inserted last
-            CacheObject sort[] = new CacheObject[list.size()];
+            CacheObject[] sort = new CacheObject[list.size()];
             list.toArray(sort);
             Arrays.sort(sort);
             for (CacheObject cached : sort) {
@@ -161,7 +162,7 @@ public class BundleFilterHttp extends BundleFilter {
         cached.time = System.currentTimeMillis();
         cached.key = key;
         cached.data = value;
-        cached.hash = MD5HashFunction.hash(key);
+        cached.hash = MD5HashFunction.hashAsString(key);
         ocache.put(cached.key, cached);
         CacheObject old;
         if (cache.dir != null) {
@@ -170,7 +171,7 @@ public class BundleFilterHttp extends BundleFilter {
                 if (log.isDebugEnabled()) {
                     log.debug("creating " + cached.hash + " for " + cached.key);
                 }
-            } catch (Exception ex)  {
+            } catch (Exception ex) {
                 log.warn("", ex);
             }
         }
@@ -187,8 +188,8 @@ public class BundleFilterHttp extends BundleFilter {
     }
 
     public static byte[] httpGet(String url, Map<String, String> requestHeaders,
-            Map<String, String> responseHeaders,
-            int timeoutms, boolean traceError) throws IOException {
+                                 Map<String, String> responseHeaders,
+                                 int timeoutms, boolean traceError) throws IOException {
         return ValueFilterHttpGet.httpGet(url, requestHeaders, responseHeaders, timeoutms, traceError);
     }
 
@@ -203,7 +204,7 @@ public class BundleFilterHttp extends BundleFilter {
             int retries = http.retries;
             while (retries-- > 0) {
                 try {
-                    byte val[] = httpGet(urlValue, null, null, http.timeout, trace);
+                    byte[] val = httpGet(urlValue, null, null, http.timeout, trace);
                     if (val != null && val.length >= 0) {
                         cached = cachePut(urlValue, Bytes.toString(val));
                         break;

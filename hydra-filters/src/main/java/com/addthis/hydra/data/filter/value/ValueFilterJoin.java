@@ -19,7 +19,7 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">joins an array or a map to a string</span>.
@@ -47,31 +47,32 @@ public class ValueFilterJoin extends ValueFilter {
     /**
      * The deliminator between elements in the output string. Default is "," .
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String join = ",";
 
     /**
      * If the input is a map, then the deliminator between keys and values. Default is "=" .
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String keyJoin = "=";
 
     /**
-     * If the input is an array or a map, then optional filter to apply onto values. Default is null.
+     * If the input is an array or a map, then optional filter to apply onto values. Default is
+     * null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter filter;
 
     /**
      * If the input is a map, then optional filter to apply onto keys. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter keyFilter;
 
     /**
      * If the input is a map or array, then sort the keys before joining. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean sort;
 
     public ValueFilterJoin setJoin(String join) {
@@ -105,7 +106,9 @@ public class ValueFilterJoin extends ValueFilter {
     }
 
     private String filterKey(String value) {
-        return keyFilter != null ? ValueUtil.asNativeString(keyFilter.filter(ValueFactory.create(value))) : value;
+        return keyFilter != null ?
+               ValueUtil.asNativeString(keyFilter.filter(ValueFactory.create(value))) :
+               value;
     }
 
     @Override
@@ -130,12 +133,12 @@ public class ValueFilterJoin extends ValueFilter {
         } else if (value.getObjectType() == ValueObject.TYPE.MAP) {
             int count = 0;
             StringBuffer sb = new StringBuffer();
-            ValueMap map = value.asMap();
+            ValueMap<?> map = value.asMap();
             if (sort) {
                 // ValueMap is a wrapper around HashMap; it is unordered
                 throw new RuntimeException("Unsupported operation: cannot sort map input");
             }
-            for (ValueMapEntry e : map) {
+            for (ValueMapEntry<?> e : map) {
                 if (count++ > 0) {
                     sb.append(join);
                 }

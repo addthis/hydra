@@ -63,9 +63,9 @@ public class MeshQueryMasterTest {
     @Test
     public void testFilterFileReferenceMap_happyPath() throws Exception {
 
-        Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap = new HashMap<Integer, Set<FileReferenceWrapper>>();
+        Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap = new HashMap<>();
         for (int i = 0; i < 5; i++) {
-            Set<FileReferenceWrapper> fileReferenceWrappers = new HashSet<FileReferenceWrapper>();
+            Set<FileReferenceWrapper> fileReferenceWrappers = new HashSet<>();
             for (int j = 0; j < 3; j++) {
                 fileReferenceWrappers.add(new FileReferenceWrapper(new FileReference("test" + i + ":" + j, 5000, 5000), i));
             }
@@ -82,9 +82,9 @@ public class MeshQueryMasterTest {
 
     @Test
     public void testFilterFileReferenceMap_oneOldFile() throws Exception {
-        Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap = new HashMap<Integer, Set<FileReferenceWrapper>>();
+        Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap = new HashMap<>();
         for (int i = 0; i < 5; i++) {
-            Set<FileReferenceWrapper> fileReferenceWrappers = new HashSet<FileReferenceWrapper>();
+            Set<FileReferenceWrapper> fileReferenceWrappers = new HashSet<>();
             for (int j = 0; j < 3; j++) {
                 if (i == 1 && j == 1) {
                     fileReferenceWrappers.add(new FileReferenceWrapper(new FileReference("test" + i + ":" + j, 1000, 5000), i));
@@ -148,9 +148,9 @@ public class MeshQueryMasterTest {
 
     @Test
     public void testFilterFileReferenceMap_oneOldAndSmallFile() throws Exception {
-        Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap = new HashMap<Integer, Set<FileReferenceWrapper>>();
+        Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap = new HashMap<>();
         for (int i = 0; i < 5; i++) {
-            Set<FileReferenceWrapper> fileReferenceWrappers = new HashSet<FileReferenceWrapper>();
+            Set<FileReferenceWrapper> fileReferenceWrappers = new HashSet<>();
             for (int j = 0; j < 3; j++) {
                 if (i == 1 && j == 1) {
                     fileReferenceWrappers.add(new FileReferenceWrapper(new FileReference("test" + i + ":" + j, 1000, 1000), i));

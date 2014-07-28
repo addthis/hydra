@@ -21,8 +21,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.Parameter;
@@ -49,7 +49,7 @@ public class HostFailWorker {
     private static final Logger log = LoggerFactory.getLogger(HostFailWorker.class);
     private final HostFailState hostFailState;
     private AtomicBoolean newAdditions = new AtomicBoolean(false); // True if a host has been recently added to the queue
-    private AtomicBoolean obeyTaskSlots = new AtomicBoolean(false); // Whether spawn should honor the max task slots when moving tasks to fail hosts
+    private AtomicBoolean obeyTaskSlots = new AtomicBoolean(true); // Whether spawn should honor the max task slots when moving tasks to fail hosts
     private final Spawn spawn;
 
     // Perform host-failure related operations at a given interval
@@ -62,8 +62,6 @@ public class HostFailWorker {
     // Use a smaller max when a disk is being failed, to avoid a 'thundering herds' scenario
     private static final int maxMovingTasksDiskFull = Parameter.intValue("host.fail.maxMovingTasksDiskFull", 2);
 
-    private final Timer failTimer = new Timer(true);
-
     private static final String dataStoragePath = "/spawn/hostfailworker";
     private static final Counter failHostCount = Metrics.newCounter(Spawn.class, "failHostCount");
 
@@ -74,21 +72,20 @@ public class HostFailWorker {
     private static final String infoPrefailCapacityKey = "prefail";
     private static final String infoPostfailCapacityKey = "postfail";
     private static final String infoFatalWarningKey = "fatal";
+    private final ScheduledExecutorService executorService;
 
-    public HostFailWorker(Spawn spawn) {
+    public HostFailWorker(Spawn spawn, ScheduledExecutorService executorService) {
         hostFailState = new HostFailState();
         this.spawn = spawn;
         boolean loaded = hostFailState.loadState();
-        if (loaded) {
+        this.executorService = executorService;
+        if (loaded && executorService != null) {
             queueFailNextHost();
         }
-        failTimer.scheduleAtFixedRate(new FailHostTask(true), hostFailDelayMillis, hostFailDelayMillis);
+        if (executorService != null) {
+            executorService.scheduleWithFixedDelay(new FailHostTask(true), hostFailDelayMillis, hostFailDelayMillis, TimeUnit.MILLISECONDS);
+        }
     }
-
-    public void stop() {
-        failTimer.cancel();
-    }
-
 
     /**
      * Mark a series of hosts for failure
@@ -216,7 +213,7 @@ public class HostFailWorker {
      */
     private void queueFailNextHost() {
         if (newAdditions.compareAndSet(false, true)) {
-            failTimer.schedule(new FailHostTask(false), hostFailQuietPeriod);
+            executorService.schedule(new FailHostTask(false), hostFailQuietPeriod, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -330,7 +327,7 @@ public class HostFailWorker {
     /**
      * A simple wrapper around failNextHost that is run by the failExecutor.
      */
-    private class FailHostTask extends TimerTask {
+    private class FailHostTask implements Runnable {
 
         private final boolean skipIfNewAdditions;
 
@@ -493,10 +490,10 @@ public class HostFailWorker {
             }
             synchronized (hostsToFailByType) {
                 try {
-                    JSONObject decoded = new JSONObject(spawn.getSpawnDataStore().get(dataStoragePath));
-                    loadHostsFromJSONArray(failFsOkay, decoded.getJSONArray(filesystemOkayKey));
-                    loadHostsFromJSONArray(failFsDead, decoded.getJSONArray(filesystemDeadKey));
-                    loadHostsFromJSONArray(fsFull, decoded.getJSONArray(filesystemFullKey));
+                    JSONObject decoded = new JSONObject(raw);
+                    loadHostsFromJSONArray(failFsOkay, decoded.optJSONArray(filesystemOkayKey));
+                    loadHostsFromJSONArray(failFsDead, decoded.optJSONArray(filesystemDeadKey));
+                    loadHostsFromJSONArray(fsFull, decoded.optJSONArray(filesystemFullKey));
                     return true;
                 } catch (Exception e) {
                     log.warn("Failed to load HostFailState: " + e + " raw=" + raw, e);

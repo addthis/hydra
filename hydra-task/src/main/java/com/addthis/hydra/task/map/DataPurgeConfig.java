@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.task.map;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * @user-reference
@@ -23,22 +23,21 @@ public class DataPurgeConfig {
     /**
      * Base directory to search for data to purge. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
-
+    @FieldConfig(codable = true, required = true, autocollection = true)
     private String[] directoryPrefix;
 
     /**
      * The <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html">DateTimeFormat</a>
      * for the date substring. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String datePathFormat;
 
     /**
      * Maximum age in days of data to retain. Anything
      * older than this value will be purged. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private int maxAgeInDays;
 
     /**
@@ -46,13 +45,13 @@ public class DataPurgeConfig {
      * maximum age in hours of data to retain. Anything
      * older than this value will be purged.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int maxAgeInHours = -1;
 
     /**
      * If true then purge should be done by file rather than by directory. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean fileBasedPurge = false;
 
     /**
@@ -60,7 +59,7 @@ public class DataPurgeConfig {
      * to look for the date string in the file. If performing
      * a file-based purge then this field is required.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int dateStartIndex = -1;
 
     /**
@@ -68,13 +67,13 @@ public class DataPurgeConfig {
      * of the substring to look for the date string in the file.
      * If performing a file-based purge then this field is required.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int dateStringLength = -1;
 
     /**
      * If true then delete empty directories. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean cleanEmptyParents = false;
 
     public DataPurgeConfig() {

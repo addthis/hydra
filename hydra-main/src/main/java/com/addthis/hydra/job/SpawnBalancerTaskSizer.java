@@ -15,8 +15,7 @@ package com.addthis.hydra.job;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -29,7 +28,6 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * A class in charge of estimating the full size of job tasks, since JobTask.getByteCount does not include backups.
@@ -57,10 +55,9 @@ public class SpawnBalancerTaskSizer {
         this.spawn = spawn;
     }
 
-    public void startPolling() {
+    public void startPolling(ScheduledExecutorService executor) {
         if (pollingStarted.compareAndSet(false, true)) {
-            Timer timer = new Timer(true);
-            timer.scheduleAtFixedRate(new QueueConsumer(), queueConsumptionInterval, queueConsumptionInterval);
+            executor.scheduleWithFixedDelay(new QueueConsumer(), queueConsumptionInterval, queueConsumptionInterval, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -171,7 +168,7 @@ public class SpawnBalancerTaskSizer {
     /**
      * A runnable that will consume from the queue of jobs that SpawnBalancer wants to size up
      */
-    private class QueueConsumer extends TimerTask {
+    private class QueueConsumer implements Runnable {
 
         @Override
         public void run() {

@@ -25,7 +25,7 @@ import java.nio.CharBuffer;
 
 import com.addthis.basis.kv.KVPairs;
 
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.JobTask;

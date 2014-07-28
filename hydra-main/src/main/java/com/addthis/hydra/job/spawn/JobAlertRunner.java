@@ -14,29 +14,32 @@
 package com.addthis.hydra.job.spawn;
 
 import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 
-import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.CodecJSON;
-import com.addthis.hydra.job.*;
+import com.addthis.codec.json.CodecJSON;
+import com.addthis.hydra.job.Job;
+import com.addthis.hydra.job.JobTask;
+import com.addthis.hydra.job.JobTaskState;
+import com.addthis.hydra.job.Spawn;
+import com.addthis.hydra.job.SpawnMesh;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.util.EmailUtil;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
-
 import com.addthis.meshy.MeshyClient;
 
 import com.google.common.collect.ImmutableMap;
@@ -70,12 +73,12 @@ public class JobAlertRunner {
 
     private final ConcurrentHashMap<String, JobAlert> alertMap;
 
-    private static final CodecJSON codec = new CodecJSON();
+    private static final CodecJSON codec = CodecJSON.INSTANCE;
 
     private boolean alertsEnabled;
 
 
-    public JobAlertRunner(Spawn spawn) {
+    public JobAlertRunner(Spawn spawn, ScheduledExecutorService scheduledExecutorService) {
         this.spawn = spawn;
         this.spawnDataStore = spawn.getSpawnDataStore();
         try {
@@ -84,14 +87,15 @@ public class JobAlertRunner {
             log.warn("Warning: failed to instantiate job alert mesh client", e);
             meshyClient = null;
         }
-        Timer alertTimer = new Timer("JobAlertTimer");
         this.alertsEnabled = spawn.areAlertsEnabled();
-        alertTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                scanAlerts();
-            }
-        }, ALERT_DELAY_MILLIS, ALERT_REPEAT_MILLIS);
+        if (scheduledExecutorService != null) {
+            scheduledExecutorService.scheduleWithFixedDelay(new Runnable() {
+                @Override
+                public void run() {
+                    scanAlerts();
+                }
+            }, ALERT_DELAY_MILLIS, ALERT_REPEAT_MILLIS, TimeUnit.MILLISECONDS);
+        }
         this.alertMap = new ConcurrentHashMap<>();
         loadAlertMap();
     }

@@ -34,7 +34,6 @@ import com.addthis.hydra.task.output.OutputWriter;
 
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class SpawnFormattedLogger {
 

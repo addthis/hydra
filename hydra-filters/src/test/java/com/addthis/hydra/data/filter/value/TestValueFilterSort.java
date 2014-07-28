@@ -28,6 +28,6 @@ public class TestValueFilterSort {
     public void sortTest() {
         ValueArray array = ValueFactory.createValueArray(Arrays.asList("aa", "bb", "ab", "ba"));
         ValueFilterSort sort = new ValueFilterSort();
-        assertEquals("should sort array correctly", "aa,ab,ba,bb", sort.filterValue(array).toString());
+        assertEquals("should sort array correctly", "[aa, ab, ba, bb]", sort.filterValue(array).toString());
     }
 }

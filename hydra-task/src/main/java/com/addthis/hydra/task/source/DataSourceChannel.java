@@ -16,15 +16,13 @@ package com.addthis.hydra.task.source;
 import java.io.EOFException;
 import java.io.IOException;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFactory;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.io.DataChannelReader;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 /**
@@ -38,15 +36,14 @@ public class DataSourceChannel extends TaskDataSource implements BundleFactory {
     /**
      * This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     protected FactoryInputStream input;
 
     private final ListBundleFormat format = new ListBundleFormat();
     private DataChannelReader reader;
     private Bundle peek;
 
-    @Override
-    protected void open(TaskRunConfig config, AtomicBoolean errored) {
+    @Override public void init(TaskRunConfig config) {
         try {
             reader = new DataChannelReader(this, input.createInputStream(config));
         } catch (IOException e) {

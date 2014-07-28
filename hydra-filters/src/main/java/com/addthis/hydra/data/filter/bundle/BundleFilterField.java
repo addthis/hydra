@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.bundle;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 /**
@@ -62,51 +62,54 @@ public class BundleFilterField extends BundleFilter {
     /**
      * The input to the value filter. If the to field is null, then store the output in this field.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String from;
 
     /**
      * The destination field for the output of the value filter. Optional field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String to;
 
     /**
      * The filter to perform. Optional field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter filter;
 
     /**
-     * If true then do not assign the value filter when the output is null and return the value of the {@link #not not} field. Default is true.
+     * If true then do not assign the value filter when the output is null and return the value
+     * of the {@link #not not} field. Default is true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean nullFail = true;
 
     /**
-     * The value to return when nullFail is true and the value filter output is null. Default is false.
+     * The value to return when nullFail is true and the value filter output is null. Default is
+     * false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean not;
 
-    private String fields[];
+    @Override public void initialize() { }
 
     @Override
-    public void initialize() {
-        fields = new String[]{from, to};
-    }
-
-    @Override
-    public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
-        ValueObject val = bundle.getValue(bound[0]);
+    public boolean filterExec(Bundle row) {
+        BundleField fromField = row.getFormat().getField(from);
+        BundleField toField;
+        if (to != null) {
+            toField = row.getFormat().getField(to);
+        } else {
+            toField = fromField;
+        }
+        ValueObject<?> val = row.getValue(fromField);
         if (filter != null) {
             val = filter.filter(val);
         }
-        if (nullFail && val == null) {
+        if (nullFail && (val == null)) {
             return not;
         }
-        bundle.setValue(to == null ? bound[0] : bound[1], val);
+        row.setValue(toField, val);
         return !not;
     }
 }

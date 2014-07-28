@@ -35,7 +35,7 @@ import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.bark.StringSerializer;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.Spawn.ClientEvent;
 import com.addthis.hydra.job.Spawn.ClientEventListener;
 import com.addthis.hydra.job.Spawn.Settings;
@@ -53,6 +53,7 @@ import com.google.common.collect.Lists;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 public class SpawnManager {
 
     private static Logger log = LoggerFactory.getLogger(SpawnManager.class);
@@ -127,7 +128,7 @@ public class SpawnManager {
                 String jobarg = kv.getValue("jobs");
                 boolean enable = kv.getValue("enable", "1").equals("1");
                 if (jobarg != null) {
-                    String joblist[] = Strings.splitArray(jobarg, ",");
+                    String[] joblist = Strings.splitArray(jobarg, ",");
                     emitLogLineForAction(kv, (enable ? "enable" : "disable") + " jobs " + jobarg);
                     for (String jobid : joblist) {
                         IJob job = spawn.getJob(jobid);
@@ -183,8 +184,8 @@ public class SpawnManager {
                     ret.put("commands", commandlist);
                     ret.put("jobs", joblist);
                     ret.put("hosts", hostlist);
-                    int numQueued = spawn.getTaskQueuedCount();
-                    ret.put("spawnqueuesize", numQueued);
+                    ret.put("defaultReplicaCount", spawn.getSettings().getDefaultReplicaCount());
+                    ret.put("spawnqueuesize", spawn.getTaskQueuedCount());
                 }
                 link.sendJSON(200, "OK", ret);
             }
@@ -198,7 +199,7 @@ public class SpawnManager {
                 String type = kv.getValue("type", "x-www-form-urlencoded");
                 String post = kv.getValue("post", "");
                 int timeout = kv.getIntValue("timeout", 10000);
-                byte res[] = null;
+                byte[] res = null;
                 HttpResponse response = HttpUtil.execute(HttpUtil.makePost(url, type, Bytes.toBytes(post)), timeout);
                 if (response.getStatus() == 200) {
                     res = response.getBody();
@@ -280,7 +281,7 @@ public class SpawnManager {
                 String owner = kv.getValue("owner", "unknown").trim();
                 require(label != null, "missing label");
                 require(command.length() > 0, "missing command");
-                String cmdtok[] = Strings.splitArray(command, ",");
+                String[] cmdtok = Strings.splitArray(command, ",");
                 for (int i = 0; i < cmdtok.length; i++) {
                     cmdtok[i] = Bytes.urldecode(cmdtok[i]);
                 }
@@ -583,25 +584,6 @@ public class SpawnManager {
                 link.sendJSON(200, "OK", a);
             }
         });
-        /**
-         * url called via ajax by client to receive a list of jobs that depend on a given job
-         */
-        server.mapService("/jobDependencies.list", new HTTPService() {
-            @Override
-            public void httpService(HTTPLink link) throws Exception {
-                KVPairs kv = link.getRequestValues();
-                IJob job = spawn.getJob(kv.getValue("id", ""));
-                if (job != null) {
-                    FlowGraph g = new FlowGraph();
-                    spawn.buildDependencyFlowGraph(g, job.getId());
-                    FlowGraph.DisplayFlowNode root = g.build(job.getId());
-                    JSONObject json = root.toJSON();
-                    link.sendJSON(200, "OK", json);
-                } else {
-                    link.sendJSON(200, "OK", json("flow_id",kv.getValue("id", "")).put("dependencies",json()));
-                }
-            }
-        });
         server.mapService("/job.get", new HTTPService() {
             @Override
             public void httpService(HTTPLink link) throws Exception {
@@ -647,7 +629,7 @@ public class SpawnManager {
                 int node = kv.getIntValue("node", -1);
                 IJob job = spawn.getJob(id);
                 if (job != null) {
-                    link.sendShortReply(200, "OK", spawn.fixTaskDir(id, node, false, false));
+                    link.sendShortReply(200, "OK", spawn.fixTaskDir(id, node, false, false).toString());
                 } else {
                     link.sendJSON(200, "Error", json("error","invalid job id"));
                 }
@@ -950,7 +932,7 @@ public class SpawnManager {
                 KVPairs kv = link.getRequestValues();
                 try {
                     InputStream in = spawn.getMeshyClient().readFile(kv.getValue("uuid", "-"), kv.getValue("path", "-"));
-                    byte data[] = Bytes.readFully(in);
+                    byte[] data = Bytes.readFully(in);
                     String value = Bytes.toString(data);
                     link.sendShortReply(200, "OK", value.length() > 0 ? value : "");
                 } catch (Exception e) {
@@ -1054,7 +1036,20 @@ public class SpawnManager {
                 }
             }
         });
+        server.mapService("/jobs.saveall", new HTTPService() {
+            @Override
+            public void httpService(HTTPLink link) throws Exception {
+                try {
+                    // Primarily for use in emergencies where updates have not been sent to the data store for a while
+                    spawn.saveAllJobs();
+                    link.sendJSON(200, "OK", json("success", "job save operation complete"));
 
+                } catch (Exception ex) {
+                    link.sendJSON(500, "Server Error", json("error", ex.toString()));
+                    log.trace("Save all jobs exception", ex);
+                }
+            }
+        });
     }
 
     /**

@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.task.output.tree;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.TreeNodeList;
 
 
@@ -29,7 +29,7 @@ public class PathDebug extends PathOp {
     /**
      * Optional prefix to the debugging output. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String debug;
 
     @Override

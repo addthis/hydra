@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.filter.value;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">applies left or right string padding</span>.
@@ -39,13 +39,13 @@ public class ValueFilterPad extends StringFilter {
     /**
      * Apply left padding using this string.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String left;
 
     /**
      * Apply right padding using this string.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String right;
 
     @Override

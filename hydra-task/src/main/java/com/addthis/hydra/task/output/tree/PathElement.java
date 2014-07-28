@@ -17,17 +17,17 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.ClassMap;
-import com.addthis.codec.Codec.ClassMapFactory;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.Pluggable;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeDataParent;
 import com.addthis.hydra.data.tree.TreeNodeList;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
+
 /*
  * TODO clean up preCheck in element, event*
  * TODO add alias nodes/map that use 'hard' links across the tree for cross-indexes (doesn't PathAlias do this?)
@@ -42,63 +42,22 @@ import org.slf4j.LoggerFactory;
  * @hydra-category
  * @exclude-fields name, count, op, term, feature, featureOff, data, filter, profileCalls, profileTime, disabled
  */
-@Codec.Set(classMapFactory = PathElement.CMAP.class)
-public abstract class PathElement implements Codec.Codable, TreeDataParent {
+@Pluggable("path element")
+public abstract class PathElement implements Codable, TreeDataParent {
 
     protected static final Logger log = LoggerFactory.getLogger(PathElement.class);
     protected static final boolean debug = System.getProperty("hydra.path.debug", "0").equals("1");
     protected static final boolean defCountHit = System.getProperty("hydra.default.counthit", "1").equals("1");
 
-    private static ClassMap cmap = new ClassMap() {
-        @Override
-        public String getClassField() {
-            return "type";
-        }
 
-        @Override
-        public String getCategory() {
-            return "path element";
-        }
-    };
-
-    /**
-     * handles serialization maps
-     */
-    public static class CMAP implements ClassMapFactory {
-
-        public ClassMap getClassMap() {
-            return cmap;
-        }
-    }
-
-    public static HashSet<String> featureSet = new HashSet<String>();
-
-    public static void registerClass(String name, Class<? extends PathElement> clazz) {
-        cmap.add(name, clazz);
-    }
-
-    /** setup default serialization types */
-    static {
-        registerClass("alias", PathAlias.class);
-        registerClass("branch", PathBranch.class);
-        registerClass("call", PathCall.class);
-        registerClass("const", PathValue.class);
-        registerClass("debug", PathDebug.class);
-        registerClass("file", PathFile.class);
-        registerClass("keyop", PathKeyOp.class);
-        registerClass("op", PathOp.class);
-        registerClass("prune", PathPrune.class);
-        registerClass("output", PathOutput.class);
-        registerClass("query", PathQuery.class);
-        registerClass("value", PathKeyValue.class);
-    }
+    public static HashSet<String> featureSet = new HashSet<>();
 
     /**
      * If non-null then a parent node is inserted
      * into the path. The parent node is a "{@link PathValue const}" node
      * with a value that is equal to the value of this parameter.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected String name;
 
     /**
@@ -107,7 +66,7 @@ public abstract class PathElement implements Codec.Codable, TreeDataParent {
      * Default is "hydra.default.counthit" configuration value
      * (as either "1" or "0") or true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean count = defCountHit;
 
     /**
@@ -115,7 +74,7 @@ public abstract class PathElement implements Codec.Codable, TreeDataParent {
      * even when the current path element does not have
      * any more data to process. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean op;
 
     /**
@@ -123,7 +82,7 @@ public abstract class PathElement implements Codec.Codable, TreeDataParent {
      * elements in the enclosing sequence of path elements.
      * Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean term;
 
     /**
@@ -132,7 +91,7 @@ public abstract class PathElement implements Codec.Codable, TreeDataParent {
      * are not included in the {@link TreeMapper#features features}
      * of the tree then disable this path element.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected HashSet<String> feature;
 
     /**
@@ -141,7 +100,7 @@ public abstract class PathElement implements Codec.Codable, TreeDataParent {
      * are included in the {@link TreeMapper#features features}
      * of the tree then disable this path element.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected HashSet<String> featureOff;
 
     /**
@@ -150,7 +109,7 @@ public abstract class PathElement implements Codec.Codable, TreeDataParent {
      * to the structure of the data attachment.
      */
     @SuppressWarnings("unchecked")
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected HashMap<String, TreeDataParameters> data;
 
     /**
@@ -158,15 +117,15 @@ public abstract class PathElement implements Codec.Codable, TreeDataParent {
      * Only bundles that pass the filter will be processed.
      * Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected BundleFilter filter;
 
     private PathValue label;
-    @Codec.Set(codable = true, writeonly = true)
+    @FieldConfig(codable = true, writeonly = true)
     private AtomicLong profileCalls;
-    @Codec.Set(codable = true, writeonly = true)
+    @FieldConfig(codable = true, writeonly = true)
     private AtomicLong profileTime;
-    @Codec.Set(codable = true, writeonly = true)
+    @FieldConfig(codable = true, writeonly = true)
     private boolean disabled;
 
     public PathElement() {

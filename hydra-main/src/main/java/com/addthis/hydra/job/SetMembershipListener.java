@@ -13,7 +13,16 @@
  */
 package com.addthis.hydra.job;
 
+import java.io.IOException;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.locks.ReentrantLock;
+
 import com.google.common.collect.ImmutableSet;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
@@ -21,15 +30,9 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.KeeperException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class SetMembershipListener implements PathChildrenCacheListener {
 
@@ -41,8 +44,8 @@ public class SetMembershipListener implements PathChildrenCacheListener {
     private final ReentrantLock membershipLock = new ReentrantLock();
     private final CuratorFramework zkClient;
     private final PathChildrenCache cache;
-    private final List<SetMembershipAdditionListener> setMembershipAdditionListeners = new CopyOnWriteArrayList<SetMembershipAdditionListener>();
-    private final List<SetMembershipRemovalListener> setMembershipRemovedListeners = new CopyOnWriteArrayList<SetMembershipRemovalListener>();
+    private final List<SetMembershipAdditionListener> setMembershipAdditionListeners = new CopyOnWriteArrayList<>();
+    private final List<SetMembershipRemovalListener> setMembershipRemovedListeners = new CopyOnWriteArrayList<>();
 
 
     public SetMembershipListener(CuratorFramework zkClient, String path) {

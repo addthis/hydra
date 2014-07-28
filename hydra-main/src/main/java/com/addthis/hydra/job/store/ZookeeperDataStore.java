@@ -20,7 +20,7 @@ import java.util.Map;
 import com.addthis.bark.StringSerializer;
 import com.addthis.bark.ZkUtil;
 import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ZookeeperDataStore implements SpawnDataStore {
 
-    private final Codec codec = new CodecJSON();
+    private final Codec codec = CodecJSON.INSTANCE;
     private static final Logger log = LoggerFactory.getLogger(ZookeeperDataStore.class);
     private static final String description = "zookeeper";
 
@@ -65,7 +65,7 @@ public class ZookeeperDataStore implements SpawnDataStore {
 
     @Override
     public Map<String, String> get(String[] paths) {
-        Map<String, String> rv = new HashMap<String, String>();
+        Map<String, String> rv = new HashMap<>();
         for (String path : paths) {
             String val = get(path);
             if (val != null) {

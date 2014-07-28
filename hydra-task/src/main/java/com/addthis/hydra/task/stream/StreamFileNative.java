@@ -20,7 +20,8 @@ import java.io.InputStream;
 
 import com.addthis.basis.io.IOWrap;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 import com.ning.compress.lzf.util.LZFFileInputStream;
 
@@ -32,13 +33,13 @@ import lzma.sdk.lzma.Decoder;
 import lzma.streams.LzmaInputStream;
 
 
-public class StreamFileNative implements StreamFile, Codec.Codable {
+public class StreamFileNative implements StreamFile, Codable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String name;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long length;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long lastModified;
 
     private File file;

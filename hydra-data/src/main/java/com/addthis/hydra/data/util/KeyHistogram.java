@@ -18,7 +18,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 
 
 /**
@@ -28,15 +29,15 @@ import com.addthis.codec.Codec;
  * <p/>
  * TODO store # of things in each bucket as well as total of key values in each bucket
  */
-public class KeyHistogram implements Codec.SuperCodable {
+public class KeyHistogram implements SuperCodable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private HashMap<Long, Long> map;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int scale = 10;
 
     public KeyHistogram init() {
-        map = new HashMap<Long, Long>();
+        map = new HashMap<>();
         return this;
     }
 
@@ -53,7 +54,7 @@ public class KeyHistogram implements Codec.SuperCodable {
     }
 
     public Map<Long, Long> getSortedHistogram() {
-        TreeMap<Long, Long> sort = new TreeMap<Long, Long>();
+        TreeMap<Long, Long> sort = new TreeMap<>();
         for (Entry<Long, Long> e : map.entrySet()) {
             sort.put(e.getKey(), e.getValue());
         }

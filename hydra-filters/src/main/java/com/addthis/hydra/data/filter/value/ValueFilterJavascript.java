@@ -17,15 +17,16 @@ import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 
 /**
  * Value filter based on the JSR 223 scripting interface, and the default
  * implementation based on Rhino, shipped with the 1.6 JDK.
  */
-public class ValueFilterJavascript extends StringFilter implements Codec.SuperCodable {
+public class ValueFilterJavascript extends StringFilter implements SuperCodable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String source;
     private Filter filter;
 

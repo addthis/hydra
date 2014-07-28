@@ -33,8 +33,8 @@ import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.Set;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
@@ -48,17 +48,17 @@ import org.apache.avro.io.EncoderFactory;
  * @user-reference
  * @hydra-name avro
  */
-public class OutputStreamAvro extends OutputStreamFormatter implements Codec.SuperCodable {
+public class OutputStreamAvro extends OutputStreamFormatter implements SuperCodable {
 
-    @Set(codable = true)
+    @FieldConfig(codable = true)
     private HashSet<String> include;
-    @Set(codable = true)
+    @FieldConfig(codable = true)
     private HashSet<String> exclude;
-    @Set(codable = true, required = true)
-    private String schema;
+    @FieldConfig(codable = true, required = true)
+    private String          schema;
     // TODO: add support for specifying schema URL
 
-    private Schema outputSchema;
+    private Schema                     outputSchema;
     private DatumWriter<GenericRecord> datumWriter;
 
 
@@ -100,24 +100,24 @@ public class OutputStreamAvro extends OutputStreamFormatter implements Codec.Sup
                             val = list;
                             break;
                         case MAP:
-                            ValueMap map = value.asMap();
+                            ValueMap<?> map = value.asMap();
                             Map<String, String> avroMap = new HashMap<>();
-                            for (ValueMapEntry valueMapEntry : map) {
+                            for (ValueMapEntry<?> valueMapEntry : map) {
                                 avroMap.put(valueMapEntry.getKey(), valueMapEntry.getValue().toString());
                             }
                             val = avroMap;
                             break;
                         case STRING:
-                            val = value.asString().getString();
+                            val = value.asString().asNative();
                             break;
                         case INT:
-                            val = value.asNumber().asLong().getLong();
+                            val = value.asNumeric().asLong().getLong();
                             break;
                         case FLOAT:
                             val = value.asDouble().getDouble();
                             break;
                         case BYTES:
-                            val = value.asBytes().getBytes();
+                            val = value.asBytes().asNative();
                             break;
                     }
 

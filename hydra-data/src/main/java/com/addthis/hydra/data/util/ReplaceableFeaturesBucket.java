@@ -19,17 +19,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
-public class ReplaceableFeaturesBucket implements Codec.Codable {
+public class ReplaceableFeaturesBucket implements Codable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Map<String, Double> featuresMap;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long hits = 0;
 
     public ReplaceableFeaturesBucket() {
-        featuresMap = new HashMap<String, Double>();
+        featuresMap = new HashMap<>();
     }
 
     public void addFeature(String feature, double initialWeight) {
@@ -84,7 +85,7 @@ public class ReplaceableFeaturesBucket implements Codec.Codable {
         return sb.toString();
     }
 
-    public static void main(String args[]) {
+    public static void main(String[] args) {
         ReplaceableFeaturesBucket featuresBucket = new ReplaceableFeaturesBucket();
         featuresBucket.addFeature("foo");
         featuresBucket.addFeature("bar");

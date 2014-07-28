@@ -14,12 +14,12 @@
 
 package com.addthis.hydra.data.query.op.merge;
 
-import com.addthis.bundle.value.ValueNumber;
+import com.addthis.bundle.value.Numeric;
 
 public class SumValue extends AbstractMergedNumber {
 
     @Override
-    public ValueNumber doMerge(ValueNumber nextValue, ValueNumber value) {
+    public Numeric<?> doMerge(Numeric<?> nextValue, Numeric<?> value) {
         return value.sum(nextValue);
     }
 }

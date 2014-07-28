@@ -16,21 +16,21 @@ package com.addthis.hydra.data.filter.closeablebundle;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 
 public class CloseableBundleFilterSet extends CloseableBundleFilter {
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String value;
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String to;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private CloseableBundleFilter filter;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean not;
 
-    private String fields[];
+    private String[] fields;
 
     @Override
     public void initialize() {
@@ -50,7 +50,7 @@ public class CloseableBundleFilterSet extends CloseableBundleFilter {
     @Override
     public boolean filterExec(Bundle bundle) {
         boolean success = true;
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
 
         if (filter != null) {
             success = filter.filter(bundle);

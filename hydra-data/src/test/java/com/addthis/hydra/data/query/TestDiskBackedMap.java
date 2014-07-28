@@ -38,14 +38,14 @@ public class TestDiskBackedMap {
     private final DataChannelCodec.ClassIndexMap classMap = DataChannelCodec.createClassIndexMap();
     private final DataChannelCodec.FieldIndexMap fieldMap = DataChannelCodec.createFieldIndexMap();
 
-    private class MergedRow implements DiskBackedMap.DiskObject {
+    private static class MergedRow implements DiskBackedMap.DiskObject {
 
         MergedRow() {
             mergedRow = new ValueObject[5];
         }
 
-        ValueObject mergedRow[];
-        int merged;
+        ValueObject[] mergedRow;
+        int           merged;
 
         @Override
         public byte[] toBytes() {
@@ -71,7 +71,7 @@ public class TestDiskBackedMap {
         }
     }
 
-    private class MergedRowFactory implements DiskBackedMap.DiskObjectFactory {
+    private static class MergedRowFactory implements DiskBackedMap.DiskObjectFactory {
 
         @Override
         public DiskBackedMap.DiskObject fromBytes(byte[] bytes) {
@@ -80,7 +80,9 @@ public class TestDiskBackedMap {
             ListBundleFormat lbf = new ListBundleFormat();
             ListBundle listBundle = new ListBundle(lbf);
             try {
-                DataChannelCodec.decodeBundle(listBundle, ArrayUtils.subarray(bytes, Integer.SIZE / 8, bytes.length));
+                DataChannelCodec.decodeBundle(listBundle,
+                                              ArrayUtils.subarray(bytes, Integer.SIZE / 8,
+                                                                  bytes.length));
                 mergedRow.mergedRow = new ValueObject[5];
                 for (int i = 0; i != 5; i++) {
                     mergedRow.mergedRow[i] = listBundle.getValue(lbf.getField("" + i));
@@ -98,7 +100,7 @@ public class TestDiskBackedMap {
         // Create a diskbackedmap
         MergedRowFactory mergedRowFactory = new MergedRowFactory();
         Files.deleteDir(new File("/tmp/testDiskBackedMap"));
-        DiskBackedMap<MergedRow> diskBackedMap = new DiskBackedMap<MergedRow>("/tmp/testDiskBackedMap",
+        DiskBackedMap<MergedRow> diskBackedMap = new DiskBackedMap<>("/tmp/testDiskBackedMap",
                 mergedRowFactory, 16 * 1024 * 1024L);
 
         MergedRow row1 = new MergedRow();
@@ -114,9 +116,9 @@ public class TestDiskBackedMap {
 
         // Compare the values
         assertTrue(row1.mergedRow[0].asDouble().getDouble() == row2.mergedRow[0].asDouble().getDouble());
-        assertTrue(row1.mergedRow[1].asString().getString().equals(row2.mergedRow[1].asString().getString()));
+        assertTrue(row1.mergedRow[1].asString().asNative().equals(row2.mergedRow[1].asString().asNative()));
         assertTrue(row1.mergedRow[2].asLong().getLong() == row2.mergedRow[2].asLong().getLong());
-        byte[] row2bytes = row1.mergedRow[3].asBytes().getBytes();
+        byte[] row2bytes = row1.mergedRow[3].asBytes().asNative();
         assertTrue(row2bytes.length == 4);
         assertTrue(row2bytes[0] == 5);
         assertTrue(row2bytes[1] == 6);

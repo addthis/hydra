@@ -18,7 +18,7 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
@@ -59,14 +59,14 @@ public class DataBits extends TreeNodeData<DataBits.Config> {
          * Number of bits to track starting from the least significant.
          * This field is required.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int bits;
 
         /**
          * Radix to parse the value in. Use 10 for numbers,
          * 36 to include all letters. This field is required..
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int radix;
 
         /**
@@ -74,14 +74,14 @@ public class DataBits extends TreeNodeData<DataBits.Config> {
          * a mask of "1" would only count the least significant bit.
          * The default value of 0 is treated as special case in which no mask is applied.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private long mask;
 
         /**
          * Name of bundle field to select for bit counting.
          * This field is required..
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String key;
 
         @Override
@@ -92,8 +92,8 @@ public class DataBits extends TreeNodeData<DataBits.Config> {
         }
     }
 
-    @Codec.Set(codable = true)
-    private long bits[];
+    @FieldConfig(codable = true)
+    private long[] bits;
 
     private BundleField keyAccess;
 

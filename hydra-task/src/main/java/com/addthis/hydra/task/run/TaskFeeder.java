@@ -15,8 +15,6 @@ package com.addthis.hydra.task.run;
 
 import java.io.IOException;
 
-import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -45,6 +43,7 @@ import com.yammer.metrics.core.Meter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * reads TaskDataSource list defined in TreeMapJob (config) using a
  * defined set of processor threads that push bundles to TreeMapper.
@@ -56,8 +55,6 @@ public final class TaskFeeder extends Thread {
     private static final boolean exit = Parameter.boolValue("task.exit", true);
     private static final long maxRead = Parameter.longValue("task.read.max", 0);
     private static final long maxProcess = Parameter.longValue("task.proc.max", 0);
-    private static final long oomAfter = Parameter.longValue("task.oom.after", 0);
-    private static final int oomAlloc = Parameter.intValue("task.oom.alloc", 8192);
     private static final DecimalFormat timeFormat = new DecimalFormat("#,###.00");
     private static final DecimalFormat countFormat = new DecimalFormat("#,###");
     private static final int QUEUE_DEPTH = Parameter.intValue("task.queue.depth", 100);
@@ -74,8 +71,8 @@ public final class TaskFeeder extends Thread {
     private final TaskRunTarget task;
     private final int readers;
 
-    private final Thread threads[];
-    private final BlockingQueue<Bundle> queues[];
+    private final Thread[] threads;
+    private final BlockingQueue<Bundle>[] queues;
     private volatile boolean queuesInit;
     private final AtomicBoolean errored;
     private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -100,7 +97,7 @@ public final class TaskFeeder extends Thread {
         this.task = task;
         this.readers = feeders;
 
-        log.info("starting " + feeders + " thread(s) for src=" + source);
+        log.info("starting {} thread(s) for src={}", feeders, source);
 
         shardField = source.getShardField();
         threads = new Thread[feeders];
@@ -120,10 +117,6 @@ public final class TaskFeeder extends Thread {
         }
         queuesInit = true;
         start();
-
-        if (oomAfter > 0) {
-            startOomThread();
-        }
     }
 
     private void mapperRun(int worker) {
@@ -180,8 +173,8 @@ public final class TaskFeeder extends Thread {
         }
         int stealQ = 0;
         Bundle item = null;
-        for (int i = 0; i < queues.length; i++) {
-            if (queues[i].size() >= stealThreshold) {
+        for (BlockingQueue<Bundle> queue : queues) {
+            if (queue.size() >= stealThreshold) {
                 item = queues[stealQ].poll();
                 if (item != null) {
                     break;
@@ -204,11 +197,12 @@ public final class TaskFeeder extends Thread {
             }
             if (errored.get()) {
                 log.warn("fill buffer exited in error state");
-            } else if (log.isDebugEnabled()) {
+            } else {
                 log.debug("fill buffer exited");
             }
             joinProcessors();
-            log.info("exit " + threads.length + " threads. bundles read " + countFormat.format(totalReads) + " processed " + countFormat.format(processed));
+            log.info("exit {} threads. bundles read {} processed {}", threads.length, countFormat.format(totalReads),
+                     countFormat.format(processed));
             closeStream();
             while (!exit && !terminated.get()) {
                 trySleep(1000);
@@ -222,12 +216,12 @@ public final class TaskFeeder extends Thread {
             log.warn("task feeder exception: ", e);
         }
         if (errored.get()) {
-            log.warn("[" + Thread.currentThread().getName() + "] exited with error");
+            log.warn("[{}] exited with error", Thread.currentThread().getName());
             if (!terminated.get()) {
                 System.exit(1);
             }
         } else {
-            log.info("[" + Thread.currentThread().getName() + "] exited");
+            log.info("[{}] exited", Thread.currentThread().getName());
         }
     }
 
@@ -260,14 +254,14 @@ public final class TaskFeeder extends Thread {
         if (!errored.get() && !closed.getAndSet(true)) {
             try {
                 join();
-            } catch (InterruptedException e)  {
+            } catch (InterruptedException e) {
                 log.warn("", e);
             }
         }
     }
 
     private void joinProcessors() {
-        if (log.isDebugEnabled()) log.debug("pushing terminating bundles to " + queues.length + " processors");
+        log.debug("pushing terminating bundles to {} processors", queues.length);
         for (int i = 0; i < queues.length; i++) {
             try {
                 pushQueue(i, TERM_BUNDLE);
@@ -282,7 +276,7 @@ public final class TaskFeeder extends Thread {
                 try {
                     threads[i].join(left);
                     left = Math.max(1, 10000 - (JitterClock.globalTime() - mark));
-                } catch (InterruptedException e)  {
+                } catch (InterruptedException e) {
                     log.warn("", e);
                 }
             }
@@ -293,7 +287,7 @@ public final class TaskFeeder extends Thread {
         for (int i = 0; i < threads.length; i++) {
             try {
                 threads[i].join();
-            } catch (InterruptedException e)  {
+            } catch (InterruptedException e) {
                 log.warn("", e);
             }
         }
@@ -303,14 +297,19 @@ public final class TaskFeeder extends Thread {
         if (source != null) {
             double totalTime = ((System.currentTimeMillis() - start)) / 1000.0;
             log.info(new StringBuilder().append("closing stream ")
-                    .append(source.getClass().getSimpleName())
-                    .append(" after ")
-                    .append(timeFormat.format(totalTime)).append("s [bundles read ")
-                    .append(countFormat.format(totalReads)).append(" (")
-                    .append(countFormat.format((double) totalReads.get() / totalTime)).append("/s) processed ")
-                    .append(countFormat.format(processed)).append(" (")
-                    .append(countFormat.format((double) processed.get() / totalTime)).append("/s) ]")
-                    .toString());
+                                        .append(source.getClass().getSimpleName())
+                                        .append(" after ")
+                                        .append(timeFormat.format(totalTime))
+                                        .append("s [bundles read ")
+                                        .append(countFormat.format(totalReads))
+                                        .append(" (")
+                                        .append(countFormat.format((double) totalReads.get() / totalTime))
+                                        .append("/s) processed ")
+                                        .append(countFormat.format(processed))
+                                        .append(" (")
+                                        .append(countFormat.format((double) processed.get() / totalTime))
+                                        .append("/s) ]")
+                                        .toString());
             source.close();
             source = null;
             currentStreamReads.set(0);
@@ -326,11 +325,11 @@ public final class TaskFeeder extends Thread {
         try {
             Bundle p = source.next();
             if (p == null) {
-                log.warn("stream " + source + " returned null packet");
+                log.warn("stream {} returned null packet", source);
                 return false;
             }
             totalReads.incrementAndGet();
-            if (maxRead > 0 && totalReads.get() >= maxRead) {
+            if ((maxRead > 0) && (totalReads.get() >= maxRead)) {
                 terminate();
             }
             currentStreamReads.incrementAndGet();
@@ -351,7 +350,7 @@ public final class TaskFeeder extends Thread {
         } catch (InterruptedException interruptedException) {
             exiting = true;
         } catch (Exception ex) {
-            log.warn("Exception during fillBuffer(), setting errored state and exiting: " + ex, ex);
+            log.warn("Exception during fillBuffer(), setting errored state and exiting: {}", ex, ex);
             errored.set(true);
             exiting = true;
         }
@@ -360,47 +359,5 @@ public final class TaskFeeder extends Thread {
 
     public boolean isProcessing() {
         return true;
-    }
-
-    private void startOomThread() {
-        new Thread("OOM Thread") {
-            {
-                setDaemon(true);
-            }
-
-            @Override
-            public void run() {
-                LinkedList<long[]> oomer = new LinkedList<>();
-                try {
-                    log.warn("[oomer] starting in " + oomAfter + " ms");
-                    Thread.sleep(oomAfter);
-                    log.warn("[oomer] starting. alloc=" + oomAlloc);
-                    long arr[];
-                    long next = 0;
-                    while (true) {
-                        arr = new long[oomAlloc];
-                        Arrays.fill(arr, next++);
-                        oomer.add(arr);
-                        Thread.sleep(1);
-                    }
-                } catch (OutOfMemoryError ex) {
-                    log.warn("[oom] success", ex);
-                    } catch (Throwable ex)  {
-                    log.warn("", ex);
-                } finally {
-                    log.warn("[oom] waiting forever");
-                    while (this.isAlive()) {
-                        synchronized (this) {
-                            try {
-                                this.wait(100);
-                            } catch (InterruptedException e)  {
-                                log.warn("", e);
-                                return;
-                            }
-                        }
-                    }
-                }
-            }
-        }.start();
     }
 }

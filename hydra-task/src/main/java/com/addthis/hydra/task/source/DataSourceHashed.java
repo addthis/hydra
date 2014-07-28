@@ -14,10 +14,9 @@
 package com.addthis.hydra.task.source;
 
 import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
@@ -32,19 +31,19 @@ public class DataSourceHashed extends TaskDataSource {
     /**
      * Underlying data source from which data is fetched. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private TaskDataSource stream;
 
     /**
      * Name of the bundle field whose values are used as input to a hash function. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String hashKey;
 
     /**
      * Total number of shards. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private int shardTotal;
 
     private Bundle peek;
@@ -52,9 +51,9 @@ public class DataSourceHashed extends TaskDataSource {
     private Integer[] shards;
 
     @Override
-    public void open(TaskRunConfig config, AtomicBoolean errored) {
+    public void init(TaskRunConfig config) {
         shards = config.calcShardList(shardTotal);
-        stream.open(config, errored);
+        stream.init(config);
     }
 
     @Override

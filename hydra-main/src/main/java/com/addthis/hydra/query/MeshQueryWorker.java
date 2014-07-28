@@ -44,7 +44,6 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ThreadPool;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * A sort of wrapper class for mesh query workers; similar to MeshQueryMaster but this one only starts up
@@ -163,7 +162,7 @@ public class MeshQueryWorker {
      * <p/>
      * Does not currently support setting variables -- would need some kind of concurrency enforcement probably.
      */
-    private class ReflectionServlet extends HttpServlet {
+    private static class ReflectionServlet extends HttpServlet {
 
         public ReflectionServlet() {
 

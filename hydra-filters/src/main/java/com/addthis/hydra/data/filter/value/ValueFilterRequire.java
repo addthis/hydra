@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.regex.Pattern;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.util.JSONFetcher;
 
 
@@ -54,73 +54,74 @@ public class ValueFilterRequire extends StringFilter {
     /**
      * The input must match exactly to an element in this set.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true, autocollection = true)
     private HashSet<String> value;
 
     /**
      * A URL to retrieve the 'value' field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String valueURL;
 
     /**
      * The input must match to one of the regular expressions in this set.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true, autocollection = true)
     private HashSet<String> match;
 
     /**
      * A URL to retrieve the 'match' field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String matchURL;
 
     /**
      * A substring of the input must match to one of the regular expressions in this set.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true, autocollection = true)
     private HashSet<String> find;
 
     /**
      * A URL to retrieve the 'find' field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String findURL;
 
     /**
      * A substring of the input must match exactly to an element of this set.
      */
-    @Codec.Set(codable = true)
-    private String contains[];
+    @FieldConfig(codable = true, autocollection = true)
+    private String[] contains;
 
     /**
      * A URL to retrieve the 'contains' field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String containsURL;
 
     /**
      * If true, then interpret the payload from the URLs as CSV files. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean urlReturnsCSV;
 
     /**
-     * If true, then convert the input to lowercase. The filter output will be in lowercase. Default is false.
+     * If true, then convert the input to lowercase. The filter output will be in lowercase.
+     * Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean toLower;
 
     /**
      * A timeout value if any of the URL fields are used. Default is 60000.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int urlTimeout = 60000;
 
     /**
      * The number of retries if any of the URL fields are used. Default is 5.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int urlRetries = 5;
 
     private ArrayList<Pattern> pattern;
@@ -136,7 +137,7 @@ public class ValueFilterRequire extends StringFilter {
         return this;
     }
 
-    public ValueFilterRequire setContains(String contains[]) {
+    public ValueFilterRequire setContains(String[] contains) {
         this.contains = contains;
         return this;
     }
@@ -230,14 +231,14 @@ public class ValueFilterRequire extends StringFilter {
             contains = tmp.toArray(new String[tmp.size()]);
         }
         if (match != null) {
-            ArrayList<Pattern> np = new ArrayList<Pattern>();
+            ArrayList<Pattern> np = new ArrayList<>();
             for (String s : match) {
                 np.add(Pattern.compile(s));
             }
             this.pattern = np;
         }
         if (find != null) {
-            ArrayList<Pattern> np = new ArrayList<Pattern>();
+            ArrayList<Pattern> np = new ArrayList<>();
             for (String s : find) {
                 np.add(Pattern.compile(s));
             }

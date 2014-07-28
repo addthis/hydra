@@ -13,18 +13,19 @@
  */
 package com.addthis.hydra.job;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.mq.JobKey;
 
 /**
  */
-public class JobTaskDirectoryMatch implements Codec.Codable {
+public class JobTaskDirectoryMatch implements Codable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final JobKey jobKey;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final String hostId;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final MatchType type;
 
     public JobKey getJobKey() {

@@ -29,7 +29,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 import com.google.common.base.Joiner;
 import com.google.common.net.InternetDomainName;
@@ -54,7 +54,7 @@ import com.google.common.net.InternetDomainName;
  */
 public final class BundleFilterURL extends BundleFilter {
 
-    private static final HotMap<String, String> iphost = new HotMap<String, String>(new ConcurrentHashMap<String, String>());
+    private static final HotMap<String, String> iphost = new HotMap<>(new ConcurrentHashMap<String, String>());
     private static final int maxhostcache = Integer.parseInt(System.getProperty("packet.cachehost.max", "4000"));
     private static final boolean debugMalformed = System.getProperty("path.debug.malformed", "0").equals("1");
 
@@ -81,7 +81,7 @@ public final class BundleFilterURL extends BundleFilter {
     /**
      * Field containing the URL used as input to this filter.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String field;
 
     /**
@@ -91,7 +91,7 @@ public final class BundleFilterURL extends BundleFilter {
      * If {@link #clean} and {@link #fixProto} are both true then
      * result of both transformations are saved back into the input field.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean clean;
 
     /**
@@ -105,26 +105,27 @@ public final class BundleFilterURL extends BundleFilter {
      * be useful to use this parameter even when {@link #clean}
      * is <code>false</code>.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean fixProto;
 
     /**
-     * If true the IP of the host identified by the URL will be resolved and set to the returnhost value.
+     * If true the IP of the host identified by the URL will be resolved and set to the
+     * returnhost value.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean resolveIP;
 
     /**
      * If true the host will be resolved to its base domain. Only affects the field specified
      * by the {@link #setHost setHost} parameter.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean toBaseDomain;
 
     /**
      * If true then the URL is a file based URL, e.g. file:///.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean asFile;
 
     /**
@@ -135,7 +136,7 @@ public final class BundleFilterURL extends BundleFilter {
      * To ensure that the input is prefixed with a protocol
      * set the {@link #fixProto} parameter to <code>true</code>.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String setHost;
 
     /**
@@ -146,48 +147,50 @@ public final class BundleFilterURL extends BundleFilter {
      * To ensure that the input is prefixed with a protocol
      * set the {@link #fixProto} parameter to <code>true</code>.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String setHostNormal;
 
     /**
      * Name of the field to populate with the top
      * private domain as defined by Google
      * Guava's
-     * <a href="http://docs.guava-libraries.googlecode.com/git-history/release/javadoc/com/google/common/net/InternetDomainName.html">InternetDomainName</a> .
+     * <a href="http://docs.guava-libraries.googlecode
+     * .com/git-history/release/javadoc/com/google/common/net/InternetDomainName
+     * .html">InternetDomainName</a> .
      * This field should be used in combination with
      * {@link #fixProto fixProto} set to true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String setTopPrivateDomain;
 
     /**
      * Name of the field to populate with the path
      * defined by this URL. If null the path will not be set.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String setPath;
 
     /**
      * Name of the field to populate with the parameters
      * defined by this URL. If null the parameters will not be set.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String setParams;
 
     /**
      * Name of the field to populate with the anchor
      * defined by this URL.  If null the anchor will not be set.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String setAnchor;
 
     /**
      * Value to return when input is invalid. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean invalidExit;
 
-    private String fields[];
+    private String[] fields;
 
     private Pattern hostNormalPattern;
 
@@ -231,7 +234,7 @@ public final class BundleFilterURL extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         String pv = ValueUtil.asNativeString(bundle.getValue(bound[0]));
         if (!asFile) {
             if (pv == null || pv.length() < 7) {

@@ -17,7 +17,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.util.BundleCalculator;
 
 
@@ -107,6 +107,12 @@ import com.addthis.hydra.data.filter.util.BundleCalculator;
  * <td>assign the a-th column the value of b.
  * <br>If a is out of bounds then
  * append b to the end of the bundle</br></td>
+ * <td>0</td>
+ * </tr>
+ * <tr>
+ * <td>"pop" or "drop"</td>
+ * <td>1</td>
+ * <td>pop the top element off the stack</td>
  * <td>0</td>
  * </tr>
  * <tr>
@@ -266,6 +272,12 @@ import com.addthis.hydra.data.filter.util.BundleCalculator;
  * <td>1</td>
  * </tr>
  * <tr>
+ * <td>"aX:Y:Z..."</td>
+ * <td>0</td>
+ * <td>push the arrays in columns X, Y, Z,... onto the stack</td>
+ * <td>array length</td>
+ * </tr>
+ * <tr>
  * <td>"cX:Y:Z..."</td>
  * <td>0</td>
  * <td>push the value in columns X, Y, Z,... onto the stack</td>
@@ -307,13 +319,13 @@ public class BundleFilterNum extends BundleFilter {
     /**
      * Sequence of commands to execute (comma-delimited)
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String define;
 
     /**
      * Subset of fields from the bundle filter that are used in calculation.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true, autocollection = true)
     private String[] columns;
 
     private BundleCalculator calculator;

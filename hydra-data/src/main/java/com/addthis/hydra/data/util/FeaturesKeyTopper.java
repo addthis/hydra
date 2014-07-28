@@ -19,22 +19,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 
 /**
  * Class that helps maintain a top N list for any String Map TODO should move
  * into basis libraries
  */
-public final class FeaturesKeyTopper implements Codec.Codable {
+public final class FeaturesKeyTopper implements Codable {
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private HashMap<String, ReplaceableFeaturesBucket> featuresMap;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long minVal;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String minKey;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean lossy;
 
     public FeaturesKeyTopper() {
@@ -47,7 +48,7 @@ public final class FeaturesKeyTopper implements Codec.Codable {
     }
 
     public FeaturesKeyTopper init() {
-        featuresMap = new HashMap<String, ReplaceableFeaturesBucket>();
+        featuresMap = new HashMap<>();
         return this;
     }
 
@@ -73,14 +74,14 @@ public final class FeaturesKeyTopper implements Codec.Codable {
      */
     @SuppressWarnings("unchecked")
     public Map.Entry<String, Long>[] getSortedEntries() {
-        Map<String, Long> summaryMap = new HashMap<String, Long>();
+        Map<String, Long> summaryMap = new HashMap<>();
 
         for (String id : featuresMap.keySet()) {
             ReplaceableFeaturesBucket bucket = featuresMap.get(id);
             summaryMap.put(id + ">" + bucket.toString(), new Long(bucket.getHits()));
         }
 
-        Map.Entry e[] = new Map.Entry[summaryMap.size()];
+        Map.Entry[] e = new Map.Entry[summaryMap.size()];
         e = summaryMap.entrySet().toArray(e);
 
         Arrays.sort(e, new Comparator() {
@@ -204,7 +205,7 @@ public final class FeaturesKeyTopper implements Codec.Codable {
         return removed;
     }
 
-    public static void main(String args[]) {
+    public static void main(String[] args) {
         FeaturesKeyTopper keyTopper = new FeaturesKeyTopper();
         keyTopper.init().setLossy(true);
         keyTopper.increment("1", 10000, new String[]{"foo", "bar"});

@@ -13,17 +13,17 @@
  */
 package com.addthis.hydra.job.backup;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
-public class BackupToDelete implements Codec.Codable, Comparable {
+public class BackupToDelete implements Codable, Comparable {
 
     private static Logger log = LoggerFactory.getLogger(BackupToDelete.class);
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String backupPath;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String backupType;
 
     public BackupToDelete() {

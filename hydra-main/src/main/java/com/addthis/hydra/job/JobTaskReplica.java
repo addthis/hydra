@@ -13,22 +13,23 @@
  */
 package com.addthis.hydra.job;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 import com.google.common.annotations.VisibleForTesting;
 
 /**
  * marker data for a replica copy of data
  */
-public class JobTaskReplica implements Codec.Codable, Cloneable {
+public class JobTaskReplica implements Codable, Cloneable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String hostUuid;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String jobUuid;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int version; // equates to runCount in task
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long updated;
 
     public JobTaskReplica() {

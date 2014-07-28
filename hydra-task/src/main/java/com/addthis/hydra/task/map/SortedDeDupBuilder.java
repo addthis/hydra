@@ -19,7 +19,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 
 import com.yammer.metrics.Metrics;
@@ -40,15 +40,15 @@ import com.yammer.metrics.core.Counter;
  */
 public class SortedDeDupBuilder extends StreamBuilder {
 
-    private final ConcurrentSkipListMap<String, Bundle> sortedMap = new ConcurrentSkipListMap<String, Bundle>();
+    private final ConcurrentSkipListMap<String, Bundle> sortedMap = new ConcurrentSkipListMap<>();
     private final Counter dropCounter = Metrics.newCounter(this.getClass(), "dropCounter");
     private final Lock flushLock = new ReentrantLock();
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String field;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int batchSize = 100;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private BundleFilter filter;
 
     @Override

@@ -24,7 +24,7 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">allows filtering on keys occurring within a time interval a given number of
@@ -39,28 +39,28 @@ import com.addthis.codec.Codec;
  */
 public final class BundleFilterRecent1 extends BundleFilter {
 
-    @Codec.Set(codable = true, required = true)
-    private String time;
-    @Codec.Set(codable = true, required = true)
-    private String field;
-    @Codec.Set(codable = true)
-    private int track; // number of unique entries to track
-    @Codec.Set(codable = true)
-    private int sample; // number of data points to sample for each entry
-    @Codec.Set(codable = true)
-    private long minTime; // true under minTime
-    @Codec.Set(codable = true)
-    private long maxTime; // true over maxTime
-    @Codec.Set(codable = true)
-    private long maxCount; // absolute max count for a key
-    @Codec.Set(codable = true)
-    private boolean defaultExit;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true, required = true)
+    private String          time;
+    @FieldConfig(codable = true, required = true)
+    private String          field;
+    @FieldConfig(codable = true)
+    private int             track; // number of unique entries to track
+    @FieldConfig(codable = true)
+    private int             sample; // number of data points to sample for each entry
+    @FieldConfig(codable = true)
+    private long            minTime; // true under minTime
+    @FieldConfig(codable = true)
+    private long            maxTime; // true over maxTime
+    @FieldConfig(codable = true)
+    private long            maxCount; // absolute max count for a key
+    @FieldConfig(codable = true)
+    private boolean         defaultExit;
+    @FieldConfig(codable = true)
     private HashSet<String> exclude;
 
     @SuppressWarnings("unchecked")
-    private HotMap<String, Mark> cache = new HotMap<String, Mark>(new HashMap());
-    private String fields[];
+    private HotMap<String, Mark> cache = new HotMap<>(new HashMap());
+    private String[] fields;
 
     @Override
     public void initialize() {
@@ -69,7 +69,7 @@ public final class BundleFilterRecent1 extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         ValueLong time = bundle.getValue(bound[0]).asLong();
         return time != null ? accept(time.getLong(), bundle.getValue(bound[1])) : false;
     }
@@ -95,7 +95,10 @@ public final class BundleFilterRecent1 extends BundleFilter {
             }
         }
         long avtime = v.averageTime(time);
-        return avtime == 0 ? defaultExit : (maxCount > 0 && v.count > maxCount) || ((minTime == 0 || avtime < minTime) && (avtime > maxTime));
+        return avtime == 0 ?
+               defaultExit :
+               (maxCount > 0 && v.count > maxCount) ||
+               ((minTime == 0 || avtime < minTime) && (avtime > maxTime));
     }
 
     /** */
@@ -103,7 +106,7 @@ public final class BundleFilterRecent1 extends BundleFilter {
 
         public int count;
         public long cumTime;
-        public TreeMap<Long, Long> times = new TreeMap<Long, Long>();
+        public TreeMap<Long, Long> times = new TreeMap<>();
 
         long averageTime(long time) {
             count++;

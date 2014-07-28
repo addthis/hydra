@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.channel.DataChannelError;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.data.query.engine.QueryEngine;
@@ -101,6 +101,9 @@ class SearchRunner implements Runnable {
         // Note that releasing our engine only decreases its open lease count.
         finally {
             MeshQuerySource.queryCount.dec();
+            if (queryOpProcessor != null) {
+                queryOpProcessor.close();
+            }
             if (finalEng != null) {
                 log.debug("Releasing engine: {}", finalEng);
                 finalEng.release();
@@ -165,7 +168,6 @@ class SearchRunner implements Runnable {
         } //else we got an engine so we're good -- maybe this logic should be in the cache get
 
         if (engineGetDuration > MeshQuerySource.slowQueryThreshold || log.isDebugEnabled() || query.isTraced()) {
-
             Query.traceLog.info(
                     "[QueryReference] Retrieved queryEngine for query: " + query.uuid() + ", key:" +
                                 goldDirString + " after waiting: " + engineGetDuration + "ms.  slow=" +

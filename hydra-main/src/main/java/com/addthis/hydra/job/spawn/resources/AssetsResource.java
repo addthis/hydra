@@ -36,7 +36,6 @@ import com.addthis.hydra.job.spawn.jersey.User;
 import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * This resource serves, HTML, CSS, JS, IMG, and any other files that are in spawn's web directory
@@ -81,7 +80,7 @@ public class AssetsResource {
             try {
                 OutputStream out = response.getOutputStream();
                 InputStream in = new FileInputStream(file);
-                byte buf[] = new byte[1024];
+                byte[] buf = new byte[1024];
                 int read = 0;
                 while ((read = in.read(buf)) >= 0) {
                     out.write(buf, 0, read);

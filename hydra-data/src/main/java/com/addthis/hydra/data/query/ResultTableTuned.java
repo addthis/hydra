@@ -30,7 +30,6 @@ import com.addthis.bundle.table.DataTableFactory;
 import com.addthis.bundle.value.ValueObject;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * An implementation of DataTable that switches the underlying DataTable object

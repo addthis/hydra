@@ -24,7 +24,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
@@ -49,31 +49,31 @@ public class BundleFilterJSON extends BundleFilter {
         return bfj;
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int cache = 100;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean trim;
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String json;
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String set;
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private BundleFilterTemplate query;
 
     private HotMap<String, Object> objCache;
     private HotMap<String, ArrayList<QueryToken>> tokCache;
-    private String fields[];
+    private String[] fields;
 
     @Override
     public void initialize() {
         fields = new String[]{json, set};
-        objCache = new HotMap<String, Object>(new ConcurrentHashMap());
-        tokCache = new HotMap<String, ArrayList<QueryToken>>(new ConcurrentHashMap());
+        objCache = new HotMap<>(new ConcurrentHashMap());
+        tokCache = new HotMap<>(new ConcurrentHashMap());
     }
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         ValueObject bundleValue = bundle.getValue(bound[0]);
         switch (bundleValue.getObjectType()) {
             case STRING:
@@ -148,7 +148,7 @@ public class BundleFilterJSON extends BundleFilter {
     }
 
     private ArrayList<QueryToken> tokenize(String query) {
-        ArrayList<QueryToken> tokens = new ArrayList<QueryToken>();
+        ArrayList<QueryToken> tokens = new ArrayList<>();
         QueryToken current = new QueryToken();
         StringTokenizer st = new StringTokenizer(query, ".[", true);
         while (st.hasMoreTokens()) {
@@ -171,7 +171,7 @@ public class BundleFilterJSON extends BundleFilter {
         return tokens;
     }
 
-    private class QueryToken {
+    private static class QueryToken {
 
         String field;
         Integer index;

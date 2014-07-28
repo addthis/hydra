@@ -32,7 +32,7 @@ public class TestTokenizer {
         private String line;
         private String[] tokens;
 
-        Tester(String line, String tokens[]) {
+        Tester(String line, String[] tokens) {
             this.line = line;
             this.tokens = tokens;
         }

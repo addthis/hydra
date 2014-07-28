@@ -18,7 +18,7 @@ package com.addthis.hydra.job;
  */
 public class Main {
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         if (args.length > 0) {
             if (args[0].equals("spawn")) {
                 Spawn.main(cutargs(args));
@@ -31,7 +31,7 @@ public class Main {
         usage();
     }
 
-    private static String[] cutargs(String args[]) {
+    private static String[] cutargs(String[] args) {
         String[] ns = new String[args.length - 1];
         System.arraycopy(args, 1, ns, 0, args.length - 1);
         return ns;

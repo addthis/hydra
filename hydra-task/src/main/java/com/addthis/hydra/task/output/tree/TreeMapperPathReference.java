@@ -15,7 +15,8 @@ package com.addthis.hydra.task.output.tree;
 
 import java.util.ArrayList;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 
 /**
@@ -23,11 +24,11 @@ import com.addthis.codec.Codec;
  *
  * @user-reference
  */
-public final class TreeMapperPathReference implements Codec.Codable {
+public final class TreeMapperPathReference implements Codable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String path;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer index;
 
     public TreeMapperPathReference() {
@@ -39,7 +40,7 @@ public final class TreeMapperPathReference implements Codec.Codable {
 
     @Override
     public String toString() {
-        ArrayList<String> l = new ArrayList<String>();
+        ArrayList<String> l = new ArrayList<>();
         if (path != null) {
             l.add("path=" + path);
         }

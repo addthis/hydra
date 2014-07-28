@@ -17,9 +17,14 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import java.math.RoundingMode;
+
 import com.addthis.basis.util.ClosableIterator;
 
+import com.addthis.bundle.value.ValueArray;
 import com.addthis.hydra.data.tree.DataTreeNode;
+
+import com.google.common.math.DoubleMath;
 
 import org.junit.Test;
 
@@ -101,6 +106,49 @@ public class DataReservoirTest {
     }
 
     @Test
+    public void testMergeEqualSizedReservoir() {
+        DataReservoir reservoir1 = new DataReservoir();
+        reservoir1.updateReservoir(1, 4, 4);
+        reservoir1.updateReservoir(2, 4, 8);
+        reservoir1.updateReservoir(3, 4, 4);
+        reservoir1.updateReservoir(4, 4, 4);
+        DataReservoir reservoir2 = new DataReservoir();
+        DataReservoir reservoir3 = reservoir1.merge(reservoir2);
+        assertEquals(4, reservoir3.retrieveCount(1));
+        assertEquals(8, reservoir3.retrieveCount(2));
+        assertEquals(4, reservoir3.retrieveCount(3));
+        assertEquals(4, reservoir3.retrieveCount(4));
+        reservoir2.updateReservoir(1, 4, 1);
+        reservoir2.updateReservoir(2, 4, 2);
+        reservoir2.updateReservoir(3, 4, 3);
+        reservoir2.updateReservoir(4, 4, 4);
+        reservoir3 = reservoir1.merge(reservoir2);
+        assertEquals(5, reservoir3.retrieveCount(1));
+        assertEquals(10, reservoir3.retrieveCount(2));
+        assertEquals(7, reservoir3.retrieveCount(3));
+        assertEquals(8, reservoir3.retrieveCount(4));
+    }
+
+    @Test
+    public void testMergeUnequalSizedReservoir() {
+        DataReservoir reservoir1 = new DataReservoir();
+        reservoir1.updateReservoir(1, 4, 4);
+        reservoir1.updateReservoir(2, 4, 8);
+        reservoir1.updateReservoir(3, 4, 4);
+        reservoir1.updateReservoir(4, 4, 4);
+        DataReservoir reservoir2 = new DataReservoir();
+        reservoir2.updateReservoir(0, 3, 1);
+        reservoir2.updateReservoir(1, 3, 2);
+        reservoir2.updateReservoir(2, 3, 3);
+        DataReservoir reservoir3 = reservoir1.merge(reservoir2);
+        assertEquals(1, reservoir3.retrieveCount(0));
+        assertEquals(6, reservoir3.retrieveCount(1));
+        assertEquals(11, reservoir3.retrieveCount(2));
+        assertEquals(4, reservoir3.retrieveCount(3));
+        assertEquals(4, reservoir3.retrieveCount(4));
+    }
+
+    @Test
     public void testGetNodesBadInput() {
         DataReservoir reservoir = new DataReservoir();
         reservoir.updateReservoir(1, 4, 4);
@@ -143,6 +191,22 @@ public class DataReservoirTest {
         node = node.getIterator().next();
         assertEquals(node.getName(), "threshold");
         assertEquals(14, node.getCounter());
+    }
+
+    @Test
+    public void testGetValue() {
+        DataReservoir reservoir = new DataReservoir();
+        reservoir.updateReservoir(1, 4, 4);
+        reservoir.updateReservoir(2, 4, 12);
+        reservoir.updateReservoir(3, 4, 4);
+        reservoir.updateReservoir(4, 4, 100);
+        ValueArray result = reservoir.getValue("epoch=4~sigma=2.0~obs=3").asArray();
+        assertEquals(5, result.size());
+        assertEquals(86, DoubleMath.roundToLong(result.get(0).asDouble().getDouble(), RoundingMode.HALF_UP));
+        assertEquals(100, result.get(1).asLong().getLong());
+        assertEquals(7, DoubleMath.roundToLong(result.get(2).asDouble().getDouble(), RoundingMode.HALF_UP));
+        assertEquals(4, DoubleMath.roundToLong(result.get(3).asDouble().getDouble(), RoundingMode.HALF_UP));
+        assertEquals(14, result.get(4).asLong().getLong());
     }
 
     @Test
@@ -360,7 +424,7 @@ public class DataReservoirTest {
         reservoir.updateReservoir(8, 10, 0);
         reservoir.updateReservoir(9, 10, 1);
         reservoir.updateReservoir(10, 10, 1);
-        List<DataTreeNode> result = reservoir.modelFitAnomalyDetection(10, 9, true, true, 0);
+        List<DataTreeNode> result = reservoir.modelFitAnomalyDetection(10, 9, true, true, 0, 0);
         DataTreeNode percentile = retrieveNode(result.iterator(), percentilePath);
         assertTrue(Double.longBitsToDouble(percentile.getCounter()) > 90.0);
         reservoir = new DataReservoir();
@@ -374,7 +438,7 @@ public class DataReservoirTest {
         reservoir.updateReservoir(8, 10, 10);
         reservoir.updateReservoir(9, 10, 9);
         reservoir.updateReservoir(10, 10, 11);
-        result = reservoir.modelFitAnomalyDetection(10, 9, true, true, 0);
+        result = reservoir.modelFitAnomalyDetection(10, 9, true, true, 0, 0);
         percentile = retrieveNode(result.iterator(), percentilePath);
         assertTrue(Double.longBitsToDouble(percentile.getCounter()) > 90.0);
     }

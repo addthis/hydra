@@ -15,10 +15,10 @@ package com.addthis.hydra.store.skiplist;
 
 import java.util.ArrayList;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.KeyCoder.EncodeType;
 
-public abstract class PageFactory<K,V extends Codec.BytesCodable> {
+public abstract class PageFactory<K,V extends BytesCodable> {
 
     abstract Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, EncodeType encodeType);
 

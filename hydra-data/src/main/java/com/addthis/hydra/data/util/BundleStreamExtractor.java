@@ -32,7 +32,7 @@ import com.addthis.bundle.io.DataChannelReader;
 @Deprecated
 public class BundleStreamExtractor {
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         String file = null;
         boolean asMap = false;
 

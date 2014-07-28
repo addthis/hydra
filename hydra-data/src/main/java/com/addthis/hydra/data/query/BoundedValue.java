@@ -17,23 +17,24 @@ import java.util.StringTokenizer;
 
 import com.addthis.basis.util.Bytes;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
-public class BoundedValue implements Codec.SuperCodable {
+public class BoundedValue implements SuperCodable {
 
     // TODO resolve - using Integers b/c JSON objects turn all nums into
     // ints
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public String name;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public Long gt;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public Long lt;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public Long eq;
-    @Codec.Set(codable = false)
+    @FieldConfig(codable = false)
     public boolean bounded;
 
     public BoundedValue parse(String tok, MutableInt nextColumn) {

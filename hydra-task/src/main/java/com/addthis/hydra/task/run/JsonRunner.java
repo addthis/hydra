@@ -26,9 +26,8 @@ import java.util.Set;
 
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
-import com.addthis.basis.util.Parameter;
 
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
@@ -41,7 +40,7 @@ import com.addthis.maljson.JSONObject;
  */
 public class JsonRunner {
 
-    private static boolean checkArgs(String[] args) {
+    static boolean checkArgs(String[] args) {
         if (args.length < 2) {
             System.out.println("usage: run <config> <nodes> <node> [jobid] [threads]");
             return false;
@@ -61,22 +60,29 @@ public class JsonRunner {
         int nodeCount = Integer.parseInt(args[1]);
         int thisNode = Integer.parseInt(args[2]);
         String jobId = (args.length > 3) ? args[3] : null;
-        int commandLineThreads = (args.length > 4) ? Integer.parseInt(args[4]) : TaskRunner.defaultThreads;
-        runTask(config, nodeCount, thisNode, jobId, commandLineThreads);
+        runTask(config, nodeCount, thisNode, jobId);
     }
 
     static void runTask(String configString, int nodeCount, int thisNode,
-            String jobId, int commandLineThreads) throws Exception {
+            String jobId) throws Exception {
 
         String json = subAt(configString);
-        JSONObject jo = new JSONObject(json);
+        JSONObject jo;
+        try {
+            jo = new JSONObject(json);
+        } catch (JSONException ex) {
+            if ((ex.getColumn() == 0) && (ex.getLine() == 0)) {
+                HoconRunner.runTask(json, nodeCount, thisNode, jobId);
+                return;
+            } else {
+                throw ex;
+            }
+        }
         preload(jo);
 
         initClasses(jo);
         final TaskRunnable task = CodecJSON.decodeObject(TaskRunnable.class, jo);
-        TaskRunConfig config = new TaskRunConfig(thisNode,
-                nodeCount, jobId);
-        config.setThreadCount(jo.optInt("taskthreads", commandLineThreads));
+        TaskRunConfig config = new TaskRunConfig(thisNode, nodeCount, jobId);
         task.init(config);
         task.exec();
 
@@ -158,7 +164,7 @@ public class JsonRunner {
         JSONArray classes = o.optJSONArray("jar-classes");
         // load jars and classes
         if (jars != null && classes != null) {
-            URL u[] = new URL[jars.length()];
+            URL[] u = new URL[jars.length()];
             for (int i = 0; i < u.length; i++) {
                 u[i] = new URL(jars.getString(i));
             }

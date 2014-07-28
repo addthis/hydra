@@ -14,7 +14,7 @@
 package com.addthis.hydra.task.output;
 
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This output sink <span class="hydra-summary">shards the output stream to one or more files</span>.
@@ -80,7 +80,7 @@ public class DataOutputFile extends AbstractDataOutput {
     /**
       * Output configuration parameters. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private OutputWriter writer;
 
 

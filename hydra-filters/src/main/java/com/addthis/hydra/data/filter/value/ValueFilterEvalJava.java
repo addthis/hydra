@@ -26,7 +26,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.compiler.JavaSimpleCompiler;
 import com.addthis.hydra.data.filter.eval.InputType;
 
@@ -100,7 +100,7 @@ public class ValueFilterEvalJava extends ValueFilter {
      * Name of the input variable. The name
      * "value" is not allowed. Default is "x".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String inputName = "x";
 
     /**
@@ -110,7 +110,7 @@ public class ValueFilterEvalJava extends ValueFilter {
      * The map types are MAP_STRING_[TYPE] where [TYPE] is one of the primitive types.
      * This field is case sensitive. Default is "LONG".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private InputType inputType = InputType.LONG;
 
     /**
@@ -120,7 +120,7 @@ public class ValueFilterEvalJava extends ValueFilter {
      * The map types are MAP_STRING_[TYPE] where [TYPE] is one of the primitive types.
      * This field is case sensitive. Default is "LONG".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private InputType outputType = InputType.LONG;
 
     /**
@@ -131,14 +131,14 @@ public class ValueFilterEvalJava extends ValueFilter {
      * place the entire contents of the function body into
      * an array of a single element. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String[] body;
 
     /**
      * Optional. A set of import statements that are included
      * at the top of the generated class.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String[] imports;
 
     /**

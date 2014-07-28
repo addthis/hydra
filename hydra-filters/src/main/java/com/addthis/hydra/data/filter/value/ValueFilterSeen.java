@@ -18,8 +18,8 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.store.util.Raw;
 import com.addthis.hydra.store.util.SeenFilterBasic;
 
@@ -42,25 +42,25 @@ public class ValueFilterSeen extends ValueFilter {
      * If true, then return elements detected in the Bloom filter. Otherwise return elements
      * not detected in the Bloom filter. Default is true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean seen = true;
 
     /**
      * Retrieve the Bloom filter from a URL.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String url;
 
     /**
      * Apply this filter on the Bloom filter retrieved from a URL.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter filter;
 
     /**
      * The bloom filter.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected SeenFilterBasic<Raw> bloom;
 
     @Override
@@ -82,10 +82,10 @@ public class ValueFilterSeen extends ValueFilter {
 
     private boolean initialize() {
         if (bloom == null && url != null) {
-            SeenFilterBasic<Raw> newbloom = new SeenFilterBasic<Raw>();
+            SeenFilterBasic<Raw> newbloom = new SeenFilterBasic<>();
             String raw;
             try {
-                byte bytes[] = ValueFilterHttpGet.httpGet(url, null, null, 30000, false);
+                byte[] bytes = ValueFilterHttpGet.httpGet(url, null, null, 30000, false);
                 if (bytes == null) {
                     System.err.println("url " + url + " empty.  killing bloom filter");
                     url = null;

@@ -19,8 +19,8 @@ import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.QueryException;
+import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.source.QueryHandle;
 import com.addthis.hydra.data.query.source.QuerySource;
 
@@ -29,7 +29,6 @@ import com.yammer.metrics.core.Gauge;
 import com.yammer.metrics.core.Histogram;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 
 import io.netty.channel.DefaultChannelProgressivePromise;

@@ -19,10 +19,7 @@ import java.util.Arrays;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.hydra.job.spawn.JobAlert;
-import com.addthis.hydra.job.spawn.JobAlertRunner;
-import com.addthis.hydra.job.spawn.JobAlertUtil;
 import com.addthis.maljson.JSONObject;
-import com.addthis.meshy.MeshyClient;
 
 import org.junit.Test;
 

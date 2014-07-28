@@ -27,7 +27,8 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.tree.ConcurrentTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
@@ -35,9 +36,10 @@ import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.store.util.SeenFilterBasic;
 
-public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> implements Codec.SuperCodable {
+public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> implements
+                                                                            SuperCodable {
 
-    private final static int targetSaturation = Integer.parseInt(System.getProperty("datakeysieve2.saturation", "20"));
+    private static final int targetSaturation = Integer.parseInt(System.getProperty("datakeysieve2.saturation", "20"));
 
     /**
      * This data attachment <span class="hydra-summary">keeps a sieve of encountered values</span>.
@@ -98,13 +100,13 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
      * @user-reference
      * @hydra-name key.sieve2
      */
-    public final static class Config extends TreeDataParameters<DataKeySieve2> {
+    public static final class Config extends TreeDataParameters<DataKeySieve2> {
 
         /**
          * Bundle field name from which to draw values.
          * This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String key;
 
         /**
@@ -113,13 +115,13 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
          * to the highest level.
          * This field is required.
          */
-        @Codec.Set(codable = true, required = true)
-        private SeenFilterBasic<String> tiers[];
+        @FieldConfig(codable = true, required = true)
+        private SeenFilterBasic<String>[] tiers;
 
         /**
          * Default is either System property "datakeysieve2.saturation" or 20.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int saturation = targetSaturation;
 
         @Override
@@ -133,17 +135,17 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
         }
     }
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private ArrayList<Sieve> layers;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int saturation;
 
-    private SeenFilterBasic<String> template[];
+    private SeenFilterBasic<String>[] template;
     private BundleField keyAccess;
     private Sieve current;
 
     private void addLayer() {
-        int newbits[] = new int[template.length];
+        int[] newbits = new int[template.length];
         if (current != null) {
             for (int idx = 0; idx < current.tiers.length; idx++) {
                 SeenFilterBasic<String> filter = current.tiers[idx];
@@ -156,7 +158,7 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
                 }
             }
         }
-        SeenFilterBasic<String> tmp[] = new SeenFilterBasic[template.length];
+        SeenFilterBasic<String>[] tmp = new SeenFilterBasic[template.length];
         for (int i = 0; i < template.length; i++) {
             tmp[i] = template[i].newInstance(newbits[i] > 32 ? newbits[i] : template[i].getBits());
         }
@@ -201,8 +203,8 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
                 }
                 break;
             case MAP:
-                ValueMap map = value.asMap();
-                for (ValueMapEntry o : map) {
+                ValueMap<?> map = value.asMap();
+                for (ValueMapEntry<?> o : map) {
                     // use "|" to prevent short circuiting
                     mod = mod | updateCounter(bundle, ValueFactory.create(o.getKey()));
                 }
@@ -256,12 +258,12 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
             }
             return list;
         }
-        String keys[] = Strings.splitArray(key, ",");
+        String[] keys = Strings.splitArray(key, ",");
         ArrayList<DataTreeNode> list = new ArrayList<>(keys.length);
         synchronized (this) {
             for (String k : keys) {
                 int count = 0;
-                long hash[] = current.tiers[0].getHashSet(k);
+                long[] hash = current.tiers[0].getHashSet(k);
                 boolean lookDeep = false;
                 for (Sieve s : layers) {
                     lookDeep = false;
@@ -305,17 +307,17 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
     /**
      * for stacking
      */
-    public final static class Sieve {
+    public static final class Sieve {
 
-        @Codec.Set(codable = true, required = true)
-        private SeenFilterBasic<String> tiers[];
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
+        private SeenFilterBasic<String>[] tiers;
+        @FieldConfig(codable = true, required = true)
         private int updates;
 
         public Sieve() {
         }
 
-        public Sieve(SeenFilterBasic<String> tiers[]) {
+        public Sieve(SeenFilterBasic<String>[] tiers) {
             this.tiers = tiers;
         }
 
@@ -343,7 +345,7 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
          * @return true if handled in level filters
          */
         public boolean updateSeen(String k) {
-            long hash[] = tiers[0].getHashSet(k);
+            long[] hash = tiers[0].getHashSet(k);
             for (SeenFilterBasic<String> bloom : tiers) {
                 if (!bloom.checkHashSet(hash)) {
                     bloom.setHashSet(hash);
@@ -357,7 +359,7 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
          * 0 = not seen in first level (by extension any) n = was seen last at
          * level -n = seen in every level
          */
-        public int getSeenLevel(long hash[]) {
+        public int getSeenLevel(long[] hash) {
             int count = 0;
             for (SeenFilterBasic<String> bloom : tiers) {
                 if (!bloom.checkHashSet(hash)) {

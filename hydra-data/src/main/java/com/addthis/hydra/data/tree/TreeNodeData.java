@@ -17,58 +17,35 @@ import java.util.Collection;
 import java.util.List;
 
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.ClassMap;
-import com.addthis.codec.Codec.ClassMapFactory;
-import com.addthis.codec.CodecBin2;
-import com.addthis.hydra.common.plugins.PluginReader;
+import com.addthis.codec.annotations.Pluggable;
+import com.addthis.codec.binary.CodecBin2;
+import com.addthis.codec.codables.BytesCodable;
 
 /**
  * These classes are stored in TreeNodes.  New instances are
  * configured using TreeDataConfig objects which are stored
  * in the 'data' field of PathElements.
  */
-@Codec.Set(classMapFactory = TreeNodeData.CMAP.class)
-public abstract class TreeNodeData<C extends TreeDataParameters<?>> implements Codec.BytesCodable, DataTreeNodeActor {
+@Pluggable("tree node data")
+public abstract class TreeNodeData<C extends TreeDataParameters<?>> implements BytesCodable, DataTreeNodeActor {
 
-    static final ClassMap cmap = new ClassMap() {
-        @Override
-        public String getClassField() {
-            return "t";
-        }
-    };
-
-    public static class CMAP implements ClassMapFactory {
-
-        public ClassMap getClassMap() {
-            return cmap;
-        }
-    }
-
-    public static void registerClass(String key, Class<? extends TreeNodeData> clazz) {
-        cmap.add(key, clazz);
-    }
-
-    /** register types */
-    static {
-        PluginReader.registerPlugin("-treedataparameters.classmap", cmap, TreeDataParameters.class);
-        PluginReader.registerPlugin("-treenodedata.classmap", cmap, TreeNodeData.class);
-    }
-
-    private static final CodecBin2 codec = new CodecBin2();
+    private static final CodecBin2 codec = CodecBin2.INSTANCE;
 
     /**
-     * called from PathValue.processNodeUpdates() -> PathValue.processChild() -> TreeNode.updateChildData() -> this.
+     * called from PathValue.processNodeUpdates() -> PathValue.processChild() -> TreeNode
+     * .updateChildData() -> this.
      * implement data handling in child node.  called before parent nodeUpdate().
      */
-    public abstract boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, C conf);
+    public abstract boolean updateChildData(DataTreeNodeUpdater state,
+                                            DataTreeNode childNode,
+                                            C conf);
 
     /**
      * override to track new children
      */
     public boolean updateParentNewChild(DataTreeNodeUpdater state, DataTreeNode parentNode,
-            DataTreeNode childNode,
-            List<TreeNodeDataDeferredOperation> deferredOps) {
+                                        DataTreeNode childNode,
+                                        List<TreeNodeDataDeferredOperation> deferredOps) {
         return false;
     }
 
@@ -78,8 +55,8 @@ public abstract class TreeNodeData<C extends TreeDataParameters<?>> implements C
      * return true if node or data was altered.
      */
     public boolean updateParentData(DataTreeNodeUpdater state, DataTreeNode parentNode,
-            DataTreeNode childNode,
-            List<TreeNodeDataDeferredOperation> deferredOps) {
+                                    DataTreeNode childNode,
+                                    List<TreeNodeDataDeferredOperation> deferredOps) {
         return false;
     }
 

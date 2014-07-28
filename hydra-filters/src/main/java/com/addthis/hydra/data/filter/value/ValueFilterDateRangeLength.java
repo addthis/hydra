@@ -20,7 +20,7 @@ import com.addthis.basis.time.DTimeUnit;
 import com.addthis.basis.time.Dates;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -53,25 +53,25 @@ public class ValueFilterDateRangeLength extends StringFilter {
      * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html">DateTimeFormat</a>.
      * Default is "yyMMdd".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String dateFormat = "yyMMdd";
 
     /**
      * The separator in between (start date, end date) pairs. Default is "-" .
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String dateSep = "-";
 
     /**
      * The separator in between items in the input sequence. Default is "," .
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String dateRangeSep = ",";
 
     /**
      * This field is not used. Do whatever you want with it.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String diffUnit = "days";
 
     public ValueFilterDateRangeLength() {
@@ -115,7 +115,7 @@ public class ValueFilterDateRangeLength extends StringFilter {
     protected int countDays(String dates) {
         DateTimeFormatter dtf = DateTimeFormat.forPattern(dateFormat);
         String[] datesSplit = toArray(dates);
-        SortedSet<DateTime> dateSet = new TreeSet<DateTime>();
+        SortedSet<DateTime> dateSet = new TreeSet<>();
         for (String strVal : datesSplit) {
             if (strVal.indexOf(dateSep) < 0) {
                 dateSet.add(dtf.parseDateTime(strVal));

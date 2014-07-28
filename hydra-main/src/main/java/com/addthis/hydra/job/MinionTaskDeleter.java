@@ -26,19 +26,20 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.SimpleExec;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.backup.BackupToDelete;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-public class MinionTaskDeleter implements Codec.Codable {
+public class MinionTaskDeleter implements Codable {
 
     private static final Logger log = LoggerFactory.getLogger(MinionTaskDeleter.class);
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final ConcurrentSkipListSet<String> tasksToDelete;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final ConcurrentSkipListSet<BackupToDelete> backupsToDelete;
 
     private static final Map<String, ScheduledBackupType> backupTypesByDesc = ScheduledBackupType.getBackupTypes();

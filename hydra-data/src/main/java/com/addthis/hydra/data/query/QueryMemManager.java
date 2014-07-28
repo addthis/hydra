@@ -32,7 +32,7 @@ import com.addthis.bundle.core.Bundle;
 public class QueryMemManager {
 
     private final AtomicLong usedMemory = new AtomicLong();
-    private final AtomicReference<QMTracker> winner = new AtomicReference<QMTracker>();
+    private final AtomicReference<QMTracker> winner = new AtomicReference<>();
     private final long maxMemHard;
     private final long maxMemSoft;
 

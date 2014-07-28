@@ -30,7 +30,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.addthis.basis.util.JitterClock;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 
 import com.google.common.util.concurrent.MoreExecutors;
@@ -58,7 +59,7 @@ import org.slf4j.LoggerFactory;
  * in the order in which the bundles are produced. The second strategy is enabled
  * by setting {@link #waitForDiskFlushThread} to true.
  */
-public abstract class AbstractOutputWriter implements Codec.SuperCodable {
+public abstract class AbstractOutputWriter implements SuperCodable {
 
     private static Logger log = LoggerFactory.getLogger(AbstractOutputWriter.class);
 
@@ -68,7 +69,7 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
      * Options for data layout within the output files.
      * The default is type "channel".
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected OutputStreamFormatter format = new OutputStreamChannel();
 
     /**
@@ -76,7 +77,7 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
      * in the bundle cache before the asynchronous
      * flush is invoked. Default is 100.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int maxBundles = 100;
 
     /**
@@ -84,7 +85,7 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
      * maxBundles * bufferSizeRatio. bufferSizeRatio
      * must be greater than 1. Default value is 100.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int bufferSizeRatio = 100;
 
     /**
@@ -93,27 +94,27 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
      * If false then perform a synchronous flush
      * when the buffer is full. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean waitForDiskFlushThread = false;
 
     /**
      * Number of threads that flush data from
      * bundle cache to disk. Default is one.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int diskFlushThreads = 1;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private BundleFilter filter;
 
     /**
      * Throw error if shutdown thread takes
      * longer than this many seconds
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int maxShutDownSeconds = 240;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean errorOnMaintenanceShutdownExceeded = true;
 
     private final Semaphore diskFlushThreadSemaphore = new Semaphore(0);
@@ -304,7 +305,7 @@ public abstract class AbstractOutputWriter implements Codec.SuperCodable {
         }
     }
 
-    protected final class WriteTuple {
+    protected static final class WriteTuple {
 
         public final String fileName;
         public final Bundle bundle;

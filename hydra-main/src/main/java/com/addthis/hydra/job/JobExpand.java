@@ -27,14 +27,15 @@ import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacer;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
-import com.addthis.hydra.common.plugins.PluginReader;
+import com.addthis.codec.plugins.PluginMap;
+import com.addthis.codec.plugins.PluginRegistry;
 import com.addthis.hydra.data.util.CommentTokenizer;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 public class JobExpand {
 
@@ -44,15 +45,17 @@ public class JobExpand {
 
     private static class MacroTokenReplacer extends TokenReplacer {
 
-        private final Spawn.SpawnState spawnState;
+        private final Spawn spawn;
 
-        private static Logger log = LoggerFactory.getLogger(MacroTokenReplacer.class);
+        private static final Logger log = LoggerFactory.getLogger(MacroTokenReplacer.class);
+
+        private static final Joiner joiner = Joiner.on(',').skipNulls();
 
         private static final Pattern macroPattern = Pattern.compile("%\\{(.+?)\\}%");
 
-        MacroTokenReplacer(Spawn.SpawnState spawnState) {
+        MacroTokenReplacer(Spawn spawn) {
             super("%{", "}%");
-            this.spawnState = spawnState;
+            this.spawn = spawn;
         }
 
         @Override
@@ -69,11 +72,20 @@ public class JobExpand {
                     throw new RuntimeException(ex);
                 }
             }
-            JobMacro macro = spawnState.macros.get(label);
+            JobMacro macro = spawn.getSpawnState().macros.get(label);
+            String target = null;
             if (macro != null) {
+                target = macro.getMacro();
+            } else {
+                List<String> aliases = spawn.aliasToJobs(label);
+                if (aliases != null) {
+                    target = joiner.join(aliases);
+                }
+            }
+            if (target != null) {
                 List<String> contents = new ArrayList<>();
                 List<String> delimiters = new ArrayList<>();
-                CommentTokenizer commentTokenizer = new CommentTokenizer(macro.getMacro());
+                CommentTokenizer commentTokenizer = new CommentTokenizer(target);
                 commentTokenizer.tokenize(contents, delimiters);
                 StringBuilder builder = new StringBuilder();
                 int length = contents.size();
@@ -103,14 +115,11 @@ public class JobExpand {
     private static Map<String, JobConfigExpander> expanders = new HashMap<>();
 
     static {
-        List<String[]> expanders = PluginReader.readProperties("-jobexpand.classmap");
-        for(String[] expander : expanders) {
-            if (expander.length >= 2) {
-                try {
-                    registerExpander(expander[0], (Class<? extends JobConfigExpander>) Class.forName(expander[1]));
-                } catch(ClassNotFoundException|ClassCastException e) {
-                    log.warn(e.toString());
-                }
+        PluginMap expanderMap = PluginRegistry.defaultRegistry().asMap().get("job expander");
+        if (expanderMap != null) {
+            for (Map.Entry<String, Class<?>> expanderPlugin : expanderMap.asBiMap().entrySet()) {
+                registerExpander(expanderPlugin.getKey(),
+                                 (Class<? extends JobConfigExpander>) expanderPlugin.getValue());
             }
         }
     }
@@ -189,7 +198,7 @@ public class JobExpand {
 
     private static void addParameter(String paramString, Map<String, JobParameter> params) {
         JobParameter param = new JobParameter();
-        String tokens[] = paramString.split(":", 2);
+        String[] tokens = paramString.split(":", 2);
         param.setName(tokens[0]);
         if (tokens.length > 1) {
             param.setDefaultValue(tokens[1]);
@@ -251,7 +260,7 @@ public class JobExpand {
      * recursively expand macros
      */
     public static String macroExpand(Spawn spawn, String rawtext) throws TokenReplacerOverflowException {
-        MacroTokenReplacer replacer = new MacroTokenReplacer(spawn.getSpawnState());
+        MacroTokenReplacer replacer = new MacroTokenReplacer(spawn);
         List<String> contents = new ArrayList<>();
         List<String> delimiters = new ArrayList<>();
         CommentTokenizer commentTokenizer = new CommentTokenizer(rawtext);
@@ -262,6 +271,11 @@ public class JobExpand {
         builder.append(replacer.process(contents.get(0)));
         builder.append(delimiters.get(0));
         for (int i = 1; i < length; i++) {
+            if (builder.length() > Spawn.inputMaxNumberOfCharacters) {
+                throw new IllegalStateException("Expanded job config length of at least " + builder.length()
+                                                   + " characters is greater than max length of "
+                                                   + Spawn.inputMaxNumberOfCharacters);
+            }
             String delimiter = delimiters.get(i - 1);
             if (delimiter.equals("//") || delimiter.equals("/*")) {
                 builder.append(contents.get(i));
@@ -269,6 +283,11 @@ public class JobExpand {
                 builder.append(replacer.process(contents.get(i)));
             }
             builder.append(delimiters.get(i));
+        }
+        if (builder.length() > Spawn.inputMaxNumberOfCharacters) {
+            throw new IllegalStateException("Expanded job config length of " + builder.length()
+                                            + " characters is greater than max length of "
+                                            + Spawn.inputMaxNumberOfCharacters);
         }
         return builder.toString();
     }

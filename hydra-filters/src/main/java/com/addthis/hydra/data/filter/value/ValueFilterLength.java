@@ -14,8 +14,8 @@
 package com.addthis.hydra.data.filter.value;
 
 import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.bundle.value.ValueNumber;
 import com.addthis.bundle.value.ValueObject;
 
 
@@ -43,7 +43,7 @@ public class ValueFilterLength extends ValueFilter {
             if (value.getObjectType() == ValueObject.TYPE.MAP) {
                 return ValueFactory.create(value.asMap().size());
             }
-            ValueNumber num = ValueUtil.asNumber(value);
+            Numeric<?> num = ValueUtil.asNumber(value);
             if (num != null) {
                 return num;
             }

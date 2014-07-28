@@ -13,11 +13,9 @@
  */
 package com.addthis.hydra.task.source;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 /**
@@ -34,19 +32,19 @@ public class DataSourceRange extends TaskDataSource {
     /**
      * Underlying data source. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private TaskDataSource source;
 
     /**
      * If non-zero then skip this number of bundles. Default is zero.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long skip;
 
     /**
      * If non-zero then return at most this number of bundles. Default is zero.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long limit;
 
     @Override
@@ -70,9 +68,8 @@ public class DataSourceRange extends TaskDataSource {
         source.close();
     }
 
-    @Override
-    protected void open(TaskRunConfig config, AtomicBoolean errored) {
-        source.open(config, errored);
+    @Override public void init(TaskRunConfig config) {
+        source.init(config);
     }
 
 }

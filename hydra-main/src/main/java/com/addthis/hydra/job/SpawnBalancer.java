@@ -26,9 +26,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
@@ -36,7 +36,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.mq.CommandTaskStop;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
@@ -46,21 +47,24 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * A class in charge of balancing load among spawn's hosts.
  * General assumptions:
  * The boxes are not so asymmetrical that running a job on three boxes is slower than running it on a single box.
  * Jobs run faster when they have as few tasks grouped together on individual boxes as possible.
  */
-public class SpawnBalancer implements Codec.Codable {
+public class SpawnBalancer implements Codable {
 
     private final Spawn spawn;
     private static final Logger log = LoggerFactory.getLogger(SpawnBalancer.class);
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private SpawnBalancerConfig config = new SpawnBalancerConfig();
 
     // How often to update aggregate host statistics
@@ -117,24 +121,31 @@ public class SpawnBalancer implements Codec.Codable {
     private final Comparator<HostState> hostStateReplicationSuitabilityComparator = new Comparator<HostState>() {
         @Override
         public int compare(HostState hostState, HostState hostState1) {
-            boolean recentlyReplicatedTo = recentlyReplicatedToHosts.getIfPresent(hostState.getHostUuid()) != null;
-            boolean recentlyReplicatedTo1 = recentlyReplicatedToHosts.getIfPresent(hostState1.getHostUuid()) != null;
-            if (recentlyReplicatedTo != recentlyReplicatedTo1) {
-                return recentlyReplicatedTo ? 1 : -1;
+            // Treat recently-replicated-to hosts as having fewer than their reported available bytes
+            long availBytes = getAvailDiskBytes(hostState);
+            long availBytes1 = getAvailDiskBytes(hostState1);
+            if (recentlyReplicatedToHosts.getIfPresent(hostState.getHostUuid()) != null) {
+                availBytes /= 2;
             }
-            return -Double.compare(getAvailDiskBytes(hostState), getAvailDiskBytes(hostState1));
+            if (recentlyReplicatedToHosts.getIfPresent(hostState1.getHostUuid()) != null) {
+                availBytes1 /= 2;
+            }
+            return -Double.compare(availBytes, availBytes1);
         }
     };
 
+    private final ScheduledExecutorService taskExecutor;
+
     public SpawnBalancer(Spawn spawn) {
         this.spawn = spawn;
-        Timer statUpdateTimer = new Timer(true);
-        statUpdateTimer.scheduleAtFixedRate(new AggregateStatUpdaterTask(), AGGREGATE_STAT_UPDATE_INTERVAL, AGGREGATE_STAT_UPDATE_INTERVAL);
+        taskExecutor = MoreExecutors.getExitingScheduledExecutorService(
+                new ScheduledThreadPoolExecutor(2, new ThreadFactoryBuilder().setNameFormat("spawnBalancer-%d").build()));
+        taskExecutor.scheduleAtFixedRate(new AggregateStatUpdaterTask(), AGGREGATE_STAT_UPDATE_INTERVAL, AGGREGATE_STAT_UPDATE_INTERVAL, TimeUnit.MILLISECONDS);
         this.taskSizer = new SpawnBalancerTaskSizer(spawn);
     }
 
     public void startTaskSizePolling() {
-        taskSizer.startPolling();
+        taskSizer.startPolling(taskExecutor);
     }
 
     /**
@@ -505,7 +516,7 @@ public class SpawnBalancer implements Codec.Codable {
         }
 
         public List<String> generateHostsSorted() {
-            List<String> rv = new ArrayList<String>(this.keySet());
+            List<String> rv = new ArrayList<>(this.keySet());
             Collections.sort(rv, new Comparator<String>() {
                 @Override
                 public int compare(String s, String s1) {
@@ -571,7 +582,7 @@ public class SpawnBalancer implements Codec.Codable {
     }
 
     /* A class for storing a task and its live/replica status */
-    private class JobTaskItem {
+    private static class JobTaskItem {
 
         private final JobTask task;
 
@@ -625,8 +636,9 @@ public class SpawnBalancer implements Codec.Codable {
             return rv;
         }
         List<HostState> sortedHosts = sortHostsByDiskSpace(hosts);
+        HostFailWorker.FailState failState = spawn.getHostFailWorker().getFailureState(hostID);
         int numAlleviateHosts = (int) Math.ceil(sortedHosts.size() * config.getAlleviateHostPercentage());
-        if (isExtremeHost(hostID, true, true) || getUsedDiskPercent(host) > 1 - config.getMinDiskPercentAvailToReceiveNewTasks()) {
+        if (failState == HostFailWorker.FailState.FAILING_FS_OKAY || isExtremeHost(hostID, true, true) || getUsedDiskPercent(host) > 1 - config.getMinDiskPercentAvailToReceiveNewTasks()) {
             // Host disk is overloaded
             log.warn("[spawn.balancer] " + hostID + " categorized as overloaded host; looking for tasks to push off of it");
             List<HostState> lightHosts = sortedHosts.subList(0, numAlleviateHosts);
@@ -688,7 +700,7 @@ public class SpawnBalancer implements Codec.Codable {
             double byteLimitFactor = 1 - ((double) (moveAssignments.getBytesUsed())) / config.getBytesMovedFullRebalance();
             moveAssignments.addAll(pushTasksOffHost(heavyHost, Arrays.asList(host), true, byteLimitFactor, config.getTasksMovedFullRebalance(), true));
         }
-        moveAssignments.addAll(purgeTasksForNonexistentJobs(host, 1));
+        moveAssignments.addAll(purgeMisplacedTasks(host, 1));
         return moveAssignments;
     }
 
@@ -699,7 +711,7 @@ public class SpawnBalancer implements Codec.Codable {
 
     /* Push/pull the tasks on a host to balance its disk, obeying an overall limit on the number of tasks/bytes to move */
     private List<JobTaskMoveAssignment> pushTasksOffHost(HostState host, List<HostState> otherHosts, boolean limitBytes, double byteLimitFactor, int moveLimit, boolean obeyDontAutobalanceMe) {
-        List<JobTaskMoveAssignment> rv = purgeTasksForNonexistentJobs(host, moveLimit);
+        List<JobTaskMoveAssignment> rv = purgeMisplacedTasks(host, moveLimit);
         if (rv.size() <= moveLimit) {
             long byteLimit = (long) (byteLimitFactor * config.getBytesMovedFullRebalance());
             List<HostState> hostsSorted = sortHostsByDiskSpace(otherHosts);
@@ -722,12 +734,20 @@ public class SpawnBalancer implements Codec.Codable {
         return rv;
     }
 
-    /* Look through a hoststate to find tasks that don't correspond to an actual job */
-    private List<JobTaskMoveAssignment> purgeTasksForNonexistentJobs(HostState host, int deleteLimit) {
+    /* Look through a hoststate to find tasks that don't correspond to an actual job or are on the wrong host */
+    private List<JobTaskMoveAssignment> purgeMisplacedTasks(HostState host, int deleteLimit) {
         List<JobTaskMoveAssignment> rv = new ArrayList<>();
         for (JobKey key : host.allJobKeys()) {
             if (spawn.getJob(key) == null) {
+                // Nonexistent job
                 rv.add(new JobTaskMoveAssignment(key, host.getHostUuid(), null, false, true));
+            } else  {
+                // Task has a copy on the wrong host. Do a fixTaskDir to ensure we aren't deleting the only remaining copy
+                JobTask task = spawn.getTask(key);
+                if (!host.getHostUuid().equals(task.getHostUUID()) && !task.hasReplicaOnHost(host.getHostUuid())) {
+                    spawn.fixTaskDir(key.getJobUuid(), key.getNodeNumber(), false, false);
+                    deleteLimit -= 1;
+                }
             }
             if (rv.size() >= deleteLimit) {
                 break;
@@ -756,8 +776,7 @@ public class SpawnBalancer implements Codec.Codable {
         String taskHost = task.getHostUUID();
         boolean live = task.getHostUUID().equals(fromHostId);
         if (!live && !task.hasReplicaOnHost(fromHostId)) {
-            // Task was found somewhere it didn't belong
-            return new JobTaskMoveAssignment(task.getJobKey(), fromHostId, null, false, true);
+            return null;
         }
         while (hostStateIterator.hasNext()) {
             HostState next = hostStateIterator.next();
@@ -776,7 +795,7 @@ public class SpawnBalancer implements Codec.Codable {
         int totalTasksToMove = config.getTasksMovedFullRebalance();
         long totalBytesToMove = config.getBytesMovedFullRebalance();
         Set<String> activeJobs = findActiveJobIDs();
-        List<JobTaskMoveAssignment> rv = purgeTasksForNonexistentJobs(host, 1);
+        List<JobTaskMoveAssignment> rv = purgeMisplacedTasks(host, 1);
         String hostID = host.getHostUuid();
         for (String jobID : activeJobs) {
             spawn.acquireJobLock();
@@ -867,7 +886,7 @@ public class SpawnBalancer implements Codec.Codable {
      */
     @VisibleForTesting
     protected List<HostState> sortHostsByActiveTasks(Collection<HostState> hosts) {
-        List<HostState> hostList = new ArrayList<HostState>(hosts);
+        List<HostState> hostList = new ArrayList<>(hosts);
         removeDownHosts(hostList);
         Collections.sort(hostList, new Comparator<HostState>() {
             @Override
@@ -1294,7 +1313,7 @@ public class SpawnBalancer implements Codec.Codable {
     /**
      * Update aggregate cluster statistics periodically
      */
-    private class AggregateStatUpdaterTask extends TimerTask {
+    private class AggregateStatUpdaterTask implements Runnable {
 
         @Override
         public void run() {
@@ -1427,7 +1446,7 @@ public class SpawnBalancer implements Codec.Codable {
         return new HostScore(meanActive, usedDiskPercent, score);
     }
 
-    private class HostScore {
+    private static class HostScore {
 
         private final double meanActiveTasks;
         private final double usedDiskPercent;
@@ -1481,7 +1500,7 @@ public class SpawnBalancer implements Codec.Codable {
      */
     public synchronized void startAutobalanceTask() {
         if (autobalanceStarted.compareAndSet(false, true)) {
-            new Timer(true).scheduleAtFixedRate(new AutobalanceTimerTask(), config.getAutobalanceCheckInterval(), config.getAutobalanceCheckInterval());
+            taskExecutor.scheduleWithFixedDelay(new AutobalanceTask(), config.getAutobalanceCheckInterval(), config.getAutobalanceCheckInterval(), TimeUnit.MILLISECONDS);
         }
     }
 
@@ -1617,7 +1636,7 @@ public class SpawnBalancer implements Codec.Codable {
     /**
      * This class performs job/host rebalancing at specified intervals
      */
-    private class AutobalanceTimerTask extends TimerTask {
+    private class AutobalanceTask implements Runnable {
 
         private long lastJobAutobalanceTime = 0L;
         private long lastHostAutobalanceTime = 0L;

@@ -18,35 +18,33 @@ import java.util.ArrayList;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 import org.slf4j.Logger;
-
-
 import org.slf4j.LoggerFactory;
 public class BundleFilterTemplate extends BundleFilter {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilterTemplate.class);
 
-    public static BundleFilterTemplate create(String tokens[], String set) {
+    public static BundleFilterTemplate create(String[] tokens, String set) {
         BundleFilterTemplate bft = new BundleFilterTemplate();
         bft.tokens = tokens;
         bft.set = set;
         return bft;
     }
 
-    @Codec.Set(codable = true, required = true)
-    private String tokens[];
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
+    private String[] tokens;
+    @FieldConfig(codable = true, required = true)
     private String set;
 
-    private String fieldSet[];
-    private Token tokenSet[];
+    private String[] fieldSet;
+    private Token[]  tokenSet;
 
     @Override
     public void initialize() {
-        ArrayList<Token> newtokens = new ArrayList<Token>();
-        ArrayList<String> newfields = new ArrayList<String>();
+        ArrayList<Token> newtokens = new ArrayList<>();
+        ArrayList<String> newfields = new ArrayList<>();
         int pos = 0;
         for (String tok : tokens) {
             if (tok.startsWith("{{") && tok.endsWith("}}")) {
@@ -64,14 +62,14 @@ public class BundleFilterTemplate extends BundleFilter {
     @Override
     public boolean filterExec(Bundle bundle) {
         try {
-            BundleField bound[] = getBindings(bundle, fieldSet);
+            BundleField[] bound = getBindings(bundle, fieldSet);
             StringBuilder sb = new StringBuilder();
             for (Token token : tokenSet) {
                 sb.append(token.value(bundle, bound));
             }
             bundle.setValue(bound[bound.length - 1], ValueFactory.create(sb.toString()));
             return true;
-        } catch (Exception e)  {
+        } catch (Exception e) {
             log.warn("", e);
             return false;
         }
@@ -79,16 +77,16 @@ public class BundleFilterTemplate extends BundleFilter {
 
     public String template(Bundle bundle) {
         filter(bundle);
-        BundleField bound[] = getBindings(bundle, fieldSet);
+        BundleField[] bound = getBindings(bundle, fieldSet);
         return bundle.getValue(bound[bound.length - 1]).toString();
     }
 
     interface Token {
 
-        public String value(Bundle bundle, BundleField fields[]);
+        public String value(Bundle bundle, BundleField[] fields);
     }
 
-    class StaticToken implements Token {
+    static class StaticToken implements Token {
 
         private String value;
 
@@ -96,12 +94,12 @@ public class BundleFilterTemplate extends BundleFilter {
             this.value = value;
         }
 
-        public String value(Bundle bundle, BundleField fields[]) {
+        public String value(Bundle bundle, BundleField[] fields) {
             return value;
         }
     }
 
-    class FieldToken implements Token {
+    static class FieldToken implements Token {
 
         private int pos;
 
@@ -110,7 +108,7 @@ public class BundleFilterTemplate extends BundleFilter {
         }
 
         @Override
-        public String value(Bundle bundle, BundleField fields[]) {
+        public String value(Bundle bundle, BundleField[] fields) {
             return bundle.getValue(fields[pos]).toString();
         }
     }

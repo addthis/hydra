@@ -32,6 +32,7 @@ import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.table.DataTable;
 import com.addthis.bundle.table.DataTableFactory;
+import com.addthis.hydra.data.util.BundleUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -256,7 +257,11 @@ public class QueryOpProcessor implements DataChannelOutput, QueryMemTracker, Clo
             }
         } catch (Exception e) {
             log.debug("Exception while processing sendComplete on op processor");
-            sourceError(DataChannelError.promote(e));
+            sourceError(BundleUtils.promoteHackForThrowables(e));
+        } catch (Throwable e) {
+            // hopefully an "out of off heap/direct memory" error
+            log.error("Error while processing sendComplete on op processor");
+            sourceError(BundleUtils.promoteHackForThrowables(e));
         }
     }
 
@@ -267,8 +272,9 @@ public class QueryOpProcessor implements DataChannelOutput, QueryMemTracker, Clo
         while (currentOp != null) {
             try {
                 currentOp.close();
-            } catch (Exception ex) {
-                log.error("unexpected exception while closing query op", ex);
+            } catch (Throwable ex) {
+                // hopefully an "out of off heap/direct memory" error if not an exception
+                log.error("unexpected exception or error while closing query op", ex);
             }
             currentOp = currentOp.getNext();
         }

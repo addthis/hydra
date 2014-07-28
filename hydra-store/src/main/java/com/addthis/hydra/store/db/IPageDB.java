@@ -20,13 +20,13 @@ import java.util.Map.Entry;
 
 import com.addthis.basis.util.ClosableIterator;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.db.IPageDB.Key;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
 import com.addthis.hydra.store.util.Raw;
 
 
-public interface IPageDB<K extends Key, V extends Codec.BytesCodable> {
+public interface IPageDB<K extends Key, V extends BytesCodable> {
 
     public interface Key {
 

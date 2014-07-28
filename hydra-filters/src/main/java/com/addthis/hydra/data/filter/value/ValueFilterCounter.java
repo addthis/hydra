@@ -19,7 +19,7 @@ import java.text.DecimalFormat;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">counts the number of values it has observed</span>.
@@ -55,25 +55,25 @@ public class ValueFilterCounter extends ValueFilter {
     /**
      * The {@link DecimalFormat DecimalFormat} input string.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String format;
 
     /**
      * The starting value of the counter. Default is 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int start;
 
     /**
      * The counter increment for each input item. Default is 1.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int increment = 1;
 
     /**
      * If non-zero, then emit an output for each <i>N</i><sup>th</sup> item. Default is 0.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int sample;
 
     private AtomicInteger counter = new AtomicInteger();

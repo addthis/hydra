@@ -80,7 +80,7 @@ class SparseEdgeList implements EdgeList {
 		return result;
 	}
 
-	static private class Cons implements Serializable {
+	private static class Cons implements Serializable {
 
 		private static final long serialVersionUID = 7161279283678706514L;
 		

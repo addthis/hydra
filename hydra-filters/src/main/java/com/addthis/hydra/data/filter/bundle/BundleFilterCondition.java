@@ -14,7 +14,7 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">conditionally executes a bundle filter</span>.
@@ -34,25 +34,27 @@ public class BundleFilterCondition extends BundleFilter {
     /**
      * The conditional bundle filter. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     BundleFilter ifCondition;
 
     /**
-     * The bundle filter to execute when {@link #ifCondition ifCondition} returns true. This field is required.
+     * The bundle filter to execute when {@link #ifCondition ifCondition} returns true. This
+     * field is required.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     BundleFilter ifDo;
 
     /**
-     * The bundle filter to execute when {@link #ifCondition ifCondition} returns false. This field is optional.
+     * The bundle filter to execute when {@link #ifCondition ifCondition} returns false. This
+     * field is optional.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     BundleFilter elseDo;
 
     /**
      * If true, return the conditional filter's return value. This field is optional. Default false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     boolean returnFilter;
 
     @Override
@@ -74,7 +76,7 @@ public class BundleFilterCondition extends BundleFilter {
                 if (ifDo != null) {
                     if (returnFilter) {
                         returnValue = ifDo.filterExec(row);
-                    }   else {
+                    } else {
                         // ignore result
                         ifDo.filterExec(row);
                     }
@@ -83,7 +85,7 @@ public class BundleFilterCondition extends BundleFilter {
                 if (elseDo != null) {
                     if (returnFilter) {
                         returnValue = elseDo.filterExec(row);
-                    }   else {
+                    } else {
                         // ignore result
                         elseDo.filterExec(row);
                     }

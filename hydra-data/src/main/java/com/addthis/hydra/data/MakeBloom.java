@@ -22,7 +22,6 @@ import com.addthis.maljson.JSONArray;
 import com.clearspring.analytics.stream.membership.BloomFilter;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * <h1>MakeBloom</h1>

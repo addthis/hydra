@@ -35,9 +35,9 @@ import com.addthis.hydra.query.aggregate.QueryTaskSource;
 import com.addthis.hydra.query.aggregate.QueryTaskSourceOption;
 import com.addthis.hydra.query.loadbalance.WorkerData;
 import com.addthis.hydra.query.loadbalance.WorkerTracker;
+import com.addthis.hydra.query.spawndatastore.SpawnDataStoreHandler;
 import com.addthis.hydra.query.tracker.QueryTracker;
 import com.addthis.hydra.query.tracker.TrackerHandler;
-import com.addthis.hydra.query.spawndatastore.SpawnDataStoreHandler;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
 

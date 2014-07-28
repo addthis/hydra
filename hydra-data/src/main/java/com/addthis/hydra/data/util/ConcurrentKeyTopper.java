@@ -24,9 +24,11 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.addthis.basis.util.MemoryCounter;
-
-import com.addthis.codec.Codec;
 import com.addthis.basis.util.Varint;
+
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.BytesCodable;
+import com.addthis.codec.codables.SuperCodable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -37,26 +39,26 @@ import jsr166e.ConcurrentHashMapV8;
  * Class that helps maintain a top N list for any String Map TODO should move
  * into basis libraries
  */
-public final class ConcurrentKeyTopper implements Codec.SuperCodable, Codec.BytesCodable {
+public final class ConcurrentKeyTopper implements SuperCodable, BytesCodable {
 
     private static final byte[] EMPTY = new byte[0];
 
     public ConcurrentKeyTopper() {
     }
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
 //  @MemoryCounter.Mem(estimate = false, size = 50000)
     private ConcurrentHashMapV8<String, Long> map;
 
     @SuppressWarnings("unused")
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long minVal;
 
     @SuppressWarnings("unused")
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String minKey;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean lossy;
 
     // If maxSizeLimit is true then map.size() >= maxSize
@@ -122,7 +124,7 @@ public final class ConcurrentKeyTopper implements Codec.SuperCodable, Codec.Byte
 
         try {
             int size = map.size();
-            Map.Entry e[] = new Map.Entry[size];
+            Map.Entry[] e = new Map.Entry[size];
             e = map.entrySet().toArray(e);
             Arrays.sort(e, new Comparator() {
                 public int compare(Object arg0, Object arg1) {

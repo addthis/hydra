@@ -14,13 +14,12 @@
 package com.addthis.hydra.task.source.bundleizer;
 
 import java.io.EOFException;
+import java.io.IOException;
 import java.io.InputStream;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFactory;
 import com.addthis.bundle.io.DataChannelReader;
-import com.addthis.hydra.task.source.AbstractStreamFileDataSource.Bundleizer;
-import com.addthis.hydra.task.source.AbstractStreamFileDataSource.BundleizerFactory;
 
 
 /**
@@ -36,7 +35,7 @@ public class ChannelBundleizer extends BundleizerFactory {
             private final DataChannelReader reader = new DataChannelReader(factory, input);
 
             @Override
-            public Bundle next() throws Exception {
+            public Bundle next() throws IOException {
                 try {
                     return reader.read();
                 } catch (EOFException eof) {

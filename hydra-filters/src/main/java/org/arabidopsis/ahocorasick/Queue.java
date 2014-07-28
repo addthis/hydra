@@ -43,8 +43,8 @@ class Queue {
 	ArrayList<State> l2;
 
 	public Queue() {
-		l1 = new ArrayList<State>();
-		l2 = new ArrayList<State>();
+		l1 = new ArrayList<>();
+		l2 = new ArrayList<>();
 	}
 
 	public void add(State s) {

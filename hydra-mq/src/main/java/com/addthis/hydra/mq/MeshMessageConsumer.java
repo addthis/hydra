@@ -14,48 +14,51 @@
 
 package com.addthis.hydra.mq;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
-import com.addthis.meshy.MeshyClient;
-import com.addthis.meshy.service.file.FileReference;
-import com.addthis.meshy.service.message.MessageFileProvider;
-import org.jboss.netty.channel.ChannelException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.Parameter;
+import com.addthis.basis.util.Strings;
+
+import com.addthis.meshy.MeshyClient;
+import com.addthis.meshy.service.file.FileReference;
+import com.addthis.meshy.service.message.MessageFileProvider;
+
+import org.jboss.netty.channel.ChannelException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class MeshMessageConsumer implements MessageConsumer {
 
     private static Logger log = LoggerFactory.getLogger(MeshMessageConsumer.class);
-    private final static long scanInterval = Parameter.longValue("mesh.queue.scan.interval", 30000);
-    private final static long pollInterval = Parameter.longValue("mesh.queue.poll.interval", 10000);
+    private static final long scanInterval = Parameter.longValue("mesh.queue.scan.interval", 30000);
+    private static final long pollInterval = Parameter.longValue("mesh.queue.poll.interval", 10000);
     private static final boolean debug = Parameter.boolValue("mesh.queue.debug", false);
 
     private final MeshyClient mesh;
     private final String uuid;
     private final String topic;
-    private final HashSet<MessageListener> listeners = new HashSet<MessageListener>();
+    private final HashSet<MessageListener> listeners = new HashSet<>();
     private final HashSet<String> routingKeys = new HashSet<>();
-    private final HashSet<String> targets = new HashSet<String>();
-    private final HashSet<String> sources = new HashSet<String>();
+    private final HashSet<String> targets = new HashSet<>();
+    private final HashSet<String> sources = new HashSet<>();
     private final IntervalTimer scanner;
     private final IntervalTimer poller;
 
     private volatile LinkedList<FileReference> fileSources = new LinkedList<>();
     private MessageFileProvider provider;
-    private String findPaths[];
+    private String[] findPaths;
 
    public MeshMessageConsumer(final MeshyClient mesh, final String topic, final String uuid) {
         this.mesh = mesh;
@@ -121,7 +124,7 @@ public class MeshMessageConsumer implements MessageConsumer {
     }
 
     private void poll(final FileReference fileRef) {
-        HashMap<String,String> options = new HashMap<String,String>();
+        HashMap<String,String> options = new HashMap<>();
         options.put("fetch","100");
         try {
             if (debug) log.info("polling ref={} options={}", fileRef, options);
@@ -199,7 +202,7 @@ public class MeshMessageConsumer implements MessageConsumer {
     }
 
     /* timed task that can be "bumped" to run now */
-    abstract class IntervalTimer extends Thread {
+    abstract static class IntervalTimer extends Thread {
 
         IntervalTimer(final String name, final long timeout) {
             super(name);

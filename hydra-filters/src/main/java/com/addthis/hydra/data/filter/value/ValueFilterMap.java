@@ -15,7 +15,7 @@ package com.addthis.hydra.data.filter.value;
 
 import java.util.HashMap;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.util.JSONFetcher;
 
 
@@ -43,37 +43,39 @@ public class ValueFilterMap extends StringFilter {
     /**
      * The map used to search for the input key.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private HashMap<String, String> map;
 
     /**
-     * If true, then the filter returns null when no value is associated with the input. Default is false.
+     * If true, then the filter returns null when no value is associated with the input. Default
+     * is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean toNull;
 
     /**
-     * If non-null, then the filter returns defaultValue when no value is associated with the input. Default is null.
+     * If non-null, then the filter returns defaultValue when no value is associated with the
+     * input. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String defaultValue;
 
     /**
      * Fetch the map from this URL.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String mapURL;
 
     /**
      * The timeout value when mapURL is used.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int httpTimeout = 60000;
 
     /**
      * If true, then print out a http trace when mapURL is used. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean httpTrace;
 
     public ValueFilterMap setMap(HashMap<String, String> map) {

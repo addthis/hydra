@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.task.output.tree;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.TreeNodeList;
 
 
@@ -31,22 +31,22 @@ import com.addthis.hydra.data.tree.TreeNodeList;
  */
 public final class PathCall extends PathOp {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private TreeMapperPathReference target;
 
     /**
      * Name of the path element that is called.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String path;
 
     /**
      * work around the non-serialization of rule name in editor
      */
-    @Codec.Set(codable = true, writeonly = true)
+    @FieldConfig(codable = true, writeonly = true)
     private String printableRule;
 
-    private PathElement ppath[];
+    private PathElement[] ppath;
 
     public PathCall() {
     }

@@ -19,11 +19,13 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.Varint;
 
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
@@ -31,12 +33,12 @@ import com.addthis.hydra.data.tree.ReadTreeNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.util.ConcurrentKeyTopper;
-import com.addthis.basis.util.Varint;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
-public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec.Codable {
+public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codable {
 
     /**
      * This data attachment <span class="hydra-summary">keeps a record of the top N values
@@ -111,28 +113,28 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
          * Bundle field name from which to draw values.
          * This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String key;
 
         /**
          * Maximum capacity of the key topper.
          * This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private Integer size;
 
         /**
          * Optionally split the input with this regular expression
          * before recording the data. Default is null.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String splitRegex;
 
         /**
          * Optionally apply a filter before recording the data.
          * Default is null.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private ValueFilter filter;
 
         @Override
@@ -145,9 +147,9 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
         }
     }
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private ConcurrentKeyTopper top;
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private int size;
 
     private ValueFilter filter;
@@ -170,7 +172,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
             if (conf.splitRegex != null) {
                 // System.out.println("SPLITTING:" + val + ":" +
                 // conf.splitRegex);
-                String split[] = val.toString().split(conf.splitRegex);
+                String[] split = val.toString().split(conf.splitRegex);
                 // System.out.println(Arrays.toString(split));
                 for (int i = 0; i < split.length; i++) {
                     top.increment(split[i], size);
@@ -260,7 +262,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codec
                 return ret;
             }
         } else if (key != null) {
-            String keys[] = Strings.splitArray(key, ":");
+            String[] keys = Strings.splitArray(key, ":");
             ArrayList<DataTreeNode> list = new ArrayList<>(keys.length);
             for (String k : keys) {
                 Long v = top.get(k);

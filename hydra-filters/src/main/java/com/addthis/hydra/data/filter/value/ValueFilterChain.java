@@ -14,7 +14,7 @@
 package com.addthis.hydra.data.filter.value;
 
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">executes a series of filters</span>.
@@ -41,13 +41,13 @@ public class ValueFilterChain extends ValueFilter {
     /**
      * The value filters to be performed in a chain.
      */
-    @Codec.Set(codable = true, required = true)
-    private ValueFilter filter[];
+    @FieldConfig(codable = true, required = true)
+    private ValueFilter[] filter;
 
     /**
      * If true, then terminate chain on first null output. Default is true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean nullStop = true;
 
     @Override

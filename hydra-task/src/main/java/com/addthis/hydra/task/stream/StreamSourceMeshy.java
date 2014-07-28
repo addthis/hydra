@@ -29,16 +29,17 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.Bytes;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.task.source.AbstractPersistentStreamSource;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
@@ -116,79 +117,74 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
 
     private static final Logger log = LoggerFactory.getLogger(StreamSourceMeshy.class);
 
-    private static final String DEFAULT_MESH_HOST = Parameter.value("source.mesh.host", "localhost");
-    private static final int DEFAULT_MESH_PORT = Parameter.intValue("source.mesh.port", 5000);
-    private static final int DEFAULT_MESH_CACHE_UNITS = Parameter.intValue("source.mesh.cache_units", 1024 * 1024);
     private static final Splitter HOST_METADATA_SPLITTER = Splitter.on(',').omitEmptyStrings();
-
-    private static final int DEFAULT_MESH_TIMEOUT = Parameter.intValue("source.mesh.find.timeout", 2000);
-    private static final boolean DEFAULT_MESH_SHORT_CIRCUIT = Parameter.boolValue("source.mesh.find.short.circuit", true);
 
     /**
      * the percentage of peers that must respond before the finder returns
      */
-    @Codec.Set(codable = true)
-    private double meshPeerThreshold = 0.95;
+    @FieldConfig(codable = true)
+    private double meshPeerThreshold;
 
     /**
      * if true the finder may return before 100% of peers have responded
      */
-    @Codec.Set(codable = true)
-    private boolean meshShortCircuit = DEFAULT_MESH_SHORT_CIRCUIT;
+    @FieldConfig(codable = true)
+    private boolean meshShortCircuit;
 
     /**
-     * the amount of time the mesh finder will wait before potentially returning
+     * the amount of time the mesh finder will wait before potentially returning.
+     * Given in either milliseconds or a string with a number and a unit like "5 seconds"
      */
-    @Codec.Set(codable = true)
-    private int meshTimeOut = DEFAULT_MESH_TIMEOUT;
+    @Time(TimeUnit.MILLISECONDS)
+    @FieldConfig(codable = true)
+    private int meshTimeOut;
 
     /**
-     * Hostname of the meshy server. Default is either "source.mesh.host" configuration value or "localhost".
+     * Hostname of the meshy server. Default is either "source.mesh.host" configuration value or
+     * "localhost".
      */
-    @Codec.Set(codable = true)
-    private String meshHost = DEFAULT_MESH_HOST;
+    @FieldConfig(codable = true)
+    private String meshHost;
 
     /**
-     * Port number of the meshy server. Default is either "source.mesh.port" configuration value or 5000.
+     * Port number of the meshy server. Default is either "source.mesh.port" configuration value
+     * or 5000.
      */
-    @Codec.Set(codable = true)
-    private int meshPort = DEFAULT_MESH_PORT;
+    @FieldConfig(codable = true)
+    private int meshPort;
 
     /**
-     * Default mesh node cache per stream in size of (meshStreamCacheUnits * bytes).
+     * Default mesh node cache per stream in size of bytes or appened with standard human readable
+     * units like "56k".
      */
-    @Codec.Set(codable = true)
+    @Bytes
+    @FieldConfig(codable = true)
     private int meshStreamCache;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int maxRangeDays;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int maxRangeHours;
 
     /**
-     * Number of byte units for meshStreamCache parameter.
-     * Default is either "source.mesh.cache_units" configuration value or 1 MB (2<sup>20</sup> bytes)
+     * Length of time to wait before possibly short circuiting mesh lookups.
+     * Given in either milliseconds or a string with a number and a unit like "5 seconds".
      */
-    @Codec.Set(codable = true)
-    private int meshStreamCacheUnits = DEFAULT_MESH_CACHE_UNITS;
+    @Time(TimeUnit.MILLISECONDS)
+    @FieldConfig(codable = true)
+    private int meshShortCircuitWaitTime;
 
-    /**
-     * Length of time to wait before possibly short circuiting mesh lookups
-     */
-    @Codec.Set(codable = true)
-    private int meshShortCircuitWaitTime = 5000;
+    private static final ConcurrentMap<String, Integer> lateFileFindMap = new ConcurrentHashMap<>();
 
+    private final Map<String, List<MeshyStreamFile>> cacheMap       = new HashMap<>();
+    private final LinkedList<String>                 cache          = new LinkedList<>();
+    private final Object                             nextSourceLock = new Object();
 
-    private final LinkedList<String> cache = new LinkedList<>();
-    private static final ConcurrentHashMap<String, Integer> lateFileFindMap = new ConcurrentHashMap<>();
-    private final HashMap<String, List<MeshyStreamFile>> cacheMap = new HashMap<>();
-    private final Object nextSourceLock = new Object();
-
-    private MeshyClient meshLink;
+    private MeshyClient        meshLink;
     private MeshHostScoreCache scoreCache;
-    private DateTime firstDate;
-    private DateTime lastDate;
+    private DateTime           firstDate;
+    private DateTime           lastDate;
 
     private volatile int peerCount = -1;
 
@@ -208,7 +204,8 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
     /**
      * query the mesh for a list of matching files
      */
-    private List<MeshyStreamFile> findMeshFiles(final DateTime date, String[] patterns) throws IOException {
+    private List<MeshyStreamFile> findMeshFiles(final DateTime date, String[] patterns)
+            throws IOException {
         if (log.isTraceEnabled()) {
             log.trace("find using mesh=" + meshLink + " patterns=" + Arrays.toString(patterns));
         }
@@ -239,7 +236,8 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
                         case "peers":
                             // the host uuid is a list of remote peers who were sent requests
                             unfinishedHosts =
-                                    Sets.newHashSet(HOST_METADATA_SPLITTER.split(ref.getHostUUID()));
+                                    Sets.newHashSet(
+                                            HOST_METADATA_SPLITTER.split(ref.getHostUUID()));
                             unfinishedHosts.add(meshHost);
                             // include the local mesh node
                             peerCount = (int) ref.size + 1;
@@ -256,7 +254,8 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
                             }
                             int newCompleteResponsesCount = peerCount - outstandingRequests;
                             // information is allowed to be forwarded out of order so take maximum
-                            respondingPeerCount.set(Math.max(newCompleteResponsesCount, respondingPeerCount.get()));
+                            respondingPeerCount.set(
+                                    Math.max(newCompleteResponsesCount, respondingPeerCount.get()));
                             StreamSourceMeshy.log.debug(toLogString("response"));
                             return;
                         case "localfind":
@@ -266,12 +265,16 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
                             StreamSourceMeshy.log.debug(toLogString("localfind"));
                             return;
                         default:
-                            StreamSourceMeshy.log.warn("Found a file ref without a prepended /. Assuming its a real fileref for now : {}", ref.name);
+                            StreamSourceMeshy.log.warn(
+                                    "Found a file ref without a prepended /. Assuming its a real " +
+                                    "fileref for now : {}",
+                                    ref.name);
                     }
                 }
                 String hostId = ref.getHostUUID().substring(0, ref.getHostUUID().indexOf("-"));
                 if (shortCircuited.get()) {
-                    int lateCount = (lateFileFindMap.get(hostId) == null ? 1 : lateFileFindMap.get(hostId));
+                    int lateCount =
+                            (lateFileFindMap.get(hostId) == null ? 1 : lateFileFindMap.get(hostId));
                     lateFileFindMap.put(hostId, lateCount + 1);
                     // we are done here
                     return;
@@ -559,7 +562,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
             }
             // this fails on linux with out the explicit cast to InputStream
             return new StreamSource(meshLink, meshFile.getHostUUID(),
-                    meshFile.name, meshStreamCache * meshStreamCacheUnits).getInputStream();
+                    meshFile.name, meshStreamCache).getInputStream();
         }
 
         @Override
@@ -625,7 +628,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
             try {
                 DateTime autoResumeDate = lastDate.minusDays(1);
                 JSONObject jo = new JSONObject().put("lastDate", formatter.print(autoResumeDate)).put("moreData", moreData);
-                Files.write(Bytes.toBytes(jo.toString(2)), autoResumeFile);
+                Files.write(com.addthis.basis.util.Bytes.toBytes(jo.toString(2)), autoResumeFile);
             } catch (Exception ex) {
                 log.warn("unable to write auto-resume file", ex);
             }

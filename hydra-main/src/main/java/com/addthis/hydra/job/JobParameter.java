@@ -13,19 +13,20 @@
  */
 package com.addthis.hydra.job;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 
 /**
  * config-defined templated parameter
  */
-public final class JobParameter implements Codec.Codable, Cloneable {
+public final class JobParameter implements Codable, Cloneable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String name;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String value;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String defaultValue;
 
     public JobParameter() {

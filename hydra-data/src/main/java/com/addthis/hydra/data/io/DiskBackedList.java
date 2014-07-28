@@ -43,14 +43,14 @@ public class DiskBackedList<K> implements List<K> {
     /** */
     public static interface ItemCodec<K> {
 
-        public K decode(byte row[]) throws IOException;
+        public K decode(byte[] row) throws IOException;
 
         public byte[] encode(K row) throws IOException;
     }
 
     private static final int headerSize = 64;
 
-    private final LinkedList<DiskBackedListEntry> master = new LinkedList<DiskBackedListEntry>();
+    private final LinkedList<DiskBackedListEntry> master = new LinkedList<>();
 
     private ItemCodec<K> codec;
     private RandomAccessFile access;
@@ -424,7 +424,7 @@ public class DiskBackedList<K> implements List<K> {
     /**
      * allocate a new Entry based on raw data and prev/next pointers
      */
-    private DiskBackedListEntry allocate(byte data[], DiskBackedListEntry next) throws Exception {
+    private DiskBackedListEntry allocate(byte[] data, DiskBackedListEntry next) throws Exception {
         return accessFileHandler.writeToAccess(data, next);
     }
 
@@ -434,7 +434,7 @@ public class DiskBackedList<K> implements List<K> {
     public void compact() throws Exception {
         if (cruft > 0) {
             File newdata = new File(data.getParentFile(), data.getName().concat(".new"));
-            DiskBackedList<K> alt = new DiskBackedList<K>(newdata, codec);
+            DiskBackedList<K> alt = new DiskBackedList<>(newdata, codec);
             alt.addEncodedData(getEncodedData());
             clear();
             close();
@@ -482,7 +482,7 @@ public class DiskBackedList<K> implements List<K> {
     }
 
     public <K> void dumbSort(final Comparator<K> comp) {
-        List<K> memoryList = new ArrayList<K>();
+        List<K> memoryList = new ArrayList<>();
         Iterator it = this.iterator();
         while (it.hasNext()) {
             memoryList.add((K) it.next());
@@ -550,8 +550,8 @@ public class DiskBackedList<K> implements List<K> {
         private RandomAccessFile access;
         private int maxReadBufferSize;
         private int maxWriteBufferSize;
-        private LinkedHashMap<Long, byte[]> readBuffer = new LinkedHashMap<Long, byte[]>();
-        public HashMap<Long, byte[]> writeBuffer = new HashMap<Long, byte[]>();
+        private LinkedHashMap<Long, byte[]> readBuffer = new LinkedHashMap<>();
+        public HashMap<Long, byte[]> writeBuffer = new HashMap<>();
 
         public AccessFileHandler(RandomAccessFile access, int maxReadBufferSize) {
             this.access = access;
@@ -614,7 +614,7 @@ public class DiskBackedList<K> implements List<K> {
             }
         }
 
-        public void write(byte data[]) throws IOException {
+        public void write(byte[] data) throws IOException {
             access.seek(off);
             access.writeLong(next);
             numSeeks += 1;

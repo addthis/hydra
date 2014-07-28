@@ -29,7 +29,6 @@ import com.google.common.cache.CacheBuilder;
 
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
 /**
  * A class for storing job config versioning.

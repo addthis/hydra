@@ -18,12 +18,10 @@ import java.util.List;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.Bundles;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 import org.slf4j.Logger;
-
-
 import org.slf4j.LoggerFactory;
 /**
  * This output sink <span class="hydra-summary">writes to multiple output sinks</span>.
@@ -63,13 +61,13 @@ public class TaskDataOutputChain extends DataOutputTypeList {
      * Sequence of output sinks. Each bundle is emitted to the first sink,
      * then the second sink, etc.
      */
-    @Codec.Set(codable = true, required = true)
-    private TaskDataOutput outputs[];
+    @FieldConfig(codable = true, required = true)
+    private TaskDataOutput[] outputs;
 
     /**
      * If true then create copy of the bundle for each output. Default value is true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean copy = true;
 
     /**
@@ -77,7 +75,7 @@ public class TaskDataOutputChain extends DataOutputTypeList {
      * output sink. This may be useful when the child sink modifies
      * the bundle. Default value is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean immutableCopy = false;
 
     @Override
@@ -91,8 +89,11 @@ public class TaskDataOutputChain extends DataOutputTypeList {
 
     public void send(Bundle row) throws DataChannelError {
         if (!copy && !immutableCopy) {
+            Bundle withPreviousFormat = row;
             for (TaskDataOutput output : outputs) {
-                output.send(row);
+                // preserves all mutations, but maintains the typical (admittedly horrible) format behavior
+                withPreviousFormat = Bundles.shallowCopyBundle(withPreviousFormat, output.createBundle());
+                output.send(withPreviousFormat);
             }
         } else if (immutableCopy) {
             for (TaskDataOutput output : outputs) {

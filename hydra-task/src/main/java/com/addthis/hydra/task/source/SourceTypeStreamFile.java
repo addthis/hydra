@@ -16,8 +16,6 @@ package com.addthis.hydra.task.source;
 import com.addthis.hydra.task.stream.StreamFile;
 
 import org.slf4j.Logger;
-
-
 import org.slf4j.LoggerFactory;
 public class SourceTypeStreamFile extends AbstractDataSourceWrapper implements SourceTypeStateful {
 

@@ -52,7 +52,7 @@ public class DiskBackedList2<K> implements List<K> {
 
     public static interface ItemCodec<K> {
 
-        public K decode(byte row[]) throws IOException;
+        public K decode(byte[] row) throws IOException;
 
         public byte[] encode(K row) throws IOException;
     }
@@ -78,7 +78,7 @@ public class DiskBackedList2<K> implements List<K> {
         this.codec = codec;
         this.maxChunkSizeBytes = maxChunkSizeBytes;
         this.directory = directory;
-        this.chunks = new ArrayList<DBLChunk>();
+        this.chunks = new ArrayList<>();
         this.currentChunk = addChunk();
         this.totalItems = 0;
     }
@@ -419,8 +419,8 @@ public class DiskBackedList2<K> implements List<K> {
             }
         };
         // This heap stores the lowest remaining value from each chunk
-        PriorityQueue<Pair<K, Integer>> heap = new PriorityQueue<Pair<K, Integer>>(chunks.size(), pairComp);
-        ArrayList<Iterator> iterators = new ArrayList<Iterator>(chunks.size());
+        PriorityQueue<Pair<K, Integer>> heap = new PriorityQueue<>(chunks.size(), pairComp);
+        ArrayList<Iterator> iterators = new ArrayList<>(chunks.size());
 
         // Initialize the heap with one value per chunk
         close();
@@ -437,7 +437,7 @@ public class DiskBackedList2<K> implements List<K> {
         // Make a new disk backed list to store sorted values.
         // When the number of chunks is large, the size of the output buffer needs to shrink to make up for the extra mem usage
         long storageMaxChunkSize = maxChunkSizeBytes / (1 + chunks.size() / 20);
-        DiskBackedList2<K> storage = new DiskBackedList2<K>(codec, storageMaxChunkSize, directory);
+        DiskBackedList2<K> storage = new DiskBackedList2<>(codec, storageMaxChunkSize, directory);
 
         // Repeatedly pull the smallest element from the heap
         while (!heap.isEmpty()) {

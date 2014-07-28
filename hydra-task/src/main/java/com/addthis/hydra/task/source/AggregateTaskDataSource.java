@@ -13,17 +13,18 @@
  */
 package com.addthis.hydra.task.source;
 
-import java.util.LinkedList;
-import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.Nullable;
 
-import com.addthis.bundle.channel.DataChannelError;
+import java.util.LinkedList;
+import java.util.NoSuchElementException;
+
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
 import org.slf4j.Logger;
-
 import org.slf4j.LoggerFactory;
+
 /**
  * This data source <span class="hydra-summary">aggregates data from one or more data sources</span>.
  * <p/>
@@ -77,11 +78,12 @@ public class AggregateTaskDataSource extends TaskDataSource {
     /**
      * an ordered sequence of data sources. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private TaskDataSource[] sources;
 
     private TaskDataSource currentSource;
-    private final LinkedList<TaskDataSource> sourceList = new LinkedList<TaskDataSource>();
+
+    private final LinkedList<TaskDataSource> sourceList = new LinkedList<>();
 
     // to support test cases
     protected void setSources(TaskDataSource[] sources) {
@@ -89,25 +91,14 @@ public class AggregateTaskDataSource extends TaskDataSource {
     }
 
     @Override
-    public boolean hadMoreData() {
+    public void init(TaskRunConfig config) {
         for (TaskDataSource source : sources) {
-            if (source.hadMoreData()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Override
-    public void open(TaskRunConfig config, AtomicBoolean errored) {
-        for (int i = 0; i < sources.length; i++) {
-            TaskDataSource source = sources[i];
             if (source.isEnabled()) {
-                if (log.isDebugEnabled()) log.debug("open " + source);
-                source.open(config, errored);
+                log.debug("init {}", source);
+                source.init(config);
                 sourceList.add(source);
             } else {
-                if (log.isDebugEnabled()) log.debug("disabled " + source);
+                log.debug("disabled {}", source);
             }
         }
         requireValidSource();
@@ -116,24 +107,24 @@ public class AggregateTaskDataSource extends TaskDataSource {
     @Override
     public void close() {
         for (TaskDataSource source : sources) {
-            if (source != null && source.isEnabled()) {
-                if (log.isDebugEnabled()) log.debug("close " + source);
+            if ((source != null) && source.isEnabled()) {
+                log.debug("close {}", source);
                 source.close();
             }
         }
     }
 
     private void resetCurrentSource() {
-        if (log.isDebugEnabled()) log.debug("resetCurrentSource " + currentSource);
+        log.debug("resetCurrentSource {}", currentSource);
         currentSource = null;
     }
 
     private boolean requireValidSource() {
-        while (currentSource == null && sourceList.size() > 0) {
+        while ((currentSource == null) && !sourceList.isEmpty()) {
             currentSource = sourceList.removeFirst();
-            if (log.isDebugEnabled()) log.debug("nextSource = " + currentSource);
+            log.debug("nextSource = {}", currentSource);
             if (currentSource.peek() != null) {
-                if (log.isDebugEnabled()) log.debug("setSource " + currentSource);
+                log.debug("setSource {}", currentSource);
                 return true;
             }
             currentSource = null;
@@ -141,11 +132,18 @@ public class AggregateTaskDataSource extends TaskDataSource {
         return currentSource != null;
     }
 
+    @Nullable
     @Override
-    public Bundle next() throws DataChannelError {
+    public Bundle next() {
         while (requireValidSource()) {
-            Bundle next = currentSource.next();
-            if (log.isDebugEnabled()) log.debug("next " + next);
+            @Nullable Bundle next;
+            try {
+                next = currentSource.next();
+            } catch (NoSuchElementException ignored) {
+                // some legacy sources throw this exception instead of returning null
+                next = null;
+            }
+            log.debug("next {}", next);
             if (next != null) {
                 return next;
             }
@@ -154,11 +152,12 @@ public class AggregateTaskDataSource extends TaskDataSource {
         return null;
     }
 
+    @Nullable
     @Override
-    public Bundle peek() throws DataChannelError {
+    public Bundle peek() {
         while (requireValidSource()) {
             Bundle peek = currentSource.peek();
-            if (log.isDebugEnabled()) log.debug("peek " + peek);
+            log.debug("peek {}", peek);
             if (peek != null) {
                 return peek;
             }

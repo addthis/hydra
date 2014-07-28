@@ -21,11 +21,20 @@ import java.util.Map;
 
 import java.math.RoundingMode;
 
+import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Varint;
 
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.value.AbstractCustom;
+import com.addthis.bundle.value.Numeric;
+import com.addthis.bundle.value.ValueArray;
+import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.bundle.value.ValueString;
+import com.addthis.bundle.value.ValueTranslationException;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
@@ -45,13 +54,27 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
-public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements Codec.BytesCodable {
+public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements BytesCodable {
 
     private static final Logger log = LoggerFactory.getLogger(DataReservoir.class);
 
     private static final ImmutableList<DataTreeNode> EMPTY_LIST = ImmutableList.<DataTreeNode>builder().build();
 
     private static final byte[] EMPTY_BYTES = new byte[0];
+
+    @FieldConfig(codable = true, required = true)
+    private int[] reservoir;
+
+    /**
+     * The minEpoch is a monotonically increasing value.
+     * An increase in this value is associated with the elimination
+     * of state from older epochs. All effort is made to increment the
+     * value as little as possible.
+     */
+    @FieldConfig(codable = true, required = true)
+    private long minEpoch;
+
+    private BundleField keyAccess;
 
     /**
      * This data attachment <span class="hydra-summary">keeps circular buffer
@@ -62,12 +85,19 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * the current epoch. The counter stored within this epoch is incremented. Older
      * epochs are dropped as newer epochs are encountered.
      *
-     * <p>The data attachment is queried with the notation {@code /+%name=epoch=N~sigma=N.N~obs=N}.
-     * Epoch determines the epoch to be tested. sigma is the number of standard deviations
+     * <p>The data attachment can be queried with the notation
+     * {@code /+%name=epoch=N~percentile=N~obs=N~min=N~mode=modelfit}
+     * Epoch determines the epoch to be tested. percentile is the Nth percentile
      * to use as a threshold. obs specifies how many previous observations to use. All these
      * fields are required. Specifying min=N is an optional parameter for a minimum number
      * of observations that must be detected. The output returned is of the form
-     * {@code /delta:+hits/measurement:+hits/mean:+hits/stddev:+hits/threshold:+hits}.
+     * {@code /delta:+hits/measurement:+hits/mean:+hits/stddev:+hits/mode:+hits/percentile:+hits}.
+     *
+     * <p>The data attachment can also be queried with the notation
+     * {@code /$name=epoch=N~percentile=N~obs=N~min=N~mode=modelfit}.
+     * The query parameters are identical to those from the previous paragraph.
+     * The output returned is a value array with six elements. The contents of the
+     * array are ["delta", "measurement", "mean", "stddev", "mode", "percentile"].
      *
      * @user-reference
      * @hydra-name reservoir
@@ -78,14 +108,14 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
          * Bundle field name from which to draw the epoch.
          * This field is required.
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String epochField;
 
         /**
          * Size of the reservoir. This field is required.
          * @return
          */
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private int size;
 
         @Override
@@ -94,19 +124,14 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         }
     }
 
-    @Codec.Set(codable = true, required = true)
-    private int[] reservoir;
+    public DataReservoir() {
 
-    /**
-     * The minEpoch is a monotonically increasing value.
-     * An increase in this value is associated with the elimination
-     * of state from older epochs. All effort is made to increment the
-     * value as little as possible.
-     */
-    @Codec.Set(codable = true, required = true)
-    private long minEpoch;
+    }
 
-    private BundleField keyAccess;
+    public DataReservoir(DataReservoir other) {
+        reservoir = (other.reservoir == null) ? null : other.reservoir.clone();
+        minEpoch = other.minEpoch;
+    }
 
     /**
      * Resize the reservoir to the new size.
@@ -170,6 +195,29 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         if (epoch >= minEpoch) {
             reservoir[(int) (epoch - minEpoch)] += count;
         }
+    }
+
+    public DataReservoir merge(DataReservoir other) {
+        if (this.reservoir == null) {
+            return new DataReservoir(other);
+        } else if (other.reservoir == null) {
+            return new DataReservoir(this);
+        }
+        long minEpoch1 = this.minEpoch;
+        long minEpoch2 = other.minEpoch;
+        long maxEpoch1 = this.minEpoch + this.reservoir.length;
+        long maxEpoch2 = other.minEpoch + other.reservoir.length;
+        long minEpoch = Math.min(minEpoch1, minEpoch2);
+        long maxEpoch = Math.max(maxEpoch1, maxEpoch2);
+        DataReservoir result = new DataReservoir();
+        result.minEpoch = minEpoch;
+        result.resize((int) (maxEpoch - minEpoch));
+        for (long i = minEpoch; i < maxEpoch; i++) {
+            long count1 = Math.max(0, this.retrieveCount(i));
+            long count2 = Math.max(0, other.retrieveCount(i));
+            result.update(i, count1 + count2);
+        }
+        return result;
     }
 
     /**
@@ -237,11 +285,6 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
             }
         }
         return false;
-    }
-
-    @Override
-    public ValueObject getValue(String key) {
-        return null;
     }
 
     /**
@@ -313,7 +356,15 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         return result;
     }
 
-    private static long generateValue(double value, boolean doubleToLongBits) {
+    private static double longToDouble(long value, boolean doubleToLongBits) {
+        if (doubleToLongBits) {
+            return Double.longBitsToDouble(value);
+        } else {
+            return (double) value;
+        }
+    }
+
+    private static long doubleToLong(double value, boolean doubleToLongBits) {
         if (doubleToLongBits) {
             return Double.doubleToLongBits(value);
         } else {
@@ -321,8 +372,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         }
     }
 
-    @Override
-    public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
+    private DataReservoirValue generateValueObject(String key) {
         long targetEpoch = -1;
         int numObservations = -1;
         double sigma = Double.POSITIVE_INFINITY;
@@ -370,14 +420,50 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
                 }
             }
         }
-        switch (mode) {
+        DataReservoirValue.Builder builder = new DataReservoirValue.Builder();
+        builder.setTargetEpoch(targetEpoch);
+        builder.setNumObservations(numObservations);
+        builder.setDoubleToLongBits(doubleToLongBits);
+        builder.setRaw(raw);
+        builder.setSigma(sigma);
+        builder.setMinMeasurement(minMeasurement);
+        builder.setPercentile(percentile);
+        builder.setMode(mode);
+        DataReservoirValue value = builder.build(this);
+        return value;
+    }
+
+    private List<DataTreeNode> computeResult(DataReservoirValue value) {
+        switch (value.mode) {
             case "sigma":
-                return sigmaAnomalyDetection(targetEpoch, numObservations, doubleToLongBits, raw, sigma, minMeasurement);
+                return sigmaAnomalyDetection(value.targetEpoch, value.numObservations, value.doubleToLongBits,
+                        value.raw, value.sigma, value.minMeasurement);
             case "modelfit":
-                return modelFitAnomalyDetection(targetEpoch, numObservations, doubleToLongBits, raw, percentile);
+                return modelFitAnomalyDetection(value.targetEpoch, value.numObservations, value.doubleToLongBits,
+                        value.raw, value.percentile, value.minMeasurement);
             default:
-                throw new RuntimeException("Unknown mode type '" + mode + "'");
+                throw new RuntimeException("Unknown mode type '" + value.mode + "'");
         }
+
+    }
+
+    @Override
+    public ValueObject getValue(String key) {
+        if (key == null) {
+            return null;
+        }
+        DataReservoirValue value = generateValueObject(key);
+        value = value.setDoubleToLongClone(true).setRawClone(false);
+        return value;
+    }
+
+    @Override
+    public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
+        if (key == null) {
+            return null;
+        }
+        DataReservoirValue value = generateValueObject(key);
+        return computeResult(value);
     }
 
     private static void updateFrequencies(Map<Integer,Integer> frequencies, int value) {
@@ -395,7 +481,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
 
     @VisibleForTesting
     List<DataTreeNode> modelFitAnomalyDetection(long targetEpoch, int numObservations,
-            boolean doubleToLongBits, boolean raw, double percentile) {
+            boolean doubleToLongBits, boolean raw, double percentile, int minMeasurement) {
         int measurement;
         int count = 0;
         int min = Integer.MAX_VALUE;
@@ -504,25 +590,25 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         List<DataTreeNode> result = new ArrayList<>();
         VirtualTreeNode vchild, vparent;
 
-        if (measurement > threshold || percentile == 0.0) {
+        if (measurement >= minMeasurement && (measurement > threshold || percentile == 0.0)) {
             vchild = new VirtualTreeNode("gaussianNegative",
-                    generateValue(gaussianNegative, doubleToLongBits));
+                    doubleToLong(gaussianNegative, doubleToLongBits));
             vparent = new VirtualTreeNode("percentile",
-                    generateValue(measurePercentile, doubleToLongBits), generateSingletonArray(vchild));
+                    doubleToLong(measurePercentile, doubleToLongBits), generateSingletonArray(vchild));
             vchild = vparent;
             vparent = new VirtualTreeNode("mode", mode, generateSingletonArray(vchild));
             vchild = vparent;
             vparent = new VirtualTreeNode("stddev",
-                    generateValue(stddev, doubleToLongBits), generateSingletonArray(vchild));
+                    doubleToLong(stddev, doubleToLongBits), generateSingletonArray(vchild));
             vchild = vparent;
             vparent = new VirtualTreeNode("mean",
-                    generateValue(mean, doubleToLongBits), generateSingletonArray(vchild));
+                    doubleToLong(mean, doubleToLongBits), generateSingletonArray(vchild));
             vchild = vparent;
             vparent = new VirtualTreeNode("measurement",
                     measurement, generateSingletonArray(vchild));
             vchild = vparent;
             vparent = new VirtualTreeNode("delta",
-                    generateValue(measurement - threshold, doubleToLongBits), generateSingletonArray(vchild));
+                    doubleToLong(measurement - threshold, doubleToLongBits), generateSingletonArray(vchild));
             result.add(vparent);
             if (raw) {
                 addRawObservations(result, targetEpoch, numObservations);
@@ -533,8 +619,8 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         return result;
     }
 
-    private List<DataTreeNode> sigmaAnomalyDetection(long targetEpoch, int numObservations, boolean doubleToLongBits, boolean raw, double sigma,
-            int minMeasurement) {
+    private List<DataTreeNode> sigmaAnomalyDetection(long targetEpoch, int numObservations, boolean doubleToLongBits,
+            boolean raw, double sigma, int minMeasurement) {
 
         int measurement;
         if (targetEpoch < 0) {
@@ -596,18 +682,18 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         if (delta >= 0 && measurement >= minMeasurement) {
             List<DataTreeNode> result = new ArrayList<>();
             vchild = new VirtualTreeNode("threshold",
-                    generateValue(sigma * stddev + mean, doubleToLongBits));
+                    doubleToLong(sigma * stddev + mean, doubleToLongBits));
             vparent = new VirtualTreeNode("stddev",
-                    generateValue(stddev, doubleToLongBits), generateSingletonArray(vchild));
+                    doubleToLong(stddev, doubleToLongBits), generateSingletonArray(vchild));
             vchild = vparent;
             vparent = new VirtualTreeNode("mean",
-                    generateValue(mean, doubleToLongBits), generateSingletonArray(vchild));
+                    doubleToLong(mean, doubleToLongBits), generateSingletonArray(vchild));
             vchild = vparent;
             vparent = new VirtualTreeNode("measurement",
                     measurement, generateSingletonArray(vchild));
             vchild = vparent;
             vparent = new VirtualTreeNode("delta",
-                    generateValue(delta, doubleToLongBits), generateSingletonArray(vchild));
+                    doubleToLong(delta, doubleToLongBits), generateSingletonArray(vchild));
             result.add(vparent);
             if (raw) {
                 addRawObservations(result, targetEpoch, numObservations);
@@ -615,6 +701,205 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
             return result;
         } else {
             return makeDefaultNodes(raw, targetEpoch, numObservations);
+        }
+    }
+
+    static final class DataReservoirValue extends AbstractCustom<DataReservoir>
+            implements Numeric<DataReservoir> {
+
+        final long targetEpoch;
+        final int numObservations;
+        final boolean doubleToLongBits;
+        final boolean raw;
+        final double percentile;
+        final double sigma;
+        final int minMeasurement;
+        final String mode;
+
+        /**
+         * The Builder pattern allows many different variations of a class to
+         * be instantiated without the pitfalls of complex constructors. See
+         * ''Effective Java, Second Edition.'' Item 2 - "Consider a builder when
+         * faced with many constructor parameters."
+         */
+        static class Builder {
+            long targetEpoch = -1;
+            int numObservations = -1;
+            boolean doubleToLongBits = false;
+            boolean raw = false;
+            double percentile = 0;
+            double sigma = Double.POSITIVE_INFINITY;
+            int minMeasurement = Integer.MIN_VALUE;
+            String mode = "sigma";
+
+            Builder setTargetEpoch(long targetEpoch) {
+                this.targetEpoch = targetEpoch;
+                return this;
+            }
+
+            Builder setNumObservations(int numObservations) {
+                this.numObservations = numObservations;
+                return this;
+            }
+
+            Builder setDoubleToLongBits(boolean doubleToLongBits) {
+                this.doubleToLongBits = doubleToLongBits;
+                return this;
+            }
+
+            Builder setRaw(boolean raw) {
+                this.raw = raw;
+                return this;
+            }
+
+            Builder setPercentile(double percentile) {
+                this.percentile = percentile;
+                return this;
+            }
+
+            Builder setSigma(double sigma) {
+                this.sigma = sigma;
+                return this;
+            }
+
+            Builder setMinMeasurement(int minMeasurement) {
+                this.minMeasurement = minMeasurement;
+                return this;
+            }
+
+            Builder setMode(String mode) {
+                this.mode = mode;
+                return this;
+            }
+
+            DataReservoirValue build(DataReservoir reservoir) {
+                return new DataReservoirValue(reservoir, targetEpoch, numObservations,
+                        doubleToLongBits, raw, percentile, sigma, minMeasurement, mode);
+            }
+        }
+
+        private DataReservoirValue(DataReservoir reservoir, long targetEpoch, int numObservations,
+                boolean doubleToLongBits, boolean raw, double percentile, double sigma,
+                int minMeasurement, String mode) {
+            super(reservoir);
+            this.targetEpoch = targetEpoch;
+            this.numObservations = numObservations;
+            this.doubleToLongBits = doubleToLongBits;
+            this.raw = raw;
+            this.percentile = percentile;
+            this.sigma = sigma;
+            this.minMeasurement = minMeasurement;
+            this.mode = mode;
+        }
+
+        public DataReservoirValue setRawClone(boolean raw) {
+            return new DataReservoirValue(asNative(), targetEpoch, numObservations,
+                    doubleToLongBits, raw, percentile, sigma, minMeasurement, mode);
+        }
+
+        public DataReservoirValue setDoubleToLongClone(boolean doubleToLongBits) {
+            return new DataReservoirValue(asNative(), targetEpoch, numObservations,
+                    doubleToLongBits, raw, percentile, sigma, minMeasurement, mode);
+        }
+
+
+        @Override
+        public <P extends Numeric<?>> Numeric<?> sum(P val) {
+            return new DataReservoirValue(asNative().merge((DataReservoir) val.asNative()),
+                    targetEpoch, numObservations, doubleToLongBits, raw, percentile,
+                    sigma, minMeasurement, mode);
+        }
+
+        @Override
+        public <P extends Numeric<?>> Numeric<?> diff(P val) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Numeric<?> avg(int count) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <P extends Numeric<?>> Numeric<?> min(P val) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <P extends Numeric<?>> Numeric<?> max(P val) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ValueMap<?> asMap() {
+            throw new ValueTranslationException();
+        }
+
+        @Override
+        public void setValues(ValueMap<?> map) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ValueArray asArray() throws ValueTranslationException {
+            ValueArray result = ValueFactory.createArray(1);
+            List<DataTreeNode> list = asNative().computeResult(this);
+            ClosableIterator<DataTreeNode> iterator;
+            DataTreeNode current;
+            switch (mode) {
+                case "modelfit":
+                    current = list.get(0);
+                    result.add(ValueFactory.create(longToDouble(current.getCounter(), doubleToLongBits))); // 'delta'
+                    iterator = current.getIterator();
+                    current = iterator.next();
+                    iterator.close();
+                    result.add(ValueFactory.create(current.getCounter()));                                // 'measurement'
+                    iterator = current.getIterator();
+                    current = iterator.next();
+                    iterator.close();
+                    result.add(ValueFactory.create(longToDouble(current.getCounter(), doubleToLongBits))); // 'mean'
+                    iterator = current.getIterator();
+                    current = iterator.next();
+                    iterator.close();
+                    result.add(ValueFactory.create(longToDouble(current.getCounter(), doubleToLongBits))); // 'stddev'
+                    iterator = current.getIterator();
+                    current = iterator.next();
+                    iterator.close();
+                    result.add(ValueFactory.create(current.getCounter()));                                 // 'mode'
+                    iterator = current.getIterator();
+                    current = iterator.next();
+                    iterator.close();
+                    result.add(ValueFactory.create(longToDouble(current.getCounter(), doubleToLongBits))); // 'percentile'
+                    break;
+                case "sigma":
+                    current = list.get(0);
+                    result.add(ValueFactory.create(longToDouble(current.getCounter(), doubleToLongBits))); // 'delta'
+                    iterator = current.getIterator();
+                    current = iterator.next();
+                    iterator.close();
+                    result.add(ValueFactory.create(current.getCounter()));                                 // 'measurement'
+                    iterator = current.getIterator();
+                    current = iterator.next();
+                    iterator.close();
+                    result.add(ValueFactory.create(longToDouble(current.getCounter(), doubleToLongBits))); // 'mean'
+                    iterator = current.getIterator();
+                    current = iterator.next();
+                    iterator.close();
+                    result.add(ValueFactory.create(longToDouble(current.getCounter(), doubleToLongBits))); // 'stddev'
+                    iterator = current.getIterator();
+                    current = iterator.next();
+                    iterator.close();
+                    result.add(ValueFactory.create(longToDouble(current.getCounter(), doubleToLongBits))); // 'threshold'
+                    break;
+                default:
+                    throw new RuntimeException("Unknown mode type '" + mode + "'");
+            }
+            return result;
+        }
+
+        @Override
+        public ValueString asString() throws ValueTranslationException {
+            throw new ValueTranslationException();
         }
     }
 

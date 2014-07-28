@@ -15,16 +15,15 @@ package com.addthis.hydra.task.source;
 
 import java.util.Iterator;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleComparator;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.run.TaskRunConfig;
+import com.addthis.hydra.task.util.BundleComparator;
 
 /**
  * This {@link TaskDataSource source} <span class="hydra-summary">sorts an underlying data source</span>.
@@ -37,19 +36,19 @@ public class SortedTaskDataSource extends TaskDataSource {
     /**
      * Underlying data source that will be sorted. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private TaskDataSource source;
 
     /**
      * How to sort the underlying data source. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private BundleComparator comparator;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer elements;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String onField;
 
     private final TreeMap<Bundle, Bundle> sorted;
@@ -57,12 +56,11 @@ public class SortedTaskDataSource extends TaskDataSource {
     private ValueObject lastValue;
 
     public SortedTaskDataSource() {
-        sorted = new TreeMap<Bundle, Bundle>(comparator);
+        sorted = new TreeMap<>(comparator);
     }
 
-    @Override
-    protected void open(TaskRunConfig config, AtomicBoolean errored) {
-        source.open(config, errored);
+    @Override public void init(TaskRunConfig config) {
+        source.init(config);
     }
 
     private void fill() {

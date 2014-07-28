@@ -47,12 +47,13 @@ public class TestValueFilterJoin {
     @Test
     public void mapTest() {
         ValueFilterJoin join = new ValueFilterJoin();
-        ValueMap map = ValueFactory.createMap(ImmutableMap.of(
+        ValueMap<?> map = ValueFactory.createMap(ImmutableMap.of(
                 "b", Arrays.asList("p", "q"),
                 "a", Arrays.asList("x", "y", "z"),
                 "c", Arrays.asList("c", "d", "e")
         ));
         join.setJoin(";");
-        assertEquals("should correctly join map", "b=p,q;c=c,d,e;a=x,y,z", join.filter(map).toString());
+        assertEquals("should correctly join map", "b=[p, q];c=[c, d, e];a=[x, y, z]",
+                     join.filter(map).toString());
     }
 }

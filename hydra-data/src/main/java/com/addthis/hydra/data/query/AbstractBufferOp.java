@@ -46,7 +46,7 @@ public abstract class AbstractBufferOp extends AbstractQueryOp {
      * helper to return a single row
      */
     public static List<Bundle> createRows(Bundle row, int count) {
-        ArrayList<Bundle> single = new ArrayList<Bundle>(count);
+        ArrayList<Bundle> single = new ArrayList<>(count);
         single.add(row);
         return single;
     }

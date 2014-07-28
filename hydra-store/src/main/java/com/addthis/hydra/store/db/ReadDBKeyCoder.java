@@ -14,10 +14,11 @@
 package com.addthis.hydra.store.db;
 
 import com.addthis.codec.Codec;
+import com.addthis.codec.codables.BytesCodable;
 
 /**
  */
-public class ReadDBKeyCoder<V extends IReadWeighable & Codec.BytesCodable> extends DBKeyCoder<V> {
+public class ReadDBKeyCoder<V extends IReadWeighable & BytesCodable> extends DBKeyCoder<V> {
 
     public ReadDBKeyCoder(Codec codec, Class<? extends V> clazz) {
         super(codec, clazz);

@@ -23,8 +23,9 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecBin2;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.binary.CodecBin2;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeActor;
 
@@ -35,17 +36,17 @@ import org.apache.commons.lang3.mutable.MutableInt;
  *
  * @user-reference
  */
-public class QueryElementField implements Codec.Codable {
+public class QueryElementField implements Codable {
 
     private static BoundedValue[] memKey = new BoundedValue[0];
 
     // output column this element is bound to 'show' (or null if dropped)
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String column;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public String name;
-    @Codec.Set(codable = true)
-    public BoundedValue keys[];
+    @FieldConfig(codable = true)
+    public BoundedValue[] keys;
 
     private BundleField field;
 
@@ -62,10 +63,10 @@ public class QueryElementField implements Codec.Codable {
             tok = tok.substring(1);
             keys = memKey;
         }
-        String kv[] = Strings.splitArray(Bytes.urldecode(tok), "=");
+        String[] kv = Strings.splitArray(Bytes.urldecode(tok), "=");
         if (kv.length == 2) {
             name = kv[0];
-            String keyarr[] = Strings.splitArray(kv[1], ",");
+            String[] keyarr = Strings.splitArray(kv[1], ",");
             keys = new BoundedValue[keyarr.length];
             for (int i = 0; i < keyarr.length; i++) {
                 keys[i] = new BoundedValue().parse(keyarr[i], nextColumn);

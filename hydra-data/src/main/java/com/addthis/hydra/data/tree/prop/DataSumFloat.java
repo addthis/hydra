@@ -17,7 +17,7 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
@@ -58,11 +58,11 @@ public class DataSumFloat extends TreeNodeData<DataSumFloat.Config> {
 
     public static final class Config extends TreeDataParameters<DataSumFloat> {
 
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String key;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private double defaultValue = 0;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private boolean warnOnError;
 
         @Override
@@ -72,9 +72,9 @@ public class DataSumFloat extends TreeNodeData<DataSumFloat.Config> {
         }
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private double sum;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long num;
 
     private BundleField keyAccess;

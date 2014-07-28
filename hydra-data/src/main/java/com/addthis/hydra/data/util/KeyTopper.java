@@ -18,25 +18,26 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 
 
 /**
  * Class that helps maintain a top N list for any String Map TODO should move
  * into basis libraries
  */
-public final class KeyTopper implements Codec.Codable {
+public final class KeyTopper implements Codable {
 
     public KeyTopper() {
     }
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private HashMap<String, Long> map;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long minVal;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String minKey;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean lossy;
 
     @Override
@@ -45,7 +46,7 @@ public final class KeyTopper implements Codec.Codable {
     }
 
     public KeyTopper init() {
-        map = new HashMap<String, Long>();
+        map = new HashMap<>();
         return this;
     }
 
@@ -71,7 +72,7 @@ public final class KeyTopper implements Codec.Codable {
      */
     @SuppressWarnings("unchecked")
     public Map.Entry<String, Long>[] getSortedEntries() {
-        Map.Entry e[] = new Map.Entry[map.size()];
+        Map.Entry[] e = new Map.Entry[map.size()];
         e = map.entrySet().toArray(e);
         Arrays.sort(e, new Comparator() {
             public int compare(Object arg0, Object arg1) {

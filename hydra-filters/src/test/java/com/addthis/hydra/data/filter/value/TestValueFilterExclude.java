@@ -34,7 +34,7 @@ public class TestValueFilterExclude {
 
     @Test
     public void exactMatch() {
-        HashSet<String> exactValues = new HashSet<String>();
+        HashSet<String> exactValues = new HashSet<>();
         exactValues.add("bar");
         exactValues.add("bax");
         assertEquals("foo", excludeFilter("foo", exactValues, null, null, null));
@@ -51,7 +51,7 @@ public class TestValueFilterExclude {
 
     @Test
     public void matches() {
-        HashSet<String> matches = new HashSet<String>();
+        HashSet<String> matches = new HashSet<>();
         matches.add("\\d\\d");
         matches.add(".*addthis.com.*");
         assertEquals("foo", excludeFilter("foo", null, matches, null, null));
@@ -61,7 +61,7 @@ public class TestValueFilterExclude {
 
     @Test
     public void find() {
-        HashSet<String> find = new HashSet<String>();
+        HashSet<String> find = new HashSet<>();
         find.add("[^a-z0-9]");
         assertEquals("laputanmachine", excludeFilter("laputanmachine", null, null, find, null));
         assertEquals(null, excludeFilter("-bobhope", null, null, find, null));
@@ -69,11 +69,11 @@ public class TestValueFilterExclude {
 
     @Test
     public void multi() {
-        HashSet<String> exactValues = new HashSet<String>();
+        HashSet<String> exactValues = new HashSet<>();
         exactValues.add("wam");
         exactValues.add("bam");
         String[] contains = new String[]{"bar", "bax"};
-        HashSet<String> matches = new HashSet<String>();
+        HashSet<String> matches = new HashSet<>();
         matches.add("\\d\\d");
         matches.add(".*addthis.com.*");
         assertEquals(null, excludeFilter("wam", exactValues, matches, null, null));

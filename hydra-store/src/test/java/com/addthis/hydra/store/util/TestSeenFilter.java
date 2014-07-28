@@ -45,7 +45,7 @@ public class TestSeenFilter {
         int incr = capacity / 10;
         for (int i = incr; i <= capacity; i += incr) {
             filter.clear();
-            HashSet<Long> incSet = new HashSet<Long>();
+            HashSet<Long> incSet = new HashSet<>();
             for (int j = 0; j < i; j++) {
                 Long next = rand.nextLong();
                 incSet.add(next);

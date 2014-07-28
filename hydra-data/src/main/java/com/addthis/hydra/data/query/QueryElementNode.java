@@ -28,8 +28,9 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecBin2;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.binary.CodecBin2;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.query.QueryElement.ReferencePathIterator;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeActor;
@@ -45,34 +46,34 @@ import org.apache.commons.lang3.mutable.MutableInt;
  *
  * @user-reference
  */
-public class QueryElementNode implements Codec.Codable {
+public class QueryElementNode implements Codable {
 
     private static String memKey = "";
 
-    @Codec.Set(codable = true)
-    public String match[];
-    @Codec.Set(codable = true)
-    public String trap[];
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
+    public String[] match;
+    @FieldConfig(codable = true)
+    public String[] trap;
+    @FieldConfig(codable = true)
     public String data;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public String dataKey;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public Boolean flat;
     // output column this element is bound to 'show' (or null if dropped)
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String column;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public Boolean regex;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public Boolean range;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public Boolean rangeStrict;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     public Boolean not;
-    @Codec.Set(codable = true)
-    public String path[];
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
+    public String[] path;
+    @FieldConfig(codable = true)
     public Boolean up;
 
     private BundleField field;
@@ -111,7 +112,7 @@ public class QueryElementNode implements Codec.Codable {
 
         QueryElementNode.MODE mode = MODE.MATCH;
 
-        String list[] = Strings.splitArray(tok, ",");
+        String[] list = Strings.splitArray(tok, ",");
         for (String component : list) {
             if (component.startsWith("*")) {
                 component = component.substring(1);
@@ -145,7 +146,7 @@ public class QueryElementNode implements Codec.Codable {
                 continue;
             }
             if (component.startsWith("%") && !(component.startsWith("%2d") || component.startsWith("%2c"))) {
-                String kv[] = Bytes.urldecode(component.substring(1)).split("=", 2);
+                String[] kv = Bytes.urldecode(component.substring(1)).split("=", 2);
                 if (kv.length == 2) {
                     data = kv[0];
                     dataKey = kv[1];
@@ -172,7 +173,7 @@ public class QueryElementNode implements Codec.Codable {
             }
         }
         if (matchList.size() > 0) {
-            String out[] = new String[matchList.size()];
+            String[] out = new String[matchList.size()];
             match = matchList.toArray(out);
             if (tok.startsWith(",")) {
                 TreeSet<String> sorted = new TreeSet<>();
@@ -259,7 +260,7 @@ public class QueryElementNode implements Codec.Codable {
         return not != null && not;
     }
 
-    private DataTreeNode followPath(DataTreeNode from, String path[]) {
+    private DataTreeNode followPath(DataTreeNode from, String[] path) {
         DataTreeNode node = from;
         for (String name : path) {
             node = node.getNode(name);

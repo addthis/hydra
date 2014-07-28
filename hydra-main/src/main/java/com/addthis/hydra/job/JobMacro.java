@@ -15,23 +15,24 @@ package com.addthis.hydra.job;
 
 import com.addthis.basis.util.JitterClock;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.maljson.JSONObject;
 
 
 /**
  * config templatable regions used in jobs
  */
-public final class JobMacro implements Codec.Codable, Cloneable {
+public final class JobMacro implements Codable, Cloneable {
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String description;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String macro;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long modified;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String owner;
 
     public JobMacro() {

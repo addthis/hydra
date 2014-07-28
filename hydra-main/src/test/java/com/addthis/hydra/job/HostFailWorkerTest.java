@@ -46,7 +46,6 @@ public class HostFailWorkerTest extends ZkStartUtil {
 
     @After
     public void cleanup() throws Exception {
-        hostFailWorker.stop();
         spawn.getSpawnDataStore().close();
     }
 
@@ -84,12 +83,11 @@ public class HostFailWorkerTest extends ZkStartUtil {
         // Mark some hosts for failure, then spin up a new HostFailWorker and make sure it can load the state
         hostFailWorker.markHostsToFail("a,b", HostFailWorker.FailState.FAILING_FS_DEAD);
         hostFailWorker.markHostsToFail("c", HostFailWorker.FailState.FAILING_FS_OKAY);
-        HostFailWorker hostFailWorker2 = new HostFailWorker(spawn);
+        HostFailWorker hostFailWorker2 = new HostFailWorker(spawn, null);
         assertEquals("should persist state", HostFailWorker.FailState.FAILING_FS_DEAD, hostFailWorker2.getFailureState("a"));
         assertEquals("should persist state", HostFailWorker.FailState.FAILING_FS_DEAD, hostFailWorker2.getFailureState("b"));
         assertEquals("should persist state", HostFailWorker.FailState.FAILING_FS_OKAY, hostFailWorker2.getFailureState("c"));
         assertEquals("should show alive state for non-failed host", HostFailWorker.FailState.ALIVE, hostFailWorker2.getFailureState("d"));
-        hostFailWorker2.stop();
     }
 
     @Test

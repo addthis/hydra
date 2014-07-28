@@ -29,7 +29,7 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.JobCommand;
 import com.addthis.hydra.job.JobMacro;
@@ -64,7 +64,7 @@ public class ListenResource {
 
     private AtomicInteger clientCounter;
 
-    private static final CodecJSON codec = new CodecJSON();
+    private static final CodecJSON codec = CodecJSON.INSTANCE;
 
     public ListenResource(Spawn spawn, int pollTimeout) {
         this.spawn = spawn;

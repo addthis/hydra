@@ -17,7 +17,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">performs glob expression matching on the input string</span>.
@@ -35,7 +35,7 @@ public class ValueFilterGlob extends StringFilter {
     /**
      * Glob expression to match against. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String pattern;
 
     private volatile PathMatcher compiled;

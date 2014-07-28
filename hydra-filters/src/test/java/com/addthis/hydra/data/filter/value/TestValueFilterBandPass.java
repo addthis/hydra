@@ -57,7 +57,7 @@ public class TestValueFilterBandPass {
 
     @Test
     public void basicBand() {
-        HashSet<String> whitelist = new HashSet<String>();
+        HashSet<String> whitelist = new HashSet<>();
         whitelist.add("bar");
         assertEquals("foo", bandPassFilter("foo", 0, 0, 0, null));
         assertEquals(null, bandPassFilter("foo", 1, 1, 0, null));

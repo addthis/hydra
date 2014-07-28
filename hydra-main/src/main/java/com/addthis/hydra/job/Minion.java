@@ -62,8 +62,9 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.bark.ZkGroupMembership;
 import com.addthis.bark.ZkUtil;
-import com.addthis.codec.Codec;
-import com.addthis.codec.CodecJSON;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.backup.DailyBackup;
 import com.addthis.hydra.job.backup.GoldBackup;
 import com.addthis.hydra.job.backup.HourlyBackup;
@@ -143,7 +144,7 @@ import org.slf4j.LoggerFactory;
 /**
  * TODO implement APIs for extended probing, sanity, clearing of job state
  */
-public class Minion extends AbstractHandler implements MessageListener, Codec.Codable {
+public class Minion extends AbstractHandler implements MessageListener, Codable {
 
     private static Logger log = LoggerFactory.getLogger(Minion.class);
     private static boolean meshQueue = Parameter.boolValue("queue.mesh", false);
@@ -199,7 +200,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                     new LinkedBlockingQueue<Runnable>(),
                     new ThreadFactoryBuilder().setNameFormat("rabbitMQConnectionService-%d").build()));
     private Lock minionStateLock = new ReentrantLock();
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private MinionTaskDeleter minionTaskDeleter;
     // Historical metrics
     private Timer fileStatsTimer;
@@ -234,7 +235,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
         }
     }
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String[] args) throws Exception {
         new Minion(new File(args.length > 0 ? args[0] : dataDir), args.length > 2 ? Integer.parseInt(args[1]) : webPort);
     }
 
@@ -258,13 +259,13 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
     private MinionWriteableDiskCheck diskHealthCheck;
     private int minionPid = -1;
 
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String uuid;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ConcurrentHashMap<String, Integer> stopped = new ConcurrentHashMap<>();
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private final ArrayList<CommandTaskKick> jobQueue = new ArrayList<>(10);
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String minionTypes;
 
     private Histogram activeTaskHistogram;
@@ -794,7 +795,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
         status.setBackingUp(backingUp.toArray(new JobKey[backingUp.size()]));
         status.setStopped(stoppedTasks.toArray(new JobKey[stoppedTasks.size()]));
         status.setIncompleteReplicas(incompleteReplicas.toArray(new JobKey[incompleteReplicas.size()]));
-        LinkedList<JobKey> queued = new LinkedList<JobKey>();
+        LinkedList<JobKey> queued = new LinkedList<>();
         minionStateLock.lock();
         try {
             for (CommandTaskKick kick : jobQueue) {
@@ -1088,7 +1089,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                                 } else if (size > 4096) {
                                     log.warn("[warning] searching > 4k space @ " + size);
                                 }
-                                byte scan[] = new byte[(int) size];
+                                byte[] scan = new byte[(int) size];
                                 access.seek(start);
                                 access.readFully(scan);
                                 log.warn("scan of " + Bytes.toString(scan));
@@ -1145,46 +1146,46 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
     /**
      * for tracking state
      */
-    public class JobTask implements Codec.Codable {
+    public class JobTask implements Codable {
 
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private String id;
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private Integer node;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private Integer nodeCount;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private CommandTaskKick kick;
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private int runCount;
-        @Codec.Set(codable = true, required = true)
+        @FieldConfig(codable = true, required = true)
         private long runTime;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private long startTime;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private boolean monitored = true;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private long fileCount;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private long fileBytes;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private volatile boolean deleted;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int retries;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private boolean wasQueued;
 
         private volatile ReplicaTarget[] failureRecoveryReplicas;
         private volatile ReplicaTarget[] replicas;
 
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private long replicateStartTime;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private long backupStartTime;
 
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String rebalanceSource;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String rebalanceTarget;
 
         private Process process;
@@ -1344,7 +1345,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             File jobExit = new File(jobDir, "job.exit");
             if (jobExit.exists() && jobExit.canRead()) {
                 try {
-                    new CodecJSON().decode(exitState, Files.read(jobExit));
+                    CodecJSON.INSTANCE.decode(exitState, Files.read(jobExit));
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -1476,7 +1477,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
         }
 
         private List<String> assembleReplicateCommandAndInformSpawn(ReplicaTarget replica, boolean replicateAllBackups) throws IOException {
-            List<String> rv = new ArrayList<String>();
+            List<String> rv = new ArrayList<>();
             if (replica == null || !shouldExecuteReplica(replica)) {
                 return null;
             }
@@ -1518,18 +1519,17 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             return rv;
         }
 
-        private List<String> assembleBackupCommandsForHost(boolean local, ReplicaTarget replica, List<String> symlinkCommands, List<String> deleteCommands) {
-            List<String> copyCommands = new ArrayList<String>();
+        private List<String> assembleBackupCommandsForHost(boolean local, ReplicaTarget replica, List<String> symlinkCommands, List<String> deleteCommands, long time) {
+            List<String> copyCommands = new ArrayList<>();
             for (ScheduledBackupType type : ScheduledBackupType.getBackupTypes().values()) {
                 String[] allBackups = local ? findLocalBackups(false) : findRemoteBackups(false, replica);
-                String[] validBackups = allBackups;
-                String backupName = type.generateCurrentName(true);
+                String backupName = type.generateNameForTime(time, true);
                 String symlinkName = type.getSymlinkName();
                 String userAT = local ? null : replica.getUserAT();
                 String source = "live";
                 String path = local ? jobDir.getParentFile().getAbsolutePath() : getTaskBaseDir(replica.getBaseDir(), id, node);
                 int maxNumBackups = getMaxNumBackupsForType(type);
-                if (maxNumBackups > 0 && type.shouldMakeNewBackup(validBackups)) {
+                if (maxNumBackups > 0 && type.shouldMakeNewBackup(allBackups)) {
                     String backupCMD = createBackupCommand(local, userAT, path, source, backupName);
                     copyCommands.add(backupCMD);
                     if (symlinkName != null) {
@@ -1537,7 +1537,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                     }
                     maxNumBackups -= 1; // Diminish the max number by one, because we're about to add a new one
                 }
-                List<String> backupsToDelete = type.oldBackupsToDelete(allBackups, validBackups, maxNumBackups);
+                List<String> backupsToDelete = type.oldBackupsToDelete(allBackups, allBackups, maxNumBackups);
                 for (String oldBackup : backupsToDelete) {
                     if (MinionTaskDeleter.shouldDeleteBackup(oldBackup, type)) {
                         deleteCommands.add(createDeleteCommand(local, userAT, path + "/" + oldBackup));
@@ -1624,7 +1624,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                 String lsResult = execCommandReturnStdOut(remoteConnectMethod + " " + userAT + " " + lscmd + " " + baseDir);
                 String[] lines = lsResult.split("\n");
                 if (completeOnly) {
-                    List<String> rv = new ArrayList<String>(lines.length);
+                    List<String> rv = new ArrayList<>(lines.length);
                     for (String line : lines) {
                         String[] splitLine = line.split("/");
                         if (splitLine.length > 2) {
@@ -2093,9 +2093,10 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
             StringBuilder bash = new StringBuilder("#!/bin/bash\n");
             bash.append("cd " + jobDir.getCanonicalPath() + "\n");
             bash.append(makeRetryDefinition());
-            List<String> symlinkCommands = new ArrayList<String>();
-            List<String> deleteCommands = new ArrayList<String>();
-            List<String> localBackupCommands = assembleBackupCommandsForHost(true, null, symlinkCommands, deleteCommands);
+            List<String> symlinkCommands = new ArrayList<>();
+            List<String> deleteCommands = new ArrayList<>();
+            long now = System.currentTimeMillis();
+            List<String> localBackupCommands = assembleBackupCommandsForHost(true, null, symlinkCommands, deleteCommands, now);
             appendCommandsWithStartFinishMessages(bash, "updating local backups", localBackupCommands, backupCommandDelaySeconds);
             if (replicas != null) {
                 for (ReplicaTarget replica : replicas) {
@@ -2103,7 +2104,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                         continue;
                     }
                     String action = "updating backups on " + replica.getHost() + " uuid=" + replica.getHostUuid();
-                    List<String> remoteBackupCommands = assembleBackupCommandsForHost(false, replica, symlinkCommands, deleteCommands);
+                    List<String> remoteBackupCommands = assembleBackupCommandsForHost(false, replica, symlinkCommands, deleteCommands, now);
                     appendCommandsWithStartFinishMessages(bash, action, remoteBackupCommands, backupCommandDelaySeconds);
                 }
             }
@@ -2355,7 +2356,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                         }
                     }
                     bytesRead = (int) (len - off);
-                    byte buf[] = new byte[bytesRead];
+                    byte[] buf = new byte[bytesRead];
                     raf.read(buf);
                     content = Bytes.toString(buf);
                     endOffset = len;
@@ -2369,7 +2370,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                         }
                     }
                     bytesRead = (int) (off - startOffset);
-                    byte buf[] = new byte[bytesRead];
+                    byte[] buf = new byte[bytesRead];
                     raf.seek(startOffset);
                     raf.read(buf);
                     content = Bytes.toString(buf);
@@ -2402,7 +2403,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                         lines--;
                     }
                 }
-                byte buf[] = new byte[(int) (len - off)];
+                byte[] buf = new byte[(int) (len - off)];
                 raf.read(buf);
                 return Bytes.toString(buf);
             } catch (Exception e) {
@@ -2424,7 +2425,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codec.Co
                         lines--;
                     }
                 }
-                byte buf[] = new byte[(int) off];
+                byte[] buf = new byte[(int) off];
                 raf.seek(0);
                 raf.read(buf);
                 return Bytes.toString(buf);

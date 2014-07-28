@@ -119,18 +119,18 @@ public class MeterFileLogger implements Runnable {
                 Thread.sleep(logInterval);
                 Map<String, Long> map = meter.getIntervalData();
                 if (meterJMX) {
-                    lastMap = new HashMap<String, Long>(map);
+                    lastMap = new HashMap<>(map);
                     mbean.setMap(lastMap);
                 }
                 if (lineCount++ == 0) {
-                    LinkedList<String> line = new LinkedList<String>();
+                    LinkedList<String> line = new LinkedList<>();
                     line.add("\"date\"");
                     for (String label : map.keySet()) {
                         line.add("\"" + label + "\"");
                     }
                     currentOutput.write(Bytes.toBytes(Strings.join(line.toArray(), ",") + "\n"));
                 }
-                LinkedList<String> line = new LinkedList<String>();
+                LinkedList<String> line = new LinkedList<>();
                 line.add(dateFormat.format(System.currentTimeMillis()));
                 for (Long val : map.values()) {
                     line.add(Long.toString(val));

@@ -31,7 +31,7 @@ import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Varint;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.db.IReadWeighable;
 import com.addthis.hydra.store.db.ReadDBKeyCoder;
 import com.addthis.hydra.store.kv.metrics.ExternalPagedStoreMetrics;
@@ -68,7 +68,7 @@ import org.xerial.snappy.SnappyInputStream;
  * @param <K> - key for individual values, also used for pages
  * @param <V> - type of object stored (the backing store will have type Page<V>)
  */
-public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeighable & Codec.BytesCodable> {
+public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeighable & BytesCodable> {
 
     private static final boolean collectMetricsParameter = Parameter.boolValue("eps.debug.collect", false);
     private static final Logger log = LoggerFactory.getLogger(ReadExternalPagedStore.class);

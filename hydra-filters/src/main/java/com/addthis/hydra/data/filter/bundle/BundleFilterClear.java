@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.bundle;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 /**
@@ -58,22 +58,26 @@ public class BundleFilterClear extends BundleFilter {
     /**
      * The target field for clearing the value. This field is required.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String field;
 
     /**
-     * Optionally apply a filter on the target field. The result of this filter used by nullFail field. The Default is null.
+     * Optionally apply a filter on the target field. The result of this filter used by nullFail
+     * field. The Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private ValueFilter filter;
 
     /**
      * If true then return false when the input is null. Default is true.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean nullFail = true;
 
-    private String fields[];
+    /** If true then remove the field rather than set it to null. Default is false. */
+    @FieldConfig private boolean removes = false;
+
+    private String[] fields;
 
     @Override
     public void initialize() {
@@ -82,7 +86,7 @@ public class BundleFilterClear extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         ValueObject val = bundle.getValue(bound[0]);
         if (filter != null) {
             val = filter.filter(val);
@@ -90,7 +94,11 @@ public class BundleFilterClear extends BundleFilter {
         if (nullFail && val == null) {
             return false;
         }
-        bundle.setValue(bound[0], null);
+        if (removes) {
+            bundle.removeValue(bound[0]);
+        } else {
+            bundle.setValue(bound[0], null);
+        }
         return true;
     }
 }

@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.value;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">performs string replacement with optional regular expression matching</span>.
@@ -37,19 +37,19 @@ public class ValueFilterReplace extends StringFilter {
     /**
      * The matching string, interpreted either as a literal string or a regular expression.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String find;
 
     /**
      * The replacement string.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String replace;
 
     /**
      * If true, then interpret 'find' as a regular expression. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean regex;
 
     private Pattern pattern;

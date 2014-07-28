@@ -27,7 +27,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -38,7 +37,8 @@ import com.addthis.basis.util.Strings;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.hydra.task.stream.StreamFile;
 import com.addthis.hydra.task.stream.StreamFileSource;
@@ -62,75 +62,75 @@ import lzma.streams.LzmaInputStream;
 /**
  * Iterates over a source list and returns them as a continuous stream.
  */
-public abstract class DataSourceStreamList extends TaskDataSource implements Codec.SuperCodable {
+public abstract class DataSourceStreamList extends TaskDataSource implements SuperCodable {
 
     private static final Logger log = LoggerFactory.getLogger(DataSourceStreamList.class);
 
     /**
      * Specifies conversion to bundles.
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     protected TaskDataSource factory;
 
     /**
      * This field is unused.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected String injectKey = FactoryInputStream.InjectorStreamSource.DefautlInjectorKey;
 
     /**
      * Path to the mark directory.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String markDir = "marks";
 
     /**
      * Number of shards in the input source.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private Integer shardTotal;
 
     /**
      * If specified then process only the shards specified in this array.
      */
-    @Codec.Set(codable = true)
-    private Integer shards[];
+    @FieldConfig(codable = true)
+    private Integer[] shards;
 
     /**
      * If true then generate a hash of the filename input rather than use the {{mod}} field. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean hash;
 
 
     /**
      * If true then set hash to true when shardTotal is null or 0. Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected boolean forceHashFalse;
 
     /**
      * If non-null, then inject the filename into the bundle field using this field name. Default is null.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected String injectSourceName;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int maxCacheSize = 100;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int cacheFillInterval = 500;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int peekerThreads = 2;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int sourceInitThreads = 1;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int MAX_GET_NEXT_SOURCE_ATTEMPTS = 360000;
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     protected int maxReadyQueuePollAttempts = 500;
 
     private StreamFileSource sources;
@@ -152,19 +152,19 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
     /**
      * a queue of sources that have a bundle that is ready for use
      */
-    private final BlockingQueue<SourceWrapper> readyQueue = new LinkedBlockingQueue<SourceWrapper>();
+    private final BlockingQueue<SourceWrapper> readyQueue = new LinkedBlockingQueue<>();
 
     /**
      * a list of all source wrappers we are currently tracking, used to detect exit conditions.
      */
-    private final List<SourceWrapper> wrapperList = new ArrayList<SourceWrapper>();
+    private final List<SourceWrapper> wrapperList = new ArrayList<>();
 
     /**
      * a set of sources that should be closed on exit
      */
-    private final Set<SourceWrapper> closeSet = new HashSet<SourceWrapper>();
+    private final Set<SourceWrapper> closeSet = new HashSet<>();
 
-    public abstract StreamFileSource getSourceList(Integer shards[]);
+    public abstract StreamFileSource getSourceList(Integer[] shards);
 
     protected DataSourceStreamList() {
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -179,15 +179,15 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
     }
 
     @Override
-    public void open(TaskRunConfig config, AtomicBoolean errored) {
+    public void init(TaskRunConfig config) {
         try {
-            doOpen(config, errored);
+            doOpen(config);
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
     }
 
-    private void doOpen(TaskRunConfig config, AtomicBoolean errored) throws Exception {
+    private void doOpen(TaskRunConfig config) throws Exception {
         tracker = new SourceTracker(markDir, config);
         if (shardTotal == null || shardTotal == 0) {
             shardTotal = config.nodeCount;
@@ -202,7 +202,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
         if (hash) {
             sources = new StreamSourceHashed(sources, shards, shardTotal);
         }
-        cacheFillerService.execute(new CacheFiller(errored));
+        cacheFillerService.execute(new CacheFiller());
         log.warn("shards=[" + Strings.join(shards, ",") + " of " + shardTotal + "] sources=" + sources + " peekers=" + peekerThreads + " maxCache=" + maxCacheSize);
     }
 
@@ -356,7 +356,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
         }
     }
 
-    private void fillInputStreamCache(AtomicBoolean errored) throws InterruptedException {
+    private void fillInputStreamCache() throws InterruptedException {
         try {
             while (wrapperList.size() < maxCacheSize && queuedSourceInitTasks.get() < maxCacheSize && !finished) {
                 if (exiting) {
@@ -370,8 +370,8 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
                     finished = true;
                     break;
                 }
-                TaskDataSource ostream = new SourceTypeStreamFile(factory.clone(), nextStream);
-                if (log.isDebugEnabled()) log.debug("[fillCache] open/init stream " + nextStream);
+                TaskDataSource ostream = new SourceTypeStreamFile(factory, nextStream);
+                if (log.isDebugEnabled()) log.debug("[fillCache] init/init stream " + nextStream);
                 if (exiting) {
                     // check to make sure we aren't exiting before trying to init source
                     break;
@@ -380,7 +380,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
                     continue;
                 }
 
-                sourceInitService.execute(new SourceInitializer(queuedSourceInitTasks.incrementAndGet(), nextStream, ostream, errored));
+                sourceInitService.execute(new SourceInitializer(queuedSourceInitTasks.incrementAndGet(), nextStream, ostream));
             }
         } catch (Exception ex) {
             log.warn("Unexpected Exception filling cacheList: " + ex.getMessage(), ex);
@@ -427,13 +427,11 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
         private final StreamFile streamFile;
         private final TaskDataSource source;
         private final int initId;
-        private final AtomicBoolean errored;
 
-        private SourceInitializer(int initId, StreamFile streamFile, TaskDataSource source, AtomicBoolean errored) {
+        private SourceInitializer(int initId, StreamFile streamFile, TaskDataSource source) {
             this.initId = initId;
             this.streamFile = streamFile;
             this.source = source;
-            this.errored = errored;
         }
 
         @Override
@@ -458,7 +456,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
                     sourceOpenLock.lock();
                     try {
                         FactoryInputStream.InjectorStreamSource.inject(FactoryInputStream.InjectorStreamSource.DefautlInjectorKey, is);
-                        tracker.open(source, errored);
+                        tracker.open(source);
                     } finally {
                         sourceOpenLock.unlock();
                     }
@@ -499,17 +497,11 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Cod
      */
     private class CacheFiller implements Runnable {
 
-        final AtomicBoolean errored;
-
-        public CacheFiller(AtomicBoolean errored) {
-            this.errored = errored;
-        }
-
         @Override
         public void run() {
             try {
                 while (!exiting && !finished) {
-                    fillInputStreamCache(errored);
+                    fillInputStreamCache();
                     Thread.sleep(cacheFillInterval);
                 }
             } catch (InterruptedException e) {

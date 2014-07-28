@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.bundle;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">compares two fields in a bundle for equality</span>.
@@ -43,19 +43,19 @@ public class BundleFilterEquals extends BundleFilter {
     /**
      * the left hand field value
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String left;
 
     /**
      * The right hand field
      */
-    @Codec.Set(codable = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String right;
 
     /**
      * inverts behavior of filter
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean not;
 
     String[] fields;
@@ -69,7 +69,7 @@ public class BundleFilterEquals extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField bound[] = getBindings(bundle, fields);
+        BundleField[] bound = getBindings(bundle, fields);
         ValueObject lv = bundle.getValue(bound[0]);
         ValueObject rv = bundle.getValue(bound[1]);
         if (lv == null && rv == null) {

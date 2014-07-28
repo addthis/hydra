@@ -176,7 +176,8 @@ public class OpString extends AbstractRowOp {
                 if (o.startsWith("c")) {
                     ops.add(new StringOp(OP_COLVAL, ValueFactory.create(o.substring(1))));
                 } else if (o.startsWith("v")) {
-                    ops.add(new StringOp(OP_CONST, ValueFactory.create(o.substring(1))));
+                    String literal = o.equals("v") ? "," : o.substring(1);
+                    ops.add(new StringOp(OP_CONST, ValueFactory.create(literal)));
                 }
             }
         }
@@ -255,7 +256,7 @@ public class OpString extends AbstractRowOp {
     }
 
     /** */
-    private class StringOp {
+    private static class StringOp {
 
         private int type;
         private ValueObject val;

@@ -97,7 +97,7 @@ public class JSONFetcher {
         int retry = retries;
         while (true) {
             try {
-                byte raw[] = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
+                byte[] raw = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
                 String kv = Bytes.toString(raw).trim();
                 if (!(kv.startsWith("{") && kv.endsWith("}"))) {
                     kv = Strings.cat("{", kv, "}");
@@ -135,11 +135,11 @@ public class JSONFetcher {
         int retry = retries;
         while (true) {
             try {
-                byte raw[] = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
+                byte[] raw = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
                 String list = Bytes.toString(raw);
 
                 if (set == null) {
-                    set = new HashSet<String>();
+                    set = new HashSet<>();
                 }
 
                 Scanner in = new Scanner(list);
@@ -163,7 +163,7 @@ public class JSONFetcher {
         int retry = retries;
         while (true) {
             try {
-                byte raw[] = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
+                byte[] raw = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
                 String list = Bytes.toString(raw);
                 if (!(list.startsWith("[") && list.endsWith("]"))) {
                     list = Strings.cat("[", list, "]");
@@ -191,7 +191,7 @@ public class JSONFetcher {
         int retry = retries;
         while (true) {
             try {
-                byte raw[] = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
+                byte[] raw = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
                 String list = Bytes.toString(raw);
                 if (!(list.startsWith("[") && list.endsWith("]"))) {
                     list = Strings.cat("[", list, "]");

@@ -55,7 +55,7 @@ public class URLTree {
 
         public TreeObject(String data) {
             treeValue = new TreeValue(data, 0d);
-            leaves = new HashMap<String, TreeObject>();
+            leaves = new HashMap<>();
         }
 
         public TreeValue getTreeValue() {
@@ -97,7 +97,7 @@ public class URLTree {
         }
 
         public List<TreeValue> getBranches(String sep) {
-            List<TreeValue> branches = new ArrayList<TreeValue>();
+            List<TreeValue> branches = new ArrayList<>();
 
             if (leaves.size() > 0) {
                 for (TreeObject leaf : leaves.values()) {

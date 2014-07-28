@@ -13,20 +13,22 @@
  */
 package com.addthis.hydra.data.tree;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.ClassMap;
-import com.addthis.codec.Codec.ClassMapFactory;
-import com.addthis.hydra.common.plugins.PluginReader;
-
+import com.addthis.codec.annotations.Pluggable;
+import com.addthis.codec.codables.Codable;
+import com.addthis.hydra.data.tree.prop.DataLimitTop;
+import com.addthis.hydra.data.tree.prop.DataSum;
 
 /**
  * Data attachments are additional information that can be attached to tree nodes.
  * <p/>
- * <p>Data attachments can be purely informational (such as a {@link DataSum.Config sum}) or they can affect
- * the rest of a tree.  For example a {@link DataLimitTop.Config limit.top} attachment limits how many children
+ * <p>Data attachments can be purely informational (such as a {@link DataSum.Config sum}) or they
+ * can affect
+ * the rest of a tree.  For example a {@link DataLimitTop.Config limit.top} attachment limits how
+ * many children
  * a node can have.</p>
  * <p/>
- * <p>When querying a data attachment use either the "${name}={parameters}" or "%{name}={parameters}" syntax.
+ * <p>When querying a data attachment use either the "${name}={parameters}" or
+ * "%{name}={parameters}" syntax.
  * The "$" returns one or more values and the "%" returns a list of nodes.
  * The exact behavior of "$" and "%" are defined on a per data attachment basis.
  * For instance they may not be implemented for each type. The "%" notation may return either
@@ -35,37 +37,8 @@ import com.addthis.hydra.common.plugins.PluginReader;
  * @user-reference
  * @hydra-category
  */
-@Codec.Set(classMapFactory = TreeDataParameters.CMAP.class)
-public abstract class TreeDataParameters<T extends TreeNodeData<?>> implements Codec.Codable {
-
-    static ClassMap cmap = new ClassMap() {
-        @Override
-        public String getClassField() {
-            return "type";
-        }
-
-        @Override
-        public String getCategory() {
-            return "data attachment";
-        }
-    };
-
-    public static class CMAP implements ClassMapFactory {
-
-        public ClassMap getClassMap() {
-            return cmap;
-        }
-    }
-
-    public static void registerClass(String key, Class<? extends TreeDataParameters> clazz) {
-        cmap.add(key, clazz);
-    }
-
-    /** register types */
-    static {
-        PluginReader.registerPlugin("-treedataparameters.classmap", cmap, TreeDataParameters.class);
-        PluginReader.registerPlugin("-treenodedata.classmap", cmap, TreeNodeData.class);
-    }
+@Pluggable("data-attachment")
+public abstract class TreeDataParameters<T extends TreeNodeData<?>> implements Codable {
 
     public abstract T newInstance();
 

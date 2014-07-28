@@ -23,7 +23,8 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
@@ -45,21 +46,21 @@ public class DataLimitRecent extends TreeNodeData<DataLimitRecent.Config> {
          * If non-zero then remove values that are older than the oldest bundle by this amount.
          * Either this field or {@link #size} must be nonzero.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private long age;
 
         /**
          * If non-zero then accept at most N bundles.
          * Either this field or {@link #age} must be nonzero.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int size;
 
         /**
          * Bundle field name from which to draw time values.
          * If null then the system time is used while processing each bundle.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String timeKey;
 
         /**
@@ -67,7 +68,7 @@ public class DataLimitRecent extends TreeNodeData<DataLimitRecent.Config> {
          * The sorting is inefficient and should be
          * reimplemented. Default is false.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private boolean sortQueue;
 
         @Override
@@ -83,25 +84,25 @@ public class DataLimitRecent extends TreeNodeData<DataLimitRecent.Config> {
     }
 
     /** */
-    public static final class KeyTime implements Codec.Codable {
+    public static final class KeyTime implements Codable {
 
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private String key;
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private long time;
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int size;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long age;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long deleted;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private LinkedList<KeyTime> queue;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private String timeKey;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean sortQueue;
 
     private BundleField keyAccess;

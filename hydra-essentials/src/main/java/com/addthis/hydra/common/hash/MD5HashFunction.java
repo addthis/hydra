@@ -16,15 +16,32 @@ package com.addthis.hydra.common.hash;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
 
-public class MD5HashFunction {
+/**
+ * Method signatures and name are similar to but not compatible with other classes in the package.
+ * Colliding method names are deprecated for eventual resolution.
+ */
+public final class MD5HashFunction {
+    private MD5HashFunction() {}
 
-    public static String hash(byte[] bytes) {
+    public static String hashAsString(byte[] bytes) {
         HashCode hc = Hashing.md5().hashBytes(bytes);
         return hc.toString();
     }
 
-    public static String hash(String key) {
+    /** @deprecated Use {@link #hashAsString(byte[])}  */
+    @Deprecated
+    public static String hash(byte[] bytes) {
+        return hashAsString(bytes);
+    }
+
+    public static String hashAsString(String key) {
         HashCode hc = Hashing.md5().hashUnencodedChars(key);
         return hc.toString();
+    }
+
+    /** @deprecated Use {@link #hashAsString(String)}. */
+    @Deprecated
+    public static String hash(String key) {
+        return hashAsString(key);
     }
 }

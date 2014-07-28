@@ -18,11 +18,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.ClassMap;
-import com.addthis.codec.Codec.ClassMapFactory;
-import com.addthis.hydra.common.plugins.PluginReader;
-import com.addthis.hydra.data.filter.bundle.BundleFilter;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.Pluggable;
+import com.addthis.codec.codables.Codable;
 
 /**
  * A value filter applies a transformation on a value and returns
@@ -32,53 +30,15 @@ import com.addthis.hydra.data.filter.bundle.BundleFilter;
  * @hydra-category
  * @exclude-fields once, nullAccept
  */
-@Codec.Set(classMapFactory = ValueFilter.CMAP.class)
-public abstract class ValueFilter implements Codec.Codable {
-
-    public static final ClassMap cmap = new ClassMap() {
-        @Override
-        public String getClassField() {
-            return "op";
-        }
-
-        @Override
-        public String getCategory() {
-            return "value filter";
-        }
-
-        @Override
-        public ClassMap misnomerMap() {
-            return BundleFilter.cmap;
-        }
-    };
-
-    /**
-     * @exclude
-     */
-    public static class CMAP implements ClassMapFactory {
-
-        public ClassMap getClassMap() {
-            return cmap;
-        }
-    }
-
-    @SuppressWarnings("unused")
-    public static void registerFilter(String name, Class<? extends ValueFilter> clazz)
-    {
-        cmap.add(name, clazz);
-    }
-
-    /** register types */
-    static {
-        PluginReader.registerPlugin("-valuefilters.classmap", cmap, ValueFilter.class);
-    }
+@Pluggable("value-filter")
+public abstract class ValueFilter implements Codable {
 
     /**
      * If true and input is array then apply filter once on input.
      * Otherwise apply filter to each element of the array.
      * Default is false.
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean once;
     /**
      * If true then a parent {@link ValueFilterChain chain} filter does not exit on null values.
@@ -87,7 +47,7 @@ public abstract class ValueFilter implements Codec.Codable {
      *
      * @return
      */
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private boolean nullAccept;
 
     /**

@@ -19,7 +19,7 @@ import java.util.Map.Entry;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.ReadTreeNode;
@@ -44,7 +44,7 @@ public class DataLimitHot extends TreeNodeData<DataLimitHot.Config> {
         /**
          * Maximum number of child nodes allowed.
          */
-        @Codec.Set(codable = true)
+        @FieldConfig(codable = true)
         private int size;
 
         @Override
@@ -58,11 +58,11 @@ public class DataLimitHot extends TreeNodeData<DataLimitHot.Config> {
         }
     }
 
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private int size;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private long deleted;
-    @Codec.Set(codable = true)
+    @FieldConfig(codable = true)
     private KeyTopper top;
 
     @Override

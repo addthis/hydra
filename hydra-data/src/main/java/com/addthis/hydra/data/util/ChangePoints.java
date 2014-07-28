@@ -17,12 +17,12 @@ import java.util.ArrayList;
 import java.util.Random;
 import java.util.TreeMap;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.codables.Codable;
 
 /**
  *         Tools for finding change points in an integer array.
  */
-public class ChangePoints implements Codec.Codable {
+public class ChangePoints implements Codable {
 
     /**
      * Finds statistically significant changes in an Integer Array
@@ -35,7 +35,7 @@ public class ChangePoints implements Codec.Codable {
     }
 
     public static TreeMap<Integer, Integer> findPeaks2(Integer[] data, int max_width, int min_height) {
-        TreeMap<Integer, Integer> rv = new TreeMap<Integer, Integer>();
+        TreeMap<Integer, Integer> rv = new TreeMap<>();
         int currIndex = 0;
         int currHt = data[0];
         int currWidth = 0;
@@ -67,7 +67,7 @@ public class ChangePoints implements Codec.Codable {
     }
 
     public static TreeMap<Integer, Integer> findPeaks(Integer[] data, int min_size) {
-        TreeMap<Integer, Integer> rv = new TreeMap<Integer, Integer>();
+        TreeMap<Integer, Integer> rv = new TreeMap<>();
         Integer lastPeak = -1;
         for (int i = 1; i < data.length; i++) {
             int lb, rb;
@@ -120,7 +120,7 @@ public class ChangePoints implements Codec.Codable {
     }
 
     private static ArrayList<Integer> FCPhelper(Integer[] data, int a, int b) {
-        ArrayList<Integer> rv = new ArrayList<Integer>();
+        ArrayList<Integer> rv = new ArrayList<>();
         if (b > a) {
             Integer[] currSlice = slice(data, a, b);
             if (changeOccured(currSlice)) {
@@ -144,7 +144,7 @@ public class ChangePoints implements Codec.Codable {
     }
 
     private static TreeMap<Integer, Integer> checkCandidates(ArrayList<Integer> cands, Integer[] data, double threshold_ratio, int min_size) {
-        TreeMap<Integer, Integer> rv = new TreeMap<Integer, Integer>();
+        TreeMap<Integer, Integer> rv = new TreeMap<>();
         for (int i = 0; i < cands.size(); i++) {
             int z = cands.get(i);
             int lb, rb;
@@ -173,7 +173,7 @@ public class ChangePoints implements Codec.Codable {
     }
 
     private static TreeMap<String, Integer> checkAndSortCandidates(ArrayList<Integer> cands, Integer[] data, double threshold_ratio, int min_size, int inactive_threshold) {
-        TreeMap<String, Integer> rv = new TreeMap<String, Integer>();
+        TreeMap<String, Integer> rv = new TreeMap<>();
         for (int i = 0; i < cands.size(); i++) {
             Integer z = cands.get(i);
             int lb, rb;

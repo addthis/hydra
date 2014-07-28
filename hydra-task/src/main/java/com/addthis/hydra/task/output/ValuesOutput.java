@@ -14,38 +14,11 @@
 package com.addthis.hydra.task.output;
 
 import com.addthis.bundle.channel.DataChannelOutput;
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.ClassMap;
-import com.addthis.codec.Codec.ClassMapFactory;
+import com.addthis.codec.annotations.Pluggable;
+import com.addthis.codec.codables.Codable;
 
-@Codec.Set(classMapFactory = ValuesOutput.CMAP.class)
-public abstract class ValuesOutput implements Codec.Codable, DataChannelOutput {
-
-    private static ClassMap cmap = new ClassMap() {
-        @Override
-        public String getClassField() {
-            return "type";
-        }
-    };
-
-    /**
-     * handles serialization maps
-     */
-    public static class CMAP implements ClassMapFactory {
-
-        public ClassMap getClassMap() {
-            return cmap;
-        }
-    }
-
-    public static void registerClass(String name, Class<? extends ValuesOutput> clazz) {
-        cmap.add(name, clazz);
-    }
-
-    /** setup default serialization types */
-    static {
-        registerClass("file", ValuesOutputFile.class);
-    }
+@Pluggable("values output")
+public abstract class ValuesOutput implements Codable, DataChannelOutput {
 
     public abstract void open() throws Exception;
 }

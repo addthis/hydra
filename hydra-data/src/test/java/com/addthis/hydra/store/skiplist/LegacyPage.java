@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import com.addthis.basis.io.GZOut;
 import com.addthis.basis.util.Bytes;
 
-import com.addthis.codec.Codec;
+import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.KeyCoder;
 
 import com.jcraft.jzlib.Deflater;
@@ -32,7 +32,7 @@ import org.xerial.snappy.SnappyOutputStream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 
-public class LegacyPage<K, V extends Codec.BytesCodable> extends Page<K, V> {
+public class LegacyPage<K, V extends BytesCodable> extends Page<K, V> {
 
     protected LegacyPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, KeyCoder.EncodeType encodeType) {
         super(cache, firstKey, nextFirstKey, encodeType);
@@ -125,7 +125,7 @@ public class LegacyPage<K, V extends Codec.BytesCodable> extends Page<K, V> {
         }
     }
 
-    public static class LegacyPageFactory<K, V extends Codec.BytesCodable> extends PageFactory<K,V> {
+    public static class LegacyPageFactory<K, V extends BytesCodable> extends PageFactory<K,V> {
 
         public static final LegacyPageFactory singleton = new LegacyPageFactory();
 

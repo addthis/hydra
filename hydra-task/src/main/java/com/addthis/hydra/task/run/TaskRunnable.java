@@ -13,13 +13,8 @@
  */
 package com.addthis.hydra.task.run;
 
-import com.addthis.codec.Codec;
-import com.addthis.codec.Codec.ClassMap;
-import com.addthis.codec.Codec.ClassMapFactory;
-import com.addthis.hydra.task.hoover.Hoover;
-import com.addthis.hydra.task.map.StreamMapper;
-import com.addthis.hydra.task.treestats.TreeStatisticsJob;
-
+import com.addthis.codec.annotations.Pluggable;
+import com.addthis.codec.codables.Codable;
 
 /**
  * This is the specification for a Hydra job.
@@ -27,40 +22,8 @@ import com.addthis.hydra.task.treestats.TreeStatisticsJob;
  * @user-reference
  * @hydra-category
  */
-@Codec.Set(classMapFactory = TaskRunnable.CMAP.class)
-public abstract class TaskRunnable implements Codec.Codable {
-
-    private static ClassMap cmap = new ClassMap() {
-        @Override
-        public String getClassField() {
-            return "type";
-        }
-
-        @Override
-        public String getCategory() {
-            return "Hydra job";
-        }
-    };
-
-    /**
-     * @exclude
-     */
-    public static class CMAP implements ClassMapFactory {
-
-        public ClassMap getClassMap() {
-            return cmap;
-        }
-    }
-
-    public static final void registerTask(String type, Class<? extends TaskRunnable> clazz) {
-        cmap.add(type, clazz);
-    }
-
-    static {
-        registerTask("hoover", Hoover.class);
-        registerTask("map", StreamMapper.class);
-        registerTask("treestats", TreeStatisticsJob.class);
-    }
+@Pluggable("task")
+public abstract class TaskRunnable implements Codable {
 
     public abstract void init(TaskRunConfig config);
 

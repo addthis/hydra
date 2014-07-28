@@ -16,7 +16,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>4.2.12-SNAPSHOT</version>
+    <version>4.3.4-SNAPSHOT</version>
   </parent>
 
   <artifactId>hydra-task</artifactId>
@@ -78,7 +78,7 @@
     <dependency>
       <groupId>com.typesafe</groupId>
       <artifactId>config</artifactId>
-      <version>1.2.0</version>
+      <version>1.2.1</version>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>
@@ -101,6 +101,12 @@
       <artifactId>joda-time</artifactId>
       <version>${dep.joda-time.version}</version>
     </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.2.4</version>
+      <scope>compile</scope>
+    </dependency>
     <!-- end 3rd party deps -->
     <!-- test deps -->
     <dependency>
@@ -113,6 +119,11 @@
       <groupId>com.addthis</groupId>
       <artifactId>codec</artifactId>
       <version>${hydra.dep.codec.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.addthis</groupId>
+      <artifactId>bundle</artifactId>
+      <version>${hydra.dep.bundle.version}</version>
     </dependency>
     <!-- end test deps -->
   </dependencies>
