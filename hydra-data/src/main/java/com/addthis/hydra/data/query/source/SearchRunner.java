@@ -167,11 +167,11 @@ class SearchRunner implements Runnable {
                                        ", key: " + goldDirString + " after waiting: " + engineGetDuration + "ms");
         } //else we got an engine so we're good -- maybe this logic should be in the cache get
 
-        if (engineGetDuration > MeshQuerySource.slowQueryThreshold || log.isDebugEnabled() || query.isTraced()) {
+        if ((engineGetDuration > MeshQuerySource.slowQueryThreshold) || log.isDebugEnabled() || query.isTraced()) {
             Query.traceLog.info(
-                    "[QueryReference] Retrieved queryEngine for query: " + query.uuid() + ", key:" +
-                                goldDirString + " after waiting: " + engineGetDuration + "ms.  slow=" +
-                                (engineGetDuration > MeshQuerySource.slowQueryThreshold));
+                    "[QueryReference] Retrieved queryEngine for query: {}, key:{} after waiting: {}ms.  slow={}",
+                    query.uuid(), goldDirString, engineGetDuration,
+                    engineGetDuration > MeshQuerySource.slowQueryThreshold);
         }
         return engine;
     }
@@ -187,9 +187,9 @@ class SearchRunner implements Runnable {
         queryOpProcessor.sendComplete();
         final long searchDuration = System.currentTimeMillis() - searchStartTime;
         if (log.isDebugEnabled() || query.isTraced()) {
-            Query.traceLog.info(
-                    "[QueryReference] search complete " + query.uuid() + " in " + searchDuration + "ms directory: " +
-                                goldDirString + " slow=" + (searchDuration > MeshQuerySource.slowQueryThreshold) + " rowsIn: " + queryOpProcessor.getInputRows());
+            Query.traceLog.info("[QueryReference] search complete {} in {}ms directory: {} slow={} rowsIn: {}",
+                                query.uuid(), searchDuration, goldDirString,
+                                searchDuration > MeshQuerySource.slowQueryThreshold, queryOpProcessor.getInputRows());
         }
         MeshQuerySource.queryTimes.update(searchDuration, TimeUnit.MILLISECONDS);
     }
