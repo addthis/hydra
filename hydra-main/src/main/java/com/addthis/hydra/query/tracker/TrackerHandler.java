@@ -18,13 +18,16 @@ import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.core.BundleFormat;
+import com.addthis.bundle.value.ValueFactory;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.query.aggregate.DetailedStatusTask;
 import com.addthis.hydra.query.aggregate.TaskSourceInfo;
 import com.addthis.hydra.query.web.DataChannelOutputToNettyBridge;
-import com.addthis.hydra.util.StringMapHelper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,23 +46,50 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
     private static final Logger log = LoggerFactory.getLogger(TrackerHandler.class);
 
     private final QueryTracker queryTracker;
-    private final String[] opsLog;
+    private final String[]     opsLog;
+    private final BundleField  typeField;
+    private final BundleField  errorField;
+    private final BundleField  pathField;
+    private final BundleField  opsField;
+    private final BundleField  sourcesField;
+    private final BundleField  timeField;
+    private final BundleField  runTimeField;
+    private final BundleField  jobIdField;
+    private final BundleField  jobAliasField;
+    private final BundleField  queryIdField;
+    private final BundleField  linesField;
+    private final BundleField  sentLinesField;
+    private final BundleField  senderField;
 
     // set when added to pipeline
     private DataChannelOutputToNettyBridge queryUser;
-    private ChannelHandlerContext ctx;
+    private ChannelHandlerContext          ctx;
     ChannelProgressivePromise queryPromise;
 
     // set on query
-    private Query query;
-    private QueryEntry queryEntry;
+    private Query            query;
+    private QueryEntry       queryEntry;
     private QueryOpProcessor opProcessorConsumer;
     ChannelProgressivePromise opPromise;
-    ChannelPromise requestPromise;
+    ChannelPromise            requestPromise;
 
     public TrackerHandler(QueryTracker queryTracker, String[] opsLog) {
         this.queryTracker = queryTracker;
         this.opsLog = opsLog;
+        BundleFormat eventFormat = queryTracker.eventLog.createBundle().getFormat();
+        typeField = eventFormat.getField("type");
+        errorField = eventFormat.getField("error");
+        pathField = eventFormat.getField("path");
+        opsField = eventFormat.getField("ops");
+        sourcesField = eventFormat.getField("sources");
+        timeField = eventFormat.getField("time");
+        runTimeField = eventFormat.getField("run.time");
+        jobIdField = eventFormat.getField("job.id");
+        jobAliasField = eventFormat.getField("job.alias");
+        queryIdField = eventFormat.getField("query.id");
+        linesField = eventFormat.getField("lines");
+        sentLinesField = eventFormat.getField("lines.sent");
+        senderField = eventFormat.getField("sender");
     }
 
     @Override
@@ -70,7 +100,8 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
+            throws Exception {
         if (msg instanceof Query) {
             writeQuery(ctx, (Query) msg, promise);
         } else {
@@ -78,7 +109,8 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
         }
     }
 
-    protected void writeQuery(final ChannelHandlerContext ctx, Query msg, ChannelPromise promise) throws Exception {
+    protected void writeQuery(final ChannelHandlerContext ctx, Query msg, ChannelPromise promise)
+            throws Exception {
         this.requestPromise = promise;
         this.queryUser = new DataChannelOutputToNettyBridge(ctx, promise);
         this.query = msg;
@@ -168,29 +200,29 @@ public class TrackerHandler extends ChannelOutboundHandlerAdapter implements Cha
         }
 
         try {
-            StringMapHelper queryLine = new StringMapHelper()
-                    .put("query.path", entryInfo.paths[0])
-                    .put("query.ops", Arrays.toString(entryInfo.ops))
-                    .put("sources", entryInfo.sources)
-                    .put("time", System.currentTimeMillis())
-                    .put("time.run", entryInfo.runTime)
-                    .put("job.id", entryInfo.job)
-                    .put("job.alias", entryInfo.alias)
-                    .put("query.id", entryInfo.uuid)
-                    .put("lines", entryInfo.lines)
-                    .put("sentLines", entryInfo.sentLines)
-                    .put("sender", entryInfo.sender);
+            Bundle event = queryTracker.eventLog.createBundle();
+            event.setValue(pathField, ValueFactory.create(entryInfo.paths[0]));
+            event.setValue(opsField, ValueFactory.create(Arrays.toString(entryInfo.ops)));
+            event.setValue(sourcesField, ValueFactory.create(entryInfo.sources));
+            event.setValue(timeField, ValueFactory.create(System.currentTimeMillis()));
+            event.setValue(runTimeField, ValueFactory.create(entryInfo.runTime));
+            event.setValue(jobIdField, ValueFactory.create(entryInfo.job));
+            event.setValue(jobAliasField, ValueFactory.create(entryInfo.alias));
+            event.setValue(queryIdField, ValueFactory.create(entryInfo.uuid));
+            event.setValue(linesField, ValueFactory.create(entryInfo.lines));
+            event.setValue(sentLinesField, ValueFactory.create(entryInfo.sentLines));
+            event.setValue(senderField, ValueFactory.create(entryInfo.sender));
             if (!future.isSuccess()) {
                 Throwable queryFailure = future.cause();
-                queryLine.put("type", "query.error")
-                         .put("error", queryFailure.getMessage());
+                event.setValue(typeField, ValueFactory.create("error"));
+                event.setValue(errorField, ValueFactory.create(queryFailure.getMessage()));
                 queryTracker.queryErrors.inc();
             } else {
-                queryLine.put("type", "query.done");
+                event.setValue(typeField, ValueFactory.create("complete"));
             }
             queryTracker.recentlyCompleted.put(query.uuid(), entryInfo);
-            queryTracker.log(queryLine);
             queryTracker.queryMeter.update(entryInfo.runTime, TimeUnit.MILLISECONDS);
+            queryTracker.eventLog.send(event);
         } catch (Exception e) {
             log.error("Error while doing record keeping for a query.", e);
         }

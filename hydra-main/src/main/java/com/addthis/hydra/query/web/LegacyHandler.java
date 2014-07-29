@@ -62,12 +62,11 @@ public class LegacyHandler {
             HttpResponse response = HttpUtils.startResponse(writer);
             String asyncUuid = genAsyncUuid();
             asyncCache.put(asyncUuid, query);
-            if (query.isTraced()) {
-                Query.emitTrace("async create " + asyncUuid + " from " + query);
-            }
+            Query.traceLog.info("async create {} from {}", asyncUuid, query);
             writer.write("{\"id\":\"" + asyncUuid + "\"}");
             ByteBuf textResponse = ByteBufUtil.encodeString(ctx.alloc(),
-                    CharBuffer.wrap(writer.getBuilder()), CharsetUtil.UTF_8);
+                                                            CharBuffer.wrap(writer.getBuilder()),
+                                                            CharsetUtil.UTF_8);
             HttpContent content = new DefaultHttpContent(textResponse);
             response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, textResponse.readableBytes());
             if (HttpHeaders.isKeepAlive(request)) {
@@ -83,9 +82,7 @@ public class LegacyHandler {
         } else {
             Query asyncQuery = asyncCache.getIfPresent(async);
             asyncCache.invalidate(async);
-            if (query.isTraced()) {
-                Query.emitTrace("async restore " + async + " as " + asyncQuery);
-            }
+            Query.traceLog.info("async restore {} as {}", async, asyncQuery);
             if (asyncQuery != null) {
                 return asyncQuery;
             } else {

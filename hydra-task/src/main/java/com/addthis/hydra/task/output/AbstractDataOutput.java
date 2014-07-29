@@ -13,19 +13,12 @@
  */
 package com.addthis.hydra.task.output;
 
-import java.io.IOException;
-
-import java.net.ServerSocket;
-
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import com.addthis.basis.jmx.MBeanRemotingSupport;
-import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
@@ -48,10 +41,7 @@ import org.slf4j.LoggerFactory;
 
 public abstract class AbstractDataOutput extends DataOutputTypeList {
 
-    private final Logger log = LoggerFactory.getLogger(AbstractDataOutput.class);
-
-    @FieldConfig(codable = true)
-    private boolean enableJmx = Parameter.boolValue("split.minion.usejmx", true);
+    private static final Logger log = LoggerFactory.getLogger(AbstractDataOutput.class);
 
     /**
      * Array of strings that determines the output file path.
@@ -77,8 +67,6 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
     @FieldConfig(codable = true)
     private DataPurgeConfig dataPurgeConfig;
 
-    private MBeanRemotingSupport jmxremote;
-
     private String[] fileToken;
     private TokenIndex[] varToken;
 
@@ -86,34 +74,8 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
 
     @Override
     public void open(TaskRunConfig config) {
-        log.info("[init] " + config);
+        log.info("[init] {}", config);
 
-        // todo: Reduce duplication with TreeMapper, do earlier in
-        // call tree (ie before we have any output)
-        if (enableJmx) {
-            try {
-                //          jmxname = new ObjectName("com..hydra:type=Hydra,node=" + queryPort);
-                //ManagementFactory.getPlatformMBeanServer().registerMBean(mapstats, jmxname);
-                ServerSocket ss = new ServerSocket();
-                ss.setReuseAddress(true);
-                ss.bind(null);
-                int jmxport = ss.getLocalPort();
-                ss.close();
-                if (jmxport == -1) {
-                    log.warn("[init.jmx] failed to get a port");
-                } else {
-                    try {
-                        jmxremote = new MBeanRemotingSupport(jmxport);
-                        jmxremote.start();
-                        log.info("[init.jmx] port=" + jmxport);
-                    } catch (Exception e) {
-                        log.error("[init.jmx]", e);
-                    }
-                }
-            } catch (IOException e)  {
-                log.error("", e);
-            }
-        }
         if (dataPurgeConfig != null) {
             purgeData();
         }
@@ -136,10 +98,10 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
                 String tok = path[i].substring(2, path[i].length() - 2);
                 vt.add(new TokenIndex(getFormat().getField(tok), i));
             }
-            ft[i] = new String(path[i]);
-            if (log.isDebugEnabled()) log.debug("[binding " + path[i]);
+            ft[i] = path[i];
+            log.debug("[binding {}", path[i]);
         }
-        if (log.isDebugEnabled()) log.debug("[bind] var=" + vt);
+        log.debug("[bind] var={}", vt);
         varToken = vt.toArray(new TokenIndex[vt.size()]);
         fileToken = ft;
     }
@@ -167,7 +129,7 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
             for (int i = 0; i < tok.length; i++) {
                 sb.append(tok[i]);
             }
-            if (log.isDebugEnabled()) log.debug("send " + bundle + " to " + sb);
+            log.debug("send {} to {}", bundle, sb);
             writer.writeLine(sb.toString(), bundle);
         } catch (Exception ex) {
             throw DataChannelError.promote(ex);
@@ -187,21 +149,13 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
     public void sourceError(DataChannelError er) {
         AbstractOutputWriter writer = getWriter();
         writer.closeOpenOutputs();
-        log.error("[sourceError] " + er);
+        log.error("[sourceError]", er);
     }
 
     @Override
     public void sendComplete() {
         AbstractOutputWriter writer = getWriter();
         writer.closeOpenOutputs();
-        if (jmxremote != null) {
-            try {
-                jmxremote.stop();
-                jmxremote = null;
-            } catch (IOException e)  {
-                log.error("", e);
-            }
-        }
         log.info("[sendComplete]");
     }
 

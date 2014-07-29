@@ -1,0 +1,29 @@
+{ "configuration": {
+  "name": "hydra-oss-default",
+  "status": "error",
+  "appenders": {
+    "appender": [
+        { "name": "STDOUT",
+          "type": "Console",
+          "PatternLayout": { "pattern": "%p [%t] %d{ISO8601} %F (line %L) %m%n" },
+          "target" : "SYSTEM_OUT"
+        },
+        { "name": "STDERR",
+          "type": "Console",
+          "PatternLayout": { "pattern": "%p [%t] %d{ISO8601} %F (line %L) %m%n" },
+          "target" : "SYSTEM_ERR"
+        }
+    ]
+  },
+  "loggers": {
+    "logger": [
+        { "name": "org.apache.activemq.spring", "level": "warn" },
+        { "name": "org.springframework", "level": "warn" },
+        { "name": "org.apache.xbean.spring", "level": "warn" }
+    ],
+    "root": { "level": "trace", "AppenderRef": [
+        { "ref": "STDERR", "level": "warn" },
+        { "ref": "STDOUT", "level": "debug"}
+    ]}
+  }
+}}

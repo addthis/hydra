@@ -14,6 +14,9 @@
 package com.addthis.hydra.task.map;
 
 import java.io.File;
+import java.io.IOException;
+
+import java.net.ServerSocket;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -22,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 
+import com.addthis.basis.jmx.MBeanRemotingSupport;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
@@ -90,8 +94,11 @@ import org.slf4j.LoggerFactory;
 public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRunTarget {
 
     private static final Logger log = LoggerFactory.getLogger(StreamMapper.class);
-    private static final boolean emitTaskState = Parameter.boolValue("task.mapper.emitState", true);
-    private static final SimpleDateFormat dateFormat = new SimpleDateFormat(Parameter.value("task.mapper.dateFormat","yyMMdd-HHmmss"));
+
+    private static final boolean          emitTaskState =
+            Parameter.boolValue("task.mapper.emitState", true);
+    private static final SimpleDateFormat dateFormat    =
+            new SimpleDateFormat(Parameter.value("task.mapper.dateFormat", "yyMMdd-HHmmss"));
 
     /**
      * The data source for this job.
@@ -131,6 +138,9 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
     @FieldConfig(codable = true)
     private TimeField timeField;
 
+    @FieldConfig
+    private boolean enableJmx = Parameter.boolValue("split.minion.usejmx", true);
+
     @FieldConfig(required = true)
     private int threads;
 
@@ -138,16 +148,19 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
     private final AtomicBoolean emitGate = new AtomicBoolean(false);
     private final AtomicBoolean errored = new AtomicBoolean(false);
     private final long startTime = JitterClock.globalTime();
+    private MBeanRemotingSupport jmxremote;
     private long lastMark;
     private TaskRunConfig config;
-    private TaskFeeder feeder;
+    private TaskFeeder    feeder;
 
     // metrics
-    private final Meter processedMeterMetric = Metrics.newMeter(getClass(), "streamMapper", "processedMeter", TimeUnit.SECONDS);
-    private final Counter inputCountMetric = Metrics.newCounter(getClass(), "inputCount");
-    private final Counter outputCountMetric = Metrics.newCounter(getClass(), "outputCount");
-    private final Counter totalInputCountMetric = Metrics.newCounter(getClass(), "totalInputCount");
-    private final AtomicLong bundleTimeSum = new AtomicLong(0);
+    private final Meter      processedMeterMetric  =
+            Metrics.newMeter(getClass(), "streamMapper", "processedMeter", TimeUnit.SECONDS);
+    private final Counter    inputCountMetric      = Metrics.newCounter(getClass(), "inputCount");
+    private final Counter    outputCountMetric     = Metrics.newCounter(getClass(), "outputCount");
+    private final Counter    totalInputCountMetric =
+            Metrics.newCounter(getClass(), "totalInputCount");
+    private final AtomicLong bundleTimeSum         = new AtomicLong(0);
 
     /**
      * This section defines the transformations to apply onto the data.
@@ -260,6 +273,30 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
             builder.init();
         }
         this.config = config;
+        if (enableJmx) {
+            try {
+                //          jmxname = new ObjectName("com..hydra:type=Hydra,node=" + queryPort);
+                //ManagementFactory.getPlatformMBeanServer().registerMBean(mapstats, jmxname);
+                ServerSocket ss = new ServerSocket();
+                ss.setReuseAddress(true);
+                ss.bind(null);
+                int jmxport = ss.getLocalPort();
+                ss.close();
+                if (jmxport == -1) {
+                    log.warn("[init.jmx] failed to get a port");
+                } else {
+                    try {
+                        jmxremote = new MBeanRemotingSupport(jmxport);
+                        jmxremote.start();
+                        log.info("[init.jmx] port={}", jmxport);
+                    } catch (Exception e) {
+                        log.error("[init.jmx]", e);
+                    }
+                }
+            } catch (IOException e)  {
+                log.error("", e);
+            }
+        }
         log.info("[init] {}", config);
     }
 
@@ -442,6 +479,14 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         getOutput().sendComplete();
         log.info("[taskComplete]");
         emitTaskExitState();
+        if (jmxremote != null) {
+            try {
+                jmxremote.stop();
+                jmxremote = null;
+            } catch (IOException e)  {
+                log.error("", e);
+            }
+        }
     }
 
     public AtomicBoolean getErrored() {

@@ -28,6 +28,7 @@ import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.data.query.engine.QueryEngine;
+import com.addthis.hydra.data.util.BundleUtils;
 
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -112,14 +113,10 @@ class SearchRunner implements Runnable {
     }
 
     protected void reportError(Throwable ex) {
-        log.warn("Canonical directory: {}", goldDirString);
-        log.warn("Engine: {}", finalEng);
-        log.warn("Query options: uuid={}", options, ex);
+        log.warn("Canonical directory: {}, Engine: {}, Query options: uuid={}", goldDirString, finalEng, options, ex);
 
-        if (!(ex instanceof DataChannelError)) {
-            ex = new DataChannelError(ex);
-        }
-        DataChannelError error = (DataChannelError) ex;
+        DataChannelError error = BundleUtils.promoteHackForThrowables(ex);
+
         // See if we can send the error to mqmaster as well
         if (queryOpProcessor != null) {
             queryOpProcessor.sourceError(error);
@@ -167,11 +164,11 @@ class SearchRunner implements Runnable {
                                        ", key: " + goldDirString + " after waiting: " + engineGetDuration + "ms");
         } //else we got an engine so we're good -- maybe this logic should be in the cache get
 
-        if (engineGetDuration > MeshQuerySource.slowQueryThreshold || log.isDebugEnabled() || query.isTraced()) {
-            Query.emitTrace(
-                    "[QueryReference] Retrieved queryEngine for query: " + query.uuid() + ", key:" +
-                    goldDirString + " after waiting: " + engineGetDuration + "ms.  slow=" +
-                    (engineGetDuration > MeshQuerySource.slowQueryThreshold));
+        if ((engineGetDuration > MeshQuerySource.slowQueryThreshold) || log.isDebugEnabled() || query.isTraced()) {
+            Query.traceLog.info(
+                    "[QueryReference] Retrieved queryEngine for query: {}, key:{} after waiting: {}ms.  slow={}",
+                    query.uuid(), goldDirString, engineGetDuration,
+                    engineGetDuration > MeshQuerySource.slowQueryThreshold);
         }
         return engine;
     }
@@ -187,12 +184,9 @@ class SearchRunner implements Runnable {
         queryOpProcessor.sendComplete();
         final long searchDuration = System.currentTimeMillis() - searchStartTime;
         if (log.isDebugEnabled() || query.isTraced()) {
-            Query.emitTrace(
-                    "[QueryReference] search complete " + query.uuid() + " in " + searchDuration +
-                    "ms directory: " +
-                    goldDirString + " slow=" +
-                    (searchDuration > MeshQuerySource.slowQueryThreshold) + " rowsIn: " +
-                    queryOpProcessor.getInputRows());
+            Query.traceLog.info("[QueryReference] search complete {} in {}ms directory: {} slow={} rowsIn: {}",
+                                query.uuid(), searchDuration, goldDirString,
+                                searchDuration > MeshQuerySource.slowQueryThreshold, queryOpProcessor.getInputRows());
         }
         MeshQuerySource.queryTimes.update(searchDuration, TimeUnit.MILLISECONDS);
     }

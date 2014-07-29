@@ -56,7 +56,8 @@ class StragglerCheckTask implements Runnable {
         long elapsedTime = JitterClock.globalTime() - sourceAggregator.startTime;
         if (numRemaining == 0) {
             if (MeshSourceAggregator.log.isDebugEnabled() || query.isTraced()) {
-                Query.emitTrace("Straggler checker for " + query.uuid() + " detected query done. Exiting.");
+                Query.traceLog.info("Straggler checker for {} detected query done. Exiting.", query.uuid());
+
             }
         } else if ((numRemaining <= tasksDoneCutoff) &&
                    (elapsedTime > getStdDevsAwayRuntime(AggregateConfig.MULTIPLE_STD_DEVS))) {
@@ -80,7 +81,8 @@ class StragglerCheckTask implements Runnable {
         double timeCutoff = AggregateConfig.stragglerCheckMeanRuntimeFactor * getMeanRuntime();
         if (numRemaining == 0) {
             if (MeshSourceAggregator.log.isDebugEnabled() || sourceAggregator.query.isTraced()) {
-                Query.emitTrace("Straggler checker for " + sourceAggregator.query.uuid() + " detected query done. Exiting.");
+                Query.traceLog.info("Straggler checker for {} detected query done. Exiting.",
+                                    sourceAggregator.query.uuid());
             }
         } else if ((numRemaining <= tasksDoneCutoff) && (elapsedTime > timeCutoff)) {
             handleStragglers();
@@ -165,8 +167,8 @@ class StragglerCheckTask implements Runnable {
                     if (option.tryActivate(sourceAggregator.meshy, sourceAggregator.queryOptions)) {
                         AggregateConfig.totalStragglerCheckerRequests.inc();
                         if (MeshSourceAggregator.log.isDebugEnabled() || sourceAggregator.query.isTraced()) {
-                            Query.emitTrace("Straggler detected for " + sourceAggregator.query.uuid() + " sending duplicate query to host: "
-                                            + option.queryReference.getHostUUID());
+                            Query.traceLog.info("Straggler detected for {} sending duplicate query to host: {}",
+                                                sourceAggregator.query.uuid(), option.queryReference.getHostUUID());
                         }
                         break;
                     }

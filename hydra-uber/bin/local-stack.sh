@@ -74,7 +74,6 @@ done
         [ ! -d $dir ] && mkdir $dir
     done
     [ ! -f bin/job-task.sh ] && cp ../hydra-uber/local/bin/job-task.sh bin/
-    [ ! -f etc/log4j.properties ] && cp ../hydra-uber/local/etc/log4j.properties etc/
     [ ! -h web ] && ln -s ../hydra-main/web web
     (
         cd streams
@@ -110,10 +109,8 @@ EOF
     done
 )
 
-export LOG4J_CFG=$(pwd)/etc/log4j.properties
 export HYDRA_CONF=$(pwd)/../hydra-uber
 export HYDRA_EXEC=`ls -t ${HYDRA_CONF}/target/hydra-uber-*exec*jar | head -n 1`
-export LOG4J_PROPERTIES="-Dlog4j.defaultInitOverride=true -Dlog4j.configuration=${LOG4J_CFG}"
 export MQ_MASTER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Deps.mem.debug=10000 -Dbatch.brokerHost=localhost -Dbatch.brokerPort=5672 -Dcs.je.cacheSize=256M -Dcs.je.cacheShared=1 -Dcs.je.deferredWrite=1 -Dzk.servers=localhost:2181 -Dstreamserver.read.timeout=60000 -Djava.net.preferIPv4Stack=true -Dganglia.enable=false -Dqmaster.mesh.peers=localhost -Dmeshy.senders=1 -Dmeshy.stream.prefetch=true -Dqmaster.mesh.peer.port=5101"
 export MQ_WORKER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Dmesh.local.handlers=com.addthis.hydra.data.query.source.MeshQuerySource -Dmeshy.stream.prefetch=true -Dmeshy.senders=1"
 export MINION_OPT="${LOG4J_PROPERTIES} -Xmx512M -Dminion.mem=512 -Dminion.localhost=localhost -Dminion.group=local -Dminion.web.port=0 -Dspawn.localhost=localhost -Dhttp.post.max=327680 -Dminion.sparse.updates=1 -Dreplicate.cmd.delay.seconds=1 -Dbackup.cmd.delay.seconds=0"
@@ -160,11 +157,13 @@ function startBrokers() {
 
 function startOthers() {
     if [ ! -f pid/pid.mqworker ]; then
+        export HYDRA_LOG=log/worker
         echo "starting mesh query worker"
         ${JAVA_CMD} ${MQ_WORKER_OPT} -jar ${HYDRA_EXEC} mqworker server 5101 ${HYDRA_LOCAL_DIR} localhost:5100 > log/mqworker.log 2>&1 &
         echo "$!" > pid/pid.mqworker
     fi
     if [ ! -f pid/pid.mqmaster ]; then
+        export HYDRA_LOG=log/master
         echo "starting mesh query master"
         ${JAVA_CMD} ${MQ_MASTER_OPT} -jar ${HYDRA_EXEC} mqmaster etc web jar > log/mqmaster.log 2>&1 &
         echo "$!" > pid/pid.mqmaster

@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.basis.util.CUID;
-import com.addthis.basis.util.RollingLog;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.channel.DataChannelOutput;
@@ -39,13 +38,12 @@ import io.netty.channel.ChannelProgressivePromise;
  */
 public class Query implements Codable {
 
-    private static final Logger log              = LoggerFactory.getLogger(Query.class);
+    public static final Logger traceLog = LoggerFactory.getLogger("query-trace");
+
     private static final int    MAX_PRINT_LENGTH = 3000;
     private static final String SESSION_ID       = CUID.createCUID();
 
     private static final AtomicLong queryIds = new AtomicLong(0);
-
-    protected static RollingLog traceLog;
 
     @FieldConfig(codable = true)
     private String[] paths;
@@ -66,8 +64,7 @@ public class Query implements Codable {
     public ChannelProgressivePromise queryPromise = null;
 
     // for codec
-    public Query() {
-    }
+    public Query() {}
 
     public Query(String job, String[] paths, String[] ops) {
         this.job = job;
@@ -75,20 +72,6 @@ public class Query implements Codable {
         this.ops = ops;
         this.sessionId = SESSION_ID;
         this.queryId = queryIds.incrementAndGet();
-    }
-
-    //Set the rolling log for trace events
-    public static void setTraceLog(RollingLog tLog) {
-        traceLog = tLog;
-    }
-
-    //write to the log used for query trace events or default to a debug log
-    public static void emitTrace(String line) {
-        if (traceLog != null) {
-            traceLog.writeLine(line);
-        } else {
-            log.warn(line);
-        }
     }
 
     public ChannelProgressivePromise getQueryPromise() {
