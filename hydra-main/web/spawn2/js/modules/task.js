@@ -243,7 +243,7 @@ function(
                     "sTitle":"State",
                     "sClass":"task-state center",
                     "mData": "state",
-                    "sWidth":"5%",
+                    "sWidth":"8%",
                     "bSearchable":false,
                     "mRender":function(val,type,data){
                         return "<span class='label "+StateLabels[val]+"'>"+States[val]+"</span>";
@@ -273,13 +273,13 @@ function(
                         return util.statusTextForExitCode(val);
                     },
                     "mData": "errorCode",
-                    "sWidth":"6%"//51
+                    "sWidth":"4%"//51
                 },
                 {
                     "sTitle":"Replicas",
                     "sClass":"task-rep",
                     "mData": "replicas",
-                    "sWidth":"5%",//56
+                    "sWidth":"4%",//56
                     "bSearchable":false
                 },
                 {
