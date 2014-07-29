@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.query;
 
+import com.addthis.hydra.common.hash.PluggableHashFunction;
+
 import org.junit.Test;
 
 public class TestOpNumber extends TestOp {
@@ -44,6 +46,16 @@ public class TestOpNumber extends TestOp {
     public void testMinMaxIf() throws Exception {
         doOpTest(parse("0|5|6|0"), "num=c0,v1,maxif,v0,set", parse("0|1|1|0"));
         doOpTest(parse("5|2|3|5"), "num=c0,v4,minif,v0,set", parse("5|4|4|5"));
+    }
+
+    @Test
+    public void testHashOperation() throws Exception {
+        String inputString = "somethingToHash";
+        int count = 123;
+        String inputTable = inputString + " " + count;
+        String expected = inputTable + " " + Integer.toString(123 + PluggableHashFunction.hash(inputString));
+        doOpTest(parse(inputTable), "num=h0,c1,add,v2,set", parse(expected));
+
     }
 }
 

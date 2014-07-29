@@ -293,6 +293,12 @@ import io.netty.channel.ChannelProgressivePromise;
  * <td>1</td>
  * </tr>
  * <tr>
+ * <td>"hX"</td>
+ * <td>0</td>
+ * <td>evaluate the current hash function on the column X, and push the resulting number onto the stack</td>
+ * <td>1</td>
+ * </tr>
+ * <tr>
  * <td>"vector"</td>
  * <td>0</td>
  * <td>modifies the behavior of the next operation.<br>

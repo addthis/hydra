@@ -34,6 +34,7 @@ import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueString;
+import com.addthis.hydra.common.hash.PluggableHashFunction;
 
 public class BundleCalculator {
 
@@ -79,7 +80,8 @@ public class BundleCalculator {
         OP_MAXIF,
         OP_ABS,
         OP_COLNAMEVAL,
-        OP_VECTOR
+        OP_VECTOR,
+        OP_HASH
     }
 
     private List<MathOp> ops;
@@ -257,6 +259,8 @@ public class BundleCalculator {
                         }
                     } else if (o.startsWith("v")) {
                         ops.add(new MathOp(Operation.OP_VAL, ValueFactory.create(o.substring(1))));
+                    } else if (o.startsWith("h")) {
+                        ops.add(new MathOp(Operation.OP_HASH, ValueFactory.create(o.substring(1))));
                     }
                 }
             }
@@ -595,6 +599,10 @@ public class BundleCalculator {
                 case OP_ABS:
                     v1 = stack.pop();
                     stack.push(ValueFactory.create(Math.abs(v1.asDouble().getDouble())));
+                case OP_HASH:
+                    ValueObject target = getSourceColumnBinder(line).getColumn(line, (int) op.val.asLong().getLong());
+                    insertNumbers(stack, ValueFactory.create(PluggableHashFunction.hash(target.asString().toString())));
+                    break;
                 default:
                     break;
             }
