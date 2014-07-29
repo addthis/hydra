@@ -28,6 +28,7 @@ import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.data.query.engine.QueryEngine;
+import com.addthis.hydra.data.util.BundleUtils;
 
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -112,14 +113,10 @@ class SearchRunner implements Runnable {
     }
 
     protected void reportError(Throwable ex) {
-        log.warn("Canonical directory: {}", goldDirString);
-        log.warn("Engine: {}", finalEng);
-        log.warn("Query options: uuid={}", options, ex);
+        log.warn("Canonical directory: {}, Engine: {}, Query options: uuid={}", goldDirString, finalEng, options, ex);
 
-        if (!(ex instanceof DataChannelError)) {
-            ex = new DataChannelError(ex);
-        }
-        DataChannelError error = (DataChannelError) ex;
+        DataChannelError error = BundleUtils.promoteHackForThrowables(ex);
+
         // See if we can send the error to mqmaster as well
         if (queryOpProcessor != null) {
             queryOpProcessor.sourceError(error);
