@@ -19,17 +19,15 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
-import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.Codec;
-import com.addthis.maljson.JSONException;
+import com.addthis.bundle.core.Bundles;
+import com.addthis.codec.codables.Codable;
 import com.addthis.maljson.JSONObject;
 
 /**
  * @user-reference
  * @hydra-name json
  */
-public class OutputStreamJson extends OutputStreamFormatter implements Codec.Codable {
+public class OutputStreamJson extends OutputStreamFormatter implements Codable {
 
     private static final byte[] newlineBytes = "\n".getBytes(StandardCharsets.UTF_8);
 
@@ -42,21 +40,7 @@ public class OutputStreamJson extends OutputStreamFormatter implements Codec.Cod
 
         @Override
         public void write(OutputStream out, Bundle row) throws IOException {
-            JSONObject jsonRow = new JSONObject();
-            for (BundleField field : row) {
-                ValueObject valueObject = row.getValue(field);
-                String value;
-                if (valueObject != null) {
-                    value = valueObject.toString();
-                } else {
-                    value = "";
-                }
-                try {
-                    jsonRow.put(field.getName(), value);
-                } catch (JSONException ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
+            JSONObject jsonRow = Bundles.toJSONObject(row);
             out.write(jsonRow.toString().getBytes(StandardCharsets.UTF_8));
             out.write(newlineBytes);
         }

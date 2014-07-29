@@ -35,7 +35,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name chain
  */
-@Codec.ArraySugar
 public class ValueFilterChain extends ValueFilter {
 
     /**

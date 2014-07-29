@@ -70,7 +70,6 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name aggregate
  */
-@Codec.ArraySugar
 public class AggregateTaskDataSource extends TaskDataSource {
 
     private static final Logger log = LoggerFactory.getLogger(AggregateTaskDataSource.class);
