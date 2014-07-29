@@ -34,7 +34,7 @@
     ],
     "root": { "level": "trace", "AppenderRef": [
         { "ref": "STDERR", "level": "warn" },
-        { "ref": "STDOUT", "level": "debug"}
+        { "ref": "STDOUT", "level": "info"}
     ]}
   }
 }}

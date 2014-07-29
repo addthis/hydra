@@ -50,6 +50,8 @@
       <artifactId>hydra-main</artifactId>
       <version>${project.version}</version>
     </dependency>
+
+    <!-- logging -->
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-api</artifactId>
