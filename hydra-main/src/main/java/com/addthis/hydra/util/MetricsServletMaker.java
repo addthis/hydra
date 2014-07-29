@@ -18,14 +18,12 @@ import com.yammer.metrics.reporting.MetricsServlet;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
-
 public class MetricsServletMaker {
 
-        public static ServletHandler makeHandler() {
+    public static ServletHandler makeHandler() {
         ServletHandler metricsHandler = new ServletHandler();
         ServletHolder metricsHolder = new ServletHolder(new MetricsServlet());
         metricsHandler.addServletWithMapping(metricsHolder, "/metrics/*");
         return metricsHandler;
-        }
-
+    }
 }
