@@ -82,7 +82,7 @@ public class QueryTracker implements Closeable {
         this.eventLog = LogUtil.newBundleOutputFromConfig("queries");
     }
 
-    public void close() {
+    @Override public void close() {
         eventLog.sendComplete();
     }
 

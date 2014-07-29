@@ -13,21 +13,10 @@
           "PatternLayout": { "pattern": "%p [%t] %d{ISO8601} %F (line %L) %m%n" },
           "target" : "SYSTEM_ERR"
         }
-    ],
-    "RollingRandomAccessFile": {
-      "name": "query-trace", "fileName": "log/query-trace",
-      "filePattern": "log/query-trace-%d{yyyyMMdd-HHmmss}.gz",
-      "PatternLayout": { "pattern": "%p [%t] %d{ISO8601} %F (line %L) %m%n" },
-      "Policies": { "Policies": [
-          { "type": "SizeBasedTriggeringPolicy", "size": "250 MB" },
-          { "type": "OnStartupTriggeringPolicy" }
-      ] }
-    }
+    ]
   },
   "loggers": {
     "logger": [
-        { "name": "query-trace", "level": "info", "additivity": "false",
-          "AppenderRef": { "ref": "query-trace" }},
         { "name": "org.apache.activemq.spring", "level": "warn" },
         { "name": "org.springframework", "level": "warn" },
         { "name": "org.apache.xbean.spring", "level": "warn" }

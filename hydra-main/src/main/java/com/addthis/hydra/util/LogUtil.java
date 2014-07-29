@@ -16,16 +16,12 @@ package com.addthis.hydra.util;
 import com.addthis.basis.util.RollingLog;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.json.CodecExceptionLineNumber;
-import com.addthis.codec.json.CodecJSON;
+import com.addthis.codec.config.Configs;
 import com.addthis.hydra.task.output.TaskDataOutput;
 import com.addthis.hydra.task.run.TaskRunConfig;
-import com.addthis.maljson.JSONException;
-import com.addthis.maljson.JSONObject;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import com.typesafe.config.ConfigRenderOptions;
 
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -52,16 +48,8 @@ public class LogUtil {
 
     public static TaskDataOutput newBundleOutputFromConfig(String name) {
         Config outputConfig = ConfigFactory.load().getConfig("hydra.log.events").getConfig(name);
-        String jsonString = outputConfig.resolve().root().render(ConfigRenderOptions.concise());
-        try {
-            JSONObject outputJson = new JSONObject(jsonString);
-            TaskDataOutput output = CodecJSON.decodeObject(TaskDataOutput.class, outputJson);
-            output.init(new TaskRunConfig(0, 1, "event-log" + name));
-            return output;
-        } catch (JSONException ex) {
-            throw new IllegalStateException(ex); // typesafe should not render invalid json
-        } catch (CodecExceptionLineNumber lineNumber) {
-            throw new RuntimeException(lineNumber);
-        }
+        TaskDataOutput output = Configs.decodeObject(TaskDataOutput.class, outputConfig);
+        output.init(new TaskRunConfig(0, 1, "event-log" + name));
+        return output;
     }
 }

@@ -38,7 +38,7 @@ import io.netty.channel.ChannelProgressivePromise;
  */
 public class Query implements Codable {
 
-    public static final Logger traceLog = LoggerFactory.getLogger("traceLog");
+    public static final Logger traceLog = LoggerFactory.getLogger("query-trace");
 
     private static final int    MAX_PRINT_LENGTH = 3000;
     private static final String SESSION_ID       = CUID.createCUID();
