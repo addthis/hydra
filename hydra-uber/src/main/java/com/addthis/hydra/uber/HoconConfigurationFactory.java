@@ -22,6 +22,7 @@ import com.google.common.io.ByteStreams;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigObject;
 import com.typesafe.config.ConfigParseOptions;
 import com.typesafe.config.ConfigRenderOptions;
 
@@ -79,7 +80,14 @@ public class HoconConfigurationFactory extends JsonConfigurationFactory {
                                .withFallback(ConfigFactory.load()).resolve()
                                .getConfig("logging");
             }
-            String json = config.resolve().root().render(ConfigRenderOptions.concise());
+            config = config.resolve();
+            ConfigObject configObject = config.root();
+            for (String key : configObject.keySet()) {
+                if (key.charAt(0) == '_') {
+                    config = config.root().withoutKey(key).toConfig();
+                }
+            }
+            String json = config.root().render(ConfigRenderOptions.concise());
             InputStream fakeStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
             ConfigurationSource fakeSource;
             if (source.getFile() != null) {
