@@ -70,12 +70,6 @@ public class Main {
             }
             try {
                 switch(args[0]) {
-                    /**
-                     * For backwards compatibility the targets "validate", "zk",
-                     * "dbspace", "mss", and "json" do not follow the standard format.
-                     *
-                     * Use the "-executables.classmap" plugin for new targets.
-                     */
                     case "validate":
                         try {
                             JsonRunner.loadConfig(new File(args[1]));
@@ -83,15 +77,6 @@ public class Main {
                         } catch (Exception ex) {
                             ex.printStackTrace();
                         }
-                        break;
-                    case "zk": {
-                        Class zk = Class.forName("org.apache.zookeeper.ZooKeeperMain");
-                        Method m = zk.getDeclaredMethod("main", String[].class);
-                        m.invoke(null, new Object[]{cutargs(args)});
-                        break;
-                    }
-                    case "dbspace":
-                        com.sleepycat.je.util.DbSpace.main(cutargs(args));
                         break;
                     case "mss":
                         String mssRoot = Parameter.value("mss.root", "streams");
@@ -131,7 +116,7 @@ public class Main {
 
     private static void usage() {
         PluginMap pluginMap = PluginRegistry.defaultRegistry().asMap().get("executables");
-        Set<String> hardCodedOptions = Sets.newHashSet("validate", "zk", "dbspace", "mss");
+        Set<String> hardCodedOptions = Sets.newHashSet("validate", "mss");
         String options = Joiner.on(" | ").join(Sets.union(pluginMap.asBiMap().keySet(), hardCodedOptions));
         String usage = "usage: run [ " + options + " ]";
         System.out.println(usage);
