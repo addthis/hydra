@@ -111,6 +111,7 @@ EOF
 
 export HYDRA_CONF=$(pwd)/../hydra-uber
 export HYDRA_EXEC=`ls -t ${HYDRA_CONF}/target/hydra-uber-*exec*jar | head -n 1`
+export LOG4J_PROPERTIES="log4j.configurationFactory=com.addthis.hydra.uber.HoconConfigurationFactory"
 export MQ_MASTER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Deps.mem.debug=10000 -Dbatch.brokerHost=localhost -Dbatch.brokerPort=5672 -Dcs.je.cacheSize=256M -Dcs.je.cacheShared=1 -Dcs.je.deferredWrite=1 -Dzk.servers=localhost:2181 -Dstreamserver.read.timeout=60000 -Djava.net.preferIPv4Stack=true -Dganglia.enable=false -Dqmaster.mesh.peers=localhost -Dmeshy.senders=1 -Dmeshy.stream.prefetch=true -Dqmaster.mesh.peer.port=5101"
 export MQ_WORKER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Dmesh.local.handlers=com.addthis.hydra.data.query.source.MeshQuerySource -Dmeshy.stream.prefetch=true -Dmeshy.senders=1"
 export MINION_OPT="${LOG4J_PROPERTIES} -Xmx512M -Dminion.mem=512 -Dminion.localhost=localhost -Dminion.group=local -Dminion.web.port=0 -Dspawn.localhost=localhost -Dhttp.post.max=327680 -Dminion.sparse.updates=1 -Dreplicate.cmd.delay.seconds=1 -Dbackup.cmd.delay.seconds=0"

@@ -94,6 +94,13 @@
                     <exclude>META-INF/*.RSA</exclude>
                   </excludes>
                 </filter>
+                <!-- log4j2's plugin configuration is not append-friendly; must use system properties for shaded jar -->
+                <filter>
+                  <artifact>com.addthis.hydra:hydra-uber</artifact>
+                  <excludes>
+                    <exclude>META-INF/org/apache/logging/log4j/core/config/plugins/Log4j2Plugins.dat</exclude>
+                  </excludes>
+                </filter>
               </filters>
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">

@@ -28,8 +28,7 @@ eval exec ${JAVA_CMD:-java} \
 	-XX:+AggressiveOpts \
 	-XX:+UseParallelGC \
 	-XX:+UseParallelOldGC \
-	-Dlog4j.defaultInitOverride=true \
-    -Dlog4j.configuration=${LOG4J_CFG} \
+	-Dlog4j.configurationFactory=com.addthis.hydra.uber.HoconConfigurationFactory \
 	-Dbatch.brokerHost=${brokerHost:-localhost} \
 	-Dbatch.brokerPort=${brokerPort:-5672} \
 	-Dbatch.job.log4j=1 \
