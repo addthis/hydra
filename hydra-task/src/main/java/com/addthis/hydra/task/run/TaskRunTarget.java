@@ -13,27 +13,15 @@
  */
 package com.addthis.hydra.task.run;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.task.source.TaskDataSource;
-
 
 public interface TaskRunTarget {
 
     public TaskDataSource getSource();
 
-    public AtomicBoolean getErrored();
-
-    /**
-     * called during normal processing
-     *
-     * @return true to continue process or false to exit normally
-     */
     public void process(Bundle bundle);
 
-    /**
-     * called on process exit.  equivalent to close()
-     */
+    /** called on process exit.  equivalent to close() */
     public void taskComplete();
 }

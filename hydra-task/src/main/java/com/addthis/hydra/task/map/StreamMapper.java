@@ -488,8 +488,4 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
             }
         }
     }
-
-    public AtomicBoolean getErrored() {
-        return errored;
-    }
 }

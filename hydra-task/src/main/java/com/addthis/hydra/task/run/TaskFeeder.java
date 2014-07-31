@@ -93,7 +93,7 @@ public final class TaskFeeder extends Thread {
         modHistrogram = Metrics.newHistogram(getClass(), "mod");
 
         this.source = task.getSource();
-        this.errored = task.getErrored();
+        this.errored = new AtomicBoolean();
         this.task = task;
         this.readers = feeders;
 
