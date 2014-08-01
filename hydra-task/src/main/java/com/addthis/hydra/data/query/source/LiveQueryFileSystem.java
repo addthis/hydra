@@ -14,7 +14,6 @@
 
 package com.addthis.hydra.data.query.source;
 
-import com.addthis.meshy.VirtualFileReference;
 import com.addthis.meshy.VirtualFileSystem;
 
 public class LiveQueryFileSystem implements VirtualFileSystem {
@@ -31,7 +30,7 @@ public class LiveQueryFileSystem implements VirtualFileSystem {
     }
 
     @Override
-    public VirtualFileReference getFileRoot() {
+    public LiveQueryReference getFileRoot() {
         return root;
     }
 }

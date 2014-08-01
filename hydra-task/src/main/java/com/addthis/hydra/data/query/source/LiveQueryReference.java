@@ -48,6 +48,10 @@ public class LiveQueryReference extends QueryReference {
         return path.endsWith(queryRoot) && path.contains(job);
     }
 
+    public QueryEngine engine() {
+        return queryEngine;
+    }
+
     @Override
     public long getLastModified() {
         return super.getLastModified() + 1;

@@ -146,8 +146,6 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
 
     private final AtomicLong totalEmit = new AtomicLong(0);
     private final AtomicBoolean emitGate = new AtomicBoolean(false);
-    private final AtomicBoolean errored = new AtomicBoolean(false);
-    private final long startTime = JitterClock.globalTime();
     private MBeanRemotingSupport jmxremote;
     private long lastMark;
     private TaskRunConfig config;

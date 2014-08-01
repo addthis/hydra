@@ -51,6 +51,7 @@ public class LiveMeshyServer extends MeshyServer {
     @Override
     public void close() {
         liveClosed.set(true);
+        liveQueryFileSystem.getFileRoot().engine().closeWhenIdle();
         log.info("Shutting down live query server. Disabled finding this job from mqm.");
         try {
             log.info("Going to wait up to {} seconds for any queries still running.", LIVE_QUERY_WAIT);

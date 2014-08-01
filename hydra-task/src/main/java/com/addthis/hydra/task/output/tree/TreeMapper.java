@@ -13,30 +13,17 @@
  */
 package com.addthis.hydra.task.output.tree;
 
-import javax.management.ObjectName;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import java.io.File;
 import java.io.IOException;
-
-import java.lang.management.ManagementFactory;
-
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import java.nio.file.Path;
@@ -44,7 +31,6 @@ import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 
-import com.addthis.basis.jmx.MBeanRemotingSupport;
 import com.addthis.basis.util.Bench;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
@@ -53,22 +39,15 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.channel.DataChannelError;
-import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.kvp.KVBundle;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
-import com.addthis.codec.codables.SuperCodable;
-import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.data.query.Query;
-import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.source.LiveMeshyServer;
 import com.addthis.hydra.data.query.source.LiveQueryReference;
-import com.addthis.hydra.data.query.source.QueryHandle;
-import com.addthis.hydra.data.query.source.QuerySource;
 import com.addthis.hydra.data.tree.ConcurrentTree;
 import com.addthis.hydra.data.tree.DataTree;
 import com.addthis.hydra.data.tree.TreeCommonParameters;
@@ -79,16 +58,10 @@ import com.addthis.hydra.task.output.tree.TreeMapperStats.Snapshot;
 import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.meshy.MeshyServer;
 
-import org.apache.commons.lang3.CharEncoding;
+import com.google.common.base.Throwables;
 
-import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.netty.channel.DefaultChannelProgressivePromise;
-import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * This output <span class="hydra-summary">transforms bundle streams into trees for statistical analysis and data queries</span>
@@ -125,7 +98,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  * @user-reference
  * @hydra-name tree
  */
-public final class TreeMapper extends DataOutputTypeList implements QuerySource, SuperCodable {
+public final class TreeMapper extends DataOutputTypeList implements Codable {
 
     private static final Logger log = LoggerFactory.getLogger(TreeMapper.class);
     private static final DecimalFormat percent = new DecimalFormat("00.0%");
@@ -140,53 +113,10 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
     }
 
     /**
-     * Default is either "mapper.http" configuration value or true.
-     */
-    @FieldConfig(codable = true)
-    private boolean enableHttp = Parameter.boolValue("mapper.http", true);
-
-    /**
-     * Default is either "mapper.query" configuration value or false.
-     */
-    @FieldConfig(codable = true)
-    private boolean enableQuery = Parameter.boolValue("mapper.query", false);
-
-
-    /**
-     * Default is either "mapper.minion.usejmx" configuration value or true.
-     */
-    @FieldConfig(codable = true)
-    private boolean enableJmx = Parameter.boolValue("mapper.minion.usejmx", true);
-
-    /**
      * Default is either "mapper.printinterval" configuration value or 1000.
      */
     @FieldConfig(codable = true)
     private long printinterval = Parameter.longValue("mapper.printinterval", 1000L);
-
-    /**
-     * Default is "mapper.localhost" configuration value.
-     */
-    @FieldConfig(codable = true)
-    private String localhost = Parameter.value("mapper.localhost");
-
-    /**
-     * Default is either "mapper.port" configuration value or 0.
-     */
-    @FieldConfig(codable = true)
-    private int port = Parameter.intValue("mapper.port", 0);
-
-    /**
-     * Default is either "batch.brokerHost" configuration value or "localhost".
-     */
-    @FieldConfig(codable = true)
-    private String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
-
-    /**
-     * Default is either "batch.brokerPort" configuration value or 5672.
-     */
-    @FieldConfig(codable = true)
-    private String batchBrokerPort = Parameter.value("batch.brokerPort", "5672");
 
     /**
      * Definition of the tree structure.
@@ -258,13 +188,13 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
     private PathOutput[] outputs;
 
     @FieldConfig(codable = true)
-    private boolean live = Parameter.boolValue("mapper.live", false);
+    private boolean live;
 
     @FieldConfig(codable = true)
-    private String liveHost = Parameter.value("mapper.live.host", "localhost");
+    private String liveHost;
 
     @FieldConfig(codable = true)
-    private int livePort = Parameter.intValue("mapper.live.port", -1);
+    private int livePort;
 
     @FieldConfig(codable = true)
     private Integer nodeCache;
@@ -293,18 +223,15 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
     @FieldConfig(codable = true)
     private int maxErrors = 0;
 
+    @FieldConfig private boolean profiling = false;
+
     private final ConcurrentMap<String, BundleField> fields    = new ConcurrentHashMap<>();
     private final IndexHash<PathElement[]>           pathIndex = new IndexHash();
 
     private DataTree tree;
     private Bench    bench;
-    private Server   jetty;
     private long     startTime;
 
-    private ObjectName           jmxname;
-    private MBeanRemotingSupport jmxremote;
-
-    private QueryEngine     queryEngine;
     private MeshyServer     liveQueryServer;
     private TreeMapperStats mapstats;
     private TaskRunConfig   config;
@@ -317,13 +244,9 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
     private final AtomicLong    mapWriteTime    = new AtomicLong(0);
     private final AtomicLong    processed       = new AtomicLong(0);
     private final AtomicLong    processNodes    = new AtomicLong(0);
-    private final AtomicBoolean calledExit      = new AtomicBoolean(false);
-    private final AtomicBoolean forceExit       = new AtomicBoolean(false);
-    private final AtomicBoolean profiling       = new AtomicBoolean(false);
     private       int           bundleErrors    = 0;
     private final AtomicLong    lastBundleTime  = new AtomicLong(0);
 
-    /** */
     private static class IndexHash<V> {
 
         private HashMap<String, Integer> map  = new HashMap<>();
@@ -349,7 +272,6 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
         }
     }
 
-    /** */
     public static final class StoreConfig implements Codable {
 
         @FieldConfig(codable = true)
@@ -362,9 +284,21 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
         Long    maxCacheMem;
         @FieldConfig(codable = true)
         Integer maxPageMem;
+
+        public void setStaticFieldsFromMembers() {
+            if (maxCacheSize != null)
+                TreeCommonParameters.setDefaultMaxCacheSize(maxCacheSize);
+            if (maxCacheMem != null)
+                TreeCommonParameters.setDefaultMaxCacheMem(maxCacheMem);
+            if (maxPageSize != null)
+                TreeCommonParameters.setDefaultMaxPageSize(maxCacheSize);
+            if (maxPageMem != null)
+                TreeCommonParameters.setDefaultMaxPageMem(maxPageMem);
+            if (memSample != null)
+                TreeCommonParameters.setDefaultMemSample(memSample);
+        }
     }
 
-    /** */
     private void resolve() throws Exception {
         fields.clear();
         if (features != null) {
@@ -409,87 +343,35 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
 
     @Override
     public void open(TaskRunConfig config) {
+        this.config = config;
         try {
-            _init(config);
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
-        }
-    }
+            mapstats = new TreeMapperStats(log);
+            resolve();
 
-    private void _init(TaskRunConfig runConfig) throws Exception {
-        config = runConfig;
-        mapstats = new TreeMapperStats(log);
+            if (nodeCache != null) TreeCommonParameters.setDefaultCleanQueueSize(nodeCache);
+            if (trashInterval != null) TreeCommonParameters.setDefaultTrashInterval(trashInterval);
+            if (trashTimeLimit != null) TreeCommonParameters.setDefaultTrashTimeLimit(trashTimeLimit);
+            if (storage != null) storage.setStaticFieldsFromMembers();
 
-        resolve();
+            log.info("[init] live={}, target={} job={}", live, root, this.config.jobId);
 
-        if (nodeCache != null) TreeCommonParameters.setDefaultCleanQueueSize(nodeCache);
-        if (trashInterval != null) TreeCommonParameters.setDefaultTrashInterval(trashInterval);
-        if (trashTimeLimit != null) TreeCommonParameters.setDefaultTrashTimeLimit(trashTimeLimit);
-        if (storage != null) {
-            if (storage.maxCacheSize != null)
-                TreeCommonParameters.setDefaultMaxCacheSize(storage.maxCacheSize);
-            if (storage.maxCacheMem != null)
-                TreeCommonParameters.setDefaultMaxCacheMem(storage.maxCacheMem);
-            if (storage.maxPageSize != null)
-                TreeCommonParameters.setDefaultMaxPageSize(storage.maxCacheSize);
-            if (storage.maxPageMem != null)
-                TreeCommonParameters.setDefaultMaxPageMem(storage.maxPageMem);
-            if (storage.memSample != null)
-                TreeCommonParameters.setDefaultMemSample(storage.memSample);
-        }
+            Path treePath = Paths.get(config.dir, "data");
+            tree = new ConcurrentTree(Files.initDirectory(treePath.toFile()));
+            bench = new Bench(EnumSet.allOf(BENCH.class), 1000);
 
-        if (Strings.isEmpty(localhost)) {
-            localhost = InetAddress.getLocalHost().getHostAddress();
-        }
-        log.info("[init] java=" + System.getProperty("java.vm.version") + " query=" + enableQuery +
-                 " http=" + enableHttp + " jmx=" + enableJmx + " live=" + live);
-        log.info("[init] host=" + localhost + " port=" + port + " target=" + root + " job=" +
-                 config.jobId);
-
-        Path treePath = Paths.get(runConfig.dir, "data");
-        tree = new ConcurrentTree(Files.initDirectory(treePath.toFile()));
-        bench = new Bench(EnumSet.allOf(BENCH.class), 1000);
-
-        if (enableHttp) {
-            jetty = new Server(port > 0 ? port++ : 0);
-            jetty.start();
-            int httpPort = jetty.getConnectors()[0].getLocalPort();
-            log.info("[init.http] http://" + localhost + ":" + httpPort + "/");
-            Files.write(new File("job.port"), Bytes.toBytes(Integer.toString(httpPort)), false);
-        }
-
-        if (enableJmx) {
-            int queryPort = 0;
-            jmxname = new ObjectName("com.addthis.hydra:type=Hydra,node=" + queryPort);
-            ManagementFactory.getPlatformMBeanServer().registerMBean(mapstats, jmxname);
-            ServerSocket ss = new ServerSocket();
-            ss.setReuseAddress(true);
-            ss.bind(port > 0 ? new InetSocketAddress(port++) : null);
-            int jmxport = ss.getLocalPort();
-            ss.close();
-            if (jmxport == -1) {
-                log.warn("[init.jmx] failed to get a port");
-            } else {
-                try {
-                    jmxremote = new MBeanRemotingSupport(jmxport);
-                    jmxremote.start();
-                    log.info("[init.jmx] port=" + jmxport);
-                } catch (Exception e) {
-                    log.warn("[init.jmx] err=" + e);
-                }
+            if (this.config.jobId != null && live && livePort > -1) {
+                QueryEngine liveQueryEngine = new QueryEngine(tree);
+                connectToMesh(treePath.toFile(), config.jobId, liveQueryEngine);
             }
-        }
 
-        if (config.jobId != null && live && livePort > -1) {
-            QueryEngine liveQueryEngine = new QueryEngine(tree);
-            connectToMesh(treePath.toFile(), runConfig.jobId, liveQueryEngine);
-        }
+            startTime = System.currentTimeMillis();
 
-        startTime = System.currentTimeMillis();
-
-        if (pre != null) {
-            log.warn("pre-chain: " + pre);
-            processBundle(new KVBundle(), pre);
+            if (pre != null) {
+                log.warn("pre-chain: " + pre);
+                processBundle(new KVBundle(), pre);
+            }
+        } catch (Exception ex) {
+            Throwables.propagate(ex);
         }
     }
 
@@ -498,24 +380,14 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
         liveQueryServer = new LiveMeshyServer(livePort, queryReference);
     }
 
-    /** */
     public BundleField bindField(String key) {
         return getFormat().getField(key);
     }
 
-    @Override
-    public String toString() {
-        return "Hydra(" + localhost + "," + port + ")";
-    }
-
     // ------------------------- PROCESSING ENGINE -------------------------
 
-    public boolean isInterrupted() {
-        return calledExit.get();
-    }
-
     public boolean isProfiling() {
-        return profiling.get();
+        return profiling;
     }
 
     public void updateProfile(PathElement pathElement, long duration) {
@@ -701,140 +573,6 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
         return Strings.padright(s, chars);
     }
 
-    // ------------------------- HTTP SERVICES -------------------------
-
-    /**
-     * used to support cluster querying and query/admin console.
-     */
-    public final class HTTP extends AbstractHandler {
-
-        private int getIntParam(HttpServletRequest request, String key, int def) {
-            String v = request.getParameter(key);
-            return v != null ? Integer.parseInt(v) : def;
-        }
-
-        private String getParam(HttpServletRequest request, String key, String def) {
-            String v = request.getParameter(key);
-            return v != null ? v : def;
-        }
-
-
-        @Override
-        public void handle(String target, Request request, HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws IOException, ServletException {
-            httpServletResponse.setCharacterEncoding(CharEncoding.UTF_8);
-            if (target.equals("/ping")) {
-                httpServletResponse.getWriter().write("ok");
-            } else if (target.equals("/do")) {
-                List<String> did = new LinkedList<>();
-                try {
-                    if (getParam(request, "sysExit", "0").equals("1")) {
-                        did.add("system exit");
-                        calledExit.set(true);
-                        new Thread() {
-                            public void run() {
-                                try {
-                                    setName("http do sysExit");
-                                    Thread.sleep(500);
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-                                System.exit(0);
-                            }
-                        }.start();
-                    }
-                    if (getParam(request, "forceExit", "0").equals("1")) {
-                        forceExit.set(true);
-                        did.add("forcing exit");
-                    }
-                    if (getParam(request, "treeSync", "0").equals("1")) {
-                        tree.sync();
-                        did.add("synced tree");
-                    }
-                } catch (Exception ex) {
-                    did.add(ex.toString());
-                }
-                httpServletResponse.getWriter().write(Strings.join(did.toArray(), ","));
-            } else if (target.equals("/profile")) {
-                boolean was = profiling.get();
-                boolean is = getIntParam(request, "enable", was ? 1 : 0) == 1;
-                profiling.set(is);
-                if (getIntParam(request, "dump", 0) == 1) {
-                    String json;
-                    try {
-                        json = CodecJSON.encodeString(config);
-                    } catch (Exception e) {
-                        throw new IOException(e);
-                    }
-                    Files.write(new File("job.profile"), Bytes.toBytes(json), false);
-                    httpServletResponse.getWriter().write(json);
-                } else {
-                    httpServletResponse.getWriter().write("{profiling:" + is + "}");
-                }
-            }
-            request.setHandled(true);
-        }
-    }
-
-    @Override
-    public QueryHandle query(final Query query, final DataChannelOutput consumer) throws QueryException {
-        if (Thread.interrupted()) {
-            log.warn("[query] caught/reset thread in a previously interrupted state :: " + Thread.currentThread());
-        }
-        return new QueryThread(query, consumer);
-    }
-
-    /** */
-    private class QueryThread extends Thread implements QueryHandle {
-
-        private Query query;
-        private DataChannelOutput consumer;
-
-        QueryThread(Query query, DataChannelOutput consumer) {
-            setName("QT query=" + query.uuid() + " consumer=" + consumer);
-            this.query = query;
-            this.consumer = consumer;
-            start();
-        }
-
-        public void run() {
-            if (query.isTraced()) {
-                Query.traceLog.info("query begin {} {} to {}", query.uuid(), query, consumer);
-            }
-            try {
-                queryEngine.search(query, consumer,
-                        new DefaultChannelProgressivePromise(null, ImmediateEventExecutor.INSTANCE));
-                consumer.sendComplete();
-            } catch (QueryException e) {
-                consumer.sourceError(e);
-                log.warn("query exception {}", query.uuid(), e);
-            } catch (Exception e) {
-                consumer.sourceError(new QueryException(e));
-                log.warn("query error {}", query.uuid(), e);
-                } finally {
-                if (query.isTraced()) {
-                    Query.traceLog.info("query end {}", query.uuid());
-                }
-            }
-        }
-
-        @Override
-        public void cancel(String message) {
-            if (query.isTraced()) {
-                Query.traceLog.info("query interrupt {}", query.uuid());
-            }
-            interrupt();
-        }
-    }
-
-    @Override
-    public void noop() {
-    }
-
-    @Override
-    public boolean isClosed() {
-        return false;
-    }
-
     @Override
     public void send(Bundle bundle) {
         long markBefore = System.nanoTime();
@@ -897,7 +635,6 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
                 liveQueryServer.close();
             }
             // disable web interface
-            jetty.stop();
             boolean doValidate;
             switch (validateTree) {
                 case ALL:
@@ -917,14 +654,6 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
                 closeOperation = repairTree ? CloseOperation.REPAIR : CloseOperation.TEST;
             }
             tree.close(false, closeOperation);
-            if (jmxname != null) {
-                log.info("[close] unregistering JMX");
-                ManagementFactory.getPlatformMBeanServer().unregisterMBean(jmxname);
-                if (jmxremote != null) {
-                    jmxremote.stop();
-                    jmxremote = null;
-                }
-            }
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
@@ -933,14 +662,5 @@ public final class TreeMapper extends DataOutputTypeList implements QuerySource,
     @Override
     public void sourceError(DataChannelError err) {
         // TODO
-    }
-
-
-    @Override
-    public void postDecode() {
-    }
-
-    @Override
-    public void preEncode() {
     }
 }
