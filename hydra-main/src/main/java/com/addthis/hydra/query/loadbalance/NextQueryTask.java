@@ -18,6 +18,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
 
 import com.addthis.bundle.channel.DataChannelError;
+import com.addthis.hydra.query.web.HttpQueryCallHandler;
 import com.addthis.hydra.query.web.HttpUtils;
 
 import com.google.common.base.Throwables;

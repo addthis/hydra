@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package com.addthis.hydra.query.loadbalance;
+package com.addthis.hydra.query.web;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -23,11 +23,6 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.source.ErrorHandlingQuerySource;
 import com.addthis.hydra.data.query.source.QuerySource;
-import com.addthis.hydra.query.web.DelimitedBundleEncoder;
-import com.addthis.hydra.query.web.GoogleDriveBundleEncoder;
-import com.addthis.hydra.query.web.HtmlBundleEncoder;
-import com.addthis.hydra.query.web.JsonBundleEncoder;
-import com.addthis.hydra.query.web.LegacyHandler;
 import com.addthis.hydra.util.StringMapHelper;
 
 import org.slf4j.Logger;
