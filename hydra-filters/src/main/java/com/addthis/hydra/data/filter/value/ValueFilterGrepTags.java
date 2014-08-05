@@ -34,20 +34,20 @@ public class ValueFilterGrepTags extends ValueFilter {
     /**
      * The set of values to match against.
      */
-    @FieldConfig(codable = true, autocollection = true)
+    @FieldConfig(codable = true, autocollection = true, required = true)
     private String[] values;
 
     /**
      * The tag name to search for
      */
-    @FieldConfig(codable = true)
+    @FieldConfig(codable = true, required = true)
     private String tagName;
 
     /**
      * The tag attribute to search for
      */
-    @FieldConfig(codable = true)
-    private String tagAttr = "src";
+    @FieldConfig(codable = true, required = true)
+    private String[] tagAttrs;
 
     @Override
     public ValueObject filterValue(ValueObject value) {
@@ -65,10 +65,13 @@ public class ValueFilterGrepTags extends ValueFilter {
 
                     if (tags != null) {
                         for (Element tag : tags) {
-                            String attrValue = tag.attr(tagAttr);
+                            for(String tagAttr : tagAttrs)
+                            {
+                                String attrValue = tag.attr(tagAttr);
 
-                            if (attrValue != null) {
-                                match(attrValue.toLowerCase(), values, matches);
+                                if (attrValue != null) {
+                                    match(attrValue.toLowerCase(), values, matches);
+                                }
                             }
                         }
                     }
@@ -109,7 +112,7 @@ public class ValueFilterGrepTags extends ValueFilter {
         this.tagName = tagName;
     }
 
-    public void setTagAttr(String tagAttr) {
-        this.tagAttr = tagAttr;
+    public void setTagAttrs(String... tagAttrs) {
+        this.tagAttrs = tagAttrs;
     }
 }
