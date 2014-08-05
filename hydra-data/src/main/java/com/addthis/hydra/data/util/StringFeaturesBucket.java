@@ -32,27 +32,27 @@ public class StringFeaturesBucket implements Codable, FeaturesBucket {
         features = new HashMap<>();
     }
 
-    public void addFeature(String feature) {
+    @Override public void addFeature(String feature) {
         Double weight = null;
         features.put(feature, (weight = features.get(feature)) != null ? weight + 1 : 1);
     }
 
 
-    public long getHits() {
+    @Override public long getHits() {
         return hits;
     }
 
-    public void incrementHits(int n) {
+    @Override public void incrementHits(int n) {
         hits += n;
     }
 
-    public void addFeatures(List<String> features) {
+    @Override public void addFeatures(List<String> features) {
         for (String feature : features) {
             addFeature(feature);
         }
     }
 
-    public void setHits(long hits) {
+    @Override public void setHits(long hits) {
         this.hits = hits;
     }
 

@@ -48,11 +48,11 @@ class Searcher implements Iterator<SearchResult> {
 		this.currentResult = result;
 	}
 
-	public boolean hasNext() {
+	@Override public boolean hasNext() {
 		return (this.currentResult != null);
 	}
 
-	public SearchResult next() {
+	@Override public SearchResult next() {
 		if (!hasNext())
 			throw new NoSuchElementException();
 		SearchResult result = currentResult;
@@ -60,7 +60,7 @@ class Searcher implements Iterator<SearchResult> {
 		return result;
 	}
 
-	public void remove() {
+	@Override public void remove() {
 		throw new UnsupportedOperationException();
 	}
 }

@@ -278,12 +278,12 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
 
     }
 
-    @SuppressWarnings("unused")
+    @Override @SuppressWarnings("unused")
     public void setMaxPages(int maxPages) {
         this.maxPages = maxPages;
     }
 
-    @SuppressWarnings("unused")
+    @Override @SuppressWarnings("unused")
     public void setMaxPageSize(int maxPageSize) {
         this.maxPageSize = maxPageSize;
     }
@@ -895,7 +895,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
             this.cmp = cmp;
         }
 
-        public int compareTo(K k2) {
+        @Override public int compareTo(K k2) {
             return cmp.compare(actualKey, k2);
         }
     }

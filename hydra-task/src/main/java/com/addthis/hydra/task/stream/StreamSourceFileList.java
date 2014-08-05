@@ -46,7 +46,7 @@ public class StreamSourceFileList implements StreamFileSource {
     private BufferedReader reader;
 
     /** */
-    public StreamFile nextSource() {
+    @Override public StreamFile nextSource() {
         if (reader != null) {
             try {
                 String line = reader.readLine();

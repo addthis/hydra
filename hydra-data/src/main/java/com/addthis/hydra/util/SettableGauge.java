@@ -26,7 +26,7 @@ public class SettableGauge<T> extends Gauge<T> {
         this.value = value;
     }
 
-    public T value() {
+    @Override public T value() {
         return this.value;
     }
 

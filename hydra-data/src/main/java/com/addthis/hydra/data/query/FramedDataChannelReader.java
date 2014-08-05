@@ -13,76 +13,86 @@
  */
 package com.addthis.hydra.data.query;
 
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.Bytes;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.BundleFactory;
 import com.addthis.bundle.core.list.ListBundle;
+import com.addthis.bundle.io.BundleReader;
 import com.addthis.bundle.io.DataChannelCodec;
-import com.addthis.bundle.io.DataChannelReader;
-import com.addthis.meshy.service.stream.SourceInputStream;
+import com.addthis.hydra.data.util.BundleUtils;
+import com.addthis.meshy.service.stream.StreamSource;
 
-public class FramedDataChannelReader extends DataChannelReader {
+import com.google.common.base.Throwables;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+@NotThreadSafe
+public class FramedDataChannelReader implements BundleReader {
+
+    private static final Logger log = LoggerFactory.getLogger(FramedDataChannelReader.class);
 
     public static final int FRAME_MORE = 0;
     public static final int FRAME_EOF = 1;
     public static final int FRAME_ERROR = 2;
     public static final int FRAME_BUSY = 3;
 
-    private final int pollWaitTime;
-
-    public AtomicBoolean eof = new AtomicBoolean(false);
-    public boolean busy;
-
-    private final SourceInputStream in;
+    private final StreamSource streamSource;
     private final DataChannelCodec.ClassIndexMap classMap;
     private final DataChannelCodec.FieldIndexMap fieldMap;
+    private final BundleFactory factory;
+    private final BlockingQueue<byte[]> queue;
+    private final int pollWaitTime;
 
     private ByteArrayInputStream bis;
     private DataChannelError err;
+    private boolean eof;
 
-    public FramedDataChannelReader(SourceInputStream in,
-                                   int pollWaitTime) {
-        this(in, DataChannelCodec.createClassIndexMap(),
-             DataChannelCodec.createFieldIndexMap(), pollWaitTime);
+    public FramedDataChannelReader(StreamSource streamSource, int pollWaitTime) {
+        this(streamSource, pollWaitTime,
+             DataChannelCodec.createClassIndexMap(), DataChannelCodec.createFieldIndexMap());
     }
 
-    public FramedDataChannelReader(final SourceInputStream in,
+    public FramedDataChannelReader(StreamSource streamSource, int pollWaitTime,
                                    DataChannelCodec.ClassIndexMap classMap,
-                                   DataChannelCodec.FieldIndexMap fieldMap,
-                                   int pollWaitTime) {
-        super(new ListBundle(), in);
-        this.in = in;
+                                   DataChannelCodec.FieldIndexMap fieldMap) {
+        this.streamSource = streamSource;
+        this.pollWaitTime = pollWaitTime;
         this.classMap = classMap;
         this.fieldMap = fieldMap;
-        this.pollWaitTime = pollWaitTime;
+
+        this.queue = streamSource.getMessageQueue();
+        this.factory = new ListBundle();
+        this.eof = false;
     }
 
-    public int available() throws IOException {
-        return in.available();
-    }
-
-    @Override
-    public Bundle read() throws IOException {
-        if (eof.get()) {
-            return null;
-        }
+    @Override @Nullable public Bundle read() throws IOException {
         if (err != null) {
             throw err;
         }
-        int frame;
-        if (bis != null && bis.available() > 0) {
-            frame = bis.read();
-        } else {
-            byte[] data = in.poll(pollWaitTime, TimeUnit.MILLISECONDS);
-            if (in.isEOF() && ((data == null) || (data.length == 0))) {
-                eof.set(true);
+        if (eof) {
+            return null;
+        }
+        if ((bis == null) || (bis.available() == 0)) {
+            byte[] data;
+            try {
+                data = queue.poll(pollWaitTime, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                throw Throwables.propagate(e);
+            }
+            handlePollResult(data);
+            if (eof) {
                 return null;
             } else if (data == null) {
                 // poll timeout no data yet
@@ -90,18 +100,18 @@ public class FramedDataChannelReader extends DataChannelReader {
             } else {
                 // more data to read
                 bis = new ByteArrayInputStream(data);
-                frame = bis.read();
             }
         }
 
+        int frame = bis.read();
         switch (frame) {
             case FRAME_BUSY:
-                busy = true;
-                return null;
+                err = new DataChannelError("busy frames are not supported");
+                throw err;
             case FRAME_MORE:
-                return DataChannelCodec.decodeBundle(getFactory().createBundle(), Bytes.readBytes(bis), fieldMap, classMap);
+                return DataChannelCodec.decodeBundle(factory.createBundle(), Bytes.readBytes(bis), fieldMap, classMap);
             case FRAME_EOF:
-                eof.set(true);
+                close();
                 return null;
             case FRAME_ERROR:
                 try {
@@ -109,16 +119,44 @@ public class FramedDataChannelReader extends DataChannelReader {
                     String errorMessage = Bytes.readString(bis);
                     Class clazz = Class.forName(error);
                     err = (DataChannelError) clazz.getConstructor(String.class).newInstance(errorMessage);
-                    throw err;
+                } catch (DataChannelError ex) {
+                    err = ex;
+                    throw ex;
                 } catch (Exception ex) {
-                    if (ex instanceof DataChannelError) {
-                        throw (DataChannelError) ex;
-                    } else {
-                        throw new DataChannelError(ex);
-                    }
+                    throw new DataChannelError(ex);
                 }
+                throw err;
             default:
-                throw new DataChannelError("invalid framing: " + frame);
+                err = new DataChannelError("invalid framing: " + frame);
+                throw err;
         }
+    }
+
+    private void handlePollResult(byte[] data) throws IOException {
+        streamSource.performBufferAccounting(data);
+        try {
+            streamSource.throwIfErrorSignal(data);
+        } catch (Throwable sourceError) {
+            // kind of silly, but I just feel like being defensive at the moment
+            err = BundleUtils.promoteHackForThrowables(sourceError);
+            throw sourceError;
+        }
+        if (streamSource.isCloseSignal(data)) {
+            // maybe this should be an error? leaving it as is for now to mainting existing behavior
+            log.warn("bundle stream ended without eof frame");
+            close();
+        }
+    }
+
+    @Override public void close() throws IOException {
+        eof = true;
+    }
+
+    public boolean isClosed() {
+        return eof;
+    }
+
+    @Override public BundleFactory getFactory() {
+        return factory;
     }
 }

@@ -30,5 +30,5 @@ public interface QueryTableOp extends QueryOp {
      * when a tableop is followed by a table op, this
      * allows an optimized transfer of internal table state.
      */
-    public void sendTable(DataTable table);
+    @Override public void sendTable(DataTable table);
 }

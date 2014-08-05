@@ -51,14 +51,14 @@ public class RabbitMessageProducer implements MessageProducer {
 
     }
 
-    public void open() throws IOException {
+    @Override public void open() throws IOException {
         connection = RabbitMQUtil.createConnection(brokerHost, brokerPort);
         channel = connection.createChannel();
         channel.exchangeDeclare(exchangeName, "direct");
         log.info("[rabbit.producer] connection established.");
     }
 
-    public void close() throws IOException {
+    @Override public void close() throws IOException {
         if (channel != null) {
             channel.close();
         }
@@ -67,7 +67,7 @@ public class RabbitMessageProducer implements MessageProducer {
         }
     }
 
-    public void sendMessage(Serializable message, String routingKey) throws IOException {
+    @Override public void sendMessage(Serializable message, String routingKey) throws IOException {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream out = new ObjectOutputStream(bos);
         out.writeObject(message);

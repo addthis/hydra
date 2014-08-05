@@ -13,7 +13,6 @@
  */
 package com.addthis.hydra.data.query.source;
 
-import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.channel.DataChannelOutput;
 
 
@@ -26,7 +25,7 @@ public abstract class AbstractQueryConsumer implements DataChannelOutput {
     }
 
     @Override
-    public void sourceError(DataChannelError er) {
+    public void sourceError(Throwable er) {
         consumer.sourceError(er);
     }
 }

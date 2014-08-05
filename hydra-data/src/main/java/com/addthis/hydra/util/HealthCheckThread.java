@@ -25,7 +25,7 @@ public class HealthCheckThread extends Thread {
         this.pollingInterval = pollingInterval;
     }
 
-    public void run() {
+    @Override public void run() {
         while (true) {
             this.healthCheck.runCheck();
             trySleep(this.pollingInterval);

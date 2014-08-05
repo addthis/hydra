@@ -18,7 +18,7 @@ import com.addthis.bundle.value.ValueObject;
 
 public abstract class StringArrayFilter extends ValueFilter {
 
-    public abstract ValueArray filter(ValueObject value);
+    @Override public abstract ValueArray filter(ValueObject value);
 
     @Override
     public ValueObject filterValue(ValueObject value) {

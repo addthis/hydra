@@ -24,10 +24,11 @@ import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.io.DataChannelReader;
+import com.addthis.bundle.io.BundleReader;
 import com.addthis.hydra.data.query.FramedDataChannelReader;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
+import com.addthis.meshy.service.stream.StreamSource;
 
 import static com.addthis.meshy.MeshyClient.ListCallback;
 
@@ -43,7 +44,7 @@ public class MeshQueryClient {
         MeshyClient meshyClient = new MeshyClient(args[0], Integer.parseInt(args[1]));
         MeshQueryClient queryClient = new MeshQueryClient();
         try {
-            DataChannelReader reader = queryClient.query(meshyClient, args[2], args[3], args[4]);
+            BundleReader reader = queryClient.query(meshyClient, args[2], args[3], args[4]);
             if (reader == null) {
                 System.out.println("no matching query source");
                 return;
@@ -57,7 +58,7 @@ public class MeshQueryClient {
         }
     }
 
-    public DataChannelReader query(MeshyClient meshyClient, FileReference fileReference, String queryPath, String queryOps) {
+    public BundleReader query(MeshyClient meshyClient, FileReference fileReference, String queryPath, String queryOps) {
         if (fileReference == null) {
             throw new DataChannelError("FileReference was null, unable to run query: " + queryPath);
         }
@@ -65,13 +66,16 @@ public class MeshQueryClient {
         options.put("path", queryPath);
         options.put("ops", queryOps);
         try {
-            return new FramedDataChannelReader(meshyClient.readFile(fileReference.getHostUUID(), fileReference.name, options), 0);
+            StreamSource streamSource = meshyClient.getFileSource(fileReference.getHostUUID(),
+                                                                  fileReference.name,
+                                                                  options);
+            return new FramedDataChannelReader(streamSource, 0);
         } catch (IOException e) {
             throw new DataChannelError(e);
         }
     }
 
-    public DataChannelReader query(MeshyClient meshyClient, String prefix, String queryPath, String queryOps) {
+    public BundleReader query(MeshyClient meshyClient, String prefix, String queryPath, String queryOps) {
         try {
             // sample of async / first-responder
             final Semaphore gate = new Semaphore(1);

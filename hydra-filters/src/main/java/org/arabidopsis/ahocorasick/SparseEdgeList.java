@@ -48,7 +48,7 @@ class SparseEdgeList implements EdgeList {
 		head = null;
 	}
 
-	public State get(char c) {
+	@Override public State get(char c) {
 		Cons cons = head;
 		while (cons != null) {
 			if (cons.c == c)
@@ -58,11 +58,11 @@ class SparseEdgeList implements EdgeList {
 		return null;
 	}
 
-	public void put(char c, State s) {
+	@Override public void put(char c, State s) {
 		this.head = new Cons(c, s, head);
 	}
 
-	public char[] keys() {
+	@Override public char[] keys() {
 		int length = 0;
 		Cons c = head;
 		while (c != null) {

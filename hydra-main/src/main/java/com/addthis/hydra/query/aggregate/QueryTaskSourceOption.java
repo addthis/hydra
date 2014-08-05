@@ -14,7 +14,7 @@
 
 package com.addthis.hydra.query.aggregate;
 
-import java.io.IOException;
+import javax.annotation.Nullable;
 
 import java.util.Map;
 import java.util.concurrent.Semaphore;
@@ -22,7 +22,6 @@ import java.util.concurrent.Semaphore;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.meshy.ChannelMaster;
 import com.addthis.meshy.service.file.FileReference;
-import com.addthis.meshy.service.stream.SourceInputStream;
 import com.addthis.meshy.service.stream.StreamSource;
 
 import org.slf4j.Logger;
@@ -35,7 +34,7 @@ public class QueryTaskSourceOption {
     public final FileReference queryReference;
     public final Semaphore optionLeases;
 
-    SourceInputStream sourceInputStream;
+    @Nullable StreamSource streamSource;
 
     public QueryTaskSourceOption(FileReference queryReference, Semaphore optionLeases) {
         this.queryReference = queryReference;
@@ -52,32 +51,37 @@ public class QueryTaskSourceOption {
     }
 
     private void activate(ChannelMaster meshy, Map<String, String> queryOptions) {
-        StreamSource source = null;
         try {
-            source = new StreamSource(meshy, queryReference.getHostUUID(),
-                    queryReference.getHostUUID(), queryReference.name, queryOptions, 0);
-        } catch (IOException e) {
+            streamSource = new StreamSource(meshy, queryReference.getHostUUID(),
+                                            queryReference.getHostUUID(), queryReference.name, queryOptions, 0);
+        } catch (Throwable e) {
             log.warn("Error getting query handle for fileReference: {}/{}",
-                    queryReference.getHostUUID(), queryReference.name, e);
+                     queryReference.getHostUUID(), queryReference.name, e);
             optionLeases.release();
             throw new QueryException(e);
         }
-        sourceInputStream = source.getInputStream();
     }
 
     public boolean isActive() {
-        return sourceInputStream != null;
+        return streamSource != null;
+    }
+
+    public boolean isReady() {
+        if (streamSource != null) {
+            return streamSource.getMessageQueue().peek() != null;
+        }
+        return false;
     }
 
     /** The message is currently a no-op, but is left in to make it easier to support later and because
      *  it is handy for self-documenting-like calls. */
     public void cancel(String message) {
         try {
-            if (sourceInputStream != null) {
+            if (streamSource != null) {
                 optionLeases.release();
                 log.debug("lease dropped for {} with reason {}", queryReference.getHostUUID(), message);
-                sourceInputStream.close();
-                sourceInputStream = null;
+                streamSource.requestClose();
+                streamSource = null;
             }
         } catch (Exception e) {
             log.warn("Exception canceling sourceInputStream for {}", queryReference, e);

@@ -53,7 +53,7 @@ public class ResultTableDisk extends ResultTable implements ItemCodec<Bundle> {
         return "(RDB:" + diskFile + ":" + diskList.size() + ")";
     }
 
-    protected void finalize() {
+    @Override protected void finalize() {
         if (!closed) {
             System.err.println("finalizing ResultDiskBacked via delete rows=" + size() + " @ " + diskFile);
             delete();

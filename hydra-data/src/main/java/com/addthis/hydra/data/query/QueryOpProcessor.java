@@ -281,7 +281,7 @@ public class QueryOpProcessor implements DataChannelOutput, QueryMemTracker, Clo
     }
 
     @Override
-    public void sourceError(DataChannelError er) {
+    public void sourceError(Throwable er) {
         opPromise.tryFailure(er);
         output.getOutput().sourceError(er);
     }

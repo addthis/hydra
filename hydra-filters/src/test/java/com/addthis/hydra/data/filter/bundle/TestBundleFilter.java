@@ -158,6 +158,10 @@ public class TestBundleFilter {
                 // TODO Auto-generated method stub
                 return 0;
             }
+
+            @Override public Bundle createBundle() {
+                return new MapBundle();
+            }
         }
 
         /** */

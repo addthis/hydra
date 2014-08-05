@@ -154,7 +154,7 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
         return cat(ab.raw);
     }
 
-    public int compareTo(Raw o) {
+    @Override public int compareTo(Raw o) {
         if (longcompare) {
             return compare(getLongs(), o.getLongs());
         }

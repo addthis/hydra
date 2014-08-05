@@ -59,7 +59,7 @@ public class TestAhoCorasick extends TestCase {
 
 	private AhoCorasick tree;
 
-	public void setUp() {
+	@Override public void setUp() {
 		this.tree = new AhoCorasick();
 	}
 

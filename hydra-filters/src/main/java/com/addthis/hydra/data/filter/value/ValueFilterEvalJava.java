@@ -324,7 +324,7 @@ public class ValueFilterEvalJava extends ValueFilter {
     }
 
 
-    public void setup() {
+    @Override public void setup() {
         constructedFilter = createConstructedFilter();
     }
 

@@ -3300,7 +3300,7 @@ public class Spawn implements Codable {
      */
     private class JobRekickTask implements Runnable {
 
-        public void run() {
+        @Override public void run() {
             boolean kicked;
 
             do {
@@ -3499,7 +3499,7 @@ public class Spawn implements Codable {
             this.task = task;
         }
 
-        public void run() {
+        @Override public void run() {
             try {
                 if (jobConfig == null) {
                     jobConfig = expandJob(jobId, jobParameters, rawJobConfig);

@@ -66,7 +66,7 @@ public class FilteredDataOutput extends TaskDataOutput {
     }
 
     @Override
-    public void sourceError(DataChannelError er) {
+    public void sourceError(Throwable er) {
         output.sourceError(er);
     }
 

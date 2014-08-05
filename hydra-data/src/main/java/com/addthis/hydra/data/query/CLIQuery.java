@@ -120,7 +120,7 @@ class CMDLineDataChannelOutput implements DataChannelOutput {
         return getClass().getSimpleName().toString();
     }
 
-    public void send(Bundle rl) throws DataChannelError {
+    @Override public void send(Bundle rl) throws DataChannelError {
         try {
             int tc = 0;
             for (BundleField bf : rl.getFormat()) {
@@ -148,7 +148,7 @@ class CMDLineDataChannelOutput implements DataChannelOutput {
         }
     }
 
-    public void sendComplete() {
+    @Override public void sendComplete() {
         try {
             out.flush();
         } catch (IOException e) {
@@ -162,7 +162,7 @@ class CMDLineDataChannelOutput implements DataChannelOutput {
     }
 
     @Override
-    public void sourceError(DataChannelError er) {
+    public void sourceError(Throwable er) {
         throw new RuntimeException(er);
     }
 

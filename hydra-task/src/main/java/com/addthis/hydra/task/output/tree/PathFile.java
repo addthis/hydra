@@ -125,7 +125,7 @@ public final class PathFile extends PathKeyValue {
     private BundleField tempAccess;
 
     /** */
-    public void resolve(TreeMapper mapper) {
+    @Override public void resolve(TreeMapper mapper) {
         super.resolve(mapper);
         tempAccess = mapper.bindField(tempKey);
         if (each != null) {

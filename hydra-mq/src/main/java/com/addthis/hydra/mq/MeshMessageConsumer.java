@@ -222,7 +222,7 @@ public class MeshMessageConsumer implements MessageConsumer {
             }
         }
 
-        public void run() {
+        @Override public void run() {
             if (debug) log.info("started with timeout "+timeout);
             try {
                 loop();

@@ -38,7 +38,6 @@ import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.kvp.KVBundle;
@@ -660,7 +659,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
     }
 
     @Override
-    public void sourceError(DataChannelError err) {
+    public void sourceError(Throwable err) {
         // TODO
     }
 }

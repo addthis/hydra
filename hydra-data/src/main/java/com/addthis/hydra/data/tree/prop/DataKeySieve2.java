@@ -242,7 +242,7 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
     /**
      * return types of synthetic nodes returned
      */
-    public List<String> getNodeTypes() {
+    @Override public List<String> getNodeTypes() {
         return Arrays.asList(new String[]{"layers", "satmax", "ram"});
     }
 

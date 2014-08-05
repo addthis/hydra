@@ -71,7 +71,7 @@ public abstract class QueryEngineSource implements QuerySource {
             start();
         }
 
-        public void run() {
+        @Override public void run() {
             engine = null;
             try {
                 engineGate.acquire(1);

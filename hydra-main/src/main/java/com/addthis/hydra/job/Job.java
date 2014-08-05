@@ -652,7 +652,7 @@ public final class Job implements IJob, Codable {
         this.properties = properties;
     }
 
-    public JSONObject toJSON() throws Exception {
+    @Override public JSONObject toJSON() throws Exception {
         recountActiveTasks();
         return CodecJSON.encodeJSON(this);
     }

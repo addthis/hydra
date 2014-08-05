@@ -190,35 +190,35 @@ public class ReadPageDB<V extends IReadWeighable & BytesCodable> implements IPag
     }
 
     //Unsupported interface compatability stuff
-    public void setCacheSize(final int cachesize) {
+    @Override public void setCacheSize(final int cachesize) {
         throw new UnsupportedOperationException();
     }
 
-    public void setPageSize(int pagesize) {
+    @Override public void setPageSize(int pagesize) {
         throw new UnsupportedOperationException();
     }
 
-    public void setCacheMem(long maxmem) {
+    @Override public void setCacheMem(long maxmem) {
         throw new UnsupportedOperationException();
     }
 
-    public void setPageMem(int maxmem) {
+    @Override public void setPageMem(int maxmem) {
         throw new UnsupportedOperationException();
     }
 
-    public void setMemSampleInterval(int sample) {
+    @Override public void setMemSampleInterval(int sample) {
         throw new UnsupportedOperationException();
     }
 
-    public V put(DBKey key, V value) {
+    @Override public V put(DBKey key, V value) {
         throw new UnsupportedOperationException();
     }
 
-    public V remove(DBKey key) {
+    @Override public V remove(DBKey key) {
         throw new UnsupportedOperationException();
     }
 
-    public void remove(DBKey start, DBKey end, boolean inclusive) {
+    @Override public void remove(DBKey start, DBKey end, boolean inclusive) {
         throw new UnsupportedOperationException();
     }
 

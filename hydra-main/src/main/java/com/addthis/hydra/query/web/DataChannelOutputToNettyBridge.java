@@ -18,7 +18,6 @@ import java.util.List;
 
 import com.addthis.basis.util.Backoff;
 
-import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
@@ -77,7 +76,7 @@ public class DataChannelOutputToNettyBridge implements DataChannelOutput {
     }
 
     @Override
-    public void sourceError(DataChannelError ex) {
+    public void sourceError(Throwable ex) {
         log.trace("failing high level query promise", ex);
         overallQueryPromise.tryFailure(ex);
     }

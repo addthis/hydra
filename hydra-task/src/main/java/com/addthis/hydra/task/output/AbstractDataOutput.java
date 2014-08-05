@@ -146,7 +146,7 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
     }
 
     @Override
-    public void sourceError(DataChannelError er) {
+    public void sourceError(Throwable er) {
         AbstractOutputWriter writer = getWriter();
         writer.closeOpenOutputs();
         log.error("[sourceError]", er);

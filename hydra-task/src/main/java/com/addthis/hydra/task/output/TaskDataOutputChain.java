@@ -86,7 +86,7 @@ public class TaskDataOutputChain extends DataOutputTypeList {
         log.warn("[init] all outputs initialized");
     }
 
-    public void send(Bundle row) throws DataChannelError {
+    @Override public void send(Bundle row) throws DataChannelError {
         if (!copy && !immutableCopy) {
             Bundle withPreviousFormat = row;
             for (TaskDataOutput output : outputs) {
@@ -105,7 +105,7 @@ public class TaskDataOutputChain extends DataOutputTypeList {
         }
     }
 
-    public void send(List<Bundle> bundles) {
+    @Override public void send(List<Bundle> bundles) {
         if (bundles != null && !bundles.isEmpty()) {
             for (Bundle bundle : bundles) {
                 send(bundle);
@@ -113,7 +113,7 @@ public class TaskDataOutputChain extends DataOutputTypeList {
         }
     }
 
-    public void sendComplete() {
+    @Override public void sendComplete() {
         log.warn("[sendComplete] forwarding completion signal to all outputs");
         for (TaskDataOutput output : outputs) {
             output.sendComplete();
@@ -121,7 +121,7 @@ public class TaskDataOutputChain extends DataOutputTypeList {
         log.warn("[sendComplete] forwarding complete");
     }
 
-    public void sourceError(DataChannelError er) {
+    @Override public void sourceError(Throwable er) {
         log.warn("[sourceError] forwarding to all outputs" + er);
         for (TaskDataOutput output : outputs) {
             output.sourceError(er);

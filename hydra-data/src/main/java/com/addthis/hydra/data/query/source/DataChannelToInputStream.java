@@ -245,7 +245,7 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
      * @param er error encountered from the source
      */
     @Override
-    public void sourceError(DataChannelError er) {
+    public void sourceError(Throwable er) {
         if (closed) {
             log.debug("Unable to send source error due to closed channel", er);
             return;

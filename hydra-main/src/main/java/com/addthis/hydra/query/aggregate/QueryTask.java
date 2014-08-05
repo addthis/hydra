@@ -79,8 +79,7 @@ public class QueryTask implements Runnable {
                     } catch (IOException io) {
                         if (taskSource.lines == 0) {
                             // This QuerySource does not have this file anymore. Signal to the caller that a retry may resolve the issue.
-                            sourceAggregator.replaceQuerySource(taskSource,
-                                    taskSource.getSelectedSource(), i);
+                            sourceAggregator.replaceQuerySource(taskSource, taskSource.getSelectedSource(), i);
                         } else {
                             // This query source has started sending lines. Need to fail the query.
                             throw io;

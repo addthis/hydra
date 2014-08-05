@@ -99,11 +99,11 @@ public class CommandTaskKick implements JobMessage {
         return TYPE.CMD_TASK_KICK;
     }
 
-    public String getHostUuid() {
+    @Override public String getHostUuid() {
         return hostUuid;
     }
 
-    public JobKey getJobKey() {
+    @Override public JobKey getJobKey() {
         return jobKey;
     }
 

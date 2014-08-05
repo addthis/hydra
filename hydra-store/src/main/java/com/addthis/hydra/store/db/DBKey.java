@@ -57,26 +57,26 @@ public final class DBKey implements IPageDB.Key, Comparable<DBKey> {
         this.key = key;
     }
 
-    public int id() {
+    @Override public int id() {
         return id;
     }
 
-    public byte[] key() {
+    @Override public byte[] key() {
         return key.toBytes();
     }
 
-    public Raw rawKey() {
+    @Override public Raw rawKey() {
         return key;
     }
 
-    public byte[] toBytes() {
+    @Override public byte[] toBytes() {
         if (key == null) {
             return Bytes.toBytes(id);
         }
         return Raw.get(Bytes.toBytes(id)).cat(key).toBytes();
     }
 
-    public void writeOut(OutputStream out) throws IOException {
+    @Override public void writeOut(OutputStream out) throws IOException {
         Bytes.writeInt(id, out);
         Bytes.writeBytes(key.toBytes(), out);
     }

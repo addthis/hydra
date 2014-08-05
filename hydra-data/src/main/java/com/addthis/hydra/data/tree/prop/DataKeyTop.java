@@ -223,7 +223,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
     /**
      * return types of synthetic nodes returned
      */
-    public List<String> getNodeTypes() {
+    @Override public List<String> getNodeTypes() {
         return Arrays.asList(new String[]{"#"});
     }
 

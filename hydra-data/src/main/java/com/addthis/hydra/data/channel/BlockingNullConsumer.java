@@ -61,7 +61,7 @@ public class BlockingNullConsumer implements DataChannelOutput {
     }
 
     @Override
-    public void sourceError(DataChannelError ex) {
+    public void sourceError(Throwable ex) {
         exception = new QueryException(ex);
         sendComplete();
     }

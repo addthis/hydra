@@ -107,7 +107,7 @@ public class WebSocketManager extends WebSocketHandler {
      * create and return a class which implements the necessary WebSocket
      * interfaces.
      */
-    public WebSocket doWebSocketConnect(HttpServletRequest request, String protocol) {
+    @Override public WebSocket doWebSocketConnect(HttpServletRequest request, String protocol) {
         MQWebSocket webSocket = new MQWebSocket(request.getParameter("user"), request.getRemoteAddr());
         synchronized (monitor) {
             int numberOfSockets = webSockets.size();
@@ -243,7 +243,7 @@ public class WebSocketManager extends WebSocketHandler {
          *
          * @param connection the newly opened connection
          */
-        public void onOpen(Connection connection) {
+        @Override public void onOpen(Connection connection) {
             //System.out.println("[SERVER] Opened connection");
             connection.setMaxIdleTime(30000);
             // WebSocket has been opened. Store the opened connection
@@ -262,7 +262,7 @@ public class WebSocketManager extends WebSocketHandler {
          *
          * @param data message sent by client to server in String format
          */
-        public void onMessage(String data) {
+        @Override public void onMessage(String data) {
             try {
                 if (data.equals("ping")) {
                     this.connection.sendMessage("pong");
@@ -283,7 +283,7 @@ public class WebSocketManager extends WebSocketHandler {
          * @param closeCode the exit code of the connection in integer format
          * @param message   a human readable message for the exit code
          */
-        public void onClose(int closeCode, String message) {
+        @Override public void onClose(int closeCode, String message) {
             webSockets.remove(this);
         }
 

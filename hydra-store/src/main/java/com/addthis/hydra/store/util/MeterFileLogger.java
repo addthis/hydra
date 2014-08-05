@@ -109,7 +109,7 @@ public class MeterFileLogger implements Runnable {
         }
     }
 
-    public void run() {
+    @Override public void run() {
         if (meterJMX) {
             startBean();
         }

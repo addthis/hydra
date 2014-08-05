@@ -82,7 +82,7 @@ public abstract class MinionWorkItem implements Runnable {
     /**
      * Run this workitem, including retries if appropriate
      */
-    public void run() {
+    @Override public void run() {
         int exit = -1;
         String logPrefix = getLogPrefix();
         task.allocate();

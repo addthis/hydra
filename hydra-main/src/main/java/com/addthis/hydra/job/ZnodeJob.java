@@ -277,170 +277,170 @@ public class ZnodeJob implements IJob {
 
 
     // ----- Interface
-    public String getId() {
+    @Override public String getId() {
         return rznData.id;
     }
 
-    public String getOwner() {
+    @Override public String getOwner() {
         return rznData.owner;
     }
 
-    public void setOwner(String owner) {
+    @Override public void setOwner(String owner) {
         this.rznData.owner = owner;
     }
 
-    public String getCreator() {
+    @Override public String getCreator() {
         return rznData.creator;
     }
 
-    public long getCreateTime() {
+    @Override public long getCreateTime() {
         return rznData.createTime;
     }
 
-    public String getDescription() {
+    @Override public String getDescription() {
         return rznData.description;
     }
 
-    public void setDescription(String description) {
+    @Override public void setDescription(String description) {
         this.rznData.description = description;
     }
 
-    public String getCommand() {
+    @Override public String getCommand() {
         return rznData.command;
     }
 
-    public void setCommand(String command) {
+    @Override public void setCommand(String command) {
         this.rznData.command = command;
     }
 
-    public String getKillSignal() {
+    @Override public String getKillSignal() {
         return rznData.killSignal;
     }
 
-    public void setKillSignal(String killSignal) {
+    @Override public void setKillSignal(String killSignal) {
         this.rznData.killSignal = killSignal;
     }
 
-    public int getPriority() {
+    @Override public int getPriority() {
         return rznData.priority;
     }
 
-    public void setPriority(int priority) {
+    @Override public void setPriority(int priority) {
         this.rznData.priority = priority;
     }
 
-    public boolean getStomp() {
+    @Override public boolean getStomp() {
         return rznData.stomp;
     }
 
-    public void setStomp(boolean stomp) {
+    @Override public void setStomp(boolean stomp) {
         this.rznData.stomp = stomp;
     }
 
-    public Long getSubmitTime() {
+    @Override public Long getSubmitTime() {
         return rznData.submitTime;
     }
 
-    public void setSubmitTime(long submitTime) {
+    @Override public void setSubmitTime(long submitTime) {
         this.rznData.submitTime = submitTime;
     }
 
-    public Long getStartTime() {
+    @Override public Long getStartTime() {
         return rznData.startTime;
     }
 
-    public void setStartTime(Long startTime) {
+    @Override public void setStartTime(Long startTime) {
         this.rznData.startTime = startTime;
     }
 
 
-    public Long getEndTime() {
+    @Override public Long getEndTime() {
         return rznData.endTime;
     }
 
-    public void setEndTime(Long endTime) {
+    @Override public void setEndTime(Long endTime) {
         this.rznData.endTime = endTime;
     }
 
-    public Long getRekickTimeout() {
+    @Override public Long getRekickTimeout() {
         return rznData.rekickTimeout;
     }
 
-    public void setRekickTimeout(Long rekick) {
+    @Override public void setRekickTimeout(Long rekick) {
         rznData.rekickTimeout = rekick != null && rekick > 0 ? rekick : null;
     }
 
-    public Long getMaxRunTime() {
+    @Override public Long getMaxRunTime() {
         return rznData.maxRunTime;
     }
 
-    public void setMaxRunTime(Long maxRunTime) {
+    @Override public void setMaxRunTime(Long maxRunTime) {
         this.rznData.maxRunTime = maxRunTime;
     }
 
-    public boolean isEnabled() {
+    @Override public boolean isEnabled() {
         return rznData.enabled;
     }
 
-    public boolean setEnabled(boolean enabled) {
+    @Override public boolean setEnabled(boolean enabled) {
         rznData.enabled = true;
         return isEnabled();
     }
 
-    public Collection<JobParameter> getParameters() {
+    @Override public Collection<JobParameter> getParameters() {
         return rznData.parameters;
     }
 
-    public void setParameters(Collection<JobParameter> parameters) {
+    @Override public void setParameters(Collection<JobParameter> parameters) {
         this.rznData.parameters = new ArrayList<>(parameters.size());
         this.rznData.parameters.addAll(parameters);
     }
 
-    public String getConfig() {
+    @Override public String getConfig() {
         return config;
     }
 
-    public void setConfig(String config) {
+    @Override public void setConfig(String config) {
         this.config = config;
     }
 
-    public String getOnCompleteURL() {
+    @Override public String getOnCompleteURL() {
         return rznData.onComplete;
     }
 
-    public void setOnCompleteURL(String url) {
+    @Override public void setOnCompleteURL(String url) {
         this.rznData.onComplete = url;
     }
 
-    public String getOnErrorURL() {
+    @Override public String getOnErrorURL() {
         return rznData.onError;
     }
 
-    public void setOnErrorURL(String url) {
+    @Override public void setOnErrorURL(String url) {
         this.rznData.onError = url;
     }
 
-    public int getOnCompleteTimeout() { return rznData.onCompleteTimeout; }
+    @Override public int getOnCompleteTimeout() { return rznData.onCompleteTimeout; }
 
-    public void setOnCompleteTimeout(int timeout) { this.rznData.onCompleteTimeout = timeout; }
+    @Override public void setOnCompleteTimeout(int timeout) { this.rznData.onCompleteTimeout = timeout; }
 
-    public int getOnErrorTimeout() { return rznData.onErrorTimeout; }
+    @Override public int getOnErrorTimeout() { return rznData.onErrorTimeout; }
 
-    public void setOnErrorTimeout(int timeout) { this.rznData.onErrorTimeout = timeout; }
+    @Override public void setOnErrorTimeout(int timeout) { this.rznData.onErrorTimeout = timeout; }
 
-    public int getBackups() {
+    @Override public int getBackups() {
         return rznData.backups;
     }
 
-    public void setBackups(int backups) {
+    @Override public void setBackups(int backups) {
         this.rznData.backups = backups;
     }
 
-    public int getReplicas() {
+    @Override public int getReplicas() {
         return rznData.replicas;
     }
 
-    public void setReplicas(int replicas) {
+    @Override public void setReplicas(int replicas) {
         this.rznData.replicas = replicas;
     }
 
@@ -454,23 +454,23 @@ public class ZnodeJob implements IJob {
         this.rznData.readOnlyReplicas = readOnlyReplicas;
     }
 
-    public int getRunCount() {
+    @Override public int getRunCount() {
         return rznData.runCount;
     }
 
-    public int incrementRunCount() {
+    @Override public int incrementRunCount() {
         return ++rznData.runCount;
     }
 
-    public long getRunTime() {
+    @Override public long getRunTime() {
         return rznData.runTime;
     }
 
-    public JobState getState() {
+    @Override public JobState getState() {
         return rznData.state;
     }
 
-    public boolean setState(JobState state) {
+    @Override public boolean setState(JobState state) {
         if (getState().canTransition(state)) {
             rznData.state = state;
             return true;
@@ -491,7 +491,7 @@ public class ZnodeJob implements IJob {
         return this.alerts;
     }
 
-    public JobTask getTask(int id) {
+    @Override public JobTask getTask(int id) {
         if (tasks == null) {
             return null;
         }
@@ -503,57 +503,57 @@ public class ZnodeJob implements IJob {
         return null;
     }
 
-    public List<JobTask> getCopyOfTasks() {
+    @Override public List<JobTask> getCopyOfTasks() {
         if (tasks == null) {
             return null;
         }
         return ImmutableList.copyOf(tasks);
     }
 
-    public void addTask(JobTask task) {
+    @Override public void addTask(JobTask task) {
         tasks.add(task);
     }
 
-    public void setTasks(List<JobTask> tasks) {
+    @Override public void setTasks(List<JobTask> tasks) {
         if (tasks != null) {
             this.tasks = Lists.newArrayList(tasks);
         }
     }
 
-    public JobQueryConfig getQueryConfig() {
+    @Override public JobQueryConfig getQueryConfig() {
         return queryConfig;
     }
 
-    public void setQueryConfig(JobQueryConfig queryConfig) {
+    @Override public void setQueryConfig(JobQueryConfig queryConfig) {
         this.queryConfig = queryConfig;
     }
 
-    public JobCommand getSubmitCommand() {
+    @Override public JobCommand getSubmitCommand() {
         return rznData.submitCommand;
     }
 
-    public void setSubmitCommand(JobCommand submitCommand) {
+    @Override public void setSubmitCommand(JobCommand submitCommand) {
         this.rznData.submitCommand = submitCommand;
     }
 
-    public boolean getStrictReplicas() {
+    @Override public boolean getStrictReplicas() {
         return rznData.strictReplicas;
     }
 
-    public void setStrictReplicas(boolean strictReplicas) {
+    @Override public void setStrictReplicas(boolean strictReplicas) {
         this.rznData.strictReplicas = strictReplicas;
     }
 
-    public HashMap<String, String> getProperties() {
+    @Override public HashMap<String, String> getProperties() {
         return rznData.properties;
     }
 
-    public void setProperties(HashMap<String, String> properties) {
+    @Override public void setProperties(HashMap<String, String> properties) {
         rznData.properties = properties;
     }
 
     // Should this really be here?
-    public JSONObject toJSON() throws Exception {
+    @Override public JSONObject toJSON() throws Exception {
         return CodecJSON.encodeJSON(this);
     }
 
@@ -622,35 +622,35 @@ public class ZnodeJob implements IJob {
         rznData.maxSimulRunning = maxSimulRunning;
     }
 
-    public int getHourlyBackups() {
+    @Override public int getHourlyBackups() {
         return rznData.hourlyBackups;
     }
 
-    public int getDailyBackups() {
+    @Override public int getDailyBackups() {
         return rznData.dailyBackups;
     }
 
-    public int getWeeklyBackups() {
+    @Override public int getWeeklyBackups() {
         return rznData.weeklyBackups;
     }
 
-    public int getMonthlyBackups() {
+    @Override public int getMonthlyBackups() {
         return rznData.monthlyBackups;
     }
 
-    public void setHourlyBackups(int hourlyBackups) {
+    @Override public void setHourlyBackups(int hourlyBackups) {
         rznData.hourlyBackups = hourlyBackups;
     }
 
-    public void setDailyBackups(int dailyBackups) {
+    @Override public void setDailyBackups(int dailyBackups) {
         rznData.dailyBackups = dailyBackups;
     }
 
-    public void setWeeklyBackups(int weeklyBackups) {
+    @Override public void setWeeklyBackups(int weeklyBackups) {
         rznData.weeklyBackups = weeklyBackups;
     }
 
-    public void setMonthlyBackups(int monthlyBackups) {
+    @Override public void setMonthlyBackups(int monthlyBackups) {
         rznData.monthlyBackups = monthlyBackups;
     }
 
@@ -662,11 +662,11 @@ public class ZnodeJob implements IJob {
         rznData.tasks = tasks;
     }
 
-    public String getMinionType() {
+    @Override public String getMinionType() {
         return rznData.minionType;
     }
 
-    public void setMinionType(String minionType) {
+    @Override public void setMinionType(String minionType) {
         rznData.minionType = minionType;
     }
 

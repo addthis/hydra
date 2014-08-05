@@ -334,7 +334,7 @@ public class ConcurrentByteStoreBDB implements ByteStore {
     /**
      * internal/raw bdb delete
      */
-    public byte[] delete(byte[] key) throws DatabaseException {
+    @Override public byte[] delete(byte[] key) throws DatabaseException {
         DatabaseEntry dk = new DatabaseEntry(key);
         DatabaseEntry dv = new DatabaseEntry();
         dv.setPartial(0, 0, true);

@@ -37,7 +37,7 @@ public class IndexedFeaturesBucket implements Codable, FeaturesBucket {
         featuresWeight = new int[SIZE];
     }
 
-    public void addFeature(String feature) {
+    @Override public void addFeature(String feature) {
         int featureIndex = Integer.parseInt(feature);
 
         for (int i = 0; i < featuresIndex.length; i++) {
@@ -72,21 +72,21 @@ public class IndexedFeaturesBucket implements Codable, FeaturesBucket {
         return temp;
     }
 
-    public long getHits() {
+    @Override public long getHits() {
         return hits;
     }
 
-    public void incrementHits(int k) {
+    @Override public void incrementHits(int k) {
         hits += k;
     }
 
-    public void addFeatures(List<String> features) {
+    @Override public void addFeatures(List<String> features) {
         for (String feature : features) {
             addFeature(feature);
         }
     }
 
-    public void setHits(long hits) {
+    @Override public void setHits(long hits) {
         this.hits = hits;
     }
 

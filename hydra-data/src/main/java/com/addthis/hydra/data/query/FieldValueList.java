@@ -86,7 +86,7 @@ public class FieldValueList implements BundleFormatted {
         return bundle;
     }
 
-    public BundleFormat getFormat() {
+    @Override public BundleFormat getFormat() {
         return bundleFormat;
     }
 }

@@ -990,7 +990,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
             interrupt();
         }
 
-        public void run() {
+        @Override public void run() {
             while (!done) {
                 if (meshQueue) {
                     try {
@@ -2982,7 +2982,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
             start();
         }
 
-        public void run() {
+        @Override public void run() {
             while (!shutdown.get()) {
                 try {
                     Thread.sleep(hostMetricUpdaterInterval);

@@ -165,7 +165,7 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
     /**
      * return types of synthetic nodes returned
      */
-    public List<String> getNodeTypes() {
+    @Override public List<String> getNodeTypes() {
         return Arrays.asList("sat");
     }
 

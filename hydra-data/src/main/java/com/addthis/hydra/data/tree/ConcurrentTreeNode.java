@@ -111,11 +111,11 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
                ",nm=" + name + ",le=" + leases + ",ch=" + changed + ",bi=" + bits + "]";
     }
 
-    public String getName() {
+    @Override public String getName() {
         return name;
     }
 
-    @SuppressWarnings("unchecked")
+    @Override @SuppressWarnings("unchecked")
     public Map<String, TreeNodeData> getDataMap() {
         return data;
     }
@@ -334,11 +334,11 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         return new Iter(tree.fetchNodeRange(nodedb, from, to), true);
     }
 
-    public ConcurrentTreeNode getNode(String name) {
+    @Override public ConcurrentTreeNode getNode(String name) {
         return tree.getNode(this, name, false);
     }
 
-    public ConcurrentTreeNode getLeasedNode(String name) {
+    @Override public ConcurrentTreeNode getLeasedNode(String name) {
         return tree.getNode(this, name, true);
     }
 
@@ -350,7 +350,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         return tree.getOrCreateNode(this, name, creator);
     }
 
-    public boolean deleteNode(String name) {
+    @Override public boolean deleteNode(String name) {
         return tree.deleteNode(this, name);
     }
 
@@ -388,7 +388,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
      * annotated node is crossed, the attached data will be updated if that path
      * declares annotated data.
      */
-    @SuppressWarnings("unchecked")
+    @Override @SuppressWarnings("unchecked")
     public void updateChildData(DataTreeNodeUpdater state, TreeDataParent path) {
         requireEditable();
         boolean updated = false;
@@ -426,7 +426,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     /**
      * @return true if data was changed
      */
-    public void updateParentData(DataTreeNodeUpdater state, DataTreeNode child, boolean isnew) {
+    @Override public void updateParentData(DataTreeNodeUpdater state, DataTreeNode child, boolean isnew) {
         requireEditable();
         List<TreeNodeDataDeferredOperation> deferredOps = null;
         lock.writeLock().lock();
@@ -454,7 +454,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
 
     // TODO concurrent broken -- data classes should be responsible for their
     // own get/update sync
-    public DataTreeNodeActor getData(String key) {
+    @Override public DataTreeNodeActor getData(String key) {
         lock.readLock().lock();
         try {
             return data != null ? data.get(key) : null;

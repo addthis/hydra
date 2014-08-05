@@ -52,7 +52,7 @@ public class RabbitMessageConsumer extends DefaultConsumer implements MessageCon
 
     }
 
-    public void open() throws IOException {
+    @Override public void open() throws IOException {
         getChannel().exchangeDeclare(exchange, "direct");
         getChannel().queueDeclare(queueName, true, false, false, null);
         for (String routingKey : routingKeys) {
@@ -77,15 +77,15 @@ public class RabbitMessageConsumer extends DefaultConsumer implements MessageCon
         }
     }
 
-    public boolean addMessageListener(MessageListener hostMessageListener) {
+    @Override public boolean addMessageListener(MessageListener hostMessageListener) {
         return messageListeners.add(hostMessageListener);
     }
 
-    public boolean removeMessageListener(MessageListener hostMessageListener) {
+    @Override public boolean removeMessageListener(MessageListener hostMessageListener) {
         return messageListeners.remove(hostMessageListener);
     }
 
-    public void close() throws IOException {
+    @Override public void close() throws IOException {
         Channel channel = getChannel();
         if (channel != null) {
             channel.close();

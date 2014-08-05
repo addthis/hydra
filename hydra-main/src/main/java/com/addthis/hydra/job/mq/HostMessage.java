@@ -17,5 +17,5 @@ public interface HostMessage extends CoreMessage {
 
     public String ALL_HOSTS = "all";
 
-    public String getHostUuid();
+    @Override public String getHostUuid();
 }

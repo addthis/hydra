@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
 
@@ -95,5 +96,9 @@ public class FilteredFormat implements BundleFormat {
     @Override
     public int getFieldCount() {
         return wrap.getFieldCount();
+    }
+
+    @Override public Bundle createBundle() {
+        return wrap.createBundle();
     }
 }

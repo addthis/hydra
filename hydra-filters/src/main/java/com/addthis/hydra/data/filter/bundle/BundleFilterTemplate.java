@@ -94,7 +94,7 @@ public class BundleFilterTemplate extends BundleFilter {
             this.value = value;
         }
 
-        public String value(Bundle bundle, BundleField[] fields) {
+        @Override public String value(Bundle bundle, BundleField[] fields) {
             return value;
         }
     }

@@ -40,7 +40,7 @@ public abstract class AbstractTableOp extends AbstractQueryOp implements QueryTa
 
     public abstract DataTable tableOp(DataTable table);
 
-    public DataTable createTable(int size) {
+    @Override public DataTable createTable(int size) {
         return tableFactory.createTable(size);
     }
 

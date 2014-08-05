@@ -188,7 +188,7 @@ public final class TaskFeeder extends Thread {
         return item;
     }
 
-    public void run() {
+    @Override public void run() {
         try {
             if (source.isEnabled()) {
                 while (!errored.get() && fillBuffer()) {

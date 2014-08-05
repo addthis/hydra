@@ -86,7 +86,7 @@ public class ReadTreeNode extends AbstractTreeNode implements IReadWeighable {
         return "TN[db=" + nodedb + ",n#=" + nodes + ",h#=" + hits + ",nm=" + name + ",bi=" + bits + "]";
     }
 
-    public String getName() {
+    @Override public String getName() {
         return name;
     }
 
@@ -136,15 +136,15 @@ public class ReadTreeNode extends AbstractTreeNode implements IReadWeighable {
         return nodedb == null ? new Iter(null) : new Iter(tree.fetchNodeRange(nodedb, from, to));
     }
 
-    public DataTreeNode getNode(String name) {
+    @Override public DataTreeNode getNode(String name) {
         return tree.getNode(this, name);
     }
 
-    public ReadTreeNode getLeasedNode(String name) {
+    @Override public ReadTreeNode getLeasedNode(String name) {
         throw new UnsupportedOperationException();
     }
 
-    public boolean deleteNode(String node) {
+    @Override public boolean deleteNode(String node) {
         throw new UnsupportedOperationException();
     }
 
@@ -153,12 +153,12 @@ public class ReadTreeNode extends AbstractTreeNode implements IReadWeighable {
         throw new UnsupportedOperationException();
     }
 
-    @SuppressWarnings("unchecked")
+    @Override @SuppressWarnings("unchecked")
     public void updateChildData(DataTreeNodeUpdater state, TreeDataParent path) {
         throw new UnsupportedOperationException();
     }
 
-    public void updateParentData(DataTreeNodeUpdater state, DataTreeNode child, boolean isnew) {
+    @Override public void updateParentData(DataTreeNodeUpdater state, DataTreeNode child, boolean isnew) {
         throw new UnsupportedOperationException();
     }
 
@@ -169,7 +169,7 @@ public class ReadTreeNode extends AbstractTreeNode implements IReadWeighable {
 
     // TODO concurrent broken -- data classes should be responsible for their
     // own get/update sync
-    public DataTreeNodeActor getData(String key) {
+    @Override public DataTreeNodeActor getData(String key) {
         return data != null ? data.get(key) : null;
     }
 

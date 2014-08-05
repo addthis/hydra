@@ -168,7 +168,7 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements SuperCodabl
     /**
      * return types of synthetic nodes returned
      */
-    public List<String> getNodeTypes() {
+    @Override public List<String> getNodeTypes() {
         return Arrays.asList(new String[]{"#"});
     }
 

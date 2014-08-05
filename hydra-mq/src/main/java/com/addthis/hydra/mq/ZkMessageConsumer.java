@@ -124,11 +124,11 @@ public class ZkMessageConsumer<T extends Serializable> implements MessageConsume
         // Whomever passed us the client needs to shut it down.
     }
 
-    public boolean addMessageListener(MessageListener hostMessageListener) {
+    @Override public boolean addMessageListener(MessageListener hostMessageListener) {
         return messageListeners.add(hostMessageListener);
     }
 
-    public boolean removeMessageListener(MessageListener hostMessageListener) {
+    @Override public boolean removeMessageListener(MessageListener hostMessageListener) {
         return messageListeners.remove(hostMessageListener);
     }
 }

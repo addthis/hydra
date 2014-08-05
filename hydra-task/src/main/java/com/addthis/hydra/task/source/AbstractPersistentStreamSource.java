@@ -184,7 +184,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
      * @return true if the configuration for this source includes a template 'mod' element
      *         that can be used to segment the input stream between n consumers
      */
-    public boolean hasMod() {
+    @Override public boolean hasMod() {
         for (String file : files) {
             if (file.contains("{{mod")) {
                 return true;
@@ -197,7 +197,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
      * called by data source wrapper and performs common initialization
      * steps.
      */
-    public boolean init(File stateDir, Integer[] shards) throws Exception {
+    @Override public boolean init(File stateDir, Integer[] shards) throws Exception {
         if (log.isDebugEnabled()) {
             log.debug("SSM: " + CodecJSON.encodeString(this));
         }
@@ -281,7 +281,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         log.warn("override start date with " + startDate);
     }
 
-    public void shutdown() throws IOException {
+    @Override public void shutdown() throws IOException {
         running.set(false);
         doShutdown();
     }

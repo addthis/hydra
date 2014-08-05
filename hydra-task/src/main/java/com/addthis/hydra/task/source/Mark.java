@@ -41,11 +41,11 @@ public final class Mark extends SimpleMark {
                 .toString();
     }
 
-    public int getError() {
+    @Override public int getError() {
         return error;
     }
 
-    public void setError(int error) {
+    @Override public void setError(int error) {
         this.error = error;
     }
 

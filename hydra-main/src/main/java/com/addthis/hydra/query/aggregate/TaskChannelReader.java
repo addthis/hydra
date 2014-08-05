@@ -20,7 +20,7 @@ public class TaskChannelReader extends FramedDataChannelReader {
     final QueryTaskSourceOption sourceOption;
 
     public TaskChannelReader(QueryTaskSourceOption taskSourceOption) {
-        super(taskSourceOption.sourceInputStream, AggregateConfig.FRAME_READER_POLL);
+        super(taskSourceOption.streamSource, AggregateConfig.FRAME_READER_POLL);
         sourceOption = taskSourceOption;
     }
 }

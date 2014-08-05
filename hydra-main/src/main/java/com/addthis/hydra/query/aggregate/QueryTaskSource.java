@@ -14,6 +14,8 @@
 
 package com.addthis.hydra.query.aggregate;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 
 import com.addthis.bundle.channel.DataChannelError;
@@ -43,7 +45,7 @@ public class QueryTaskSource {
         if (endTime > 0) {
             return true;
         }
-        if (oneHasResponded() && dataChannelReader.eof.get()) {
+        if (oneHasResponded() && dataChannelReader.isClosed()) {
             eagerComplete();
             return true;
         }
@@ -56,7 +58,7 @@ public class QueryTaskSource {
         cancelAllActiveOptions("task is already complete");
     }
 
-    public Bundle next() throws IOException, DataChannelError {
+    public Bundle next() throws IOException, DataChannelError, InterruptedException {
         if (dataChannelReader == null) {
             if (!checkForReadyOption()) {
                 return null;
@@ -65,7 +67,7 @@ public class QueryTaskSource {
         Bundle bundle = dataChannelReader.read();
         if (bundle != null) {
             lines++;
-        } else if (dataChannelReader.eof.get()) {
+        } else if (dataChannelReader.isClosed()) {
             eagerComplete();
         }
         return bundle;
@@ -111,10 +113,10 @@ public class QueryTaskSource {
         dataChannelReader = new TaskChannelReader(readySourceOption);
     }
 
-    private QueryTaskSourceOption getReadyOption() {
+    @Nullable private QueryTaskSourceOption getReadyOption() {
         for (QueryTaskSourceOption option : options) {
-            if (option.isActive() && (option.sourceInputStream.available() > 0)) {
-                    return option;
+            if (option.isReady()) {
+                return option;
             }
         }
         return null;

@@ -20,7 +20,6 @@ import java.util.List;
 
 import com.addthis.basis.util.RollingLog;
 
-import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
 
@@ -76,7 +75,7 @@ public class ValuesOutputFile extends ValuesOutput {
     }
 
     @Override
-    public void sourceError(DataChannelError er) {
+    public void sourceError(Throwable er) {
         // TODO Auto-generated method stub
     }
 

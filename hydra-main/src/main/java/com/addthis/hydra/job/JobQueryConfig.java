@@ -73,7 +73,7 @@ public final class JobQueryConfig implements Codable, Cloneable {
         this.consecutiveFailureThreshold = consecutiveFailureThreshold;
     }
 
-    public JobQueryConfig clone() {
+    @Override public JobQueryConfig clone() {
         try {
             return (JobQueryConfig) super.clone();
         } catch (CloneNotSupportedException e)  {
