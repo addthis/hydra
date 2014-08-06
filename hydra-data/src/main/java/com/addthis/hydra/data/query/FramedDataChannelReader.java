@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.data.query;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -77,7 +78,9 @@ public class FramedDataChannelReader implements BundleReader {
         this.eof = false;
     }
 
-    @Override @Nullable public Bundle read() throws IOException {
+    @Override
+    @Nullable
+    public Bundle read() throws IOException {
         if (err != null) {
             throw err;
         }
@@ -91,11 +94,12 @@ public class FramedDataChannelReader implements BundleReader {
             } catch (InterruptedException e) {
                 throw Throwables.propagate(e);
             }
+            if (data == null) {
+                // poll timeout no data yet
+                return null;
+            }
             handlePollResult(data);
             if (eof) {
-                return null;
-            } else if (data == null) {
-                // poll timeout no data yet
                 return null;
             } else {
                 // more data to read
@@ -132,7 +136,7 @@ public class FramedDataChannelReader implements BundleReader {
         }
     }
 
-    private void handlePollResult(byte[] data) throws IOException {
+    private void handlePollResult(@Nonnull byte[] data) throws IOException {
         streamSource.performBufferAccounting(data);
         try {
             streamSource.throwIfErrorSignal(data);
