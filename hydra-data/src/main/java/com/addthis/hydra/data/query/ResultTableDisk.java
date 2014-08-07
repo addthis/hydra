@@ -27,7 +27,6 @@ import com.addthis.bundle.table.DataTableFactory;
 import com.addthis.hydra.data.io.DiskBackedList2;
 import com.addthis.hydra.data.io.DiskBackedList2.ItemCodec;
 
-
 /**
  * a disk-backed implementation of DataTable using DiskBackedList.
  * designed to be temporary and never re-opened.  does not persist
@@ -43,7 +42,7 @@ public class ResultTableDisk extends ResultTable implements ItemCodec<Bundle> {
 
     public ResultTableDisk(DataTableFactory factory, File tmpFile) throws IOException {
         super(factory, new DiskBackedList2<Bundle>(null));
-        diskList = (DiskBackedList2<Bundle>) getBackingList();
+        diskList = (DiskBackedList2<Bundle>) delegate();
         diskList.setCodec(this);
         this.diskFile = tmpFile;
     }

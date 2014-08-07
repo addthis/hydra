@@ -16,8 +16,9 @@ package com.addthis.hydra.data.query;
 import java.io.File;
 import java.io.IOException;
 
+import java.util.Collection;
 import java.util.Comparator;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 
 import com.addthis.basis.util.MemoryCounter;
@@ -29,8 +30,11 @@ import com.addthis.bundle.table.DataTable;
 import com.addthis.bundle.table.DataTableFactory;
 import com.addthis.bundle.value.ValueObject;
 
+import com.google.common.collect.ForwardingList;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * An implementation of DataTable that switches the underlying DataTable object
  * based on performance and resource constraints. Never used directly outside of
@@ -38,7 +42,7 @@ import org.slf4j.LoggerFactory;
  * double-counting TODO which can occur when 'depivot'ing a data set, for
  * example (row/col keys).
  */
-public class ResultTableTuned implements DataTable, DataTableFactory {
+public class ResultTableTuned extends ForwardingList<Bundle> implements DataTable, DataTableFactory {
 
     private static final Random random = new Random(System.currentTimeMillis());
     private static final Logger log = LoggerFactory.getLogger(ResultTableTuned.class);
@@ -77,6 +81,10 @@ public class ResultTableTuned implements DataTable, DataTableFactory {
         } else {
             result = new ResultTable(factory, sizeHint * 2);
         }
+    }
+
+    @Override protected List<Bundle> delegate() {
+        return result;
     }
 
     @Override
@@ -128,63 +136,29 @@ public class ResultTableTuned implements DataTable, DataTableFactory {
         return factory.createTable(sizeHint);
     }
 
-    @Override
-    public void append(Bundle row) {
-        result.append(row);
+    @Override public boolean add(Bundle element) {
+        result.add(element);
         if (!tipped) {
-            estimateRow(row);
+            estimateRow(element);
+        }
+        tipCheck();
+        return true;
+    }
+
+    @Override public void add(int index, Bundle element) {
+        result.add(index, element);
+        if (!tipped) {
+            estimateRow(element);
         }
         tipCheck();
     }
 
-    @Override
-    public void append(DataTable nextResult) {
-        this.result.append(nextResult);
-        if (!tipped) {
-            for (Bundle row : nextResult) {
-                estimateRow(row);
-            }
-        }
-        tipCheck();
+    @Override public boolean addAll(Collection<? extends Bundle> collection) {
+        return standardAddAll(collection);
     }
 
-    @Override
-    public Bundle get(int rownum) {
-        return result.get(rownum);
-    }
-
-    @Override
-    public void insert(int index, Bundle row) {
-        result.insert(index, row);
-        if (!tipped) {
-            estimateRow(row);
-        }
-        tipCheck();
-    }
-
-    @Override
-    public Bundle remove(int index) {
-        return result.remove(index);
-    }
-
-    @Override
-    public Bundle set(int rownum, Bundle row) {
-        return result.set(rownum, row);
-    }
-
-    @Override
-    public int size() {
-        return result.size();
-    }
-
-    @Override
-    public void sort(Comparator<Bundle> comp) {
-        result.sort(comp);
-    }
-
-    @Override
-    public Iterator<Bundle> iterator() {
-        return result.iterator();
+    @Override public boolean addAll(int index, Collection<? extends Bundle> collection) {
+        return standardAddAll(index, collection);
     }
 
     @Override
@@ -195,5 +169,24 @@ public class ResultTableTuned implements DataTable, DataTableFactory {
     @Override
     public BundleFormat getFormat() {
         return result.getFormat();
+    }
+
+    @Override
+    public void sort(Comparator<Bundle> comp) {
+        result.sort(comp);
+    }
+
+    // DEPRECATED METHODS
+
+    @Override public void append(Bundle row) {
+        this.add(row);
+    }
+
+    @Override public void insert(int index, Bundle row) {
+        this.add(index, row);
+    }
+
+    @Override public void append(DataTable result) {
+        this.addAll(result);
     }
 }

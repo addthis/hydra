@@ -16,7 +16,7 @@ package com.addthis.hydra.data.query;
 import java.io.File;
 
 import java.util.Comparator;
-import java.util.Iterator;
+import java.util.List;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -25,9 +25,11 @@ import com.addthis.bundle.table.DataTable;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 
+import com.google.common.collect.ForwardingList;
+
 
 @SuppressWarnings("serial")
-public class DataTableHelper implements DataTable {
+public class DataTableHelper extends ForwardingList<Bundle> implements DataTable {
 
     private DataTable result;
     private Bundle currentRow;
@@ -35,6 +37,10 @@ public class DataTableHelper implements DataTable {
 
     public DataTableHelper() {
         this(0);
+    }
+
+    @Override protected List<Bundle> delegate() {
+        return result;
     }
 
     public DataTableHelper(int sizeHint) {
@@ -133,51 +139,11 @@ public class DataTableHelper implements DataTable {
         return this;
     }
 
-    @Override
-    public void append(Bundle row) {
-        currentRow = row;
+    @Override public boolean add(Bundle element) {
+        currentRow = element;
         currentColumn = 0;
-        result.append(row);
-    }
-
-    @Override
-    public void append(DataTable result) {
-        result.append(result);
-    }
-
-    @Override
-    public Bundle get(int rownum) {
-        return result.get(rownum);
-    }
-
-    @Override
-    public void insert(int index, Bundle row) {
-        result.insert(index, row);
-    }
-
-    @Override
-    public Bundle remove(int index) {
-        return result.remove(index);
-    }
-
-    @Override
-    public Bundle set(int rownum, Bundle row) {
-        return result.set(rownum, row);
-    }
-
-    @Override
-    public int size() {
-        return result.size();
-    }
-
-    @Override
-    public void sort(Comparator<Bundle> comp) {
-        result.sort(comp);
-    }
-
-    @Override
-    public Iterator<Bundle> iterator() {
-        return result.iterator();
+        result.add(element);
+        return true;
     }
 
     @Override
@@ -188,5 +154,24 @@ public class DataTableHelper implements DataTable {
     @Override
     public BundleFormat getFormat() {
         return result.getFormat();
+    }
+
+    @Override
+    public void sort(Comparator<Bundle> comp) {
+        result.sort(comp);
+    }
+
+    // DEPRECATED METHODS
+
+    @Override public void append(Bundle row) {
+        this.add(row);
+    }
+
+    @Override public void insert(int index, Bundle row) {
+        this.add(index, row);
+    }
+
+    @Override public void append(DataTable table) {
+        this.addAll(table);
     }
 }
