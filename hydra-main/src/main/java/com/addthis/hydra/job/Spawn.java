@@ -151,19 +151,13 @@ public class Spawn implements Codable {
     private static final String  queryHttpHost = Parameter.value("spawn.queryhost");
     private static final int     webPort       = Parameter.intValue("spawn.http.port", 5050);
 
-    private static final int requestHeaderBufferSize   =
-            Parameter.intValue("spawn.http.bufsize", 8192);
-    private static final int hostStatusRequestInterval =
-            Parameter.intValue("spawn.status.interval", 5_000);
+    private static final int requestHeaderBufferSize   = Parameter.intValue("spawn.http.bufsize", 8192);
+    private static final int hostStatusRequestInterval = Parameter.intValue("spawn.status.interval", 5_000);
 
-    private static final int queueKickInterval     =
-            Parameter.intValue("spawn.queue.kick.interval", 3_000);
-    private static final int backgroundThreads     =
-            Parameter.intValue("spawn.background.threads", 4);
-    private static final int backgroundQueueSize   =
-            Parameter.intValue("spawn.background.queuesize", 1_000);
-    private static final int backgroundHttpTimeout =
-            Parameter.intValue("spawn.background.timeout", 300_000);
+    private static final int queueKickInterval     = Parameter.intValue("spawn.queue.kick.interval", 3_000);
+    private static final int backgroundThreads     = Parameter.intValue("spawn.background.threads", 4);
+    private static final int backgroundQueueSize   = Parameter.intValue("spawn.background.queuesize", 1_000);
+    private static final int backgroundHttpTimeout = Parameter.intValue("spawn.background.timeout", 300_000);
 
     private static final int    backgroundEmailMinute      =
             Parameter.intValue("spawn.background.notification.interval.minutes", 60);
@@ -178,11 +172,11 @@ public class Spawn implements Codable {
     private static final BlockingQueue<Runnable> backgroundTaskQueue =
             new LinkedBlockingQueue<>(backgroundQueueSize);
 
-    private static final ExecutorService backgroundService   =
-            MoreExecutors.getExitingExecutorService(
-                    new ThreadPoolExecutor(backgroundThreads, backgroundThreads, 0L,
-                                           TimeUnit.MILLISECONDS, backgroundTaskQueue), 100,
-                    TimeUnit.MILLISECONDS);
+    private static final ExecutorService backgroundService   = MoreExecutors.getExitingExecutorService(
+            new ThreadPoolExecutor(backgroundThreads, backgroundThreads, 0L,
+                                   TimeUnit.MILLISECONDS, backgroundTaskQueue),
+            100, TimeUnit.MILLISECONDS);
+
     private static       String          debugOverride       = Parameter.value("spawn.debug");
     private static final boolean         useStructuredLogger =
             Parameter.boolValue("spawn.logger.bundle.enable", clusterName.equals("localhost"));
@@ -243,17 +237,13 @@ public class Spawn implements Codable {
     // instantaneous
     // - max queue size of 5000 was chosen as a generous upper bound for how many tasks may be
     // queued at once (since the number of scheduled kicks is limited by queue size)
-    private final LinkedBlockingQueue<Runnable> expandKickQueue    =
-            new LinkedBlockingQueue<>(5000);
-    private final ExecutorService               expandKickExecutor =
-            MoreExecutors.getExitingExecutorService(
-                    new ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS, expandKickQueue,
-                                           new ThreadFactoryBuilder().setNameFormat(
-                                                   "jobExpander-%d").build()));
-    private final ScheduledExecutorService      scheduledExecutor  =
-            MoreExecutors.getExitingScheduledExecutorService(
-                    new ScheduledThreadPoolExecutor(6, new ThreadFactoryBuilder().setNameFormat(
-                            "spawnScheduledTask-%d").build()));
+    private final LinkedBlockingQueue<Runnable> expandKickQueue    = new LinkedBlockingQueue<>(5000);
+    private final ExecutorService               expandKickExecutor = MoreExecutors.getExitingExecutorService(
+            new ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS, expandKickQueue,
+                                   new ThreadFactoryBuilder().setNameFormat("jobExpander-%d").build()));
+    private final ScheduledExecutorService      scheduledExecutor  = MoreExecutors.getExitingScheduledExecutorService(
+            new ScheduledThreadPoolExecutor(6,
+                                            new ThreadFactoryBuilder().setNameFormat( "spawnScheduledTask-%d").build()));
 
     private final Gauge<Integer> expandQueueGauge     =
             Metrics.newGauge(Spawn.class, "expandKickExecutorQueue", new Gauge<Integer>() {
@@ -301,16 +291,13 @@ public class Spawn implements Codable {
     @FieldConfig(codable = true)
     private boolean quiesce;
     @FieldConfig(codable = true)
-    private final        HashSet<String> disabledHosts                 = new HashSet<>();
-    private final        int             defaultReplicaCount           =
-            Parameter.intValue("spawn.defaultReplicaCount", 1);
-    private static final int             TASK_QUEUE_DRAIN_INTERVAL     =
-            Parameter.intValue("task.queue.drain.interval", 500);
-    private static final boolean         ENABLE_JOB_STORE              =
-            Parameter.boolValue("job.store.enable", true);
-    private static final boolean         ENABLE_JOB_FIXDIRS_ONCOMPLETE =
-            Parameter.boolValue("job.fixdirs.oncomplete", true);
+    private final HashSet<String> disabledHosts = new HashSet<>();
 
+    private static final int DEFAULT_REPLICA_COUNT = Parameter.intValue("spawn.defaultReplicaCount", 1);
+    private static final int TASK_QUEUE_DRAIN_INTERVAL = Parameter.intValue("task.queue.drain.interval", 500);
+    private static final boolean ENABLE_JOB_STORE = Parameter.boolValue("job.store.enable", true);
+    private static final boolean ENABLE_JOB_FIXDIRS_ONCOMPLETE = Parameter.boolValue("job.fixdirs.oncomplete", true);
+    private static final String stateFilePath = Parameter.value("spawn.state.file", "spawn.state");
 
     private final ConcurrentHashMap<String, HostState> monitored;
     private final SpawnState spawnState = new SpawnState();
@@ -325,7 +312,6 @@ public class Spawn implements Codable {
     private SetMembershipListener deadMinionMembers;
     private AliasBiMap            aliasBiMap;
     private       boolean        useZk         = true;
-    private final String         stateFilePath = Parameter.value("spawn.state.file", "spawn.state");
     private       Gauge<Integer> minionsDown   =
             Metrics.newGauge(Spawn.class, "minionsDown", new Gauge<Integer>() {
                 public Integer value() {
@@ -1009,7 +995,7 @@ public class Spawn implements Codable {
             job.setWeeklyBackups(1);
             job.setMonthlyBackups(0);
             job.setHourlyBackups(0);
-            job.setReplicas(defaultReplicaCount);
+            job.setReplicas(DEFAULT_REPLICA_COUNT);
             job.setMinionType(minionType);
             List<HostState> hostStates = getOrCreateHostStateList(minionType, taskHosts);
             List<JobTask> tasksAssignedToHosts = balancer.generateAssignedTasksForNewJob(job.getId(), taskCount, hostStates);
@@ -4023,7 +4009,7 @@ public class Spawn implements Codable {
         }
 
         public int getDefaultReplicaCount() {
-            return defaultReplicaCount;
+            return DEFAULT_REPLICA_COUNT;
         }
 
         public String getQueryHost() {
@@ -4071,7 +4057,10 @@ public class Spawn implements Codable {
         }
 
         public JSONObject toJSON() throws JSONException {
-            return new JSONObject().put("debug", debug).put("quiesce", quiesce).put("queryHost", queryHost).put("spawnHost", spawnHost).put("disabled", getDisabled()).put("defaultReplicaCount", defaultReplicaCount);
+            return new JSONObject().put("debug", debug).put("quiesce", quiesce)
+                                   .put("queryHost", queryHost).put("spawnHost", spawnHost)
+                                   .put("disabled", getDisabled())
+                                   .put("defaultReplicaCount", DEFAULT_REPLICA_COUNT);
         }
     }
 
