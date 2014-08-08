@@ -43,6 +43,10 @@
       <version>2.1.0</version>
       <exclusions>
         <exclusion>
+          <groupId>org.hibernate</groupId>
+          <artifactId>hibernate-validator</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>org.jboss.logging</groupId>
           <artifactId>jboss-logging</artifactId>
         </exclusion>

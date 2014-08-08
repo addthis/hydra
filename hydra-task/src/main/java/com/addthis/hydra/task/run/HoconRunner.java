@@ -18,7 +18,7 @@ import java.io.File;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.codec.config.CodecConfig;
+import com.addthis.codec.jackson.CodecJackson;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -57,18 +57,18 @@ public class HoconRunner {
      */
     public static TaskRunnable makeTask(Config config) {
         Config jobConfig = config;
-        CodecConfig codec;
+        CodecJackson codec;
         if (config.hasPath("global")) {
             jobConfig = config.withoutPath("global").resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true));
             Config globalDefaults = config.getConfig("global")
                                           .withFallback(ConfigFactory.load())
                                           .resolve();
             jobConfig = jobConfig.resolveWith(globalDefaults);
-            codec = new CodecConfig(globalDefaults);
+            codec = CodecJackson.getDefault().withConfig(jobConfig);
         } else {
             jobConfig = jobConfig.resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true))
                                  .resolveWith(ConfigFactory.load());
-            codec = CodecConfig.getDefault();
+            codec = CodecJackson.getDefault();
         }
         return codec.decodeObject(TaskRunnable.class, jobConfig);
     }

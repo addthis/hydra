@@ -33,6 +33,11 @@
     <!-- clearspring deps -->
     <dependency>
       <groupId>com.addthis</groupId>
+      <artifactId>codec</artifactId>
+      <version>${hydra.dep.codec.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.addthis</groupId>
       <artifactId>bundle</artifactId>
       <version>${hydra.dep.bundle.version}</version>
     </dependency>

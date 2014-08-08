@@ -13,8 +13,12 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import javax.validation.constraints.NotNull;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">conditionally executes a bundle filter</span>.
@@ -31,10 +35,9 @@ import com.addthis.codec.annotations.FieldConfig;
  */
 public class BundleFilterCondition extends BundleFilter {
 
-    /**
-     * The conditional bundle filter. This field is required.
-     */
-    @FieldConfig(codable = true, required = true)
+    /** The conditional bundle filter. This field is required. */
+    @NotNull
+    @FieldConfig(codable = true)
     BundleFilter ifCondition;
 
     /**
@@ -56,6 +59,14 @@ public class BundleFilterCondition extends BundleFilter {
      */
     @FieldConfig(codable = true)
     boolean returnFilter;
+
+    public BundleFilterCondition(@JsonProperty("if")   BundleFilter ifCondition,
+                                 @JsonProperty("then") BundleFilter ifDo,
+                                 @JsonProperty("else") BundleFilter elseDo) {
+        this.ifCondition = ifCondition;
+        this.ifDo = ifDo;
+        this.elseDo = elseDo;
+    }
 
     @Override
     public void initialize() {

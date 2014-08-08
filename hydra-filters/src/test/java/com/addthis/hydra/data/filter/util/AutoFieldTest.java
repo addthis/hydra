@@ -38,6 +38,12 @@ public class AutoFieldTest {
     }
 
     @Test
+    public void creation() {
+        AutoField autoField = Configs.decodeObject(AutoField.class, "name = fieldName");
+        Assert.assertEquals("fieldName", autoField.getName());
+    }
+
+    @Test
     public void createAndAccess() {
         SimpleCopyFilter filter = Configs.decodeObject(SimpleCopyFilter.class, "from = a, to = b");
         Bundle bundle = new ListBundle();

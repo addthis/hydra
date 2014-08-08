@@ -16,6 +16,8 @@ package com.addthis.hydra.data.filter.bundle;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * Performs the required filter try (or sometimes 'tryDo'). If and only if it fails,
  * then the catch filter is performed and its result is returned instead. The default
@@ -25,8 +27,13 @@ import com.addthis.codec.annotations.FieldConfig;
  */
 public class BundleFilterTry extends BundleFilter {
 
-    @FieldConfig(required = true) BundleFilter tryDo;
-    @FieldConfig(required = true) BundleFilter catchDo;
+    @JsonProperty("try")
+    @FieldConfig(required = true)
+    BundleFilter tryDo;
+
+    @JsonProperty("catch")
+    @FieldConfig(required = true)
+    BundleFilter catchDo;
 
     @Override
     public void initialize() {

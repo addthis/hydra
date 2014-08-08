@@ -18,11 +18,9 @@ import javax.annotation.concurrent.ThreadSafe;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.codec.config.ValueCodable;
 
-import com.typesafe.config.ConfigObject;
-import com.typesafe.config.ConfigValue;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * A convenience class for codable objects that might otherwise have to implement
@@ -34,24 +32,16 @@ import com.typesafe.config.ConfigValue;
  * and so on.
  */
 @ThreadSafe
-public class AutoField implements ValueCodable {
+public class AutoField {
 
-    @FieldConfig private String name;
+    private final String name;
 
-    /* always check before using and always copy to a local variable */
-    private transient BundleField cachedField;
+    public AutoField(String name) {
+        this.name = name;
+    }
 
-    private BundleField checkAndGet(Bundle bundle) {
-        BundleField currentField = cachedField;
-        if ((currentField != null)
-            && (currentField.getIndex() != null) /* kv bundles ruin everything */
-            && (bundle.getFormat().getField(currentField.getIndex()) == currentField)) {
-            return currentField;
-        } else {
-            BundleField newField = bundle.getFormat().getField(name);
-            cachedField = newField;
-            return newField;
-        }
+    public String getName() {
+        return name;
     }
 
     public ValueObject getValue(Bundle bundle) {
@@ -69,8 +59,24 @@ public class AutoField implements ValueCodable {
         bundle.removeValue(field);
     }
 
-    /** should be called at most once during construction - thread safety is void otherwise */
-    @Override public void fromConfigValue(ConfigValue configValue, ConfigObject defaults) {
-        name = (String) configValue.unwrapped();
+    /* always check before using and always copy to a local variable */
+    private transient BundleField cachedField;
+
+    private BundleField checkAndGet(Bundle bundle) {
+        BundleField currentField = cachedField;
+        if ((currentField != null)
+            && (currentField.getIndex() != null) /* kv bundles ruin everything */
+            && (bundle.getFormat().getField(currentField.getIndex()) == currentField)) {
+            return currentField;
+        } else {
+            BundleField newField = bundle.getFormat().getField(name);
+            cachedField = newField;
+            return newField;
+        }
+    }
+
+    @JsonCreator
+    public static AutoField newAutoField(@JsonProperty("name") String name) {
+        return new AutoField(name);
     }
 }
