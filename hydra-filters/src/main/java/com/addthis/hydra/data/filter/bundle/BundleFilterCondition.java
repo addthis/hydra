@@ -60,6 +60,9 @@ public class BundleFilterCondition extends BundleFilter {
     @FieldConfig(codable = true)
     boolean returnFilter;
 
+    // for CodecJson
+    public BundleFilterCondition() {}
+
     public BundleFilterCondition(@JsonProperty("if")   BundleFilter ifCondition,
                                  @JsonProperty("then") BundleFilter ifDo,
                                  @JsonProperty("else") BundleFilter elseDo) {
