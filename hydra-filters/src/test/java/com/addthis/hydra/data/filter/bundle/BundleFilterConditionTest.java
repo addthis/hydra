@@ -15,7 +15,9 @@ package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.config.Configs;
+import com.addthis.codec.json.CodecJSON;
 
 import org.junit.Test;
 
@@ -26,5 +28,20 @@ public class BundleFilterConditionTest {
         BundleFilterCondition filter = (BundleFilterCondition) Configs.decodeObject(
                 BundleFilter.class, "if {true {}}, then {log = PASSED}");
         filter.filter(bundle);
+    }
+
+    public static class FilterHolder {
+        @FieldConfig public BundleFilter filter;
+    }
+
+    @Test public void simpleRunJson() throws Exception {
+        String filterDef = "{filter: {op:\"condition\",\n" +
+                           "\t\t\t\tifCondition:{op:\"field\", from:\"UID\",filter:{op:\"require\",contains:[\"0000000000000000\"]}},\n" +
+                           "\t\t\t\tifDo:{op:\"field\", from:\"TIME\", to:\"SHARD\"},\n" +
+                           "                elseDo:{op:\"field\", from:\"UID\", to:\"SHARD\"},\n" +
+                           "\t\t\t}}";
+        Bundle bundle = new ListBundle();
+        FilterHolder filterHolder = CodecJSON.INSTANCE.decode(FilterHolder.class, filterDef.getBytes());
+        filterHolder.filter.filter(bundle);
     }
 }
