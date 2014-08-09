@@ -13,17 +13,29 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import java.io.IOException;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.config.Configs;
 import com.addthis.codec.json.CodecJSON;
+import com.addthis.maljson.JSONArray;
 
+import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.typesafe.config.ConfigException;
+import com.typesafe.config.ConfigOrigin;
+
+import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BundleFilterConditionTest {
+    private static final Logger log = LoggerFactory.getLogger(BundleFilterConditionTest.class);
 
-    @Test public void simpleRun() {
+    public void simpleRun() throws IOException {
         Bundle bundle = new ListBundle();
         BundleFilterCondition filter = (BundleFilterCondition) Configs.decodeObject(
                 BundleFilter.class, "if {true {}}, then {log = PASSED}");
@@ -34,6 +46,42 @@ public class BundleFilterConditionTest {
         @FieldConfig public BundleFilter filter;
     }
 
+    @Ignore
+    @Test public void multiLineReport() throws Exception {
+        String filterDef = "{op:\"condition\",\n" +
+                           "\t\t\t\tifCondition:{op:\"field\", from:\"UID\",filter:{op:\"require\",contains:[\"0000000000000000\"]}},\n" +
+                           "\t\t\t\tifDt:{op:\"field\", from:\"TIME\", to:\"SHARD\"},\n" +
+                           "                elseDo:{op:\"field\", from:\"UID\", to:\"SHARD\"},\n" +
+                           "\t\t\t}";
+        filterDef = "filter = [{from: UID}\n{from: LED}\n{OBVIOUSLYNOTAFILTER {}}]";
+        String message = null;
+        int lineNumber = -1;
+        Bundle bundle = new ListBundle();
+        try {
+            FilterHolder filterHolder = Configs.decodeObject(FilterHolder.class, filterDef);
+            filterHolder.filter.filter(bundle);
+        } catch (ConfigException ex) {
+            ConfigOrigin exceptionOrigin = ex.origin();
+            message = ex.getMessage();
+            if (exceptionOrigin != null) {
+                lineNumber = exceptionOrigin.lineNumber();
+            }
+        } catch (JsonProcessingException ex) {
+            JsonLocation jsonLocation = ex.getLocation();
+            message = ex.getMessage();
+            if (jsonLocation != null) {
+                lineNumber = jsonLocation.getLineNr();
+            }
+        } catch (Exception other) {
+            message = other.getMessage();
+        }
+        JSONArray lineColumns = new JSONArray();
+        JSONArray lineErrors = new JSONArray();
+        lineErrors.put(lineNumber);
+        log.info("cols {} lines {} lineNum {} es.mess {}", lineColumns, lineErrors, lineNumber, message);
+    }
+
+    @Ignore
     @Test public void simpleRunJson() throws Exception {
         String filterDef = "{filter: {op:\"condition\",\n" +
                            "\t\t\t\tifCondition:{op:\"field\", from:\"UID\",filter:{op:\"require\",contains:[\"0000000000000000\"]}},\n" +

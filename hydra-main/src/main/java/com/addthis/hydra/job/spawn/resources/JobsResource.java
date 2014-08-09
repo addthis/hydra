@@ -17,7 +17,6 @@ import javax.annotation.Nonnull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
-import javax.ws.rs.HEAD;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -73,6 +72,9 @@ import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Optional;
 
+import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
@@ -1013,18 +1015,38 @@ public class JobsResource {
 
     private Response validateHoconConfig(String expandedConfig) throws JSONException {
         Config config = ConfigFactory.parseString(expandedConfig);
+        String message = null;
+        int lineNumber = 1;
         try {
             HoconRunner.makeTask(config);
+            return Response.ok(new JSONObject().put("result", "valid").toString()).build();
         } catch (ConfigException ex) {
-            JSONArray lineErrors = new JSONArray();
-            JSONArray lineColumns = new JSONArray();
             ConfigOrigin exceptionOrigin = ex.origin();
+            message = ex.getMessage();
             if (exceptionOrigin != null) {
-                lineErrors.put(exceptionOrigin.lineNumber());
+                lineNumber = exceptionOrigin.lineNumber();
             }
-            return validateCreateError(ex.getMessage(), lineErrors, lineColumns, "postExpansionError");
+        } catch (JsonProcessingException ex) {
+            JsonLocation jsonLocation = ex.getLocation();
+            if (jsonLocation != null) {
+                lineNumber = jsonLocation.getLineNr();
+                message = "Line: " + lineNumber + " ";
+            }
+            message += ex.getOriginalMessage();
+            if (ex instanceof JsonMappingException) {
+                String pathReference = ((JsonMappingException) ex).getPathReference();
+                if (pathReference != null) {
+                    message += " referenced via: " + pathReference;
+                }
+            }
+        } catch (Exception other) {
+            message = other.getMessage();
         }
-        return Response.ok(new JSONObject().put("result", "valid").toString()).build();
+        JSONArray lineColumns = new JSONArray();
+        JSONArray lineErrors = new JSONArray();
+        lineColumns.put(1);
+        lineErrors.put(lineNumber);
+        return validateCreateError(message, lineErrors, lineColumns, "postExpansionError");
     }
 
     private Response validateJsonConfig(JSONObject jobJSON) throws JSONException {

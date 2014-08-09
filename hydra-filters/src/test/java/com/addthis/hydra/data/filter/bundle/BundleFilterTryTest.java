@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import java.io.IOException;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.codec.config.Configs;
@@ -22,21 +24,21 @@ import org.junit.Test;
 
 public class BundleFilterTryTest {
 
-    @Test public void failThenPass() {
+    @Test public void failThenPass() throws IOException {
         Bundle bundle = new ListBundle();
         BundleFilterTry filter = (BundleFilterTry) Configs.decodeObject(
                 BundleFilter.class, "try: {fail {}}");
         Assert.assertTrue(filter.filter(bundle));
     }
 
-    @Test public void failThenFail() {
+    @Test public void failThenFail() throws IOException {
         Bundle bundle = new ListBundle();
         BundleFilterTry filter = (BundleFilterTry) Configs.decodeObject(
                 BundleFilter.class, "try: {fail {}}, catch: {fail {}}");
         Assert.assertFalse(filter.filter(bundle));
     }
 
-    @Test public void passThenFail() {
+    @Test public void passThenFail() throws IOException {
         Bundle bundle = new ListBundle();
         BundleFilterTry filter = (BundleFilterTry) Configs.decodeObject(
                 BundleFilter.class, "try: {true {}}, catch: {fail {}}");

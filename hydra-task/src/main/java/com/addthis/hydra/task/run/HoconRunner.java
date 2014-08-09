@@ -15,11 +15,13 @@
 package com.addthis.hydra.task.run;
 
 import java.io.File;
+import java.io.IOException;
 
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.jackson.CodecJackson;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
@@ -55,7 +57,7 @@ public class HoconRunner {
      * properties for the purposes of variable substitution. This will not merge them entirely
      * though and so the job config will be otherwise unaffected.
      */
-    public static TaskRunnable makeTask(Config config) {
+    public static TaskRunnable makeTask(Config config) throws JsonProcessingException, IOException {
         Config jobConfig = config;
         CodecJackson codec;
         if (config.hasPath("global")) {

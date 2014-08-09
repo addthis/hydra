@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import java.io.IOException;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.codec.config.Configs;
@@ -21,7 +23,7 @@ import org.junit.Test;
 
 public class BundleFilterTestTest {
 
-    @Test public void allTrue() {
+    @Test public void allTrue() throws IOException {
         Bundle bundle = new ListBundle();
         BundleFilterTest filter = Configs.decodeObject(
                 BundleFilterTest.class, "test = [], onTrue = [], onFalse = []");

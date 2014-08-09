@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import java.io.IOException;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.codec.config.Configs;
@@ -22,14 +24,14 @@ import org.junit.Test;
 
 public class BundleFilterUnaryTest {
 
-    @Test public void trueAlias() {
+    @Test public void trueAlias() throws IOException {
         Bundle bundle = new ListBundle();
         BundleFilterUnary filter = (BundleFilterUnary) Configs.decodeObject(
                 BundleFilter.class, "true {}");
         Assert.assertTrue(filter.filter(bundle));
     }
 
-    @Test public void isNotAlias() {
+    @Test public void isNotAlias() throws IOException {
         Bundle bundle = new ListBundle();
         BundleFilterUnary filter = (BundleFilterUnary) Configs.decodeObject(
                 BundleFilter.class, "is not {false {}}");

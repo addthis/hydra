@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.filter.util;
 
+import java.io.IOException;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.kvp.KVBundle;
@@ -38,27 +40,27 @@ public class AutoFieldTest {
     }
 
     @Test
-    public void creation() {
+    public void creation() throws IOException {
         AutoField autoField = Configs.decodeObject(AutoField.class, "name = fieldName");
         Assert.assertEquals("fieldName", autoField.getName());
     }
 
     @Test
-    public void createAndAccess() {
+    public void createAndAccess() throws IOException {
         SimpleCopyFilter filter = Configs.decodeObject(SimpleCopyFilter.class, "from = a, to = b");
         Bundle bundle = new ListBundle();
         setAndFilterBundle(bundle, filter);
     }
 
     @Test
-    public void kvBundles() {
+    public void kvBundles() throws IOException {
         SimpleCopyFilter filter = Configs.decodeObject(SimpleCopyFilter.class, "from = a, to = b");
         Bundle bundle = new KVBundle();
         setAndFilterBundle(bundle, filter);
     }
 
     @Test
-    public void changingFormats() {
+    public void changingFormats() throws IOException {
         SimpleCopyFilter filter = Configs.decodeObject(SimpleCopyFilter.class, "from = a, to = b");
         Bundle bundle = new KVBundle();
         setAndFilterBundle(bundle, filter);

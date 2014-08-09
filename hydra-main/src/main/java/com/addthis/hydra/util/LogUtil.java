@@ -20,15 +20,19 @@ import com.addthis.codec.config.Configs;
 import com.addthis.hydra.task.output.TaskDataOutput;
 import com.addthis.hydra.task.run.TaskRunConfig;
 
+import com.google.common.base.Throwables;
+
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LogUtil {
 
+    private static Logger log = LoggerFactory.getLogger(LogUtil.class);
     private static DateTimeFormatter format = DateTimeFormat.forPattern("yyMMdd-HHmmss.SSS");
 
     /**
@@ -48,8 +52,13 @@ public class LogUtil {
 
     public static TaskDataOutput newBundleOutputFromConfig(String name) {
         Config outputConfig = ConfigFactory.load().getConfig("hydra.log.events").getConfig(name);
-        TaskDataOutput output = Configs.decodeObject(TaskDataOutput.class, outputConfig);
-        output.init(new TaskRunConfig(0, 1, "event-log" + name));
-        return output;
+        try {
+            TaskDataOutput output = Configs.decodeObject(TaskDataOutput.class, outputConfig);
+            output.init(new TaskRunConfig(0, 1, "event-log" + name));
+            return output;
+        } catch (Throwable ex) {
+            log.error("error while trying to create bundle output named {}", name, ex);
+            throw Throwables.propagate(ex);
+        }
     }
 }
