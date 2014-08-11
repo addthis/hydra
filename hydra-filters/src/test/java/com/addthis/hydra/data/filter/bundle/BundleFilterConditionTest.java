@@ -24,9 +24,11 @@ import com.addthis.maljson.JSONArray;
 
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigOrigin;
 
+import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -35,6 +37,8 @@ import org.slf4j.LoggerFactory;
 public class BundleFilterConditionTest {
     private static final Logger log = LoggerFactory.getLogger(BundleFilterConditionTest.class);
 
+    @Ignore
+    @Test
     public void simpleRun() throws IOException {
         Bundle bundle = new ListBundle();
         BundleFilterCondition filter = (BundleFilterCondition) Configs.decodeObject(
@@ -46,14 +50,8 @@ public class BundleFilterConditionTest {
         @FieldConfig public BundleFilter filter;
     }
 
-    @Ignore
     @Test public void multiLineReport() throws Exception {
-        String filterDef = "{op:\"condition\",\n" +
-                           "\t\t\t\tifCondition:{op:\"field\", from:\"UID\",filter:{op:\"require\",contains:[\"0000000000000000\"]}},\n" +
-                           "\t\t\t\tifDt:{op:\"field\", from:\"TIME\", to:\"SHARD\"},\n" +
-                           "                elseDo:{op:\"field\", from:\"UID\", to:\"SHARD\"},\n" +
-                           "\t\t\t}";
-        filterDef = "filter = [{from: UID}\n{from: LED}\n{OBVIOUSLYNOTAFILTER {}}]";
+        String filterDef = "filter = [{from: UID}\n{from: LED}\n{OBVIOUSLYNOTAFILTER {}}]";
         String message = null;
         int lineNumber = -1;
         Bundle bundle = new ListBundle();
@@ -68,17 +66,25 @@ public class BundleFilterConditionTest {
             }
         } catch (JsonProcessingException ex) {
             JsonLocation jsonLocation = ex.getLocation();
-            message = ex.getMessage();
             if (jsonLocation != null) {
                 lineNumber = jsonLocation.getLineNr();
+                message = "Line: " + lineNumber + " ";
+            }
+            message += ex.getOriginalMessage();
+            if (ex instanceof JsonMappingException) {
+                String pathReference = ((JsonMappingException) ex).getPathReference();
+                if (pathReference != null) {
+                    message += " referenced via: " + pathReference;
+                }
             }
         } catch (Exception other) {
-            message = other.getMessage();
+            message = other.toString();
         }
         JSONArray lineColumns = new JSONArray();
         JSONArray lineErrors = new JSONArray();
         lineErrors.put(lineNumber);
-        log.info("cols {} lines {} lineNum {} es.mess {}", lineColumns, lineErrors, lineNumber, message);
+        log.debug("cols {} lines {} lineNum {} es.mess {}", lineColumns, lineErrors, lineNumber, message);
+        Assert.assertEquals(3, lineNumber);
     }
 
     @Ignore

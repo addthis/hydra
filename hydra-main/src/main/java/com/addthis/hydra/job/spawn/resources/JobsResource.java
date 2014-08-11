@@ -1040,7 +1040,7 @@ public class JobsResource {
                 }
             }
         } catch (Exception other) {
-            message = other.getMessage();
+            message = other.toString();
         }
         JSONArray lineColumns = new JSONArray();
         JSONArray lineErrors = new JSONArray();
