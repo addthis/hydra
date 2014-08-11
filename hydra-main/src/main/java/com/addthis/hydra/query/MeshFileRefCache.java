@@ -82,10 +82,12 @@ public class MeshFileRefCache implements ChannelCloseListener {
     /**
      * thread pool for refreshing cache keys asynchronously
      */
-    private static final ExecutorService fileReferenceCacheReloader = MoreExecutors
-            .getExitingExecutorService(new ThreadPoolExecutor(2, 5, 5000L, TimeUnit.MILLISECONDS,
+    private static final ExecutorService fileReferenceCacheReloader =
+            new ThreadPoolExecutor(2, 5, 5000L, TimeUnit.MILLISECONDS,
                     new LinkedBlockingQueue<Runnable>(),
-                    new ThreadFactoryBuilder().setNameFormat("fileReferenceCacheReloader-%d").build()));
+                    new ThreadFactoryBuilder().setDaemon(true)
+                                              .setNameFormat("fileReferenceCacheReloader-%d")
+                                              .build());
 
     //for testing
     public MeshFileRefCache() throws Exception {

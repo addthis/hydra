@@ -29,7 +29,6 @@ import com.addthis.hydra.data.tree.ReadTree;
 import com.google.common.cache.CacheLoader;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableFutureTask;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -56,10 +55,12 @@ class EngineLoader extends CacheLoader<String, QueryEngine> {
     protected static final Meter newEnginesOpened = Metrics.newMeter(QueryEngineCache.class, "newEnginesOpened",
             "newEnginesOpened", TimeUnit.MINUTES);
 
-    private final ExecutorService engineRefresherPool = MoreExecutors
-            .getExitingExecutorService(new ThreadPoolExecutor(1, MAX_REFRESH_THREADS, 5000L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(),
-                    new ThreadFactoryBuilder().setNameFormat("engineRefresher-%d").build()));
+    private final ExecutorService engineRefresherPool =
+            new ThreadPoolExecutor(1, MAX_REFRESH_THREADS, 5000L, TimeUnit.MILLISECONDS,
+                                   new LinkedBlockingQueue<Runnable>(),
+                                   new ThreadFactoryBuilder().setDaemon(true)
+                                                             .setNameFormat("engineRefresher-%d")
+                                                             .build());
 
     @Override
     public QueryEngine load(String dir) throws Exception {
