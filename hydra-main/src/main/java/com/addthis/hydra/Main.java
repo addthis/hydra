@@ -18,11 +18,11 @@ import java.io.File;
 import java.lang.reflect.Method;
 
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
+import com.addthis.codec.config.Configs;
 import com.addthis.codec.plugins.PluginMap;
 import com.addthis.codec.plugins.PluginRegistry;
 import com.addthis.hydra.task.run.JsonRunner;
@@ -31,7 +31,8 @@ import com.addthis.metrics.reporter.config.ReporterConfig;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
 
-import com.yammer.metrics.reporting.GangliaReporter;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,30 +43,16 @@ import org.slf4j.LoggerFactory;
 public class Main {
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
-    private static final boolean GANGLIA_ENABLE = Parameter.boolValue("ganglia.enable", true);
-    private static final String GANGLIA_HOSTS = Parameter.value("ganglia.hosts", "localhost:8649");
-    private static final String METRICS_REPORTER_CONFIG_FILE = Parameter.value("metrics.reporter.config", "");
-    private static final boolean GANGLIA_SHORT_NAMES = Parameter.boolValue("ganglia.useShortNames", false);
-
     public static void main(String[] args) {
         if (args.length > 0) {
-            if (GANGLIA_ENABLE) {
-                if (!Strings.isEmpty(METRICS_REPORTER_CONFIG_FILE)) {
-                    log.info("enabling ganglia using reporter config: " + METRICS_REPORTER_CONFIG_FILE);
-                    try {
-                        ReporterConfig.loadFromFileAndValidate(METRICS_REPORTER_CONFIG_FILE).enableAll();
-                    } catch (Exception e) {
-                        log.warn("Failed to enable metrics reporter from file", e);
-                        }
-                } else {
-                    log.info("enabling ganglia using host/ports: " + GANGLIA_HOSTS);
-                    String[] splitHosts = GANGLIA_HOSTS.split(",");
-                    for (String hostAndPort : splitHosts) {
-                        String[] params = hostAndPort.split(":");
-                        String host = params[0];
-                        int port = Integer.parseInt(params[1]);
-                        GangliaReporter.enable(60, TimeUnit.SECONDS, host, port, GANGLIA_SHORT_NAMES);
-                    }
+            Config globalConfig = ConfigFactory.load();
+            if (globalConfig.getBoolean("hydra.metrics.enable")) {
+                try {
+                    Configs.decodeObject(ReporterConfig.class,
+                                         globalConfig.getConfig("hydra.metrics.config"))
+                           .enableAll();
+                } catch (Exception e) {
+                    log.warn("Failed to enable metrics reporter from config", e);
                 }
             }
             try {
