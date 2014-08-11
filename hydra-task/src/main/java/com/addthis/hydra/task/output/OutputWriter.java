@@ -126,8 +126,8 @@ public class OutputWriter extends AbstractOutputWriter {
     }
 
     @Override
-    public void postDecode() {
-        super.postDecode();
+    public void open() {
+        super.open();
 
         // thread to close open outputs if the maxopen value has been exceeded
         writerMaintenanceThread.scheduleAtFixedRate(new Runnable() {

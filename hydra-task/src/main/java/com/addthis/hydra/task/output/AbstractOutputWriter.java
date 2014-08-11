@@ -31,7 +31,6 @@ import com.addthis.basis.util.JitterClock;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 
 import com.google.common.util.concurrent.MoreExecutors;
@@ -59,7 +58,7 @@ import org.slf4j.LoggerFactory;
  * in the order in which the bundles are produced. The second strategy is enabled
  * by setting {@link #waitForDiskFlushThread} to true.
  */
-public abstract class AbstractOutputWriter implements SuperCodable {
+public abstract class AbstractOutputWriter {
 
     private static Logger log = LoggerFactory.getLogger(AbstractOutputWriter.class);
 
@@ -170,8 +169,8 @@ public abstract class AbstractOutputWriter implements SuperCodable {
         errored = true;
     }
 
-    @Override
-    public void postDecode() {
+
+    public void open() {
         /**
          * The next several lines of logic are to handle
          * ridiculous input values for maxBundles and bufferSizeRatio.
@@ -208,11 +207,6 @@ public abstract class AbstractOutputWriter implements SuperCodable {
             diskFlushThreadArray[i].setDaemon(true);
             diskFlushThreadArray[i].start();
         }
-    }
-
-    @Override
-    public void preEncode() {
-        // nothing to do here
     }
 
     private class QueueWriter {

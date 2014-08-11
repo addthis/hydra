@@ -64,7 +64,7 @@ public class SpawnFormattedLogger {
             OutputWrapperFactory factory = new OutputWrapperFactory(absPath);
             OutputWriter writer = new OutputWriter();
             writer.setMaxOpen(1).setOutputWrapperFactory(factory).setFormat(new OutputStreamChannel());
-            writer.postDecode();
+            writer.open();
             newOutputSink = new DataOutputFile().setWriter(writer).setPath(LOG_PATH);
             newOutputSink.init(null);
         } catch (Exception ex)  {
