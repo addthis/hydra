@@ -15,7 +15,6 @@ package com.addthis.hydra.task.output;
 
 
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.task.run.TaskRunConfig;
 
 /**
  * This output sink <span class="hydra-summary">shards the output stream to one or more files</span>.
@@ -95,9 +94,4 @@ public class DataOutputFile extends AbstractDataOutput {
         return writer;
     }
 
-    @Override
-    public void open(TaskRunConfig config) {
-        super.open(config);
-        writer.open();
-    }
 }

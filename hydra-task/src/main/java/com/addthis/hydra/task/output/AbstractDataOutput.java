@@ -75,6 +75,10 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
     @Override
     public void open(TaskRunConfig config) {
         log.info("[init] {}", config);
+        AbstractOutputWriter writer = getWriter();
+        if (writer != null) {
+            writer.open();
+        }
 
         if (dataPurgeConfig != null) {
             purgeData();
