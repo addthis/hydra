@@ -66,7 +66,7 @@ public class HoconRunner {
                                           .withFallback(ConfigFactory.load())
                                           .resolve();
             jobConfig = jobConfig.resolveWith(globalDefaults);
-            codec = CodecJackson.getDefault().withConfig(jobConfig);
+            codec = CodecJackson.getDefault().withConfig(globalDefaults);
         } else {
             jobConfig = jobConfig.resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true))
                                  .resolveWith(ConfigFactory.load());
