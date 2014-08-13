@@ -13,8 +13,8 @@
  */
 package com.addthis.hydra.task.output;
 
+import java.io.Closeable;
 import java.io.IOException;
-import java.io.OutputStream;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,35 +33,42 @@ import com.addthis.bundle.value.ValueString;
 import com.google.common.annotations.Beta;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.io.BinaryEncoder;
-import org.apache.avro.io.DatumWriter;
-import org.apache.avro.io.EncoderFactory;
+import org.apache.hadoop.fs.Path;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import parquet.avro.AvroParquetWriter;
+import parquet.hadoop.ParquetWriter;
+import parquet.hadoop.metadata.CompressionCodecName;
+
 @Beta
-public class OutputStreamAvro extends OutputStreamFormatter {
-    private static final Logger log = LoggerFactory.getLogger(OutputStreamAvro.class);
+public class OutputStreamParquet implements Closeable {
+    private static final Logger log = LoggerFactory.getLogger(OutputStreamParquet.class);
 
-    private final Schema                     outputSchema;
-    private final DatumWriter<GenericRecord> datumWriter;
+    CompressionCodecName compressionCodecName = CompressionCodecName.GZIP;
 
-    public OutputStreamAvro(String schema) {
+    private final Schema outputSchema;
+    private final AvroParquetWriter<GenericRecord> parquetWriter;
+
+    public OutputStreamParquet(String schema, String path) throws IOException {
         outputSchema = new Schema.Parser().parse(schema);
-        datumWriter = new GenericDatumWriter<>(outputSchema);
+        parquetWriter = new AvroParquetWriter<>(
+                new Path(path), outputSchema, compressionCodecName,
+                ParquetWriter.DEFAULT_BLOCK_SIZE, ParquetWriter.DEFAULT_PAGE_SIZE);
     }
 
     @JsonCreator
-    public OutputStreamAvro(JsonNode nodeSchema) {
+    public OutputStreamParquet(@JsonProperty("schema") JsonNode nodeSchema,
+                               @JsonProperty("path") String path) throws IOException {
         if (nodeSchema.hasNonNull("_optional-strings")) {
             ArrayNode fields = (ArrayNode) nodeSchema.get("fields");
             ArrayNode optionalStrings = (ArrayNode) nodeSchema.get("_optional-strings");
@@ -79,28 +86,19 @@ public class OutputStreamAvro extends OutputStreamFormatter {
         }
         String schema = nodeSchema.toString();
         outputSchema = new Schema.Parser().parse(schema);
-        datumWriter = new GenericDatumWriter<>(outputSchema);
+        parquetWriter = new AvroParquetWriter<>(
+                new Path(path), outputSchema, compressionCodecName,
+                ParquetWriter.DEFAULT_BLOCK_SIZE, ParquetWriter.DEFAULT_PAGE_SIZE);
     }
 
-    @Override
-    public OutputStreamEmitter createEmitter() {
-        return new OutputStreamEmitter() {
-            private BinaryEncoder encoder;
+    public void write(Bundle row) throws IOException {
+        GenericRecord outputRecord = new GenericData.Record(outputSchema);
+        populateAvroRecord(outputRecord, row);
+        parquetWriter.write(outputRecord);
+    }
 
-            @Override
-            public void write(OutputStream out, Bundle row) throws IOException {
-                GenericRecord outputRecord = new GenericData.Record(outputSchema);
-                populateAvroRecord(outputRecord, row);
-                encoder = EncoderFactory.get().blockingBinaryEncoder(out, encoder);
-                datumWriter.write(outputRecord, encoder);
-                encoder.flush();
-            }
-
-            @Override
-            public void flush(OutputStream out) throws IOException {
-                out.flush();
-            }
-        };
+    @Override public void close() throws IOException {
+        parquetWriter.close();
     }
 
     public static void populateAvroRecord(GenericRecord genericRecord, Bundle bundle) {

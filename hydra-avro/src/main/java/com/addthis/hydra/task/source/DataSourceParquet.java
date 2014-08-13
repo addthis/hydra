@@ -13,71 +13,41 @@
  */
 package com.addthis.hydra.task.source;
 
+import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStream;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleFactory;
+import com.addthis.bundle.core.BundleFormat;
+import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.hydra.task.source.bundleizer.Bundleizer;
-import com.addthis.hydra.task.source.bundleizer.BundleizerFactory;
 
 import com.google.common.annotations.Beta;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.io.BinaryDecoder;
-import org.apache.avro.io.DecoderFactory;
+import org.apache.hadoop.fs.Path;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import parquet.avro.AvroParquetReader;
+
 @Beta
-public class DataSourceAvro extends BundleizerFactory {
-    private static final Logger log = LoggerFactory.getLogger(DataSourceAvro.class);
+public class DataSourceParquet implements Closeable {
+    private static final Logger log = LoggerFactory.getLogger(DataSourceParquet.class);
 
-    private final Schema inputSchema;
-    private final GenericDatumReader<GenericRecord> datumReader;
+    private final AvroParquetReader<GenericRecord> parquetReader;
+    private final BundleFormat factory = new ListBundleFormat();
 
-    public DataSourceAvro(String schema) {
-        this.inputSchema = new Schema.Parser().parse(schema);
-        this.datumReader = new GenericDatumReader<>(inputSchema);
-    }
-
-    @JsonCreator
-    public DataSourceAvro(JsonNode nodeSchema) {
-        if (nodeSchema.hasNonNull("_optional-strings")) {
-            ArrayNode fields = (ArrayNode) nodeSchema.get("fields");
-            ArrayNode optionalStrings = (ArrayNode) nodeSchema.get("_optional-strings");
-            Iterator<JsonNode> optionalStringIterator = optionalStrings.elements();
-            while (optionalStringIterator.hasNext()) {
-                String optionalString = optionalStringIterator.next().asText();
-                ObjectNode wrapper = ((ObjectNode) nodeSchema).objectNode();
-                ArrayNode unionType = wrapper.arrayNode();
-                unionType.add("null");
-                unionType.add("string");
-                wrapper.put("name", optionalString);
-                wrapper.set("type", unionType);
-                fields.add(wrapper);
-            }
-        }
-        String schema = nodeSchema.toString();
-        inputSchema = new Schema.Parser().parse(schema);
-        datumReader = new GenericDatumReader<>(inputSchema);
+    public DataSourceParquet(String path) throws IOException {
+        parquetReader = new AvroParquetReader<>(new Path(path));
     }
 
     public static ValueObject<?> getValueObject(GenericRecord genericRecord,
@@ -144,28 +114,25 @@ public class DataSourceAvro extends BundleizerFactory {
         }
     }
 
-    @Override public Bundleizer createBundleizer(final InputStream input,
-                                                 final BundleFactory factory) {
-        return new Bundleizer() {
-            private final BinaryDecoder decoder = DecoderFactory.get().binaryDecoder(input, null);
-            private GenericRecord reusableRecord = null;
-
-            @Override public Bundle next() throws IOException {
-                if (decoder.isEnd()) {
-                    return null;
-                }
-                reusableRecord = datumReader.read(reusableRecord, decoder);
-                GenericData genericData = datumReader.getData();
-                Bundle bundle = factory.createBundle();
-                for (Schema.Field field : inputSchema.getFields()) {
-                    ValueObject<?> value = DataSourceAvro.getValueObject(
-                            reusableRecord, field, genericData);
-                    if (value != null) {
-                        bundle.setValue(bundle.getFormat().getField(field.name()), value);
-                    }
-                }
-                return bundle;
+    public Bundle read() throws IOException {
+        GenericRecord nextRecord = parquetReader.read();
+        if (nextRecord == null) {
+            return null;
+        }
+        GenericData genericData = GenericData.get();
+        Bundle bundle = factory.createBundle();
+        Schema inputSchema = nextRecord.getSchema();
+        for (Schema.Field field : inputSchema.getFields()) {
+            ValueObject<?> value = DataSourceAvro.getValueObject(
+                    nextRecord, field, genericData);
+            if (value != null) {
+                bundle.setValue(bundle.getFormat().getField(field.name()), value);
             }
-        };
+        }
+        return bundle;
+    }
+
+    @Override public void close() throws IOException {
+        parquetReader.close();
     }
 }

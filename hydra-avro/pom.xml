@@ -33,9 +33,19 @@
 
     <!-- 3rd party -->
     <dependency>
+      <groupId>com.twitter</groupId>
+      <artifactId>parquet-avro</artifactId>
+      <version>1.5.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client</artifactId>
+      <version>1.1.0</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
-      <version>1.7.6</version>
+      <version>1.7.7</version>
       <exclusions>
         <!-- avro uses version snappy version 1.0.5 which is incompatible with older hardware -->
         <exclusion>
