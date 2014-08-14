@@ -44,8 +44,6 @@ import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.codec.config.CodecConfig;
 import com.addthis.codec.config.Configs;
-import com.addthis.codec.json.CodecExceptionLineNumber;
-import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobExpand;
@@ -996,23 +994,7 @@ public class JobsResource {
         return Response.ok().entity(error.toString()).build();
     }
 
-    private Response validateExpandedConfigurationBody(String expandedConfig) throws JSONException {
-        try {
-            JSONObject jobJSON = new JSONObject(expandedConfig, false);
-            return validateJsonConfig(jobJSON);
-        } catch (JSONException ex) {
-            if ((ex.getColumn() == 0) && (ex.getLine() == 0)) {
-                return validateHoconConfig(expandedConfig);
-            }
-            JSONArray lineErrors = new JSONArray();
-            JSONArray lineColumns = new JSONArray();
-            lineErrors.put(ex.getLine());
-            lineColumns.put(ex.getColumn());
-            return validateCreateError(ex.getMessage(), lineErrors, lineColumns, "postExpansionError");
-        }
-    }
-
-    private Response validateHoconConfig(String expandedConfig) throws JSONException {
+    private Response validateJobConfig(String expandedConfig) throws JSONException {
         String message = null;
         int lineNumber = 1;
         try {
@@ -1047,39 +1029,6 @@ public class JobsResource {
         return validateCreateError(message, lineErrors, lineColumns, "postExpansionError");
     }
 
-    private Response validateJsonConfig(JSONObject jobJSON) throws JSONException {
-        JSONArray lineErrors = new JSONArray();
-        JSONArray lineColumns = new JSONArray();
-        try {
-            List<CodecExceptionLineNumber> warnings = new ArrayList<>();
-            CodecJSON.decodeObject(TaskRunnable.class, jobJSON, warnings);
-            if (!warnings.isEmpty()) {
-                StringBuilder message = new StringBuilder();
-                Iterator<CodecExceptionLineNumber> iter = warnings.iterator();
-                while (iter.hasNext()) {
-                    @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-                    CodecExceptionLineNumber ex = iter.next();
-                    lineErrors.put(ex.getLine());
-                    lineColumns.put(ex.getColumn());
-                    message.append(ex.getMessage());
-                    if (iter.hasNext()) {
-                        message.append("<br>");
-                    }
-                }
-                return validateCreateError(message.toString(), lineErrors, lineColumns, "postExpansionError");
-            }
-        } catch (JSONException ex) {
-            lineErrors.put(ex.getLine());
-            lineColumns.put(ex.getColumn());
-            return validateCreateError(ex.getMessage(), lineErrors, lineColumns, "postExpansionError");
-        } catch (CodecExceptionLineNumber ex) {
-            lineErrors.put(ex.getLine());
-            lineColumns.put(ex.getColumn());
-            return validateCreateError(ex.getMessage(), lineErrors, lineColumns, "postExpansionError");
-        }
-        return Response.ok(new JSONObject().put("result", "valid").toString()).build();
-    }
-
     @GET
     @Path("/validate")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
@@ -1102,7 +1051,7 @@ public class JobsResource {
                 }
 
                 try {
-                    return validateExpandedConfigurationBody(expandedConfig);
+                    return validateJobConfig(expandedConfig);
                 } catch (Exception ex) {
                     JSONArray lineErrors = new JSONArray();
                     JSONArray lineColumns = new JSONArray();
@@ -1139,7 +1088,7 @@ public class JobsResource {
         }
 
         try {
-            return validateExpandedConfigurationBody(expandedConfig);
+            return validateJobConfig(expandedConfig);
         } catch (Exception ex) {
             JSONArray lineErrors = new JSONArray();
             JSONArray lineColumns = new JSONArray();

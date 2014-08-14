@@ -22,17 +22,17 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class JsonRunnerTest {
+public class ConfigSubTest {
 
     @Test
-    public void testSubAt() throws IOException {
+    public void subAt() throws IOException {
         String input = "hello world";
         File tempDir = Files.createTempDir();
         File tempFile = new File(tempDir.getAbsolutePath() + File.separator + "temp");
         Files.write(tempFile, input.getBytes(), true);
         try {
-            assertEquals(input, JsonRunner.subAt(input));
-            assertEquals(":" + input, JsonRunner.subAt(":@file(" + tempFile.getAbsolutePath() + ")"));
+            assertEquals(input, TaskRunner.subAt(input));
+            assertEquals(":" + input, TaskRunner.subAt(":@file(" + tempFile.getAbsolutePath() + ")"));
         } finally {
             if (tempDir != null)
                 Files.deleteDir(tempDir);
