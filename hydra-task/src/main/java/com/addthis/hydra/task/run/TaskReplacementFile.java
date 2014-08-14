@@ -23,7 +23,7 @@ import com.addthis.basis.util.Files;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-public class TaskReplacementFile implements JsonRunner.TaskStringReplacement {
+public class TaskReplacementFile implements TaskStringReplacement {
 
     private static final Logger log = LoggerFactory.getLogger(TaskReplacementFile.class);
 

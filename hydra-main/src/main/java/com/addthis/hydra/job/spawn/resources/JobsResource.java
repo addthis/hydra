@@ -62,9 +62,8 @@ import com.addthis.hydra.job.backup.ScheduledBackupType;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.JobAlert;
 import com.addthis.hydra.job.spawn.jersey.User;
-import com.addthis.hydra.task.run.HoconRunner;
-import com.addthis.hydra.task.run.JsonRunner;
 import com.addthis.hydra.task.run.TaskRunnable;
+import com.addthis.hydra.task.run.TaskRunner;
 import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONException;
@@ -1014,11 +1013,10 @@ public class JobsResource {
     }
 
     private Response validateHoconConfig(String expandedConfig) throws JSONException {
-        Config config = ConfigFactory.parseString(expandedConfig);
         String message = null;
         int lineNumber = 1;
         try {
-            HoconRunner.makeTask(config);
+            TaskRunner.makeTask(expandedConfig);
             return Response.ok(new JSONObject().put("result", "valid").toString()).build();
         } catch (ConfigException ex) {
             ConfigOrigin exceptionOrigin = ex.origin();
@@ -1053,8 +1051,6 @@ public class JobsResource {
         JSONArray lineErrors = new JSONArray();
         JSONArray lineColumns = new JSONArray();
         try {
-            JsonRunner.initClasses(jobJSON);
-            jobJSON.remove("classes");
             List<CodecExceptionLineNumber> warnings = new ArrayList<>();
             CodecJSON.decodeObject(TaskRunnable.class, jobJSON, warnings);
             if (!warnings.isEmpty()) {

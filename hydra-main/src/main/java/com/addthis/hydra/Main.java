@@ -13,8 +13,6 @@
  */
 package com.addthis.hydra;
 
-import java.io.File;
-
 import java.lang.reflect.Method;
 
 import java.util.Set;
@@ -25,7 +23,6 @@ import com.addthis.basis.util.Strings;
 import com.addthis.codec.config.Configs;
 import com.addthis.codec.plugins.PluginMap;
 import com.addthis.codec.plugins.PluginRegistry;
-import com.addthis.hydra.task.run.JsonRunner;
 import com.addthis.metrics.reporter.config.ReporterConfig;
 
 import com.google.common.base.Joiner;
@@ -57,14 +54,6 @@ public class Main {
             }
             try {
                 switch(args[0]) {
-                    case "validate":
-                        try {
-                            JsonRunner.loadConfig(new File(args[1]));
-                            System.out.println("task config is valid");
-                        } catch (Exception ex) {
-                            ex.printStackTrace();
-                        }
-                        break;
                     case "mss":
                         String mssRoot = Parameter.value("mss.root", "streams");
                         String meshyPorts = Parameter.value("mss.mesh.ports", "5000");

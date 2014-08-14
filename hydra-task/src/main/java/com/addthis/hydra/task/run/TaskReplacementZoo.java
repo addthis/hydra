@@ -26,7 +26,7 @@ import org.apache.curator.framework.CuratorFramework;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-public class TaskReplacementZoo implements JsonRunner.TaskStringReplacement {
+public class TaskReplacementZoo implements TaskStringReplacement {
 
     private static final Logger log = LoggerFactory.getLogger(TaskReplacementZoo.class);
 
