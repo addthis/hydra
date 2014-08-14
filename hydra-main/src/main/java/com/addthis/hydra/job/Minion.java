@@ -17,10 +17,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.io.RandomAccessFile;
 import java.io.Serializable;
 
@@ -51,7 +49,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.addthis.basis.kv.KVPairs;
-import com.addthis.basis.util.Backoff;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
@@ -93,32 +90,18 @@ import com.addthis.hydra.job.mq.StatusTaskPort;
 import com.addthis.hydra.job.mq.StatusTaskReplica;
 import com.addthis.hydra.job.mq.StatusTaskReplicate;
 import com.addthis.hydra.job.mq.StatusTaskRevert;
-import com.addthis.hydra.mq.MeshMessageConsumer;
-import com.addthis.hydra.mq.MeshMessageProducer;
-import com.addthis.hydra.mq.MessageConsumer;
 import com.addthis.hydra.mq.MessageListener;
 import com.addthis.hydra.mq.MessageProducer;
-import com.addthis.hydra.mq.RabbitMQUtil;
-import com.addthis.hydra.mq.RabbitMessageConsumer;
-import com.addthis.hydra.mq.RabbitMessageProducer;
-import com.addthis.hydra.mq.RabbitQueueingConsumer;
 import com.addthis.hydra.mq.ZKMessageProducer;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
 import com.addthis.maljson.JSONObject;
-import com.addthis.meshy.MeshyClient;
-import com.addthis.meshy.MeshyClientConnector;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.AlreadyClosedException;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ShutdownSignalException;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
@@ -135,7 +118,6 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.servlet.ServletHandler;
-import org.eclipse.jetty.util.BlockingArrayQueue;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
@@ -148,9 +130,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
 
     private static Logger log = LoggerFactory.getLogger(Minion.class);
     private static boolean meshQueue = Parameter.boolValue("queue.mesh", false);
-    private static final String meshHost = Parameter.value("mesh.host", "localhost");
-    private static final int meshPort = Parameter.intValue("mesh.port", 5000);
-    private static final int meshRetryTimeout = Parameter.intValue("mesh.retry.timeout", 5000);
     private static int webPort = Parameter.intValue("minion.web.port", 5051);
     private static int minJobPort = Parameter.intValue("minion.job.baseport", 0);
     private static int maxJobPort = Parameter.intValue("minion.job.maxport", 0);
@@ -160,10 +139,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     private static String localHost = System.getProperty("minion.localhost");
     private static boolean linkBackup = !System.getProperty("minion.backup.hardlink", "0").equals("0");
     private static final DateTimeFormatter timeFormat = DateTimeFormat.forPattern("yyMMdd-HHmmss");
-    private static final String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
-    private static final String batchBrokerPort = Parameter.value("batch.brokerPort", "5672");
-    private static final int mqReconnectDelay = Parameter.intValue("mq.reconnect.delay", 10000);
-    private static final int mqReconnectTries = Parameter.intValue("mq.reconnect.tries", 10);
     private static final int sendStatusRetries = Parameter.intValue("send.status.retries", 5);
     private static final int sendStatusRetryDelay = Parameter.intValue("send.status.delay", 5000);
     private static final long hostMetricUpdaterInterval = Parameter.longValue("minion.host.metric.interval", 30 * 1000);
@@ -195,10 +170,10 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     // wait on a lengthy revert / delete / etc.
     private final ExecutorService promoteDemoteTaskExecutorService = MoreExecutors.getExitingExecutorService(
             new ThreadPoolExecutor(4, 4, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
-    private final ExecutorService connectionExecutorService = MoreExecutors
-            .getExitingExecutorService(new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(),
-                    new ThreadFactoryBuilder().setNameFormat("rabbitMQConnectionService-%d").build()));
+    private final ExecutorService connectionExecutorService = MoreExecutors.getExitingExecutorService(
+            new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<Runnable>(),
+                new ThreadFactoryBuilder().setNameFormat("rabbitMQConnectionService-%d").build()));
     private Lock minionStateLock = new ReentrantLock();
     @FieldConfig(codable = true)
     private MinionTaskDeleter minionTaskDeleter;
@@ -209,7 +184,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     private final int replicateCommandDelaySeconds = Parameter.intValue("replicate.cmd.delay.seconds", 0);
     private final int backupCommandDelaySeconds = Parameter.intValue("backup.cmd.delay.seconds", 0);
     private boolean useMacFriendlyPSCommands = false;
-    private MeshyClientConnector mesh;
 
     // detect fl-cow in sys env and apple for copy command
     {
@@ -258,6 +232,10 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     private boolean diskReadOnly;
     private MinionWriteableDiskCheck diskHealthCheck;
     private int minionPid = -1;
+    private CuratorFramework zkClient;
+    private ZkGroupMembership minionGroupMembership;
+    private MessageProducer zkBatchControlProducer;
+    private MinionMQ messageQ;
 
     @FieldConfig(codable = true, required = true)
     private String uuid;
@@ -271,9 +249,8 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     private Histogram activeTaskHistogram;
 
     @VisibleForTesting
-    public Minion(CuratorFramework zkClient) {
+    public Minion(final CuratorFramework zkClient) {
         uuid = UUID.randomUUID().toString();
-
         // null placeholder for now
         this.rootDir = null;
         this.nextPort = 0;
@@ -293,7 +270,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     }
 
     @VisibleForTesting
-    public Minion(File rootDir, int port) throws Exception {
+    public Minion(final File rootDir, final int port) throws Exception {
         this.rootDir = rootDir;
         this.nextPort = minJobPort;
         this.startTime = System.currentTimeMillis();
@@ -340,8 +317,9 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         activeTaskHistogram = Metrics.newHistogram(Minion.class, "activeTasks");
         new HostMetricUpdater();
         try {
+            messageQ = meshQueue ? new MinionMQImplMesh() : new MinionMQImpl();
             joinGroup();
-            connectToMQ();
+            messageQ.connect(uuid, this);
             updateJobsMeta(rootDir);
             if (liveEverywhereMarkerFile.createNewFile()) {
                 log.warn("cutover to live-everywhere tasks");
@@ -385,134 +363,11 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         }
     }
 
-    RabbitQueueingConsumer batchJobConsumer;
-    private BlockingArrayQueue<HostMessage> queuedHostMessages;
-    private MessageConsumer batchControlConsumer;
-    private MessageProducer queryControlProducer;
-    private MessageProducer zkBatchControlProducer;
-    private MessageProducer batchControlProducer;
-    private Channel channel;
-    private CuratorFramework zkClient;
-    private ZkGroupMembership minionGroupMembership;
-
-    private void connectToMQ() throws Exception {
-        zkBatchControlProducer = new ZKMessageProducer(getZkClient());
-        if (meshQueue) {
-            log.info("Queueing via Mesh");
-            final AtomicBoolean up = new AtomicBoolean(false);
-            mesh = new MeshyClientConnector(meshHost, meshPort, 1000, meshRetryTimeout) {
-                @Override
-                public void linkUp(MeshyClient client) {
-                    log.info("connected to mesh on {}", client.toString());
-                    up.set(true);
-                    synchronized (this) {
-                        this.notify();
-                    }
-                }
-
-                @Override
-                public void linkDown(MeshyClient client) {
-                    log.info("disconnected from mesh on {}", client.toString());
-                }
-            };
-            while (!up.get()) {
-                synchronized (mesh) {
-                    mesh.wait(1000);
-                }
-            }
-            batchControlProducer = new MeshMessageProducer(mesh.getClient(), "CSBatchControl");
-            queryControlProducer = new MeshMessageProducer(mesh.getClient(), "CSBatchQuery");
-            queuedHostMessages = new BlockingArrayQueue<>();
-            MeshMessageConsumer jobConsumer = new MeshMessageConsumer(mesh.getClient(), "CSBatchJob", uuid);
-            jobConsumer.addRoutingKey(HostMessage.ALL_HOSTS);
-            jobConsumer.addMessageListener(new MessageListener() {
-                @Override
-                public void onMessage(Serializable message) {
-                    try {
-                        queuedHostMessages.put((HostMessage) message);
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    }
-                }
-            });
-            batchControlConsumer = new MeshMessageConsumer(mesh.getClient(), "CSBatchControl", uuid).addRoutingKey(HostMessage.ALL_HOSTS);
-            batchControlConsumer.addMessageListener(this);
-        } else {
-            connectToRabbitMQ();
-        }
-    }
-
-    private synchronized boolean connectToRabbitMQ() {
-        String[] routingKeys = new String[]{uuid, HostMessage.ALL_HOSTS};
-        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, Integer.valueOf(batchBrokerPort));
-        queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerHost, Integer.valueOf(batchBrokerPort));
-        try {
-            Connection connection = RabbitMQUtil.createConnection(batchBrokerHost, Integer.valueOf(batchBrokerPort));
-            channel = connection.createChannel();
-            channel.exchangeDeclare("CSBatchJob", "direct");
-            AMQP.Queue.DeclareOk result = channel.queueDeclare(uuid + ".batchJob", true, false, false, null);
-            String queueName = result.getQueue();
-            channel.queueBind(queueName, "CSBatchJob", uuid);
-            channel.queueBind(queueName, "CSBatchJob", HostMessage.ALL_HOSTS);
-            batchJobConsumer = new RabbitQueueingConsumer(channel);
-            channel.basicConsume(queueName, false, batchJobConsumer);
-            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", uuid + ".batchControl", this, routingKeys);
-            return true;
-        } catch (IOException e) {
-            log.error("Error connecting to rabbitmq " + batchBrokerHost + ":" + batchBrokerPort, e);
-            return false;
-        }
-    }
-
     /**
      * attempt to reconnect up to n times then shut down
      */
     private void shutdown() {
         System.exit(1);
-    }
-
-    private void disconnectFromMQ() {
-        try {
-            if (batchControlConsumer != null) {
-                batchControlConsumer.close();
-            }
-        } catch (AlreadyClosedException ace) {
-            // do nothing
-        } catch (Exception ex) {
-            log.warn("", ex);
-        }
-        try {
-            if (queryControlProducer != null) {
-                queryControlProducer.close();
-            }
-        } catch (Exception ex) {
-            log.warn("", ex);
-        }
-        try {
-            if (batchControlProducer != null) {
-                batchControlProducer.close();
-            }
-        } catch (AlreadyClosedException ace) {
-            // do nothing
-        } catch (Exception ex) {
-            log.warn("", ex);
-        }
-        try {
-            if (zkBatchControlProducer != null) {
-                zkBatchControlProducer.close();
-            }
-        } catch (Exception ex) {
-            log.warn("", ex);
-        }
-        try {
-            if (channel != null) {
-                channel.close();
-            }
-        } catch (AlreadyClosedException ace) {
-            // do nothing
-        } catch (Exception ex) {
-            log.warn("", ex);
-        }
     }
 
     public static int shell(String cmd, File directory) {
@@ -833,6 +688,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                 }
             }
         });
+        zkBatchControlProducer = new ZKMessageProducer(zkClient);
         return zkClient;
     }
 
@@ -863,8 +719,8 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     private void sendControlMessage(HostMessage msg) {
         synchronized (jmsxmitlock) {
             try {
-                if (batchControlProducer != null) {
-                    batchControlProducer.sendMessage(msg, msg.getHostUuid());
+                if (messageQ != null) {
+                    messageQ.sendControlMessage(msg);
                 }
             } catch (Exception ex) {
                 log.warn("[mq.ctrl.send] fail with " + ex, ex);
@@ -876,8 +732,8 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     private void sendStatusMessage(HostMessage msg) {
         synchronized (jmsxmitlock) {
             try {
-                if (batchControlProducer != null) {
-                    batchControlProducer.sendMessage(msg, "SPAWN");
+                if (messageQ != null) {
+                    messageQ.sendStatusMessage(msg);
                 }
             } catch (Exception ex) {
                 log.warn("[mq.ctrl.send] fail with " + ex, ex);
@@ -923,6 +779,10 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     }
 
     @Override
+    public void doStart() {
+    }
+
+    @Override
     public void doStop() {
         if (!shutdown.getAndSet(true)) {
             writeState();
@@ -936,12 +796,15 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
             } catch (Exception ex) {
                 log.warn("", ex);
             }
-            disconnectFromMQ();
+            try {
+                if (zkBatchControlProducer != null) {
+                    zkBatchControlProducer.close();
+                }
+            } catch (Exception ex) {
+                log.warn("", ex);
+            }
+            messageQ.disconnect();
         }
-    }
-
-    @Override
-    public void doStart() {
     }
 
     private synchronized int findNextPort() {
@@ -970,7 +833,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
 
     @SuppressWarnings("serial")
     private static class ExecException extends Exception {
-
         ExecException(String msg) {
             super(msg);
         }
@@ -981,9 +843,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     }
 
     private class TaskRunner extends Thread {
-
         private boolean done;
-        private final Backoff backoff = new Backoff(1000, 5000);
 
         public void stopTaskRunner() {
             done = true;
@@ -992,59 +852,17 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
 
         @Override public void run() {
             while (!done) {
-                if (meshQueue) {
-                    try {
-                        HostMessage hostMessage = queuedHostMessages.take();
-                        if (hostMessage.getMessageType() != CoreMessage.TYPE.CMD_TASK_KICK) {
-                            log.warn("[task.runner] unknown command type : " + hostMessage.getMessageType());
-                            continue;
-                        }
-                        CommandTaskKick kick = (CommandTaskKick) hostMessage;
-                        insertJobKickMessage(kick);
+                try {
+                    CommandTaskKick kickMessage = messageQ.pollKickMessages();
+                    if (kickMessage != null) {
+                        insertJobKickMessage(kickMessage);
                         kickNextJob();
-                    } catch (InterruptedException e) {
-                        // ignore
-                    } catch (Exception e) {
-                        log.error("Error sending meshQueue message", e);
                     }
-                } else {
-                    RabbitQueueingConsumer.Delivery delivery = null;
-                    try {
-                        delivery = batchJobConsumer.nextDelivery();
-                        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(delivery.getBody()));
-                        HostMessage hostMessage = (HostMessage) ois.readObject();
-                        if (hostMessage.getMessageType() != CoreMessage.TYPE.CMD_TASK_KICK) {
-                            log.warn("[task.runner] unknown command type : " + hostMessage.getMessageType());
-                            continue;
-                        }
-                        CommandTaskKick kick = (CommandTaskKick) hostMessage;
-                        insertJobKickMessage(kick);
-                        kickNextJob();
-                        channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
-                    } catch (InterruptedException ex) {
-                        log.warn("Interrupted while processing task messages");
-                        shutdown();
-                    } catch (ShutdownSignalException shutdownException) {
-                        log.warn("Received unexpected shutdown exception from rabbitMQ", shutdownException);
-                        try {
-                            backoff.sleep();
-                        } catch (InterruptedException ignored) {
-                            // interrupted while sleeping
-                        }
-                    } catch (Throwable ex) {
-                        try {
-                            if (delivery != null) {
-                                channel.basicNack(delivery.getEnvelope().getDeliveryTag(), false, true);
-                            }
-                        } catch (Exception e) {
-                            log.warn("[task.runner] unable to nack message delivery", ex);
-                        }
-                        log.warn("[task.runner] error: " + ex);
-                        if (!(ex instanceof ExecException)) {
-                            log.error("Error nacking message", ex);
-                        }
-                        shutdown();
-                    }
+                } catch (InterruptedException ex) {
+                    log.warn("Interrupted while processing task messages");
+                    shutdown();
+                } catch (Throwable ex) {
+                    shutdown();
                 }
             }
         }

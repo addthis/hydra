@@ -67,10 +67,19 @@ public abstract class BundleFilter implements Codable {
                 } finally {
                     init.set(true);
                     initing.set(false);
+                    synchronized (this) {
+                        this.notifyAll();
+                    }
                 }
             } else {
                 while (initing.get()) {
-                    Thread.yield();
+                    try {
+                        synchronized (this) {
+                            this.wait(100);
+                        }
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         }
