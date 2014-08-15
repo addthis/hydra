@@ -93,7 +93,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
     /**
      * list of file paths to process. This field is required.
      */
-    @FieldConfig(codable = true, required = true, autocollection = true)
+    @FieldConfig(codable = true, required = true)
     private String[] files;
 
     /**

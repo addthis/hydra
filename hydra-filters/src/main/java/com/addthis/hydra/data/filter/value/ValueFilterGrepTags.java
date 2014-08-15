@@ -34,7 +34,7 @@ public class ValueFilterGrepTags extends ValueFilter {
     /**
      * The set of values to match against.
      */
-    @FieldConfig(codable = true, autocollection = true, required = true)
+    @FieldConfig(codable = true, required = true)
     private String[] values;
 
     /**

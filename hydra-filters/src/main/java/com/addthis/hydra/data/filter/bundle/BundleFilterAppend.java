@@ -99,7 +99,7 @@ public class BundleFilterAppend extends BundleFilter {
     /**
      * A list of values to append in between the 'to' and 'from' fields.
      */
-    @FieldConfig(codable = true, autocollection = true)
+    @FieldConfig(codable = true)
     private ArrayList<String> values;
 
     /**

@@ -325,7 +325,7 @@ public class BundleFilterNum extends BundleFilter {
     /**
      * Subset of fields from the bundle filter that are used in calculation.
      */
-    @FieldConfig(codable = true, autocollection = true)
+    @FieldConfig(codable = true)
     private String[] columns;
 
     private BundleCalculator calculator;

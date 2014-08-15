@@ -51,7 +51,7 @@ public class BundleFilterContains extends BundleFilter {
     /**
      * An array of strings to test against the input field.
      */
-    @FieldConfig(codable = true, autocollection = true)
+    @FieldConfig(codable = true)
     private String[] value;
 
     /**

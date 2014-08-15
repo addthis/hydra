@@ -41,7 +41,7 @@ public class ValueFilterExclude extends StringFilter {
     /**
      * A set of strings. The input must be an exact match to a member of this set to be accepted.
      */
-    @FieldConfig(codable = true, autocollection = true)
+    @FieldConfig(codable = true)
     private HashSet<String> value;
 
     /**
@@ -55,7 +55,7 @@ public class ValueFilterExclude extends StringFilter {
      * A set of regular expression strings. The entire input must match against a regular
      * expression to be accepted.
      */
-    @FieldConfig(codable = true, autocollection = true)
+    @FieldConfig(codable = true)
     private HashSet<String> match;
 
     /**
@@ -69,7 +69,7 @@ public class ValueFilterExclude extends StringFilter {
      * A set of regular expression strings. The substring of the input must be found in a regular
      * expression to be accepted.
      */
-    @FieldConfig(codable = true, autocollection = true)
+    @FieldConfig(codable = true)
     private HashSet<String> find;
 
     /**
@@ -81,7 +81,7 @@ public class ValueFilterExclude extends StringFilter {
     /**
      * A set of strings. The input must a substring of a member of the set to be accepted.
      */
-    @FieldConfig(codable = true, autocollection = true)
+    @FieldConfig(codable = true)
     private String[] contains;
 
     /**

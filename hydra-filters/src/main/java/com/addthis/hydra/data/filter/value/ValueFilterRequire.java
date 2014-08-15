@@ -54,7 +54,7 @@ public class ValueFilterRequire extends StringFilter {
     /**
      * The input must match exactly to an element in this set.
      */
-    @FieldConfig(codable = true, autocollection = true)
+    @FieldConfig(codable = true)
     private HashSet<String> value;
 
     /**
@@ -66,7 +66,7 @@ public class ValueFilterRequire extends StringFilter {
     /**
      * The input must match to one of the regular expressions in this set.
      */
-    @FieldConfig(codable = true, autocollection = true)
+    @FieldConfig(codable = true)
     private HashSet<String> match;
 
     /**
@@ -78,7 +78,7 @@ public class ValueFilterRequire extends StringFilter {
     /**
      * A substring of the input must match to one of the regular expressions in this set.
      */
-    @FieldConfig(codable = true, autocollection = true)
+    @FieldConfig(codable = true)
     private HashSet<String> find;
 
     /**
@@ -90,7 +90,7 @@ public class ValueFilterRequire extends StringFilter {
     /**
      * A substring of the input must match exactly to an element of this set.
      */
-    @FieldConfig(codable = true, autocollection = true)
+    @FieldConfig(codable = true)
     private String[] contains;
 
     /**

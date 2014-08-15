@@ -23,15 +23,15 @@ import com.addthis.codec.codables.Codable;
  */
 public class SpawnBalancerConfig implements Codable {
 
-    @FieldConfig(codable = true)
     // How aggressively balancing should be done. For now, 0=no rebalancing, 1=rebalance jobs that are over/under-allocated, 2=rebalance all jobs
+    @FieldConfig(codable = true)
     private int autoBalanceLevel = 0;
 
-    @FieldConfig(codable = true)
     // During reallocation, don't move more than this many tasks
-    private int tasksMovedFullRebalance = Parameter.intValue("spawnbalance.tasks.fullbalance", 10);
     @FieldConfig(codable = true)
+    private int tasksMovedFullRebalance = Parameter.intValue("spawnbalance.tasks.fullbalance", 10);
     // During reallocation, don't move more than this many bytes
+    @FieldConfig(codable = true)
     private long bytesMovedFullRebalance = Parameter.longValue("spawnbalance.bytes.fullbalance", 300L * 1000 * 1000 * 1000);
     // During host reallocation, a single moved task can only be this portion of the overall byte maximum
     private double singleTaskBytesFactor = Double.parseDouble(Parameter.value("spawnbalance.task.factor", ".8"));
@@ -51,11 +51,11 @@ public class SpawnBalancerConfig implements Codable {
     private double alleviateHostPercentage = Double.parseDouble(Parameter.value("spawnbalance.alleviate.perc", ".2"));
 
     private int autobalanceCheckInterval = Parameter.intValue("spawnbalance.check.autobalance", 60 * 1000);
-    @FieldConfig(codable = true)
     // Only do job autobalancing once per time interval
-    private int jobAutobalanceIntervalMillis = Parameter.intValue("spawnbalance.interval.job.autobalance", 4 * 60 * 60 * 1000);
     @FieldConfig(codable = true)
+    private int jobAutobalanceIntervalMillis = Parameter.intValue("spawnbalance.interval.job.autobalance", 4 * 60 * 60 * 1000);
     // Only do host autobalancing once per time interval
+    @FieldConfig(codable = true)
     private int hostAutobalanceIntervalMillis = Parameter.intValue("spawnbalance.interval.host.autobalance", 6 * 60 * 60 * 1000);
     // Track the last time a job autobalance was done
     private long lastJobAutobalanceTime = 0L;
