@@ -31,8 +31,14 @@ import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.backup.BackupToDelete;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class MinionTaskDeleter implements Codable {
 
     private static final Logger log = LoggerFactory.getLogger(MinionTaskDeleter.class);

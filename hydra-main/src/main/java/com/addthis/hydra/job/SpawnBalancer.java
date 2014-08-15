@@ -50,6 +50,8 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,6 +61,9 @@ import org.slf4j.LoggerFactory;
  * The boxes are not so asymmetrical that running a job on three boxes is slower than running it on a single box.
  * Jobs run faster when they have as few tasks grouped together on individual boxes as possible.
  */
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class SpawnBalancer implements Codable {
 
     private final Spawn spawn;

@@ -16,11 +16,17 @@ package com.addthis.hydra.job;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * A class describing the outcome of a rebalancing action.
  */
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class RebalanceOutcome implements Codable {
 
     @FieldConfig(codable = true)

@@ -18,10 +18,15 @@ import com.addthis.codec.codables.Codable;
 
 import com.google.common.base.Objects;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public final class JobQueryConfig implements Codable, Cloneable {
 
     private static Logger log = LoggerFactory.getLogger(JobQueryConfig.class);

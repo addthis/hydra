@@ -30,9 +30,14 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class FilesystemDataStore implements SpawnDataStore, Codable {
     private static final Logger log = LoggerFactory.getLogger(FilesystemDataStore.class);
     private static final boolean debug = Parameter.boolValue("spawn.datastore.fs.debug",false);

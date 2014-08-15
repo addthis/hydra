@@ -31,6 +31,7 @@ import com.addthis.maljson.JSONObject;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 
@@ -54,7 +55,7 @@ public class WebSocketManager extends WebSocketHandler {
     /**
      * A json factory for any json serializing
      */
-    private static final JsonFactory factory = new JsonFactory(new com.fasterxml.jackson.databind.ObjectMapper());
+    private static final JsonFactory factory = new JsonFactory(new ObjectMapper());
 
     /**
      * Object used as monitor that the WebUpdateThread waits on when there are no websockets, and then gets notified when a websocket arrives

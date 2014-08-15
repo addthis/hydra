@@ -18,9 +18,14 @@ import com.addthis.codec.codables.Codable;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 /**
  * marker data for a replica copy of data
  */
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class JobTaskReplica implements Codable, Cloneable {
 
     @FieldConfig(codable = true)

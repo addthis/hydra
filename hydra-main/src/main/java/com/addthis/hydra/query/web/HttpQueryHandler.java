@@ -300,7 +300,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 break;
             case "/v2/job/list": {
                 StringWriter swriter = new StringWriter();
-                final JsonGenerator json = QueryServer.factory.createJsonGenerator(swriter);
+                final JsonGenerator json = QueryServer.factory.createGenerator(swriter);
                 json.writeStartArray();
                 for (IJob job : meshQueryMaster.getSpawnDataStoreHandler().getJobs()) {
                     if (job.getQueryConfig() != null && job.getQueryConfig().getCanQuery()) {
@@ -327,7 +327,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             }
             case "/v2/settings/git.properties": {
                 StringWriter swriter = new StringWriter();
-                final JsonGenerator json = QueryServer.factory.createJsonGenerator(swriter);
+                final JsonGenerator json = QueryServer.factory.createGenerator(swriter);
                 Properties gitProperties = new Properties();
                 json.writeStartObject();
                 try {

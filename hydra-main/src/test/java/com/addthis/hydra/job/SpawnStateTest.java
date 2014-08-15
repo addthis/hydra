@@ -134,6 +134,4 @@ public class SpawnStateTest extends ZkStartUtil {
             Files.deleteDir(tmpRoot);
         }
     }
-
-
 }

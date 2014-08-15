@@ -20,10 +20,15 @@ import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.maljson.JSONObject;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 
 /**
  * config templatable regions used in jobs
  */
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public final class JobMacro implements Codable, Cloneable {
 
     @FieldConfig(codable = true)

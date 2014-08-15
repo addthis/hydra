@@ -13,7 +13,6 @@
  */
 package com.addthis.hydra.job;
 
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.mq.JobKey;
 
@@ -22,7 +21,6 @@ import com.addthis.hydra.job.mq.JobKey;
  */
 public class SpawnQueueItem extends JobKey implements Codable {
 
-    @FieldConfig(codable = true)
     private boolean ignoreQuiesce; // Whether this task is allowed to kick even if Spawn is quiesced
 
     private final long creationTime; // When this task was added to the queue

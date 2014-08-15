@@ -18,6 +18,8 @@ import java.io.Serializable;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 
 public class ReplicaTarget implements Codable, Serializable {
 
@@ -69,6 +71,7 @@ public class ReplicaTarget implements Codable, Serializable {
         return replicationFactor;
     }
 
+    @JsonIgnore
     public String getUserAT() {
         return user + "@" + host;
     }

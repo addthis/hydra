@@ -22,9 +22,14 @@ import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Objects;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 /**
  * command run on minion to start each task in a job
  */
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public final class JobCommand implements Codable, Cloneable {
 
     @FieldConfig(codable = true)

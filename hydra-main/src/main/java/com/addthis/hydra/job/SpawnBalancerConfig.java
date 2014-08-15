@@ -18,9 +18,14 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 /**
  * This class stores various configuration parameters for spawn balancer, such as how many tasks to move, how many bytes to move, etc.
  */
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class SpawnBalancerConfig implements Codable {
 
     // How aggressively balancing should be done. For now, 0=no rebalancing, 1=rebalance jobs that are over/under-allocated, 2=rebalance all jobs

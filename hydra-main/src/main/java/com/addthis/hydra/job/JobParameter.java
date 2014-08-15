@@ -16,10 +16,15 @@ package com.addthis.hydra.job;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 
 /**
  * config-defined templated parameter
  */
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public final class JobParameter implements Codable, Cloneable {
 
     @FieldConfig(codable = true)

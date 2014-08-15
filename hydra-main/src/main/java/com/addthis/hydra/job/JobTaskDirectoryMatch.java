@@ -17,8 +17,13 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.mq.JobKey;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 /**
  */
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class JobTaskDirectoryMatch implements Codable {
 
     @FieldConfig(codable = true)
