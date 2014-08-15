@@ -57,21 +57,23 @@
     <hydra.dep.meshy.version>2.1.7</hydra.dep.meshy.version>
     <hydra.dep.muxy.version>2.0.12</hydra.dep.muxy.version>
     <hydra.dep.maljson.version>0.2.0</hydra.dep.maljson.version>
+
     <!-- hydra addthis external dependency versions -->
+    <hydra.dep.log4j2.version>2.0</hydra.dep.log4j2.version>
     <hydra.dep.apache.commons.lang3.version>3.1</hydra.dep.apache.commons.lang3.version>
     <hydra.dep.jackson.jackson-mapper-asl.version>1.9.13</hydra.dep.jackson.jackson-mapper-asl.version>
     <hydra.dep.commons-codec.version>1.8</hydra.dep.commons-codec.version>
     <hydra.dep.spring.version>4.0.0.RELEASE</hydra.dep.spring.version>
     <hydra.dep.jersey.version>1.18</hydra.dep.jersey.version>
     <hydra.dep.jetty.version>8.1.4.v20120524</hydra.dep.jetty.version>
+    <hydra.dep.sleepycat.je.version>5.0.73</hydra.dep.sleepycat.je.version>
+
     <!-- hydra compression dependency versions -->
     <hydra.dep.compress.compress-lzf.version>0.9.8</hydra.dep.compress.compress-lzf.version>
     <hydra.dep.compress.jzlib.version>1.1.3</hydra.dep.compress.jzlib.version>
     <hydra.dep.compress.snappy-java.version>1.0.4.1</hydra.dep.compress.snappy-java.version>
     <hydra.dep.compress.lzma-java.version>1.2</hydra.dep.compress.lzma-java.version>
     <hydra.dep.compress.apache.commons-compress.version>1.6</hydra.dep.compress.apache.commons-compress.version>
-
-    <hydra.dep.sleepycat.je.version>5.0.73</hydra.dep.sleepycat.je.version>
   </properties>
 
   <!-- included in every submodule -->
@@ -192,6 +194,58 @@
         <groupId>com.addthis</groupId>
         <artifactId>maljson</artifactId>
         <version>${hydra.dep.maljson.version}</version>
+      </dependency>
+
+      <!-- intermodule and downstream convenience -->
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-avro</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-data</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-essentials</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-filters</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-main</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-main-api</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-mq</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-store</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-task</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-uber</artifactId>
+        <version>${project.version}</version>
       </dependency>
 
       <!--

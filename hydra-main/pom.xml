@@ -31,22 +31,18 @@
     <dependency>
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-main-api</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-data</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-mq</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-task</artifactId>
-      <version>${project.version}</version>
     </dependency>
 
     <!-- addthis open source -->

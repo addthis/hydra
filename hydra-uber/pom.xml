@@ -47,7 +47,6 @@
     <dependency>
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-main</artifactId>
-      <version>${project.version}</version>
     </dependency>
 
     <!-- logging -->

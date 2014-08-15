@@ -49,7 +49,6 @@
     <dependency>
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-task</artifactId>
-      <version>${project.version}</version>
     </dependency>
 
     <!-- 3rd party -->

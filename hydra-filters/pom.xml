@@ -28,7 +28,6 @@
     <dependency>
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-store</artifactId>
-      <version>${project.version}</version>
     </dependency>
 
     <!-- addthis open source -->

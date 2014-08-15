@@ -29,7 +29,6 @@
     <dependency>
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-essentials</artifactId>
-      <version>${project.version}</version>
     </dependency>
 
     <!-- addthis deps -->

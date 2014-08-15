@@ -28,12 +28,10 @@
     <dependency>
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-data</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-mq</artifactId>
-      <version>${project.version}</version>
     </dependency>
 
     <!-- addthis open source -->
