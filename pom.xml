@@ -66,6 +66,8 @@
     <hydra.dep.spring.version>4.0.0.RELEASE</hydra.dep.spring.version>
     <hydra.dep.jersey.version>1.18</hydra.dep.jersey.version>
     <hydra.dep.jetty.version>8.1.4.v20120524</hydra.dep.jetty.version>
+    <hydra.dep.netty3.version>3.9.3.Final</hydra.dep.netty3.version>
+    <hydra.dep.netty4.version>4.0.23.Final</hydra.dep.netty4.version>
     <hydra.dep.sleepycat.je.version>5.0.73</hydra.dep.sleepycat.je.version>
 
     <!-- hydra compression dependency versions -->
@@ -102,6 +104,11 @@
     <dependencies>
       <!-- inlined version numbers -->
       <dependency>
+        <groupId>org.apache.zookeeper</groupId>
+        <artifactId>zookeeper</artifactId>
+        <version>3.4.5</version>
+      </dependency>
+      <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
         <version>3.1</version>
@@ -119,20 +126,51 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
-        <version>4.0.19.Final</version>
+        <version>${hydra.dep.netty4.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-buffer</artifactId>
-        <version>4.0.19.Final</version>
+        <version>${hydra.dep.netty4.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty</artifactId>
+        <version>${hydra.dep.netty3.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
         <version>2.0.1</version>
       </dependency>
+      <dependency>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+        <version>1.1.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro</artifactId>
+        <version>1.7.7</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.code.gson</groupId>
+        <artifactId>gson</artifactId>
+        <version>2.2.4</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-math</artifactId>
+        <version>2.1</version>
+      </dependency>
 
       <!-- property controlled versions -->
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>${dep.junit.version}</version>
+        <scope>test</scope>
+      </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-mapper-asl</artifactId>

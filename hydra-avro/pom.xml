@@ -23,27 +23,6 @@
   <name>Hydra Avro Module</name>
   <description>Avro input and output</description>
 
-  <dependencyManagement>
-    <dependencies>
-      <!-- parquet/ hadoop seem to be internally inconsistent -->
-      <dependency>
-        <groupId>commons-logging</groupId>
-        <artifactId>commons-logging</artifactId>
-        <version>1.1.1</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.avro</groupId>
-        <artifactId>avro</artifactId>
-        <version>1.7.7</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-math</artifactId>
-        <version>2.1</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
-
   <dependencies>
     <!-- module deps -->
     <dependency>
