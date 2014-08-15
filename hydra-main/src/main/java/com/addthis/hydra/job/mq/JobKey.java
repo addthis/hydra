@@ -18,7 +18,7 @@ import java.io.Serializable;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 
-import org.codehaus.jackson.annotate.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class JobKey implements Codable, Serializable {
 

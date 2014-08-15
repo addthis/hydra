@@ -114,6 +114,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Gauge;
@@ -140,6 +141,9 @@ import jsr166e.ConcurrentHashMapV8;
  * manages minions running on remote notes. runs master http server to
  * communicate with and control those instances.
  */
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class Spawn implements Codable {
 
     private static final Logger log = LoggerFactory.getLogger(Spawn.class);

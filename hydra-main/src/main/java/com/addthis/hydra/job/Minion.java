@@ -114,6 +114,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AlreadyClosedException;
 import com.rabbitmq.client.Channel;
@@ -144,6 +145,9 @@ import org.slf4j.LoggerFactory;
 /**
  * TODO implement APIs for extended probing, sanity, clearing of job state
  */
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class Minion extends AbstractHandler implements MessageListener, Codable {
 
     private static Logger log = LoggerFactory.getLogger(Minion.class);

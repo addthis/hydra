@@ -30,7 +30,12 @@ import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 // {queryconfig,config,jobtask/[n],alerts/[m]} under job uuid
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class ZnodeJob implements IJob {
 
     // Codable bundle of basic state
