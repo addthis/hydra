@@ -16,7 +16,7 @@
   <parent>
     <artifactId>jar-pom</artifactId>
     <groupId>com.addthis.common.build.maven.pom</groupId>
-    <version>3.1.0</version>
+    <version>3.2.1</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
@@ -47,13 +47,7 @@
 
   <properties>
     <!-- surefire junit properties -->
-    <hydra.test.excluded.groups>com.addthis.basis.test.SlowTest,com.addthis.hydra.common.test.LocalStackTest</hydra.test.excluded.groups>
-    <!-- These should be set to the default values specified in the surefire plugin.
-         They can be assigned new values by a submodule that needs non-default values. -->
-    <hydra.test.useSystemClassLoader>true</hydra.test.useSystemClassLoader>
-    <hydra.test.useManifestOnlyJar>false</hydra.test.useManifestOnlyJar>
-    <!-- enforcer plugin must be explicitly enabled with -Denforcer.skip=false -->
-    <enforcer.skip>true</enforcer.skip>
+    <at.test.excluded.groups>com.addthis.basis.test.SlowTest,com.addthis.hydra.common.test.LocalStackTest</at.test.excluded.groups>
 
     <!-- hydra addthis projects dependency versions -->
     <hydra.dep.bark.version>2.1.3</hydra.dep.bark.version>
@@ -63,13 +57,13 @@
     <hydra.dep.meshy.version>2.1.7</hydra.dep.meshy.version>
     <hydra.dep.muxy.version>2.0.12</hydra.dep.muxy.version>
     <hydra.dep.maljson.version>0.2.0</hydra.dep.maljson.version>
-    <hydra.dep.streamlib.version>2.6.0-rc0</hydra.dep.streamlib.version>
     <!-- hydra addthis external dependency versions -->
     <hydra.dep.apache.commons.lang3.version>3.1</hydra.dep.apache.commons.lang3.version>
     <hydra.dep.jackson.jackson-mapper-asl.version>1.9.13</hydra.dep.jackson.jackson-mapper-asl.version>
     <hydra.dep.commons-codec.version>1.8</hydra.dep.commons-codec.version>
     <hydra.dep.spring.version>4.0.0.RELEASE</hydra.dep.spring.version>
     <hydra.dep.jersey.version>1.18</hydra.dep.jersey.version>
+    <hydra.dep.jetty.version>8.1.4.v20120524</hydra.dep.jetty.version>
     <!-- hydra compression dependency versions -->
     <hydra.dep.compress.compress-lzf.version>0.9.8</hydra.dep.compress.compress-lzf.version>
     <hydra.dep.compress.jzlib.version>1.1.3</hydra.dep.compress.jzlib.version>
@@ -80,171 +74,138 @@
     <hydra.dep.sleepycat.je.version>5.0.73</hydra.dep.sleepycat.je.version>
   </properties>
 
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.3.1</version>
-        <configuration>
-          <rules>
-            <DependencyConvergence />
-          </rules>
-          <fail>true</fail>
-          <skip>${enforcer.skip}</skip>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
-
-  <!--
-      There is some duplication in the following profiles.
-      This is a solution to the problem of specifying the <groups> configuration
-      option in the "localstack" profile and eliminating the <groups> configuration
-      option in the other profiles. A more terse solution would be preferable.
-  -->
-  <profiles>
-    <profile>
-      <id>default</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <version>${dep.plugin.surefire.version}</version>
-            <configuration>
-              <!-- The surefire plugin used exclude all tests that
-                   were marked with any category. This behavior appears
-                   to have stopped. -->
-              <excludedGroups>${hydra.test.excluded.groups}</excludedGroups>
-              <useSystemClassLoader>${hydra.test.useSystemClassLoader}</useSystemClassLoader>
-              <useManifestOnlyJar>${hydra.test.useManifestOnlyJar}</useManifestOnlyJar>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>all-tests</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <version>${dep.plugin.surefire.version}</version>
-            <configuration>
-              <!-- exclude local stack tests. These require special setup. -->
-              <excludedGroups>com.addthis.hydra.common.test.LocalStackTest</excludedGroups>
-              <useSystemClassLoader>${hydra.test.useSystemClassLoader}</useSystemClassLoader>
-              <useManifestOnlyJar>${hydra.test.useManifestOnlyJar}</useManifestOnlyJar>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>localstack</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <version>${dep.plugin.surefire.version}</version>
-                        <configuration>
-                            <!-- only include local stack tests. These require special setup. -->
-                            <groups>com.addthis.hydra.common.test.LocalStackTest</groups>
-                            <useSystemClassLoader>${hydra.test.useSystemClassLoader}</useSystemClassLoader>
-                            <useManifestOnlyJar>${hydra.test.useManifestOnlyJar}</useManifestOnlyJar>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
- 
+  <!-- included in every submodule -->
   <dependencies>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>${dep.guava.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.googlecode.concurrentlinkedhashmap</groupId>
-      <artifactId>concurrentlinkedhashmap-lru</artifactId>
-      <version>1.3.2</version>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-mapper-asl</artifactId>
-      <version>${hydra.dep.jackson.jackson-mapper-asl.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>${dep.slf4j.version}</version>
     </dependency>
     <dependency>
       <groupId>com.yammer.metrics</groupId>
       <artifactId>metrics-core</artifactId>
-      <version>${dep.metrics.version}</version>
-      <exclusions>
-        <!-- metrics core uses an older version of slf4j-api -->
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-api</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
-      <version>2.0.2</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
-      <version>3.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jgit</groupId>
-      <artifactId>org.eclipse.jgit</artifactId>
-      <version>3.0.0.201306101825-r</version>
-    </dependency>
-
-    <!-- addthis oss -->
-    <dependency>
-      <groupId>com.addthis</groupId>
-      <artifactId>basis</artifactId>
-      <version>${hydra.dep.basis.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-core</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-databind</artifactId>
-        </exclusion>
-        <!-- org.apache.httpcomponents:httpclient 4.3.1 uses an older version of commons-codec -->
-        <exclusion>
-          <groupId>commons-codec</groupId>
-          <artifactId>commons-codec</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
 
     <!-- test deps -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
-      <version>${dep.slf4j.version}</version>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 
+  <dependencyManagement>
+    <dependencies>
+      <!-- inlined version numbers -->
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>3.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jgit</groupId>
+        <artifactId>org.eclipse.jgit</artifactId>
+        <version>3.0.0.201306101825-r</version>
+      </dependency>
+      <dependency>
+        <groupId>com.googlecode.concurrentlinkedhashmap</groupId>
+        <artifactId>concurrentlinkedhashmap-lru</artifactId>
+        <version>1.3.2</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-all</artifactId>
+        <version>4.0.19.Final</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-buffer</artifactId>
+        <version>4.0.19.Final</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+        <version>2.0.1</version>
+      </dependency>
+
+      <!-- property controlled versions -->
+      <dependency>
+        <groupId>org.codehaus.jackson</groupId>
+        <artifactId>jackson-mapper-asl</artifactId>
+        <version>${hydra.dep.jackson.jackson-mapper-asl.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.jackson</groupId>
+        <artifactId>jackson-core-asl</artifactId>
+        <version>${hydra.dep.jackson.jackson-mapper-asl.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-compress</artifactId>
+        <version>${hydra.dep.compress.apache.commons-compress.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-codec</groupId>
+        <artifactId>commons-codec</artifactId>
+        <version>${hydra.dep.commons-codec.version}</version>
+      </dependency>
+
+      <!-- addthis oss -->
+      <dependency>
+        <groupId>com.addthis</groupId>
+        <artifactId>basis</artifactId>
+        <version>${hydra.dep.basis.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis</groupId>
+        <artifactId>codec</artifactId>
+        <version>${hydra.dep.codec.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis</groupId>
+        <artifactId>meshy</artifactId>
+        <version>${hydra.dep.meshy.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis</groupId>
+        <artifactId>muxy</artifactId>
+        <version>${hydra.dep.muxy.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis</groupId>
+        <artifactId>bark</artifactId>
+        <version>${hydra.dep.bark.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis</groupId>
+        <artifactId>bundle</artifactId>
+        <version>${hydra.dep.bundle.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis</groupId>
+        <artifactId>maljson</artifactId>
+        <version>${hydra.dep.maljson.version}</version>
+      </dependency>
+
+      <!--
+          The sleepycat license has surprisingly strong copyleft
+          properties that do not match the licenses used for the
+          rest of hydra.  It is set as non-transitive to avoid
+          inadvertently pulling it into downstream projects.  In the
+          future hydra should have plugable storage with multiple
+          implementations.
+      -->
+      <dependency>
+        <groupId>com.sleepycat</groupId>
+        <artifactId>je</artifactId>
+        <version>${hydra.dep.sleepycat.je.version}</version>
+        <scope>provided</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+ 
   <reporting>
     <plugins>
       <plugin>
@@ -264,6 +225,40 @@
       </plugin>
     </plugins>
   </reporting>
+
+  <!-- Profiles that control which tests run. These seem like they could just be replaced with system properties -->
+  <profiles>
+    <profile>
+      <id>all-tests</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <!-- exclude local stack tests. These require special setup. -->
+              <excludedGroups>com.addthis.hydra.common.test.LocalStackTest</excludedGroups>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>localstack</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <!-- only include local stack tests. These require special setup. -->
+              <groups>com.addthis.hydra.common.test.LocalStackTest</groups>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
   <scm>
     <connection>scm:git:git@github.com:addthis/hydra.git</connection>

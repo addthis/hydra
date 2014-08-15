@@ -48,34 +48,104 @@
       <artifactId>hydra-task</artifactId>
       <version>${project.version}</version>
     </dependency>
-    <dependency>
-      <groupId>com.addthis</groupId>
-      <artifactId>muxy</artifactId>
-      <version>${hydra.dep.muxy.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.addthis</groupId>
-      <artifactId>meshy</artifactId>
-      <version>${hydra.dep.meshy.version}</version>
-    </dependency>
 
+    <!-- addthis open source -->
     <dependency>
       <groupId>com.addthis</groupId>
-      <artifactId>bark</artifactId>
-      <version>${hydra.dep.bark.version}</version>
+      <artifactId>basis</artifactId>
     </dependency>
     <dependency>
       <groupId>com.addthis</groupId>
       <artifactId>codec</artifactId>
-      <version>${hydra.dep.codec.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.addthis</groupId>
+      <artifactId>muxy</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.addthis</groupId>
+      <artifactId>meshy</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.addthis</groupId>
+      <artifactId>bark</artifactId>
     </dependency>
 
     <!-- 3rd part deps -->
     <dependency>
+      <groupId>com.sleepycat</groupId>
+      <artifactId>je</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.typesafe</groupId>
       <artifactId>config</artifactId>
-      <version>1.2.1</version>
     </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-all</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jgit</groupId>
+      <artifactId>org.eclipse.jgit</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-servlet</artifactId>
+      <version>${hydra.dep.jetty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-websocket</artifactId>
+      <version>${hydra.dep.jetty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-core</artifactId>
+      <version>${hydra.dep.jersey.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-servlet</artifactId>
+      <version>${hydra.dep.jersey.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-json</artifactId>
+      <version>${hydra.dep.jersey.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.yammer.dropwizard</groupId>
+      <artifactId>dropwizard-auth</artifactId>
+      <version>0.6.2</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.yammer.dropwizard</groupId>
+          <artifactId>dropwizard-core</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+     <dependency>
+      <groupId>org.drizzle.jdbc</groupId>
+      <artifactId>drizzle-jdbc</artifactId>
+      <version>1.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.mchange</groupId>
+      <artifactId>c3p0</artifactId>
+      <version>0.9.2.1</version>
+    </dependency>
+
+    <!-- extra metrics dependencies -->
+    <dependency>
+      <groupId>com.yammer.metrics</groupId>
+      <artifactId>metrics-servlet</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.yammer.metrics</groupId>
+      <artifactId>metrics-ganglia</artifactId>
+    </dependency>
+
+    <!-- test deps -->
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
@@ -101,95 +171,5 @@
         </exclusion>
       </exclusions>
     </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-servlet</artifactId>
-      <version>8.1.4.v20120524</version>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>jetty-websocket</artifactId>
-      <version>8.1.4.v20120524</version>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-core</artifactId>
-      <version>${hydra.dep.jersey.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-core-asl</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-mapper-asl</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-servlet</artifactId>
-      <version>${hydra.dep.jersey.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-core-asl</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-mapper-asl</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-json</artifactId>
-      <version>${hydra.dep.jersey.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-core-asl</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.jackson</groupId>
-          <artifactId>jackson-mapper-asl</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>com.yammer.dropwizard</groupId>
-      <artifactId>dropwizard-auth</artifactId>
-      <version>0.6.2</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.yammer.dropwizard</groupId>
-          <artifactId>dropwizard-core</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-all</artifactId>
-      <version>4.0.19.Final</version>
-    </dependency>
-    <dependency>
-      <groupId>com.sleepycat</groupId>
-      <artifactId>je</artifactId>
-      <version>${hydra.dep.sleepycat.je.version}</version>
-      <scope>provided</scope>
-    </dependency>
-     <dependency>
-      <groupId>org.drizzle.jdbc</groupId>
-      <artifactId>drizzle-jdbc</artifactId>
-      <version>1.2</version>
-    </dependency>
-    <dependency>
-      <groupId>com.mchange</groupId>
-      <artifactId>c3p0</artifactId>
-      <version>0.9.2.1</version>
-    </dependency>                
-    <!-- end 3rd party deps -->
-    <!-- test deps -->
-    <!-- end test deps -->
   </dependencies>
 </project>

@@ -24,14 +24,11 @@
   <name>Hydra Essentials Module</name>
   <description>log file processing library</description>
 
-
   <dependencies>
     <!-- addthis deps -->
     <dependency>
       <groupId>com.addthis</groupId>
       <artifactId>codec</artifactId>
-      <version>${hydra.dep.codec.version}</version>
     </dependency>
-    <!-- end addthis deps -->
   </dependencies>
 </project>

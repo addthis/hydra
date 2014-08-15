@@ -16,10 +16,11 @@ package com.addthis.hydra.mq;
 import java.io.IOException;
 import java.io.Serializable;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
 
-import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

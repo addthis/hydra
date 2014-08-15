@@ -35,8 +35,24 @@
       <artifactId>hydra-mq</artifactId>
       <version>${project.version}</version>
     </dependency>
-    <!-- end module deps -->
-    <!-- at os deps -->
+
+    <!-- addthis open source -->
+    <dependency>
+      <groupId>com.addthis</groupId>
+      <artifactId>meshy</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.addthis</groupId>
+      <artifactId>bark</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.addthis</groupId>
+      <artifactId>codec</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.addthis</groupId>
+      <artifactId>bundle</artifactId>
+    </dependency>
     <dependency>
       <groupId>com.addthis.metrics</groupId>
       <artifactId>reporter-config</artifactId>
@@ -50,12 +66,29 @@
           <groupId>org.jboss.logging</groupId>
           <artifactId>jboss-logging</artifactId>
         </exclusion>
-        <!-- reporter-config uses an older version of slf4j-api -->
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-api</artifactId>
-        </exclusion>
       </exclusions>
+    </dependency>
+
+    <!-- 3rd party deps -->
+    <dependency>
+      <groupId>com.typesafe</groupId>
+      <artifactId>config</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>joda-time</groupId>
+      <artifactId>joda-time</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
     </dependency>
     <dependency>
       <groupId>org.jboss.logging</groupId>
@@ -63,47 +96,9 @@
       <version>3.1.3.GA</version>
     </dependency>
     <dependency>
-      <groupId>com.addthis</groupId>
-      <artifactId>meshy</artifactId>
-      <version>${hydra.dep.meshy.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.addthis</groupId>
-      <artifactId>bark</artifactId>
-      <version>${hydra.dep.bark.version}</version>
-    </dependency>
-    <!-- end at os deps -->
-    <!-- 3rd party deps -->
-    <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
-      <version>8.1.4.v20120524</version>
-    </dependency>
-    <dependency>
-      <groupId>com.typesafe</groupId>
-      <artifactId>config</artifactId>
-      <version>1.2.1</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>2.0.1</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.clearspring.common</groupId>
-          <artifactId>codec</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-compress</artifactId>
-      <version>${hydra.dep.compress.apache.commons-compress.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>joda-time</groupId>
-      <artifactId>joda-time</artifactId>
-      <version>${dep.joda-time.version}</version>
+      <version>${hydra.dep.jetty.version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.code.gson</groupId>
@@ -111,7 +106,7 @@
       <version>2.2.4</version>
       <scope>compile</scope>
     </dependency>
-    <!-- end 3rd party deps -->
+
     <!-- test deps -->
     <dependency>
       <groupId>org.easymock</groupId>
@@ -119,17 +114,6 @@
       <version>3.0</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>com.addthis</groupId>
-      <artifactId>codec</artifactId>
-      <version>${hydra.dep.codec.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.addthis</groupId>
-      <artifactId>bundle</artifactId>
-      <version>${hydra.dep.bundle.version}</version>
-    </dependency>
-    <!-- end test deps -->
   </dependencies>
 
   <repositories>

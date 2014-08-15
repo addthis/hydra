@@ -30,42 +30,41 @@
       <artifactId>hydra-store</artifactId>
       <version>${project.version}</version>
     </dependency>
-    <!-- clearspring deps -->
+
+    <!-- addthis open source -->
+    <dependency>
+      <groupId>com.addthis</groupId>
+      <artifactId>basis</artifactId>
+    </dependency>
     <dependency>
       <groupId>com.addthis</groupId>
       <artifactId>codec</artifactId>
-      <version>${hydra.dep.codec.version}</version>
     </dependency>
     <dependency>
       <groupId>com.addthis</groupId>
       <artifactId>bundle</artifactId>
-      <version>${hydra.dep.bundle.version}</version>
     </dependency>
     <dependency>
       <groupId>com.addthis</groupId>
       <artifactId>meshy</artifactId>
-      <version>${hydra.dep.meshy.version}</version>
     </dependency>
     <dependency>
       <groupId>com.addthis</groupId>
       <artifactId>maljson</artifactId>
-      <version>${hydra.dep.maljson.version}</version>
     </dependency>
     <dependency>
       <groupId>com.clearspring.analytics</groupId>
       <artifactId>stream</artifactId>
-      <version>${hydra.dep.streamlib.version}</version>
     </dependency>
+
     <!-- 3rd party deps -->
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
-      <version>${hydra.dep.commons-codec.version}</version>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
-      <version>2.0.1</version>
     </dependency>
     <dependency>
       <groupId>net.sf.jopt-simple</groupId>

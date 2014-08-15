@@ -24,41 +24,31 @@
   <description>Hydra message queue interfaces and implementations</description>
 
   <dependencies>
-    <!-- clearspring -->
+    <!-- addthis open source -->
+    <dependency>
+      <groupId>com.addthis</groupId>
+      <artifactId>codec</artifactId>
+    </dependency>
     <dependency>
       <groupId>com.addthis</groupId>
       <artifactId>bark</artifactId>
-      <version>${hydra.dep.bark.version}</version>
     </dependency>
     <dependency>
       <groupId>com.addthis</groupId>
       <artifactId>meshy</artifactId>
-      <version>${hydra.dep.meshy.version}</version>
     </dependency>
-    <!-- end clearspring -->
+
     <!-- 3rd party -->
     <dependency>
       <groupId>com.rabbitmq</groupId>
       <artifactId>amqp-client</artifactId>
       <version>3.2.3</version>
     </dependency>
-      <dependency>
-          <groupId>org.apache.curator</groupId>
-          <artifactId>curator-recipes</artifactId>
-          <version>2.4.0</version>
-          <exclusions>
-              <!-- curator-recipes 2.4.0 uses an older version of slf4j-api -->
-              <exclusion>
-                  <groupId>org.slf4j</groupId>
-                  <artifactId>slf4j-api</artifactId>
-              </exclusion>
-              <!-- curator-recipes 2.4.0 uses an older version of google guava -->
-              <exclusion>
-                  <groupId>com.google.guava</groupId>
-                  <artifactId>guava</artifactId>
-              </exclusion>
-          </exclusions>
-      </dependency>
+    <dependency>
+      <groupId>org.apache.curator</groupId>
+      <artifactId>curator-recipes</artifactId>
+      <version>2.4.0</version>
+    </dependency>
     <dependency>
       <groupId>net.jodah</groupId>
       <artifactId>lyra</artifactId>

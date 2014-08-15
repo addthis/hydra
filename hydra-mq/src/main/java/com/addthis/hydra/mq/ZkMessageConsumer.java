@@ -22,20 +22,20 @@ import java.util.Set;
 
 import com.addthis.bark.StringSerializer;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ZkMessageConsumer<T extends Serializable> implements MessageConsumer {
 
-    private static Logger log = LoggerFactory.getLogger(ZKMessageProducer.class);
-
+    private static Logger log = LoggerFactory.getLogger(ZkMessageConsumer.class);
 
     private CuratorFramework zkClient;
     private ObjectMapper mapper;

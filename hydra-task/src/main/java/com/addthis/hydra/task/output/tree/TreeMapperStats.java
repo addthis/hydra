@@ -18,8 +18,10 @@ import java.io.IOException;
 import com.addthis.basis.jmx.FieldBasedDynamicMBean;
 import com.addthis.basis.jmx.WrappingDynamicMBean;
 
-import org.codehaus.jackson.map.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.slf4j.Logger;
+
 /**
  * Encapsulation of statistics about a running hydra instance.  Registered
  * in JMX so people can look in on a Hydra remotely.

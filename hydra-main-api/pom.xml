@@ -27,39 +27,10 @@
   </description>
 
   <dependencies>
+    <!-- addthis open source -->
     <dependency>
       <groupId>com.addthis</groupId>
       <artifactId>codec</artifactId>
-      <version>${hydra.dep.codec.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.yammer.metrics</groupId>
-      <artifactId>metrics-servlet</artifactId>
-      <version>${dep.metrics.version}</version>
-      <exclusions>
-        <!-- metrics-servlet uses an older version of jackson-core -->
-        <exclusion>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-core</artifactId>
-        </exclusion>
-        <!-- metrics-servlet uses an older version of jackson-databind -->
-        <exclusion>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-databind</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>com.yammer.metrics</groupId>
-      <artifactId>metrics-ganglia</artifactId>
-      <version>${dep.metrics.version}</version>
-      <exclusions>
-        <!-- metrics-ganglia uses an older version of slf4j-api -->
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-api</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
   </dependencies>
 

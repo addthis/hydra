@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 <!--
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -23,7 +24,6 @@
   <name>Hydra KV Store Module</name>
   <description>log file processing library</description>
 
-
   <dependencies>
     <!-- hydra module deps -->
     <dependency>
@@ -31,16 +31,14 @@
       <artifactId>hydra-essentials</artifactId>
       <version>${project.version}</version>
     </dependency>
+
     <!-- addthis deps -->
     <dependency>
       <groupId>com.addthis</groupId>
       <artifactId>codec</artifactId>
-      <version>${hydra.dep.codec.version}</version>
     </dependency>
-    <!-- end addthis deps -->
 
     <!-- 3rd party -->
-    <!-- begin compression libraries -->
     <dependency>
       <groupId>org.mapdb</groupId>
       <artifactId>mapdb</artifactId>
@@ -49,8 +47,8 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-buffer</artifactId>
-      <version>4.0.19.Final</version>
     </dependency>
+    <!-- begin compression libraries -->
     <dependency>
       <groupId>com.ning</groupId>
       <artifactId>compress-lzf</artifactId>
@@ -74,23 +72,12 @@
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-compress</artifactId>
-      <version>${hydra.dep.compress.apache.commons-compress.version}</version>
     </dependency>
     <!-- end compression libraries -->
 
-    <!--
-        The sleepycat license has surprisingly strong copyleft
-        properties that do not match the licenses used for the
-        rest of hydra.  It is set as non-transitive to avoid
-        inadvertently pulling it into downstream projects.  In the
-        future hydra should have plugable storage with multiple
-        implementations.
-    -->
     <dependency>
       <groupId>com.sleepycat</groupId>
       <artifactId>je</artifactId>
-      <version>${hydra.dep.sleepycat.je.version}</version>
-      <scope>provided</scope>
     </dependency>
     <!-- end 3rd party -->
   </dependencies>
