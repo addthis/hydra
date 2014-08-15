@@ -79,7 +79,7 @@ public class BundleFilterChain extends BundleFilter {
         for (BundleFilter f : filter) {
             if (!f.filterExec(row) && failStop) {
                 if (debug && bundleCounter.getAndIncrement() < debugMaxBundles) {
-                    log.warn("fail @ " + CodecJSON.encodeString(f) + " with " +
+                    log.warn("fail @ " + CodecJSON.tryEncodeString(f, "UNKNOWN") + " with " +
                              BundlePrinter.printBundle(row));
                 }
                 return failReturn;

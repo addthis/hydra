@@ -27,6 +27,8 @@ import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.hydra.data.util.BundleUtils;
 import com.addthis.meshy.ChannelMaster;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,7 +78,7 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
     }
 
     public MeshSourceAggregator(QueryTaskSource[] taskSources, ChannelMaster meshy,
-            MeshQueryMaster meshQueryMaster, Query query) {
+            MeshQueryMaster meshQueryMaster, Query query) throws JsonProcessingException {
         this.taskSources = taskSources;
         this.meshy = meshy;
         this.meshQueryMaster = meshQueryMaster;

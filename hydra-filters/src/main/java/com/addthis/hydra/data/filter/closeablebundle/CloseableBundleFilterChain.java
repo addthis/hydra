@@ -50,7 +50,7 @@ public class CloseableBundleFilterChain extends CloseableBundleFilter {
         for (BundleFilter f : filter) {
             if (!f.filterExec(row) && failStop) {
                 if (debug) {
-                    log.warn("fail @ " + CodecJSON.encodeString(f));
+                    log.warn("fail @ " + CodecJSON.tryEncodeString(f, "UNKNOWN"));
                 }
                 return failReturn;
             }

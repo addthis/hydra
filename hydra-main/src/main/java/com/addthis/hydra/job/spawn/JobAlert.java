@@ -402,7 +402,7 @@ public class JobAlert implements Codable {
                     return "Canary filter is empty";
                 }
                 try {
-                    CodecJSON.decodeObject(BundleFilter.class, new JSONObject(canaryFilter));
+                    CodecJSON.decodeString(BundleFilter.class, canaryFilter);
                 } catch (Exception ex) {
                     return "Error attempting to create bundle filter";
                 }

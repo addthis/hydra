@@ -1284,7 +1284,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
 
         public void save() {
             try {
-                Files.write(new File(getConfigDir(), "job.state"), Bytes.toBytes(CodecJSON.encodeString(this, 4)), false);
+                Files.write(new File(getConfigDir(), "job.state"), Bytes.toBytes(CodecJSON.encodeString(this)), false);
             } catch (Exception e) {
                 log.warn("", e);
             }

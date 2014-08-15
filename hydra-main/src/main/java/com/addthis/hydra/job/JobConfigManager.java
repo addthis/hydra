@@ -27,15 +27,15 @@ import java.util.concurrent.TimeUnit;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.Codec;
+import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.spawn.JobAlert;
 import com.addthis.hydra.job.store.SpawnDataStore;
-import com.addthis.maljson.JSONArray;
-import com.addthis.maljson.JSONObject;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Timer;
@@ -149,20 +149,14 @@ public class JobConfigManager {
      * @return A List of JobAlerts decoded from the config
      */
     private List<JobAlert> loadAlerts(String alertData) {
-        List<JobAlert> alerts = new ArrayList<>();
         if (alertData != null) {
             try {
-                JSONArray alertArray = new JSONArray(alertData);
-                for (int i = 0; i < alertArray.length(); i++) {
-                    JSONObject alertJson = alertArray.getJSONObject(i);
-                    JobAlert jobAlert = CodecJSON.decodeJSON(new JobAlert(), alertJson);
-                    alerts.add(jobAlert);
-                }
+                return Jackson.defaultMapper().readValue(alertData, new TypeReference<List<JobAlert>>() {});
             } catch (Exception ex) {
-                alerts = null;
+                return null;
             }
         }
-        return alerts;
+        return null;
     }
 
     /**

@@ -32,7 +32,6 @@ import com.addthis.hydra.data.util.DateUtil;
 import com.addthis.hydra.data.util.JSONFetcher;
 import com.addthis.hydra.task.stream.StreamFileUtil;
 import com.addthis.maljson.JSONArray;
-import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
 
@@ -169,7 +168,7 @@ public class JobAlertUtil {
         }
         BundleFilter bFilter = null;
         try {
-            bFilter = CodecJSON.decodeObject(BundleFilter.class, new JSONObject(filter));
+            bFilter = CodecJSON.decodeString(BundleFilter.class, filter);
         } catch (Exception ex) {
             alert.appendCanaryOutputMessage("Error attempting to create bundle filter: " + ex + "\n");
             log.error("Error attempting to create bundle filter {}", ex);

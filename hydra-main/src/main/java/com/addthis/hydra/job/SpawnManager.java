@@ -654,10 +654,9 @@ public class SpawnManager {
                 IJob job = spawn.getJob(id);
                 if (job != null) {
                     job = new Job(job);
-                    JSONObject jobobj = null;
                     String field = kv.getValue("field");
                     if (field != null) {
-                        jobobj = job.toJSON();
+                        JSONObject jobobj = job.toJSON();
                         Object oldvalue = jobobj.opt(field);
                         String value = kv.getValue("value");
                         if (value == null) {
@@ -682,7 +681,7 @@ public class SpawnManager {
                         } else {
                             jobobj.put(field, value);
                         }
-                        CodecJSON.decodeJSON(job, jobobj);
+                        CodecJSON.decodeString(job, jobobj.toString());
                         spawn.updateJob(job);
                         spawn.submitConfigUpdate(id, null);
                     } else {
@@ -903,7 +902,7 @@ public class SpawnManager {
                 KVPairs kv = link.getRequestValues();
                 try {
                     String o = StringSerializer.deserialize(spawn.getZkClient().getData().forPath(kv.getValue("path", "/")));
-                    String reply = CodecJSON.encodeString(o, 1);
+                    String reply = CodecJSON.encodeString(o);
                     link.sendShortReply(200, "OK", reply != null && reply.length() > 0 ? reply : "");
                 } catch (Exception e) {
                     link.sendJSON(500, "Error", json("error",e.getMessage()));
