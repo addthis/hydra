@@ -50,7 +50,8 @@ import com.addthis.meshy.service.file.FileReference;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 
-import org.codehaus.jackson.map.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
