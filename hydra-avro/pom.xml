@@ -23,6 +23,27 @@
   <name>Hydra Avro Module</name>
   <description>Avro input and output</description>
 
+  <dependencyManagement>
+    <dependencies>
+      <!-- parquet/ hadoop seem to be internally inconsistent -->
+      <dependency>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+        <version>1.1.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro</artifactId>
+        <version>1.7.7</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-math</artifactId>
+        <version>2.1</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
     <!-- module deps -->
     <dependency>
@@ -45,29 +66,10 @@
     <dependency>
       <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
-      <version>1.7.7</version>
-      <exclusions>
-        <!-- avro uses version snappy version 1.0.5 which is incompatible with older hardware -->
-        <exclusion>
-          <groupId>org.xerial.snappy</groupId>
-          <artifactId>snappy-java</artifactId>
-        </exclusion>
-        <!-- avro uses an older version of slf4j-api -->
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-api</artifactId>
-        </exclusion>
-        <!-- avro uses an older version of commons-compress -->
-        <exclusion>
-          <groupId>org.apache.commons</groupId>
-          <artifactId>commons-compress</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.xerial.snappy</groupId>
       <artifactId>snappy-java</artifactId>
-      <version>${hydra.dep.compress.snappy-java.version}</version>
     </dependency>
     <!-- end 3rd party -->
   </dependencies>
