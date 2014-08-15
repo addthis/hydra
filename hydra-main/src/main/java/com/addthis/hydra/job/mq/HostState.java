@@ -24,8 +24,7 @@ import com.addthis.hydra.job.Minion;
 
 import com.google.common.base.Objects;
 
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.annotate.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties({"messageType", "totalLive"})
 public class HostState implements HostMessage {
@@ -115,6 +114,10 @@ public class HostState implements HostMessage {
         return uuid;
     }
 
+    public void setHostUuid(String uuid) {
+        this.uuid = uuid;
+    }
+
     public long getLastUpdateTime() {
         return lastUpdateTime;
     }
@@ -157,11 +160,6 @@ public class HostState implements HostMessage {
 
     public void setPort(int port) {
         this.port = port;
-    }
-
-    @JsonProperty(value = "hostUuid")
-    public void setUuid(String uuid) {
-        this.uuid = uuid;
     }
 
     public String getGroup() {
