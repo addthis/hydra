@@ -26,6 +26,8 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import org.slf4j.Logger;
@@ -36,6 +38,9 @@ import io.netty.channel.ChannelProgressivePromise;
 /**
  * Object representation of a tree query.
  */
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class Query implements Codable {
 
     public static final Logger traceLog = LoggerFactory.getLogger("query-trace");

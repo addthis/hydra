@@ -22,6 +22,8 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 /**
  * A simple, codable Bloom Filter adhering to the SeenFilter interface.
  * <p>A Bloom filter is a space-efficient probabilistic data structure that is used
@@ -33,6 +35,9 @@ import com.addthis.hydra.common.hash.PluggableHashFunction;
  *
  * @user-reference
  */
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class SeenFilterBasic<K> implements SeenFilter<K>, SuperCodable {
 
     public static final int HASH_HASHCODE = 0; /* mostly bad */

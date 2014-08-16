@@ -133,7 +133,7 @@ class SearchRunner implements Runnable {
     protected void setup() throws Exception {
         long startTime = System.currentTimeMillis();
         MeshQuerySource.queueTimes.update(creationTime - startTime, TimeUnit.MILLISECONDS);
-        query = CodecJSON.decodeString(new Query(), options.get("query"));
+        query = CodecJSON.decodeString(Query.class, options.get("query"));
         // set as soon as possible (and especially before creating op processor)
         query.queryPromise = bridge.queryPromise;
         // Parse the query and return a reference to the last QueryOpProcessor.

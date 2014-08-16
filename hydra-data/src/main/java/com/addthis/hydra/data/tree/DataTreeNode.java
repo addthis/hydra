@@ -17,7 +17,12 @@ import java.util.Map;
 
 import com.addthis.basis.util.ClosableIterator;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 
+
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 public interface DataTreeNode extends Iterable<DataTreeNode> {
 
     /**

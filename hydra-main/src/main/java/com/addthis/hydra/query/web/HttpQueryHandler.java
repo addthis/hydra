@@ -250,7 +250,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             }
             case "/query/decode": {
                 String qo = "{path:" + kv.getValue("query", kv.getValue("path", "")) + "}";
-                Query q = CodecJSON.decodeString(new Query(), qo);
+                Query q = CodecJSON.decodeString(Query.class, qo);
                 writer.write(q.getPaths()[0]);
                 break;
             }
