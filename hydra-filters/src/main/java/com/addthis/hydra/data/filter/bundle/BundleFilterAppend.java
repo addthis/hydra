@@ -26,6 +26,8 @@ import com.addthis.bundle.value.ValueString;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">appends a value to an array</span>.
  * <p/>
@@ -51,11 +53,13 @@ import com.addthis.hydra.data.filter.value.ValueFilter;
  */
 public class BundleFilterAppend extends BundleFilter {
 
+    @JsonIgnore
     public BundleFilterAppend setValues(ArrayList<String> values) {
         this.values = values;
         return this;
     }
 
+    @JsonIgnore
     public BundleFilterAppend setValues(HashSet<String> values) {
         this.values = new ArrayList<>(values.size());
         for (String val : values) {
