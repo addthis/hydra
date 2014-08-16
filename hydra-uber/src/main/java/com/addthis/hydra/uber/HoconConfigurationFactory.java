@@ -25,6 +25,7 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigObject;
 import com.typesafe.config.ConfigParseOptions;
 import com.typesafe.config.ConfigRenderOptions;
+import com.typesafe.config.ConfigResolveOptions;
 
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.ConfigurationSource;
@@ -79,6 +80,9 @@ public class HoconConfigurationFactory extends JsonConfigurationFactory {
                 config = config.getConfig("global")
                                .withFallback(ConfigFactory.load()).resolve()
                                .getConfig("logging");
+            } else {
+                config = config.resolveWith((ConfigFactory.defaultOverrides()),
+                                            ConfigResolveOptions.defaults().setAllowUnresolved(true));
             }
             config = config.resolve();
             ConfigObject configObject = config.root();
