@@ -16,7 +16,6 @@ package com.addthis.hydra.store.db;
 import com.addthis.codec.Codec;
 import com.addthis.codec.binary.CodecBin2;
 import com.addthis.codec.codables.BytesCodable;
-import com.addthis.codec.util.CodableStatistics;
 import com.addthis.hydra.store.kv.KeyCoder;
 import com.addthis.hydra.store.util.Raw;
 
@@ -102,15 +101,6 @@ class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
     @Override
     public boolean nullRawValueInternal(byte[] value) {
         return codec.storesNull(value);
-    }
-
-    public CodableStatistics valueStatistics(V value) {
-        try {
-            CodableStatistics statistics = codec.statistics(value);
-            return statistics;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 
     @Override

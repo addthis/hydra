@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.ClosableIterator;
 
-import com.addthis.codec.util.CodableStatistics;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.kv.ReadExternalPagedStore;
 import com.addthis.hydra.store.kv.metrics.ExternalPagedStoreMetrics;
@@ -267,27 +266,13 @@ public class TreeStatistics {
             ReadTree.CacheKey cacheKey = new ReadTree.CacheKey(readNodeParent.nodeDB(), name);
             long keyBytes = readEPS.getKeyCoder().keyEncode(cacheKey.dbkey()).length;
 
-            // get value statistics
-            CodableStatistics statistics = readEPS.getKeyCoder().valueStatistics(readNode);
-
             nodeState = writeTree.getOrCreateNode(newChild, "node", null);
-
-            long attachSize = getAttachmentStatistics(statistics, nodeState);
-
-            long valueWithAttachments = statistics.getTotalSize();
-            long valueWithoutAttachments = valueWithAttachments - attachSize;
-            long totalBytes = keyBytes + valueWithAttachments;
-
             generateNodeStatisticsEntry(nodeState, "key", keyBytes);
-            generateNodeStatisticsEntry(nodeState, "valueWithAttachments", valueWithAttachments);
-            generateNodeStatisticsEntry(nodeState, "valueWithoutAttachments", valueWithoutAttachments);
-            generateNodeStatisticsEntry(nodeState, "total", totalBytes);
 
             /**
              * If this is a leaf node then set the node counter to the total size
              */
             if (readNode.nodes == 0) {
-                newChild.setCounter(totalBytes);
                 newChild.markChanged();
             }
         } finally {
@@ -317,34 +302,6 @@ public class TreeStatistics {
         }
     }
 
-
-    /**
-     * Generates data attachment statistics on a specific node.
-     */
-    private long getAttachmentStatistics(CodableStatistics statistics, ConcurrentTreeNode newParent) {
-        long size = 0;
-        Map<String, Map<Object, Long>> mapStatistics = statistics.getMapStatistics();
-        ConcurrentTreeNode dataNode = writeTree.getOrCreateNode(newParent, "attachments", null);
-        try {
-            Map<Object, Long> attachments = mapStatistics.get("data");
-
-            if (attachments == null) {
-                return size;
-            }
-
-            for (Map.Entry<Object, Long> entry : attachments.entrySet()) {
-                String name = entry.getKey().toString();
-                long attachmentSize = entry.getValue();
-                generateNodeStatisticsEntry(dataNode, name, attachmentSize);
-                size += attachmentSize;
-            }
-            dataNode.setCounter(size);
-            dataNode.markChanged();
-            return size;
-        } finally {
-            dataNode.release();
-        }
-    }
 
     /**
      * Phase 2 perform a breadth-first search to collect
