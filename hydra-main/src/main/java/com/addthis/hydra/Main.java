@@ -30,6 +30,7 @@ import com.google.common.collect.Sets;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigObject;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,15 +60,20 @@ public class Main {
                         String meshyPorts = Parameter.value("mss.mesh.ports", "5000");
                         String meshyPeers = Parameter.value("mss.mesh.peers", "");
                         for (String portGroup : Strings.splitArray(meshyPorts, ";")) {
-                            System.out.println("[mss] starting meshy with port group: " + portGroup);
+                            log.info("[mss] starting meshy with port group: " + portGroup);
                             com.addthis.meshy.Main.main(new String[]{"server", portGroup, mssRoot, meshyPeers});
                         }
                         break;
                     default:
-                        Class clazz = PluginRegistry.defaultRegistry().asMap()
-                                                    .get("executables").asBiMap()
-                                                    .get(args[0]);
+                        PluginMap executables = PluginRegistry.defaultRegistry().asMap().get("executables");
+                        String name = args[0];
+                        Class clazz = executables.asBiMap().get(name);
                         if (clazz != null) {
+                            ConfigObject banners = executables.config().getObject("_banners");
+                            if (banners.containsKey(name)) {
+                                String banner = banners.get(name).unwrapped().toString();
+                                log.info(String.format("Starting {}%n{}"), name, banner);
+                            }
                             Method m = clazz.getDeclaredMethod("main", String[].class);
                             m.invoke(null, (Object) cutargs(args));
                         } else {
@@ -75,8 +81,7 @@ public class Main {
                         }
                 }
             } catch (Exception e) {
-                System.err.println("Error starting process.");
-                e.printStackTrace();
+                log.error("Error starting process.", e);
                 System.exit(1);
             }
         } else {
