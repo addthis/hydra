@@ -21,11 +21,16 @@ import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.binary.CodecBin2;
 import com.addthis.codec.codables.BytesCodable;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 /**
  * These classes are stored in TreeNodes.  New instances are
  * configured using TreeDataConfig objects which are stored
  * in the 'data' field of PathElements.
  */
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                setterVisibility = JsonAutoDetect.Visibility.NONE)
 @Pluggable("tree node data")
 public abstract class TreeNodeData<C extends TreeDataParameters<?>> implements BytesCodable, DataTreeNodeActor {
 
