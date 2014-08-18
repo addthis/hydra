@@ -123,7 +123,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
      * One of these path elements will serve as the root of the tree.
      */
     @FieldConfig(codable = true)
-    private HashMap<String, PathElement[]> paths;
+    private Map<String, PathElement[]> paths;
 
     /**
      * Optional path that is processed once
