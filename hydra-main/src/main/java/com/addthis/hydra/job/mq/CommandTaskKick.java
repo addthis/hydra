@@ -15,6 +15,8 @@ package com.addthis.hydra.job.mq;
 
 import com.addthis.codec.annotations.FieldConfig;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class CommandTaskKick implements JobMessage {
 
     private static final long serialVersionUID = -7588140676324569250L;
@@ -84,12 +86,12 @@ public class CommandTaskKick implements JobMessage {
         this.replicas = replicas;
     }
 
-    @Override
+    @Override @JsonIgnore
     public String getJobUuid() {
         return jobKey.getJobUuid();
     }
 
-    @Override
+    @Override @JsonIgnore
     public Integer getNodeID() {
         return jobKey.getNodeNumber();
     }
