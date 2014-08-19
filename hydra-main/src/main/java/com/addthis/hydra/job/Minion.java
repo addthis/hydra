@@ -1150,6 +1150,9 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     /**
      * for tracking state
      */
+    @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+                    isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+                    setterVisibility = JsonAutoDetect.Visibility.NONE)
     public class JobTask implements Codable {
 
         @FieldConfig(codable = true, required = true)
