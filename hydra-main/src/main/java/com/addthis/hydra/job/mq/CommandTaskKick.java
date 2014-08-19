@@ -96,7 +96,7 @@ public class CommandTaskKick implements JobMessage {
         return jobKey.getNodeNumber();
     }
 
-    @Override
+    @Override @JsonIgnore
     public TYPE getMessageType() {
         return TYPE.CMD_TASK_KICK;
     }
