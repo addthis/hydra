@@ -50,7 +50,6 @@ import org.slf4j.LoggerFactory;
 
 @Beta
 public class OutputStreamAvro extends OutputStreamFormatter {
-    private static final Logger log = LoggerFactory.getLogger(OutputStreamAvro.class);
 
     private final Schema                     outputSchema;
     private final DatumWriter<GenericRecord> datumWriter;
