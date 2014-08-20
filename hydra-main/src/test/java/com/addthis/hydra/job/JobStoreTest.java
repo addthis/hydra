@@ -13,6 +13,10 @@
  */
 package com.addthis.hydra.job;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 
 import com.addthis.basis.util.Files;
@@ -20,32 +24,64 @@ import com.addthis.basis.util.Files;
 import com.addthis.hydra.job.store.JobStore;
 import com.addthis.maljson.JSONArray;
 
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class JobStoreTest {
 
+    private static final String JOB_ID = "abc123";
+
+    private File tempDir;
+    private JobStore jobStore;
+
+    @Before
+    public void setUp() throws Exception {
+        System.setProperty("job.store.remote", "false");
+        tempDir = Files.createTempDir();
+        jobStore = new JobStore(tempDir);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        Files.deleteDir(tempDir);
+    }
+
     @Test
     public void jobStoreTest() throws Exception {
-        System.setProperty("job.store.remote", "false");
-        File tempDir = Files.createTempDir();
-        JobStore jobStore = new JobStore(tempDir);
-        String jobId = "abc123";
         for (int i = 0; i < 10; i++) {
-            jobStore.submitConfigUpdate(jobId, "anon" + i, "jobconfig" + i, null);
+            jobStore.submitConfigUpdate(JOB_ID, "anon" + i, "jobconfig" + i, null);
         }
         String finalConfig = "a\nb\nc";
-        jobStore.submitConfigUpdate(jobId, "anonF", finalConfig, null);
-        JSONArray arr = jobStore.getHistory(jobId);
+        jobStore.submitConfigUpdate(JOB_ID, "anonF", finalConfig, null);
+        JSONArray arr = jobStore.getHistory(JOB_ID);
         assertEquals("should get correct number of updates", 11, arr.length());
         assertTrue("update should have correct changes", arr.getJSONObject(5).getString("msg").matches(".*added 1.*removed 1.*"));
         String midCommitId = arr.getJSONObject(5).getString("commit");
         assertEquals("should get correct historical config", "jobconfig5\n", jobStore.fetchHistoricalConfig("abc123", midCommitId));
-        assertEquals("should still have correct latest config", finalConfig + "\n", new String(Files.read(new File(tempDir + "/jobs/" + jobId))));
-        String diff = jobStore.getDiff(jobId, midCommitId);
+        assertEquals("should still have correct latest config", finalConfig + "\n", new String(Files.read(new File(tempDir + "/jobs/" + JOB_ID))));
+        String diff = jobStore.getDiff(JOB_ID, midCommitId);
         assertTrue("diff should have expected components", diff.contains("-jobconfig") && diff.contains("+a"));
-        Files.deleteDir(tempDir);
+    }
+
+    @Test
+    public void getDeletedJobConfigSuccessTest() throws Exception {
+        jobStore.submitConfigUpdate(JOB_ID, "bob", "config 1", null);
+        jobStore.submitConfigUpdate(JOB_ID, "bob", "config 2", null);
+        jobStore.delete(JOB_ID);
+        assertEquals("config 2\n", jobStore.getDeletedJobConfig(JOB_ID));
+    }
+
+    @Test
+    public void getDeletedJobConfigNoCommitTest() throws Exception {
+        jobStore.submitConfigUpdate(JOB_ID, "bob", "config 1", null);
+        assertNull(jobStore.getDeletedJobConfig("bogus_job_id"));
+    }
+
+    @Test(expected = GitAPIException.class)
+    public void getDeletedJobConfigGitErrorTest() throws Exception {
+        // without the init commit jgit will throw an No HEAD exception 
+        jobStore.getDeletedJobConfig("bogus_job_id");
     }
 }

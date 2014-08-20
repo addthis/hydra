@@ -30,6 +30,7 @@ import com.google.common.cache.CacheBuilder;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * A class for storing job config versioning.
  */
@@ -72,7 +73,7 @@ public class JobStore {
             return jobStoreGit.getGitLog(jobId);
         } catch (Exception e) {
             log.warn("Failed to get history for jobId " + jobId + ": " + e, e);
-            }
+        }
         return empty;
     }
 
@@ -93,9 +94,9 @@ public class JobStore {
             }
         } catch (GitAPIException g) {
             log.warn("Failed to getch git diff for jobId " + jobId + ": " + g, g);
-            } catch (IOException e) {
+        } catch (IOException e) {
             log.warn("Failed to find file for jobId " + jobId + ": " + e, e);
-            }
+        }
         return null;
     }
 
@@ -111,10 +112,35 @@ public class JobStore {
             return jobStoreGit.fetchJobConfigFromHistory(jobId, commitId);
         } catch (IOException io) {
             log.warn("Failed to read stored job for " + jobId + ": " + io, io);
-            } catch (GitAPIException g) {
+        } catch (GitAPIException g) {
             log.warn("Failed to fetch historical config for " + jobId + ": " + g, g);
-            }
+        }
         return null;
+    }
+
+    /**
+     * Returns the full config at the time when a job was deleted.
+     * 
+     * It's the caller's responsibility to ensure that the job was indeed deleted. If the job 
+     * exists, there's no guarantee as to what this method returns.
+     * 
+     * @param jobId The ID of a deleted job.
+     * @return <code>null</code> if unable to find commit history of the job
+     * @throws Exception if any underlying git error occurred
+     */
+    public String getDeletedJobConfig(String jobId) throws Exception {
+        try {
+            String commit = jobStoreGit.getCommitHashBeforeJobDeletion(jobId);
+            if (commit == null) {
+                log.warn("Unable to find commit history for job {}", jobId);
+                return null;
+            } else {
+                return jobStoreGit.fetchJobConfigFromHistory(jobId, commit);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get deleted config for job {}: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
     /**
@@ -156,7 +182,7 @@ public class JobStore {
                 jobStoreGit.commit(jobId, author, config, commitMessage);
             } catch (Exception io) {
                 log.warn("Failed to save config to file: " + io, io);
-                }
+            }
         }
     }
 

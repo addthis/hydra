@@ -987,6 +987,17 @@ public class Spawn implements Codable {
     public String diff(String jobId, String commitId) {
         return jobStore != null ? jobStore.getDiff(jobId, commitId) : null;
     }
+    
+    public String getDeletedJobConfig(String jobId) throws Exception {
+        requireJobStore();
+        return jobStore.getDeletedJobConfig(jobId);
+    }
+
+    private void requireJobStore() throws Exception {
+        if (jobStore == null) {
+            throw new Exception("Job history is disabled.");
+        }
+    }
 
     public Job createJob(String creator, int taskCount, Collection<String> taskHosts, String minionType, String command) throws Exception {
         jobLock.lock();
