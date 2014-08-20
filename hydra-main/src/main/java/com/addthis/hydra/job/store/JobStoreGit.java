@@ -26,7 +26,10 @@ import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.maljson.JSONArray;
+import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
+
+import com.google.common.collect.Iterables;
 
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.DiffCommand;
@@ -47,6 +50,7 @@ import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * A class for storing/retrieving files from a git repository.
  */
@@ -63,6 +67,7 @@ public class JobStoreGit {
     private static final String gitPassword = Parameter.value("git.password", "");
     private static final String gitUrl = Parameter.value("git.url", "");
     private static final UsernamePasswordCredentialsProvider provider = new UsernamePasswordCredentialsProvider(gitUser, gitPassword);
+    @SuppressWarnings("unused")
     private static final Logger log = LoggerFactory.getLogger(JobStoreGit.class);
     boolean haveRemoteBranch = false;
 
@@ -98,6 +103,26 @@ public class JobStoreGit {
             git.reset().setMode(ResetCommand.ResetType.HARD).call();
             return rv;
         }
+    }
+
+    /**
+     * Returns the hash of the last commit before a job was deleted.
+     * 
+     * This method uses the following git command equivalent:
+     * <pre>
+     * git log --all --skip=1 -n 1 -- jobs/[jobId]
+     * </pre>
+     * which only works as intended with deleted jobs. 
+     * 
+     * @param jobId     The id of a deleted job.
+     * @throws GitAPIException
+     * @throws IOException
+     */
+    public String getCommitHashBeforeJobDeletion(String jobId) throws GitAPIException, IOException {
+        // skip=1 skips the deletion, and -n 1 returns only the commit immediately before that
+        Iterable<RevCommit> iter = git.log().all().addPath(getPathForJobId(jobId)).setSkip(1).setMaxCount(1).call();
+        RevCommit commit = Iterables.getFirst(iter, null);
+        return commit == null ? null : commit.getName();
     }
 
     /**
@@ -308,7 +333,6 @@ public class JobStoreGit {
     private String getPathForJobId(String jobId) {
         return jobDir.getName() + "/" + jobId;
     }
-
 
     private boolean haveRemoteBranch() throws GitAPIException {
         if (haveRemoteBranch) {

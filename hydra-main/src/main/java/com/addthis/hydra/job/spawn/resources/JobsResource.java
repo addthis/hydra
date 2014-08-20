@@ -812,6 +812,29 @@ public class JobsResource {
         return Response.ok(spawn.diff(id, commit)).build();
     }
 
+    @GET
+    @Path("/config.deleted")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response getDeletedJobConfig(@QueryParam("id") String id) {
+        Response.ResponseBuilder rb;
+        if (spawn.getJob(id) == null) {
+            try {
+                String jobConfig = spawn.getDeletedJobConfig(id);
+                if (jobConfig != null) {
+                    rb = Response.ok(jobConfig);
+                } else {
+                    String err = "Unable to find commit history for job " + id;
+                    rb = Response.status(Response.Status.BAD_REQUEST).entity(err);
+                }
+            } catch (Exception e) {
+                rb = Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage());
+            }
+        } else {
+            rb = Response.status(Response.Status.BAD_REQUEST).entity("Job " + id + " exists!");
+        }
+        return rb.build();
+    }
+
     @POST
     @Path("/submit")
     @Produces(MediaType.APPLICATION_JSON)
