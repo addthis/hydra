@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.job.Spawn;
+import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 

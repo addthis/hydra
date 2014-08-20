@@ -18,7 +18,7 @@ import java.util.Arrays;
 
 import com.addthis.basis.util.Strings;
 
-import com.addthis.hydra.job.spawn.JobAlert;
+import com.addthis.hydra.job.web.JobAlert;
 import com.addthis.maljson.JSONObject;
 
 import org.junit.Test;

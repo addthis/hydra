@@ -17,6 +17,9 @@ import java.io.File;
 
 import java.util.List;
 
+import com.addthis.hydra.job.minion.Minion;
+import com.addthis.hydra.job.minion.MinionWorkItem;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 public class RunTaskWorkItem extends MinionWorkItem {

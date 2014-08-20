@@ -15,6 +15,8 @@ package com.addthis.hydra.job;
 
 import java.io.File;
 
+import com.addthis.hydra.job.minion.Minion;
+import com.addthis.hydra.job.minion.MinionWorkItem;
 import com.addthis.hydra.job.mq.ReplicaTarget;
 
 import org.slf4j.Logger;

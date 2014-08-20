@@ -21,7 +21,7 @@ import java.util.List;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.job.Minion;
+import com.addthis.hydra.job.minion.Minion;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +41,7 @@ public class MinionWriteableDiskCheck extends WriteableDiskCheck {
 
     /**
      * If this method is invoked from a context where
-     * {@link com.addthis.hydra.job.Minion#doStart()}
+     * {@link Minion#doStart()}
      * is above it on the stack frame then minion.shutdown
      * has been set to true and therefore do not call
      * System.exit() or the shutdown hook will deadlock.

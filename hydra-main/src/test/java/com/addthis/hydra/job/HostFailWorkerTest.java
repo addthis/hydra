@@ -21,6 +21,7 @@ import com.addthis.bark.ZkStartUtil;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
+import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
 
