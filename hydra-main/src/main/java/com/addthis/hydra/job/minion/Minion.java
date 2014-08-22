@@ -13,10 +13,6 @@
  */
 package com.addthis.hydra.job.minion;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
@@ -27,7 +23,6 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -46,7 +41,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
@@ -81,7 +75,6 @@ import com.addthis.hydra.mq.RabbitQueueingConsumer;
 import com.addthis.hydra.mq.ZKMessageProducer;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
-import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.MeshyClientConnector;
 
@@ -104,9 +97,7 @@ import org.apache.curator.framework.state.ConnectionState;
 import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.zookeeper.KeeperException;
 
-import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.util.BlockingArrayQueue;
 import org.joda.time.format.DateTimeFormat;
@@ -120,21 +111,19 @@ import org.slf4j.LoggerFactory;
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
-public class Minion extends AbstractHandler implements MessageListener, Codable {
+public class Minion implements MessageListener, Codable {
     private static final Logger log = LoggerFactory.getLogger(Minion.class);
 
-    static boolean meshQueue = Parameter.boolValue("queue.mesh", false);
+    static final boolean meshQueue = Parameter.boolValue("queue.mesh", false);
     private static final String meshHost = Parameter.value("mesh.host", "localhost");
     private static final int meshPort = Parameter.intValue("mesh.port", 5000);
     private static final int meshRetryTimeout = Parameter.intValue("mesh.retry.timeout", 5000);
-    private static int webPort = Parameter.intValue("minion.web.port", 5051);
-    private static int minJobPort = Parameter.intValue("minion.job.baseport", 0);
-    private static int maxJobPort = Parameter.intValue("minion.job.maxport", 0);
-    static ReentrantLock capacityLock = new ReentrantLock();
-    private static String dataDir = System.getProperty("minion.data.dir", "minion");
-    private static String group = System.getProperty("minion.group", "none");
-    private static String localHost = System.getProperty("minion.localhost");
-    static final DateTimeFormatter timeFormat = DateTimeFormat.forPattern("yyMMdd-HHmmss");
+    private static final int webPort = Parameter.intValue("minion.web.port", 5051);
+    private static final int minJobPort = Parameter.intValue("minion.job.baseport", 0);
+    private static final int maxJobPort = Parameter.intValue("minion.job.maxport", 0);
+    private static final String dataDir = System.getProperty("minion.data.dir", "minion");
+    private static final String group = System.getProperty("minion.group", "none");
+    private static final String localHost = System.getProperty("minion.localhost");
     private static final String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
     private static final String batchBrokerPort = Parameter.value("batch.brokerPort", "5672");
     private static final int mqReconnectDelay = Parameter.intValue("mq.reconnect.delay", 10000);
@@ -142,22 +131,31 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     private static final int sendStatusRetries = Parameter.intValue("send.status.retries", 5);
     private static final int sendStatusRetryDelay = Parameter.intValue("send.status.delay", 5000);
     static final long hostMetricUpdaterInterval = Parameter.longValue("minion.host.metric.interval", 30 * 1000);
-    static final String remoteConnectMethod = Parameter.value("minion.remote.connect.method", "ssh -o StrictHostKeyChecking=no -o TCPKeepAlive=yes -o ServerAliveInterval=30");
+    static final String remoteConnectMethod = Parameter.value("minion.remote.connect.method",
+                                                              "ssh -o StrictHostKeyChecking=no -o TCPKeepAlive=yes -o ServerAliveInterval=30");
     static final String rsyncCommand = Parameter.value("minion.rsync.command", "rsync");
     private static final int maxActiveTasks = Parameter.intValue("minion.max.active.tasks", 3);
     static final int copyRetryLimit = Parameter.intValue("minion.copy.retry.limit", 3);
     static final int copyRetryDelaySeconds = Parameter.intValue("minion.copy.retry.delay", 10);
     /* If the following var is positive, it is passed as the bwlimit arg to rsync. If <= 0, it is ignored. */
     static final int copyBandwidthLimit = Parameter.intValue("minion.copy.bwlimit", -1);
-    static ReentrantLock revertLock = new ReentrantLock();
+    static final ReentrantLock revertLock = new ReentrantLock();
+    static final ReentrantLock capacityLock = new ReentrantLock();
 
-    static String echoWithDate_cmd = "echo `date '+%y/%m/%d %H:%M:%S'` ";
+    static final DateTimeFormatter timeFormat = DateTimeFormat.forPattern("yyMMdd-HHmmss");
+    static final String echoWithDate_cmd = "echo `date '+%y/%m/%d %H:%M:%S'` ";
 
     public static final String MINION_ZK_PATH = "/minion/";
     public static final String defaultMinionType = Parameter.value("minion.type", "default");
 
     public static void main(String[] args) throws Exception {
-        new Minion(new File(args.length > 0 ? args[0] : dataDir), args.length > 2 ? Integer.parseInt(args[1]) : webPort);
+        File rootDir;
+        if (args.length > 0) {
+            rootDir = new File(args[0]);
+        } else {
+            rootDir = new File(dataDir);
+        }
+        new Minion(rootDir);
     }
 
     @FieldConfig(required = true) String uuid;
@@ -174,7 +172,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     // wait on a lengthy revert / delete / etc.
     final ExecutorService promoteDemoteTaskExecutorService = MoreExecutors.getExitingExecutorService(
             new ThreadPoolExecutor(4, 4, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
-    Lock minionStateLock = new ReentrantLock();
+    final Lock minionStateLock = new ReentrantLock();
     // Historical metrics
     Timer fileStatsTimer;
     Counter sendStatusFailCount;
@@ -198,6 +196,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     final AtomicLong diskFree = new AtomicLong(0);
     final Server jetty;
     final ServletHandler metricsHandler;
+    final MinionHandler minionHandler = new MinionHandler(this);
     final boolean readOnly;
     boolean diskReadOnly;
     MinionWriteableDiskCheck diskHealthCheck;
@@ -220,54 +219,58 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         uuid = UUID.randomUUID().toString();
 
         // null placeholder for now
-        this.rootDir = null;
-        this.nextPort = 0;
-        this.startTime = 0;
-        this.stateFile = null;
-        this.liveEverywhereMarkerFile = null;
-        this.myHost = null;
-        this.user = null;
-        this.path = null;
-        this.jetty = null;
-        this.metricsHandler = null;
-        this.readOnly = false;
-        this.diskReadOnly = false;
-        this.minionPid = -1;
-        this.activeTaskKeys = new HashSet<>();
-        this.zkClient = zkClient;
+        rootDir = null;
+        nextPort = 0;
+        startTime = 0;
+        stateFile = null;
+        liveEverywhereMarkerFile = null;
+        myHost = null;
+        user = null;
+        path = null;
+        jetty = null;
+        metricsHandler = null;
+        readOnly = false;
+        diskReadOnly = false;
+        minionPid = -1;
+        activeTaskKeys = new HashSet<>();
+        zkClient = zkClient;
     }
 
     @VisibleForTesting
-    public Minion(File rootDir, int port) throws Exception {
+    public Minion(File rootDir) throws Exception {
         this.rootDir = rootDir;
-        this.nextPort = minJobPort;
-        this.startTime = System.currentTimeMillis();
-        this.stateFile = new File(Files.initDirectory(rootDir), "minion.state");
-        this.liveEverywhereMarkerFile = new File(rootDir, "liveeverywhere.marker");
-        this.myHost = (localHost != null ? localHost : InetAddress.getLocalHost().getHostAddress());
-        this.user = new SimpleExec("whoami").join().stdoutString().trim();
-        this.path = rootDir.getAbsolutePath();
-        this.diskTotal.set(rootDir.getTotalSpace());
-        this.diskFree.set(rootDir.getFreeSpace());
-        this.diskReadOnly = false;
-        this.readOnly = Boolean.getBoolean("minion.readOnly");
+        nextPort = minJobPort;
+        startTime = System.currentTimeMillis();
+        stateFile = new File(Files.initDirectory(rootDir), "minion.state");
+        liveEverywhereMarkerFile = new File(rootDir, "liveeverywhere.marker");
+        if (localHost != null) {
+            myHost = localHost;
+        } else {
+            myHost = InetAddress.getLocalHost().getHostAddress();
+        }
+        user = new SimpleExec("whoami").join().stdoutString().trim();
+        path = rootDir.getAbsolutePath();
+        diskTotal.set(rootDir.getTotalSpace());
+        diskFree.set(rootDir.getFreeSpace());
+        diskReadOnly = false;
+        readOnly = Boolean.getBoolean("minion.readOnly");
         minionTaskDeleter = new MinionTaskDeleter();
         if (stateFile.exists()) {
             CodecJSON.decodeString(this, Bytes.toString(Files.read(stateFile)));
         } else {
             uuid = UUID.randomUUID().toString();
         }
-        File minionTypes = new File(rootDir, "minion.types");
-        this.minionTypes = minionTypes.exists() ? new String(Files.read(minionTypes)).replaceAll("\n", "") : defaultMinionType;
-        this.activeTaskKeys = new HashSet<>();
+        File minionTypesFile = new File(rootDir, "minion.types");
+        minionTypes = minionTypesFile.exists() ? new String(Files.read(minionTypesFile)).replaceAll("\n", "") : defaultMinionType;
+        activeTaskKeys = new HashSet<>();
         jetty = new Server(webPort);
-        jetty.setHandler(this);
+        jetty.setHandler(minionHandler);
         jetty.start();
         waitForJetty();
         sendStatusFailCount = Metrics.newCounter(Minion.class, "sendStatusFail-" + getJettyPort() + "-JMXONLY");
         sendStatusFailAfterRetriesCount = Metrics.newCounter(Minion.class, "sendStatusFailAfterRetries-" + getJettyPort() + "-JMXONLY");
         fileStatsTimer = Metrics.newTimer(Minion.class, "JobTask-byte-size-timer");
-        this.metricsHandler = MetricsServletMaker.makeHandler();
+        metricsHandler = MetricsServletMaker.makeHandler();
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 try {
@@ -294,8 +297,8 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
             writeState();
             runner = new TaskRunner(this);
             runner.start();
-            this.diskHealthCheck = new MinionWriteableDiskCheck(this);
-            this.diskHealthCheck.startHealthCheckThread();
+            diskHealthCheck = new MinionWriteableDiskCheck(Minion.this);
+            diskHealthCheck.startHealthCheckThread();
             sendHostStatus();
             log.info("[init] up on {}:{} as {} in {}", myHost, getJettyPort(), user, path);
             String processName = ManagementFactory.getRuntimeMXBean().getName();
@@ -308,11 +311,11 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     }
 
     public File getRootDir() {
-        return this.rootDir;
+        return rootDir;
     }
 
     public void setDiskReadOnly(boolean disk_read_only) {
-        this.diskReadOnly = disk_read_only;
+        diskReadOnly = disk_read_only;
     }
 
     private int getJettyPort() {
@@ -371,7 +374,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                 }
             });
             batchControlConsumer = new MeshMessageConsumer(mesh.getClient(), "CSBatchControl", uuid).addRoutingKey(HostMessage.ALL_HOSTS);
-            batchControlConsumer.addMessageListener(this);
+            batchControlConsumer.addMessageListener(Minion.this);
         } else {
             connectToRabbitMQ();
         }
@@ -391,7 +394,8 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
             channel.queueBind(queueName, "CSBatchJob", HostMessage.ALL_HOSTS);
             batchJobConsumer = new RabbitQueueingConsumer(channel);
             channel.basicConsume(queueName, false, batchJobConsumer);
-            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", uuid + ".batchControl", this, routingKeys);
+            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", uuid + ".batchControl",
+                                                             Minion.this, routingKeys);
             return true;
         } catch (IOException e) {
             log.error("Error connecting to rabbitmq {}:{}", batchBrokerHost, batchBrokerPort, e);
@@ -406,7 +410,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         System.exit(1);
     }
 
-    private void disconnectFromMQ() {
+    void disconnectFromMQ() {
         try {
             if (batchControlConsumer != null) {
                 batchControlConsumer.close();
@@ -555,28 +559,28 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                     sendHostStatus();
                     break;
                 case CMD_TASK_STOP:
-                    messageTaskExecutorService.execute(new CommandTaskStopRunner(this, core));
+                    messageTaskExecutorService.execute(new CommandTaskStopRunner(Minion.this, core));
                     break;
                 case CMD_TASK_REVERT:
-                    messageTaskExecutorService.execute(new CommandTaskRevertRunner(this, core));
+                    messageTaskExecutorService.execute(new CommandTaskRevertRunner(Minion.this, core));
                     break;
                 case CMD_TASK_DELETE:
-                    messageTaskExecutorService.execute(new CommandTaskDeleteRunner(this, core));
+                    messageTaskExecutorService.execute(new CommandTaskDeleteRunner(Minion.this, core));
                     break;
                 case CMD_TASK_REPLICATE:
-                    messageTaskExecutorService.execute(new CommandTaskReplicateRunner(this, core));
+                    messageTaskExecutorService.execute(new CommandTaskReplicateRunner(Minion.this, core));
                     break;
                 case CMD_TASK_PROMOTE_REPLICA:
                     // Legacy; ignore
                     break;
                 case CMD_TASK_NEW:
-                    messageTaskExecutorService.execute(new CommandCreateNewTask(this, core));
+                    messageTaskExecutorService.execute(new CommandCreateNewTask(Minion.this, core));
                     break;
                 case CMD_TASK_DEMOTE_REPLICA:
                     // Legacy; ignore
                     break;
                 case CMD_TASK_UPDATE_REPLICAS:
-                    promoteDemoteTaskExecutorService.execute(new CommandTaskUpdateReplicasRunner(this, core));
+                    promoteDemoteTaskExecutorService.execute(new CommandTaskUpdateReplicasRunner(Minion.this, core));
                     break;
                 case STATUS_TASK_JUMP_SHIP:
                     break;
@@ -590,7 +594,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     /**
      * import/update jobs from a given root
      */
-    private int updateJobsMeta(File jobsRoot) throws IOException {
+    int updateJobsMeta(File jobsRoot) throws IOException {
         int loaded = 0;
         File[] list = jobsRoot.isDirectory() ? jobsRoot.listFiles() : null;
         if (list == null || list.length == 0) {
@@ -633,7 +637,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         JobKey key = new JobKey(jobID, taskID);
         JobTask task = tasks.get(key.toString());
         if (task == null) {
-            task = new JobTask(this);
+            task = new JobTask(Minion.this);
             tasks.put(key.toString(), task);
         }
         if (task.restoreTaskState(taskRoot)) {
@@ -648,11 +652,11 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     void writeState() {
         minionStateLock.lock();
         try {
-            Files.write(stateFile, Bytes.toBytes(CodecJSON.encodeString(this)), false);
+            Files.write(stateFile, Bytes.toBytes(CodecJSON.encodeString(minionHandler)), false);
         } catch (IOException io) {
             log.warn("", io);
             /* assume disk failure: set diskReadOnly=true and exit */
-            this.diskHealthCheck.onFailure();
+            Minion.this.diskHealthCheck.onFailure();
         } finally {
             minionStateLock.unlock();
         }
@@ -836,28 +840,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         }
     }
 
-    @Override
-    public void doStop() {
-        if (!shutdown.getAndSet(true)) {
-            writeState();
-            log.info("[minion] stopping and sending updated stats to spawn");
-            sendHostStatus();
-            if (runner != null) {
-                runner.stopTaskRunner();
-            }
-            try {
-                Thread.sleep(1000);
-            } catch (Exception ex) {
-                log.warn("", ex);
-            }
-            disconnectFromMQ();
-        }
-    }
-
-    @Override
-    public void doStart() {
-    }
-
     synchronized int findNextPort() {
         if (minJobPort == 0) {
             return 0;
@@ -880,132 +862,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
             }
         }
         return nextPort;
-    }
-
-    @Override
-    public void handle(String target, Request request, HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws IOException, ServletException {
-        try {
-            doHandle(target, request, httpServletRequest, httpServletResponse);
-        } catch (IOException | ServletException io) {
-            throw io;
-        } catch (Exception ex) {
-            throw new IOException(ex);
-        }
-    }
-
-    public void doHandle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        response.setBufferSize(65535);
-        response.setHeader("Access-Control-Allow-Origin", "*");
-        response.setHeader("Access-Control-Allow-Headers", "accept, username");
-        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT");
-        KVPairs kv = new KVPairs();
-        boolean handled = true;
-        for (Enumeration<String> e = request.getParameterNames(); e.hasMoreElements(); ) {
-            String k = e.nextElement();
-            String v = request.getParameter(k);
-            kv.add(k, v);
-        }
-        if (target.equals("/ping")) {
-            response.getWriter().write("ACK");
-        } else if (target.startsWith("/metrics")) {
-            metricsHandler.handle(target, baseRequest, request, response);
-        } else if (target.equals("/job.port")) {
-            String job = kv.getValue("id");
-            int taskID = kv.getIntValue("node", -1);
-            JobKey key = new JobKey(job, taskID);
-            JobTask task = tasks.get(key.toString());
-            Integer jobPort = null;
-            if (task != null) {
-                jobPort = task.getPort();
-            }
-            response.getWriter().write("{port:" + (jobPort != null ? jobPort : 0) + "}");
-        } else if (target.equals("/job.profile")) {
-            String jobName = kv.getValue("id", "") + "/" + kv.getIntValue("node", 0);
-            JobTask job = tasks.get(jobName);
-            if (job != null) {
-                response.getWriter().write(job.profile());
-            } else {
-                response.sendError(400, "No Job");
-            }
-        } else if (target.equals("/job.head")) {
-            String jobName = kv.getValue("id", "") + "/" + kv.getIntValue("node", 0);
-            int lines = kv.getIntValue("lines", 10);
-            boolean out = !kv.getValue("out", "0").equals("0");
-            boolean err = !kv.getValue("err", "0").equals("0");
-            String html = kv.getValue("html");
-            JobTask job = tasks.get(jobName);
-            if (job != null) {
-                String outB = out ? job.head(job.logOut, lines) : "";
-                String errB = err ? job.head(job.logErr, lines) : "";
-                if (html != null) {
-                    html = html.replace("{{out}}", outB);
-                    html = html.replace("{{err}}", errB);
-                    response.setContentType("text/html");
-                    response.getWriter().write(html);
-                } else {
-                    response.getWriter().write(new JSONObject().put("out", outB).put("err", errB).toString());
-                }
-            } else {
-                response.sendError(400, "No Job");
-            }
-        } else if (target.equals("/job.tail")) {
-            String jobName = kv.getValue("id", "") + "/" + kv.getIntValue("node", 0);
-            int lines = kv.getIntValue("lines", 10);
-            boolean out = !kv.getValue("out", "0").equals("0");
-            boolean err = !kv.getValue("err", "0").equals("0");
-            String html = kv.getValue("html");
-            JobTask job = tasks.get(jobName);
-            if (job != null) {
-                String outB = out ? job.tail(job.logOut, lines) : "";
-                String errB = err ? job.tail(job.logErr, lines) : "";
-                if (html != null) {
-                    html = html.replace("{{out}}", outB);
-                    html = html.replace("{{err}}", errB);
-                    response.setContentType("text/html");
-                    response.getWriter().write(html);
-                } else {
-                    response.getWriter().write(new JSONObject().put("out", outB).put("err", errB).toString());
-                }
-            } else {
-                response.sendError(400, "No Job");
-            }
-        } else if (target.equals("/job.log")) {
-            String jobName = kv.getValue("id", "") + "/" + kv.getIntValue("node", 0);
-            int offset = kv.getIntValue("offset", -1);
-            int lines = kv.getIntValue("lines", 10);
-            boolean out = kv.getValue("out", "1").equals("1");
-            JobTask job = tasks.get(jobName);
-            if (job != null) {
-                File log = (out ? job.logOut : job.logErr);
-                response.getWriter().write(job.readLogLines(log, offset, lines).toString());
-            } else {
-                response.sendError(400, "No Job");
-            }
-        } else if (target.equals("/jobs.import")) {
-            int count = updateJobsMeta(new File(kv.getValue("dir", ".")));
-            response.getWriter().write("imported " + count + " jobs");
-        } else if (target.equals("/xdebug/findnextport")) {
-            int port = findNextPort();
-            response.getWriter().write("port: " + port);
-        } else if (target.equals("/active.tasks")) {
-            capacityLock.lock();
-            try {
-                response.getWriter().write("tasks: " + activeTaskKeys.toString());
-            } finally {
-                capacityLock.unlock();
-            }
-        } else if (target.equals("/task.size")) {
-            String jobId = kv.getValue("id");
-            int taskId = kv.getIntValue("node", -1);
-            if (jobId != null && taskId >= 0) {
-                String duOutput = new SimpleExec(MacUtils.ducmd + " -s --block-size=1 " + ProcessUtils.getTaskBaseDir(
-                        rootDir.getAbsolutePath(), jobId, taskId)).join().stdoutString();
-                response.getWriter().write(duOutput.split("\t")[0]);
-            }
-        } else {
-            response.sendError(404);
-        }
-        ((Request) request).setHandled(handled);
     }
 
     void removeJobFromQueue(JobKey key, boolean sendToSpawn) {
@@ -1031,7 +887,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     }
 
     JobTask createNewTask(String jobID, int node) throws ExecException {
-        JobTask task = new JobTask(this);
+        JobTask task = new JobTask(Minion.this);
         task.id = jobID;
         task.node = node;
         task.taskRoot = new File(rootDir, task.id + "/" + task.node);
