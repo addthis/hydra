@@ -216,6 +216,7 @@ public class Minion implements MessageListener, Codable {
 
     @VisibleForTesting
     public Minion(CuratorFramework zkClient) {
+        this.zkClient = zkClient;
         uuid = UUID.randomUUID().toString();
 
         // null placeholder for now
@@ -233,7 +234,6 @@ public class Minion implements MessageListener, Codable {
         diskReadOnly = false;
         minionPid = -1;
         activeTaskKeys = new HashSet<>();
-        zkClient = zkClient;
     }
 
     @VisibleForTesting
