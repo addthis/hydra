@@ -1085,7 +1085,7 @@ public class SpawnManager {
     }
 
     private void updateJobFromCall(KVPairs kv, Spawn spawn) throws Exception {
-        log.debug("[job.update] {}" + kv);
+        log.debug("[job.update] {}", kv);
         String id = kv.getValue("id", kv.getValue("job"));
         HTTPService.require(id != null, "missing job id");
         IJob job = spawn.getJob(id);

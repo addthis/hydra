@@ -66,7 +66,7 @@ public class JobStoreTest {
     }
 
     @Test
-    public void getDeletedJobConfigSuccessTest() throws Exception {
+    public void getDeletedJobConfigSuccess() throws Exception {
         jobStore.submitConfigUpdate(JOB_ID, "bob", "config 1", null);
         jobStore.submitConfigUpdate(JOB_ID, "bob", "config 2", null);
         jobStore.delete(JOB_ID);
@@ -74,19 +74,19 @@ public class JobStoreTest {
     }
 
     @Test
-    public void getDeletedJobConfigNoCommitTest() throws Exception {
+    public void getDeletedJobConfigNoCommit() throws Exception {
         jobStore.submitConfigUpdate(JOB_ID, "bob", "config 1", null);
         assertNull(jobStore.getDeletedJobConfig("bogus_job_id"));
     }
 
     @Test(expected = GitAPIException.class)
-    public void getDeletedJobConfigGitErrorTest() throws Exception {
+    public void getDeletedJobConfigGitError() throws Exception {
         // without the init commit jgit will throw an No HEAD exception 
         jobStore.getDeletedJobConfig("bogus_job_id");
     }
     
     @Test
-    public void getHistoryNonExistentJobTest() throws Exception {
+    public void getHistoryNonExistentJob() throws Exception {
         jobStore.submitConfigUpdate(JOB_ID, "bob", "config 1", null);
         String history = jobStore.getHistory("bogus_job_id").toString();
         assertEquals("[]", history);
