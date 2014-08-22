@@ -386,7 +386,7 @@ public class JobTask implements Codable {
             return null;
         }
         try {
-            String target = minion.getTaskBaseDir(replica.getBaseDir(), id, node);
+            String target = ProcessUtils.getTaskBaseDir(replica.getBaseDir(), id, node);
             if (!replicateAllBackups) {
                 target += "/live";
             }
@@ -432,8 +432,9 @@ public class JobTask implements Codable {
             String symlinkName = type.getSymlinkName();
             String userAT = local ? null : replica.getUserAT();
             String source = "live";
-            String path = local ? jobDir.getParentFile().getAbsolutePath() : minion.getTaskBaseDir(replica.getBaseDir(),
-                                                                                                   id, node);
+            String path = local ? jobDir.getParentFile().getAbsolutePath() : ProcessUtils.getTaskBaseDir(
+                    replica.getBaseDir(),
+                    id, node);
             int maxNumBackups = getMaxNumBackupsForType(type);
             if (maxNumBackups > 0 && type.shouldMakeNewBackup(allBackups)) {
                 String backupCMD = createBackupCommand(local, userAT, path, source, backupName);
@@ -523,7 +524,7 @@ public class JobTask implements Codable {
     private String[] findRemoteBackups(boolean completeOnly, ReplicaTarget replica) {
         try {
             String userAT = replica.getUser() + "@" + replica.getHost();
-            String baseDir = minion.getTaskBaseDir(replica.getBaseDir(), id, node);
+            String baseDir = ProcessUtils.getTaskBaseDir(replica.getBaseDir(), id, node);
             if (completeOnly) {
                 baseDir += "/*/backup.complete";
             }
@@ -600,7 +601,7 @@ public class JobTask implements Codable {
             moveAndDeleteAsync(targetDir);
             // Copy the backup directory onto the target directory
             String cpCMD = MacUtils.cpcmd + (MacUtils.linkBackup ? " -lrf " : " -rf ");
-            return Minion.shell(cpCMD + backupDir + " " + targetDir + " >> /dev/null 2>&1", minion.rootDir) == 0;
+            return ProcessUtils.shell(cpCMD + backupDir + " " + targetDir + " >> /dev/null 2>&1", minion.rootDir) == 0;
         } else {
             log.warn("[restore] invalid backup dir {}", backupDir);
         }
@@ -858,11 +859,11 @@ public class JobTask implements Codable {
             execBackup(rebalanceSource, rebalanceTarget, true);
             return;
         }
-        if (Minion.findActiveRsync(id, node) != null) {
+        if (ProcessUtils.findActiveRsync(id, node) != null) {
             String msg = "Replicate failed because an existing rsync process was found for " + getName();
             log.warn("[task.execReplicate] {}", msg);
             sendEndStatus(JobTaskErrorCode.EXIT_REPLICATE_FAILURE);
-            Minion.shell(Minion.echoWithDate_cmd + msg + " >> " + logErr.getCanonicalPath(), minion.rootDir);
+            ProcessUtils.shell(Minion.echoWithDate_cmd + msg + " >> " + logErr.getCanonicalPath(), minion.rootDir);
             return;
         }
         minion.sendStatusMessage(new StatusTaskReplicate(minion.uuid, id, node, replicateAllBackups));
@@ -1058,8 +1059,8 @@ public class JobTask implements Codable {
     }
 
     boolean isProcessRunning(File pidFile) {
-        Integer pid = minion.getPID(pidFile);
-        return pid != null && Minion.activeProcessExistsWithPid(pid, minion.rootDir);
+        Integer pid = ProcessUtils.getPID(pidFile);
+        return pid != null && ProcessUtils.activeProcessExistsWithPid(pid, minion.rootDir);
     }
 
     protected void createDoneFileIfNoProcessRunning(File pidFile, File doneFile) {
@@ -1068,8 +1069,8 @@ public class JobTask implements Codable {
         }
         boolean success = false;
         try {
-            Integer pid = minion.getPID(pidFile);
-            if (pid == null || !Minion.activeProcessExistsWithPid(pid, minion.rootDir)) {
+            Integer pid = ProcessUtils.getPID(pidFile);
+            if (pid == null || !ProcessUtils.activeProcessExistsWithPid(pid, minion.rootDir)) {
                 success = doneFile.exists() || doneFile.createNewFile();
             } else {
                 success = true; // Process exists, nothing to do.
@@ -1146,12 +1147,12 @@ public class JobTask implements Codable {
         File[] activePidFiles = getActivePidFiles();
         Integer rsync = null;
         if (isReplicating()) {
-            rsync = Minion.findActiveRsync(id, node);
+            rsync = ProcessUtils.findActiveRsync(id, node);
         }
         boolean success = activePidFiles != null && stopWait(activePidFiles, kill);
         if (rsync != null) {
             // Need to kill the rsync after the replicate script to avoid doing a retry
-            Minion.shell("kill -9 " + rsync, minion.rootDir);
+            ProcessUtils.shell("kill -9 " + rsync, minion.rootDir);
         }
         return success;
     }
@@ -1172,7 +1173,7 @@ public class JobTask implements Codable {
                 }
             }
             for (File pidFile : pidFiles) {
-                Integer pid = minion.getPID(pidFile);
+                Integer pid = ProcessUtils.getPID(pidFile);
                 if (pid == null) {
                     log.warn("{}Wait failed with null pid for {}", kill ? "stop" : "kill", getName());
                     result = false;
@@ -1181,7 +1182,7 @@ public class JobTask implements Codable {
                         log.warn("[minion.kill] tried to kill my own process. pid: {}", pid);
                         result = false;
                     }
-                    String cmd = minion.getCmdLine(pid);
+                    String cmd = ProcessUtils.getCmdLine(pid);
                     if (cmd == null) {
                         log.warn("[minion.kill] unable to read cmdline, so it seems unlikely the process is running, ret false");
                         result = false;
@@ -1200,10 +1201,10 @@ public class JobTask implements Codable {
                     }
                     if (kill) {
                         log.warn("[minion.kill] killing pid:{} hard", pid);
-                        result &= Minion.shell("kill -9 " + pid, minion.rootDir) >= 0;
+                        result &= ProcessUtils.shell("kill -9 " + pid, minion.rootDir) >= 0;
                     } else {
                         log.warn("[minion.kill] killing pid:{} nice", pid);
-                        result &= Minion.shell("kill " + pid, minion.rootDir) >= 0;
+                        result &= ProcessUtils.shell("kill " + pid, minion.rootDir) >= 0;
                     }
                 }
             }

@@ -33,10 +33,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -87,7 +87,6 @@ import com.addthis.meshy.MeshyClientConnector;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.rabbitmq.client.AMQP;
@@ -155,22 +154,17 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     static String echoWithDate_cmd = "echo `date '+%y/%m/%d %H:%M:%S'` ";
 
     public static final String MINION_ZK_PATH = "/minion/";
-    private static final String defaultMinionType = Parameter.value("minion.type", "default");
+    public static final String defaultMinionType = Parameter.value("minion.type", "default");
 
     public static void main(String[] args) throws Exception {
         new Minion(new File(args.length > 0 ? args[0] : dataDir), args.length > 2 ? Integer.parseInt(args[1]) : webPort);
     }
 
-    @FieldConfig(codable = true, required = true)
-    String uuid;
-    @FieldConfig(codable = true)
-    MinionTaskDeleter minionTaskDeleter;
-    @FieldConfig(codable = true)
-    ConcurrentHashMap<String, Integer> stopped = new ConcurrentHashMap<>();
-    @FieldConfig(codable = true)
-    final ArrayList<CommandTaskKick> jobQueue = new ArrayList<>(10);
-    @FieldConfig(codable = true)
-    String minionTypes;
+    @FieldConfig(required = true) String uuid;
+    @FieldConfig MinionTaskDeleter minionTaskDeleter;
+    @FieldConfig ConcurrentMap<String, Integer> stopped = new ConcurrentHashMap<>();
+    @FieldConfig List<CommandTaskKick> jobQueue = new ArrayList<>(10);
+    @FieldConfig String minionTypes;
 
     final Set<String> activeTaskKeys;
     final AtomicBoolean shutdown = new AtomicBoolean(false);
@@ -180,10 +174,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     // wait on a lengthy revert / delete / etc.
     final ExecutorService promoteDemoteTaskExecutorService = MoreExecutors.getExitingExecutorService(
             new ThreadPoolExecutor(4, 4, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
-    final ExecutorService connectionExecutorService = MoreExecutors
-            .getExitingExecutorService(new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(),
-                    new ThreadFactoryBuilder().setNameFormat("rabbitMQConnectionService-%d").build()));
     Lock minionStateLock = new ReentrantLock();
     // Historical metrics
     Timer fileStatsTimer;
@@ -202,7 +192,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     String user;
     String path;
     TaskRunner runner;
-    final ConcurrentHashMap<String, JobTask> tasks = new ConcurrentHashMap<>();
+    final ConcurrentMap<String, JobTask> tasks = new ConcurrentHashMap<>();
     final Object jmsxmitlock = new Object();
     final AtomicLong diskTotal = new AtomicLong(0);
     final AtomicLong diskFree = new AtomicLong(0);
@@ -307,10 +297,10 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
             this.diskHealthCheck = new MinionWriteableDiskCheck(this);
             this.diskHealthCheck.startHealthCheckThread();
             sendHostStatus();
-            log.info("[init] up on " + myHost + ":" + getJettyPort() + " as " + user + " in " + path);
+            log.info("[init] up on {}:{} as {} in {}", myHost, getJettyPort(), user, path);
             String processName = ManagementFactory.getRuntimeMXBean().getName();
             minionPid = Integer.valueOf(processName.substring(0, processName.indexOf("@")));
-            log.info("[minion.start] pid for minion process is: " + minionPid);
+            log.info("[minion.start] pid for minion process is: {}", minionPid);
             minionTaskDeleter.startDeletionThread();
         } catch (Exception ex) {
             log.warn("Exception during startup", ex);
@@ -412,7 +402,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     /**
      * attempt to reconnect up to n times then shut down
      */
-    void shutdown() {
+    static void shutdown() {
         System.exit(1);
     }
 
@@ -458,25 +448,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         } catch (Exception ex) {
             log.warn("", ex);
         }
-    }
-
-    public static int shell(String cmd, File directory) {
-        try {
-            File tmp = File.createTempFile(".minion", "shell", directory);
-            try {
-                Files.write(tmp, Bytes.toBytes("#!/bin/sh\n" + cmd + "\n"), false);
-                int exit = Runtime.getRuntime().exec("sh " + tmp).waitFor();
-                if (log.isDebugEnabled()) {
-                    log.debug("[shell] (" + cmd + ") exited with " + exit);
-                }
-                return exit;
-            } finally {
-                tmp.delete();
-            }
-        } catch (Exception ex) {
-            log.warn("", ex);
-        }
-        return -1;
     }
 
     @VisibleForTesting
@@ -570,7 +541,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     }
 
     private void handleMessage(Serializable message) throws Exception {
-
         if (message instanceof CoreMessage) {
             CoreMessage core;
             try {
@@ -611,7 +581,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                 case STATUS_TASK_JUMP_SHIP:
                     break;
                 default:
-                    log.warn("[mq.core] unhandled type = " + core.getMessageType());
+                    log.warn("[mq.core] unhandled type = {}", core.getMessageType());
                     break;
             }
         }
@@ -629,7 +599,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         for (File jobRoot : list) {
             loaded += updateJobMeta(jobRoot);
         }
-        log.info("[import] " + loaded + " tasks from directory '" + jobsRoot + "'");
+        log.info("[import] {} tasks from directory '{}'", loaded, jobsRoot);
         return loaded;
     }
 
@@ -657,7 +627,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         }
         Integer taskID = Numbers.parseInt(10, taskRoot.getName(), -1);
         if (taskID < 0) {
-            log.warn("[task.update] invalid task root " + taskRoot);
+            log.warn("[task.update] invalid task root {}", taskRoot);
             return false;
         }
         JobKey key = new JobKey(jobID, taskID);
@@ -667,10 +637,10 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
             tasks.put(key.toString(), task);
         }
         if (task.restoreTaskState(taskRoot)) {
-            log.warn("[import.task] " + key + " as " + (task.isRunning() ? "running" : "idle"));
+            log.warn("[import.task] {} as {}", key, task.isRunning() ? "running" : "idle");
             return true;
         } else {
-            log.warn("[import.task] " + key + " failed");
+            log.warn("[import.task] {} failed", key);
             return false;
         }
     }
@@ -800,10 +770,9 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         } catch (Exception e) {
             log.error("Exception joining group", e);
         }
-        log.info("joining group: " + upPath);
+        log.info("joining group: {}", upPath);
         minionGroupMembership.addToGroup(upPath, getUUID(), shutdown);
     }
-
 
     void sendControlMessage(HostMessage msg) {
         synchronized (jmsxmitlock) {
@@ -812,7 +781,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                     batchControlProducer.sendMessage(msg, msg.getHostUuid());
                 }
             } catch (Exception ex) {
-                log.warn("[mq.ctrl.send] fail with " + ex, ex);
+                log.warn("[mq.ctrl.send] fail", ex);
                 shutdown();
             }
         }
@@ -825,7 +794,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                     batchControlProducer.sendMessage(msg, "SPAWN");
                 }
             } catch (Exception ex) {
-                log.warn("[mq.ctrl.send] fail with " + ex, ex);
+                log.warn("[mq.ctrl.send] fail", ex);
                 shutdown();
             }
         }
@@ -847,9 +816,9 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                     sent = true;
                     break;
                 } catch (Exception ex) {
-                    log.warn("[mq.ctrl.send] exception " + ex, ex);
+                    log.warn("[mq.ctrl.send] exception", ex);
                     if (i < sendStatusRetries - 1) {
-                        log.warn("[mq.ctrl.send] fail on try " + i + "; retrying");
+                        log.warn("[mq.ctrl.send] fail on try {}; retrying", i);
                     }
                     sendStatusFailCount.inc();
                 }
@@ -907,61 +876,18 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                 if (startPort == nextPort) {
                     throw new RuntimeException("unable to find any free ports");
                 }
-                log.warn("[nextport] skipping port " + nextPort + " due to " + ex);
+                log.warn("[nextport] skipping port {} due to {}", nextPort, ex);
             }
         }
         return nextPort;
     }
 
-    String getTaskBaseDir(String baseDir, String id, int node) {
-        return new StringBuilder().append(baseDir).append("/").append(id).append("/").append(node).toString();
-    }
-
-    public Integer getPID(File pidFile) {
-        try {
-            if (log.isDebugEnabled()) {
-                log.debug("[getpid] " + pidFile + " --> " + (pidFile != null ? pidFile.exists() : "<null>"));
-            }
-            return (pidFile != null && pidFile.exists()) ? Integer.parseInt(Bytes.toString(Files.read(pidFile)).trim()) : null;
-        } catch (Exception ex) {
-            log.warn("", ex);
-            return null;
-        }
-    }
-
-    private String execCommandReturnStdOut(String cmd) throws InterruptedException, IOException {
-        SimpleExec command = new SimpleExec(cmd).join();
-        return command.stdoutString();
-    }
-
-    // Sorry Illumos port...
-    public String getCmdLine(int pid) {
-        try {
-            String cmd;
-            if (MacUtils.useMacFriendlyPSCommands) {
-                cmd = execCommandReturnStdOut("ps -f " + pid);
-            } else {
-                File cmdFile = new File("/proc/" + pid + "/cmdline");
-                cmd = Bytes.toString(Files.read(cmdFile)).trim().replace('\0', ' ');
-            }
-            log.warn("found cmd " + cmd + "  for pid: " + pid);
-            return cmd;
-
-        } catch (Exception ex) {
-            log.warn("error searching for pidfile for pid: " + pid, ex);
-            return null;
-        }
-    }
-
-
     @Override
     public void handle(String target, Request request, HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws IOException, ServletException {
         try {
             doHandle(target, request, httpServletRequest, httpServletResponse);
-        } catch (IOException io) {
+        } catch (IOException | ServletException io) {
             throw io;
-        } catch (ServletException se) {
-            throw se;
         } catch (Exception ex) {
             throw new IOException(ex);
         }
@@ -1072,10 +998,9 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
             String jobId = kv.getValue("id");
             int taskId = kv.getIntValue("node", -1);
             if (jobId != null && taskId >= 0) {
-                String duOutput = new SimpleExec(MacUtils.ducmd + " -s --block-size=1 " + getTaskBaseDir(rootDir.getAbsolutePath(), jobId, taskId)).join().stdoutString();
-                response.getWriter().write(
-                        duOutput.split("\t")[0]
-                );
+                String duOutput = new SimpleExec(MacUtils.ducmd + " -s --block-size=1 " + ProcessUtils.getTaskBaseDir(
+                        rootDir.getAbsolutePath(), jobId, taskId)).join().stdoutString();
+                response.getWriter().write(duOutput.split("\t")[0]);
             }
         } else {
             response.sendError(404);
@@ -1089,13 +1014,12 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
             for (Iterator<CommandTaskKick> iter = jobQueue.iterator(); iter.hasNext(); ) {
                 CommandTaskKick kick = iter.next();
                 if (kick.getJobKey().matches(key)) {
-                    log.warn("[task.stop] removing from queue " + kick.getJobKey() + " kick=" + kick + " key=" + key);
+                    log.warn("[task.stop] removing from queue {} kick={} key={}", kick.getJobKey(), kick, key);
                     if (sendToSpawn) {
                         try {
                             sendStatusMessage(new StatusTaskEnd(uuid, kick.getJobUuid(), kick.getNodeID(), 0, 0, 0));
                         } catch (Exception ex) {
-                            log.warn("", ex);
-                            log.warn("---> send fail " + uuid + " " + key + " " + kick);
+                            log.warn("---> send fail {} {} {}", uuid, key, kick, ex);
                         }
                     }
                     iter.remove();
@@ -1111,7 +1035,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         task.id = jobID;
         task.node = node;
         task.taskRoot = new File(rootDir, task.id + "/" + task.node);
-        log.warn("[task.new] restore " + task.id + "/" + task.node + " root=" + task.taskRoot);
+        log.warn("[task.new] restore {}/{} root={}", task.id, task.node, task.taskRoot);
         tasks.put(task.getJobKey().toString(), task);
         task.initializeFileVariables();
         writeState();
@@ -1127,7 +1051,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     boolean deleteFiles(File... files) {
         for (File file : files) {
             if (file != null && file.exists()) {
-                if (shell(MacUtils.rmcmd + " -rf " + file.getAbsolutePath(), rootDir) != 0) {
+                if (ProcessUtils.shell(MacUtils.rmcmd + " -rf " + file.getAbsolutePath(), rootDir) != 0) {
                     return false;
                 }
             }
@@ -1135,44 +1059,8 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         return true;
     }
 
-    static boolean activeProcessExistsWithPid(Integer pid, File directory) {
-        return shell("ps " + pid, directory) == 0;
-    }
-
-    static Integer findActiveRsync(String id, int node) {
-        return findActiveProcessWithTokens(new String[]{id + "/" + node + "/", rsyncCommand}, new String[]{"server"});
-    }
-
-    private static Integer findActiveProcessWithTokens(String[] requireTokens, String[] omitTokens) {
-        StringBuilder command = new StringBuilder("ps ax | grep -v grep");
-        for (String requireToken : requireTokens) {
-            command.append("| grep " + requireToken);
-        }
-        for (String excludeToken : omitTokens) {
-            command.append("| grep -v " + excludeToken);
-        }
-        command.append("| cut -c -5");
-        try {
-            SimpleExec exec = new SimpleExec(new String[]{"/bin/sh", "-c", command.toString()}).join();
-            if (exec.exitCode() == 0) {
-                return new Scanner(exec.stdoutString()).nextInt();
-            } else {
-                return null;
-            }
-        } catch (Exception e) {
-            // No PID found
-            return null;
-        }
-
-    }
-
     public boolean getShutdown() {
         return shutdown.get();
     }
-
-    public static String getDefaultMinionType() {
-        return defaultMinionType;
-    }
-
 }
 

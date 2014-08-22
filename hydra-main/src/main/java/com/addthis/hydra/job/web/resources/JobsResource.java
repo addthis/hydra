@@ -520,7 +520,7 @@ public class JobsResource {
                     kv.getValue("owner", user.getUsername()),
                     kv.getIntValue("nodes", -1),
                     Arrays.asList(Strings.splitArray(kv.getValue("hosts", ""), ",")),
-                    kv.getValue("minionType", Minion.getDefaultMinionType()),
+                    kv.getValue("minionType", Minion.defaultMinionType),
                     kv.getValue("command"));
             kv.addValue("id", job.getId());
         } else {
@@ -859,7 +859,7 @@ public class JobsResource {
                             kv.getValue("owner", user.getUsername()),
                             kv.getIntValue("nodes", -1),
                             Arrays.asList(hosts),
-                            kv.getValue("minionType", Minion.getDefaultMinionType()),
+                            kv.getValue("minionType", Minion.defaultMinionType),
                             kv.getValue("command"));
                     kv.addValue("id", job.getId());
                 }

@@ -35,7 +35,7 @@ class CommandTaskDeleteRunner implements Runnable {
     @Override
     public void run() {
         CommandTaskDelete delete = (CommandTaskDelete) core;
-        log.warn("[task.delete] " + delete.getJobKey());
+        log.warn("[task.delete] {}", delete.getJobKey());
         minion.minionStateLock.lock();
         try {
             for (JobTask task : minion.getMatchingJobs(delete)) {
@@ -43,7 +43,7 @@ class CommandTaskDeleteRunner implements Runnable {
                 boolean terminated = task.isRunning() && task.stopWait(true);
                 task.setDeleted(true);
                 minion.tasks.remove(task.getJobKey().toString());
-                log.warn("[task.delete] " + task.getJobKey() + " terminated=" + terminated);
+                log.warn("[task.delete] {} terminated={}", task.getJobKey(), terminated);
                 minion.writeState();
             }
             File taskDirFile = new File(minion.rootDir + "/" + delete.getJobUuid() + (delete.getNodeID() != null ? "/" + delete.getNodeID() : ""));

@@ -564,7 +564,8 @@ public class SpawnBalancerTest extends ZkStartUtil {
     }
 
     private Job createSpawnJob(Spawn spawn, int numTasks, List<String> hosts, long startTime, long taskSizeBytes, int numReplicas) throws Exception {
-        Job job = spawn.createJob("fsm", numTasks, hosts, Minion.getDefaultMinionType(), "foo");
+
+        Job job = spawn.createJob("fsm", numTasks, hosts, Minion.defaultMinionType, "foo");
         job.setReplicas(numReplicas);
         for (JobTask task : job.getCopyOfTasks()) {
             task.setByteCount(taskSizeBytes);

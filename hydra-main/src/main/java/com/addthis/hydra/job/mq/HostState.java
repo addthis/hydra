@@ -407,7 +407,7 @@ public class HostState implements HostMessage {
 
     public boolean hasType(String type) {
         if (minionTypes == null) {
-            minionTypes = Minion.getDefaultMinionType();
+            minionTypes = Minion.defaultMinionType;
         }
         if (minionTypes.contains(",")) {
             return Arrays.asList(minionTypes.split(",")).contains(type);

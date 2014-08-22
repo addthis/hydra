@@ -724,7 +724,7 @@ public class SpawnManager {
                                     kv.getValue("owner", "anonymous"),
                                     kv.getIntValue("nodes", -1),
                                     Arrays.asList(Strings.splitArray(kv.getValue("hosts", ""), ",")),
-                                    kv.getValue("minionType", Minion.getDefaultMinionType()),
+                                    kv.getValue("minionType", Minion.defaultMinionType),
                                     kv.getValue("command"));
                             kv.addValue("id", job.getId());
                             id = job.getId();
@@ -763,7 +763,7 @@ public class SpawnManager {
                         kv.getValue("owner", "anonymous"),
                         kv.getIntValue("nodes", -1),
                         Arrays.asList(Strings.splitArray(kv.getValue("hosts", ""), ",")),
-                        kv.getValue("minionType", Minion.getDefaultMinionType()),
+                        kv.getValue("minionType", Minion.defaultMinionType),
                         kv.getValue("command"));
                 String id = job.getId();
                 kv.addValue("id", id);

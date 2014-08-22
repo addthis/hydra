@@ -927,7 +927,7 @@ public final class Job implements IJob, Codable {
     @Override
     public String getMinionType() {
         if (minionType == null) {
-            minionType = Minion.getDefaultMinionType();
+            minionType = Minion.defaultMinionType;
         }
         return minionType;
     }
