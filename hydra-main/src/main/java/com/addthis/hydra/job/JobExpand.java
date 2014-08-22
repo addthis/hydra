@@ -30,6 +30,7 @@ import com.addthis.basis.util.TokenReplacerOverflowException;
 import com.addthis.codec.plugins.PluginMap;
 import com.addthis.codec.plugins.PluginRegistry;
 import com.addthis.hydra.data.util.CommentTokenizer;
+import com.addthis.hydra.job.spawn.Spawn;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
@@ -151,7 +152,7 @@ public class JobExpand {
         }.process(input);
     }
 
-    static String macroTemplateParams(String expandedJob, Collection<JobParameter> params)
+    public static String macroTemplateParams(String expandedJob, Collection<JobParameter> params)
             throws TokenReplacerOverflowException {
         if (params != null && expandedJob != null) {
             final HashMap<String, String> map = new HashMap<>();

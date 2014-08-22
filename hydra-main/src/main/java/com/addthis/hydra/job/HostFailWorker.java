@@ -29,6 +29,7 @@ import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
+import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONException;

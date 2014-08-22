@@ -29,7 +29,7 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.codec.Codec;
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.job.spawn.JobAlert;
+import com.addthis.hydra.job.web.JobAlert;
 import com.addthis.hydra.job.store.SpawnDataStore;
 
 import com.google.common.collect.Lists;

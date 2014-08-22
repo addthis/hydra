@@ -23,7 +23,7 @@ import com.addthis.basis.util.JitterClock;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.job.spawn.JobAlert;
+import com.addthis.hydra.job.web.JobAlert;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Objects;
