@@ -17,11 +17,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.RandomAccessFile;
 import java.io.Serializable;
 
 import java.lang.management.ManagementFactory;
@@ -30,8 +27,6 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -39,6 +34,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -51,52 +47,28 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.addthis.basis.kv.KVPairs;
-import com.addthis.basis.util.Backoff;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Numbers;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.SimpleExec;
-import com.addthis.basis.util.Strings;
 
 import com.addthis.bark.ZkGroupMembership;
 import com.addthis.bark.ZkUtil;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.job.BackupWorkItem;
 import com.addthis.hydra.job.JobTaskErrorCode;
-import com.addthis.hydra.job.ReplicateWorkItem;
-import com.addthis.hydra.job.RunTaskWorkItem;
-import com.addthis.hydra.job.backup.DailyBackup;
-import com.addthis.hydra.job.backup.GoldBackup;
-import com.addthis.hydra.job.backup.HourlyBackup;
-import com.addthis.hydra.job.backup.MonthlyBackup;
-import com.addthis.hydra.job.backup.ScheduledBackupType;
-import com.addthis.hydra.job.backup.WeeklyBackup;
-import com.addthis.hydra.job.mq.CommandTaskDelete;
 import com.addthis.hydra.job.mq.CommandTaskKick;
-import com.addthis.hydra.job.mq.CommandTaskNew;
-import com.addthis.hydra.job.mq.CommandTaskReplicate;
-import com.addthis.hydra.job.mq.CommandTaskRevert;
-import com.addthis.hydra.job.mq.CommandTaskStop;
-import com.addthis.hydra.job.mq.CommandTaskUpdateReplicas;
 import com.addthis.hydra.job.mq.CoreMessage;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostMessage;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.mq.JobMessage;
-import com.addthis.hydra.job.mq.ReplicaTarget;
-import com.addthis.hydra.job.mq.StatusTaskBackup;
-import com.addthis.hydra.job.mq.StatusTaskBegin;
 import com.addthis.hydra.job.mq.StatusTaskCantBegin;
 import com.addthis.hydra.job.mq.StatusTaskEnd;
-import com.addthis.hydra.job.mq.StatusTaskPort;
-import com.addthis.hydra.job.mq.StatusTaskReplica;
-import com.addthis.hydra.job.mq.StatusTaskReplicate;
-import com.addthis.hydra.job.mq.StatusTaskRevert;
 import com.addthis.hydra.mq.MeshMessageConsumer;
 import com.addthis.hydra.mq.MeshMessageProducer;
 import com.addthis.hydra.mq.MessageConsumer;
@@ -107,7 +79,6 @@ import com.addthis.hydra.mq.RabbitMessageConsumer;
 import com.addthis.hydra.mq.RabbitMessageProducer;
 import com.addthis.hydra.mq.RabbitQueueingConsumer;
 import com.addthis.hydra.mq.ZKMessageProducer;
-import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
 import com.addthis.maljson.JSONObject;
@@ -123,12 +94,10 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AlreadyClosedException;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ShutdownSignalException;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Timer;
-import com.yammer.metrics.core.TimerContext;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
@@ -153,74 +122,51 @@ import org.slf4j.LoggerFactory;
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class Minion extends AbstractHandler implements MessageListener, Codable {
+    private static final Logger log = LoggerFactory.getLogger(Minion.class);
 
-    private static Logger log = LoggerFactory.getLogger(Minion.class);
-    private static boolean meshQueue = Parameter.boolValue("queue.mesh", false);
+    static boolean meshQueue = Parameter.boolValue("queue.mesh", false);
     private static final String meshHost = Parameter.value("mesh.host", "localhost");
     private static final int meshPort = Parameter.intValue("mesh.port", 5000);
     private static final int meshRetryTimeout = Parameter.intValue("mesh.retry.timeout", 5000);
     private static int webPort = Parameter.intValue("minion.web.port", 5051);
     private static int minJobPort = Parameter.intValue("minion.job.baseport", 0);
     private static int maxJobPort = Parameter.intValue("minion.job.maxport", 0);
-    private static ReentrantLock capacityLock = new ReentrantLock();
+    static ReentrantLock capacityLock = new ReentrantLock();
     private static String dataDir = System.getProperty("minion.data.dir", "minion");
     private static String group = System.getProperty("minion.group", "none");
     private static String localHost = System.getProperty("minion.localhost");
-    private static boolean linkBackup = !System.getProperty("minion.backup.hardlink", "0").equals("0");
-    private static final DateTimeFormatter timeFormat = DateTimeFormat.forPattern("yyMMdd-HHmmss");
+    static boolean linkBackup = !System.getProperty("minion.backup.hardlink", "0").equals("0");
+    static final DateTimeFormatter timeFormat = DateTimeFormat.forPattern("yyMMdd-HHmmss");
     private static final String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
     private static final String batchBrokerPort = Parameter.value("batch.brokerPort", "5672");
     private static final int mqReconnectDelay = Parameter.intValue("mq.reconnect.delay", 10000);
     private static final int mqReconnectTries = Parameter.intValue("mq.reconnect.tries", 10);
     private static final int sendStatusRetries = Parameter.intValue("send.status.retries", 5);
     private static final int sendStatusRetryDelay = Parameter.intValue("send.status.delay", 5000);
-    private static final long hostMetricUpdaterInterval = Parameter.longValue("minion.host.metric.interval", 30 * 1000);
-    private static final String remoteConnectMethod = Parameter.value("minion.remote.connect.method", "ssh -o StrictHostKeyChecking=no -o TCPKeepAlive=yes -o ServerAliveInterval=30");
-    private static final String rsyncCommand = Parameter.value("minion.rsync.command", "rsync");
+    static final long hostMetricUpdaterInterval = Parameter.longValue("minion.host.metric.interval", 30 * 1000);
+    static final String remoteConnectMethod = Parameter.value("minion.remote.connect.method", "ssh -o StrictHostKeyChecking=no -o TCPKeepAlive=yes -o ServerAliveInterval=30");
+    static final String rsyncCommand = Parameter.value("minion.rsync.command", "rsync");
     private static final int maxActiveTasks = Parameter.intValue("minion.max.active.tasks", 3);
-    private static final int copyRetryLimit = Parameter.intValue("minion.copy.retry.limit", 3);
-    private static final int copyRetryDelaySeconds = Parameter.intValue("minion.copy.retry.delay", 10);
+    static final int copyRetryLimit = Parameter.intValue("minion.copy.retry.limit", 3);
+    static final int copyRetryDelaySeconds = Parameter.intValue("minion.copy.retry.delay", 10);
     /* If the following var is positive, it is passed as the bwlimit arg to rsync. If <= 0, it is ignored. */
-    private static final int copyBandwidthLimit = Parameter.intValue("minion.copy.bwlimit", -1);
-    private static ReentrantLock revertLock = new ReentrantLock();
+    static final int copyBandwidthLimit = Parameter.intValue("minion.copy.bwlimit", -1);
+    static ReentrantLock revertLock = new ReentrantLock();
 
-    private static String cpcmd = "cp";
-    private static String lncmd = "ln";
-    private static String lscmd = "ls";
-    private static String rmcmd = "rm";
-    private static String mvcmd = "mv";
-    private static String ducmd = "du";
-    private static String echoWithDate_cmd = "echo `date '+%y/%m/%d %H:%M:%S'` ";
+    static String cpcmd = "cp";
+    static String lncmd = "ln";
+    static String lscmd = "ls";
+    static String rmcmd = "rm";
+    static String mvcmd = "mv";
+    static String ducmd = "du";
+    static String echoWithDate_cmd = "echo `date '+%y/%m/%d %H:%M:%S'` ";
+    static boolean useMacFriendlyPSCommands = false;
 
     public static final String MINION_ZK_PATH = "/minion/";
     private static final String defaultMinionType = Parameter.value("minion.type", "default");
 
-    private final java.util.Set<String> activeTaskKeys;
-    private final AtomicBoolean shutdown = new AtomicBoolean(false);
-    private final ExecutorService messageTaskExecutorService = MoreExecutors.getExitingExecutorService(
-            new ThreadPoolExecutor(4, 4, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
-    // This next executor service only serves promote/demote requests, so that these will be performed quickly and not
-    // wait on a lengthy revert / delete / etc.
-    private final ExecutorService promoteDemoteTaskExecutorService = MoreExecutors.getExitingExecutorService(
-            new ThreadPoolExecutor(4, 4, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
-    private final ExecutorService connectionExecutorService = MoreExecutors
-            .getExitingExecutorService(new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(),
-                    new ThreadFactoryBuilder().setNameFormat("rabbitMQConnectionService-%d").build()));
-    private Lock minionStateLock = new ReentrantLock();
-    @FieldConfig(codable = true)
-    private MinionTaskDeleter minionTaskDeleter;
-    // Historical metrics
-    private Timer fileStatsTimer;
-    private Counter sendStatusFailCount;
-    private Counter sendStatusFailAfterRetriesCount;
-    private final int replicateCommandDelaySeconds = Parameter.intValue("replicate.cmd.delay.seconds", 0);
-    private final int backupCommandDelaySeconds = Parameter.intValue("backup.cmd.delay.seconds", 0);
-    private boolean useMacFriendlyPSCommands = false;
-    private MeshyClientConnector mesh;
-
     // detect fl-cow in sys env and apple for copy command
-    {
+    static {
         for (String v : System.getenv().values()) {
             if (v.toLowerCase().contains("libflcow")) {
                 log.info("detected support for copy-on-write hard-links");
@@ -247,36 +193,69 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         new Minion(new File(args.length > 0 ? args[0] : dataDir), args.length > 2 ? Integer.parseInt(args[1]) : webPort);
     }
 
-    private final File rootDir;
-    private final File stateFile;
-    private final File liveEverywhereMarkerFile;
-    private final String myHost;
-    private long startTime;
-    private int nextPort;
-    private String user;
-    private String path;
-    private TaskRunner runner;
-    private final ConcurrentHashMap<String, JobTask> tasks = new ConcurrentHashMap<>();
-    private final Object jmsxmitlock = new Object();
-    private final AtomicLong diskTotal = new AtomicLong(0);
-    private final AtomicLong diskFree = new AtomicLong(0);
-    private final Server jetty;
-    private final ServletHandler metricsHandler;
-    private final boolean readOnly;
-    private boolean diskReadOnly;
-    private MinionWriteableDiskCheck diskHealthCheck;
-    private int minionPid = -1;
-
     @FieldConfig(codable = true, required = true)
-    private String uuid;
+    String uuid;
     @FieldConfig(codable = true)
-    private ConcurrentHashMap<String, Integer> stopped = new ConcurrentHashMap<>();
+    MinionTaskDeleter minionTaskDeleter;
     @FieldConfig(codable = true)
-    private final ArrayList<CommandTaskKick> jobQueue = new ArrayList<>(10);
+    ConcurrentHashMap<String, Integer> stopped = new ConcurrentHashMap<>();
     @FieldConfig(codable = true)
-    private String minionTypes;
+    final ArrayList<CommandTaskKick> jobQueue = new ArrayList<>(10);
+    @FieldConfig(codable = true)
+    String minionTypes;
 
-    private Histogram activeTaskHistogram;
+    final Set<String> activeTaskKeys;
+    final AtomicBoolean shutdown = new AtomicBoolean(false);
+    final ExecutorService messageTaskExecutorService = MoreExecutors.getExitingExecutorService(
+            new ThreadPoolExecutor(4, 4, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
+    // This next executor service only serves promote/demote requests, so that these will be performed quickly and not
+    // wait on a lengthy revert / delete / etc.
+    final ExecutorService promoteDemoteTaskExecutorService = MoreExecutors.getExitingExecutorService(
+            new ThreadPoolExecutor(4, 4, 100L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
+    final ExecutorService connectionExecutorService = MoreExecutors
+            .getExitingExecutorService(new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<Runnable>(),
+                    new ThreadFactoryBuilder().setNameFormat("rabbitMQConnectionService-%d").build()));
+    Lock minionStateLock = new ReentrantLock();
+    // Historical metrics
+    Timer fileStatsTimer;
+    Counter sendStatusFailCount;
+    Counter sendStatusFailAfterRetriesCount;
+    final int replicateCommandDelaySeconds = Parameter.intValue("replicate.cmd.delay.seconds", 0);
+    final int backupCommandDelaySeconds = Parameter.intValue("backup.cmd.delay.seconds", 0);
+    private MeshyClientConnector mesh;
+
+    final File rootDir;
+    final File stateFile;
+    final File liveEverywhereMarkerFile;
+    final String myHost;
+    long startTime;
+    int nextPort;
+    String user;
+    String path;
+    TaskRunner runner;
+    final ConcurrentHashMap<String, JobTask> tasks = new ConcurrentHashMap<>();
+    final Object jmsxmitlock = new Object();
+    final AtomicLong diskTotal = new AtomicLong(0);
+    final AtomicLong diskFree = new AtomicLong(0);
+    final Server jetty;
+    final ServletHandler metricsHandler;
+    final boolean readOnly;
+    boolean diskReadOnly;
+    MinionWriteableDiskCheck diskHealthCheck;
+    int minionPid = -1;
+
+    RabbitQueueingConsumer batchJobConsumer;
+    BlockingArrayQueue<HostMessage> queuedHostMessages;
+    private MessageConsumer batchControlConsumer;
+    private MessageProducer queryControlProducer;
+    private MessageProducer zkBatchControlProducer;
+    private MessageProducer batchControlProducer;
+    Channel channel;
+    private CuratorFramework zkClient;
+    private ZkGroupMembership minionGroupMembership;
+
+    Histogram activeTaskHistogram;
 
     @VisibleForTesting
     public Minion(CuratorFramework zkClient) {
@@ -346,7 +325,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
             }
         });
         activeTaskHistogram = Metrics.newHistogram(Minion.class, "activeTasks");
-        new HostMetricUpdater();
+        new HostMetricUpdater(this);
         try {
             joinGroup();
             connectToMQ();
@@ -355,7 +334,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                 log.warn("cutover to live-everywhere tasks");
             }
             writeState();
-            runner = new TaskRunner();
+            runner = new TaskRunner(this);
             runner.start();
             this.diskHealthCheck = new MinionWriteableDiskCheck(this);
             this.diskHealthCheck.startHealthCheckThread();
@@ -389,19 +368,9 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         }
         wait = JitterClock.globalTime() - wait;
         if (wait > 1000 || getJettyPort() <= 0) {
-            log.warn("[init] jetty to > " + wait + "ms to start.  on port " + getJettyPort());
+            log.warn("[init] jetty to > {}ms to start.  on port {}", wait, getJettyPort());
         }
     }
-
-    RabbitQueueingConsumer batchJobConsumer;
-    private BlockingArrayQueue<HostMessage> queuedHostMessages;
-    private MessageConsumer batchControlConsumer;
-    private MessageProducer queryControlProducer;
-    private MessageProducer zkBatchControlProducer;
-    private MessageProducer batchControlProducer;
-    private Channel channel;
-    private CuratorFramework zkClient;
-    private ZkGroupMembership minionGroupMembership;
 
     private void connectToMQ() throws Exception {
         zkBatchControlProducer = new ZKMessageProducer(getZkClient());
@@ -467,7 +436,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
             batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", uuid + ".batchControl", this, routingKeys);
             return true;
         } catch (IOException e) {
-            log.error("Error connecting to rabbitmq " + batchBrokerHost + ":" + batchBrokerPort, e);
+            log.error("Error connecting to rabbitmq {}:{}", batchBrokerHost, batchBrokerPort, e);
             return false;
         }
     }
@@ -475,7 +444,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     /**
      * attempt to reconnect up to n times then shut down
      */
-    private void shutdown() {
+    void shutdown() {
         System.exit(1);
     }
 
@@ -561,7 +530,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         writeState();
     }
 
-    private void kickNextJob() throws Exception {
+    void kickNextJob() throws Exception {
         minionStateLock.lock();
         try {
             if (jobQueue.isEmpty()) {
@@ -604,7 +573,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         }
     }
 
-    private List<JobTask> getMatchingJobs(JobMessage msg) {
+    List<JobTask> getMatchingJobs(JobMessage msg) {
         LinkedList<JobTask> match = new LinkedList<>();
         JobKey msgKey = msg.getJobKey();
         if (msgKey.getNodeNumber() == null) {
@@ -648,28 +617,28 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
                     sendHostStatus();
                     break;
                 case CMD_TASK_STOP:
-                    messageTaskExecutorService.execute(new CommandTaskStopRunner(core));
+                    messageTaskExecutorService.execute(new CommandTaskStopRunner(this, core));
                     break;
                 case CMD_TASK_REVERT:
-                    messageTaskExecutorService.execute(new CommandTaskRevertRunner(core));
+                    messageTaskExecutorService.execute(new CommandTaskRevertRunner(this, core));
                     break;
                 case CMD_TASK_DELETE:
-                    messageTaskExecutorService.execute(new CommandTaskDeleteRunner(core));
+                    messageTaskExecutorService.execute(new CommandTaskDeleteRunner(this, core));
                     break;
                 case CMD_TASK_REPLICATE:
-                    messageTaskExecutorService.execute(new CommandTaskReplicateRunner(core));
+                    messageTaskExecutorService.execute(new CommandTaskReplicateRunner(this, core));
                     break;
                 case CMD_TASK_PROMOTE_REPLICA:
                     // Legacy; ignore
                     break;
                 case CMD_TASK_NEW:
-                    messageTaskExecutorService.execute(new CommandCreateNewTask(core));
+                    messageTaskExecutorService.execute(new CommandCreateNewTask(this, core));
                     break;
                 case CMD_TASK_DEMOTE_REPLICA:
                     // Legacy; ignore
                     break;
                 case CMD_TASK_UPDATE_REPLICAS:
-                    promoteDemoteTaskExecutorService.execute(new CommandTaskUpdateReplicasRunner(core));
+                    promoteDemoteTaskExecutorService.execute(new CommandTaskUpdateReplicasRunner(this, core));
                     break;
                 case STATUS_TASK_JUMP_SHIP:
                     break;
@@ -726,7 +695,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         JobKey key = new JobKey(jobID, taskID);
         JobTask task = tasks.get(key.toString());
         if (task == null) {
-            task = new JobTask();
+            task = new JobTask(this);
             tasks.put(key.toString(), task);
         }
         if (task.restoreTaskState(taskRoot)) {
@@ -738,7 +707,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         }
     }
 
-    private void writeState() {
+    void writeState() {
         minionStateLock.lock();
         try {
             Files.write(stateFile, Bytes.toBytes(CodecJSON.encodeString(this)), false);
@@ -868,7 +837,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     }
 
 
-    private void sendControlMessage(HostMessage msg) {
+    void sendControlMessage(HostMessage msg) {
         synchronized (jmsxmitlock) {
             try {
                 if (batchControlProducer != null) {
@@ -881,7 +850,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         }
     }
 
-    private void sendStatusMessage(HostMessage msg) {
+    void sendStatusMessage(HostMessage msg) {
         synchronized (jmsxmitlock) {
             try {
                 if (batchControlProducer != null) {
@@ -952,7 +921,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     public void doStart() {
     }
 
-    private synchronized int findNextPort() {
+    synchronized int findNextPort() {
         if (minJobPort == 0) {
             return 0;
         }
@@ -976,142 +945,8 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         return nextPort;
     }
 
-    @SuppressWarnings("serial")
-    private static class ExecException extends Exception {
-
-        ExecException(String msg) {
-            super(msg);
-        }
-    }
-
-    private String getTaskBaseDir(String baseDir, String id, int node) {
+    String getTaskBaseDir(String baseDir, String id, int node) {
         return new StringBuilder().append(baseDir).append("/").append(id).append("/").append(node).toString();
-    }
-
-    private class TaskRunner extends Thread {
-
-        private boolean done;
-        private final Backoff backoff = new Backoff(1000, 5000);
-
-        public void stopTaskRunner() {
-            done = true;
-            interrupt();
-        }
-
-        @Override public void run() {
-            while (!done) {
-                if (meshQueue) {
-                    try {
-                        HostMessage hostMessage = queuedHostMessages.take();
-                        if (hostMessage.getMessageType() != CoreMessage.TYPE.CMD_TASK_KICK) {
-                            log.warn("[task.runner] unknown command type : " + hostMessage.getMessageType());
-                            continue;
-                        }
-                        CommandTaskKick kick = (CommandTaskKick) hostMessage;
-                        insertJobKickMessage(kick);
-                        kickNextJob();
-                    } catch (InterruptedException e) {
-                        // ignore
-                    } catch (Exception e) {
-                        log.error("Error sending meshQueue message", e);
-                    }
-                } else {
-                    RabbitQueueingConsumer.Delivery delivery = null;
-                    try {
-                        delivery = batchJobConsumer.nextDelivery();
-                        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(delivery.getBody()));
-                        HostMessage hostMessage = (HostMessage) ois.readObject();
-                        if (hostMessage.getMessageType() != CoreMessage.TYPE.CMD_TASK_KICK) {
-                            log.warn("[task.runner] unknown command type : " + hostMessage.getMessageType());
-                            continue;
-                        }
-                        CommandTaskKick kick = (CommandTaskKick) hostMessage;
-                        insertJobKickMessage(kick);
-                        kickNextJob();
-                        channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
-                    } catch (InterruptedException ex) {
-                        log.warn("Interrupted while processing task messages");
-                        shutdown();
-                    } catch (ShutdownSignalException shutdownException) {
-                        log.warn("Received unexpected shutdown exception from rabbitMQ", shutdownException);
-                        try {
-                            backoff.sleep();
-                        } catch (InterruptedException ignored) {
-                            // interrupted while sleeping
-                        }
-                    } catch (Throwable ex) {
-                        try {
-                            if (delivery != null) {
-                                channel.basicNack(delivery.getEnvelope().getDeliveryTag(), false, true);
-                            }
-                        } catch (Exception e) {
-                            log.warn("[task.runner] unable to nack message delivery", ex);
-                        }
-                        log.warn("[task.runner] error: " + ex);
-                        if (!(ex instanceof ExecException)) {
-                            log.error("Error nacking message", ex);
-                        }
-                        shutdown();
-                    }
-                }
-            }
-        }
-    }
-
-    public static class FileWatcher {
-
-        private File file;
-        private long lastSize;
-        private long lastEnd;
-        private RandomAccessFile access;
-        private String needle;
-
-        FileWatcher(File file, String needle) {
-            try {
-                this.access = new RandomAccessFile(file, "r");
-                this.needle = needle;
-                this.file = file;
-            } catch (Exception ex) {
-                log.warn("", ex);
-            }
-        }
-
-        public boolean containsKill() {
-            log.warn("containsKill(" + file + "," + access + ")");
-            if (access != null) {
-                try {
-                    long len = file.length();
-                    if (len > lastSize) {
-                        lastSize = len;
-                        // find last CR
-                        log.warn("searching " + lastEnd + " to " + len);
-                        for (long pos = len - 1; pos >= lastEnd; pos--) {
-                            access.seek(pos);
-                            if (access.read() == '\n') {
-                                long start = lastEnd;
-                                long size = pos - start;
-                                if (size > 32768) {
-                                    log.warn("[warning] skipping search @ " + size);
-                                    lastEnd = pos;
-                                    return false;
-                                } else if (size > 4096) {
-                                    log.warn("[warning] searching > 4k space @ " + size);
-                                }
-                                byte[] scan = new byte[(int) size];
-                                access.seek(start);
-                                access.readFully(scan);
-                                log.warn("scan of " + Bytes.toString(scan));
-                                lastEnd = pos;
-                                return (Bytes.toString(scan).indexOf(needle) >= 0);
-                            }
-                        }
-                    }
-                } catch (Exception ex) {
-                    log.warn("", ex);
-                }
-            }
-            return false;
-        }
     }
 
     public Integer getPID(File pidFile) {
@@ -1150,1403 +985,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         }
     }
 
-
-    /**
-     * for tracking state
-     */
-    @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
-                    isGetterVisibility = JsonAutoDetect.Visibility.NONE,
-                    setterVisibility = JsonAutoDetect.Visibility.NONE)
-    public class JobTask implements Codable {
-
-        @FieldConfig(codable = true, required = true)
-        private String id;
-        @FieldConfig(codable = true, required = true)
-        private Integer node;
-        @FieldConfig(codable = true)
-        private Integer nodeCount;
-        @FieldConfig(codable = true)
-        private CommandTaskKick kick;
-        @FieldConfig(codable = true, required = true)
-        private int runCount;
-        @FieldConfig(codable = true, required = true)
-        private long runTime;
-        @FieldConfig(codable = true)
-        private long startTime;
-        @FieldConfig(codable = true)
-        private boolean monitored = true;
-        @FieldConfig(codable = true)
-        private long fileCount;
-        @FieldConfig(codable = true)
-        private long fileBytes;
-        @FieldConfig(codable = true)
-        private volatile boolean deleted;
-        @FieldConfig(codable = true)
-        private int retries;
-        @FieldConfig(codable = true)
-        private boolean wasQueued;
-
-        private volatile ReplicaTarget[] failureRecoveryReplicas;
-        private volatile ReplicaTarget[] replicas;
-
-        @FieldConfig(codable = true)
-        private long replicateStartTime;
-        @FieldConfig(codable = true)
-        private long backupStartTime;
-
-        @FieldConfig(codable = true)
-        private String rebalanceSource;
-        @FieldConfig(codable = true)
-        private String rebalanceTarget;
-
-        private Process process;
-        private Thread workItemThread;
-        private File taskRoot;
-        private File jobRun;
-        private File replicateSH;
-        private File replicateRun;
-        private File backupSH;
-        private File backupRun;
-        private File jobDone;
-        private File replicateDone;
-        private File backupDone;
-        private File jobBackup;
-        private File jobStopped;
-        private File jobDir;
-        private File logOut;
-        private File logErr;
-        private File jobPid;
-        private File replicatePid;
-        private File backupPid;
-        private File jobPort;
-        private Integer port;
-
-        public void setDeleted(boolean deleted) {
-            this.deleted = deleted;
-        }
-
-        public JobKey getJobKey() {
-            return new JobKey(id, node);
-        }
-
-        public CommandTaskKick getKick() {
-            return kick;
-        }
-
-        public long getStartTime() {
-            return startTime;
-        }
-
-        public void setStartTime(long startTime) {
-            this.startTime = startTime;
-        }
-
-        public long getReplicateStartTime() {
-            return replicateStartTime;
-        }
-
-        public void setReplicateStartTime(long replicateStartTime) {
-            this.replicateStartTime = replicateStartTime;
-        }
-
-        public long getBackupStartTime() {
-            return backupStartTime;
-        }
-
-        public void setBackupStartTime(long backupStartTime) {
-            this.backupStartTime = backupStartTime;
-        }
-
-        public void setProcess(Process p) {
-            this.process = p;
-        }
-
-        public void interruptProcess() {
-            if (this.process != null) {
-                this.process.destroy();
-            }
-        }
-
-        public int getRetries() {
-            return retries;
-        }
-
-        public void setRetries(int retries) {
-            this.retries = retries;
-        }
-
-        public void clearFailureReplicas() {
-            // Merge all failureRecoveryReplicas into the master list, then clear failureRecoveryReplicas
-            List<ReplicaTarget> finalReplicas = replicas != null ? new ArrayList<>(Arrays.asList(replicas)) : new ArrayList<ReplicaTarget>();
-            if (failureRecoveryReplicas != null) {
-                finalReplicas.addAll(Arrays.asList(failureRecoveryReplicas));
-            }
-            replicas = finalReplicas.toArray(new ReplicaTarget[finalReplicas.size()]);
-            failureRecoveryReplicas = new ReplicaTarget[]{};
-        }
-
-        public boolean isDeleted() {
-            return deleted;
-        }
-
-        public void setWorkItemThread(MinionWorkItem workItemThread) {
-            this.workItemThread = workItemThread == null ? null : new Thread(workItemThread);
-        }
-
-        public void save() {
-            try {
-                Files.write(new File(getConfigDir(), "job.state"), Bytes.toBytes(CodecJSON.encodeString(this)), false);
-            } catch (Exception e) {
-                log.warn("", e);
-            }
-        }
-
-        private void monitor() {
-            monitored = true;
-            save();
-        }
-
-        public void unmonitor() {
-            monitored = false;
-            save();
-        }
-
-        public void updateFileStats() {
-            final TimerContext updateTimer = fileStatsTimer.time();
-            FileStats stats = new FileStats();
-            stats.update(jobDir);
-            try {
-                Files.write(new File(getConfigDir(), "job.stats"), Bytes.toBytes(CodecJSON.encodeString(stats)), false);
-            } catch (Exception e) {
-                log.warn("", e);
-            }
-            fileCount = stats.count;
-            fileBytes = stats.bytes;
-            updateTimer.stop();
-        }
-
-        public void allocate() {
-            capacityLock.lock();
-            try {
-                activeTaskKeys.add(this.getName());
-            } finally {
-                capacityLock.unlock();
-            }
-        }
-
-        public void deallocate() {
-            capacityLock.lock();
-            try {
-                activeTaskKeys.remove(this.getName());
-            } finally {
-                capacityLock.unlock();
-            }
-        }
-
-        public void sendNewStatusToReplicaHost(String hostUUID) {
-            sendControlMessage(new CommandTaskNew(hostUUID, getJobKey().getJobUuid(), getJobKey().getNodeNumber()));
-        }
-
-        public void sendEndStatus(int exit) {
-            sendEndStatus(exit, null, null);
-        }
-
-        public void sendEndStatus(int exit, String rebalanceSource, String rebalanceTarget) {
-            TaskExitState exitState = new TaskExitState();
-            File jobExit = new File(jobDir, "job.exit");
-            if (jobExit.exists() && jobExit.canRead()) {
-                try {
-                    CodecJSON.INSTANCE.decode(exitState, Files.read(jobExit));
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-            exitState.setWasStopped(wasStopped());
-            StatusTaskEnd end = new StatusTaskEnd(uuid, id, node, exit, fileCount, fileBytes);
-            end.setRebalanceSource(rebalanceSource);
-            end.setRebalanceTarget(rebalanceTarget);
-            end.setWasQueued(wasQueued);
-            end.setExitState(exitState);
-            setRebalanceSource(null);
-            setRebalanceTarget(null);
-            sendStatusMessage(end);
-            try {
-                kickNextJob();
-            } catch (Exception e) {
-                log.warn("[task.kick] exception while trying to kick next job: " + e, e);
-            }
-        }
-
-        public void sendPort() {
-            sendStatusMessage(new StatusTaskPort(uuid, kick.getJobUuid(), kick.getNodeID(), port));
-        }
-
-        /* restore a job state from a job/task-id root directory */
-        private boolean restoreTaskState(File taskDir) throws IOException {
-            taskRoot = taskDir;
-            File liveDir = new File(taskDir, "live");
-            File replicaDir = new File(taskDir, "replica");
-            File configDir = new File(taskDir, "config");
-            Files.initDirectory(configDir);
-            String jobID = taskDir.getParentFile().getName();
-            String nodeID = taskDir.getName();
-            String taskPath = jobID + "/" + nodeID;
-            if (replicaDir.isDirectory()) {
-                // Cut over replica to live
-                replicaDir.renameTo(liveDir);
-            } else if (liveDir.exists() && !liveEverywhereMarkerFile.exists()) {
-                // On first startup, mark any existing "live" directory as complete.
-                new File(liveDir, "replicate.complete").createNewFile();
-            }
-            if (!liveDir.isDirectory()) {
-                log.warn("[restore] " + taskPath + " has no live or replica directories");
-                return false;
-            }
-            id = jobID;
-            node = Integer.parseInt(nodeID);
-            initializeFileVariables();
-            if (!liveEverywhereMarkerFile.exists()) {
-                // On first startup, make sure to get to known idle state
-                jobDone.createNewFile();
-                backupDone.createNewFile();
-                replicateDone.createNewFile();
-            }
-            File jobState = new File(configDir, "job.state");
-            if (jobState.exists()) {
-                try {
-                    CodecJSON.decodeString(this, Bytes.toString(Files.read(jobState)));
-                } catch (Exception e) {
-                    log.warn("", e);
-                    return false;
-                }
-            }
-            if (Integer.parseInt(nodeID) != node) {
-                log.warn("[restore] " + taskPath + " mismatch with node # " + node);
-                return false;
-            }
-            if (!jobID.equals(id)) {
-                log.warn("[restore] " + taskPath + " mismatch with node id " + id);
-                return false;
-            }
-            monitored = true;
-            recoverWorkItem();
-            return true;
-        }
-
-        /* If minion detects that a task was running when the minion was shut down, attempt to recover by looking for the pid */
-        private void recoverWorkItem() {
-            try {
-                if (isRunning()) {
-                    log.warn("[restore] " + getName() + " as running");
-                    exec(this.kick, false);
-                } else if (isReplicating()) {
-                    log.warn("[restore] " + getName() + " as replicating");
-                    execReplicate(null, null, false, false, false);
-                } else if (isBackingUp()) {
-                    log.warn("[restore] " + getName() + " as backing up");
-                    execBackup(null, null, false);
-                } else if ((startTime > 0 || replicateStartTime > 0 || backupStartTime > 0)) {
-                    // Minion had a process running that finished during the downtime; notify Spawn
-                    log.warn("[restore]" + getName() + " as previously active; now finished");
-                    startTime = 0;
-                    replicateStartTime = 0;
-                    backupStartTime = 0;
-                    sendEndStatus(0);
-                }
-            } catch (Exception ex) {
-                log.warn("WARNING: failed to restore state for " + getName() + ": " + ex, ex);
-            }
-
-        }
-
-        private void initializeFileVariables() {
-            jobDir = getLiveDir();
-            File configDir = getConfigDir();
-            File logRoot = new File(jobDir, "log");
-            logOut = new File(logRoot, "log.out");
-            logErr = new File(logRoot, "log.err");
-            jobPid = new File(configDir, "job.pid");
-            replicatePid = new File(configDir, "replicate.pid");
-            backupPid = new File(configDir, "backup.pid");
-            jobPort = new File(jobDir, "job.port");
-            jobDone = new File(configDir, "job.done");
-            replicateDone = new File(configDir, "replicate.done");
-            backupDone = new File(configDir, "backup.done");
-        }
-
-        private boolean isComplete() {
-            File replicaComplete = new File(getLiveDir(), "replicate.complete");
-            return replicaComplete.exists();
-        }
-
-        private boolean shouldExecuteReplica(ReplicaTarget replica) {
-            if (replica.getHostUuid().equals(uuid)) {
-                log.warn("Host: " + uuid + " received a replication target of itself, this is NOT allowed for " + getName());
-                return false;
-            }
-            return true;
-        }
-
-        private List<String> assembleReplicateCommandAndInformSpawn(ReplicaTarget replica, boolean replicateAllBackups) throws IOException {
-            List<String> rv = new ArrayList<>();
-            if (replica == null || !shouldExecuteReplica(replica)) {
-                return null;
-            }
-            try {
-                String target = getTaskBaseDir(replica.getBaseDir(), id, node);
-                if (!replicateAllBackups) {
-                    target += "/live";
-                }
-                String userAT = replica.getUserAT();
-                String mkTarget = remoteConnectMethod + " " + userAT + " mkdir -p " + target + "/";
-                log.warn("[replicate] " + getJobKey() + " to " + userAT + ":" + target);
-                if (log.isDebugEnabled()) {
-                    log.debug(" --> " + mkTarget);
-                }
-                int runCount = kick != null ? kick.getRunCount() : 0;
-                sendStatusMessage(new StatusTaskReplica(replica.getHostUuid(), id, node, runCount, System.currentTimeMillis()));
-                rv.add(mkTarget);
-                if (replicateAllBackups) {
-                    StringBuilder sb = new StringBuilder();
-                    sb.append(createRsyncCommand(userAT, jobDir.getParentFile().getAbsolutePath() + "/", target));
-                    for (String backup : findLocalBackups(true)) {
-                        if (backup.startsWith(ScheduledBackupType.getBackupPrefix())) {
-                            // only include "b-" dirs/exclude gold - it won't exist on the remote host after the rsync.
-                            // On some occasions, this logic can attempt to touch a backup that is about to be deleted -- if so, log a message but don't fail the command
-                            sb.append("\n" + createTouchCommand(false, userAT, target + "/" + backup + "/backup.complete", true));
-                        }
-                    }
-                    sb.append("\n" + createTouchCommand(false, userAT, target + "/live/replicate.complete", false));
-                    rv.add(sb.toString());
-                } else {
-                    rv.add(createDeleteCommand(false, userAT, target + "/replicate.complete") +
-                                    "\n" + createRsyncCommand(userAT, jobDir.getAbsolutePath() + "/", target) +
-                                    "\n" + createTouchCommand(false, userAT, target + "/replicate.complete", false)
-                    );
-                }
-            } catch (Exception ex) {
-                log.warn("failed to replicate " + this.getJobKey() + " to " + replica.getHost(), ex);
-            }
-            return rv;
-        }
-
-        private List<String> assembleBackupCommandsForHost(boolean local, ReplicaTarget replica, List<String> symlinkCommands, List<String> deleteCommands, long time) {
-            List<String> copyCommands = new ArrayList<>();
-            for (ScheduledBackupType type : ScheduledBackupType.getBackupTypes().values()) {
-                String[] allBackups = local ? findLocalBackups(false) : findRemoteBackups(false, replica);
-                String backupName = type.generateNameForTime(time, true);
-                String symlinkName = type.getSymlinkName();
-                String userAT = local ? null : replica.getUserAT();
-                String source = "live";
-                String path = local ? jobDir.getParentFile().getAbsolutePath() : getTaskBaseDir(replica.getBaseDir(), id, node);
-                int maxNumBackups = getMaxNumBackupsForType(type);
-                if (maxNumBackups > 0 && type.shouldMakeNewBackup(allBackups)) {
-                    String backupCMD = createBackupCommand(local, userAT, path, source, backupName);
-                    copyCommands.add(backupCMD);
-                    if (symlinkName != null) {
-                        symlinkCommands.add(createSymlinkCommand(local, userAT, path, backupName, symlinkName));
-                    }
-                    maxNumBackups -= 1; // Diminish the max number by one, because we're about to add a new one
-                }
-                List<String> backupsToDelete = type.oldBackupsToDelete(allBackups, allBackups, maxNumBackups);
-                for (String oldBackup : backupsToDelete) {
-                    if (MinionTaskDeleter.shouldDeleteBackup(oldBackup, type)) {
-                        deleteCommands.add(createDeleteCommand(local, userAT, path + "/" + oldBackup));
-                    }
-                }
-            }
-            writeState();
-            return copyCommands;
-        }
-
-        private String createRsyncCommand(String userAT, String source, String target) throws Exception {
-            return "retry " + rsyncCommand + (copyBandwidthLimit > 0 ? " --bwlimit " + copyBandwidthLimit : "") + " -Hqa --exclude config --exclude gold --exclude replicate.complete --exclude backup.complete --delete-after -e \\'" + remoteConnectMethod + "\\' " + source + " " + userAT + ":" + target;
-        }
-
-        private String createBackupCommand(boolean local, String userAT, String baseDir, String source, String name) {
-            String sourceDir = baseDir + "/" + source;
-            String targetDir = baseDir + "/" + name;
-            log.warn("[backup] executing backup from " + sourceDir + " to " + targetDir);
-            return createDeleteCommand(local, userAT, targetDir) + " && " +
-                    createCopyCommand(local, userAT, sourceDir, targetDir) + " && " +
-                    createTouchCommand(local, userAT, targetDir + "/backup.complete", false);
-        }
-
-        private String createSymlinkCommand(boolean local, String userAt, String baseDir, String source, String name) {
-            String linkDir = baseDir + "/" + name;
-            String tmpName = linkDir + "_tmp";
-            return wrapCommandWithRetries(local, userAt, "if [ ! -L " + linkDir + " ]; then rm -rf " + linkDir + " ; fi && " + lncmd + " -nsf " + source + " " + tmpName + " && " + mvcmd + " -Tf " + tmpName + " " + linkDir);
-        }
-
-        private String createCopyCommand(boolean local, String userAt, String sourceDir, String targetDir) {
-            String cpParams = linkBackup ? " -lr " : " -r ";
-            return wrapCommandWithRetries(local, userAt, cpcmd + cpParams + sourceDir + " " + targetDir);
-        }
-
-        private String createTouchCommand(boolean local, String userAT, String path, boolean failSafe) {
-            return wrapCommandWithRetries(local, userAT, "touch " + path + (failSafe ? " 2>/dev/null || echo 'Skipped deleted backup'" : ""));
-        }
-
-        private String createDeleteCommand(boolean local, String userAT, String dirPath) {
-            return wrapCommandWithRetries(local, userAT, rmcmd + " -rf " + dirPath);
-        }
-
-        private String wrapCommandWithRetries(boolean local, String userAt, String command) {
-            return "retry \"" + (local ? "" : remoteConnectMethod + " " + userAt + " '") + command + (local ? "" : "'") + "\"";
-        }
-
-        /**
-         * Find local backups for a task.
-         *
-         * @param completeOnly Whether to restrict to backups that contain the backup.complete file
-         * @return A list of directory names
-         */
-        private String[] findLocalBackups(boolean completeOnly) {
-            File[] dirs = jobDir.getParentFile().listFiles();
-            if (dirs == null) {
-                return new String[]{};
-            }
-            List<String> rvList = new ArrayList<>();
-            for (File dir : dirs) {
-                if (dir.isDirectory()) {
-                    if (!completeOnly || Strings.contains(dir.list(), "backup.complete")) {
-                        rvList.add(dir.getName());
-                    }
-                }
-            }
-            Collections.sort(rvList);
-            return rvList.toArray(new String[]{});
-        }
-
-        /**
-         * Find backups for a task on a replica host
-         *
-         * @param completeOnly Whether to restrict to backups that contain the backup.complete file
-         * @param replica      The ReplicaTarget object describing the destination for this replica
-         * @return A list of directory names
-         */
-        private String[] findRemoteBackups(boolean completeOnly, ReplicaTarget replica) {
-            try {
-                String userAT = replica.getUser() + "@" + replica.getHost();
-                String baseDir = getTaskBaseDir(replica.getBaseDir(), id, node);
-                if (completeOnly) {
-                    baseDir += "/*/backup.complete";
-                }
-                String lsResult = execCommandReturnStdOut(remoteConnectMethod + " " + userAT + " " + lscmd + " " + baseDir);
-                String[] lines = lsResult.split("\n");
-                if (completeOnly) {
-                    List<String> rv = new ArrayList<>(lines.length);
-                    for (String line : lines) {
-                        String[] splitLine = line.split("/");
-                        if (splitLine.length > 2) {
-                            rv.add(splitLine[splitLine.length - 2]);
-                        }
-                    }
-                    return rv.toArray(new String[]{});
-                } else {
-                    return lines;
-                }
-            } catch (Exception ex) {
-                return new String[]{};
-            }
-        }
-
-        private String execCommandReturnStdOut(String sshCMD) throws InterruptedException, IOException {
-            String[] wrappedCMD = new String[]{"/bin/sh", "-c", sshCMD};
-            SimpleExec command = runCommand(wrappedCMD, null);
-            if (command.exitCode() == 0) {
-                return command.stdoutString();
-            } else {
-                return "";
-            }
-        }
-
-        private SimpleExec runCommand(String[] sshCMDArray, String sshCMD) throws InterruptedException, IOException {
-            SimpleExec command;
-            if (sshCMD != null) {
-                command = new SimpleExec(sshCMD).join();
-            } else {
-                command = new SimpleExec(sshCMDArray).join();
-            }
-            return command;
-        }
-
-        /* Read the proper number of backups for each type from the kick parameters */
-        private int getMaxNumBackupsForType(ScheduledBackupType type) {
-            if (type instanceof GoldBackup) {
-                return 3; // Keep 3 gold backups around so that these directories will linger for query/streaming stability
-            }
-            if (kick == null) {
-                return -1; // If we're not sure how many backups to create, hold off until we receive a task kick
-            }
-            if (type instanceof HourlyBackup) {
-                return kick.getHourlyBackups();
-            } else if (type instanceof DailyBackup) {
-                return kick.getDailyBackups();
-            } else if (type instanceof WeeklyBackup) {
-                return kick.getWeeklyBackups();
-            } else if (type instanceof MonthlyBackup) {
-                return kick.getMonthlyBackups();
-            } else {
-                return 0; // Unknown backup type
-            }
-        }
-
-        /**
-         * Move the specified backup dir onto the live dir
-         *
-         * @param backupDir The "good" version of a task
-         * @param targetDir The target directory, generally "live", which may have bad/incomplete data
-         * @return True if the operation succeeds
-         */
-        public boolean promoteBackupToLive(File backupDir, File targetDir) {
-            if (targetDir != null && backupDir != null && backupDir.exists() && backupDir.isDirectory()) {
-                moveAndDeleteAsync(targetDir);
-                // Copy the backup directory onto the target directory
-                String cpCMD = cpcmd + (linkBackup ? " -lrf " : " -rf ");
-                return shell(cpCMD + backupDir + " " + targetDir + " >> /dev/null 2>&1", rootDir) == 0;
-            } else {
-                log.warn("[restore] invalid backup dir " + backupDir);
-            }
-            return false;
-        }
-
-        /**
-         * Move a file to a temporary location, then delete it asynchronously via a request to MinionTaskDeleter
-         *
-         * @param file The file to be deleted.
-         */
-        private void moveAndDeleteAsync(File file) {
-            if (file != null && file.exists()) {
-                File tmpLocation = new File(file.getParent(), "BAD-" + System.currentTimeMillis());
-                if (file.renameTo(tmpLocation)) {
-                    submitPathToDelete(tmpLocation.getPath());
-                } else {
-                    throw new RuntimeException("Could not rename file for asynchronous deletion: " + file);
-                }
-            }
-        }
-
-        private void submitPathToDelete(String path) {
-            minionStateLock.lock();
-            try {
-                minionTaskDeleter.submitPathToDelete(path);
-            } finally {
-                minionStateLock.unlock();
-            }
-        }
-
-        public boolean revertToBackup(int revision, long time, String type) {
-            revertLock.lock();
-            try {
-                if (isRunning() || isReplicating() || isBackingUp()) {
-                    log.warn("[revert] cannot promote backup for active task " + getName());
-                    return false;
-                }
-                ScheduledBackupType typeToUse = ScheduledBackupType.getBackupTypes().get(type);
-                if (typeToUse == null) {
-                    log.warn("[revert] unrecognized backup type " + type);
-                    return false;
-                }
-                String backupName;
-                if (revision < 0) {
-                    backupName = getBackupByTime(time, type);
-                } else {
-                    backupName = getBackupByRevision(revision, type);
-                }
-                if (backupName == null) {
-                    log.warn("[revert] found no backups of type " + type + " and time " + time + " to revert to for " + getName() + "; failing");
-                    return false;
-                }
-                File oldBackup = new File(jobDir.getParentFile(), backupName);
-                log.warn("[revert] " + getName() + " from " + oldBackup);
-                sendStatusMessage(new StatusTaskRevert(getUUID(), id, node));
-                boolean promoteSuccess = promoteBackupToLive(oldBackup, jobDir);
-                if (promoteSuccess) {
-                    try {
-                        execReplicate(null, null, false, true, false);
-                        return true;
-                    } catch (Exception ex) {
-                        log.warn("[revert] post-revert replicate of " + getName() + " failed with exception " + ex, ex);
-                        return false;
-                    }
-                } else {
-                    log.warn("[revert] " + getName() + " from " + oldBackup + " failed");
-                    sendEndStatus(JobTaskErrorCode.EXIT_REVERT_FAILURE);
-                    return false;
-                }
-            } finally {
-                revertLock.unlock();
-            }
-        }
-
-        private String getBackupByTime(long time, String type) {
-            ScheduledBackupType backupType = ScheduledBackupType.getBackupTypes().get(type);
-            String[] backups = findLocalBackups(true);
-            if (backups == null || backups.length == 0) {
-                log.warn("[revert] fail, there are no local backups of type " + type + " for " + getName());
-                return null;
-            }
-            String timeName = backupType.stripSuffixAndPrefix(backupType.generateNameForTime(time, true));
-            for (String backupName : backups) {
-                if (backupType.isValidName(backupName) && (backupType.stripSuffixAndPrefix(backupName).equals(timeName))) {
-                    return backupName;
-                }
-            }
-            log.warn("[revert] fail, invalid backup time for " + getName() + ": " + time);
-            return null;
-        }
-
-        /**
-         * Get all complete backups, ordered from most recent to earliest.
-         *
-         * @return A list of backup names
-         */
-        public List<String> getBackupsOrdered() {
-            List<String> backups = new ArrayList<>(Arrays.asList(findLocalBackups(true)));
-            ScheduledBackupType.sortBackupsByTime(backups);
-            return backups;
-        }
-
-        /**
-         * Fetch the name of the backup directory for this task, n revisions back
-         *
-         * @param revision How far to go back -- 0 for latest stable version, 1 for the next oldest, etc.
-         * @param type     Which backup type to use.
-         * @return The name of the appropriate complete backup, if found, and null if no such backup was found
-         */
-        private String getBackupByRevision(int revision, String type) {
-
-            String[] backupsRaw = findLocalBackups(true);
-            List<String> backups = new ArrayList<>();
-            if (backupsRaw == null) {
-                return null;
-            }
-            if ("all".equals(type)) {
-                backups.addAll(Arrays.asList(backupsRaw));
-                ScheduledBackupType.sortBackupsByTime(backups);
-            } else {
-                ScheduledBackupType backupType = ScheduledBackupType.getBackupTypes().get(type);
-                for (String backup : backupsRaw) {
-                    if (backupType.isValidName(backup)) {
-                        backups.add(backup);
-                    }
-                }
-            }
-            int offset = (backups.size() - 1 - revision);
-            if (revision < 0 || offset < 0 || offset >= backups.size()) {
-                log.warn("[revert] fail: can't find revision=" + revision + " with only " + backups.size() + " complete backups");
-                return null;
-            }
-            return backups.get(offset);
-        }
-
-        private void require(boolean test, String msg) throws ExecException {
-            if (!test) {
-                throw new ExecException(msg);
-            }
-        }
-
-        private void requireNewOrEqual(Object currentValue, Object newValue, String valueName) throws IllegalArgumentException {
-            if (currentValue != null && !currentValue.equals(newValue)) {
-                throw new IllegalArgumentException("value mismatch for '" + valueName + "' " + newValue + " != " + currentValue);
-            }
-        }
-
-        public void exec(CommandTaskKick kickMessage, boolean execute) throws Exception {
-            // setup data directory
-            jobDir = Files.initDirectory(new File(rootDir, id + File.separator + node + File.separator + "live"));
-            File configDir = getConfigDir();
-            if (!configDir.exists()) {
-                Files.initDirectory(configDir);
-            }
-            File logDir = new File(jobDir, "log");
-            Files.initDirectory(logDir);
-            replicateDone = new File(configDir, "replicate.done");
-            jobRun = new File(configDir, "job.run");
-            jobDone = new File(configDir, "job.done");
-            logOut = new File(logDir, "log.out");
-            logErr = new File(logDir, "log.err");
-            jobPid = new File(configDir, "job.pid");
-            jobPort = new File(jobDir, "job.port");
-            jobStopped = new File(jobDir, "job.stopped");
-            wasQueued = false;
-            if (execute) {
-                File replicateComplete = new File(getLiveDir(), "replicate.complete");
-                replicateComplete.createNewFile();
-                replicas = kickMessage.getReplicas();
-                String jobId = kickMessage.getJobUuid();
-                int jobNode = kickMessage.getJobKey().getNodeNumber();
-                if (log.isDebugEnabled()) {
-                    log.debug("[task.exec] " + kickMessage.getJobKey());
-                }
-                require(testTaskIdle(), "task is not idle");
-                String jobCommand = kickMessage.getCommand();
-                require(!Strings.isEmpty(jobCommand), "task command is missing or empty");
-                // ensure we're not changing something critical on a re-spawn
-                int jobNodes = kickMessage.getJobNodes();
-                requireNewOrEqual(id, jobId, "Job ID");
-                requireNewOrEqual(node, jobNode, "Job Node");
-                requireNewOrEqual(nodeCount, jobNodes, "Job Node Count");
-                // store the new values
-                id = jobId;
-                node = jobNode;
-                nodeCount = jobNodes;
-                kick = kickMessage;
-                retries = kick != null ? kick.getRetries() : 0;
-                // allocate type slot if applicable
-                sendStatusMessage(new StatusTaskBegin(uuid, id, node));
-                // store in jobs on first run
-                if (runCount == 0) {
-                    log.warn("[task.exec] first time running " + getName());
-                }
-                String jobConfig = kickMessage.getConfig();
-                if (jobConfig != null) {
-                    Files.write(new File(jobDir, "job.conf"), Bytes.toBytes(jobConfig), false);
-                }
-                // create exec command
-                jobCommand = jobCommand.replace("{{jobdir}}", jobDir.getPath()).replace("{{jobid}}", jobId).replace("{{port}}", findNextPort() + "").replace("{{node}}", jobNode + "").replace(
-                        "{{nodes}}", jobNodes + "");
-                log.warn("[task.exec] starting " + jobDir.getPath() + " with retries=" + retries);
-                // create shell wrapper
-                require(deleteFiles(jobPid, jobPort, jobDone, jobStopped), "failed to delete files");
-                port = null;
-                String stamp = timeFormat.print(System.currentTimeMillis());
-                File logOutTmp = new File(logDir, "log-" + stamp + ".out");
-                File logErrTmp = new File(logDir, "log-" + stamp + ".err");
-                StringBuilder bash = new StringBuilder("#!/bin/bash\n");
-                bash.append("find " + logDir + " -type f -mtime +30 -exec rm {} \\;\n");
-                bash.append("rm -f " + logOut + " " + logErr + "\n");
-                bash.append("ln -s " + logOutTmp.getName() + " " + logOut + "\n");
-                bash.append("ln -s " + logErrTmp.getName() + " " + logErr + "\n");
-                bash.append("(\n");
-                bash.append("cd " + jobDir + "\n");
-                bash.append("(" + jobCommand + ") &\n");
-                bash.append("pid=$!\n");
-                bash.append("echo ${pid} > " + jobPid.getCanonicalPath() + "\n");
-                bash.append("exit=0\n");
-                bash.append("wait ${pid} || exit=$?\n");
-                bash.append("echo ${exit} > " + jobDone.getCanonicalPath() + "\n");
-                bash.append("exit ${exit}\n");
-                bash.append(") >" + logOutTmp + " 2>" + logErrTmp + " &\n");
-                Files.write(jobRun, Bytes.toBytes(bash.toString()), false);
-                runCount++;
-            }
-            this.startTime = System.currentTimeMillis();
-            // save it
-            save();
-            sendHostStatus();
-            // mark it active
-            capacityLock.lock();
-            try {
-                activeTaskKeys.add(getName());
-            } finally {
-                capacityLock.unlock();
-            }
-            // start watcher, which will fire it up
-            workItemThread = new Thread(new RunTaskWorkItem(jobDir, jobPid, jobRun, jobDone, this, execute, retries));
-            workItemThread.setName("RunTask-WorkItem-" + getName());
-            workItemThread.start();
-        }
-
-        public void execReplicate(String rebalanceSource, String rebalanceTarget, boolean replicateAllBackups, boolean execute, boolean wasQueued) throws Exception {
-            setRebalanceSource(rebalanceSource);
-            setRebalanceTarget(rebalanceTarget);
-            setWasQueued(wasQueued);
-            if (log.isDebugEnabled()) {
-                log.debug("[task.execReplicate] " + this.getJobKey());
-            }
-            require(testTaskIdle(), "task is not idle");
-            if ((replicas == null || replicas.length == 0) && (failureRecoveryReplicas == null || failureRecoveryReplicas.length == 0)) {
-                execBackup(rebalanceSource, rebalanceTarget, true);
-                return;
-            }
-            if (findActiveRsync(id, node) != null) {
-                String msg = "Replicate failed because an existing rsync process was found for " + getName();
-                log.warn("[task.execReplicate] " + msg);
-                sendEndStatus(JobTaskErrorCode.EXIT_REPLICATE_FAILURE);
-                shell(echoWithDate_cmd + msg + " >> " + logErr.getCanonicalPath(), rootDir);
-                return;
-            }
-            sendStatusMessage(new StatusTaskReplicate(uuid, id, node, replicateAllBackups));
-            try {
-                jobDir = Files.initDirectory(new File(rootDir, id + File.separator + node + File.separator + "live"));
-                log.warn("[task.execReplicate] replicating " + jobDir.getPath());
-                File configDir = getConfigDir();
-                Files.initDirectory(configDir);
-                // create shell wrapper
-                replicateSH = new File(configDir, "replicate.sh");
-                replicateRun = new File(configDir, "replicate.run");
-                replicateDone = new File(configDir, "replicate.done");
-                replicatePid = new File(configDir, "replicate.pid");
-                if (execute) {
-                    require(deleteFiles(replicatePid, replicateDone), "failed to delete replicate config files");
-                    String replicateRunScript = generateRunScript(replicateSH.getCanonicalPath(), replicatePid.getCanonicalPath(), replicateDone.getCanonicalPath());
-                    Files.write(replicateRun, Bytes.toBytes(replicateRunScript), false);
-                    String replicateSHScript = generateReplicateSHScript(replicateAllBackups);
-                    Files.write(replicateSH, Bytes.toBytes(replicateSHScript), false);
-                }
-                replicateStartTime = System.currentTimeMillis();
-                // save it
-                save();
-                // start watcher
-                workItemThread = new Thread(new ReplicateWorkItem(jobDir, replicatePid, replicateRun, replicateDone, this, rebalanceSource, rebalanceTarget, execute));
-                workItemThread.setName("Replicate-WorkItem-" + getName());
-                workItemThread.start();
-            } catch (Exception ex) {
-                sendEndStatus(JobTaskErrorCode.EXIT_SCRIPT_EXEC_ERROR);
-                throw ex;
-            }
-        }
-
-        public void execBackup(String rebalanceSource, String rebalanceTarget, boolean execute) throws Exception {
-            if (log.isDebugEnabled()) {
-                log.debug("[task.execBackup] " + this.getJobKey());
-            }
-            require(testTaskIdle(), "task is not idle");
-            sendStatusMessage(new StatusTaskBackup(uuid, id, node));
-            try {
-                log.warn("[task.execBackup] backing up " + jobDir.getPath());
-                File configDir = getConfigDir();
-                Files.initDirectory(configDir);
-                backupSH = new File(configDir, "backup.sh");
-                backupRun = new File(configDir, "backup.run");
-                backupDone = new File(configDir, "backup.done");
-                backupPid = new File(configDir, "backup.pid");
-                if (execute) {
-                    require(deleteFiles(backupPid, backupDone), "failed to delete backup config files");
-                    String backupSHScript = generateBackupSHScript(replicas);
-                    Files.write(backupSH, Bytes.toBytes(backupSHScript), false);
-                    String backupRunScript = generateRunScript(backupSH.getCanonicalPath(), backupPid.getCanonicalPath(), backupDone.getCanonicalPath());
-                    Files.write(backupRun, Bytes.toBytes(backupRunScript), false);
-                }
-                backupStartTime = System.currentTimeMillis();
-                save();
-                workItemThread = new Thread(new BackupWorkItem(jobDir, backupPid, backupRun, backupDone, this, rebalanceSource, rebalanceTarget, execute));
-                workItemThread.setName("Backup-WorkItem-" + getName());
-                workItemThread.start();
-            } catch (Exception ex) {
-                sendEndStatus(JobTaskErrorCode.EXIT_SCRIPT_EXEC_ERROR);
-                throw ex;
-            }
-        }
-
-        private String makeRetryDefinition() {
-            StringBuilder sb = new StringBuilder();
-            sb.append("retries=" + copyRetryLimit + "\n");
-            sb.append("retryDelaySeconds=" + copyRetryDelaySeconds + "\n");
-            sb.append("function retry {\n" +
-                    "try=0; cmd=\"$@\"\n" +
-                    "until [ $try -ge $retries ]; do\n" +
-                    "\tif [ \"$try\" -ge \"1\" ]; then echo starting retry $try; sleep $retryDelaySeconds; fi\n" +
-                    "\ttry=$((try+1)); eval $cmd; exitCode=$?\n" +
-                    "\tif [ \"$exitCode\" == \"0\" ] || [ \"$exitCode\" == \"127\" ] || [ \"$exitCode\" == \"137\" ]; then return $exitCode; fi\n" +
-                    "done\n" +
-                    "echo \"Command failed after $retries retries: $cmd\"; exit $exitCode\n" +
-                    "}\n");
-            return sb.toString();
-        }
-
-        private String generateReplicateSHScript(boolean replicateAllBackups) throws IOException {
-            File logDir = new File(jobDir, "log");
-            Files.initDirectory(logDir);
-            StringBuilder bash = new StringBuilder("#!/bin/bash\n");
-            bash.append(makeRetryDefinition());
-            bash.append(echoWithDate_cmd + "Deleting environment lock files in preparation for replication\n");
-            bash.append("find " + jobDir.getCanonicalPath() + " -name je.lck -print -exec rm {} \\;\n");
-            bash.append("find " + jobDir.getCanonicalPath() + " -name je.info.0 -print -exec rm {} \\;\n");
-            appendReplicas(bash, failureRecoveryReplicas, true); // Add commands for any the failure-recovery replicas that definitely need full rsyncs
-            appendReplicas(bash, replicas, replicateAllBackups); // Add commands for the existing replicas
-            bash.append(echoWithDate_cmd + "Finished replicating successfully\n");
-            return bash.toString();
-        }
-
-        private void appendReplicas(StringBuilder bash, ReplicaTarget[] replicas, boolean replicateAllBackups) throws IOException {
-            if (replicas == null) {
-                return;
-            }
-            for (ReplicaTarget replica : replicas) {
-                if (replica.getHostUuid() == null || replica.getHostUuid().equals(uuid)) {
-                    return;
-                }
-                List<String> replicateCommands = assembleReplicateCommandAndInformSpawn(replica, replicateAllBackups);
-                if (replicateCommands == null || replicateCommands.isEmpty()) {
-                    return;
-                }
-                String action = "replicating to " + replica.getHost() + " uuid=" + replica.getHostUuid();
-                appendCommandsWithStartFinishMessages(bash, action, replicateCommands, replicateCommandDelaySeconds);
-            }
-        }
-
-        private String generateRunScript(String shName, String pidPath, String donePath) throws IOException {
-            if (logOut == null || logErr == null) {
-                File logRoot = new File(jobDir, "log");
-                logOut = new File(logRoot, "log.out");
-                logErr = new File(logRoot, "log.err");
-            }
-            StringBuilder bash = new StringBuilder("#!/bin/bash\n");
-            bash.append("(\n");
-            bash.append("\t cd " + jobDir.getCanonicalPath() + "\n");
-            bash.append("\t (bash " + shName + ") &\n");
-            bash.append("\t pid=$!\n");
-            bash.append("\t echo ${pid} > " + pidPath + "\n");
-            bash.append("\t exit=0\n");
-            bash.append("\t wait ${pid} || exit=$?\n");
-            bash.append("\t echo ${exit} > " + donePath + "\n");
-            bash.append("\t exit ${exit};\n");
-            bash.append(") >> " + logOut.getCanonicalPath() + " 2>> " + logErr.getCanonicalPath() + " &");
-            return bash.toString();
-        }
-
-        private String generateBackupSHScript(ReplicaTarget[] replicas) throws IOException {
-            File logDir = new File(jobDir, "log");
-            Files.initDirectory(logDir);
-            StringBuilder bash = new StringBuilder("#!/bin/bash\n");
-            bash.append("cd " + jobDir.getCanonicalPath() + "\n");
-            bash.append(makeRetryDefinition());
-            List<String> symlinkCommands = new ArrayList<>();
-            List<String> deleteCommands = new ArrayList<>();
-            long now = System.currentTimeMillis();
-            List<String> localBackupCommands = assembleBackupCommandsForHost(true, null, symlinkCommands, deleteCommands, now);
-            appendCommandsWithStartFinishMessages(bash, "updating local backups", localBackupCommands, backupCommandDelaySeconds);
-            if (replicas != null) {
-                for (ReplicaTarget replica : replicas) {
-                    if (replica.getHostUuid() == null || replica.getHostUuid().equals(uuid)) {
-                        continue;
-                    }
-                    String action = "updating backups on " + replica.getHost() + " uuid=" + replica.getHostUuid();
-                    List<String> remoteBackupCommands = assembleBackupCommandsForHost(false, replica, symlinkCommands, deleteCommands, now);
-                    appendCommandsWithStartFinishMessages(bash, action, remoteBackupCommands, backupCommandDelaySeconds);
-                }
-            }
-            appendCommandsWithStartFinishMessages(bash, "updating symlinks", symlinkCommands, backupCommandDelaySeconds);
-            appendCommandsWithStartFinishMessages(bash, "deleting old backups", deleteCommands, backupCommandDelaySeconds);
-            bash.append(echoWithDate_cmd + "Finished backing up successfully\n");
-            return bash.toString();
-        }
-
-        private void appendCommandsWithStartFinishMessages(StringBuilder builder, String action, List<String> commands, int delaySeconds) {
-            builder.append(echoWithDate_cmd + " Started " + action + " \n");
-            for (String cmd : commands) {
-                if (delaySeconds > 0) {
-                    builder.append("sleep " + delaySeconds + " && \\\n");
-                }
-                builder.append(cmd + " && \\\n");
-            }
-            builder.append(echoWithDate_cmd + " Finished " + action + " \n");
-        }
-
-        /**
-         * Suppose we have received a message to begin running a task / replicating / backing up.
-         * If we're already doing one of these, reject the received instruction and re-send an event describing what we're doing.
-         *
-         * @return true only if the task was really idle.
-         */
-        private boolean testTaskIdle() {
-            if (isRunning()) {
-                sendStatusMessage(new StatusTaskBegin(uuid, id, node));
-                return false;
-            } else if (isReplicating()) {
-                sendStatusMessage(new StatusTaskReplicate(uuid, id, node, false));
-                return false;
-            } else if (isBackingUp()) {
-                sendStatusMessage(new StatusTaskBackup(uuid, id, node));
-                return false;
-            } else if (workItemThread != null) {
-                log.warn("clearing workItem for idle task " + getName());
-                workItemThread.interrupt();
-                workItemThread = null;
-            }
-            return true;
-        }
-
-        private boolean isProcessRunning(File pidFile) {
-            Integer pid = getPID(pidFile);
-            return pid != null && activeProcessExistsWithPid(pid, rootDir);
-        }
-
-        protected void createDoneFileIfNoProcessRunning(File pidFile, File doneFile) {
-            if (doneFile == null || pidFile == null || doneFile.exists()) {
-                return;
-            }
-            boolean success = false;
-            try {
-                Integer pid = getPID(pidFile);
-                if (pid == null || !activeProcessExistsWithPid(pid, rootDir)) {
-                    success = doneFile.exists() || doneFile.createNewFile();
-                } else {
-                    success = true; // Process exists, nothing to do.
-                }
-            } catch (IOException io) {
-                success = false;
-                log.warn("[task.state.check] exception when creating done file: " + io, io);
-            }
-            if (!success) {
-                log.warn("[task.state.check] failed to create done file for task " + getName() + " path " + doneFile);
-            }
-        }
-
-        public String getName() {
-            return id + "/" + node;
-        }
-
-        public File getJobDir() {
-            return jobDir;
-        }
-
-        public Integer getPort() {
-            try {
-                if (port == null && jobPort.exists())// && jobPort.lastModified() >= jobRun.lastModified())
-                {
-                    port = Integer.parseInt(Bytes.toString(Files.read(jobPort)));
-                }
-            } catch (Exception ex) {
-                log.warn("", ex);
-            }
-            return port;
-        }
-
-        // TODO hookup to a job clean cmd at some point (for testing mostly)
-        public boolean deleteData() {
-            return false;
-        }
-
-        public boolean isRunning() {
-            if (jobDone == null) {
-                return false;
-            }
-            // no checking for process here since this doesn't seem to be broken like the others
-            return this.startTime > 0 && !jobDone.exists();
-        }
-
-        public boolean isReplicating() {
-            if (replicateDone == null) {
-                return false;
-            }
-            return !isRunning() && replicateStartTime > 0 && !replicateDone.exists() && isProcessRunning(replicatePid);
-        }
-
-        public boolean isBackingUp() {
-            if (backupDone == null) {
-                return false;
-            }
-            return !isRunning() && !isReplicating() && backupStartTime > 0 && !backupDone.exists() && isProcessRunning(backupPid);
-        }
-
-        public File[] getActivePidFiles() {
-            if (isRunning()) {
-                return new File[]{jobPid};
-            } else if (isReplicating()) {
-                return new File[]{replicatePid};
-            } else if (isBackingUp()) {
-                return new File[]{backupPid};
-            } else {
-                return null;
-            }
-        }
-
-        public boolean stopWait(boolean kill) {
-            File[] activePidFiles = getActivePidFiles();
-            Integer rsync = null;
-            if (isReplicating()) {
-                rsync = findActiveRsync(id, node);
-            }
-            boolean success = activePidFiles != null && stopWait(activePidFiles, kill);
-            if (rsync != null) {
-                // Need to kill the rsync after the replicate script to avoid doing a retry
-                shell("kill -9 " + rsync, rootDir);
-            }
-            return success;
-        }
-
-        public boolean stopWait(File[] pidFiles, boolean kill) {
-            boolean result = true;
-            boolean isRunning = isRunning();
-            try {
-                if (kill) {
-                    resetStartTime();
-                    log.warn("[stopWait] creating done files for " + getName() + " if they do not exist");
-                    if (!jobDone.getParentFile().exists()) {
-                        log.warn("The directory " + jobDone.getParent() + " does not exist.");
-                    } else {
-                        createDoneFileIfNoProcessRunning(jobPid, jobDone);
-                        createDoneFileIfNoProcessRunning(replicatePid, replicateDone);
-                        createDoneFileIfNoProcessRunning(backupPid, backupDone);
-                    }
-                }
-                for (File pidFile : pidFiles) {
-                    Integer pid = getPID(pidFile);
-                    if (pid == null) {
-                        log.warn((kill ? "stop" : "kill") + "Wait failed with null pid for " + getName());
-                        result = false;
-                    } else {
-                        if (pid.equals(minionPid)) {
-                            log.warn("[minion.kill] tried to kill my own process. pid: " + pid);
-                            result = false;
-                        }
-                        String cmd = getCmdLine(pid);
-                        if (cmd == null) {
-                            log.warn("[minion.kill] unable to read cmdline, so it seems unlikely the process is running, ret false");
-                            result = false;
-                        } else {
-                            log.warn("[minion.kill] about to kill pid " + pid + " with cmd line: " + cmd);
-                            if (cmd.contains(" minion") || cmd.contains(" mss") || cmd.contains(" mqworker")) {
-                                log.warn("It looked like we are trying to kill an Important Process (TM), returning false instead");
-                                result = false;
-                            }
-                        }
-                        if (isRunning) {
-                            jobStopped = new File(jobDir, "job.stopped");
-                            if (!jobStopped.createNewFile()) {
-                                log.warn("Failed to create job.stopped file for stopped job " + getName());
-                            }
-                        }
-                        if (kill) {
-                            log.warn("[minion.kill] killing pid:" + pid + " hard");
-                            result &= Minion.shell("kill -9 " + pid, rootDir) >= 0;
-                        } else {
-                            log.warn("[minion.kill] killing pid:" + pid + " nice");
-                            result &= Minion.shell("kill " + pid, rootDir) >= 0;
-                        }
-                    }
-                }
-            } catch (Exception ex) {
-                log.warn("", ex);
-            }
-            return result;
-        }
-
-        private void resetStartTime() {
-            if (isRunning()) {
-                startTime = 0;
-            } else if (isReplicating()) {
-                replicateStartTime = 0;
-            } else if (isBackingUp()) {
-                backupStartTime = 0;
-            }
-            writeState();
-        }
-
-        public File getLiveDir() {
-            return new File(taskRoot, "live");
-        }
-
-        public File getConfigDir() {
-            return new File(taskRoot, "config");
-        }
-
-        public String profile() {
-            File profile = new File(jobDir, "job.profile");
-            if (profile.exists()) {
-                try {
-                    return Bytes.toString(Files.read(profile));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            return "";
-        }
-
-        public JSONObject readLogLines(File file, int startOffset, int lines) {
-            JSONObject json = new JSONObject();
-            String content = "";
-            long off = 0;
-            long endOffset = 0;
-            int linesRead = 0;
-            int bytesRead = 0;
-            try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-                long len = raf.length();
-                //if startoffset is negative, tail the content
-                if (startOffset < 0 || startOffset > len) {
-                    off = len;
-                    while (lines > 0 && --off >= 0) {
-                        raf.seek(off);
-                        if (off == 0 || raf.read() == '\n') {
-                            lines--;
-                            linesRead++;
-                        }
-                    }
-                    bytesRead = (int) (len - off);
-                    byte[] buf = new byte[bytesRead];
-                    raf.read(buf);
-                    content = Bytes.toString(buf);
-                    endOffset = len;
-                } else if (len > 0 && startOffset < len) {
-                    off = startOffset;
-                    while (lines > 0 && off < len) {
-                        raf.seek(off++);
-                        if (raf.read() == '\n') {
-                            lines--;
-                            linesRead++;
-                        }
-                    }
-                    bytesRead = (int) (off - startOffset);
-                    byte[] buf = new byte[bytesRead];
-                    raf.seek(startOffset);
-                    raf.read(buf);
-                    content = Bytes.toString(buf);
-                    endOffset = off;
-                } else if (startOffset == len) {
-                    endOffset = len;
-                    linesRead = 0;
-                    content = "";
-                }
-                json.put("offset", endOffset);
-                json.put("lines", linesRead);
-                json.put("lastModified", file.lastModified());
-                json.put("out", content);
-            } catch (Exception e) {
-                log.warn("", e);
-            }
-            return json;
-        }
-
-        public String tail(File file, int lines) {
-            try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-                long len = raf.length();
-                if (len <= 0) {
-                    return "";
-                }
-                long off = len;
-                while (lines > 0 && --off >= 0) {
-                    raf.seek(off);
-                    if (off == 0 || raf.read() == '\n') {
-                        lines--;
-                    }
-                }
-                byte[] buf = new byte[(int) (len - off)];
-                raf.read(buf);
-                return Bytes.toString(buf);
-            } catch (Exception e) {
-                log.warn("", e);
-            }
-            return "";
-        }
-
-        public String head(File file, int lines) {
-            try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-                long len = raf.length();
-                if (len <= 0) {
-                    return "";
-                }
-                long off = 0;
-                while (lines > 0 && off < len) {
-                    raf.seek(off++);
-                    if (raf.read() == '\n') {
-                        lines--;
-                    }
-                }
-                byte[] buf = new byte[(int) off];
-                raf.seek(0);
-                raf.read(buf);
-                return Bytes.toString(buf);
-            } catch (Exception e) {
-                log.warn("", e);
-            }
-            return "";
-        }
-
-        public void setRuntime(long runTime) {
-            this.runTime = runTime;
-        }
-
-        public void setReplicas(ReplicaTarget[] replicas) {
-            this.replicas = replicas;
-        }
-
-        public void setFailureRecoveryReplicas(ReplicaTarget[] replicas) {
-            this.failureRecoveryReplicas = replicas;
-        }
-
-        public ReplicaTarget[] getFailureRecoveryReplicas() {
-            return failureRecoveryReplicas;
-        }
-
-        public ReplicaTarget[] getReplicas() {
-            return replicas;
-        }
-
-        public boolean wasStopped() {
-            if (jobStopped == null) {
-                jobStopped = new File(jobDir, "job.stopped");
-            }
-            return jobStopped.exists();
-        }
-
-        public String getRebalanceSource() {
-            return rebalanceSource;
-        }
-
-        public void setRebalanceSource(String rebalanceSource) {
-            this.rebalanceSource = rebalanceSource;
-        }
-
-        public boolean wasQueued() {
-            return wasQueued;
-        }
-
-        public void setWasQueued(boolean wasQueued) {
-            this.wasQueued = wasQueued;
-        }
-
-        public String getRebalanceTarget() {
-            return rebalanceTarget;
-        }
-
-        public void setRebalanceTarget(String rebalanceTarget) {
-            this.rebalanceTarget = rebalanceTarget;
-        }
-
-        @Override
-        public String toString() {
-            return "JobTask{" +
-                    "id='" + id + '\'' +
-                    ", node=" + node +
-                    ", jobDir=" + jobDir +
-                    '}';
-        }
-
-        /**
-         * Attempt to identify the task's last end status from the file system
-          * @return An integer representing the task's last exit code
-         */
-        public int findLastJobStatus() {
-            if (jobDone != null && jobDone.exists()) {
-                try {
-                    String jobDoneString = Bytes.toString(Files.read(jobDone));
-                    if (jobDoneString == null || jobDoneString.isEmpty()) {
-                        return 0;
-                    }
-                    return Integer.parseInt(jobDoneString.trim());
-                } catch (IOException e) {
-                    return JobTaskErrorCode.EXIT_SCRIPT_EXEC_ERROR;
-                }
-            }
-            return 0;
-        }
-    }
-
-    public static class FileStats {
-
-        public long count;
-        public long bytes;
-
-        private void update(File dir) {
-            if (dir != null) {
-                for (File file : dir.listFiles()) {
-                    if (file.isDirectory()) {
-                        update(file);
-                    } else if (file.isFile()) {
-                        count++;
-                        bytes += file.length();
-                    }
-                }
-            } else {
-                count = 0;
-                bytes = 0;
-            }
-        }
-    }
 
     @Override
     public void handle(String target, Request request, HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws IOException, ServletException {
@@ -2677,89 +1115,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         ((Request) request).setHandled(handled);
     }
 
-    private class CommandTaskDeleteRunner implements Runnable {
-
-        CoreMessage core;
-
-        public CommandTaskDeleteRunner(CoreMessage core) {
-            this.core = core;
-        }
-
-        @Override
-        public void run() {
-            CommandTaskDelete delete = (CommandTaskDelete) core;
-            log.warn("[task.delete] " + delete.getJobKey());
-            minionStateLock.lock();
-            try {
-                for (JobTask task : getMatchingJobs(delete)) {
-                    stopped.put(delete.getJobUuid(), delete.getRunCount());
-                    boolean terminated = task.isRunning() && task.stopWait(true);
-                    task.setDeleted(true);
-                    tasks.remove(task.getJobKey().toString());
-                    log.warn("[task.delete] " + task.getJobKey() + " terminated=" + terminated);
-                    writeState();
-                }
-                File taskDirFile = new File(rootDir + "/" + delete.getJobUuid() + (delete.getNodeID() != null ? "/" + delete.getNodeID() : ""));
-                if (taskDirFile.exists() && taskDirFile.isDirectory()) {
-                    minionTaskDeleter.submitPathToDelete(taskDirFile.getAbsolutePath());
-                }
-            } finally {
-                minionStateLock.unlock();
-            }
-
-        }
-    }
-
-    private class CommandTaskStopRunner implements Runnable {
-
-        private CoreMessage core;
-
-        public CommandTaskStopRunner(CoreMessage core) {
-            this.core = core;
-        }
-
-        @Override
-        public void run() {
-            CommandTaskStop stop = (CommandTaskStop) core;
-            log.warn("[task.stop] request " + stop.getJobKey() + " count @ " + stop.getRunCount());
-            removeJobFromQueue(stop.getJobKey(), false);
-            if (stop.getJobKey().getNodeNumber() == null) {
-                minionStateLock.lock();
-                try {
-                    stopped.put(stop.getJobUuid(), stop.getRunCount());
-                } finally {
-                    minionStateLock.unlock();
-                }
-            }
-            List<JobTask> match = getMatchingJobs(stop);
-            if (match.size() == 0 && stop.getNodeID() != null && stop.getNodeID() >= 0) {
-                log.warn("[task.stop] unmatched stop for " + stop.getJobUuid() + " / " + stop.getNodeID());
-                sendStatusMessage(new StatusTaskEnd(uuid, stop.getJobUuid(), stop.getNodeID(), 0, 0, 0));
-            }
-            for (JobTask task : match) {
-                if (!task.getConfigDir().exists()) {
-                    Files.initDirectory(task.getConfigDir());
-                }
-                if (task.isRunning() || task.isReplicating() || task.isBackingUp()) {
-                    if (!stop.force() && task.isBackingUp()) {
-                        log.warn("[task.stop] " + task.getName() + " wasn't terminated because task was backing up and the stop wasn't a kill");
-                    } else if (!stop.force() && task.isReplicating() && task.getRebalanceSource() == null) {
-                        log.warn("[task.stop] " + task.getName() + " wasn't terminated because task was replicating and the stop wasn't a kill");
-                    } else {
-                        task.stopWait(stop.force());
-                        log.warn("[task.stop] " + task.getName());
-                    }
-                } else if (stop.force()) {
-                    log.warn("[task.stop] " + task.getName() + " force stop idle task");
-                    task.sendEndStatus(task.findLastJobStatus());
-                }
-            }
-            writeState();
-        }
-
-    }
-
-    private void removeJobFromQueue(JobKey key, boolean sendToSpawn) {
+    void removeJobFromQueue(JobKey key, boolean sendToSpawn) {
         minionStateLock.lock();
         try {
             for (Iterator<CommandTaskKick> iter = jobQueue.iterator(); iter.hasNext(); ) {
@@ -2782,149 +1138,8 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         }
     }
 
-    private class CommandTaskRevertRunner implements Runnable {
-
-        CoreMessage core;
-
-        public CommandTaskRevertRunner(CoreMessage core) {
-            this.core = core;
-        }
-
-        @Override
-        public void run() {
-            CommandTaskRevert revert = (CommandTaskRevert) core;
-            List<JobTask> match = getMatchingJobs(revert);
-            log.warn("[task.revert] request " + revert.getJobKey() + " matched " + match.size());
-            if (match.size() == 0 && revert.getNodeID() != null && revert.getNodeID() >= 0) {
-                log.warn("[task.revert] unmatched for " + revert.getJobUuid() + " / " + revert.getNodeID());
-            }
-            if (revert.getNodeID() == null || revert.getNodeID() < 0) {
-                log.warn("[task.revert] got invalid node id " + revert.getNodeID());
-                return;
-            }
-            for (JobTask task : match) {
-                if (task.isRunning() || task.isReplicating() || task.isBackingUp()) {
-                    log.warn("[task.revert] " + task.getJobKey() + " skipped. job node active.");
-                } else {
-                    long time = System.currentTimeMillis();
-                    task.setReplicas(revert.getReplicas());
-                    if (revert.getSkipMove()) {
-                        try {
-                            task.execReplicate(null, null, false, true, false);
-                        } catch (Exception ex) {
-                            task.sendEndStatus(JobTaskErrorCode.EXIT_REVERT_FAILURE);
-                        }
-                    } else {
-                        task.revertToBackup(revert.getRevision(), revert.getTime(), revert.getBackupType());
-                    }
-                    log.warn("[task.revert] " + task.getJobKey() + " completed in " + (System.currentTimeMillis() - time) + "ms.");
-                }
-            }
-            writeState();
-        }
-    }
-
-    private class CommandTaskReplicateRunner implements Runnable {
-
-        private CoreMessage core;
-
-        public CommandTaskReplicateRunner(CoreMessage core) {
-            this.core = core;
-        }
-
-        @Override
-        public void run() {
-            CommandTaskReplicate replicate = (CommandTaskReplicate) core;
-            JobTask task = tasks.get(replicate.getJobKey().toString());
-            if (task != null) {
-                if (task.jobDir == null) {
-                    task.jobDir = task.getLiveDir();
-                }
-                if (!task.jobDir.exists()) {
-                    log.warn("[task.replicate] aborted because there is no directory for " + task.getJobKey() + " yet: " + task.jobDir);
-                } else if (!task.isRunning() && !task.isReplicating() && !task.isBackingUp()) {
-                    log.warn("[task.replicate] starting " + replicate.getJobKey());
-                    removeJobFromQueue(replicate.getJobKey(), false);
-                    if (!task.isComplete()) {
-                        // Attempt to revert to the latest complete backup, if one can be found
-                        String latestCompleteBackup = task.getBackupByRevision(0, "gold");
-                        if (latestCompleteBackup != null) {
-                            task.promoteBackupToLive(new File(task.getJobDir(), latestCompleteBackup), task.getLiveDir());
-                        }
-                    }
-                    try {
-                        task.setReplicas(replicate.getReplicas());
-                        task.execReplicate(replicate.getRebalanceSource(), replicate.getRebalanceTarget(), true, true, replicate.wasQueued());
-                    } catch (Exception e) {
-                        log.warn("[task.replicate] received exception after replicate request for " + task.getJobKey() + ": " + e, e);
-                    }
-                } else {
-                    log.warn("[task.replicate] skip running " + replicate.getJobKey());
-                }
-            }
-        }
-    }
-
-    private class CommandCreateNewTask implements Runnable {
-
-        private CoreMessage core;
-
-        public CommandCreateNewTask(CoreMessage core) {
-            this.core = core;
-        }
-
-        @Override
-        public void run() {
-            CommandTaskNew newTask = (CommandTaskNew) core;
-            JobTask task = tasks.get(newTask.getJobKey().toString());
-            if (task == null) {
-                log.warn("[task.new] creating " + newTask.getJobKey());
-                try {
-                    createNewTask(newTask.getJobUuid(), newTask.getNodeID());
-                } catch (ExecException e) {
-                    log.warn("Error restoring task state: " + e, e);
-                }
-            } else {
-                // Make sure the id/node # were set correctly
-                task.id = newTask.getJobUuid();
-                task.node = newTask.getNodeID();
-                log.warn("[task.new] skip existing " + newTask.getJobKey());
-            }
-        }
-    }
-
-    private class CommandTaskUpdateReplicasRunner implements Runnable {
-
-        private CoreMessage core;
-
-        public CommandTaskUpdateReplicasRunner(CoreMessage core) {
-            this.core = core;
-        }
-
-        @Override
-        public void run() {
-            CommandTaskUpdateReplicas updateReplicas = (CommandTaskUpdateReplicas) core;
-            JobTask task = tasks.get(updateReplicas.getJobKey().toString());
-            if (task != null) {
-                synchronized (task) {
-                    List<ReplicaTarget> newReplicas = new ArrayList<>();
-                    if (task.replicas != null) {
-                        for (ReplicaTarget replica : task.replicas) {
-                            if (!updateReplicas.getFailedHosts().contains(replica.getHostUuid())) {
-                                newReplicas.add(replica);
-                            }
-                        }
-                    }
-                    task.setReplicas(newReplicas.toArray(new ReplicaTarget[newReplicas.size()]));
-                    List<ReplicaTarget> failureRecoveryReplicas = updateReplicas.getNewReplicaHosts();
-                    task.setFailureRecoveryReplicas(failureRecoveryReplicas.toArray(new ReplicaTarget[failureRecoveryReplicas.size()]));
-                }
-            }
-        }
-    }
-
-    private JobTask createNewTask(String jobID, int node) throws ExecException {
-        Minion.JobTask task = new JobTask();
+    JobTask createNewTask(String jobID, int node) throws ExecException {
+        JobTask task = new JobTask(this);
         task.id = jobID;
         task.node = node;
         task.taskRoot = new File(rootDir, task.id + "/" + task.node);
@@ -2941,7 +1156,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
      * @param files Files to delete
      * @return False only if some file existed and could not be deleted
      */
-    private boolean deleteFiles(File... files) {
+    boolean deleteFiles(File... files) {
         for (File file : files) {
             if (file != null && file.exists()) {
                 if (shell(rmcmd + " -rf " + file.getAbsolutePath(), rootDir) != 0) {
@@ -2952,11 +1167,11 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
         return true;
     }
 
-    private static boolean activeProcessExistsWithPid(Integer pid, File directory) {
+    static boolean activeProcessExistsWithPid(Integer pid, File directory) {
         return shell("ps " + pid, directory) == 0;
     }
 
-    private static Integer findActiveRsync(String id, int node) {
+    static Integer findActiveRsync(String id, int node) {
         return findActiveProcessWithTokens(new String[]{id + "/" + node + "/", rsyncCommand}, new String[]{"server"});
     }
 
@@ -2981,31 +1196,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
             return null;
         }
 
-    }
-
-    /**
-     * This lightweight thread periodically updates various minion metrics
-     */
-    private class HostMetricUpdater extends Thread {
-
-        HostMetricUpdater() {
-            setDaemon(true);
-            start();
-        }
-
-        @Override public void run() {
-            while (!shutdown.get()) {
-                try {
-                    Thread.sleep(hostMetricUpdaterInterval);
-                    activeTaskHistogram.update(activeTaskKeys.size());
-                    diskFree.set(rootDir.getFreeSpace());
-                } catch (Exception ex) {
-                    if (!(ex instanceof InterruptedException)) {
-                        log.warn("Exception during host metric update: " + ex, ex);
-                    }
-                }
-            }
-        }
     }
 
     public boolean getShutdown() {

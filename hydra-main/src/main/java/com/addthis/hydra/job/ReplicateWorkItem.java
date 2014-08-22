@@ -15,8 +15,7 @@ package com.addthis.hydra.job;
 
 import java.io.File;
 
-import com.addthis.hydra.job.minion.Minion;
-import com.addthis.hydra.job.minion.MinionWorkItem;
+import com.addthis.hydra.job.minion.*;
 import com.addthis.hydra.job.mq.ReplicaTarget;
 
 import org.slf4j.Logger;
@@ -27,7 +26,7 @@ public class ReplicateWorkItem extends MinionWorkItem {
     private String rebalanceSource;
     private String rebalanceTarget;
 
-    public ReplicateWorkItem(File jobDir, File pidFile, File runFile, File doneFile, Minion.JobTask task, String rebalanceSource, String rebalanceTarget, boolean execute) {
+    public ReplicateWorkItem(File jobDir, File pidFile, File runFile, File doneFile, com.addthis.hydra.job.minion.JobTask task, String rebalanceSource, String rebalanceTarget, boolean execute) {
         super(jobDir, pidFile, runFile, doneFile, task, execute);
         this.rebalanceSource = rebalanceSource;
         this.rebalanceTarget = rebalanceTarget;

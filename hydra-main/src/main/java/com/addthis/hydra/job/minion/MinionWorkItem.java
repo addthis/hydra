@@ -34,9 +34,9 @@ public abstract class MinionWorkItem implements Runnable {
     private File logOut;
     private File logErr;
     private boolean execute;
-    protected final Minion.JobTask task;
+    protected final JobTask task;
 
-    public MinionWorkItem(File jobDir, File pidFile, File runFile, File doneFile, Minion.JobTask task, boolean execute) {
+    public MinionWorkItem(File jobDir, File pidFile, File runFile, File doneFile, JobTask task, boolean execute) {
         this.pidFile = pidFile;
         this.runFile = runFile;
         this.doneFile = doneFile;
@@ -156,11 +156,11 @@ public abstract class MinionWorkItem implements Runnable {
             log.warn("[exit.wait] " + name + " maxTime=" + kick.getRunTime() + " start=" + getStartTime());
         }
         try {
-            Minion.FileWatcher stdoutWatch = null;
-            Minion.FileWatcher stderrWatch = null;
+            FileWatcher stdoutWatch = null;
+            FileWatcher stderrWatch = null;
             if (kick != null && !Strings.isEmpty(kick.getKillSignal())) {
-                stdoutWatch = new Minion.FileWatcher(logOut, kick.getKillSignal());
-                stderrWatch = new Minion.FileWatcher(logErr, kick.getKillSignal());
+                stdoutWatch = new FileWatcher(logOut, kick.getKillSignal());
+                stderrWatch = new FileWatcher(logErr, kick.getKillSignal());
             }
             while (!task.isDeleted() && !doneFile.exists() && doneFile.getParentFile().exists()) {
                 Thread.sleep(100);

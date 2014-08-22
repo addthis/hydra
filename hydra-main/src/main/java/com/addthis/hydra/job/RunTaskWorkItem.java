@@ -17,8 +17,7 @@ import java.io.File;
 
 import java.util.List;
 
-import com.addthis.hydra.job.minion.Minion;
-import com.addthis.hydra.job.minion.MinionWorkItem;
+import com.addthis.hydra.job.minion.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +29,7 @@ public class RunTaskWorkItem extends MinionWorkItem {
     private int retries;
 
 
-    public RunTaskWorkItem(File jobDir, File pidFile, File runFile, File doneFile, Minion.JobTask task, boolean execute, int retries) {
+    public RunTaskWorkItem(File jobDir, File pidFile, File runFile, File doneFile, com.addthis.hydra.job.minion.JobTask task, boolean execute, int retries) {
         super(jobDir, pidFile, runFile, doneFile, task, execute);
         this.retries = retries;
     }
