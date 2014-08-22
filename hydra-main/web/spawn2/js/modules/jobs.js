@@ -769,7 +769,8 @@ function(
                 'handleEnableButtonClick',
                 'handleDisableButtonClick',
                 'handleDeleteButtonClick',
-                'handleCreateAlertButtonClick'
+                'handleCreateAlertButtonClick',
+                'handleFindDeletedJobButtonClick'
             );
             this.hasRendered=false;
             this.listenTo(app.user,"change:username",this.handleUsernameChange);
@@ -787,7 +788,9 @@ function(
                 this.views.selectable.find("#createAlertButton").on("click", this.handleCreateAlertButtonClick);
                 this.hasRendered=true;
             }
-            //Jobs filter
+            // Find deleted job
+            this.views.parent.find("#findDeletedJobButton").on("click", this.handleFindDeletedJobButtonClick);
+            // Jobs filter
             var jobFilter = this.views.filter.find("#myJobs");
             jobFilter.data("value",app.user.get("username"));
             var state = this.views.table.fnSettings().oLoadedState;
@@ -834,6 +837,11 @@ function(
             var ids = this.getSelectedIds();
             app.router.navigate("alerts/create/" + ids.join(), {trigger:true});
         },        
+        handleFindDeletedJobButtonClick:function(event){
+            Alertify.dialog.prompt("Enter the deleted job ID:",function(str){
+                window.open("/job/config.deleted?id="+str,"_blank");
+            });
+        },
         remove:function(){
             this.$el.detach();
         },
