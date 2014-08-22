@@ -66,7 +66,7 @@ class TaskRunner extends Thread {
                     ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(delivery.getBody()));
                     HostMessage hostMessage = (HostMessage) ois.readObject();
                     if (hostMessage.getMessageType() != CoreMessage.TYPE.CMD_TASK_KICK) {
-                        log.warn("[task.runner] unknown command type : " + hostMessage.getMessageType());
+                        log.warn("[task.runner] unknown command type : {}", hostMessage.getMessageType());
                         continue;
                     }
                     CommandTaskKick kick = (CommandTaskKick) hostMessage;

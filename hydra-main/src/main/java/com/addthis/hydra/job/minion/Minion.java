@@ -126,8 +126,6 @@ public class Minion implements MessageListener, Codable {
     private static final String localHost = System.getProperty("minion.localhost");
     private static final String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
     private static final String batchBrokerPort = Parameter.value("batch.brokerPort", "5672");
-    private static final int mqReconnectDelay = Parameter.intValue("mq.reconnect.delay", 10000);
-    private static final int mqReconnectTries = Parameter.intValue("mq.reconnect.tries", 10);
     private static final int sendStatusRetries = Parameter.intValue("send.status.retries", 5);
     private static final int sendStatusRetryDelay = Parameter.intValue("send.status.delay", 5000);
     static final long hostMetricUpdaterInterval = Parameter.longValue("minion.host.metric.interval", 30 * 1000);
@@ -381,7 +379,7 @@ public class Minion implements MessageListener, Codable {
     }
 
     private synchronized boolean connectToRabbitMQ() {
-        String[] routingKeys = new String[]{uuid, HostMessage.ALL_HOSTS};
+        String[] routingKeys = {uuid, HostMessage.ALL_HOSTS};
         batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, Integer.valueOf(batchBrokerPort));
         queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerHost, Integer.valueOf(batchBrokerPort));
         try {
@@ -403,9 +401,6 @@ public class Minion implements MessageListener, Codable {
         }
     }
 
-    /**
-     * attempt to reconnect up to n times then shut down
-     */
     static void shutdown() {
         System.exit(1);
     }
@@ -705,7 +700,7 @@ public class Minion implements MessageListener, Codable {
                     }
                 }
             } catch (Exception ex) {
-                log.warn("Failed to detect status of job " + job + "; omitting from host state", ex);
+                log.warn("Failed to detect status of job {}; omitting from host state", job, ex);
             }
 
         }
