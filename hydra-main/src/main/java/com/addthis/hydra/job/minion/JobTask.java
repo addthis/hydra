@@ -490,12 +490,12 @@ public class JobTask implements Codable {
     private String createSymlinkCommand(boolean local, String userAt, String baseDir, String source, String name) {
         String linkDir = baseDir + "/" + name;
         String tmpName = linkDir + "_tmp";
-        return wrapCommandWithRetries(local, userAt, "if [ ! -L " + linkDir + " ]; then rm -rf " + linkDir + " ; fi && " + Minion.lncmd + " -nsf " + source + " " + tmpName + " && " + Minion.mvcmd + " -Tf " + tmpName + " " + linkDir);
+        return wrapCommandWithRetries(local, userAt, "if [ ! -L " + linkDir + " ]; then rm -rf " + linkDir + " ; fi && " + MacUtils.lncmd + " -nsf " + source + " " + tmpName + " && " + MacUtils.mvcmd + " -Tf " + tmpName + " " + linkDir);
     }
 
     private String createCopyCommand(boolean local, String userAt, String sourceDir, String targetDir) {
-        String cpParams = Minion.linkBackup ? " -lr " : " -r ";
-        return wrapCommandWithRetries(local, userAt, Minion.cpcmd + cpParams + sourceDir + " " + targetDir);
+        String cpParams = MacUtils.linkBackup ? " -lr " : " -r ";
+        return wrapCommandWithRetries(local, userAt, MacUtils.cpcmd + cpParams + sourceDir + " " + targetDir);
     }
 
     private String createTouchCommand(boolean local, String userAT, String path, boolean failSafe) {
@@ -503,7 +503,7 @@ public class JobTask implements Codable {
     }
 
     private String createDeleteCommand(boolean local, String userAT, String dirPath) {
-        return wrapCommandWithRetries(local, userAT, Minion.rmcmd + " -rf " + dirPath);
+        return wrapCommandWithRetries(local, userAT, MacUtils.rmcmd + " -rf " + dirPath);
     }
 
     private String wrapCommandWithRetries(boolean local, String userAt, String command) {
@@ -548,7 +548,7 @@ public class JobTask implements Codable {
                 baseDir += "/*/backup.complete";
             }
             String lsResult = execCommandReturnStdOut(
-                    Minion.remoteConnectMethod + " " + userAT + " " + Minion.lscmd + " " + baseDir);
+                    Minion.remoteConnectMethod + " " + userAT + " " + MacUtils.lscmd + " " + baseDir);
             String[] lines = lsResult.split("\n");
             if (completeOnly) {
                 List<String> rv = new ArrayList<>(lines.length);
@@ -619,7 +619,7 @@ public class JobTask implements Codable {
         if (targetDir != null && backupDir != null && backupDir.exists() && backupDir.isDirectory()) {
             moveAndDeleteAsync(targetDir);
             // Copy the backup directory onto the target directory
-            String cpCMD = Minion.cpcmd + (Minion.linkBackup ? " -lrf " : " -rf ");
+            String cpCMD = MacUtils.cpcmd + (MacUtils.linkBackup ? " -lrf " : " -rf ");
             return Minion.shell(cpCMD + backupDir + " " + targetDir + " >> /dev/null 2>&1", minion.rootDir) == 0;
         } else {
             log.warn("[restore] invalid backup dir " + backupDir);

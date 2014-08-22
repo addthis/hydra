@@ -135,7 +135,6 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     private static String dataDir = System.getProperty("minion.data.dir", "minion");
     private static String group = System.getProperty("minion.group", "none");
     private static String localHost = System.getProperty("minion.localhost");
-    static boolean linkBackup = !System.getProperty("minion.backup.hardlink", "0").equals("0");
     static final DateTimeFormatter timeFormat = DateTimeFormat.forPattern("yyMMdd-HHmmss");
     private static final String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
     private static final String batchBrokerPort = Parameter.value("batch.brokerPort", "5672");
@@ -153,41 +152,10 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     static final int copyBandwidthLimit = Parameter.intValue("minion.copy.bwlimit", -1);
     static ReentrantLock revertLock = new ReentrantLock();
 
-    static String cpcmd = "cp";
-    static String lncmd = "ln";
-    static String lscmd = "ls";
-    static String rmcmd = "rm";
-    static String mvcmd = "mv";
-    static String ducmd = "du";
     static String echoWithDate_cmd = "echo `date '+%y/%m/%d %H:%M:%S'` ";
-    static boolean useMacFriendlyPSCommands = false;
 
     public static final String MINION_ZK_PATH = "/minion/";
     private static final String defaultMinionType = Parameter.value("minion.type", "default");
-
-    // detect fl-cow in sys env and apple for copy command
-    static {
-        for (String v : System.getenv().values()) {
-            if (v.toLowerCase().contains("libflcow")) {
-                log.info("detected support for copy-on-write hard-links");
-                linkBackup = true;
-                break;
-            }
-        }
-        for (Object v : System.getProperties().values()) {
-            if (v.toString().toLowerCase().contains("apple") || v.toString().toLowerCase().contains("mac os x")) {
-                log.info("detected darwin-based system. switching to gnu commands");
-                cpcmd = "gcp";
-                lncmd = "gln";
-                lscmd = "gls";
-                rmcmd = "grm";
-                mvcmd = "gmv";
-                ducmd = "gdu";
-                useMacFriendlyPSCommands = true;
-                break;
-            }
-        }
-    }
 
     public static void main(String[] args) throws Exception {
         new Minion(new File(args.length > 0 ? args[0] : dataDir), args.length > 2 ? Integer.parseInt(args[1]) : webPort);
@@ -970,7 +938,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     public String getCmdLine(int pid) {
         try {
             String cmd;
-            if (useMacFriendlyPSCommands) {
+            if (MacUtils.useMacFriendlyPSCommands) {
                 cmd = execCommandReturnStdOut("ps -f " + pid);
             } else {
                 File cmdFile = new File("/proc/" + pid + "/cmdline");
@@ -1104,7 +1072,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
             String jobId = kv.getValue("id");
             int taskId = kv.getIntValue("node", -1);
             if (jobId != null && taskId >= 0) {
-                String duOutput = new SimpleExec(ducmd + " -s --block-size=1 " + getTaskBaseDir(rootDir.getAbsolutePath(), jobId, taskId)).join().stdoutString();
+                String duOutput = new SimpleExec(MacUtils.ducmd + " -s --block-size=1 " + getTaskBaseDir(rootDir.getAbsolutePath(), jobId, taskId)).join().stdoutString();
                 response.getWriter().write(
                         duOutput.split("\t")[0]
                 );
@@ -1159,7 +1127,7 @@ public class Minion extends AbstractHandler implements MessageListener, Codable 
     boolean deleteFiles(File... files) {
         for (File file : files) {
             if (file != null && file.exists()) {
-                if (shell(rmcmd + " -rf " + file.getAbsolutePath(), rootDir) != 0) {
+                if (shell(MacUtils.rmcmd + " -rf " + file.getAbsolutePath(), rootDir) != 0) {
                     return false;
                 }
             }
