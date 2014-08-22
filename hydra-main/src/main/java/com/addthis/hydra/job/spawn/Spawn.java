@@ -1096,7 +1096,7 @@ public class Spawn implements Codable {
         return true;
     }
 
-    private boolean matchJobNodeAndId(String jobUUID, JobTask task, JobKey[]... jobKeys) {
+    private static boolean matchJobNodeAndId(String jobUUID, JobTask task, JobKey[]... jobKeys) {
         for (JobKey[] jobKeyArray : jobKeys) {
             for (JobKey jobKey : jobKeyArray) {
                 if (jobKey == null) {
@@ -1511,7 +1511,7 @@ public class Spawn implements Codable {
         }
     }
 
-    private boolean hostSuitableForReplica(HostState host) {
+    private static boolean hostSuitableForReplica(HostState host) {
         return host != null && host.isUp() && !host.isDead();
     }
 
@@ -1946,7 +1946,7 @@ public class Spawn implements Codable {
         }
     }
 
-    private List<JobTaskReplica> removeReplicasForHost(String hostUuid, List<JobTaskReplica> currentReplicas) {
+    private static List<JobTaskReplica> removeReplicasForHost(String hostUuid, List<JobTaskReplica> currentReplicas) {
         if (currentReplicas == null || currentReplicas.size() == 0) {
             return new ArrayList<>();
         }
@@ -2494,7 +2494,7 @@ public class Spawn implements Codable {
      * @param messageSourceUuid The source of the message regarding that task
      * @return True if the message source matches the task's expected host
      */
-    private boolean checkTaskMessage(JobTask task, String messageSourceUuid) {
+    private static boolean checkTaskMessage(JobTask task, String messageSourceUuid) {
         if (task == null || messageSourceUuid == null || !messageSourceUuid.equals(task.getHostUUID())) {
             log.warn("Ignoring task state message from non-live host {}", messageSourceUuid);
             nonHostTaskMessageCounter.inc();
@@ -2681,7 +2681,7 @@ public class Spawn implements Codable {
     }
 
 
-    private void quietBackgroundPost(String jobId, String state, String url, int timeout, byte[] post) {
+    private static void quietBackgroundPost(String jobId, String state, String url, int timeout, byte[] post) {
         BackgroundPost task = new BackgroundPost(jobId, state, url, timeout, post);
         try {
             backgroundService.submit(task);
@@ -2879,7 +2879,7 @@ public class Spawn implements Codable {
         return lastQueueSize;
     }
 
-    public JSONObject getJobUpdateEvent(IJob job) throws Exception {
+    public static JSONObject getJobUpdateEvent(IJob job) throws Exception {
         long files = 0;
         long bytes = 0;
         int running = 0;
@@ -2988,7 +2988,7 @@ public class Spawn implements Codable {
         webSocketManager.addEvent(new ClientEvent(topic, message));
     }
 
-    private void require(boolean test, String msg) throws Exception {
+    private static void require(boolean test, String msg) throws Exception {
         if (!test) {
             throw new Exception("test failed with '" + msg + "'");
         }
