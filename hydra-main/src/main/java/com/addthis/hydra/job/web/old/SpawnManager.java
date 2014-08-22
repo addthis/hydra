@@ -47,10 +47,11 @@ import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.minion.Minion;
 import com.addthis.hydra.job.RebalanceOutcome;
+import com.addthis.hydra.job.spawn.DeleteStatus;
 import com.addthis.hydra.job.spawn.Spawn;
-import com.addthis.hydra.job.spawn.Spawn.ClientEvent;
-import com.addthis.hydra.job.spawn.Spawn.ClientEventListener;
-import com.addthis.hydra.job.spawn.Spawn.Settings;
+import com.addthis.hydra.job.spawn.ClientEvent;
+import com.addthis.hydra.job.spawn.ClientEventListener;
+import com.addthis.hydra.job.spawn.Settings;
 import com.addthis.hydra.job.web.old.SpawnHttp.HTTPLink;
 import com.addthis.hydra.job.web.old.SpawnHttp.HTTPService;
 import com.addthis.hydra.job.mq.HostState;
@@ -457,7 +458,7 @@ public class SpawnManager {
                     link.sendJSON(500, "ERROR", json("error","A non-IDLE job cannot be deleted"));
                 } else {
                     emitLogLineForAction(kv, "job delete on " + id);
-                    Spawn.DeleteStatus status = spawn.deleteJob(id);
+                    DeleteStatus status = spawn.deleteJob(id);
                     switch (status) {
                         case SUCCESS:
                             link.sendJSON(200, "OK", json("id",id).put("action","deleted"));

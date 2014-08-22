@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.hydra.job.spawn.ClientEvent;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
@@ -182,7 +183,7 @@ public class WebSocketManager extends WebSocketHandler {
      *
      * @param event
      */
-    public void addEvent(Spawn.ClientEvent event) {
+    public void addEvent(ClientEvent event) {
         for (MQWebSocket webSocket : webSockets) {
             webSocket.addEvent(event);
         }
@@ -227,7 +228,7 @@ public class WebSocketManager extends WebSocketHandler {
         /**
          * A queue of events to queue up and push to websockets at intervals
          */
-        private final LinkedBlockingQueue<Spawn.ClientEvent> eventQueue = new LinkedBlockingQueue<>();
+        private final LinkedBlockingQueue<ClientEvent> eventQueue = new LinkedBlockingQueue<>();
 
         public MQWebSocket(String username, String remoteAddress) {
             this.username = username;
@@ -353,7 +354,7 @@ public class WebSocketManager extends WebSocketHandler {
             this.remoteAddress = remoteAddress;
         }
 
-        public void addEvent(Spawn.ClientEvent event) {
+        public void addEvent(ClientEvent event) {
             if (eventQueue.size() > clientDropQueueSize) {
                 // Queue has grown too big. Client does not appear to be consuming. Drop the socket to prevent an ugly OOM.
                 eventQueue.clear();
@@ -368,7 +369,7 @@ public class WebSocketManager extends WebSocketHandler {
             try {
                 JSONArray eventArray = new JSONArray();
                 for (int i = 0; i < eventQueue.size() && i < maxNumber; i++) {
-                    Spawn.ClientEvent event = eventQueue.poll(1000, TimeUnit.MILLISECONDS);
+                    ClientEvent event = eventQueue.poll(1000, TimeUnit.MILLISECONDS);
                     eventArray.put(event.toJSON());
                     events++;
                 }

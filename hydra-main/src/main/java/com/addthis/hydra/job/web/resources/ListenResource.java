@@ -33,6 +33,8 @@ import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.JobCommand;
 import com.addthis.hydra.job.JobMacro;
+import com.addthis.hydra.job.spawn.ClientEvent;
+import com.addthis.hydra.job.spawn.ClientEventListener;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.spawn.SpawnBalancerConfig;
 import com.addthis.hydra.job.mq.HostState;
@@ -91,9 +93,9 @@ public class ListenResource {
         String clientId = (clientIdParameter.isPresent() ? clientIdParameter.get() : "noid");
         int timeout = timeoutParameter.or(pollTimeout);
         int batchTime = batchtimeParameter.or(batchInterval);
-        Spawn.ClientEventListener listener = spawn.getClientEventListener(clientId);
+        ClientEventListener listener = spawn.getClientEventListener(clientId);
         try {
-            Spawn.ClientEvent nextEvent = listener.events.poll(timeout, TimeUnit.MILLISECONDS);
+            ClientEvent nextEvent = listener.events.poll(timeout, TimeUnit.MILLISECONDS);
             if (nextEvent != null) {
                 long mark = System.currentTimeMillis();
                 JSONArray payload = new JSONArray();
@@ -275,7 +277,7 @@ public class ListenResource {
         }
     }
 
-    private JSONObject encodeJson(Spawn.ClientEvent event) throws Exception {
+    private JSONObject encodeJson(ClientEvent event) throws Exception {
         JSONObject json = event.toJSON();
         return json;
     }

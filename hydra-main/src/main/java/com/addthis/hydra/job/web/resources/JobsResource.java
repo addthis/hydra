@@ -54,6 +54,7 @@ import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.minion.Minion;
 import com.addthis.hydra.job.RebalanceOutcome;
+import com.addthis.hydra.job.spawn.DeleteStatus;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.web.old.SpawnHttp;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
@@ -281,7 +282,7 @@ public class JobsResource {
         } else {
             emitLogLineForAction(user.or(DEFAULT_USER), "job delete on " + id);
             try {
-                Spawn.DeleteStatus status = spawn.deleteJob(id);
+                DeleteStatus status = spawn.deleteJob(id);
                 switch (status) {
                     case SUCCESS:
                         return Response.ok().build();
