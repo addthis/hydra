@@ -60,56 +60,32 @@ import com.yammer.metrics.core.TimerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * for tracking state
- */
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class JobTask implements Codable {
     private static final Logger log = LoggerFactory.getLogger(JobTask.class);
 
+    @FieldConfig(required = true) String id;
+    @FieldConfig(required = true) Integer node;
+    @FieldConfig(required = true) int runCount;
+    @FieldConfig(required = true) long runTime;
+
+    @FieldConfig Integer nodeCount;
+    @FieldConfig CommandTaskKick kick;
+    @FieldConfig long startTime;
+    @FieldConfig boolean monitored = true;
+    @FieldConfig long fileCount;
+    @FieldConfig long fileBytes;
+    @FieldConfig volatile boolean deleted;
+    @FieldConfig int retries;
+    @FieldConfig boolean wasQueued;
+    @FieldConfig long replicateStartTime;
+    @FieldConfig long backupStartTime;
+    @FieldConfig String rebalanceSource;
+    @FieldConfig String rebalanceTarget;
+
     Minion minion;
-    @FieldConfig(codable = true, required = true)
-    String id;
-    @FieldConfig(codable = true, required = true)
-    Integer node;
-    @FieldConfig(codable = true)
-    Integer nodeCount;
-    @FieldConfig(codable = true)
-    CommandTaskKick kick;
-    @FieldConfig(codable = true, required = true)
-    int runCount;
-    @FieldConfig(codable = true, required = true)
-    long runTime;
-    @FieldConfig(codable = true)
-    long startTime;
-    @FieldConfig(codable = true)
-    boolean monitored = true;
-    @FieldConfig(codable = true)
-    long fileCount;
-    @FieldConfig(codable = true)
-    long fileBytes;
-    @FieldConfig(codable = true)
-    volatile boolean deleted;
-    @FieldConfig(codable = true)
-    int retries;
-    @FieldConfig(codable = true)
-    boolean wasQueued;
-
-    volatile ReplicaTarget[] failureRecoveryReplicas;
-    volatile ReplicaTarget[] replicas;
-
-    @FieldConfig(codable = true)
-    long replicateStartTime;
-    @FieldConfig(codable = true)
-    long backupStartTime;
-
-    @FieldConfig(codable = true)
-    String rebalanceSource;
-    @FieldConfig(codable = true)
-    String rebalanceTarget;
-
     Process process;
     Thread workItemThread;
     File taskRoot;
@@ -131,6 +107,9 @@ public class JobTask implements Codable {
     File backupPid;
     File jobPort;
     Integer port;
+
+    volatile ReplicaTarget[] failureRecoveryReplicas;
+    volatile ReplicaTarget[] replicas;
 
     public JobTask(Minion minion) {this.minion = minion;}
 
@@ -286,7 +265,7 @@ public class JobTask implements Codable {
         try {
             minion.kickNextJob();
         } catch (Exception e) {
-            log.warn("[task.kick] exception while trying to kick next job: " + e, e);
+            log.warn("[task.kick] exception while trying to kick next job", e);
         }
     }
 
@@ -312,7 +291,7 @@ public class JobTask implements Codable {
             new File(liveDir, "replicate.complete").createNewFile();
         }
         if (!liveDir.isDirectory()) {
-            log.warn("[restore] " + taskPath + " has no live or replica directories");
+            log.warn("[restore] {} has no live or replica directories", taskPath);
             return false;
         }
         id = jobID;
@@ -334,11 +313,11 @@ public class JobTask implements Codable {
             }
         }
         if (Integer.parseInt(nodeID) != node) {
-            log.warn("[restore] " + taskPath + " mismatch with node # " + node);
+            log.warn("[restore] {} mismatch with node # {}", taskPath, node);
             return false;
         }
         if (!jobID.equals(id)) {
-            log.warn("[restore] " + taskPath + " mismatch with node id " + id);
+            log.warn("[restore] {} mismatch with node id {}", taskPath, id);
             return false;
         }
         monitored = true;
@@ -350,24 +329,24 @@ public class JobTask implements Codable {
     private void recoverWorkItem() {
         try {
             if (isRunning()) {
-                log.warn("[restore] " + getName() + " as running");
+                log.warn("[restore] {} as running", getName());
                 exec(this.kick, false);
             } else if (isReplicating()) {
-                log.warn("[restore] " + getName() + " as replicating");
+                log.warn("[restore] {} as replicating", getName());
                 execReplicate(null, null, false, false, false);
             } else if (isBackingUp()) {
-                log.warn("[restore] " + getName() + " as backing up");
+                log.warn("[restore] {} as backing up", getName());
                 execBackup(null, null, false);
             } else if ((startTime > 0 || replicateStartTime > 0 || backupStartTime > 0)) {
                 // Minion had a process running that finished during the downtime; notify Spawn
-                log.warn("[restore]" + getName() + " as previously active; now finished");
+                log.warn("[restore]{} as previously active; now finished", getName());
                 startTime = 0;
                 replicateStartTime = 0;
                 backupStartTime = 0;
                 sendEndStatus(0);
             }
         } catch (Exception ex) {
-            log.warn("WARNING: failed to restore state for " + getName() + ": " + ex, ex);
+            log.warn("WARNING: failed to restore state for {}", getName(), ex);
         }
 
     }
@@ -394,7 +373,8 @@ public class JobTask implements Codable {
 
     private boolean shouldExecuteReplica(ReplicaTarget replica) {
         if (replica.getHostUuid().equals(minion.uuid)) {
-            log.warn("Host: " + minion.uuid + " received a replication target of itself, this is NOT allowed for " + getName());
+            log.warn("Host: {} received a replication target of itself, this is NOT allowed for {}", minion.uuid,
+                     getName());
             return false;
         }
         return true;
@@ -412,9 +392,9 @@ public class JobTask implements Codable {
             }
             String userAT = replica.getUserAT();
             String mkTarget = Minion.remoteConnectMethod + " " + userAT + " mkdir -p " + target + "/";
-            log.warn("[replicate] " + getJobKey() + " to " + userAT + ":" + target);
+            log.warn("[replicate] {} to {}:{}", getJobKey(), userAT, target);
             if (log.isDebugEnabled()) {
-                log.debug(" --> " + mkTarget);
+                log.debug(" --> {}", mkTarget);
             }
             int runCount = kick != null ? kick.getRunCount() : 0;
             minion.sendStatusMessage(
@@ -439,7 +419,7 @@ public class JobTask implements Codable {
                 );
             }
         } catch (Exception ex) {
-            log.warn("failed to replicate " + this.getJobKey() + " to " + replica.getHost(), ex);
+            log.warn("failed to replicate {} to {}", this.getJobKey(), replica.getHost(), ex);
         }
         return rv;
     }
@@ -481,7 +461,7 @@ public class JobTask implements Codable {
     private String createBackupCommand(boolean local, String userAT, String baseDir, String source, String name) {
         String sourceDir = baseDir + "/" + source;
         String targetDir = baseDir + "/" + name;
-        log.warn("[backup] executing backup from " + sourceDir + " to " + targetDir);
+        log.warn("[backup] executing backup from {} to {}", sourceDir, targetDir);
         return createDeleteCommand(local, userAT, targetDir) + " && " +
                 createCopyCommand(local, userAT, sourceDir, targetDir) + " && " +
                 createTouchCommand(local, userAT, targetDir + "/backup.complete", false);
@@ -622,7 +602,7 @@ public class JobTask implements Codable {
             String cpCMD = MacUtils.cpcmd + (MacUtils.linkBackup ? " -lrf " : " -rf ");
             return Minion.shell(cpCMD + backupDir + " " + targetDir + " >> /dev/null 2>&1", minion.rootDir) == 0;
         } else {
-            log.warn("[restore] invalid backup dir " + backupDir);
+            log.warn("[restore] invalid backup dir {}", backupDir);
         }
         return false;
     }
@@ -656,12 +636,12 @@ public class JobTask implements Codable {
         Minion.revertLock.lock();
         try {
             if (isRunning() || isReplicating() || isBackingUp()) {
-                log.warn("[revert] cannot promote backup for active task " + getName());
+                log.warn("[revert] cannot promote backup for active task {}", getName());
                 return false;
             }
             ScheduledBackupType typeToUse = ScheduledBackupType.getBackupTypes().get(type);
             if (typeToUse == null) {
-                log.warn("[revert] unrecognized backup type " + type);
+                log.warn("[revert] unrecognized backup type {}", type);
                 return false;
             }
             String backupName;
@@ -671,11 +651,12 @@ public class JobTask implements Codable {
                 backupName = getBackupByRevision(revision, type);
             }
             if (backupName == null) {
-                log.warn("[revert] found no backups of type " + type + " and time " + time + " to revert to for " + getName() + "; failing");
+                log.warn("[revert] found no backups of type {} and time {} to revert to for {}; failing", type, time,
+                         getName());
                 return false;
             }
             File oldBackup = new File(jobDir.getParentFile(), backupName);
-            log.warn("[revert] " + getName() + " from " + oldBackup);
+            log.warn("[revert] {} from {}", getName(), oldBackup);
             minion.sendStatusMessage(new StatusTaskRevert(minion.getUUID(), id, node));
             boolean promoteSuccess = promoteBackupToLive(oldBackup, jobDir);
             if (promoteSuccess) {
@@ -683,11 +664,11 @@ public class JobTask implements Codable {
                     execReplicate(null, null, false, true, false);
                     return true;
                 } catch (Exception ex) {
-                    log.warn("[revert] post-revert replicate of " + getName() + " failed with exception " + ex, ex);
+                    log.warn("[revert] post-revert replicate of {} failed", getName(), ex);
                     return false;
                 }
             } else {
-                log.warn("[revert] " + getName() + " from " + oldBackup + " failed");
+                log.warn("[revert] {} from {} failed", getName(), oldBackup);
                 sendEndStatus(JobTaskErrorCode.EXIT_REVERT_FAILURE);
                 return false;
             }
@@ -700,7 +681,7 @@ public class JobTask implements Codable {
         ScheduledBackupType backupType = ScheduledBackupType.getBackupTypes().get(type);
         String[] backups = findLocalBackups(true);
         if (backups == null || backups.length == 0) {
-            log.warn("[revert] fail, there are no local backups of type " + type + " for " + getName());
+            log.warn("[revert] fail, there are no local backups of type {} for {}", type, getName());
             return null;
         }
         String timeName = backupType.stripSuffixAndPrefix(backupType.generateNameForTime(time, true));
@@ -709,7 +690,7 @@ public class JobTask implements Codable {
                 return backupName;
             }
         }
-        log.warn("[revert] fail, invalid backup time for " + getName() + ": " + time);
+        log.warn("[revert] fail, invalid backup time for {}: {}", getName(), time);
         return null;
     }
 
@@ -751,7 +732,7 @@ public class JobTask implements Codable {
         }
         int offset = (backups.size() - 1 - revision);
         if (revision < 0 || offset < 0 || offset >= backups.size()) {
-            log.warn("[revert] fail: can't find revision=" + revision + " with only " + backups.size() + " complete backups");
+            log.warn("[revert] fail: can't find revision={} with only {} complete backups", revision, backups.size());
             return null;
         }
         return backups.get(offset);
@@ -794,7 +775,7 @@ public class JobTask implements Codable {
             String jobId = kickMessage.getJobUuid();
             int jobNode = kickMessage.getJobKey().getNodeNumber();
             if (log.isDebugEnabled()) {
-                log.debug("[task.exec] " + kickMessage.getJobKey());
+                log.debug("[task.exec] {}", kickMessage.getJobKey());
             }
             require(testTaskIdle(), "task is not idle");
             String jobCommand = kickMessage.getCommand();
@@ -814,7 +795,7 @@ public class JobTask implements Codable {
             minion.sendStatusMessage(new StatusTaskBegin(minion.uuid, id, node));
             // store in jobs on first run
             if (runCount == 0) {
-                log.warn("[task.exec] first time running " + getName());
+                log.warn("[task.exec] first time running {}", getName());
             }
             String jobConfig = kickMessage.getConfig();
             if (jobConfig != null) {
@@ -823,7 +804,7 @@ public class JobTask implements Codable {
             // create exec command
             jobCommand = jobCommand.replace("{{jobdir}}", jobDir.getPath()).replace("{{jobid}}", jobId).replace("{{port}}", minion.findNextPort() + "").replace("{{node}}", jobNode + "").replace(
                     "{{nodes}}", jobNodes + "");
-            log.warn("[task.exec] starting " + jobDir.getPath() + " with retries=" + retries);
+            log.warn("[task.exec] starting {} with retries={}", jobDir.getPath(), retries);
             // create shell wrapper
             require(minion.deleteFiles(jobPid, jobPort, jobDone, jobStopped), "failed to delete files");
             port = null;
@@ -870,7 +851,7 @@ public class JobTask implements Codable {
         setRebalanceTarget(rebalanceTarget);
         setWasQueued(wasQueued);
         if (log.isDebugEnabled()) {
-            log.debug("[task.execReplicate] " + this.getJobKey());
+            log.debug("[task.execReplicate] {}", this.getJobKey());
         }
         require(testTaskIdle(), "task is not idle");
         if ((replicas == null || replicas.length == 0) && (failureRecoveryReplicas == null || failureRecoveryReplicas.length == 0)) {
@@ -879,7 +860,7 @@ public class JobTask implements Codable {
         }
         if (Minion.findActiveRsync(id, node) != null) {
             String msg = "Replicate failed because an existing rsync process was found for " + getName();
-            log.warn("[task.execReplicate] " + msg);
+            log.warn("[task.execReplicate] {}", msg);
             sendEndStatus(JobTaskErrorCode.EXIT_REPLICATE_FAILURE);
             Minion.shell(Minion.echoWithDate_cmd + msg + " >> " + logErr.getCanonicalPath(), minion.rootDir);
             return;
@@ -887,7 +868,7 @@ public class JobTask implements Codable {
         minion.sendStatusMessage(new StatusTaskReplicate(minion.uuid, id, node, replicateAllBackups));
         try {
             jobDir = Files.initDirectory(new File(minion.rootDir, id + File.separator + node + File.separator + "live"));
-            log.warn("[task.execReplicate] replicating " + jobDir.getPath());
+            log.warn("[task.execReplicate] replicating {}", jobDir.getPath());
             File configDir = getConfigDir();
             Files.initDirectory(configDir);
             // create shell wrapper
@@ -917,12 +898,12 @@ public class JobTask implements Codable {
 
     public void execBackup(String rebalanceSource, String rebalanceTarget, boolean execute) throws Exception {
         if (log.isDebugEnabled()) {
-            log.debug("[task.execBackup] " + this.getJobKey());
+            log.debug("[task.execBackup] {}", this.getJobKey());
         }
         require(testTaskIdle(), "task is not idle");
         minion.sendStatusMessage(new StatusTaskBackup(minion.uuid, id, node));
         try {
-            log.warn("[task.execBackup] backing up " + jobDir.getPath());
+            log.warn("[task.execBackup] backing up {}", jobDir.getPath());
             File configDir = getConfigDir();
             Files.initDirectory(configDir);
             backupSH = new File(configDir, "backup.sh");
@@ -1069,7 +1050,7 @@ public class JobTask implements Codable {
             minion.sendStatusMessage(new StatusTaskBackup(minion.uuid, id, node));
             return false;
         } else if (workItemThread != null) {
-            log.warn("clearing workItem for idle task " + getName());
+            log.warn("clearing workItem for idle task {}", getName());
             workItemThread.interrupt();
             workItemThread = null;
         }
@@ -1095,10 +1076,10 @@ public class JobTask implements Codable {
             }
         } catch (IOException io) {
             success = false;
-            log.warn("[task.state.check] exception when creating done file: " + io, io);
+            log.warn("[task.state.check] exception when creating done file", io);
         }
         if (!success) {
-            log.warn("[task.state.check] failed to create done file for task " + getName() + " path " + doneFile);
+            log.warn("[task.state.check] failed to create done file for task {} path {}", getName(), doneFile);
         }
     }
 
@@ -1181,9 +1162,9 @@ public class JobTask implements Codable {
         try {
             if (kill) {
                 resetStartTime();
-                log.warn("[stopWait] creating done files for " + getName() + " if they do not exist");
+                log.warn("[stopWait] creating done files for {} if they do not exist", getName());
                 if (!jobDone.getParentFile().exists()) {
-                    log.warn("The directory " + jobDone.getParent() + " does not exist.");
+                    log.warn("The directory {} does not exist.", jobDone.getParent());
                 } else {
                     createDoneFileIfNoProcessRunning(jobPid, jobDone);
                     createDoneFileIfNoProcessRunning(replicatePid, replicateDone);
@@ -1193,11 +1174,11 @@ public class JobTask implements Codable {
             for (File pidFile : pidFiles) {
                 Integer pid = minion.getPID(pidFile);
                 if (pid == null) {
-                    log.warn((kill ? "stop" : "kill") + "Wait failed with null pid for " + getName());
+                    log.warn("{}Wait failed with null pid for {}", kill ? "stop" : "kill", getName());
                     result = false;
                 } else {
                     if (pid.equals(minion.minionPid)) {
-                        log.warn("[minion.kill] tried to kill my own process. pid: " + pid);
+                        log.warn("[minion.kill] tried to kill my own process. pid: {}", pid);
                         result = false;
                     }
                     String cmd = minion.getCmdLine(pid);
@@ -1205,7 +1186,7 @@ public class JobTask implements Codable {
                         log.warn("[minion.kill] unable to read cmdline, so it seems unlikely the process is running, ret false");
                         result = false;
                     } else {
-                        log.warn("[minion.kill] about to kill pid " + pid + " with cmd line: " + cmd);
+                        log.warn("[minion.kill] about to kill pid {} with cmd line: {}", pid, cmd);
                         if (cmd.contains(" minion") || cmd.contains(" mss") || cmd.contains(" mqworker")) {
                             log.warn("It looked like we are trying to kill an Important Process (TM), returning false instead");
                             result = false;
@@ -1214,14 +1195,14 @@ public class JobTask implements Codable {
                     if (isRunning) {
                         jobStopped = new File(jobDir, "job.stopped");
                         if (!jobStopped.createNewFile()) {
-                            log.warn("Failed to create job.stopped file for stopped job " + getName());
+                            log.warn("Failed to create job.stopped file for stopped job {}", getName());
                         }
                     }
                     if (kill) {
-                        log.warn("[minion.kill] killing pid:" + pid + " hard");
+                        log.warn("[minion.kill] killing pid:{} hard", pid);
                         result &= Minion.shell("kill -9 " + pid, minion.rootDir) >= 0;
                     } else {
-                        log.warn("[minion.kill] killing pid:" + pid + " nice");
+                        log.warn("[minion.kill] killing pid:{} nice", pid);
                         result &= Minion.shell("kill " + pid, minion.rootDir) >= 0;
                     }
                 }
