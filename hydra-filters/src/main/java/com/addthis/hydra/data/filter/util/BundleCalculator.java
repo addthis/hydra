@@ -599,6 +599,7 @@ public class BundleCalculator {
                 case OP_ABS:
                     v1 = stack.pop();
                     stack.push(ValueFactory.create(Math.abs(v1.asDouble().getDouble())));
+                    break;
                 case OP_HASH:
                     ValueObject target = getSourceColumnBinder(line).getColumn(line, (int) op.val.asLong().getLong());
                     insertNumbers(stack, ValueFactory.create(PluggableHashFunction.hash(target.asString().toString())));
