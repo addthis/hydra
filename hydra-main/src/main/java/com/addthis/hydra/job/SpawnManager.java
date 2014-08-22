@@ -714,6 +714,7 @@ public class SpawnManager {
                                     kv.getValue("minionType", Minion.getDefaultMinionType()),
                                     kv.getValue("command"));
                             kv.addValue("id", job.getId());
+                            id = job.getId();
                         }
                         updateJobFromCall(link, spawn);
                         spawn.submitConfigUpdate(id, kv.getValue("commit"));
@@ -1084,9 +1085,7 @@ public class SpawnManager {
     }
 
     private void updateJobFromCall(KVPairs kv, Spawn spawn) throws Exception {
-        if (log.isDebugEnabled()) {
-            log.debug("[job.update] " + kv);
-        }
+        log.debug("[job.update] {}" + kv);
         String id = kv.getValue("id", kv.getValue("job"));
         HTTPService.require(id != null, "missing job id");
         IJob job = spawn.getJob(id);
@@ -1104,6 +1103,7 @@ public class SpawnManager {
         job.setOnErrorURL(kv.getValue("onError", job.getOnErrorURL()));
         job.setOnCompleteTimeout(kv.getIntValue("onCompleteTimeout", job.getOnCompleteTimeout()));
         job.setOnErrorTimeout(kv.getIntValue("onErrorTimeout", job.getOnErrorTimeout()));
+        
         spawn.setJobConfig(id, kv.getValue("config", spawn.getJobConfig("id")));
         job.setMaxRunTime(HTTPService.getValidLong(kv, "maxrun", job.getMaxRunTime()));
         job.setRekickTimeout(HTTPService.getValidLong(kv, "rekick", job.getRekickTimeout()));

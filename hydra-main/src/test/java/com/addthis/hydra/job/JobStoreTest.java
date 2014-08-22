@@ -84,4 +84,11 @@ public class JobStoreTest {
         // without the init commit jgit will throw an No HEAD exception 
         jobStore.getDeletedJobConfig("bogus_job_id");
     }
+    
+    @Test
+    public void getHistoryNonExistentJobTest() throws Exception {
+        jobStore.submitConfigUpdate(JOB_ID, "bob", "config 1", null);
+        String history = jobStore.getHistory("bogus_job_id").toString();
+        assertEquals("[]", history);
+    }
 }
