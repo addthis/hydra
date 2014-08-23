@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
 class MinionHandler extends AbstractHandler {
     private static final Logger log = LoggerFactory.getLogger(MinionHandler.class);
 
-    private Minion minion;
+    private final Minion minion;
 
     public MinionHandler(Minion minion) {
         this.minion = minion;
@@ -70,7 +70,7 @@ class MinionHandler extends AbstractHandler {
                        HttpServletRequest httpServletRequest,
                        HttpServletResponse httpServletResponse) throws IOException, ServletException {
         try {
-            minion.minionHandler.doHandle(target, request, httpServletRequest, httpServletResponse);
+            doHandle(target, request, httpServletRequest, httpServletResponse);
         } catch (IOException | ServletException io) {
             throw io;
         } catch (Exception ex) {

@@ -295,7 +295,7 @@ public class Minion implements MessageListener, Codable {
             writeState();
             runner = new TaskRunner(this);
             runner.start();
-            diskHealthCheck = new MinionWriteableDiskCheck(Minion.this);
+            diskHealthCheck = new MinionWriteableDiskCheck(this);
             diskHealthCheck.startHealthCheckThread();
             sendHostStatus();
             log.info("[init] up on {}:{} as {} in {}", myHost, getJettyPort(), user, path);
@@ -647,11 +647,11 @@ public class Minion implements MessageListener, Codable {
     void writeState() {
         minionStateLock.lock();
         try {
-            Files.write(stateFile, Bytes.toBytes(CodecJSON.encodeString(minionHandler)), false);
+            Files.write(stateFile, Bytes.toBytes(CodecJSON.encodeString(this)), false);
         } catch (IOException io) {
             log.warn("", io);
             /* assume disk failure: set diskReadOnly=true and exit */
-            Minion.this.diskHealthCheck.onFailure();
+            diskHealthCheck.onFailure();
         } finally {
             minionStateLock.unlock();
         }
