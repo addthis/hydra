@@ -227,8 +227,22 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
                 pathIndex.add(me.getKey(), pe);
             }
         }
-        if ((root == null) && (paths != null) && !paths.isEmpty()) {
+        if (root != null) {
+            for (PathElement p : root) {
+                p.resolve(this);
+            }
+        } else if ((paths != null) && !paths.isEmpty()) {
             root = paths.values().iterator().next();
+        }
+        if (pre != null) {
+            for (PathElement p : pre) {
+                p.resolve(this);
+            }
+        }
+        if (post != null) {
+            for (PathElement p : post) {
+                p.resolve(this);
+            }
         }
         if (outputs != null) {
             for (PathOutput out : outputs) {
