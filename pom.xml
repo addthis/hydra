@@ -59,7 +59,7 @@
     <hydra.dep.maljson.version>0.2.0</hydra.dep.maljson.version>
 
     <!-- hydra addthis external dependency versions -->
-    <hydra.dep.log4j2.version>2.0.1</hydra.dep.log4j2.version>
+    <hydra.dep.log4j2.version>2.0</hydra.dep.log4j2.version>
     <hydra.dep.apache.commons.lang3.version>3.1</hydra.dep.apache.commons.lang3.version>
     <hydra.dep.jackson.jackson-mapper-asl.version>1.9.13</hydra.dep.jackson.jackson-mapper-asl.version>
     <hydra.dep.commons-codec.version>1.8</hydra.dep.commons-codec.version>
