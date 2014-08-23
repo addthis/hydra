@@ -118,23 +118,15 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
     @FieldConfig private Map<String, PathElement[]> paths;
 
     /**
-     * Optional path that is processed once
-     * at the beginning of execution.
-     * The input to this path is an empty bundle.
+     * Optional path that is processed once at the beginning of execution. The input to this path is an empty bundle.
      */
-    @FieldConfig private TreeMapperPathReference pre;
+    @FieldConfig private PathElement[] pre;
 
-    /**
-     * Path that will serve as the root of the output tree.
-     */
-    @FieldConfig private TreeMapperPathReference root;
+    /** Path that will serve as the root of the output tree. */
+    @FieldConfig private PathElement[] root;
 
-    /**
-     * Optional path that is processed once
-     * at the end of execution.
-     * The input to this path is an empty bundle.
-     */
-    @FieldConfig private TreeMapperPathReference post;
+    /** Optional path that is processed once at the end of execution. The input to this path is an empty bundle. */
+    @FieldConfig private PathElement[] post;
 
     /**
      * Optional specify whether to perform
@@ -235,17 +227,8 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
                 pathIndex.add(me.getKey(), pe);
             }
         }
-        if (pre != null) {
-            pre.resolve(this);
-        }
         if ((root == null) && (paths != null) && !paths.isEmpty()) {
-            root = new TreeMapperPathReference(paths.keySet().iterator().next());
-        }
-        if (root != null) {
-            root.resolve(this);
-        }
-        if (post != null) {
-            post.resolve(this);
+            root = paths.values().iterator().next();
         }
         if (outputs != null) {
             for (PathOutput out : outputs) {
@@ -315,6 +298,16 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         pathElement.updateProfile(duration);
     }
 
+
+    public void processBundle(Bundle bundle, TreeMapperPathReference target) {
+        Integer unit = target.getTargetUnit();
+        if (unit == null) {
+            log.warn("[deliver] target missing unit: {}", target);
+            return;
+        }
+        processBundle(bundle, pathIndex.getValueByIndex(unit));
+    }
+
     /**
      * Processor interface take a packet and target and either hand it to local
      * delivery directly, or if processing queue is enabled, hand it to the
@@ -330,13 +323,8 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
      * and target are examined and either delivered locally or sent to the
      * router for delivery to another hydra node.
      */
-    public void processBundle(Bundle bundle, TreeMapperPathReference target) {
+    public void processBundle(Bundle bundle, PathElement[] path) {
         try {
-            Integer unit = target.getTargetUnit();
-            if (unit == null) {
-                log.warn("[deliver] target missing unit: {}", target);
-                return;
-            }
             long bundleTime;
             try {
                 bundleTime = getBundleTime(bundle);
@@ -354,7 +342,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
             }
             bench.addEvents(BENCH.UNITS, 1);
             bench.addEvents(BENCH.TIME, bundleTime >> 8);
-            processPath(bundle, pathIndex.getValueByIndex(unit));
+            processPath(bundle, path);
         } catch (RuntimeException ex) {
             throw ex;
         } catch (Exception ex)  {

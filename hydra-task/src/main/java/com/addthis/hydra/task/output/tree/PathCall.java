@@ -77,5 +77,4 @@ public final class PathCall extends PathOp {
         }
         return TreeMapState.empty();
     }
-
 }
