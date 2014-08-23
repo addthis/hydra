@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.tree;
+package com.addthis.hydra.data.tree.concurrent;
 
 import java.io.File;
 
@@ -20,6 +20,10 @@ import java.util.Map;
 
 import com.addthis.basis.util.ClosableIterator;
 
+import com.addthis.hydra.data.tree.DataTreeNode;
+import com.addthis.hydra.data.tree.ReadTree;
+import com.addthis.hydra.data.tree.ReadTreeNode;
+import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.store.db.CloseOperation;
 
 public class ConcurrentTreeConverter {

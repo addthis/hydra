@@ -17,7 +17,7 @@ import java.util.NoSuchElementException;
 
 import com.addthis.basis.util.ClosableIterator;
 
-import com.addthis.hydra.data.tree.ConcurrentTreeNode;
+import com.addthis.hydra.data.tree.concurrent.ConcurrentTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNode;
 
 /**

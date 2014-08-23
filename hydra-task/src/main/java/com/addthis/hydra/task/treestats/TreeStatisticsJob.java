@@ -27,7 +27,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.data.tree.ConcurrentTree;
+import com.addthis.hydra.data.tree.concurrent.ConcurrentTree;
 import com.addthis.hydra.data.tree.ReadTree;
 import com.addthis.hydra.data.tree.TreeStatistics;
 import com.addthis.hydra.store.db.SettingsDB;

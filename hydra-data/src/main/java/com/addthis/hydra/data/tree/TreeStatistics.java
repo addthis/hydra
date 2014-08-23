@@ -28,6 +28,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.ClosableIterator;
 
+import com.addthis.hydra.data.tree.concurrent.ConcurrentTree;
+import com.addthis.hydra.data.tree.concurrent.ConcurrentTreeNode;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.kv.ReadExternalPagedStore;
 import com.addthis.hydra.store.kv.metrics.ExternalPagedStoreMetrics;
@@ -142,9 +144,9 @@ public class TreeStatistics {
     /**
      * Breadth-first search to generate per-node statistics.
      * Invokes {@link #generateNodeStatistics(com.addthis.hydra.data.tree.ReadTreeNode,
-     * com.addthis.hydra.data.tree.ReadTreeNode, com.addthis.hydra.data.tree.ConcurrentTreeNode)}
+     * com.addthis.hydra.data.tree.ReadTreeNode, ConcurrentTreeNode)}
      * on each node and recursively calls {@link #walkNodeStatistics(
-     *com.addthis.hydra.data.tree.ReadTreeNode, com.addthis.hydra.data.tree.ConcurrentTreeNode)}.
+     *com.addthis.hydra.data.tree.ReadTreeNode, ConcurrentTreeNode)}.
      */
     private void walkNodeStatistics(ReadTreeNode readParent, ConcurrentTreeNode writeParent) {
         if (readParent.nodes == 0) {
@@ -245,7 +247,7 @@ public class TreeStatistics {
     /**
      * Generate statistics on a specific node. Ignores subtree information.
      * Invoked by {@link #walkNodeStatistics(com.addthis.hydra.data.tree.ReadTreeNode,
-     * com.addthis.hydra.data.tree.ConcurrentTreeNode)}.
+     * ConcurrentTreeNode)}.
      *
      * @param readNode        target node to inspect
      * @param readNodeParent  parent of the target node to inspect

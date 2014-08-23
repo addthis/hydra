@@ -16,9 +16,7 @@ package com.addthis.hydra.task.output.tree;
 import java.io.File;
 import java.io.IOException;
 
-import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +26,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 
 import com.addthis.basis.util.Bench;
@@ -36,7 +33,6 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -47,13 +43,12 @@ import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.source.LiveMeshyServer;
 import com.addthis.hydra.data.query.source.LiveQueryReference;
-import com.addthis.hydra.data.tree.ConcurrentTree;
+import com.addthis.hydra.data.tree.concurrent.ConcurrentTree;
 import com.addthis.hydra.data.tree.DataTree;
-import com.addthis.hydra.data.tree.TreeCommonParameters;
+import com.addthis.hydra.data.tree.concurrent.TreeCommonParameters;
 import com.addthis.hydra.data.util.TimeField;
 import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.task.output.DataOutputTypeList;
-import com.addthis.hydra.task.output.tree.TreeMapperStats.Snapshot;
 import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.meshy.MeshyServer;
 
@@ -100,7 +95,6 @@ import org.slf4j.LoggerFactory;
 public final class TreeMapper extends DataOutputTypeList implements Codable {
 
     private static final Logger log = LoggerFactory.getLogger(TreeMapper.class);
-    private static final DecimalFormat percent = new DecimalFormat("00.0%");
     private static final SimpleDateFormat date = new SimpleDateFormat("yyMMdd-HHmmss");
 
     private enum BENCH {
@@ -114,38 +108,33 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
     /**
      * Default is either "mapper.printinterval" configuration value or 1000.
      */
-    @FieldConfig(codable = true)
-    private long printinterval = Parameter.longValue("mapper.printinterval", 1000L);
+    @FieldConfig private long printinterval = Parameter.longValue("mapper.printinterval", 1000L);
 
     /**
      * Definition of the tree structure.
      * Consists of a mapping from a name to one or more path elements.
      * One of these path elements will serve as the root of the tree.
      */
-    @FieldConfig(codable = true)
-    private Map<String, PathElement[]> paths;
+    @FieldConfig private Map<String, PathElement[]> paths;
 
     /**
      * Optional path that is processed once
      * at the beginning of execution.
      * The input to this path is an empty bundle.
      */
-    @FieldConfig(codable = true)
-    private TreeMapperPathReference pre;
+    @FieldConfig private TreeMapperPathReference pre;
 
     /**
      * Path that will serve as the root of the output tree.
      */
-    @FieldConfig(codable = true)
-    private TreeMapperPathReference root;
+    @FieldConfig private TreeMapperPathReference root;
 
     /**
      * Optional path that is processed once
      * at the end of execution.
      * The input to this path is an empty bundle.
      */
-    @FieldConfig(codable = true)
-    private TreeMapperPathReference post;
+    @FieldConfig private TreeMapperPathReference post;
 
     /**
      * Optional specify whether to perform
@@ -158,8 +147,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
      * In the event of invalid tree pages the correct action
      * is to revert the task.
      */
-    @FieldConfig(codable = true)
-    private ValidateMode validateTree = ValidateMode.NONE;
+    @FieldConfig private ValidateMode validateTree = ValidateMode.NONE;
 
     /**
      * If tree validation has been validated (see {@link #validateTree validateTree}
@@ -167,8 +155,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
      * repairs will be made when an error is detected.
      * Default is false.
      */
-    @FieldConfig(codable = true)
-    private boolean repairTree = false;
+    @FieldConfig private boolean repairTree = false;
 
     /**
      * Optional sample rate for applying
@@ -176,51 +163,38 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
      * than one than apply once every N runs.
      * Default is one.
      */
-    @FieldConfig(codable = true)
-    private int postRate = 1;
+    @FieldConfig private int postRate = 1;
 
     /**
      * One or more queries that are executed
      * after the tree has been constructed.
      */
-    @FieldConfig(codable = true)
-    private PathOutput[] outputs;
+    @FieldConfig private PathOutput[] outputs;
 
-    @FieldConfig(codable = true)
-    private boolean live;
+    @FieldConfig private boolean live;
 
-    @FieldConfig(codable = true)
-    private String liveHost;
+    @FieldConfig private String liveHost;
 
-    @FieldConfig(codable = true)
-    private int livePort;
+    @FieldConfig private int livePort;
 
-    @FieldConfig(codable = true)
-    private Integer nodeCache;
+    @FieldConfig private Integer nodeCache;
 
-    @FieldConfig(codable = true)
-    private Integer trashInterval;
+    @FieldConfig private Integer trashInterval;
 
-    @FieldConfig(codable = true)
-    private Integer trashTimeLimit;
+    @FieldConfig private Integer trashTimeLimit;
 
-    @FieldConfig(codable = true)
-    private TimeField timeField;
+    @FieldConfig private TimeField timeField;
 
-    @FieldConfig(codable = true)
-    private boolean stats = true;
+    @FieldConfig private boolean stats = true;
 
     /**
      * Set of strings that enumerate the features to process.
      */
-    @FieldConfig(codable = true)
-    private HashSet<String> features;
+    @FieldConfig private HashSet<String> features;
 
-    @FieldConfig(codable = true)
-    private StoreConfig storage;
+    @FieldConfig private StoreConfig storage;
 
-    @FieldConfig(codable = true)
-    private int maxErrors = 0;
+    @FieldConfig private int maxErrors = 0;
 
     @FieldConfig private boolean profiling = false;
 
@@ -246,58 +220,6 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
     private       int           bundleErrors    = 0;
     private final AtomicLong    lastBundleTime  = new AtomicLong(0);
 
-    private static class IndexHash<V> {
-
-        private HashMap<String, Integer> map  = new HashMap<>();
-        private ArrayList<V>             list = new ArrayList<>(64);
-
-        public int add(String key, V value) {
-            int pos = list.size();
-            map.put(key, pos);
-            list.add(value);
-            return pos;
-        }
-
-        public V getValueByKey(String key) {
-            return getValueByIndex(map.get(key));
-        }
-
-        public V getValueByIndex(Integer pos) {
-            return list.get(pos);
-        }
-
-        public Integer getIndex(String key) {
-            return map.get(key);
-        }
-    }
-
-    public static final class StoreConfig implements Codable {
-
-        @FieldConfig(codable = true)
-        Integer memSample;
-        @FieldConfig(codable = true)
-        Integer maxCacheSize;
-        @FieldConfig(codable = true)
-        Integer maxPageSize;
-        @FieldConfig(codable = true)
-        Long    maxCacheMem;
-        @FieldConfig(codable = true)
-        Integer maxPageMem;
-
-        public void setStaticFieldsFromMembers() {
-            if (maxCacheSize != null)
-                TreeCommonParameters.setDefaultMaxCacheSize(maxCacheSize);
-            if (maxCacheMem != null)
-                TreeCommonParameters.setDefaultMaxCacheMem(maxCacheMem);
-            if (maxPageSize != null)
-                TreeCommonParameters.setDefaultMaxPageSize(maxCacheSize);
-            if (maxPageMem != null)
-                TreeCommonParameters.setDefaultMaxPageMem(maxPageMem);
-            if (memSample != null)
-                TreeCommonParameters.setDefaultMemSample(memSample);
-        }
-    }
-
     private void resolve() throws Exception {
         fields.clear();
         if (features != null) {
@@ -316,7 +238,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         if (pre != null) {
             pre.resolve(this);
         }
-        if (root == null && paths != null && paths.size() > 0) {
+        if ((root == null) && (paths != null) && !paths.isEmpty()) {
             root = new TreeMapperPathReference(paths.keySet().iterator().next());
         }
         if (root != null) {
@@ -344,7 +266,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
     public void open(TaskRunConfig config) {
         this.config = config;
         try {
-            mapstats = new TreeMapperStats(log);
+            mapstats = new TreeMapperStats();
             resolve();
 
             if (nodeCache != null) TreeCommonParameters.setDefaultCleanQueueSize(nodeCache);
@@ -366,7 +288,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
             startTime = System.currentTimeMillis();
 
             if (pre != null) {
-                log.warn("pre-chain: " + pre);
+                log.warn("pre-chain: {}", pre);
                 processBundle(new KVBundle(), pre);
             }
         } catch (Exception ex) {
@@ -389,14 +311,8 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         return profiling;
     }
 
-    public void updateProfile(PathElement pathElement, long duration) {
+    public static void updateProfile(PathElement pathElement, long duration) {
         pathElement.updateProfile(duration);
-    }
-
-    public TreeMapperPathReference createBundleTarget(String rule) {
-        TreeMapperPathReference pt = new TreeMapperPathReference(rule);
-        pt.resolve(this);
-        return pt;
     }
 
     /**
@@ -418,18 +334,19 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         try {
             Integer unit = target.getTargetUnit();
             if (unit == null) {
-                log.warn("[deliver] target missing unit: " + target);
+                log.warn("[deliver] target missing unit: {}", target);
                 return;
             }
             long bundleTime;
             try {
                 bundleTime = getBundleTime(bundle);
             } catch (NumberFormatException nfe) {
-                log.warn("error reading TimeField, : " + timeField.getField() + "\nbundle: " + bundle.toString());
+                log.warn("error reading TimeField, : {}\nbundle: {}", timeField.getField(), bundle);
                 // in case of junk data, if the source is flexable we'll continue processing bundles
                 // until maxErrors is reached
                 if (bundleErrors++ < maxErrors) {
-                    log.warn("bundleErrors:" + bundleErrors + " is less than max errors: " + maxErrors + ", skipping this bundle");
+                    log.warn("bundleErrors:{} is less than max errors: {}, skipping this bundle", bundleErrors,
+                             maxErrors);
                     return;
                 } else {
                     throw new RuntimeException("Invalid bundle: " + bundle + " unable to read TimeField due to NumberFormatException");
@@ -453,9 +370,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         if (timeField != null) {
             ValueObject vo = bundle.getValue(bundle.getFormat().getField(timeField.getField()));
             if (vo == null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("missing time " + timeField.getField() + " in [" + bundle.getCount() + "] --> " + bundle);
-                }
+                log.debug("missing time {} in [{}] --> {}", timeField.getField(), bundle.getCount(), bundle);
             } else {
                 bundleTime = timeField.toUnix(vo);
             }
@@ -489,12 +404,15 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
                 long proc = processed.get();
                 // prevent multiple Hydra threads from competing to change
                 // streamXX,lastTime vars
-                if (benchCalls.getAndIncrement() % 20 == 0 && stats) {
+                if (((benchCalls.getAndIncrement() % 20) == 0) && stats) {
                     long streamCounts = streamReadCount.getAndSet(0);
                     long streamTotals = streamReadTotal.addAndGet(streamCounts) / (1024 * 1024);
                     long mark = JitterClock.globalTime();
                     long streamRate = (streamCounts * 1000L) / (mark - lastHeaderTime.getAndSet(mark));
-                    log.info("tread tmap  input proc  rules  nodes bundles cache..hit% dbs   " + "mem   bundleTime [" + streamCounts + "," + streamRate + "/s," + streamTotals + "MM]");
+                    log.info(
+                            "tread tmap  input proc  rules  nodes bundles cache..hit% dbs   mem   bundleTime [{}," +
+                            "{}/s,{}MM]",
+                            streamCounts, streamRate, streamTotals);
                 }
                 long benchtime = bench.getEventCount(BENCH.TIME);
                 long benchlocal = bench.getEventCount(BENCH.UNITS);
@@ -505,7 +423,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
                 long time_write_map = mapWriteTime.getAndSet(0);
                 long time_read_wait = streamWaitime.getAndSet(0);
 
-                Snapshot snap = new Snapshot();
+                TreeMapperStats.Snapshot snap = new TreeMapperStats.Snapshot();
                 snap.streamRate = streamRate;
                 snap.mapWriteTime = benchlocal > 0 ? time_write_map / benchlocal : time_write_map;
                 snap.streamWaitTime = (benchlocal > 0 ? time_read_wait / benchlocal : time_read_wait);
@@ -524,52 +442,9 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
                 if (!stats) {
                     return;
                 }
-                StringBuilder msg = new StringBuilder();
-                msg.append(pad(snap.streamWaitTime, 6));
-                msg.append(pad(snap.mapWriteTime, 6));
-                msg.append(pad(snap.streamRate, 6));
-                msg.append(pad(snap.localPacketRate, 6));
-                msg.append(pad(snap.ruleProcessRate, 7));
-                msg.append(pad(snap.nodesUpdated, 6));
-                msg.append(pad(snap.totalPackets, 8));
-                msg.append(pad(snap.treeCacheSize, 6));
-                msg.append(pad(percent.format(snap.treeCacheHitRate), 6));
-                msg.append(pad(snap.treeDbCount, 6));
-                msg.append(pad(snap.freeMemory, 6));
-                msg.append(pad(snap.averageTimestamp, 14));
-                log.info(msg.toString());
+                log.info(snap.toFormattedString());
             }
         }
-    }
-
-    /**
-     * number right pad utility for log data
-     */
-    private static String pad(long v, int chars) {
-        String sv = Long.toString(v);
-        String[] opt = new String[]{"K", "M", "B", "T"};
-        DecimalFormat[] dco = new DecimalFormat[]{new DecimalFormat("0.00"), new DecimalFormat("0.0"), new DecimalFormat("0")};
-        int indx = 0;
-        double div = 1000d;
-        outer:
-        while (sv.length() > chars - 1 && indx < opt.length) {
-            for (DecimalFormat dc : dco) {
-                sv = dc.format(v / div).concat(opt[indx]);
-                if (sv.length() <= chars - 1) {
-                    break outer;
-                }
-            }
-            div *= 1000;
-            indx++;
-        }
-        return Strings.padright(sv, chars);
-    }
-
-    /**
-     * string right pad utility for log data
-     */
-    private static String pad(String s, int chars) {
-        return Strings.padright(s, chars);
     }
 
     @Override
@@ -615,17 +490,16 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
                     doPost = true;
                 }
                 if (doPost) {
-                    log.warn("post-chain: " + post);
+                    log.warn("post-chain: {}", post);
                     processBundle(new KVBundle(), post);
                     processed.incrementAndGet();
                 } else {
-                    log.warn("skipping post-chain: " + post +
-                             ". Sample rate is " + sample + " out of " + postRate);
+                    log.warn("skipping post-chain: {}. Sample rate is {} out of {}", post, sample, postRate);
                 }
             }
             if (outputs != null) {
                 for (PathOutput output : outputs) {
-                    log.warn("output: " + output);
+                    log.warn("output: {}", output);
                     output.exec(tree);
                 }
             }

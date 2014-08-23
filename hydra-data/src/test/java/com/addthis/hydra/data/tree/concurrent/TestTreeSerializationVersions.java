@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.tree;
+package com.addthis.hydra.data.tree.concurrent;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,6 +20,7 @@ import java.util.Map;
 
 import com.addthis.basis.util.Files;
 
+import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.prop.DataTime;
 import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.store.skiplist.LegacyPage;
@@ -56,7 +57,7 @@ public class TestTreeSerializationVersions {
         File dir = makeTemporaryDirectory();
         try {
             int count = 1000;
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir).
+            ConcurrentTree tree = new Builder(dir).
                     pageFactory(LegacyPage.LegacyPageFactory.singleton).build();
             ConcurrentTreeNode root = tree.getRootNode();
             /**
@@ -74,7 +75,7 @@ public class TestTreeSerializationVersions {
                 node.release();
             }
             tree.close(false, close);
-            tree = new ConcurrentTree.Builder(dir).
+            tree = new Builder(dir).
                     pageFactory(Page.DefaultPageFactory.singleton).build();
             /**
              * Sanity check. Read the count notes and look for the data attachment.
@@ -93,7 +94,7 @@ public class TestTreeSerializationVersions {
                 node.release();
             }
             tree.close(false, close);
-            tree = new ConcurrentTree.Builder(dir).
+            tree = new Builder(dir).
                     pageFactory(Page.DefaultPageFactory.singleton).build();
             /**
              * Only on even nodes update the data attachment.
@@ -112,7 +113,7 @@ public class TestTreeSerializationVersions {
                 node.release();
             }
             tree.close(false, close);
-            tree = new ConcurrentTree.Builder(dir).
+            tree = new Builder(dir).
                     pageFactory(Page.DefaultPageFactory.singleton).build();
             /**
              * Read all the nodes and verify that the data attachments are correct.

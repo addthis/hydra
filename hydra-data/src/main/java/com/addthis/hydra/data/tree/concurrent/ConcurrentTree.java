@@ -11,16 +11,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.tree;
+package com.addthis.hydra.data.tree.concurrent;
 
 import javax.annotation.concurrent.GuardedBy;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
-import java.io.Writer;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -32,20 +29,24 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.addthis.basis.concurrentlinkedhashmap.EvictionMediator;
 import com.addthis.basis.concurrentlinkedhashmap.MediatedEvictionConcurrentHashMap;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Meter;
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
 
 import com.addthis.hydra.common.Configuration;
+import com.addthis.hydra.data.tree.DataTree;
+import com.addthis.hydra.data.tree.DataTreeNode;
+import com.addthis.hydra.data.tree.DataTreeNodeActor;
+import com.addthis.hydra.data.tree.DataTreeNodeInitializer;
+import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
+import com.addthis.hydra.data.tree.TreeDataParent;
+import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB;
-import com.addthis.hydra.store.db.IPageDB.Range;
 import com.addthis.hydra.store.db.PageDB;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
 import com.addthis.hydra.store.skiplist.Page;
@@ -68,8 +69,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  */
 public final class ConcurrentTree implements DataTree, MeterDataSource {
-
-    private static final Logger log = LoggerFactory.getLogger(ConcurrentTree.class);
+    static final Logger log = LoggerFactory.getLogger(ConcurrentTree.class);
 
     // number of background deletion threads
     @Configuration.Parameter
@@ -82,8 +82,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     // number of nodes in between trash removal logging messages
     @Configuration.Parameter
     static int deletionLogInterval = Parameter.intValue("hydra.tree.clean.logging", 100000);
-
-    static final boolean trashDebug = Parameter.boolValue("hydra.tree.trash.debug", false);
 
     private static final AtomicInteger scopeGenerator = new AtomicInteger();
 
@@ -98,20 +96,19 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     private final File root;
     private final File idFile;
-    private final IPageDB<DBKey, ConcurrentTreeNode> source;
+    final IPageDB<DBKey, ConcurrentTreeNode> source;
     private final ConcurrentTreeNode treeRootNode;
-    private final ConcurrentTreeNode treeTrashNode;
+    final ConcurrentTreeNode treeTrashNode;
     private final AtomicInteger nextDBID;
-    private final AtomicBoolean closed = new AtomicBoolean(false);
+    final AtomicBoolean closed = new AtomicBoolean(false);
     private final Meter<METERTREE> meter;
     private final MeterFileLogger logger;
     private final AtomicDouble cacheHitRate = new AtomicDouble(0.0);
-    private final boolean meterLoggerEnabled = true;
     private final MediatedEvictionConcurrentHashMap<CacheKey, ConcurrentTreeNode> cache;
     private final ScheduledExecutorService deletionThreadPool;
 
     @GuardedBy("treeTrashNode")
-    private Range<DBKey, ConcurrentTreeNode> trashIterator;
+    private IPageDB.Range<DBKey, ConcurrentTreeNode> trashIterator;
 
     @SuppressWarnings("unused")
     final Gauge<Integer> treeTrashNodeCount = Metrics.newGauge(SkipListCache.class,
@@ -133,68 +130,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 }
             });
 
-
-    /**
-     * convert meter enums to sensible short names for reporting
-     */
-    protected static String shortName(String meterName) {
-        StringBuilder sb = new StringBuilder();
-        for (String s : Strings.split(meterName.toString(), "_")) {
-            sb.append(s.length() >= 2 ? s.substring(0, 2) : s + "_");
-        }
-        return sb.toString();
-    }
-
-    public static class Builder {
-
-        // Required parameters
-        protected final File root;
-
-        // Optional parameters - initialized to default values;
-        protected int numDeletionThreads = defaultNumDeletionThreads;
-        protected int cleanQSize = TreeCommonParameters.cleanQMax;
-        protected int maxCache = TreeCommonParameters.maxCacheSize;
-        protected int maxPageSize = TreeCommonParameters.maxPageSize;
-        protected PageFactory pageFactory = Page.DefaultPageFactory.singleton;
-
-        public Builder(File root) {
-            this.root = root;
-        }
-
-        public Builder numDeletionThreads(int val) {
-            numDeletionThreads = val;
-            return this;
-        }
-
-        public Builder cleanQSize(int val) {
-            cleanQSize = val;
-            return this;
-        }
-
-        public Builder maxCacheSize(int val) {
-            maxCache = val;
-            return this;
-        }
-
-        public Builder maxPageSize(int val) {
-            maxPageSize = val;
-            return this;
-        }
-
-        public Builder pageFactory(PageFactory factory) {
-            pageFactory = factory;
-            return this;
-        }
-
-        public ConcurrentTree build() throws Exception {
-            return new ConcurrentTree(root, numDeletionThreads, cleanQSize,
-                    maxCache, maxPageSize, pageFactory);
-        }
-
-    }
-
-    private ConcurrentTree(File root, int numDeletionThreads, int cleanQSize, int maxCacheSize,
-            int maxPageSize, PageFactory factory) throws Exception {
+    ConcurrentTree(File root, int numDeletionThreads, int cleanQSize, int maxCacheSize,
+                   int maxPageSize, PageFactory factory) throws Exception {
         //Only attempt mkdirs if we are not readonly. Theoretically should not be needed, but guarding here
         // prevent logic leak created by transient file detection issues. Regardless, while in readonly, we should
         // certainly not be attempting to create directories.
@@ -211,9 +148,9 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         }
 
         // create meter logging thread
-        if (TreeCommonParameters.meterLogging > 0 && meterLoggerEnabled) {
+        if (TreeCommonParameters.meterLogging > 0) {
             logger = new MeterFileLogger(this, root, "tree-metrics",
-                    TreeCommonParameters.meterLogging, TreeCommonParameters.meterLogLines);
+                                         TreeCommonParameters.meterLogging, TreeCommonParameters.meterLogLines);
         } else {
             logger = null;
         }
@@ -225,7 +162,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         // create cache
         cache = new MediatedEvictionConcurrentHashMap.
                 Builder<CacheKey, ConcurrentTreeNode>().
-                mediator(new CacheMediator()).
+                mediator(new CacheMediator(source)).
                 maximumWeightedCapacity(cleanQSize).build();
 
         // get stored next db id
@@ -245,55 +182,28 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 new NamedThreadFactory(scope + "-deletion-", true));
 
         for (int i = 0; i < numDeletionThreads; i++) {
-            deletionThreadPool.scheduleAtFixedRate(new BackgroundDeletionTask(),
+            deletionThreadPool.scheduleAtFixedRate(new BackgroundDeletionTask(this),
                     i,
                     deletionThreadSleepMillis,
                     TimeUnit.MILLISECONDS);
         }
 
         long openTime = System.currentTimeMillis() - start;
-        log.info("dir=" + root +
-                 (log.isDebugEnabled() ? " root=" + treeRootNode + " trash=" + treeTrashNode : "")
-                 + " cache=" + TreeCommonParameters.cleanQMax + " nextdb=" + nextDBID
-                 + " openms=" + openTime);
+        log.info("dir={} root={} trash={} cache={} nextdb={} openms={}",
+                 root, treeRootNode, treeTrashNode, TreeCommonParameters.cleanQMax, nextDBID, openTime);
     }
 
     public ConcurrentTree(File root) throws Exception {
         this(root, defaultNumDeletionThreads, TreeCommonParameters.cleanQMax,
-                TreeCommonParameters.maxCacheSize, TreeCommonParameters.maxPageSize,
-                Page.DefaultPageFactory.singleton);
-    }
-
-    private class CacheMediator implements EvictionMediator<CacheKey, ConcurrentTreeNode> {
-
-        @Override
-        public boolean onEviction(CacheKey key, ConcurrentTreeNode value) {
-            boolean evict = value.trySetEviction();
-            if (evict) {
-                try {
-                    if (!value.isDeleted() && value.isChanged()) {
-                        source.put(key.dbkey(), value);
-                    }
-                } finally {
-                    value.evictionComplete();
-                }
-            }
-            return evict;
-        }
-    }
-
-    private void logException(String message, Exception ex) {
-        final Writer result = new StringWriter();
-        final PrintWriter printWriter = new PrintWriter(result);
-        ex.printStackTrace(printWriter);
-        log.warn(message + " : " + result.toString());
+             TreeCommonParameters.maxCacheSize, TreeCommonParameters.maxPageSize,
+             Page.DefaultPageFactory.singleton);
     }
 
     public void meter(METERTREE meterval) {
         meter.inc(meterval);
     }
 
-    protected int getNextNodeDB() {
+    int getNextNodeDB() {
         return nextDBID.incrementAndGet();
     }
 
@@ -301,11 +211,10 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         return (!lease || node.tryLease());
     }
 
-    protected ConcurrentTreeNode getNode(final ConcurrentTreeNode parent, final String child,
-            final boolean lease) {
+    public ConcurrentTreeNode getNode(final ConcurrentTreeNode parent, final String child, final boolean lease) {
         Integer nodedb = parent.nodeDB();
         if (nodedb == null) {
-            if (log.isTraceEnabled()) log.trace("[node.get] " + parent + " --> " + child + " NOMAP --> null");
+            log.trace("[node.get] {} --> {} NOMAP --> null", parent, child);
             return null;
         }
         CacheKey key = new CacheKey(nodedb, child);
@@ -356,8 +265,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         }
     }
 
-    protected ConcurrentTreeNode getOrCreateNode(final ConcurrentTreeNode parent, final String child,
-            final DataTreeNodeInitializer creator) {
+    public ConcurrentTreeNode getOrCreateNode(final ConcurrentTreeNode parent, final String child,
+                                              final DataTreeNodeInitializer creator) {
         parent.requireNodeDB();
         CacheKey key = new CacheKey(parent.nodeDB(), child);
         ConcurrentTreeNode newNode = null;
@@ -415,12 +324,11 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         }
     }
 
-    protected boolean deleteNode(final ConcurrentTreeNode parent, final String child) {
-        if (log.isTraceEnabled()) log.trace("[node.delete] " + parent + " --> " + child);
+    boolean deleteNode(final ConcurrentTreeNode parent, final String child) {
+        log.trace("[node.delete] {} --> {}", parent, child);
         Integer nodedb = parent.nodeDB();
         if (nodedb == null) {
-            if (log.isDebugEnabled())
-                log.debug("parent has no children on delete : " + parent + " --> " + child);
+            log.debug("parent has no children on delete : {} --> {}", parent, child);
             return false;
         }
         CacheKey key = new CacheKey(nodedb, child);
@@ -444,7 +352,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         }
     }
 
-    protected void markForChildDeletion(final ConcurrentTreeNode node) {
+    private void markForChildDeletion(final ConcurrentTreeNode node) {
         /*
          * only put nodes in the trash if they have children because they've
          * otherwise already been purged from backing store by release() in the
@@ -459,18 +367,16 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         if (log.isTraceEnabled()) log.trace("[trash.mark] " + next + " --> " + treeTrashNode);
     }
 
-    @SuppressWarnings("unchecked")
-    protected Range<DBKey, ConcurrentTreeNode> fetchNodeRange(int db) {
+    @SuppressWarnings("unchecked") IPageDB.Range<DBKey, ConcurrentTreeNode> fetchNodeRange(int db) {
         return source.range(new DBKey(db), new DBKey(db + 1));
     }
 
-    @SuppressWarnings({"unchecked", "unused"})
-    protected Range<DBKey, ConcurrentTreeNode> fetchNodeRange(int db, String from) {
+    @SuppressWarnings({"unchecked", "unused"}) private IPageDB.Range<DBKey, ConcurrentTreeNode> fetchNodeRange(int db,
+                                                                                                               String from) {
         return source.range(new DBKey(db, Raw.get(from)), new DBKey(db + 1));
     }
 
-    @SuppressWarnings("unchecked")
-    protected Range<DBKey, ConcurrentTreeNode> fetchNodeRange(int db, String from, String to) {
+    @SuppressWarnings("unchecked") IPageDB.Range<DBKey, ConcurrentTreeNode> fetchNodeRange(int db, String from, String to) {
         return source.range(new DBKey(db, Raw.get(from)),
                 to == null ? new DBKey(db+1, (Raw)null) : new DBKey(db, Raw.get(to)));
     }
@@ -563,7 +469,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             treeRootNode.markChanged();
             treeRootNode.release();
             if (treeRootNode.getLeaseCount() != 0) {
-                log.warn("invalid root state on shutdown : " + treeRootNode);
+                log.warn("invalid root state on shutdown : {}", treeRootNode);
             }
         }
         if (treeTrashNode != null) {
@@ -609,51 +515,12 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         return mark;
     }
 
-    protected void reportCacheHit() {
+    private void reportCacheHit() {
         meter.inc(METERTREE.CACHE_HIT);
     }
 
-    protected void reportCacheMiss() {
+    private void reportCacheMiss() {
         meter.inc(METERTREE.CACHE_MISS);
-    }
-
-    protected static class CacheKey {
-
-        private final int hc;
-        private final int db;
-        private final String name;
-        private volatile DBKey dbkey;
-
-        protected CacheKey(int db, String name) {
-            int hash = Math.abs(db + name.hashCode());
-            this.db = db;
-            this.name = name;
-            if (hash == Integer.MIN_VALUE) {
-                hash = Integer.MAX_VALUE;
-            }
-            hc = hash;
-        }
-
-        protected DBKey dbkey() {
-            if (dbkey == null) {
-                dbkey = new DBKey(db, Raw.get(name));
-            }
-            return dbkey;
-        }
-
-        @Override
-        public boolean equals(Object key) {
-            if (!(key instanceof CacheKey)) {
-                return false;
-            }
-            CacheKey ck = (CacheKey) key;
-            return ck.db == db && ck.name.equals(name);
-        }
-
-        @Override
-        public int hashCode() {
-            return hc;
-        }
     }
 
     @Override
@@ -785,7 +652,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         return getRootNode().getDataMap();
     }
 
-    protected static String keyName(DBKey dbkey) {
+    private static String keyName(DBKey dbkey) {
         try {
             return new String(dbkey.key(), "UTF-8");
         } catch (UnsupportedEncodingException ex) {
@@ -806,7 +673,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
      */
     long deleteSubTree(ConcurrentTreeNode rootNode, long counter) {
         int nodeDB = rootNode.nodeDB();
-        Range<DBKey, ConcurrentTreeNode> range = fetchNodeRange(nodeDB);
+        IPageDB.Range<DBKey, ConcurrentTreeNode> range = fetchNodeRange(nodeDB);
         try {
             while (range.hasNext()) {
                 // do not emit logging when counter is negative
@@ -836,11 +703,11 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         return counter;
     }
 
-    private Map.Entry<DBKey, ConcurrentTreeNode> nextTrashNode() {
+    Map.Entry<DBKey, ConcurrentTreeNode> nextTrashNode() {
         synchronized (treeTrashNode) {
             if (trashIterator == null) {
                 return recreateTrashIterator();
-            }else if (trashIterator.hasNext()) {
+            } else if (trashIterator.hasNext()) {
                 return trashIterator.next();
             } else {
                 return recreateTrashIterator();
@@ -878,7 +745,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
         int nodeDB = treeTrashNode.nodeDB();
 
-        Range<DBKey, ConcurrentTreeNode> range = fetchNodeRange(nodeDB);
+        IPageDB.Range<DBKey, ConcurrentTreeNode> range = fetchNodeRange(nodeDB);
 
         while (range.hasNext()) {
             Map.Entry<DBKey, ConcurrentTreeNode> entry = range.next();
@@ -892,30 +759,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         source.remove(new DBKey(nodeDB), new DBKey(nodeDB + 1), false);
     }
 
-    class BackgroundDeletionTask implements Runnable {
-
-        @Override
-        public void run() {
-            try {
-                Map.Entry<DBKey, ConcurrentTreeNode> entry;
-                do {
-                    entry = nextTrashNode();
-                    if (entry != null) {
-                        ConcurrentTreeNode node = entry.getValue();
-                        deleteSubTree(node, -1);
-                        ConcurrentTreeNode prev = source.remove(entry.getKey());
-                        if (prev != null) {
-                            treeTrashNode.incrementCounter();
-                        }
-                    }
-                }
-                while (entry != null && !closed.get());
-            } catch (Exception ex) {
-                logException("Uncaught exception in concurrent tree background deletion thread", ex);
-            }
-        }
-    }
-
     /**
      * For testing purposes only.
      */
@@ -923,7 +766,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         return treeTrashNode;
     }
 
-    void repairIntegrity() {
+    public void repairIntegrity() {
         PagedKeyValueStore store = source.getEps();
         if (store instanceof SkipListCache) {
             ((SkipListCache) store).testIntegrity(true);

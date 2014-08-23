@@ -89,7 +89,6 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
         public PageDB<V> build() throws IOException {
             return new PageDB<>(dir, clazz, dbname, maxPageSize, maxPages, pageFactory);
         }
-
     }
 
     protected PageDB(PagedKeyValueStore<DBKey, V> eps, DBKeyCoder<V> keyCoder) {
@@ -102,7 +101,7 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
     }
 
     public PageDB(File dir, Class<? extends V> clazz, String dbname, int maxPageSize,
-            int maxPages, PageFactory factory) throws IOException {
+                  int maxPages, PageFactory factory) throws IOException {
         this.keyCoder = new DBKeyCoder<>(clazz);
         String dbType = getByteStoreNameForFile(dir);
         ByteStore store;

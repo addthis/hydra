@@ -15,6 +15,8 @@ package com.addthis.hydra.data.tree;
 
 import java.io.File;
 
+import com.addthis.hydra.data.tree.concurrent.ConcurrentTree;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

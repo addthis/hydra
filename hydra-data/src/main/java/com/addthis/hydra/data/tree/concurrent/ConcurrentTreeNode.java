@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.tree;
+package com.addthis.hydra.data.tree.concurrent;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -29,6 +29,15 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.MemoryCounter.Mem;
 
+import com.addthis.hydra.data.tree.AbstractTreeNode;
+import com.addthis.hydra.data.tree.DataTreeNode;
+import com.addthis.hydra.data.tree.DataTreeNodeActor;
+import com.addthis.hydra.data.tree.DataTreeNodeInitializer;
+import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
+import com.addthis.hydra.data.tree.TreeDataParameters;
+import com.addthis.hydra.data.tree.TreeDataParent;
+import com.addthis.hydra.data.tree.TreeNodeData;
+import com.addthis.hydra.data.tree.TreeNodeDataDeferredOperation;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB.Range;
 
@@ -147,10 +156,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         return nodes;
     }
 
-    /**
-     * The implementation of {@link com.addthis.hydra.data.tree.TreeNode#requireEditable()}
-     * allows the editing of deleted nodes. So we're going to continue to support that behavior.
-     */
     void requireEditable() {
         int count = leases.get();
         if (!(count == -2 || count > 0)) {
@@ -171,7 +176,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         return count == -2;
     }
 
-    protected void markChanged() {
+    public void markChanged() {
         requireEditable();
         changed.set(true);
     }

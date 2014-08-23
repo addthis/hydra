@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.tree;
+package com.addthis.hydra.data.tree.concurrent;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,6 +26,7 @@ import com.addthis.basis.test.SlowTest;
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Files;
 
+import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.store.db.CloseOperation;
 
 import org.junit.Test;
@@ -166,7 +167,7 @@ public class TestConcurrentTree {
         log.info("testGetOrCreateOneThread");
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir).build();
+            ConcurrentTree tree = new Builder(dir).build();
             ConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < 1000; i++) {
                 ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
@@ -194,7 +195,7 @@ public class TestConcurrentTree {
         log.info("testRecursiveDeleteOneThread");
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir).build();
+            ConcurrentTree tree = new Builder(dir).build();
             ConcurrentTreeNode root = tree.getRootNode();
             ConcurrentTreeNode parent = tree.getOrCreateNode(root, "hello", null);
             for (int i = 0; i < (TreeCommonParameters.cleanQMax << 1); i++) {
@@ -228,7 +229,7 @@ public class TestConcurrentTree {
         log.info("testRecursiveDeleteMultiThreads");
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir).
+            ConcurrentTree tree = new Builder(dir).
                     numDeletionThreads(8).build();
             ConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < fastNumThreads; i++) {
@@ -283,7 +284,7 @@ public class TestConcurrentTree {
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             ArrayList<Integer> threadId = new ArrayList<>(numElements);
             InsertionThread[] threads = new InsertionThread[numThreads];
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir).build();
+            ConcurrentTree tree = new Builder(dir).build();
             ConcurrentTreeNode root = tree.getRootNode();
 
             for (int i = 0; i < numElements; i++) {
@@ -339,7 +340,7 @@ public class TestConcurrentTree {
     private void testDeleteOneThread(int numDeletionThreads) throws Exception {
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir)
+            ConcurrentTree tree = new Builder(dir)
                     .numDeletionThreads(numDeletionThreads).build();
             ConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < 1000; i++) {
@@ -408,7 +409,7 @@ public class TestConcurrentTree {
         log.info("testIterateAndDelete {} {}", numThreads, numElements);
         File dir = makeTemporaryDirectory();
         try {
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir).numDeletionThreads(numThreads).
+            ConcurrentTree tree = new Builder(dir).numDeletionThreads(numThreads).
                     maxPageSize(5).maxCacheSize(500).build();
             ConcurrentTreeNode root = tree.getRootNode();
 
@@ -457,7 +458,7 @@ public class TestConcurrentTree {
             final CyclicBarrier barrier = new CyclicBarrier(numThreads);
             ArrayList<Integer> threadId = new ArrayList<>(numElements);
             DeletionThread[] threads = new DeletionThread[numThreads];
-            ConcurrentTree tree = new ConcurrentTree.Builder(dir)
+            ConcurrentTree tree = new Builder(dir)
                     .numDeletionThreads(numDeletionThreads).build();
             ConcurrentTreeNode root = tree.getRootNode();
 

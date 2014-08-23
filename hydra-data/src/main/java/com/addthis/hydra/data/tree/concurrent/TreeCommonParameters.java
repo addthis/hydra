@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.tree;
+package com.addthis.hydra.data.tree.concurrent;
 
 import com.addthis.basis.util.Parameter;
 
@@ -32,7 +32,6 @@ public class TreeCommonParameters {
     static int cacheShards = Parameter.intValue("hydra.tree.shards", Runtime.getRuntime().availableProcessors() * 8);
     static long trashInterval = Parameter.longValue("hydra.tree.trash.interval", 0);
     static long trashMaxTime = Parameter.intValue("hydra.tree.trash.maxtime", 0);
-    static boolean trashDebug = Parameter.boolValue("hydra.tree.trash.debug", false);
 
     public static void setDefaultMaxCacheSize(int size) {
         maxCacheSize = size;

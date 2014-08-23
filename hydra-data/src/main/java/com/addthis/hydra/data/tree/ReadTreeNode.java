@@ -100,7 +100,7 @@ public class ReadTreeNode extends AbstractTreeNode implements IReadWeighable {
         throw new UnsupportedOperationException();
     }
 
-    protected Integer nodeDB() {
+    public Integer nodeDB() {
         return nodedb;
     }
 

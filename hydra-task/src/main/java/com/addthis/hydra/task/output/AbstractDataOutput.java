@@ -91,7 +91,11 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
                 if (tok.equals("job")) {
                     path[i] = config.jobId;
                 } else if (tok.startsWith("node")) {
-                    path[i] = Integer.toString(tok.startsWith("nodes") ? config.nodeCount : config.node);
+                    if (tok.startsWith("nodes")) {
+                        path[i] = Integer.toString(config.nodeCount);
+                    } else {
+                        path[i] = Integer.toString(config.node);
+                    }
                     int cp = tok.indexOf(":");
                     if (cp > 0) {
                         path[i] = padleft(path[i], Integer.parseInt(tok.substring(cp + 1)));

@@ -13,11 +13,10 @@
  */
 package com.addthis.hydra.task.output.tree;
 
-import java.util.ArrayList;
-
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 
+import com.google.common.base.Objects;
 
 /**
  * Integer value / index substitution for target name
@@ -26,28 +25,14 @@ import com.addthis.codec.codables.Codable;
  */
 public final class TreeMapperPathReference implements Codable {
 
-    @FieldConfig(codable = true)
-    private String path;
-    @FieldConfig(codable = true)
-    private Integer index;
+    @FieldConfig private String path;
+    @FieldConfig private Integer index;
 
     public TreeMapperPathReference() {
     }
 
     public TreeMapperPathReference(String path) {
         this.path = path;
-    }
-
-    @Override
-    public String toString() {
-        ArrayList<String> l = new ArrayList<>();
-        if (path != null) {
-            l.add("path=" + path);
-        }
-        if (index != null) {
-            l.add("index=" + index);
-        }
-        return "BundleTarget(" + l + ")";
     }
 
     public void resolve(TreeMapper mapper) {
@@ -70,5 +55,12 @@ public final class TreeMapperPathReference implements Codable {
 
     public String ruleName() {
         return path;
+    }
+
+    @Override public String toString() {
+        return Objects.toStringHelper(this)
+                      .add("path", path)
+                      .add("index", index)
+                      .toString();
     }
 }

@@ -314,7 +314,7 @@ public class Hoover extends TaskRunnable implements Runnable {
             this.jodaEndDate = DateUtil.getDateTime(DateUtil.getFormatter(startEndDateFormat), endDate);
         }
 
-        log.info("init job=" + config.jobId + " mods=" + Strings.join(mods, ",") + " node=" + config.node + " of " + config.nodeCount);
+        log.info("init config={} mods={}", config, Strings.join(mods, ","));
         /* create job files from map if not already existing or changed */
         for (Map.Entry<String, String> file : staticFiles.entrySet()) {
             String[] fileName = Strings.splitArray(file.getKey(), ";");
