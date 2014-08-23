@@ -45,7 +45,7 @@ public class HostState implements HostMessage {
     @FieldConfig private int maxTaskSlots;
     @FieldConfig private JobKey[] running;
     @FieldConfig private JobKey[] replicating;
-    @FieldConfig private JobKey[] backingup;
+    @FieldConfig private JobKey[] backingUp;
     @FieldConfig private JobKey[] stopped;
     @FieldConfig private JobKey[] replicas;
     @FieldConfig private JobKey[] incompleteReplicas;
@@ -105,7 +105,7 @@ public class HostState implements HostMessage {
         if (replicating != null && Arrays.asList(replicating).contains(jobKey)) {
             return true;
         }
-        if (backingup != null && Arrays.asList(backingup).contains(jobKey)) {
+        if (backingUp != null && Arrays.asList(backingUp).contains(jobKey)) {
             return true;
         }
         return false;
@@ -117,7 +117,7 @@ public class HostState implements HostMessage {
 
     public List<JobKey> allJobKeys() {
         List<JobKey> rv = new ArrayList<>();
-        for (JobKey[] jobKeys : Arrays.asList(stopped, queued, running, replicating, backingup, replicas)) {
+        for (JobKey[] jobKeys : Arrays.asList(stopped, queued, running, replicating, backingUp, replicas)) {
             if (jobKeys != null) {
                 rv.addAll(Arrays.asList(jobKeys));
             }
@@ -186,7 +186,7 @@ public class HostState implements HostMessage {
 
     public int countTotalLive() {
         int total = 0;
-        for (JobKey[] keys : Arrays.asList(stopped, running, replicating, backingup, queued)) {
+        for (JobKey[] keys : Arrays.asList(stopped, running, replicating, backingUp, queued)) {
             if (keys != null) {
                 total += keys.length;
             }
@@ -316,11 +316,11 @@ public class HostState implements HostMessage {
 
     // Needed for serialization!
     public JobKey[] getBackingUp() {
-        return backingup;
+        return backingUp;
     }
 
     public void setBackingUp(JobKey[] backingUp) {
-        this.backingup = backingUp;
+        this.backingUp = backingUp;
     }
 
     public void setReplicas(JobKey[] replicas) {
