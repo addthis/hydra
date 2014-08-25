@@ -314,7 +314,7 @@ public class JobsResource {
         JSONArray jobs = new JSONArray();
         try {
             for (IJob job : spawn.listJobsConcurrentImmutable()) {
-                JSONObject jobUpdateEvent = spawn.getJobUpdateEvent(job);
+                JSONObject jobUpdateEvent = Spawn.getJobUpdateEvent(job);
                 jobs.put(jobUpdateEvent);
             }
             return Response.ok(jobs.toString()).build();

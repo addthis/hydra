@@ -145,7 +145,7 @@ public class JobAlertRunner {
     private List<Job> getAlertJobs(JobAlert alert) {
         List<Job> rv = new ArrayList<>();
         if (alert != null && alert.getJobIds() != null) {
-            Map<String, List<String>> aliases = spawn.getAliases();
+            Map<String, List<String>> aliases = spawn.getAliasManager().getAliases();
             for (String lookupId : alert.getJobIds()) {
                 Job job = spawn.getJob(lookupId);
                 if (job != null) {
@@ -183,13 +183,15 @@ public class JobAlertRunner {
                     running++;
                 }
                 switch (task.getState()) {
-                    case IDLE:
-                        done++;
-                        break;
-                    case ERROR:
-                        done++;
-                        errored++;
-                        break;
+                case IDLE:
+                    done++;
+                    break;
+                case ERROR:
+                    done++;
+                    errored++;
+                    break;
+                default:
+                    break;
                 }
             }
         }

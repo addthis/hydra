@@ -150,7 +150,7 @@ public class ListenResource {
             for (HostState host : spawn.listHostStatus(null)) {
                 hostlist.put(host.getHostUuid(), spawn.getHostStateUpdateEvent(host));
             }
-            for (Map.Entry<String, List<String>> alias : spawn.getAliases().entrySet()) {
+            for (Map.Entry<String, List<String>> alias : spawn.getAliasManager().getAliases().entrySet()) {
                 JSONObject aliasJson = new JSONObject();
                 JSONArray aliasJobs = new JSONArray();
                 for (String key : alias.getValue()) {

@@ -86,6 +86,8 @@ import com.addthis.hydra.job.minion.Minion;
 import com.addthis.hydra.job.RebalanceOutcome;
 import com.addthis.hydra.job.web.old.SpawnHttp;
 import com.addthis.hydra.job.web.old.SpawnManager;
+import com.addthis.hydra.job.alias.AliasManager;
+import com.addthis.hydra.job.alias.AliasManagerImpl;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 import com.addthis.hydra.job.mq.CommandTaskDelete;
 import com.addthis.hydra.job.mq.CommandTaskKick;
@@ -112,7 +114,6 @@ import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.job.store.SpawnDataStoreKeys;
-import com.addthis.hydra.query.spawndatastore.AliasBiMap;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.hydra.util.EmailUtil;
@@ -329,7 +330,6 @@ public class Spawn implements Codable {
     private JobConfigManager jobConfigManager;
     SetMembershipListener minionMembers;
     private SetMembershipListener deadMinionMembers;
-    private AliasBiMap            aliasBiMap;
     private       boolean        useZk         = true;
     private       Gauge<Integer> minionsDown   =
             Metrics.newGauge(Spawn.class, "minionsDown", new DownMinionGauge(this));
@@ -344,6 +344,7 @@ public class Spawn implements Codable {
     private JobAlertRunner jobAlertRunner;
     private JobStore       jobStore;
     private SpawnDataStore spawnDataStore;
+    private AliasManager aliasManager;
     //To track web socket connections
     private final WebSocketManager webSocketManager = new WebSocketManager();
 
@@ -435,8 +436,7 @@ public class Spawn implements Codable {
                 meshQueue ? new SpawnMQImplMesh(zkClient, this) : new SpawnMQImpl(zkClient, this);
         this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
         this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
-        this.aliasBiMap = new AliasBiMap(spawnDataStore);
-        aliasBiMap.loadCurrentValues();
+        aliasManager = new AliasManagerImpl(spawnDataStore);
         hostFailWorker = new HostFailWorker(this, scheduledExecutor);
         balancer = new SpawnBalancer(this);
         loadSpawnBalancerConfig();
@@ -524,6 +524,10 @@ public class Spawn implements Codable {
 
     public SpawnBalancer getSpawnBalancer() {
         return balancer;
+    }
+    
+    public AliasManager getAliasManager() {
+        return aliasManager;
     }
 
     public static String getHttpHost() {
@@ -672,26 +676,6 @@ public class Spawn implements Codable {
 
     public Settings getSettings() {
         return new Settings(this);
-    }
-
-    public Map<String, List<String>> getAliases() {
-        return aliasBiMap.viewAliasMap();
-    }
-
-    public List<String> aliasToJobs(String alias) {
-        return aliasBiMap.getJobs(alias);
-    }
-
-    public void addAlias(String alias, List<String> jobs) {
-        if (jobs.size() > 0) {
-            aliasBiMap.putAlias(alias, jobs);
-        } else {
-            log.warn("Ignoring empty jobs addition for alias: " + alias);
-        }
-    }
-
-    public void deleteAlias(String alias) {
-        aliasBiMap.deleteAlias(alias);
     }
 
     public ClientEventListener getClientEventListener(String id) {
@@ -898,7 +882,7 @@ public class Spawn implements Codable {
         try {
             JSONArray jsonArray = new JSONArray();
             for (Integer priority : taskQueuesByPriority.keySet()) {
-                Map<String, Object> jobToTaskMap = new HashMap<>();
+                Map<String, HashMap<String, Object>> jobToTaskMap = new HashMap<>();
                 LinkedList<SpawnQueueItem> jobQueue = taskQueuesByPriority.get(priority);
                 for (JobKey jobkey : jobQueue) {
                     JobTask jobtask = getTask(jobkey.getJobUuid(), jobkey.getNodeNumber());
@@ -2619,7 +2603,7 @@ public class Spawn implements Codable {
                 emailNotification(job.getId(), state, e);
             }
         } else if (url.startsWith("kick://")) {
-            Map<String, List<String>> aliasMap = getAliases();
+            Map<String, List<String>> aliasMap = aliasManager.getAliases();
             for (String kick : Strings.splitArray(url.substring(7), ",")) {
                 kick = kick.trim();
                 List<String> aliases = aliasMap.get(kick);
@@ -2907,6 +2891,8 @@ public class Spawn implements Codable {
                     case ERROR:
                         done++;
                         errored++;
+                        break;
+                    default:
                         break;
                 }
             }
