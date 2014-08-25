@@ -73,7 +73,7 @@ public class SpawnService {
         MacroResource macroResource = new MacroResource(spawn);
         CommandResource commandResource = new CommandResource(spawn);
         TaskResource taskResource = new TaskResource(spawn);
-        AliasResource aliasResource = new AliasResource(spawn);
+        AliasResource aliasResource = new AliasResource(spawn.getAliasManager());
         HostResource hostResource = new HostResource(spawn);
         AlertResource alertResource = new AlertResource(spawn);
 

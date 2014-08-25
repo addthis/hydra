@@ -27,7 +27,7 @@ import java.util.Map;
 
 import com.addthis.basis.kv.KVPairs;
 
-import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.job.alias.AliasManager;
 import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
@@ -39,17 +39,17 @@ import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 @Path("/alias")
 public class AliasResource {
 
+    @SuppressWarnings("unused")
     private static Logger log = LoggerFactory.getLogger(AliasResource.class);
 
-    private final Spawn spawn;
+    private final AliasManager aliasManager;
 
-    private static final String defaultUser = "UNKNOWN_USER";
-
-    public AliasResource(Spawn spawn) {
-        this.spawn = spawn;
+    public AliasResource(AliasManager aliasManager) {
+        this.aliasManager = aliasManager;
     }
 
     @GET
@@ -58,7 +58,7 @@ public class AliasResource {
     public Response listAliases(@QueryParam("id") String id) {
         try {
             JSONArray aliases = new JSONArray();
-            for (Map.Entry<String, List<String>> alias : spawn.getAliases().entrySet()) {
+            for (Map.Entry<String, List<String>> alias : aliasManager.getAliases().entrySet()) {
                 JSONObject aliasJson = new JSONObject();
                 JSONArray aliasJobs = new JSONArray();
                 for (String key : alias.getValue()) {
@@ -78,7 +78,7 @@ public class AliasResource {
     public Response mapAliases(@QueryParam("id") String id) {
         try {
             JSONObject aliases = new JSONObject();
-            for (Map.Entry<String, List<String>> alias : spawn.getAliases().entrySet()) {
+            for (Map.Entry<String, List<String>> alias : aliasManager.getAliases().entrySet()) {
                 JSONArray aliasJobs = new JSONArray();
                 for (String key : alias.getValue()) {
                     aliasJobs.put(key);
@@ -96,7 +96,7 @@ public class AliasResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAlias(@QueryParam("id") String id) {
         try {
-            List<String> alias = spawn.getAliases().get(id);
+            List<String> alias = aliasManager.getAliases().get(id);
             JSONObject aliasJson = new JSONObject();
             JSONArray aliasJobs = new JSONArray();
             for (String key : alias) {
@@ -108,7 +108,6 @@ public class AliasResource {
         }
     }
 
-
     @POST
     @Path("/save")
     @Produces(MediaType.APPLICATION_JSON)
@@ -118,7 +117,7 @@ public class AliasResource {
         }
         try {
             List<String> jobs = Lists.newArrayList(Splitter.on(',').split(kv.getValue("jobs")));
-            spawn.addAlias(kv.getValue("name"), jobs);
+            aliasManager.addAlias(kv.getValue("name"), jobs);
             return Response.ok().entity(new JSONObject().put("name", kv.getValue("name")).put("jobs", new JSONArray(jobs)).toString()).build();
         } catch (Exception e) {
             e.printStackTrace();
@@ -134,7 +133,7 @@ public class AliasResource {
             return Response.serverError().entity("must supply alias name and jobs").build();
         }
         try {
-            spawn.deleteAlias(kv.getValue("name"));
+            aliasManager.deleteAlias(kv.getValue("name"));
             return Response.ok().build();
         } catch (Exception e) {
             e.printStackTrace();

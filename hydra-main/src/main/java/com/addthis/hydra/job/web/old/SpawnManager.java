@@ -45,6 +45,7 @@ import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobQueryConfig;
 import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
+import com.addthis.hydra.job.alias.AliasManager;
 import com.addthis.hydra.job.minion.Minion;
 import com.addthis.hydra.job.RebalanceOutcome;
 import com.addthis.hydra.job.spawn.DeleteStatus;
@@ -77,6 +78,7 @@ public class SpawnManager {
 
     public void register(final SpawnHttp server) {
         final Spawn spawn = server.spawn();
+        final AliasManager aliasManager = spawn.getAliasManager();
         /** url called via ajax to listen for change events */
         server.mapService("/listen", new HTTPService() {
             @Override
@@ -848,7 +850,7 @@ public class SpawnManager {
             public void httpService(HTTPLink link) throws Exception {
                 try {
                     ObjectMapper mapper = new ObjectMapper();
-                    Map<String, List<String>> aliases = spawn.getAliases();
+                    Map<String, List<String>> aliases = aliasManager.getAliases();
                     StringWriter sw = new StringWriter();
                     mapper.writeValue(sw, aliases);
                     link.sendShortReply(200, "OK", sw.toString());
@@ -869,7 +871,7 @@ public class SpawnManager {
                 }
                 try {
                     List<String> jobs = Lists.newArrayList(Splitter.on(',').split(kv.getValue("jobs")));
-                    spawn.addAlias(kv.getValue("alias"), jobs);
+                    aliasManager.addAlias(kv.getValue("alias"), jobs);
                     link.sendJSON(200, "OK", json("success",true));
                 } catch (Exception e) {
                     link.sendJSON(500, "Error", json("error",e.getMessage()));
@@ -886,7 +888,7 @@ public class SpawnManager {
                     return;
                 }
                 try {
-                    spawn.deleteAlias(kv.getValue("alias"));
+                    aliasManager.deleteAlias(kv.getValue("alias"));
                     link.sendJSON(200, "OK", json("success",true));
                 } catch (Exception e) {
                     link.sendJSON(500, "Error", json("error",e.getMessage()));

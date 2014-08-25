@@ -78,7 +78,7 @@ public class JobExpand {
             if (macro != null) {
                 target = macro.getMacro();
             } else {
-                List<String> aliases = spawn.aliasToJobs(label);
+                List<String> aliases = spawn.getAliasManager().aliasToJobs(label);
                 if (aliases != null) {
                     target = joiner.join(aliases);
                 }
