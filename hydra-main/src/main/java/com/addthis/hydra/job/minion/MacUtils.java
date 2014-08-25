@@ -21,36 +21,51 @@ final class MacUtils {
 
     private MacUtils() {}
 
+    static final String cpcmd;
+    static final String lncmd;
+    static final String lscmd;
+    static final String rmcmd;
+    static final String mvcmd;
+    static final String ducmd;
+    static final boolean useMacFriendlyPSCommands;
+    static final boolean linkBackup;
+
     // detect fl-cow in sys env and apple for copy command
     static {
+        boolean copyOnWriteSupported = false;
         for (String v : System.getenv().values()) {
             if (v.toLowerCase().contains("libflcow")) {
                 log.info("detected support for copy-on-write hard-links");
-                linkBackup = true;
+                copyOnWriteSupported = true;
                 break;
             }
         }
+        linkBackup = !System.getProperty("minion.backup.hardlink", "0").equals("0") || copyOnWriteSupported;
+
+        boolean useGnuCommands = false;
         for (Object v : System.getProperties().values()) {
             if (v.toString().toLowerCase().contains("apple") || v.toString().toLowerCase().contains("mac os x")) {
                 log.info("detected darwin-based system. switching to gnu commands");
-                MacUtils.cpcmd = "gcp";
-                MacUtils.lncmd = "gln";
-                MacUtils.lscmd = "gls";
-                MacUtils.rmcmd = "grm";
-                MacUtils.mvcmd = "gmv";
-                MacUtils.ducmd = "gdu";
-                MacUtils.useMacFriendlyPSCommands = true;
+                useGnuCommands = true;
                 break;
             }
         }
+        if (useGnuCommands) {
+            cpcmd = "gcp";
+            lncmd = "gln";
+            lscmd = "gls";
+            rmcmd = "grm";
+            mvcmd = "gmv";
+            ducmd = "gdu";
+            useMacFriendlyPSCommands = true;
+        } else {
+            cpcmd = "cp";
+            lncmd = "ln";
+            lscmd = "ls";
+            rmcmd = "rm";
+            mvcmd = "mv";
+            ducmd = "du";
+            useMacFriendlyPSCommands = false;
+        }
     }
-
-    static String cpcmd = "cp";
-    static String lncmd = "ln";
-    static String lscmd = "ls";
-    static String rmcmd = "rm";
-    static String mvcmd = "mv";
-    static String ducmd = "du";
-    static boolean useMacFriendlyPSCommands = false;
-    static boolean linkBackup = !System.getProperty("minion.backup.hardlink", "0").equals("0");
 }
