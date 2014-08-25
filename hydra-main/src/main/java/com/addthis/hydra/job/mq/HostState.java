@@ -45,7 +45,7 @@ public class HostState implements HostMessage {
     @FieldConfig private int maxTaskSlots;
     @FieldConfig private JobKey[] running;
     @FieldConfig private JobKey[] replicating;
-    @FieldConfig private JobKey[] backingUp;
+    @FieldConfig private JobKey[] backingup;
     @FieldConfig private JobKey[] stopped;
     @FieldConfig private JobKey[] replicas;
     @FieldConfig private JobKey[] incompleteReplicas;
