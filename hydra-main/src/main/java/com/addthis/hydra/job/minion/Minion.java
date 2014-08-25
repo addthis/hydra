@@ -706,7 +706,7 @@ public class Minion implements MessageListener, Codable {
         }
         status.setRunning(running.toArray(new JobKey[running.size()]));
         status.setReplicating(replicating.toArray(new JobKey[replicating.size()]));
-        status.setBackingUp(backingUp.toArray(new JobKey[backingUp.size()]));
+        status.setBackingup(backingUp.toArray(new JobKey[backingUp.size()]));
         status.setStopped(stoppedTasks.toArray(new JobKey[stoppedTasks.size()]));
         status.setIncompleteReplicas(incompleteReplicas.toArray(new JobKey[incompleteReplicas.size()]));
         LinkedList<JobKey> queued = new LinkedList<>();

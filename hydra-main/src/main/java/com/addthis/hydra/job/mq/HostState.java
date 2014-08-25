@@ -105,7 +105,7 @@ public class HostState implements HostMessage {
         if (replicating != null && Arrays.asList(replicating).contains(jobKey)) {
             return true;
         }
-        if (backingUp != null && Arrays.asList(backingUp).contains(jobKey)) {
+        if (backingup != null && Arrays.asList(backingup).contains(jobKey)) {
             return true;
         }
         return false;
@@ -117,7 +117,7 @@ public class HostState implements HostMessage {
 
     public List<JobKey> allJobKeys() {
         List<JobKey> rv = new ArrayList<>();
-        for (JobKey[] jobKeys : Arrays.asList(stopped, queued, running, replicating, backingUp, replicas)) {
+        for (JobKey[] jobKeys : Arrays.asList(stopped, queued, running, replicating, backingup, replicas)) {
             if (jobKeys != null) {
                 rv.addAll(Arrays.asList(jobKeys));
             }
@@ -186,7 +186,7 @@ public class HostState implements HostMessage {
 
     public int countTotalLive() {
         int total = 0;
-        for (JobKey[] keys : Arrays.asList(stopped, running, replicating, backingUp, queued)) {
+        for (JobKey[] keys : Arrays.asList(stopped, running, replicating, backingup, queued)) {
             if (keys != null) {
                 total += keys.length;
             }
@@ -315,12 +315,12 @@ public class HostState implements HostMessage {
     }
 
     // Needed for serialization!
-    public JobKey[] getBackingUp() {
-        return backingUp;
+    public JobKey[] getBackingup() {
+        return backingup;
     }
 
-    public void setBackingUp(JobKey[] backingUp) {
-        this.backingUp = backingUp;
+    public void setBackingup(JobKey[] backingup) {
+        this.backingup = backingup;
     }
 
     public void setReplicas(JobKey[] replicas) {
