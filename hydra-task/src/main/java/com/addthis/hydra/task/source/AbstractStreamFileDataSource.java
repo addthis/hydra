@@ -600,6 +600,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                     }
                 }
             } catch (Exception ex) {
+                if (!IGNORE_MARKS_ERRORS) {
+                    throw ex;
+                }
                 log.info("error {} / {}", mark, stream, ex);
                 mark.setError(mark.getError() + 1);
                 close();
