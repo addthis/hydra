@@ -131,7 +131,7 @@ public class ListenResource {
             JSONObject setup = new JSONObject();
             JSONArray jobs = new JSONArray();
             for (IJob job : spawn.listJobsConcurrentImmutable()) {
-                JSONObject jobUpdateEvent = spawn.getJobUpdateEvent(job);
+                JSONObject jobUpdateEvent = Spawn.getJobUpdateEvent(job);
                 jobs.put(jobUpdateEvent);
             }
             setup.put("jobs", jobs);
@@ -163,7 +163,7 @@ public class ListenResource {
             setup.put("commands", commandlist);
             setup.put("hosts", hostlist);
             setup.put("aliases", aliases);
-            setup.put("alerts", spawn.fetchAllAlertsMap());
+            setup.put("alerts", spawn.getJobAlertManager().fetchAllAlertsMap());
             setup.put("quiesced", (spawn.getSettings().getQuiesced() ? "1" : "0"));
             setup.put("spawnqueuesize", spawn.getTaskQueuedCount());
             setup.put("clientId", clientCounter.incrementAndGet());

@@ -11,7 +11,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.job.web;
+package com.addthis.hydra.job.alert;
+
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_LOADED_LEGACY;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
 
 import java.io.IOException;
 
@@ -21,13 +24,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 
-import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.codec.json.CodecJSON;
@@ -47,24 +47,18 @@ import com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_LOADED_LEGACY;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
-
 /**
  * This class runs over the set of job alerts, sending trigger/clear emails as appropriate
  */
 public class JobAlertRunner {
 
     private static final Logger log = LoggerFactory.getLogger(JobAlertRunner.class);
-    private static String clusterHead = Spawn.getHttpHost();
-    private final Spawn spawn;
-    private final SpawnDataStore spawnDataStore;
-
-    private static final long ALERT_REPEAT_MILLIS = Parameter.longValue("spawn.job.alert.repeat", 5 * 60 * 1000);
-    private static final long ALERT_DELAY_MILLIS = Parameter.longValue("spawn.job.alert.delay", 60 * 1000);
-
+    private static final String clusterHead = Spawn.getHttpHost();
     private static final String meshHost = SpawnMesh.getMeshHost();
     private static final int meshPort = SpawnMesh.getMeshPort();
+
+    private final Spawn spawn;
+    private final SpawnDataStore spawnDataStore;
     private MeshyClient meshyClient;
 
     private static final long GIGA_BYTE = (long) Math.pow(1024, 3);
@@ -77,8 +71,7 @@ public class JobAlertRunner {
 
     private boolean alertsEnabled;
 
-
-    public JobAlertRunner(Spawn spawn, ScheduledExecutorService scheduledExecutorService) {
+    public JobAlertRunner(Spawn spawn, boolean alertEnabled) {
         this.spawn = spawn;
         this.spawnDataStore = spawn.getSpawnDataStore();
         try {
@@ -87,15 +80,7 @@ public class JobAlertRunner {
             log.warn("Warning: failed to instantiate job alert mesh client", e);
             meshyClient = null;
         }
-        this.alertsEnabled = spawn.areAlertsEnabled();
-        if (scheduledExecutorService != null) {
-            scheduledExecutorService.scheduleWithFixedDelay(new Runnable() {
-                @Override
-                public void run() {
-                    scanAlerts();
-                }
-            }, ALERT_DELAY_MILLIS, ALERT_REPEAT_MILLIS, TimeUnit.MILLISECONDS);
-        }
+        this.alertsEnabled = alertEnabled;
         this.alertMap = new ConcurrentHashMap<>();
         loadAlertMap();
     }
@@ -239,7 +224,7 @@ public class JobAlertRunner {
     private void emailAlert(JobAlert jobAlert) {
         String status = jobAlert.getAlertStatus();
         Map<String, String> activeJobs = jobAlert.getActiveJobs();
-        log.info("Alerting " + jobAlert.getEmail() + " :: jobs : " + activeJobs.keySet() + " : " + status);
+        log.info("Alerting {} :: jobs : {} : {}", jobAlert.getEmail(), activeJobs.keySet(), status);
         StringBuilder sb = new StringBuilder();
         sb.append("Alert : " + jobAlert.getAlertStatus() + " \n");
         sb.append("Alert link : http://" + clusterHead + ":5052/spawn2/index.html#alerts/" + jobAlert.getAlertId() + " \n");
@@ -287,7 +272,7 @@ public class JobAlertRunner {
                 alertMap.put(id, jobAlert);
             }
         } catch (Exception ex) {
-            log.warn("Failed to decode JobAlert id=" + id + " raw=" + raw);
+            log.warn("Failed to decode JobAlert id={} raw={}", id, raw);
         }
     }
 
@@ -324,7 +309,7 @@ public class JobAlertRunner {
                 for (Job job : spawn.listJobs()) {
                     if (job != null && (alerts = job.getAlerts()) != null) {
                         for (JobAlert alert : alerts) {
-                            alert.setJobIds(new String[] {job.getId()});
+                            alert.setJobIds(new String[] { job.getId() });
                             String newUUID = UUID.randomUUID().toString();
                             alert.setAlertId(newUUID);
                             alertMap.put(newUUID, alert);
@@ -334,7 +319,7 @@ public class JobAlertRunner {
                     }
                 }
             }
-        }  finally {
+        } finally {
             spawn.releaseJobLock();
         }
 
@@ -345,7 +330,7 @@ public class JobAlertRunner {
             try {
                 spawnDataStore.putAsChild(SPAWN_COMMON_ALERT_PATH, alertId, new String(codec.encode(alert)));
             } catch (Exception e) {
-                log.warn("Warning: failed to save alert id=" + alertId + " alert=" + alert);
+                log.warn("Warning: failed to save alert id={} alert={}", alertId, alert);
             }
         }
     }
@@ -360,7 +345,7 @@ public class JobAlertRunner {
             try {
                 rv.put(jobAlert.toJSON());
             } catch (Exception e) {
-                log.warn("Warning: failed to send alert in array: " + jobAlert);
+                log.warn("Warning: failed to send alert in array: {}", jobAlert);
             }
         }
         return rv;
@@ -372,7 +357,7 @@ public class JobAlertRunner {
             try {
                 rv.put(jobAlert.getAlertId(), jobAlert.toJSON());
             } catch (Exception e) {
-                log.warn("Warning: failed to send alert in map: " + jobAlert);
+                log.warn("Warning: failed to send alert in map: {}", jobAlert);
             }
         }
         return rv;

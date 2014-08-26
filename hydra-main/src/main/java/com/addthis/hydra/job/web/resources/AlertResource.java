@@ -25,8 +25,8 @@ import java.util.UUID;
 
 import com.addthis.basis.kv.KVPairs;
 
-import com.addthis.hydra.job.spawn.Spawn;
-import com.addthis.hydra.job.web.JobAlert;
+import com.addthis.hydra.job.alert.JobAlert;
+import com.addthis.hydra.job.alert.JobAlertManager;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,9 +36,9 @@ public class AlertResource {
 
     private static Logger log = LoggerFactory.getLogger(AlertResource.class);
 
-    private final Spawn spawn;
+    private final JobAlertManager spawn;
 
-    public AlertResource(Spawn spawn) {
+    public AlertResource(JobAlertManager spawn) {
         this.spawn = spawn;
     }
 
