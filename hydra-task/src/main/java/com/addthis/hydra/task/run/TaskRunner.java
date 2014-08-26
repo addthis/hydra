@@ -78,8 +78,9 @@ public class TaskRunner {
                                                   ConfigParseOptions.defaults().setOriginDescription("job.conf"));
         Config jobConfig = config;
         CodecJackson codec;
-        if (config.hasPath("global")) {
-            jobConfig = config.withoutPath("global").resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true));
+        if (config.root().containsKey("global")) {
+            jobConfig = config.root().withoutKey("global").toConfig()
+                              .resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true));
             Config globalDefaults = config.getConfig("global")
                                           .withFallback(ConfigFactory.load())
                                           .resolve();
