@@ -585,10 +585,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 log.debug("next {} / {} CLOSED returns null", mark, stream);
                 return null;
             }
-            maybeFinishInit();
-            Bundle next = null;
             try {
-                next = bundleizer.next();
+                maybeFinishInit();
+                Bundle next = bundleizer.next();
                 log.debug("next {} / {} = {}", mark, stream, next);
                 if (next == null) {
                     mark.setEnd(true);
@@ -599,16 +598,17 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                         next.setValue(injectSourceField, sourceName);
                     }
                 }
+                return next;
             } catch (Exception ex) {
                 if (!IGNORE_MARKS_ERRORS) {
-                    log.error("source error with mark: {}, stream file: {}", mark, stream, ex);
+                    log.error("(rethrowing) source error with mark: {}, stream file: {}", mark, stream, ex);
                     throw ex;
                 }
                 log.warn("source error with mark: {}, stream file: {}", mark, stream, ex);
                 mark.setError(mark.getError() + 1);
                 close();
             }
-            return next;
+            return null;
         }
     }
 
