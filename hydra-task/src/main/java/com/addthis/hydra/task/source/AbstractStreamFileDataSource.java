@@ -543,12 +543,8 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                             bundlesSkipped = 0;
                         }
                     }
-                    try {
-                        bundleizer.next();
-                        read--;
-                    } catch (Exception e) {
-                        log.warn("", e);
-                    }
+                    read--;
+                    bundleizer.next();
                 }
                 skipping.dec();
                 localBundleSkip.set(localBundleSkip.get() + bundlesSkipped);
