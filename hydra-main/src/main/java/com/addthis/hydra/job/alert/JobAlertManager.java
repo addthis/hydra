@@ -11,19 +11,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.job.alias;
+package com.addthis.hydra.job.alert;
 
-import java.util.List;
-import java.util.Map;
+import com.addthis.maljson.JSONArray;
+import com.addthis.maljson.JSONObject;
 
-public interface AliasManager {
+public interface JobAlertManager {
+    
+    /** Enables periodic alert checking */
+    void enableAlerts() throws Exception;
 
-    Map<String, List<String>> getAliases();
+    /** Disables periodic alert checking */
+    void disableAlerts() throws Exception;
 
-    void addAlias(String alias, List<String> jobs);
+    public void putAlert(String alertId, JobAlert alert);
 
-    void deleteAlias(String alias);
+    public void removeAlert(String alertId);
 
-    List<String> aliasToJobs(String alias);
+    public JSONArray fetchAllAlertsArray();
+
+    public JSONObject fetchAllAlertsMap();
+
+    public String getAlert(String alertId);
 
 }

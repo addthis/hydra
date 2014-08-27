@@ -87,7 +87,6 @@ public class SpawnTest extends ZkStartUtil {
 
     @Test
     public void testMacroFindParameters() throws Exception {
-        Spawn spawn = new Spawn();
         Map<String, JobParameter> params = JobExpand.macroFindParameters("%[foobar:5]%");
         assertEquals(1, params.size());
         assertTrue(params.containsKey("foobar"));
@@ -109,7 +108,6 @@ public class SpawnTest extends ZkStartUtil {
 
     @Test
     public void testMacroExpandParameters() throws Exception {
-        Spawn spawn = new Spawn();
         Map<String, JobParameter> params = JobExpand.macroFindParameters("%[a:foo]% %[b:bar]%");
         assertEquals(2, params.size());
         assertTrue(params.containsKey("a"));

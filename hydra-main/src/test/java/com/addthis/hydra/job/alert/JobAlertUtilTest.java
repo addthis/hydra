@@ -11,9 +11,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.job.web;
+package com.addthis.hydra.job.alert;
 
 import com.addthis.hydra.data.util.DateUtil;
+import com.addthis.hydra.job.alert.JobAlertUtil;
 
 import org.junit.Test;
 

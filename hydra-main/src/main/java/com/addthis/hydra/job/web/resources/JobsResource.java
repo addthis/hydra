@@ -57,9 +57,9 @@ import com.addthis.hydra.job.RebalanceOutcome;
 import com.addthis.hydra.job.spawn.DeleteStatus;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.web.old.SpawnHttp;
+import com.addthis.hydra.job.alert.JobAlert;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 import com.addthis.hydra.job.mq.HostState;
-import com.addthis.hydra.job.web.JobAlert;
 import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.hydra.task.run.TaskRunnable;
 import com.addthis.hydra.task.run.TaskRunner;
@@ -470,9 +470,9 @@ public class JobsResource {
     public Response toggleJobAlerts(@QueryParam("enable") @DefaultValue("true") Boolean enable) {
         try {
             if (enable) {
-                spawn.enableAlerts();
+                spawn.getJobAlertManager().enableAlerts();
             } else {
-                spawn.disableAlerts();
+                spawn.getJobAlertManager().disableAlerts();
             }
         } catch (Exception e) {
             log.warn("Failed to toggle alerts", e);

@@ -75,7 +75,7 @@ public class SpawnService {
         TaskResource taskResource = new TaskResource(spawn);
         AliasResource aliasResource = new AliasResource(spawn.getAliasManager());
         HostResource hostResource = new HostResource(spawn);
-        AlertResource alertResource = new AlertResource(spawn);
+        AlertResource alertResource = new AlertResource(spawn.getJobAlertManager());
 
         //authenticator
         Authenticator authenticator = new DefaultAuthenticator();

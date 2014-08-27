@@ -13,6 +13,15 @@
  */
 package com.addthis.hydra.job.spawn;
 
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_UP_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_COMMAND_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_MACRO_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
+
+import javax.annotation.Nonnull;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -82,13 +91,13 @@ import com.addthis.hydra.job.JobTaskErrorCode;
 import com.addthis.hydra.job.JobTaskMoveAssignment;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.JobTaskState;
-import com.addthis.hydra.job.minion.Minion;
 import com.addthis.hydra.job.RebalanceOutcome;
-import com.addthis.hydra.job.web.old.SpawnHttp;
-import com.addthis.hydra.job.web.old.SpawnManager;
+import com.addthis.hydra.job.alert.JobAlertManager;
+import com.addthis.hydra.job.alert.JobAlertManagerImpl;
 import com.addthis.hydra.job.alias.AliasManager;
 import com.addthis.hydra.job.alias.AliasManagerImpl;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
+import com.addthis.hydra.job.minion.Minion;
 import com.addthis.hydra.job.mq.CommandTaskDelete;
 import com.addthis.hydra.job.mq.CommandTaskKick;
 import com.addthis.hydra.job.mq.CommandTaskReplicate;
@@ -107,13 +116,13 @@ import com.addthis.hydra.job.mq.StatusTaskPort;
 import com.addthis.hydra.job.mq.StatusTaskReplica;
 import com.addthis.hydra.job.mq.StatusTaskReplicate;
 import com.addthis.hydra.job.mq.StatusTaskRevert;
-import com.addthis.hydra.job.web.JobAlert;
-import com.addthis.hydra.job.web.JobAlertRunner;
-import com.addthis.hydra.job.web.SpawnService;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.job.store.SpawnDataStoreKeys;
+import com.addthis.hydra.job.web.SpawnService;
+import com.addthis.hydra.job.web.old.SpawnHttp;
+import com.addthis.hydra.job.web.old.SpawnManager;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.hydra.util.EmailUtil;
@@ -144,14 +153,6 @@ import org.apache.zookeeper.KeeperException;
 import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_UP_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_COMMAND_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_MACRO_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
 
 /**
  * manages minions running on remote notes. runs master http server to
@@ -341,12 +342,13 @@ public class Spawn implements Codable {
     private final    AtomicBoolean               shuttingDown         = new AtomicBoolean(false);
     private final    LinkedBlockingQueue<String> jobUpdateQueue       = new LinkedBlockingQueue<>();
     private final    SpawnJobFixer               spawnJobFixer        = new SpawnJobFixer(this);
-    private JobAlertRunner jobAlertRunner;
     private JobStore       jobStore;
     private SpawnDataStore spawnDataStore;
-    private AliasManager aliasManager;
     //To track web socket connections
     private final WebSocketManager webSocketManager = new WebSocketManager();
+
+    private final AliasManager aliasManager;
+    private final JobAlertManager jobAlertManager;
 
     /**
      * default constructor used for testing purposes only
@@ -373,6 +375,11 @@ public class Spawn implements Codable {
             this.jobConfigManager = new JobConfigManager(this.spawnDataStore);
             this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
             this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
+            this.aliasManager = new AliasManagerImpl(spawnDataStore);
+            this.jobAlertManager = new JobAlertManagerImpl(this, null);
+        } else {
+            this.aliasManager = null;
+            this.jobAlertManager = null;
         }
         this.hostFailWorker = new HostFailWorker(this, scheduledExecutor);
         this.balancer = new SpawnBalancer(this);
@@ -442,8 +449,8 @@ public class Spawn implements Codable {
         loadSpawnBalancerConfig();
         this.spawnMQ.connectToMQ(uuid);
 
-        //Start JobAlertManager
-        this.jobAlertRunner = new JobAlertRunner(this, scheduledExecutor);
+        // start JobAlertManager
+        jobAlertManager = new JobAlertManagerImpl(this, scheduledExecutor);
         // start job scheduler
         scheduledExecutor.scheduleWithFixedDelay(new UpdateEventRunnable(this), 0, 1, TimeUnit.MINUTES);
         scheduledExecutor.scheduleWithFixedDelay(new JobRekickTask(this), 0, 500,
@@ -526,8 +533,14 @@ public class Spawn implements Codable {
         return balancer;
     }
     
+    @Nonnull
     public AliasManager getAliasManager() {
         return aliasManager;
+    }
+    
+    @Nonnull
+    public JobAlertManager getJobAlertManager() {
+        return jobAlertManager;
     }
 
     public static String getHttpHost() {
@@ -1845,26 +1858,6 @@ public class Spawn implements Codable {
                 jobLock.unlock();
             }
         }
-    }
-
-    public void putAlert(String alertId, JobAlert alert) {
-        jobAlertRunner.putAlert(alertId, alert);
-    }
-
-    public void removeAlert(String alertId) {
-        jobAlertRunner.removeAlert(alertId);
-    }
-
-    public JSONArray fetchAllAlertsArray() {
-        return jobAlertRunner.getAlertStateArray();
-    }
-
-    public JSONObject fetchAllAlertsMap() {
-        return jobAlertRunner.getAlertStateMap();
-    }
-
-    public String getAlert(String alertId) {
-        return jobAlertRunner.getAlert(alertId);
     }
 
     public DeleteStatus deleteJob(String jobUUID) throws Exception {
@@ -3506,26 +3499,6 @@ public class Spawn implements Codable {
 
     public WebSocketManager getWebSocketManager() {
         return this.webSocketManager;
-    }
-
-    public boolean areAlertsEnabled() {
-        String alertsEnabled = null;
-        try {
-            alertsEnabled = spawnDataStore.get(SPAWN_COMMON_ALERT_PATH);
-        } catch (Exception ex) {
-            log.warn("Unable to read alerts status due to : " + ex.getMessage());
-        }
-        return alertsEnabled == null || alertsEnabled.equals("") || alertsEnabled.equals("true");
-    }
-
-    public void disableAlerts() throws Exception {
-        spawnDataStore.put(SPAWN_COMMON_ALERT_PATH, "false");
-        this.jobAlertRunner.disableAlerts();
-    }
-
-    public void enableAlerts() throws Exception {
-        spawnDataStore.put(SPAWN_COMMON_ALERT_PATH, "true");
-        this.jobAlertRunner.enableAlerts();
     }
 
     public List<String> getJobsToAutobalance() {
