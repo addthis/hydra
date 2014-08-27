@@ -101,8 +101,8 @@ class UpdateEventRunnable implements Runnable {
         events.clear();
         events.put("time", System.currentTimeMillis());
         events.put("hosts", (long) spawn.monitored.size());
-        events.put("commands", (long) spawn.spawnState.commands.size());
-        events.put("macros", (long) spawn.spawnState.macros.size());
+        events.put("commands", (long) spawn.getJobCommandManager().size());
+        events.put("macros", (long) spawn.getJobMacroManager().size());
         events.put("jobs", (long) spawn.spawnState.jobs.size());
         events.put("cpus", (long) hostmax.getCpu());
         events.put("cpus_used", (long) hostused.getCpu());

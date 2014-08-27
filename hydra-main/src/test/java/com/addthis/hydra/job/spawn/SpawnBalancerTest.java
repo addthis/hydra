@@ -29,12 +29,12 @@ import com.addthis.basis.util.JitterClock;
 
 import com.addthis.bark.ZkStartUtil;
 import com.addthis.hydra.job.Job;
-import com.addthis.hydra.job.JobCommand;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskMoveAssignment;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.JobTaskState;
+import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.minion.Minion;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
@@ -273,7 +273,7 @@ public class SpawnBalancerTest extends ZkStartUtil {
         installHostStateWithUUID(firstHostUUID, spawn, true);
         installHostStateWithUUID(secondHostUUID, spawn, true);
         installHostStateWithUUID(thirdHostUUID, spawn, true);
-        spawn.putCommand("foo", new JobCommand(), false);
+        spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
         int numTasks = 15;
         Job job = createJobAndUpdateHosts(spawn, numTasks, Arrays.asList(firstHostUUID, secondHostUUID, thirdHostUUID), now, 1, 0);
         assertEquals("should divide tasks evenly", numTasks / 3, numTasksOnHost(job, firstHostUUID));
@@ -338,7 +338,7 @@ public class SpawnBalancerTest extends ZkStartUtil {
         String lightHostUUID = "light";
         HostState heavyHost = installHostStateWithUUID(heavyHostUUID, spawn, true);
         HostState lightHost = installHostStateWithUUID(lightHostUUID, spawn, true);
-        spawn.putCommand("foo", new JobCommand(), false);
+        spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
         int numTasks = 3;
         Job job1 = createJobAndUpdateHosts(spawn, numTasks, Arrays.asList(heavyHostUUID), now, 1, 0);
         Job job2 = createJobAndUpdateHosts(spawn, numTasks, Arrays.asList(heavyHostUUID), now, 1, 0);
@@ -372,7 +372,7 @@ public class SpawnBalancerTest extends ZkStartUtil {
         HostState lightHost2 = installHostStateWithUUID(lightHost2UUID, spawn, true);
         HostState readOnlyHost = installHostStateWithUUID(readOnlyHostUUID, spawn, true, true, 0, "default");
         List<HostState> hosts = Arrays.asList(heavyHost, lightHost, lightHost2, readOnlyHost);
-        spawn.putCommand("foo", new JobCommand(), false);
+        spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
         Job gargantuanJob = createSpawnJob(spawn, 1, Arrays.asList(heavyHostUUID), now, 8_000_000_000l, 0);
         Job movableJob1 = createSpawnJob(spawn, 1, Arrays.asList(heavyHostUUID), now, 850_000_000l, 0);
         Job movableJob2 = createSpawnJob(spawn, 1, Arrays.asList(heavyHostUUID), now, 820_000_000l, 0);
@@ -435,7 +435,7 @@ public class SpawnBalancerTest extends ZkStartUtil {
 
     @Test
     public void queuePersist() throws Exception {
-        spawn.putCommand("foo", new JobCommand(), false);
+        spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
         spawn.getSettings().setQuiesced(true);
         installHostStateWithUUID("host", spawn, true);
         Job job = createJobAndUpdateHosts(spawn, 4, Arrays.asList("host"), now, 1000, 0);
@@ -533,7 +533,7 @@ public class SpawnBalancerTest extends ZkStartUtil {
         {
             installHostStateWithUUID(host, spawn, true);
         }
-        spawn.putCommand("a", new JobCommand(), true);
+        spawn.getJobCommandManager().putEntity("a", new JobCommand(), true);
         Job job = spawn.createJob("fsm", 3, hosts, "default", "a");
         JobTask task0 = job.getTask(0);
         JobTask task1 = job.getTask(1);

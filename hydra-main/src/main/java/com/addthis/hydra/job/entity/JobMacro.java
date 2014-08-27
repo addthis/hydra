@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.job;
+package com.addthis.hydra.job.entity;
 
 import com.addthis.basis.util.JitterClock;
 
@@ -31,13 +31,13 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
 public final class JobMacro implements Codable, Cloneable {
 
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String description;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String macro;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private long modified;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String owner;
 
     public JobMacro() {
