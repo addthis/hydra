@@ -63,6 +63,8 @@ public class JobAlertManagerImpl implements JobAlertManager {
                 }
             }, ALERT_DELAY_MILLIS, ALERT_REPEAT_MILLIS, TimeUnit.MILLISECONDS);
             log.info("Alert scan scheduled: delay={}s, repeat={}s", ALERT_DELAY_MILLIS / 1000, ALERT_REPEAT_MILLIS / 1000);
+        } else {
+            log.warn("ScheduledExecutorService is not provided. Alert scan is disabled");
         }
     }
 
