@@ -60,7 +60,7 @@ import lzma.streams.LzmaOutputStream;
  */
 public class OutputWrapperFactory {
 
-    private static final Logger log = LoggerFactory.getLogger(OutputWrapper.class);
+    private static final Logger log = LoggerFactory.getLogger(OutputWrapperFactory.class);
 
     private static final int DEFAULT_PADDING = 3;
     protected static final String PART_PREFIX = "{{PART";
@@ -103,10 +103,10 @@ public class OutputWrapperFactory {
         this.dir = dir;
     }
 
-    public OutputWrapper openWriteStream(String target, OutputStreamFlags outputFlags, OutputStreamEmitter logLineOutput) throws IOException {
-        if (log.isDebugEnabled()) {
-            log.debug("[open] " + outputFlags + "target=" + target);
-        }
+    public OutputWrapper openWriteStream(String target,
+                                         OutputStreamFlags outputFlags,
+                                         OutputStreamEmitter logLineOutput) throws IOException {
+        log.debug("[open] {}target={}", outputFlags, target);
         String rawTarget = target;
         target = getModifiedTarget(target, outputFlags);
         File targetOut = new File(dir, target);
@@ -140,9 +140,8 @@ public class OutputWrapperFactory {
             }
         } else {
             if (targetOut.exists()) {
-                if (log.isDebugEnabled()) {
-                    log.debug("[open.append]" + targetOut + "/" + targetOut.exists() + " renaming to " + targetOutTmp + "/" + targetOutTmp.exists());
-                }
+                log.debug("[open.append]{}/{} renaming to {}/{}",
+                          targetOut, targetOut.exists(), targetOutTmp, targetOutTmp.exists());
                 if (!targetOut.renameTo(targetOutTmp)) {
                     throw new IOException("Unable to rename " + targetOut + " to " + targetOutTmp);
                 }
@@ -150,7 +149,8 @@ public class OutputWrapperFactory {
             outputStream = new FileOutputStream(targetOutTmp, true);
         }
         OutputStream wrappedStream = wrapOutputStream(outputFlags, targetOut.exists(), outputStream);
-        return new DefaultOutputWrapper(wrappedStream, logLineOutput, targetOut, targetOutTmp, outputFlags.isCompress(), outputFlags.getCompressType(), rawTarget);
+        return new DefaultOutputWrapper(wrappedStream, logLineOutput, targetOut, targetOutTmp, outputFlags.isCompress(),
+                                        outputFlags.getCompressType(), rawTarget);
     }
 
     private OutputStream wrapOutputStream(OutputStreamFlags outputFlags, boolean exists, OutputStream outputStream) throws IOException {
