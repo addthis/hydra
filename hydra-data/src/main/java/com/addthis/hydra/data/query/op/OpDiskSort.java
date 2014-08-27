@@ -558,5 +558,10 @@ public class OpDiskSort extends AbstractRowOp {
         public void reportWrite(long bytes) {
             // ignored
         }
+
+        @Override
+        public void reportStreams(long streams) {
+            // ignored
+        }
     }
 }
