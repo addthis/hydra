@@ -258,10 +258,10 @@ public class JobAlertRunner {
                     loadLegacyAlerts();
                     spawnDataStore.put(SPAWN_COMMON_ALERT_LOADED_LEGACY, "1");
                 } catch (Exception ex) {
-                    log.warn("Warning: failed to fetch legacy alerts", ex);
+                    log.error("Failed to fetch legacy alerts:", ex);
                 }
-
             }
+            log.info("{} alerts loaded", alertMap.size());
         }
     }
 
@@ -272,7 +272,7 @@ public class JobAlertRunner {
                 alertMap.put(id, jobAlert);
             }
         } catch (Exception ex) {
-            log.warn("Failed to decode JobAlert id={} raw={}", id, raw);
+            log.error("Failed to decode JobAlert id={} raw={}", id, raw, ex);
         }
     }
 

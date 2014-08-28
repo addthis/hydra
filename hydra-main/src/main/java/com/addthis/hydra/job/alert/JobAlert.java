@@ -31,6 +31,8 @@ import com.addthis.meshy.MeshyClient;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -289,6 +291,7 @@ public class JobAlert implements Codable {
         }
     }
 
+    @JsonIgnore
     public String getAlertStatus() {
         hasChanged = false;
         StringBuilder sb = new StringBuilder();
