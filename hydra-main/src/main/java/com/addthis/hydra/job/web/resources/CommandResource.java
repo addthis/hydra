@@ -102,10 +102,13 @@ public class CommandResource {
             if (name == null) {
                 return Response.serverError().entity("missing command name").build();
             }
-            jobCommandManager.deleteEntity(name);
-            return Response.ok().build();
+            if (jobCommandManager.deleteEntity(name)) {
+                return Response.ok().build();
+            } else {
+                return Response.serverError().entity("command may be used by a job").build();
+            }
         } catch (Exception ex) {
-            return Response.serverError().entity("command delete failed").build();
+            return Response.serverError().entity(ex.getMessage()).build();
         }
     }
 }

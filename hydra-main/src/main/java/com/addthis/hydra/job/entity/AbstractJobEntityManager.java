@@ -43,6 +43,7 @@ public abstract class AbstractJobEntityManager<T> implements JobEntityManager<T>
     private final SpawnDataStore spawnDataStore;
     private final Class<T> entityClass;
     private final String dataStorePath;
+    private final String entityClassName;
 
     /**
      * Constructs a new instance and load entities from {@link SpawnDataStore}.
@@ -59,14 +60,15 @@ public abstract class AbstractJobEntityManager<T> implements JobEntityManager<T>
         this.spawnDataStore = spawn.getSpawnDataStore();
         this.entityClass = entityClass;
         this.dataStorePath = dataStorePath;
+        this.entityClassName = entityClass.getSimpleName();
         loadEntities(spawnDataStore);
     }
 
     private void loadEntities(SpawnDataStore spawnDataStore) throws Exception {
-        log.info("Loading entities from data store...");
+        log.info("Loading {}s from data store...", entityClassName);
         Map<String, String> loadedEntities = spawnDataStore.getAllChildren(dataStorePath);
         if (loadedEntities == null) {
-            log.warn("No entities loaded from data store.");
+            log.warn("No {}s loaded from data store.", entityClassName);
             return;
         }
         for (Entry<String, String> entry : loadedEntities.entrySet()) {
@@ -76,7 +78,7 @@ public abstract class AbstractJobEntityManager<T> implements JobEntityManager<T>
                 putEntity(entry.getKey(), entity, false);
             }
         }
-        log.info("{} entities loaded from data store", size());
+        log.info("{} {}s loaded from data store", size(), entityClassName);
     }
     
     public String getDataStorePath() {
@@ -102,9 +104,9 @@ public abstract class AbstractJobEntityManager<T> implements JobEntityManager<T>
     public void putEntity(String key, T entity, boolean store) throws Exception {
         key = key.trim();
         if (entities.put(key, entity) == null) {
-            log.info("Added new entity {}", key);
+            log.info("Added new {} {}", entityClassName, key);
         } else {
-            log.info("Updated existing entity {}", key);
+            log.info("Updated existing {} {}", entityClassName, key);
         }
         if (store) {
             spawnDataStore.putAsChild(dataStorePath, key, CodecJSON.encodeString(entity));
@@ -116,17 +118,17 @@ public abstract class AbstractJobEntityManager<T> implements JobEntityManager<T>
         // prevent deletion of entity used in jobs
         Job job = findDependentJob(spawn, key);
         if (job != null) {
-            log.warn("Unable to delete entity {} because it is used by job {}", key, job.getId());
+            log.warn("Unable to delete {} {} because it is used by job {}", entityClassName, key, job.getId());
             return false;
         }
 
         T entity = entities.remove(key);
         if (entity != null) {
             spawnDataStore.deleteChild(dataStorePath, key);
-            log.info("Successfully deleted entity {}", key);
+            log.info("Successfully deleted {} {}", entityClassName, key);
             return true;
         } else {
-            log.warn("Unable to delete entity {} because it doesn't exist", key);
+            log.warn("Unable to delete {} {} because it doesn't exist", entityClassName, key);
             return false;
         }
     }

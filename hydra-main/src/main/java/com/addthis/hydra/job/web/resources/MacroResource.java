@@ -123,16 +123,17 @@ public class MacroResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response deleteMacro(@QueryParam("pairs") KVPairs kv, @Auth User user) {
         try {
-            if (!kv.hasKey("name")) {
-                throw new Exception("missing field");
+            String name = kv.getValue("name");
+            if (name == null) {
+                return Response.serverError().entity("missing macro name").build();
             }
-            if (jobMacroManager.deleteEntity(kv.getValue("name", ""))) {
+            if (jobMacroManager.deleteEntity(name)) {
                 return Response.ok().build();
             } else {
-                return Response.serverError().entity("macro delete failed").build();
+                return Response.serverError().entity("macro may be used by a job").build();
             }
         } catch (Exception ex) {
-            return Response.serverError().entity(ex.toString()).build();
+            return Response.serverError().entity(ex.getMessage()).build();
         }
     }
 }

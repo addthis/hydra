@@ -167,11 +167,11 @@ function(
                     model.delete().done(function(){
                         app.macroCollection.remove(model.id);
                     }).fail(function(xhr){
-                        Alertify.log.error("Error deleting macro: "+model.id);
+                        Alertify.log.error("Error deleting '" + model.id + "': " + xhr.responseText);
                     });
                 }
             });
-            Alertify.log.success(ids.length+" macros deleted.");
+            Alertify.log.info("Deleting " + ids.length + " macros...");
         }
     });
     var DetailView = Backbone.View.extend({
