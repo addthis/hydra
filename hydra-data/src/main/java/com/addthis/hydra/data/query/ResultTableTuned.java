@@ -172,7 +172,7 @@ public class ResultTableTuned extends ForwardingList<Bundle> implements DataTabl
     }
 
     @Override
-    public void sort(Comparator<Bundle> comp) {
+    public void sort(Comparator<? super Bundle> comp) {
         result.sort(comp);
     }
 
