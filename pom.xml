@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 <!--
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -46,6 +47,7 @@
   </modules>
 
   <properties>
+    <project.build.targetJdk>1.8</project.build.targetJdk>
     <!-- surefire junit properties -->
     <at.test.excluded.groups>com.addthis.basis.test.SlowTest,com.addthis.hydra.common.test.LocalStackTest</at.test.excluded.groups>
 
