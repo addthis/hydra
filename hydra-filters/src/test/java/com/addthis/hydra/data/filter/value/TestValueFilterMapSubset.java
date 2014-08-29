@@ -105,7 +105,7 @@ public class TestValueFilterMapSubset {
     public void toMap_String() {
         ValueMap map = createMap("k1=v1", "k2=v2", "k3=v3");
 
-        assertEquals("k3=v3,k1=v1,k2=v2", subsetOfMap(map, null, null, true, "=", ",").toString());
+        assertEquals("k1=v1,k2=v2,k3=v3", subsetOfMap(map, null, null, true, "=", ",").toString());
     }
 
     private ValueMap createMap(String... kvPairs) {

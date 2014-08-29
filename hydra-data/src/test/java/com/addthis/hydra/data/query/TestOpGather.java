@@ -30,9 +30,9 @@ public class TestOpGather extends TestOp {
                         tr().td("a", "1", "2", "3"),
                 "gather=ksssu",
                 new DataTableHelper().
+                        tr().td("a", "3", "6", "9", "3").
                         tr().td("b", "2", "4", "6", "2").
-                        tr().td("c", "2", "4", "6", "2").
-                        tr().td("a", "3", "6", "9", "3")
+                        tr().td("c", "2", "4", "6", "2")
         );
         doOpTest(
                 new DataTableHelper().
@@ -45,9 +45,9 @@ public class TestOpGather extends TestOp {
                         tr().td("a", "1", "2", "3"),
                 "gather=kaaa",
                 new DataTableHelper().
+                        tr().td("a", "1", "3", "3").
                         tr().td("b", "4", "5", "3").
-                        tr().td("c", "4", "2", "4").
-                        tr().td("a", "1", "3", "3")
+                        tr().td("c", "4", "2", "4")
         );
         doOpTest(
                 new DataTableHelper().
@@ -60,9 +60,9 @@ public class TestOpGather extends TestOp {
                         tr().td("a", "1", "2", "3"),
                 "gather=ksss",
                 new DataTableHelper().
+                        tr().td("a", "3", "9", "6").
                         tr().td("b", "8", "8", "6").
-                        tr().td("c", "1", "4", "4").
-                        tr().td("a", "3", "9", "6")
+                        tr().td("c", "1", "4", "4")
         );
         doOpTest(
                 new DataTableHelper().
@@ -75,9 +75,9 @@ public class TestOpGather extends TestOp {
                         tr().td("a", "1", "2", "3"),
                 "gather=kiss",
                 new DataTableHelper().
+                        tr().td("a", "6", "9").
                         tr().td("b", "4", "6").
-                        tr().td("c", "4", "6").
-                        tr().td("a", "6", "9")
+                        tr().td("c", "4", "6")
         );
         doOpTest(
                 new DataTableHelper().

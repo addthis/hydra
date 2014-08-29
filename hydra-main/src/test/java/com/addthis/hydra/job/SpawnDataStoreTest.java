@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.job;
 
+import java.util.Arrays;
 import java.util.List;
 
 import com.addthis.bark.ZkStartUtil;
@@ -71,7 +72,9 @@ public class SpawnDataStoreTest extends ZkStartUtil {
             spawnDataStore.putAsChild(savePath, c1, "data1_updated");
             spawnDataStore.putAsChild(savePath, c2, "data2");
             List<String> children = spawnDataStore.getChildrenNames(savePath);
-            assertArrayEquals("should get correct children", children.toArray(new String[children.size()]), new String[]{c1, c2});
+            String[] childrenArray = children.toArray(new String[children.size()]);
+            Arrays.sort(childrenArray);
+            assertArrayEquals("should get correct children", childrenArray, new String[]{c1, c2});
             assertEquals("should get updated value for c1", spawnDataStore.getChild(savePath, c1), "data1_updated");
             spawnDataStore.deleteChild(savePath, c2);
             children = spawnDataStore.getChildrenNames(savePath);

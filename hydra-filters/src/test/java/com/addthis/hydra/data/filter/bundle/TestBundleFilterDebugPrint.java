@@ -31,7 +31,7 @@ public class TestBundleFilterDebugPrint extends TestBundleFilter {
         BundleFilterDebugPrint bf = new BundleFilterDebugPrint().enableCacheOutput();
         TestBundleFilter.MapBundle bundle = createBundle(new String[]{"hello", "1", "dog", "food", "foo", null});
         bf.filter(bundle);
-        assertEquals("{\"hello\" = \"1\" , \"foo\" = null , \"dog\" = \"food\"}", bf.getCacheOutput());
+        assertEquals("{\"foo\" = null , \"hello\" = \"1\" , \"dog\" = \"food\"}", bf.getCacheOutput());
     }
 
     @Test
@@ -76,7 +76,7 @@ public class TestBundleFilterDebugPrint extends TestBundleFilter {
         bundle.setValue(bundleFormat.getField("map"), map);
 
         bf.filter(bundle);
-        assertEquals("{\"map\" = {\"baz\" : \"baz\" , \"foo\" : 1 , \"bar\" : 1.0 , \"quux\" : null}}",
+        assertEquals("{\"map\" = {\"bar\" : 1.0 , \"quux\" : null , \"foo\" : 1 , \"baz\" : \"baz\"}}",
                 bf.getCacheOutput());
     }
 

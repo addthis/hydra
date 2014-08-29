@@ -38,6 +38,6 @@ public class TestURLTree {
 
         List<URLTree.TreeObject.TreeValue> branches = urlTree.getBranches("/");
         assertEquals(3, branches.size());
-        assertEquals("[www.foo.com/1/2/3/5/:2.0, www.foo.com/1/2/3/4:1.0, www.foo.com/1/2/4:1.0]", branches.toString());
+        assertEquals("[www.foo.com/1/2/3/4:1.0, www.foo.com/1/2/3/5/:2.0, www.foo.com/1/2/4:1.0]", branches.toString());
     }
 }
