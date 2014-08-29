@@ -157,7 +157,7 @@ public class DataTableHelper extends ForwardingList<Bundle> implements DataTable
     }
 
     @Override
-    public void sort(Comparator<Bundle> comp) {
+    public void sort(Comparator<? super Bundle> comp) {
         result.sort(comp);
     }
 
