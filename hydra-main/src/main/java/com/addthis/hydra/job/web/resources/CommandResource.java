@@ -25,8 +25,8 @@ import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.hydra.job.JobCommand;
-import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.job.entity.JobCommand;
+import com.addthis.hydra.job.entity.JobEntityManager;
 import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.maljson.JSONArray;
 
@@ -34,17 +34,16 @@ import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 @Path("/command")
 public class CommandResource {
 
     private static Logger log = LoggerFactory.getLogger(CommandResource.class);
 
-    private final Spawn spawn;
+    private final JobEntityManager<JobCommand> jobCommandManager;
 
-    private static final String defaultUser = "UNKNOWN_USER";
-
-    public CommandResource(Spawn spawn) {
-        this.spawn = spawn;
+    public CommandResource(JobEntityManager<JobCommand> jobCommandManager) {
+        this.jobCommandManager = jobCommandManager;
     }
 
     @GET
@@ -53,8 +52,8 @@ public class CommandResource {
     public Response listCommands() {
         JSONArray commands = new JSONArray();
         try {
-            for (String key : spawn.listCommands()) {
-                JobCommand command = spawn.getCommand(key);
+            for (String key : jobCommandManager.getKeys()) {
+                JobCommand command = jobCommandManager.getEntity(key);
                 commands.put(command.toJSON().put("name", key));
             }
             return Response.ok(commands.toString()).build();
@@ -68,7 +67,7 @@ public class CommandResource {
     @Path("/get")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getCommands(@QueryParam("command") String key) throws Exception {
-        return Response.ok(spawn.getCommand(key).toJSON().put("name", key).toString()).build();
+        return Response.ok(jobCommandManager.getEntity(key).toJSON().put("name", key).toString()).build();
     }
 
     @POST
@@ -87,7 +86,7 @@ public class CommandResource {
                 cmdtok[i] = Bytes.urldecode(cmdtok[i]);
             }
             JobCommand jobCommand = new JobCommand(owner, cmdtok, kv.getIntValue("reqCPU", 0), kv.getIntValue("reqMEM", 0), kv.getIntValue("reqIO", 0));
-            spawn.putCommand(label, jobCommand, true);
+            jobCommandManager.putEntity(label, jobCommand, true);
             return Response.ok().entity(jobCommand.toJSON().put("name", label).toString()).build();
         } catch (Exception ex) {
             return Response.serverError().entity(ex.toString()).build();
@@ -103,10 +102,13 @@ public class CommandResource {
             if (name == null) {
                 return Response.serverError().entity("missing command name").build();
             }
-            spawn.deleteCommand(name);
-            return Response.ok().build();
+            if (jobCommandManager.deleteEntity(name)) {
+                return Response.ok().build();
+            } else {
+                return Response.serverError().entity("command may be used by a job").build();
+            }
         } catch (Exception ex) {
-            return Response.serverError().entity("command delete failed").build();
+            return Response.serverError().entity(ex.getMessage()).build();
         }
     }
 }

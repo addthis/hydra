@@ -24,6 +24,7 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.alert.JobAlert;
+import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Objects;

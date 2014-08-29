@@ -16,8 +16,6 @@ package com.addthis.hydra.job.spawn;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_UP_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_COMMAND_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_MACRO_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
 
 import javax.annotation.Nonnull;
@@ -78,11 +76,9 @@ import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.HostFailWorker;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
-import com.addthis.hydra.job.JobCommand;
 import com.addthis.hydra.job.JobConfigManager;
 import com.addthis.hydra.job.JobEvent;
 import com.addthis.hydra.job.JobExpand;
-import com.addthis.hydra.job.JobMacro;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
@@ -97,6 +93,11 @@ import com.addthis.hydra.job.alert.JobAlertManagerImpl;
 import com.addthis.hydra.job.alias.AliasManager;
 import com.addthis.hydra.job.alias.AliasManagerImpl;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
+import com.addthis.hydra.job.entity.JobCommand;
+import com.addthis.hydra.job.entity.JobCommandManager;
+import com.addthis.hydra.job.entity.JobEntityManager;
+import com.addthis.hydra.job.entity.JobMacro;
+import com.addthis.hydra.job.entity.JobMacroManager;
 import com.addthis.hydra.job.minion.Minion;
 import com.addthis.hydra.job.mq.CommandTaskDelete;
 import com.addthis.hydra.job.mq.CommandTaskKick;
@@ -349,6 +350,8 @@ public class Spawn implements Codable {
 
     private final AliasManager aliasManager;
     private final JobAlertManager jobAlertManager;
+    private final JobEntityManager<JobMacro> jobMacroManager;
+    private final JobEntityManager<JobCommand> jobCommandManager;
 
     /**
      * default constructor used for testing purposes only
@@ -377,9 +380,13 @@ public class Spawn implements Codable {
             this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
             this.aliasManager = new AliasManagerImpl(spawnDataStore);
             this.jobAlertManager = new JobAlertManagerImpl(this, null);
+            this.jobMacroManager = new JobMacroManager(this);
+            this.jobCommandManager = new JobCommandManager(this);
         } else {
             this.aliasManager = null;
             this.jobAlertManager = null;
+            this.jobMacroManager = null;
+            this.jobCommandManager = null;
         }
         this.hostFailWorker = new HostFailWorker(this, scheduledExecutor);
         this.balancer = new SpawnBalancer(this);
@@ -418,8 +425,8 @@ public class Spawn implements Codable {
         }
         // look for local object to import
         log.info("[init] beginning to load stats from data store");
-        loadMacros();
-        loadCommands();
+        jobMacroManager = new JobMacroManager(this);
+        jobCommandManager = new JobCommandManager(this);
         loadSpawnQueue();
         this.jobConfigManager = new JobConfigManager(spawnDataStore);
         // fix up null pointers
@@ -542,6 +549,16 @@ public class Spawn implements Codable {
     public JobAlertManager getJobAlertManager() {
         return jobAlertManager;
     }
+    
+    @Nonnull
+    public JobEntityManager<JobMacro> getJobMacroManager() {
+        return jobMacroManager;
+    }
+    
+    @Nonnull
+    public JobEntityManager<JobCommand> getJobCommandManager() {
+        return jobCommandManager;
+    }
 
     public static String getHttpHost() {
         return httpHost;
@@ -590,40 +607,6 @@ public class Spawn implements Codable {
 
     public void setSpawnMQ(SpawnMQ spawnMQ) {
         this.spawnMQ = spawnMQ;
-    }
-
-    private void loadMacros() throws Exception {
-        Map<String, String> loadedMacros = spawnDataStore.getAllChildren(SPAWN_COMMON_MACRO_PATH);
-        if (loadedMacros == null) {
-            return;
-        }
-        for (Entry<String, String> macroEntry : loadedMacros.entrySet()) {
-            String jsonMacro = macroEntry.getValue();
-            if (jsonMacro != null && !jsonMacro.equals("null") && !jsonMacro.isEmpty()) {
-                JobMacro macro = new JobMacro();
-                codec.decode(macro, jsonMacro.getBytes());
-                putMacro(macroEntry.getKey(), macro, false);
-            }
-        }
-    }
-
-    // TODO: It should be possible to reduce duplication between how commands and macros are
-    // handled.
-    @VisibleForTesting
-    protected void loadCommands() throws Exception {
-        Map<String, String> loadedCommands =
-                spawnDataStore.getAllChildren(SPAWN_COMMON_COMMAND_PATH);
-        if (loadedCommands == null) {
-            return;
-        }
-        for (Entry<String, String> commandEntry : loadedCommands.entrySet()) {
-            String jsonCommand = commandEntry.getValue();
-            if (jsonCommand != null && !jsonCommand.equals("null") && !jsonCommand.isEmpty()) {
-                JobCommand command = new JobCommand();
-                codec.decode(command, jsonCommand.getBytes());
-                putCommand(commandEntry.getKey(), command, false);
-            }
-        }
     }
 
     @VisibleForTesting
@@ -2186,86 +2169,6 @@ public class Spawn implements Codable {
     }
 
 
-    public Collection<String> listCommands() {
-        synchronized (spawnState.commands) {
-            return spawnState.commands.keySet();
-        }
-    }
-
-    public JobCommand getCommand(String key) {
-        synchronized (spawnState.commands) {
-            return spawnState.commands.get(key);
-        }
-    }
-
-    public void putCommand(String key, JobCommand command, boolean store) throws Exception {
-        synchronized (spawnState.commands) {
-            spawnState.commands.put(key, command);
-        }
-        if (useZk && store) {
-            spawnDataStore.putAsChild(SPAWN_COMMON_COMMAND_PATH, key, new String(codec.encode(command)));
-        }
-    }
-
-    public boolean deleteCommand(String key) throws Exception {
-        /* prevent deletion of commands used in jobs */
-        for (Job job : listJobs()) {
-            if (job.getCommand() != null && job.getCommand().equals(key)) {
-                return false;
-            }
-        }
-        synchronized (spawnState.commands) {
-            JobCommand cmd = spawnState.commands.remove(key);
-            if (cmd != null) {
-                spawnDataStore.deleteChild(SPAWN_COMMON_COMMAND_PATH, key);
-                return true;
-            } else {
-                return false;
-            }
-        }
-    }
-
-    public Collection<String> listMacros() {
-        synchronized (spawnState.macros) {
-            return spawnState.macros.keySet();
-        }
-    }
-
-    public JobMacro getMacro(String key) {
-        synchronized (spawnState.macros) {
-            return spawnState.macros.get(key.trim());
-        }
-    }
-
-    public void putMacro(String key, JobMacro macro, boolean store) throws Exception {
-        key = key.trim();
-        synchronized (spawnState.macros) {
-            spawnState.macros.put(key, macro);
-        }
-        if (store) {
-            spawnDataStore.putAsChild(SPAWN_COMMON_MACRO_PATH, key, new String(codec.encode(macro)));
-        }
-    }
-
-    public boolean deleteMacro(String key) {
-        /* prevent deletion of macros used in job configs */
-        for (Job job : listJobs()) {
-            String rawconf = getJobConfig(job.getId());
-            if (rawconf != null && rawconf.contains("%{" + key + "}%")) {
-                return false;
-            }
-        }
-        synchronized (spawnState.macros) {
-            JobMacro macro = spawnState.macros.remove(key);
-            if (macro != null) {
-                spawnDataStore.deleteChild(SPAWN_COMMON_MACRO_PATH, key);
-                return true;
-            } else {
-                return false;
-            }
-        }
-    }
-
     // --------------------- END API ----------------------
 
     private List<HostState> getOrCreateHostStateList(String minionType, Collection<String> hostList) {
@@ -3015,7 +2918,7 @@ public class Spawn implements Codable {
     }
 
     private boolean schedulePrep(Job job) {
-        job.setSubmitCommand(getCommand(job.getCommand()));
+        job.setSubmitCommand(getJobCommandManager().getEntity(job.getCommand()));
         if (job.getSubmitCommand() == null) {
             log.warn("[schedule] failed submit : invalid command " + job.getCommand());
             return false;

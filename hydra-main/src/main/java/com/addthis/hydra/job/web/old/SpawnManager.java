@@ -38,25 +38,26 @@ import com.addthis.bark.StringSerializer;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
-import com.addthis.hydra.job.JobCommand;
 import com.addthis.hydra.job.JobExpand;
-import com.addthis.hydra.job.JobMacro;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobQueryConfig;
 import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
-import com.addthis.hydra.job.alias.AliasManager;
-import com.addthis.hydra.job.minion.Minion;
 import com.addthis.hydra.job.RebalanceOutcome;
-import com.addthis.hydra.job.spawn.DeleteStatus;
-import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.job.alias.AliasManager;
+import com.addthis.hydra.job.entity.JobCommand;
+import com.addthis.hydra.job.entity.JobEntityManager;
+import com.addthis.hydra.job.entity.JobMacro;
+import com.addthis.hydra.job.minion.Minion;
+import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.ClientEvent;
 import com.addthis.hydra.job.spawn.ClientEventListener;
+import com.addthis.hydra.job.spawn.DeleteStatus;
 import com.addthis.hydra.job.spawn.Settings;
+import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.web.old.SpawnHttp.HTTPLink;
 import com.addthis.hydra.job.web.old.SpawnHttp.HTTPService;
-import com.addthis.hydra.job.mq.HostState;
-import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.service.file.FileReference;
@@ -79,6 +80,8 @@ public class SpawnManager {
     public void register(final SpawnHttp server) {
         final Spawn spawn = server.spawn();
         final AliasManager aliasManager = spawn.getAliasManager();
+        final JobEntityManager<JobMacro> jobMacroManager = spawn.getJobMacroManager();
+        final JobEntityManager<JobCommand> jobCommandManager = spawn.getJobCommandManager();
         /** url called via ajax to listen for change events */
         server.mapService("/listen", new HTTPService() {
             @Override
@@ -180,11 +183,11 @@ public class SpawnManager {
                     JSONObject commandlist = new JSONObject();
                     JSONArray joblist = new JSONArray();
                     JSONArray hostlist = new JSONArray();
-                    for (String key : spawn.listMacros()) {
-                        macrolist.put(key, spawn.getMacro(key).toJSON().put("macro", ""));
+                    for (String key : jobMacroManager.getKeys()) {
+                        macrolist.put(key, jobMacroManager.getEntity(key).toJSON().put("macro", ""));
                     }
-                    for (String key : spawn.listCommands()) {
-                        commandlist.put(key, spawn.getCommand(key).toJSON());
+                    for (String key : jobCommandManager.getKeys()) {
+                        commandlist.put(key, jobCommandManager.getEntity(key).toJSON());
                     }
                     for (HostState host : spawn.listHostStatus(null)) {
                         hostlist.put(spawn.getHostStateUpdateEvent(host));
@@ -192,7 +195,7 @@ public class SpawnManager {
                     HashSet<String> ids = csvListToSet(link.getRequestValues().getValue("id"));
                     for (IJob job : spawn.listJobsConcurrentImmutable()) {
                         if (ids == null || ids.contains(job.getId())) {
-                            JSONObject jobUpdateEvent = spawn.getJobUpdateEvent(job);
+                            JSONObject jobUpdateEvent = Spawn.getJobUpdateEvent(job);
                             joblist.put(jobUpdateEvent);
                         }
                     }
@@ -231,8 +234,8 @@ public class SpawnManager {
             @Override
             public void httpService(HTTPLink link) throws Exception {
                 JSONObject list = new JSONObject();
-                for (String key : spawn.listMacros()) {
-                    JobMacro macro = spawn.getMacro(key);
+                for (String key : jobMacroManager.getKeys()) {
+                    JobMacro macro = jobMacroManager.getEntity(key);
                     list.put(key, macro.toJSON());
                 }
                 link.sendJSON(200, "OK", list);
@@ -242,7 +245,7 @@ public class SpawnManager {
             @Override
             public void httpService(HTTPLink link) throws Exception {
                 String label = link.getRequestValues().getValue("label", "");
-                JobMacro macro = spawn.getMacro(label);
+                JobMacro macro = jobMacroManager.getEntity(label);
                 if (macro != null) {
                     link.sendJSON(200, "OK", macro.toJSON());
                 } else {
@@ -256,21 +259,21 @@ public class SpawnManager {
                 KVPairs kv = link.getRequestValues();
                 String label = kv.getValue("label");
                 require(label != null, "missing label");
-                JobMacro oldMacro = spawn.getMacro(label);
+                JobMacro oldMacro = jobMacroManager.getEntity(label);
                 String description = kv.getValue("description", oldMacro != null ? oldMacro.getDescription() : null);
                 String owner = kv.getValue("owner", oldMacro != null ? oldMacro.getOwner() : null);
                 String macro = kv.getValue("macro", oldMacro != null ? oldMacro.getMacro() : null);
                 require(description != null, "missing description");
                 require(owner != null, "missing owner");
                 require(macro != null, "missing macro");
-                spawn.putMacro(label, new JobMacro(owner, description, macro), true);
+                jobMacroManager.putEntity(label, new JobMacro(owner, description, macro), true);
                 link.sendJSON(200, "OK", json("success",true));
             }
         });
         server.mapService("/macro.delete", new HTTPService() {
             @Override
             public void httpService(HTTPLink link) throws Exception {
-                if (spawn.deleteMacro(link.getRequestValues().getValue("label", ""))) {
+                if (jobMacroManager.deleteEntity(link.getRequestValues().getValue("label", ""))) {
                     link.sendJSON(200, "OK", json("success",true));
                 } else {
                     link.sendJSON(200, "Error", json("error","macro delete failed"));
@@ -282,8 +285,8 @@ public class SpawnManager {
             @Override
             public void httpService(HTTPLink link) throws Exception {
                 JSONObject list = new JSONObject();
-                for (String key : spawn.listCommands()) {
-                    list.put(key, spawn.getCommand(key).toJSON());
+                for (String key : jobCommandManager.getKeys()) {
+                    list.put(key, jobCommandManager.getEntity(key).toJSON());
                 }
                 link.sendJSON(200, "OK", list);
             }
@@ -301,7 +304,7 @@ public class SpawnManager {
                 for (int i = 0; i < cmdtok.length; i++) {
                     cmdtok[i] = Bytes.urldecode(cmdtok[i]);
                 }
-                spawn.putCommand(label, new JobCommand(owner, cmdtok, kv.getIntValue("cpu", 0), kv.getIntValue("mem", 0), kv.getIntValue("io", 0)), true);
+                jobCommandManager.putEntity(label, new JobCommand(owner, cmdtok, kv.getIntValue("cpu", 0), kv.getIntValue("mem", 0), kv.getIntValue("io", 0)), true);
                 kv.putValue("return", 1);
             }
         });
@@ -311,7 +314,7 @@ public class SpawnManager {
             public void kvCall(KVPairs kv) throws Exception {
                 String label = kv.getValue("label");
                 require(label != null, "missing label");
-                if (!spawn.deleteCommand(label)) {
+                if (!jobCommandManager.deleteEntity(label)) {
                     throw new Exception("command delete failed");
                 }
             }
@@ -1108,7 +1111,7 @@ public class SpawnManager {
         /** basic command validation */
         String commandName = kv.getValue("command", job.getCommand());
         HTTPService.require(commandName != null, "missing command key");
-        HTTPService.require(spawn.getCommand(commandName) != null, "invalid command key");
+        HTTPService.require(spawn.getJobCommandManager().getEntity(commandName) != null, "invalid command key");
         job.setCommand(commandName);
         /** update other top-level basic meta-data */
         job.setOwner(kv.getValue("owner", job.getOwner()));

@@ -16,10 +16,10 @@ package com.addthis.hydra.job.spawn;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.hydra.job.Job;
-import com.addthis.hydra.job.JobCommand;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskErrorCode;
 import com.addthis.hydra.job.JobTaskState;
+import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.mq.CommandTaskReplicate;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
@@ -130,7 +130,7 @@ class TaskMover {
                         targetHost.getPath(),
                         task.getReplicationFactor())
         };
-        job.setSubmitCommand(spawn.getCommand(job.getCommand()));
+        job.setSubmitCommand(spawn.getJobCommandManager().getEntity(job.getCommand()));
         JobCommand jobcmd = job.getSubmitCommand();
         CommandTaskReplicate replicate = new CommandTaskReplicate(
                 task.getHostUUID(), task.getJobUUID(), task.getTaskID(), target, Strings.join(jobcmd.getCommand(), " "), choreWatcherKey(), true, kickOnComplete);

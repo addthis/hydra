@@ -30,6 +30,7 @@ import com.addthis.basis.util.TokenReplacerOverflowException;
 import com.addthis.codec.plugins.PluginMap;
 import com.addthis.codec.plugins.PluginRegistry;
 import com.addthis.hydra.data.util.CommentTokenizer;
+import com.addthis.hydra.job.entity.JobMacro;
 import com.addthis.hydra.job.spawn.Spawn;
 
 import com.google.common.base.Joiner;
@@ -73,7 +74,7 @@ public class JobExpand {
                     throw new RuntimeException(ex);
                 }
             }
-            JobMacro macro = spawn.getSpawnState().macros.get(label);
+            JobMacro macro = spawn.getJobMacroManager().getEntity(label);
             String target = null;
             if (macro != null) {
                 target = macro.getMacro();

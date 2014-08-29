@@ -11,19 +11,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.job.spawn;
+package com.addthis.hydra.job.entity;
 
-import java.util.concurrent.ConcurrentMap;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-import jsr166e.ConcurrentHashMapV8;
+import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.job.store.SpawnDataStore;
 
-import com.addthis.codec.codables.Codable;
-import com.addthis.hydra.job.Job;
-import com.addthis.hydra.util.DirectedGraph;
+public class JobEntityManagerTestBase {
 
-public class SpawnState implements Codable {
+    protected Spawn spawn;
+    protected SpawnDataStore spawnDataStore;
 
-    final ConcurrentMap<String, Job> jobs = new ConcurrentHashMapV8<>();
-    final DirectedGraph<String> jobDependencies = new DirectedGraph<>();
-    SpawnBalancerConfig balancerConfig = new SpawnBalancerConfig();
+    protected void initSpawnMocks() {
+        // setup mock data store
+        spawn = mock(Spawn.class);
+        spawnDataStore = mock(SpawnDataStore.class);
+        when(spawn.getSpawnDataStore()).thenReturn(spawnDataStore);
+    }
 }

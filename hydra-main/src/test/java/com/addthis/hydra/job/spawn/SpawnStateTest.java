@@ -22,8 +22,8 @@ import com.addthis.basis.util.Files;
 
 import com.addthis.bark.ZkStartUtil;
 import com.addthis.hydra.job.Job;
-import com.addthis.hydra.job.JobCommand;
 import com.addthis.hydra.job.JobConfigManager;
+import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.spawn.SpawnBalancerConfig;
@@ -69,7 +69,7 @@ public class SpawnStateTest extends ZkStartUtil {
         assertEquals("JobConfigManager should correctly put/fetch configs", conf1, jobConfigManager.getConfig("id"));
 
         String config = "// MY JOB CONFIG";
-        spawn.putCommand("a", new JobCommand(), true);
+        spawn.getJobCommandManager().putEntity("a", new JobCommand(), true);
         HostState host = new HostState("h");
         host.setUp(true);
         host.setDead(false);
@@ -89,8 +89,7 @@ public class SpawnStateTest extends ZkStartUtil {
         System.setProperty("SPAWN_LOG_DIR", tmpRoot + "/tmp/spawn/log/events");
         try {
             Spawn spawn = new Spawn(zkClient);
-            spawn.loadCommands();
-            assertEquals(0, spawn.listCommands().size());
+            assertEquals(0, spawn.getJobCommandManager().size());
             spawn.runtimeShutdownHook();
         } finally {
             Files.deleteDir(tmpRoot);
@@ -106,12 +105,11 @@ public class SpawnStateTest extends ZkStartUtil {
         System.setProperty("SPAWN_LOG_DIR", tmpRoot + "/tmp/spawn/log/events");
         try {
             Spawn spawn = new Spawn(zkClient);
-            spawn.loadCommands();
             jcmd = new JobCommand("me", new String[]{"ls"}, 1, 1, 1);
-            spawn.putCommand("test1", jcmd, true);
-            assertEquals(1, spawn.listCommands().size());
+            spawn.getJobCommandManager().putEntity("test1", jcmd, true);
+            assertEquals(1, spawn.getJobCommandManager().size());
             // todo: brittle, but this is the easiest way to test job equality right now
-            assertEquals(jcmd.toJSON().toString(), spawn.getCommand("test1").toJSON().toString());
+            assertEquals(jcmd.toJSON().toString(), spawn.getJobCommandManager().getEntity("test1").toJSON().toString());
             spawn.runtimeShutdownHook();
         } finally {
             Files.deleteDir(tmpRoot);

@@ -889,7 +889,7 @@ public class JobsResource {
         /** basic command validation */
         String commandName = kv.getValue("command", job.getCommand());
         SpawnHttp.HTTPService.require(commandName != null, "missing command key");
-        SpawnHttp.HTTPService.require(spawn.getCommand(commandName) != null, "invalid command key");
+        SpawnHttp.HTTPService.require(spawn.getJobCommandManager().getEntity(commandName) != null, "invalid command key");
         job.setCommand(commandName);
         /** update other top-level basic meta-data */
         job.setOwner(kv.getValue("owner", job.getOwner()));

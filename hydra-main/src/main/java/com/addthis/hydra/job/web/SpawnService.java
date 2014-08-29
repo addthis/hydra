@@ -70,8 +70,8 @@ public class SpawnService {
         //instantiate resources
         ListenResource listenResource = new ListenResource(spawn, pollTimeout);
         JobsResource jobsResource = new JobsResource(spawn);
-        MacroResource macroResource = new MacroResource(spawn);
-        CommandResource commandResource = new CommandResource(spawn);
+        MacroResource macroResource = new MacroResource(spawn.getJobMacroManager());
+        CommandResource commandResource = new CommandResource(spawn.getJobCommandManager());
         TaskResource taskResource = new TaskResource(spawn);
         AliasResource aliasResource = new AliasResource(spawn.getAliasManager());
         HostResource hostResource = new HostResource(spawn);

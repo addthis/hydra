@@ -178,11 +178,11 @@ function(
                     model.delete().done(function(){
                         app.commandCollection.remove(model.id);
                     }).fail(function(xhr){
-                        Alertify.log.error("Error deleting command: "+model.id);
+                        Alertify.log.error("Error deleting '" + model.id + "': " + xhr.responseText);
                     });
                 }
             });
-            Alertify.log.success(ids.length+" commands deleted.");
+            Alertify.log.info("Deleting " + ids.length + " commands...");
         }
     });
     var DetailView = Backbone.View.extend({

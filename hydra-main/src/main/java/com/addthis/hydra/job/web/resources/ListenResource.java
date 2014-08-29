@@ -31,15 +31,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.IJob;
-import com.addthis.hydra.job.JobCommand;
-import com.addthis.hydra.job.JobMacro;
+import com.addthis.hydra.job.entity.JobCommand;
+import com.addthis.hydra.job.entity.JobEntityManager;
+import com.addthis.hydra.job.entity.JobMacro;
+import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.ClientEvent;
 import com.addthis.hydra.job.spawn.ClientEventListener;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.spawn.SpawnBalancerConfig;
-import com.addthis.hydra.job.mq.HostState;
-import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.hydra.job.store.DataStoreUtil;
+import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
@@ -139,12 +140,14 @@ public class ListenResource {
             JSONObject commandlist = new JSONObject();
             JSONObject hostlist = new JSONObject();
             JSONObject aliases = new JSONObject();
-            for (String key : spawn.listMacros()) {
-                JobMacro macro = spawn.getMacro(key);
+            JobEntityManager<JobMacro> jobMacroManager = spawn.getJobMacroManager();
+            JobEntityManager<JobCommand> jobCommandManager = spawn.getJobCommandManager();
+            for (String key : jobMacroManager.getKeys()) {
+                JobMacro macro = jobMacroManager.getEntity(key);
                 macrolist.put(key, macro.toJSON().put("macro", "").put("name", key));
             }
-            for (String key : spawn.listCommands()) {
-                JobCommand command = spawn.getCommand(key);
+            for (String key : jobCommandManager.getKeys()) {
+                JobCommand command = jobCommandManager.getEntity(key);
                 commandlist.put(key, command.toJSON().put("name", key));
             }
             for (HostState host : spawn.listHostStatus(null)) {

@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.job;
+package com.addthis.hydra.job.entity;
 
 import java.util.Arrays;
 
@@ -32,15 +32,15 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
 public final class JobCommand implements Codable, Cloneable {
 
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String owner;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String[] command;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int reqCPU;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int reqMEM;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int reqIO;
 
     public JobCommand() {

@@ -23,7 +23,8 @@ import javax.ws.rs.core.Response;
 
 import com.addthis.basis.kv.KVPairs;
 
-import com.addthis.hydra.job.JobMacro;
+import com.addthis.hydra.job.entity.JobEntityManager;
+import com.addthis.hydra.job.entity.JobMacro;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.maljson.JSONArray;
@@ -33,17 +34,16 @@ import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 @Path("/macro")
 public class MacroResource {
 
     private static Logger log = LoggerFactory.getLogger(MacroResource.class);
 
-    private final Spawn spawn;
+    private final JobEntityManager<JobMacro> jobMacroManager;
 
-    private static final String defaultUser = "UNKNOWN_USER";
-
-    public MacroResource(Spawn spawn) {
-        this.spawn = spawn;
+    public MacroResource(JobEntityManager<JobMacro> jobMacroManager) {
+        this.jobMacroManager = jobMacroManager;
     }
 
     @GET
@@ -52,8 +52,8 @@ public class MacroResource {
     public Response listMacros() {
         JSONArray macros = new JSONArray();
         try {
-            for (String key : spawn.listMacros()) {
-                JobMacro macro = spawn.getMacro(key);
+            for (String key : jobMacroManager.getKeys()) {
+                JobMacro macro = jobMacroManager.getEntity(key);
                 macros.put(macro.toJSON().put("macro", "").put("name", key));
             }
             return Response.ok(macros.toString()).build();
@@ -69,8 +69,8 @@ public class MacroResource {
     public Response mapMacros() {
         JSONObject macros = new JSONObject();
         try {
-            for (String key : spawn.listMacros()) {
-                JobMacro macro = spawn.getMacro(key);
+            for (String key : jobMacroManager.getKeys()) {
+                JobMacro macro = jobMacroManager.getEntity(key);
                 macros.put(key, macro.toJSON());
             }
             return Response.ok(macros.toString()).build();
@@ -84,7 +84,7 @@ public class MacroResource {
     @Path("/get")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getMacros(@QueryParam("label") String label) throws Exception {
-        JobMacro macro = spawn.getMacro(label);
+        JobMacro macro = jobMacroManager.getEntity(label);
         JSONObject macroJson = macro.toJSON();
         macroJson.put("modified", macro.getModified());
         macroJson.put("owner", macro.getOwner());
@@ -101,7 +101,7 @@ public class MacroResource {
                 throw new Exception("missing field");
             }
             String label = kv.getValue("label");
-            JobMacro oldMacro = spawn.getMacro(label);
+            JobMacro oldMacro = jobMacroManager.getEntity(label);
             String description = kv.getValue("description", oldMacro != null ? oldMacro.getDescription() : null);
             String owner = kv.getValue("owner", oldMacro != null ? oldMacro.getOwner() : user.getUsername());
             String macro = kv.getValue("macro", oldMacro != null ? oldMacro.getMacro() : null);
@@ -111,7 +111,7 @@ public class MacroResource {
                                                    + Spawn.inputMaxNumberOfCharacters);
             }
             JobMacro jobMacro = new JobMacro(owner, description, macro);
-            spawn.putMacro(label, jobMacro, true);
+            jobMacroManager.putEntity(label, jobMacro, true);
             return Response.ok().entity(jobMacro.toJSON().put("macro", "").put("name", label).toString()).build();
         } catch (Exception ex) {
             return Response.serverError().entity(ex.toString()).build();
@@ -123,16 +123,17 @@ public class MacroResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response deleteMacro(@QueryParam("pairs") KVPairs kv, @Auth User user) {
         try {
-            if (!kv.hasKey("name")) {
-                throw new Exception("missing field");
+            String name = kv.getValue("name");
+            if (name == null) {
+                return Response.serverError().entity("missing macro name").build();
             }
-            if (spawn.deleteMacro(kv.getValue("name", ""))) {
+            if (jobMacroManager.deleteEntity(name)) {
                 return Response.ok().build();
             } else {
-                return Response.serverError().entity("macro delete failed").build();
+                return Response.serverError().entity("macro may be used by a job").build();
             }
         } catch (Exception ex) {
-            return Response.serverError().entity(ex.toString()).build();
+            return Response.serverError().entity(ex.getMessage()).build();
         }
     }
 }
