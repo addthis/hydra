@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 
-import jsr166e.ConcurrentHashMapV8;
+import com.addthis.basis.collect.ConcurrentHashMapV8;
 
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.Job;

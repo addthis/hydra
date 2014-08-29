@@ -15,7 +15,7 @@ package com.addthis.hydra.job.spawn;
 
 import java.util.concurrent.ConcurrentMap;
 
-import jsr166e.ConcurrentHashMapV8;
+import com.addthis.basis.collect.ConcurrentHashMapV8;
 
 import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.Job;

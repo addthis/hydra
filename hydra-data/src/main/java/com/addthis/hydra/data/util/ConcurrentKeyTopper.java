@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.addthis.basis.collect.ConcurrentHashMapV8;
 import com.addthis.basis.util.MemoryCounter;
 import com.addthis.basis.util.Varint;
 
@@ -33,7 +34,6 @@ import com.addthis.codec.codables.SuperCodable;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import jsr166e.ConcurrentHashMapV8;
 
 /**
  * Class that helps maintain a top N list for any String Map TODO should move

@@ -24,6 +24,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.addthis.basis.collect.ConcurrentHashMapV8;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.task.output.TaskDataOutput;
@@ -40,8 +41,6 @@ import com.yammer.metrics.core.Timer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import jsr166e.ConcurrentHashMapV8;
 
 public class QueryTracker implements Closeable {
 
