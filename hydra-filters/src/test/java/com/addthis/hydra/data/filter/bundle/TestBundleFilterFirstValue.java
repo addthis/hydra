@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 
-public class TestBundleFilterFirstValue extends TestBundleFilter {
+public class TestBundleFilterFirstValue {
 
     @Test
     public void testBundleFilterFirst() {
@@ -30,7 +30,7 @@ public class TestBundleFilterFirstValue extends TestBundleFilter {
         bff.setIn(new String[]{"a", "b", "c", "d"});
         bff.setOut("out");
 
-        MapBundle b1 = createBundle(new String[]{
+        MapBundle b1 = MapBundle.createBundle(new String[]{
                 "a", "123",
                 "b", "234",
                 "c", "345",
@@ -39,7 +39,7 @@ public class TestBundleFilterFirstValue extends TestBundleFilter {
         assertTrue(bff.filter(b1));
         assertEquals("123", b1.get("out"));
 
-        b1 = createBundle(new String[]{
+        b1 = MapBundle.createBundle(new String[]{
                 "a", "",
                 "b", "234",
                 "c", "345",
@@ -48,7 +48,7 @@ public class TestBundleFilterFirstValue extends TestBundleFilter {
         assertTrue(bff.filter(b1));
         assertEquals("234", b1.get("out"));
 
-        b1 = createBundle(new String[]{
+        b1 = MapBundle.createBundle(new String[]{
                 "a", null,
                 "b", "",
                 "c", "345",
@@ -77,7 +77,7 @@ public class TestBundleFilterFirstValue extends TestBundleFilter {
         bff.setOut("out");
         bff.setWhich("whichField");
 
-        MapBundle b1 = createBundle(new String[]{
+        MapBundle b1 = MapBundle.createBundle(new String[]{
                 "a", "123",
                 "b", "234",
                 "c", "345",
@@ -87,7 +87,7 @@ public class TestBundleFilterFirstValue extends TestBundleFilter {
         assertEquals("123", b1.get("out"));
         assertEquals("a", b1.get("whichField"));
 
-        b1 = createBundle(new String[]{
+        b1 = MapBundle.createBundle(new String[]{
                 "a", "",
                 "b", "234",
                 "c", "345",
@@ -97,7 +97,7 @@ public class TestBundleFilterFirstValue extends TestBundleFilter {
         assertEquals("234", b1.get("out"));
         assertEquals("b", b1.get("whichField"));
 
-        b1 = createBundle(new String[]{
+        b1 = MapBundle.createBundle(new String[]{
                 "a", null,
                 "b", "",
                 "c", "345",

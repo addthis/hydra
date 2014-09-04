@@ -18,12 +18,12 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class TestBundleFilterRandomField extends TestBundleFilter {
+public class TestBundleFilterRandomField {
 
     @Test
     public void fieldTest() {
         BundleFilterRandomField bfrf = new BundleFilterRandomField(new String[]{"f0", "f1"}, "out0");
-        MapBundle bundle = createBundle(new String[]{"f0", "foo", "f1", "bar"});
+        MapBundle bundle = MapBundle.createBundle(new String[]{"f0", "foo", "f1", "bar"});
         bfrf.filter(bundle);
         assertTrue(bundle.get("out0").equals("foo") || bundle.get("out0").equals("bar"));
     }
@@ -31,7 +31,7 @@ public class TestBundleFilterRandomField extends TestBundleFilter {
     @Test
     public void fieldTestNull() {
         BundleFilterRandomField bfrf = new BundleFilterRandomField(new String[]{"f0", "f1"}, "out0");
-        MapBundle bundle = createBundle(new String[]{"f0", null, "f1", "bar"});
+        MapBundle bundle = MapBundle.createBundle(new String[]{"f0", null, "f1", "bar"});
         bfrf.filter(bundle);
         assertEquals("bar", bundle.get("out0"));
     }

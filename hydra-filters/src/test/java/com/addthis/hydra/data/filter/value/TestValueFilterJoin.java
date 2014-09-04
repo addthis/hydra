@@ -53,7 +53,6 @@ public class TestValueFilterJoin {
                 "c", Arrays.asList("c", "d", "e")
         ));
         join.setJoin(";");
-        assertEquals("should correctly join map", "b=[p, q];c=[c, d, e];a=[x, y, z]",
-                     join.filter(map).toString());
+        assertEquals("should correctly join map", "a=[x, y, z];b=[p, q];c=[c, d, e]", join.filter(map).toString());
     }
 }

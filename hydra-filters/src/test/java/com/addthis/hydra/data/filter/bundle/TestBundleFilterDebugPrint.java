@@ -21,21 +21,22 @@ import com.addthis.bundle.value.ValueMap;
 
 import org.junit.Test;
 
+import static com.addthis.hydra.data.filter.bundle.MapBundle.createBundle;
 import static org.junit.Assert.assertEquals;
 
-public class TestBundleFilterDebugPrint extends TestBundleFilter {
+public class TestBundleFilterDebugPrint {
 
     @Test
-    public void debugPrintMapBundleTest() {
+    public void mapBundle() {
         // The map bundle converts everything into a string.
         BundleFilterDebugPrint bf = new BundleFilterDebugPrint().enableCacheOutput();
-        TestBundleFilter.MapBundle bundle = createBundle(new String[]{"hello", "1", "dog", "food", "foo", null});
+        MapBundle bundle = createBundle(new String[]{"hello", "1", "dog", "food", "foo", null});
         bf.filter(bundle);
-        assertEquals("{\"hello\" = \"1\" , \"foo\" = null , \"dog\" = \"food\"}", bf.getCacheOutput());
+        assertEquals("{\"dog\" = \"food\" , \"foo\" = null , \"hello\" = \"1\"}", bf.getCacheOutput());
     }
 
     @Test
-    public void debugPrintKVBundleTest() {
+    public void kvBundle() {
         BundleFilterDebugPrint bf = new BundleFilterDebugPrint().enableCacheOutput();
         KVBundleFormat bundleFormat = new KVBundleFormat();
         KVBundle bundle = new KVBundle(bundleFormat);
@@ -45,11 +46,11 @@ public class TestBundleFilterDebugPrint extends TestBundleFilter {
         bundle.setValue(bundleFormat.getField("dog"), ValueFactory.create("food"));
         bf.filter(bundle);
         assertEquals("{\"hello\" = 1 , \"world\" = 1.0 , \"foo\" = null , \"dog\" = \"food\"}",
-                bf.getCacheOutput());
+                     bf.getCacheOutput());
     }
 
     @Test
-    public void debugPrintKVBundleArrayTest() {
+    public void kvBundleArray() {
         BundleFilterDebugPrint bf = new BundleFilterDebugPrint().enableCacheOutput();
         KVBundleFormat bundleFormat = new KVBundleFormat();
         KVBundle bundle = new KVBundle(bundleFormat);
@@ -64,7 +65,7 @@ public class TestBundleFilterDebugPrint extends TestBundleFilter {
     }
 
     @Test
-    public void debugPrintKVBundleMapTest() {
+    public void kvBundleMap() {
         BundleFilterDebugPrint bf = new BundleFilterDebugPrint().enableCacheOutput();
         KVBundleFormat bundleFormat = new KVBundleFormat();
         KVBundle bundle = new KVBundle(bundleFormat);
@@ -76,8 +77,8 @@ public class TestBundleFilterDebugPrint extends TestBundleFilter {
         bundle.setValue(bundleFormat.getField("map"), map);
 
         bf.filter(bundle);
-        assertEquals("{\"map\" = {\"baz\" : \"baz\" , \"foo\" : 1 , \"bar\" : 1.0 , \"quux\" : null}}",
-                bf.getCacheOutput());
+        assertEquals("{\"map\" = {\"bar\" : 1.0 , \"baz\" : \"baz\" , \"foo\" : 1 , \"quux\" : null}}",
+                     bf.getCacheOutput());
     }
 
 

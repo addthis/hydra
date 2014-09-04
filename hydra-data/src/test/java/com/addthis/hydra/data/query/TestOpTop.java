@@ -28,11 +28,11 @@ public class TestOpTop extends TestOp {
                         tr().td("b", "1", "2", "3").
                         tr().td("c", "1", "2", "3").
                         tr().td("a", "1", "2", "3"),
-                "top=ksssu",
+                "top=ksssu;sort",
                 new DataTableHelper().
+                        tr().td("a", "3", "6", "9", "3").
                         tr().td("b", "2", "4", "6", "2").
-                        tr().td("c", "2", "4", "6", "2").
-                        tr().td("a", "3", "6", "9", "3")
+                        tr().td("c", "2", "4", "6", "2")
         );
         doOpTest(
                 new DataTableHelper().
@@ -43,11 +43,11 @@ public class TestOpTop extends TestOp {
                         tr().td("b", "3", "2", "3").
                         tr().td("c", "1", "2", "5").
                         tr().td("a", "1", "2", "3"),
-                "top=kaaa",
+                "top=kaaa;sort",
                 new DataTableHelper().
+                        tr().td("a", "1", "3", "3").
                         tr().td("b", "4", "5", "3").
-                        tr().td("c", "4", "2", "4").
-                        tr().td("a", "1", "3", "3")
+                        tr().td("c", "4", "2", "4")
         );
         doOpTest(
                 new DataTableHelper().
@@ -58,11 +58,11 @@ public class TestOpTop extends TestOp {
                         tr().td("b", "3").td().td("3").
                         tr().td("c", "1", "2").
                         tr().td("a", "1", "2", "3"),
-                "top=ksss",
+                "top=ksss;sort",
                 new DataTableHelper().
+                        tr().td("a", "3", "9", "6").
                         tr().td("b", "8", "8", "6").
-                        tr().td("c", "1", "4", "4").
-                        tr().td("a", "3", "9", "6")
+                        tr().td("c", "1", "4", "4")
         );
     }
 
@@ -97,10 +97,10 @@ public class TestOpTop extends TestOp {
                         tr().td("c", "3").
                         tr().td("a", "1").
                         tr().td("y", "1"),
-                "top=2,ktsu",
+                "top=2,ktsu;sort",
                 new DataTableHelper().
-                        tr().td("d", "9", "1").
-                        tr().td("c", "6", "2")
+                        tr().td("c", "6", "2").
+                        tr().td("d", "9", "1")
         );
     }
 }

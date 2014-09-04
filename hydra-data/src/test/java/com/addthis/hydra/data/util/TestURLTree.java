@@ -13,15 +13,14 @@
  */
 package com.addthis.hydra.data.util;
 
-import java.util.List;
+import java.util.Set;
+
+import com.google.common.collect.Sets;
 
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-/**
- * Date: 10/30/12
- */
 public class TestURLTree {
 
     @Test
@@ -36,8 +35,12 @@ public class TestURLTree {
         urlTree.addURLPath("www.foo.com/1/2/3/5/", 1);
         urlTree.addURLPath("www.foo.com", 1);
 
-        List<URLTree.TreeObject.TreeValue> branches = urlTree.getBranches("/");
-        assertEquals(3, branches.size());
-        assertEquals("[www.foo.com/1/2/3/5/:2.0, www.foo.com/1/2/3/4:1.0, www.foo.com/1/2/4:1.0]", branches.toString());
+        Set<UrlTreeObject.TreeValue> branches = Sets.newHashSet(urlTree.getBranches("/"));
+        Set<UrlTreeObject.TreeValue> expected = Sets.newHashSet(
+                new UrlTreeObject.TreeValue("www.foo.com/1/2/3/4", 1.0),
+                new UrlTreeObject.TreeValue("www.foo.com/1/2/3/5/", 2.0),
+                new UrlTreeObject.TreeValue("www.foo.com/1/2/4", 1.0)
+        );
+        assertEquals(expected, branches);
     }
 }

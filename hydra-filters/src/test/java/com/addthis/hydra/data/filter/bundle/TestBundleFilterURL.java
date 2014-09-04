@@ -19,12 +19,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class TestBundleFilterURL extends TestBundleFilter {
+public class TestBundleFilterURL {
 
     @Test
     public void testSetHost() {
         BundleFilterURL filterURL = new BundleFilterURL().setField("input").setHost("host");
-        MapBundle bundle = createBundle(new String[]{"input", "http://www.neuron.com", "host", ""});
+        MapBundle bundle = MapBundle.createBundle(new String[]{"input", "http://www.neuron.com", "host", ""});
         assertTrue(filterURL.filter(bundle));
         assertEquals("www.neuron.com", bundle.get("host"));
     }
@@ -32,7 +32,7 @@ public class TestBundleFilterURL extends TestBundleFilter {
     @Test
     public void testBaseDomain() {
         BundleFilterURL filterURL = new BundleFilterURL().setField("input").setHost("host").setBaseDomain(true);
-        MapBundle bundle = createBundle(new String[]{"input", "http://www.neuron.com", "host", ""});
+        MapBundle bundle = MapBundle.createBundle(new String[]{"input", "http://www.neuron.com", "host", ""});
         assertTrue(filterURL.filter(bundle));
         assertEquals("neuron.com", bundle.get("host"));
     }
@@ -40,7 +40,7 @@ public class TestBundleFilterURL extends TestBundleFilter {
     @Test
     public void testFixProto() {
         BundleFilterURL filterURL = new BundleFilterURL().setField("input").setHost("host");
-        MapBundle bundle = createBundle(new String[]{"input", "www.neuron.com", "host", ""});
+        MapBundle bundle = MapBundle.createBundle(new String[]{"input", "www.neuron.com", "host", ""});
         assertFalse(filterURL.filter(bundle));
         filterURL.setFixProto(true);
         assertTrue(filterURL.filter(bundle));
@@ -73,7 +73,7 @@ public class TestBundleFilterURL extends TestBundleFilter {
             BundleFilterURL filterURL = new BundleFilterURL().setField("input").setHostNormal("host");
             String[] input = new String[]{"input", null, "host", ""};
             input[1] = "http://" + testInput[i];
-            MapBundle bundle = createBundle(input);
+            MapBundle bundle = MapBundle.createBundle(input);
             assertTrue(filterURL.filter(bundle));
             assertEquals(expectedOutput[i], bundle.get("host"));
         }
