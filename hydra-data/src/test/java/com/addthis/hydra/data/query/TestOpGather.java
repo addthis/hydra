@@ -28,7 +28,7 @@ public class TestOpGather extends TestOp {
                         tr().td("b", "1", "2", "3").
                         tr().td("c", "1", "2", "3").
                         tr().td("a", "1", "2", "3"),
-                "gather=ksssu",
+                "gather=ksssu;sort",
                 new DataTableHelper().
                         tr().td("a", "3", "6", "9", "3").
                         tr().td("b", "2", "4", "6", "2").
@@ -43,7 +43,7 @@ public class TestOpGather extends TestOp {
                         tr().td("b", "3", "2", "3").
                         tr().td("c", "1", "2", "5").
                         tr().td("a", "1", "2", "3"),
-                "gather=kaaa",
+                "gather=kaaa;sort",
                 new DataTableHelper().
                         tr().td("a", "1", "3", "3").
                         tr().td("b", "4", "5", "3").
@@ -58,7 +58,7 @@ public class TestOpGather extends TestOp {
                         tr().td("b", "3").td().td("3").
                         tr().td("c", "1", "2").
                         tr().td("a", "1", "2", "3"),
-                "gather=ksss",
+                "gather=ksss;sort",
                 new DataTableHelper().
                         tr().td("a", "3", "9", "6").
                         tr().td("b", "8", "8", "6").
@@ -73,7 +73,7 @@ public class TestOpGather extends TestOp {
                         tr().td("b", "1", "2", "3").
                         tr().td("c", "1", "2", "3").
                         tr().td("a", "1", "2", "3"),
-                "gather=kiss",
+                "gather=kiss;sort",
                 new DataTableHelper().
                         tr().td("a", "6", "9").
                         tr().td("b", "4", "6").

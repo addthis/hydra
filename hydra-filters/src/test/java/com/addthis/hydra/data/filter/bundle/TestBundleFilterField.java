@@ -20,12 +20,12 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 
-public class TestBundleFilterField extends TestBundleFilter {
+public class TestBundleFilterField {
 
     @Test
     public void fieldTest() {
         BundleFilterField bff = new BundleFilterField().setFromField("foo").setFilter(new ValueFilterDefault().setValue("bar"));
-        MapBundle bundle = createBundle(new String[]{"dog", "food"});
+        MapBundle bundle = MapBundle.createBundle(new String[]{"dog", "food"});
         bff.filter(bundle);
         assertEquals(bundle.get("dog"), "food");
         assertEquals(bundle.get("foo"), "bar");

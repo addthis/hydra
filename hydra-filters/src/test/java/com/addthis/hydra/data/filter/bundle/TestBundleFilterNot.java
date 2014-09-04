@@ -18,19 +18,19 @@ import org.junit.Test;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class TestBundleFilterNot extends TestBundleFilter {
+public class TestBundleFilterNot {
 
     @Test
     public void fieldTest() {
         BundleFilterNot bff = new BundleFilterNot().setField("foo");
-        MapBundle bundle = createBundle(new String[]{"dog", "food"});
+        MapBundle bundle = MapBundle.createBundle(new String[]{"dog", "food"});
         assertTrue(bff.filter(bundle));
     }
 
     @Test
     public void fieldTest_False() {
         BundleFilterNot bff = new BundleFilterNot().setField("foo");
-        MapBundle bundle = createBundle(new String[]{"dog", "food", "foo", "bar"});
+        MapBundle bundle = MapBundle.createBundle(new String[]{"dog", "food", "foo", "bar"});
         assertFalse(bff.filter(bundle));
     }
 

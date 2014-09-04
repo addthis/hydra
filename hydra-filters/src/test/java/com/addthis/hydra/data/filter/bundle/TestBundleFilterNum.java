@@ -23,7 +23,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class TestBundleFilterNum extends TestBundleFilter {
+public class TestBundleFilterNum {
 
     @Test
     public void testAdd() {

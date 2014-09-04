@@ -65,7 +65,7 @@ public class TestTrendingScore {
         monthly.put("201210", kt6);
 
         // now calculate trending scores
-        List<URLTree.TreeObject.TreeValue> values = trendingScore.getTrends(hourly, monthly, null);
+        List<UrlTreeObject.TreeValue> values = trendingScore.getTrends(hourly, monthly, null);
 
         assertEquals(values.toString(), "[foobar:30.0, urls:12.0, foo:8.0, bar:7.235, more:6.0, some:3.0]");
     }

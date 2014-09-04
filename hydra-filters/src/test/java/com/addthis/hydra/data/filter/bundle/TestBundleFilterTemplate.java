@@ -18,12 +18,13 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 
-public class TestBundleFilterTemplate extends TestBundleFilter {
+public class TestBundleFilterTemplate {
 
     @Test
     public void fieldTest() {
         BundleFilterTemplate bft = BundleFilterTemplate.create(new String[]{"abc", "{{tok1}}", "def", "{{tok2}}", "ghi{{notatoken}}jkl"}, "out");
-        MapBundle bundle = createBundle(new String[]{"abc", "123", "tok1", "1kot", "tok2", "2kot", "notatoken", "fooledya", "out", "killme"});
+        MapBundle bundle = MapBundle.createBundle(
+                new String[]{"abc", "123", "tok1", "1kot", "tok2", "2kot", "notatoken", "fooledya", "out", "killme"});
         bft.filter(bundle);
         assertEquals(bundle.get("out"), "abc1kotdef2kotghi{{notatoken}}jkl");
     }

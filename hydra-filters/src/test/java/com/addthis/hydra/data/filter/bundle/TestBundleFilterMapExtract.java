@@ -24,7 +24,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class TestBundleFilterMapExtract extends TestBundleFilter {
+public class TestBundleFilterMapExtract {
 
     @Test
     public void fieldTest() {

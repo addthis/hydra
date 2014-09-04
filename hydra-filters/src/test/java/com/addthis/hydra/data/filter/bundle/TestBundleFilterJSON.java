@@ -18,12 +18,12 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 
-public class TestBundleFilterJSON extends TestBundleFilter {
+public class TestBundleFilterJSON {
 
     @Test
     public void fieldTest() {
         BundleFilterJSON bfj = BundleFilterJSON.create("json", "set", BundleFilterTemplate.create(new String[]{"[1]"}, "query"));
-        MapBundle bundle = createBundle(new String[]{"json", "[123,456,789]"});
+        MapBundle bundle = MapBundle.createBundle(new String[]{"json", "[123,456,789]"});
         bfj.filter(bundle);
         assertEquals(bundle.get("set"), "456");
     }

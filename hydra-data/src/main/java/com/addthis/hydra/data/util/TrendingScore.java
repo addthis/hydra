@@ -46,8 +46,8 @@ public class TrendingScore implements Codable {
         this.alpha = alpha;
     }
 
-    public List<URLTree.TreeObject.TreeValue> getTrends(TreeMap<String, KeyTopper> hourlyTrends, TreeMap<String, KeyTopper> dailyTrends, TreeMap<String, KeyTopper> monthlyTrends) {
-        List<URLTree.TreeObject.TreeValue> sortedScore = null;
+    public List<UrlTreeObject.TreeValue> getTrends(TreeMap<String, KeyTopper> hourlyTrends, TreeMap<String, KeyTopper> dailyTrends, TreeMap<String, KeyTopper> monthlyTrends) {
+        List<UrlTreeObject.TreeValue> sortedScore = null;
 
         URLTree scores = new URLTree();
 
@@ -138,12 +138,12 @@ public class TrendingScore implements Codable {
         return trendingMap;
     }
 
-    public static List<URLTree.TreeObject.TreeValue> sortByValue(URLTree tree) {
-        List<URLTree.TreeObject.TreeValue> list = new LinkedList<>(tree.getBranches(DEFAULT_URL_SEP));
+    public static List<UrlTreeObject.TreeValue> sortByValue(URLTree tree) {
+        List<UrlTreeObject.TreeValue> list = new LinkedList<>(tree.getBranches(DEFAULT_URL_SEP));
 
-        Collections.sort(list, new Comparator<URLTree.TreeObject.TreeValue>() {
+        Collections.sort(list, new Comparator<UrlTreeObject.TreeValue>() {
             @Override
-            public int compare(URLTree.TreeObject.TreeValue t1, URLTree.TreeObject.TreeValue t2) {
+            public int compare(UrlTreeObject.TreeValue t1, UrlTreeObject.TreeValue t2) {
                 return -t1.getValue().compareTo(t2.getValue());
             }
         });

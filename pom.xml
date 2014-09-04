@@ -47,14 +47,13 @@
   </modules>
 
   <properties>
-    <project.build.targetJdk>1.8</project.build.targetJdk>
     <!-- surefire junit properties -->
     <at.test.excluded.groups>com.addthis.basis.test.SlowTest,com.addthis.hydra.common.test.LocalStackTest</at.test.excluded.groups>
 
     <!-- hydra addthis projects dependency versions -->
     <hydra.dep.bark.version>2.1.3</hydra.dep.bark.version>
     <hydra.dep.basis.version>2.3.0</hydra.dep.basis.version>
-    <hydra.dep.bundle.version>2.2.14-SNAPSHOT</hydra.dep.bundle.version>
+    <hydra.dep.bundle.version>2.3.1-SNAPSHOT</hydra.dep.bundle.version>
     <hydra.dep.codec.version>3.1.0</hydra.dep.codec.version>
     <hydra.dep.meshy.version>2.1.7</hydra.dep.meshy.version>
     <hydra.dep.muxy.version>2.0.13-SNAPSHOT</hydra.dep.muxy.version>
