@@ -22,9 +22,6 @@ import javax.annotation.Nonnull;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.Writer;
 
 import java.net.InetAddress;
 
@@ -44,17 +41,14 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -117,6 +111,7 @@ import com.addthis.hydra.job.mq.StatusTaskPort;
 import com.addthis.hydra.job.mq.StatusTaskReplica;
 import com.addthis.hydra.job.mq.StatusTaskReplicate;
 import com.addthis.hydra.job.mq.StatusTaskRevert;
+import com.addthis.hydra.job.spawn.JobOnFinishStateHandler.JobOnFinishState;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
@@ -126,7 +121,6 @@ import com.addthis.hydra.job.web.old.SpawnHttp;
 import com.addthis.hydra.job.web.old.SpawnManager;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.util.DirectedGraph;
-import com.addthis.hydra.util.EmailUtil;
 import com.addthis.hydra.util.SettableGauge;
 import com.addthis.hydra.util.WebSocketManager;
 import com.addthis.maljson.JSONArray;
@@ -182,27 +176,9 @@ public class Spawn implements Codable {
     private static final int hostStatusRequestInterval = Parameter.intValue("spawn.status.interval", 5_000);
 
     private static final int queueKickInterval     = Parameter.intValue("spawn.queue.kick.interval", 3_000);
-    private static final int backgroundThreads     = Parameter.intValue("spawn.background.threads", 4);
-    private static final int backgroundQueueSize   = Parameter.intValue("spawn.background.queuesize", 1_000);
-    static final int backgroundHttpTimeout = Parameter.intValue("spawn.background.timeout", 300_000);
 
-    private static final int    backgroundEmailMinute      =
-            Parameter.intValue("spawn.background.notification.interval.minutes", 60);
-    private static final String backgroundEmailAddress     =
-            Parameter.value("spawn.background.notification.address");
     public static final  long   inputMaxNumberOfCharacters =
             Parameter.longValue("spawn.input.max.length", 1_000_000);
-    private static final long   MILLISECONDS_PER_MINUTE    = (1_000 * 60);
-
-    private static final AtomicLong emailLastFired = new AtomicLong();
-
-    private static final BlockingQueue<Runnable> backgroundTaskQueue =
-            new LinkedBlockingQueue<>(backgroundQueueSize);
-
-    private static final ExecutorService backgroundService   = MoreExecutors.getExitingExecutorService(
-            new ThreadPoolExecutor(backgroundThreads, backgroundThreads, 0L,
-                                   TimeUnit.MILLISECONDS, backgroundTaskQueue),
-            100, TimeUnit.MILLISECONDS);
 
     private static final String debugOverride = Parameter.value("spawn.debug");
     private static final boolean useStructuredLogger = Parameter.boolValue("spawn.logger.bundle.enable",
@@ -294,12 +270,6 @@ public class Spawn implements Codable {
                     return expandKickQueue.size();
                 }
             });
-    private final Gauge<Integer> backgroundQueueGauge =
-            Metrics.newGauge(Spawn.class, "backgroundExecutorQueue", new Gauge<Integer>() {
-                public Integer value() {
-                    return backgroundTaskQueue.size();
-                }
-            });
     private final HostFailWorker hostFailWorker;
     private final RollingLog     eventLog;
 
@@ -352,6 +322,7 @@ public class Spawn implements Codable {
     private final JobAlertManager jobAlertManager;
     private final JobEntityManager<JobMacro> jobMacroManager;
     private final JobEntityManager<JobCommand> jobCommandManager;
+    private final JobOnFinishStateHandler jobOnFinishStateHandler;
 
     /**
      * default constructor used for testing purposes only
@@ -382,11 +353,13 @@ public class Spawn implements Codable {
             this.jobAlertManager = new JobAlertManagerImpl(this, null);
             this.jobMacroManager = new JobMacroManager(this);
             this.jobCommandManager = new JobCommandManager(this);
+            this.jobOnFinishStateHandler = new JobOnFinishStateHandlerImpl(this);
         } else {
             this.aliasManager = null;
             this.jobAlertManager = null;
             this.jobMacroManager = null;
             this.jobCommandManager = null;
+            this.jobOnFinishStateHandler = null;
         }
         this.hostFailWorker = new HostFailWorker(this, scheduledExecutor);
         this.balancer = new SpawnBalancer(this);
@@ -427,6 +400,7 @@ public class Spawn implements Codable {
         log.info("[init] beginning to load stats from data store");
         jobMacroManager = new JobMacroManager(this);
         jobCommandManager = new JobCommandManager(this);
+        jobOnFinishStateHandler = new JobOnFinishStateHandlerImpl(this);
         loadSpawnQueue();
         this.jobConfigManager = new JobConfigManager(spawnDataStore);
         // fix up null pointers
@@ -2462,68 +2436,6 @@ public class Spawn implements Codable {
         }
     }
 
-    static void emailNotification(String jobId, String state, Exception e) {
-        if (backgroundEmailAddress != null) {
-            long currentTime = System.currentTimeMillis();
-            long lastTime = emailLastFired.get();
-            if (((currentTime - lastTime) / MILLISECONDS_PER_MINUTE) > backgroundEmailMinute) {
-                String subject = "Background operation failed -" + clusterName + "- {" + jobId + "}";
-                Writer stringWriter = new StringWriter();
-                PrintWriter printWriter = new PrintWriter(stringWriter);
-                printWriter.append("The operation for job \"");
-                printWriter.append(jobId);
-                printWriter.append("\" in state ");
-                printWriter.append(state);
-                printWriter.append(" throw an exception ");
-                e.printStackTrace(printWriter);
-                if (e.getCause() != null) {
-                    printWriter.append(" caused by ");
-                    e.getCause().printStackTrace(printWriter);
-                }
-                printWriter.flush();
-                EmailUtil.email(backgroundEmailAddress, subject, stringWriter.toString());
-                emailLastFired.set(currentTime);
-            }
-        }
-    }
-
-    private void doOnState(Job job, String url, int timeout, String state) {
-        if (Strings.isEmpty(url)) {
-            return;
-        }
-        if (url.startsWith("http://")) {
-            try {
-                quietBackgroundPost(job.getId(), state, url, timeout, codec.encode(job));
-            } catch (Exception e) {
-                log.error("", e);
-                emailNotification(job.getId(), state, e);
-            }
-        } else if (url.startsWith("kick://")) {
-            Map<String, List<String>> aliasMap = aliasManager.getAliases();
-            for (String kick : Strings.splitArray(url.substring(7), ",")) {
-                kick = kick.trim();
-                List<String> aliases = aliasMap.get(kick);
-                if (aliases != null) {
-                    for (String alias : aliases) {
-                        safeStartJob(alias.trim());
-                    }
-                } else {
-                    safeStartJob(kick);
-                }
-            }
-        } else {
-            log.warn("invalid onState url: " + url + " for " + job.getId());
-        }
-    }
-
-    private void safeStartJob(String uuid) {
-        try {
-            startJob(uuid, false);
-        } catch (Exception ex) {
-            log.warn("[safe.start] " + uuid + " failed due to " + ex);
-        }
-    }
-
     /**
      * Perform cleanup tasks once per job completion. Triggered when the last running task transitions to an idle state.
      * In particular: perform any onComplete/onError triggers, set the end time, and possibly do a fixdirs.
@@ -2531,45 +2443,36 @@ public class Spawn implements Codable {
      * @param errored Whether the job ended up in error state
      */
     private void finishJob(Job job, boolean errored) {
-        log.info("[job.done] " + job.getId() + " :: errored=" + errored + ". callback=" + job.getOnCompleteURL());
+        String callback = errored ? job.getOnErrorURL() : job.getOnCompleteURL();
+        log.info("[job.done] {} :: errored={}. callback={}", job.getId(), errored, callback);
         jobsCompletedPerHour.mark();
         job.setFinishTime(System.currentTimeMillis());
         spawnFormattedLogger.finishJob(job);
         if (!quiesce) {
             if (job.isEnabled() && !errored) {
-                /* rekick if any task had more work to do */
+                // rekick if any task had more work to do
                 if (job.hadMoreData()) {
-                    log.warn("[job.done] " + job.getId() + " :: rekicking on more data");
+                    log.warn("[job.done] {} :: rekicking on more data", job.getId());
                     try {
                         scheduleJob(job, false);
                     } catch (Exception ex) {
-                        log.warn("", ex);
+                        log.warn("[job.done] {} :: error scheduling job: {}", job.getId(), ex.getMessage(), ex);
                     }
                 } else {
-                    doOnState(job, job.getOnCompleteURL(), job.getOnCompleteTimeout(), "onComplete");
+                    jobOnFinishStateHandler.handle(job, JobOnFinishState.OnComplete);
                     if (ENABLE_JOB_FIXDIRS_ONCOMPLETE && job.getRunCount() > 1) {
                         // Perform a fixDirs on completion, cleaning up missing replicas/orphans.
                         fixTaskDir(job.getId(), -1, false, true);
                     }
                 }
             } else {
-                doOnState(job, job.getOnErrorURL(), job.getOnErrorTimeout(), "onError");
+                jobOnFinishStateHandler.handle(job, JobOnFinishState.OnError);
             }
         }
         Job.logJobEvent(job, JobEvent.FINISH, eventLog);
         balancer.requestJobSizeUpdate(job.getId(), 0);
     }
 
-
-    private static void quietBackgroundPost(String jobId, String state, String url, int timeout, byte[] post) {
-        BackgroundPost task = new BackgroundPost(jobId, state, url, timeout, post);
-        try {
-            backgroundService.submit(task);
-        } catch (RejectedExecutionException ex) {
-            log.error("Unable to submit task \"" + jobId + " " + state + "\" for execution", ex);
-            emailNotification(jobId, state, ex);
-        }
-    }
 
     /**
      * debug output, can be disabled by policy
