@@ -13,44 +13,36 @@
  */
 package com.addthis.hydra.job;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.Set;
 
 import com.addthis.bark.ZkStartUtil;
-import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.job.store.ZookeeperDataStore;
 
+import com.google.common.collect.Sets;
+
+import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class SpawnDataStoreTest extends ZkStartUtil {
 
-    /**
-     * Run the unit tests using a single SpawnDataStore instance
-     */
-    @Test
-    public void runTests() throws Exception {
-        ZookeeperDataStore zookeeperDataStore = new ZookeeperDataStore(zkClient);
-        putGetTest(zookeeperDataStore);
-        childTest(zookeeperDataStore);
+    ZookeeperDataStore spawnDataStore;
+
+    @Before
+    public void createSpawnDataStore() {
+        spawnDataStore = new ZookeeperDataStore(zkClient);
     }
 
-    /**
-     * Test simple put/get operations
-     *
-     * @param spawnDataStore The data store to test
-     * @throws Exception
-     */
-    public void putGetTest(SpawnDataStore spawnDataStore) throws Exception {
+    @Test public void simplePutGet() throws Exception {
         String savePath = "/some/path";
         try {
             spawnDataStore.delete(savePath);
             spawnDataStore.put(savePath, "someval");
             assertEquals("should get inserted value", "someval", spawnDataStore.get(savePath));
             spawnDataStore.delete(savePath);
-            assertEquals("should get null value after deletion", null, spawnDataStore.get(savePath));
+            assertNull("should get null value after deletion", spawnDataStore.get(savePath));
         } finally {
             spawnDataStore.delete(savePath);
         }
@@ -59,10 +51,8 @@ public class SpawnDataStoreTest extends ZkStartUtil {
     /**
      * Write some children to a specified location. Make sure their respective data is held intact, and that the list
      * of children updates correctly after nodes are added or deleted.
-     *
-     * @param spawnDataStore The data store to test
      */
-    public void childTest(SpawnDataStore spawnDataStore) throws Exception {
+    @Test public void crudChildren() throws Exception {
         String savePath = "/other/path";
         try {
             String c1 = "child1";
@@ -71,17 +61,15 @@ public class SpawnDataStoreTest extends ZkStartUtil {
             spawnDataStore.putAsChild(savePath, c1, "data1");
             spawnDataStore.putAsChild(savePath, c1, "data1_updated");
             spawnDataStore.putAsChild(savePath, c2, "data2");
-            List<String> children = spawnDataStore.getChildrenNames(savePath);
-            String[] childrenArray = children.toArray(new String[children.size()]);
-            Arrays.sort(childrenArray);
-            assertArrayEquals("should get correct children", childrenArray, new String[]{c1, c2});
-            assertEquals("should get updated value for c1", spawnDataStore.getChild(savePath, c1), "data1_updated");
+            Set<String> bothChildren = Sets.newHashSet(spawnDataStore.getChildrenNames(savePath));
+            assertEquals("should get correct children", bothChildren, Sets.newHashSet(c1, c2));
+            assertEquals("should get updated value for c1", "data1_updated", spawnDataStore.getChild(savePath, c1));
             spawnDataStore.deleteChild(savePath, c2);
-            children = spawnDataStore.getChildrenNames(savePath);
-            assertArrayEquals("should get new correct children", children.toArray(new String[children.size()]), new String[]{c1});
-            assertEquals("c1 should be intact", spawnDataStore.getChild(savePath, c1), "data1_updated");
+            Set<String> oneChild = Sets.newHashSet(spawnDataStore.getChildrenNames(savePath));
+            assertEquals("should get new correct children", oneChild, Sets.newHashSet(c1));
+            assertEquals("c1 should be intact", "data1_updated", spawnDataStore.getChild(savePath, c1));
             spawnDataStore.delete(savePath);
-            assertEquals("should get no children", null, spawnDataStore.getChildrenNames(savePath));
+            assertNull("should get no children", spawnDataStore.getChildrenNames(savePath));
         } finally {
             spawnDataStore.delete(savePath);
         }
