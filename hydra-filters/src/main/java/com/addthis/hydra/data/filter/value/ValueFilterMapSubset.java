@@ -19,7 +19,8 @@ import com.addthis.bundle.value.ValueMapEntry;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.bundle.value.ValueTranslationException;
-import com.addthis.codec.annotations.FieldConfig;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,91 +57,76 @@ import org.slf4j.LoggerFactory;
  * @hydra-name map-subset
  */
 public class ValueFilterMapSubset extends ValueFilter {
-
-    /**
-     * A set of keys that are preserved by the filter.
-     */
-    @FieldConfig(codable = true)
-    private String[] whitelist;
-
-    /**
-     * A set of keys that are excluded by the filter.
-     */
-    @FieldConfig(codable = true)
-    private String[] blacklist;
-
-    /**
-     * If true, then convert the output to a string. Default is false.
-     */
-    @FieldConfig(codable = true)
-    private boolean toString;
-
-    /**
-     * If toString is true, then use this field as the delimiter between a key and a value.
-     */
-    @FieldConfig(codable = true)
-    private String keySep = "=";
-
-    /**
-     * If toString is true, then use this field as the deliminator between two (key,value) pairs.
-     */
-    @FieldConfig(codable = true)
-    private String valueSep = ",";
-
     private static final Logger log = LoggerFactory.getLogger(ValueFilterMapSubset.class);
+
+    /** Set of keys that are preserved by the filter. */
+    @JsonProperty private String[] whitelist;
+
+    /** Set of keys that are excluded by the filter. */
+    @JsonProperty private String[] blacklist;
+
+    /** If true, then convert the output to a string. Default is false. */
+    @JsonProperty private boolean toString;
+
+    /** If toString is true, then use this field as the delimiter between a key and a value. */
+    @JsonProperty private String keySep = "=";
+
+    /** If toString is true, then use this field as the deliminator between two (key,value) pairs. */
+    @JsonProperty private String valueSep = ",";
+
 
     @Override
     public ValueObject filterValue(ValueObject value) {
-        ValueObject returnObject = null;
+        if (value == null) {
+            return null;
+        }
+        ValueMap<?> map;
+        try {
+            map = value.asMap();
+        } catch (ValueTranslationException vte) {
+            log.warn("Error extracting map from value: {}", value);
+            return null;
+        }
 
-        if (value != null) {
-            ValueObject<?> valueObject = null;
-            ValueMap<?> map = null;
-            ValueMap subsetMap = ValueFactory.createMap();
-
-            try {
-                map = value.asMap();
-            } catch (ValueTranslationException vte) {
-                log.warn("Error extracting map from value: " + value);
+        ValueMap subsetMap;
+        if ((whitelist != null) && (whitelist.length > 0)) {
+            subsetMap = ValueFactory.createMap();
+            for (String key : whitelist) {
+                ValueObject<?> valueObject = map.get(key);
+                if (valueObject != null) {
+                    subsetMap.put(key, valueObject);
+                }
             }
+        } else {
+            subsetMap = map;
+        }
 
-            if (map != null) {
-                if (whitelist != null && whitelist.length > 0) {
-                    for (String key : whitelist) {
-                        if ((valueObject = map.get(key)) != null) {
-                            subsetMap.put(key, valueObject);
-                        }
-                    }
-                } else {
-                    subsetMap = map;
-                }
-
-                if (blacklist != null && blacklist.length > 0) {
-                    for (String key : blacklist) {
-                        subsetMap.remove(key);
-                    }
-                }
-
-                if (toString) {
-                    returnObject = toString(subsetMap);
-                } else {
-                    returnObject = subsetMap;
-                }
+        if ((blacklist != null) && (blacklist.length > 0)) {
+            for (String key : blacklist) {
+                subsetMap.remove(key);
             }
         }
 
-        return returnObject;
+        if (toString) {
+            return toString(subsetMap);
+        } else {
+            return subsetMap;
+        }
     }
 
     private ValueString toString(ValueMap<?> subsetMap) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
 
         for (ValueMapEntry valueMapEntry : subsetMap) {
             if (sb.length() == 0) {
-                sb.append(valueMapEntry.getKey() + keySep + valueMapEntry.getValue().toString());
+                sb.append(valueMapEntry.getKey())
+                  .append(keySep)
+                  .append(valueMapEntry.getValue());
             } else {
-                sb.append(valueSep + valueMapEntry.getKey() + keySep +
-                          valueMapEntry.getValue().toString());
+                sb.append(valueSep)
+                  .append(valueMapEntry.getKey())
+                  .append(keySep)
+                  .append(valueMapEntry.getValue());
             }
         }
 
