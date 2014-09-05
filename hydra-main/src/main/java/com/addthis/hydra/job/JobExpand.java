@@ -260,8 +260,10 @@ public class JobExpand {
 
     /**
      * recursively expand macros
+     * 
+     * @throws IllegalStateException if expanded config exceeds the max length allowed.
      */
-    public static String macroExpand(Spawn spawn, String rawtext) throws TokenReplacerOverflowException {
+    public static String macroExpand(Spawn spawn, String rawtext) throws TokenReplacerOverflowException, IllegalStateException {
         MacroTokenReplacer replacer = new MacroTokenReplacer(spawn);
         List<String> contents = new ArrayList<>();
         List<String> delimiters = new ArrayList<>();

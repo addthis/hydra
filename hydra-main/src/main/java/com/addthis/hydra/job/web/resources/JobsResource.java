@@ -618,8 +618,11 @@ public class JobsResource {
         return Response.ok("{\"id\":\"" + kv.getValue("id") + "\",\"updated\":\"true\"}").build();
     }
 
+    /**
+     * @throws IllegalStateException if expanded config exceeds the max length allowed.
+     */
     public static void setJobParameters(Spawn spawn, IJob job, Map<String, String> setParams)
-            throws TokenReplacerOverflowException {
+            throws TokenReplacerOverflowException, IllegalStateException {
         /** set params from hash and build new param set */
         String expandedConfig = JobExpand.macroExpand(spawn, spawn.getJobConfig(job.getId()));
         Map<String, JobParameter> macroParams = JobExpand.macroFindParameters(expandedConfig);
@@ -719,7 +722,7 @@ public class JobsResource {
         return Response.ok(user.getUsername()).build();
     }
 
-    private void submitJobHelper(String jobId, int taskId) throws Exception {
+    private void startJobHelper(String jobId, int taskId) throws Exception {
         if (taskId < 0) {
             spawn.startJob(jobId, true);
         } else {
@@ -734,7 +737,7 @@ public class JobsResource {
     @GET
     @Path("/start")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response submitJob(@QueryParam("jobid") Optional<String> jobIds,
+    public Response startJob(@QueryParam("jobid") Optional<String> jobIds,
                               @QueryParam("select") @DefaultValue("-1") int select,
                               @QueryParam("id") Optional<String> id,
                               @QueryParam("task") @DefaultValue("-1") int task) {
@@ -742,11 +745,11 @@ public class JobsResource {
             if (jobIds.isPresent()) {
                 String[] joblist = Strings.splitArray(jobIds.get(), ",");
                 for (String aJob : joblist) {
-                    submitJobHelper(aJob, select);
+                    startJobHelper(aJob, select);
                 }
                 return Response.ok("{\"id\":\"" + jobIds.get() + "\",  \"updated\": \"true\"}").build();
             } else if (id.isPresent()) {
-                submitJobHelper(id.get(), task);
+                startJobHelper(id.get(), task);
                 return Response.ok("{\"id\":\"" + id.get() + "\",  \"updated\": \"true\"}").build();
             } else {
                 return Response.status(Response.Status.BAD_REQUEST).entity("job id not specified").build();
