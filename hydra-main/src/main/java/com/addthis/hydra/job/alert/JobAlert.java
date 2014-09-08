@@ -231,7 +231,7 @@ public class JobAlert implements Codable {
         this.canaryConfigThreshold = canaryConfigThreshold;
     }
 
-    public String getCanaryOutputMessage() {
+    @JsonIgnore public String getCanaryOutputMessage() {
         return canaryOutputMessage;
     }
 
