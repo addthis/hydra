@@ -23,6 +23,7 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 
 import com.addthis.codec.jackson.CodecJackson;
+import com.addthis.codec.jackson.Jackson;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.typesafe.config.Config;
@@ -85,11 +86,11 @@ public class TaskRunner {
                                           .withFallback(ConfigFactory.load())
                                           .resolve();
             jobConfig = jobConfig.resolveWith(globalDefaults);
-            codec = CodecJackson.getDefault().withConfig(globalDefaults);
+            codec = Jackson.defaultCodec().withConfig(globalDefaults);
         } else {
             jobConfig = jobConfig.resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true))
                                  .resolveWith(ConfigFactory.load());
-            codec = CodecJackson.getDefault();
+            codec = Jackson.defaultCodec();
         }
         return codec.decodeObject(TaskRunnable.class, jobConfig);
     }
