@@ -241,12 +241,8 @@ public class Page<K, V extends BytesCodable> {
                 case 2:
                     ((GZOut) os).finish();
                     break;
-                case 4:
-                    os.flush();
-                    break;
             }
-            os.flush();
-            os.close();
+            os.flush(); // flush should be called by dos.close(), but better safe than sorry
             dos.close();
 
             ByteBuf buffer = out.buffer();
