@@ -295,9 +295,9 @@ function(
             if(!_.isEmpty(this.commit)){
                 data.commit=this.commit;
             }
-            var url = "/job/submit?spawn=0&manual=1";
+            var url = "/job/save";
             if(!this.isNew()){
-                url+="&id="+this.id;
+                url+="?id="+this.id;
             }
             return $.ajax({
                 url: url,
