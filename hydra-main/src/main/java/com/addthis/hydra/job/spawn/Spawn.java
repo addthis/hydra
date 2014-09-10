@@ -633,7 +633,7 @@ public class Spawn implements Codable {
                 for (String jobId : jobIds) {
                     IJob job = getJob(jobId);
                     if (job != null) {
-                        updateJobDependencies(job);
+                        updateJobDependencies(jobId);
                     }
                 }
             }
@@ -1751,8 +1751,7 @@ public class Spawn implements Codable {
     }
 
 
-    private void updateJobDependencies(IJob job) {
-        String jobId = job.getId();
+    private void updateJobDependencies(String jobId) {
         DirectedGraph<String> dependencies = spawnState.jobDependencies;
         Set<String> sources = dependencies.getSourceEdges(jobId);
         if (sources != null) {
@@ -1800,7 +1799,7 @@ public class Spawn implements Codable {
             jobLock.lock();
             try {
                 require(getJob(job.getId()) != null, "job " + job.getId() + " does not exist");
-                updateJobDependencies(job);
+                updateJobDependencies(job.getId());
                 Job oldjob = putJobInSpawnState(job);
                 // take action on trigger changes (like # replicas)
                 if (oldjob != job && reviseReplicas) {

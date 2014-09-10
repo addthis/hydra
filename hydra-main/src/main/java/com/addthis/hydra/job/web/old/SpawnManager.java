@@ -56,6 +56,8 @@ import com.addthis.hydra.job.spawn.DeleteStatus;
 import com.addthis.hydra.job.spawn.Settings;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.store.DataStoreUtil;
+import com.addthis.hydra.job.web.JobRequestHandler;
+import com.addthis.hydra.job.web.JobRequestHandlerImpl;
 import com.addthis.hydra.job.web.old.SpawnHttp.HTTPLink;
 import com.addthis.hydra.job.web.old.SpawnHttp.HTTPService;
 import com.addthis.maljson.JSONArray;
@@ -82,6 +84,7 @@ public class SpawnManager {
         final AliasManager aliasManager = spawn.getAliasManager();
         final JobEntityManager<JobMacro> jobMacroManager = spawn.getJobMacroManager();
         final JobEntityManager<JobCommand> jobCommandManager = spawn.getJobCommandManager();
+        final JobRequestHandler jobRequestHandler = new JobRequestHandlerImpl(spawn);
         /** url called via ajax to listen for change events */
         server.mapService("/listen", new HTTPService() {
             @Override
@@ -716,34 +719,14 @@ public class SpawnManager {
         server.mapService("/job.submit", new HTTPService() {
             @Override
             public void httpService(HTTPLink link) {
+                KVPairs kv = link.getRequestValues();
+                log.debug("job.submit --> {}", kv.toString());
                 try {
-                    KVPairs kv = link.getRequestValues();
-                    log.debug("job.submit --> {}", kv.toString());
                     if (kv.count() > 0) {
-                        boolean schedule = kv.getValue("spawn", "0").equals("1");
-                        boolean manual = kv.getValue("manual", "0").equals("1");
-                        String id = kv.getValue("id", "");
-                        emitLogLineForAction(kv, "submit job " + id);
-                        if (Strings.isEmpty(id) && !schedule) {
-                            IJob job = spawn.createJob(
-                                    kv.getValue("owner", "anonymous"),
-                                    kv.getIntValue("nodes", -1),
-                                    Arrays.asList(Strings.splitArray(kv.getValue("hosts", ""), ",")),
-                                    kv.getValue("minionType", Minion.defaultMinionType),
-                                    kv.getValue("command"));
-                            kv.addValue("id", job.getId());
-                            id = job.getId();
-                        }
-                        updateJobFromCall(link, spawn);
-                        spawn.submitConfigUpdate(id, kv.getValue("commit"));
-                        if (id != null && schedule) {
-                            int select = kv.getIntValue("select", -1);
-                            if (select >= 0) {
-                                spawn.startTask(id, select, true, manual, false);
-                            } else {
-                                spawn.startJob(id, manual);
-                            }
-                        }
+                        String username = kv.getValue("user", "anonymous");
+                        Job job = jobRequestHandler.createOrUpdateJob(kv, username);
+                        // optionally kicks the job/task
+                        jobRequestHandler.maybeKickJobOrTask(kv, job);
                     }
                     link.sendJSON(200, "OK", json("updated",true));
                 } catch (Exception ex) {

@@ -62,117 +62,117 @@ public final class Job implements IJob, Codable {
     };
 
     /* what is the state of this job */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int state;
     /* how many tasks are active */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int countActiveTasks;
     /* who created this job */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String creator;
     /* who last modified this job */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String owner;
     /* purely ornamental description of this job */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String description;
     /* key used for storing / retrieving this job */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String id;
     /* higher means more important */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int priority;
     /* will stomp lower pri jobs to create capacity */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private boolean stomp;
     /* Unix epoch offset of time job was created */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private Long createTime;
     /* Unix epoch offset of time job was last submitted */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private Long submitTime;
     /* Unix epoch offset of time first job node was assigned */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private Long startTime;
     /* Unix epoch offset of time last job node completed */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private Long endTime;
     /* hours between re-kicking */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private Long rekickTimeout;
     /* minutes max time to allocate to job before it's interrupted */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private Long maxRunTime;
     /* list of nodes and their state */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private ArrayList<JobTask> nodes;
     /* JSON configuration url -- only read at submit time if conf empty */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String config;
     /* alerts on the job */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private List<JobAlert> alerts;
     /* URL for spawn to call on job complete. for automating workflows */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String onComplete;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String onError;
     /* timeout in seconds */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int onCompleteTimeout;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int onErrorTimeout;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int runCount;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private long runTime;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String command;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String killSignal;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private boolean disabled;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private ArrayList<JobParameter> parameters;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int backups; //Leaving in for cutover
-    @FieldConfig(codable = true)
-    private Integer hourlyBackups;
-    @FieldConfig(codable = true)
-    private Integer dailyBackups;
-    @FieldConfig(codable = true)
-    private Integer weeklyBackups;
-    @FieldConfig(codable = true)
-    private Integer monthlyBackups;
-    @FieldConfig(codable = true)
+    @FieldConfig
+    private int hourlyBackups;
+    @FieldConfig
+    private int dailyBackups;
+    @FieldConfig
+    private int weeklyBackups;
+    @FieldConfig
+    private int monthlyBackups;
+    @FieldConfig
     private int replicas;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int readOnlyReplicas;
     // Unused
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int replicationFactor;
     /* restrict replicas to hosts in current job/task space */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private boolean strictReplicas;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private boolean dontAutoBalanceMe;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private boolean dontDeleteMe;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private HashMap<String, String> properties;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private boolean hadMoreData;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private boolean wasStopped;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int maxSimulRunning;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String minionType;
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int retries;
 
     // Query Config, eventually the job class needs to be teased apart.
-    @FieldConfig(codable = true)
+    @FieldConfig
     private JobQueryConfig queryConfig;
 
     private JobCommand submitCommand;

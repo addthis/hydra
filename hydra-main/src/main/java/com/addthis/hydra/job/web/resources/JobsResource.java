@@ -27,11 +27,6 @@ import javax.ws.rs.core.Response;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
@@ -48,18 +43,16 @@ import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
-import com.addthis.hydra.job.JobQueryConfig;
 import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskReplica;
-import com.addthis.hydra.job.minion.Minion;
 import com.addthis.hydra.job.RebalanceOutcome;
-import com.addthis.hydra.job.spawn.DeleteStatus;
-import com.addthis.hydra.job.spawn.Spawn;
-import com.addthis.hydra.job.web.old.SpawnHttp;
-import com.addthis.hydra.job.alert.JobAlert;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 import com.addthis.hydra.job.mq.HostState;
+import com.addthis.hydra.job.spawn.DeleteStatus;
+import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.job.web.JobRequestHandler;
+import com.addthis.hydra.job.web.KVUtils;
 import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.hydra.task.run.TaskRunnable;
 import com.addthis.hydra.task.run.TaskRunner;
@@ -74,7 +67,6 @@ import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
@@ -92,14 +84,17 @@ import org.slf4j.LoggerFactory;
 public class JobsResource {
     private static final Logger log = LoggerFactory.getLogger(JobsResource.class);
 
+    @SuppressWarnings("unused")
     private static final Pattern COMMENTS_REGEX = Pattern.compile("(?m)^\\s*//\\s*host(?:s)?\\s*:\\s*(.*?)$");
     private static final String DEFAULT_USER = "UNKNOWN_USER";
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final Spawn spawn;
+    private final JobRequestHandler requestHandler;
 
-    public JobsResource(Spawn spawn) {
+    public JobsResource(Spawn spawn, JobRequestHandler requestHandler) {
         this.spawn = spawn;
+        this.requestHandler = requestHandler;
     }
 
     @GET
@@ -513,128 +508,56 @@ public class JobsResource {
     @Path("/save")
     @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_FORM_URLENCODED, MediaType.WILDCARD})
     @Produces(MediaType.APPLICATION_JSON)
-    public Response saveJob(@QueryParam("pairs") KVPairs kv, @Auth User user) throws Exception {
-        IJob job;
-        if (!kv.hasKey("id") || Strings.isEmpty(kv.getValue("id"))) {
-            job = spawn.createJob(
-                    kv.getValue("owner", user.getUsername()),
-                    kv.getIntValue("nodes", -1),
-                    Arrays.asList(Strings.splitArray(kv.getValue("hosts", ""), ",")),
-                    kv.getValue("minionType", Minion.defaultMinionType),
-                    kv.getValue("command"));
-            kv.addValue("id", job.getId());
-        } else {
-            job = spawn.getJob(kv.getValue("id"));
-        }
-//      kv.addValue("request.host", request.get);
-        job.setCommand(kv.getValue("command", job.getCommand()));
-        /** update other top-level basic meta-data */
-
-        job.setOwner(kv.getValue("owner", job.getOwner()));
-
-        job.setPriority(kv.getIntValue("priority", job.getPriority()));
-
-        job.setDescription(kv.getValue("description", job.getDescription()));
-        job.setOnCompleteURL(kv.getValue("onComplete", job.getOnCompleteURL()));
-        job.setOnErrorURL(kv.getValue("onError", job.getOnErrorURL()));
-        job.setOnCompleteTimeout(kv.getIntValue("onCompleteTimeout", job.getOnCompleteTimeout()));
-        job.setOnErrorTimeout(kv.getIntValue("onErrorTimeout", job.getOnErrorTimeout()));
-
-        spawn.setJobConfig(job.getId(), kv.getValue("config", spawn.getJobConfig(job.getId())));
-
-        job.setMaxRunTime(SpawnHttp.HTTPService.getValidLong(kv, "maxrun", job.getMaxRunTime()));
-        job.setRekickTimeout(SpawnHttp.HTTPService.getValidLong(kv, "rekick", job.getRekickTimeout()));
-
-        job.setEnabled(kv.getIntValue("enable", job.isEnabled() ? 1 : 0) == 1);
-        job.setKillSignal(kv.getValue("logkill", job.getKillSignal()));
-        job.setBackups(kv.getIntValue("backups", job.getBackups()));
-        job.setDailyBackups(kv.getIntValue("dailyBackups", job.getDailyBackups()));
-        job.setHourlyBackups(kv.getIntValue("hourlyBackups", job.getHourlyBackups()));
-        job.setWeeklyBackups(kv.getIntValue("weeklyBackups", job.getWeeklyBackups()));
-        job.setMonthlyBackups(kv.getIntValue("monthlyBackups", job.getMonthlyBackups()));
-        job.setReplicas(kv.getIntValue("replicas", job.getReplicas()));
-
-        job.setReadOnlyReplicas(kv.getIntValue("readOnlyReplicas", job.getReadOnlyReplicas()));
-        job.setReplicationFactor(kv.getIntValue("replicationFactor", job.getReplicationFactor()));
-        job.setStomp(kv.getIntValue("stomp", job.getStomp() ? 1 : 0) == 1);
-        job.setDontDeleteMe(kv.getIntValue("dontDeleteMe", job.getDontDeleteMe() ? 1 : 0) > 0);
-        job.setDontAutoBalanceMe(kv.getIntValue("dontAutoBalanceMe", job.getDontAutoBalanceMe() ? 1 : 0) > 0);
-        job.setMaxSimulRunning(kv.getIntValue("maxSimulRunning", job.getMaxSimulRunning()));
-        job.setMinionType(kv.getValue("minionType", job.getMinionType()));
-        job.setRetries(kv.getIntValue("retries", job.getRetries()));
-
-        // queryConfig paramters
-        JobQueryConfig jqc;
-        if (job.getQueryConfig() != null) {
-            jqc = job.getQueryConfig().clone();
-        } else {
-            jqc = new JobQueryConfig();
-        }
-
-        if (kv.hasKey("qc_canQuery")) {
-            jqc.setCanQuery(kv.getValue("qc_canQuery", "true").equals("true"));
-        }
-        if (kv.hasKey("qc_queryTraceLevel")) {
-            jqc.setQueryTraceLevel(kv.getIntValue("qc_queryTraceLevel", 0));
-        }
-        if (kv.hasKey("qc_consecutiveFailureThreshold")) {
-            jqc.setConsecutiveFailureThreshold(kv.getIntValue("qc_consecutiveFailureThreshold", 100));
-        }
-        job.setQueryConfig(jqc);
-
-        /**
-         * collect / merge parameters
-         */
-        Map<String, String> setParams = new LinkedHashMap<>();
-        /** copy values existing in job parameters */
-        if (job.getParameters() != null) {
-            // remove specified parameters
-            for (Iterator<JobParameter> jp = job.getParameters().iterator(); jp.hasNext(); ) {
-                JobParameter param = jp.next();
-                if (kv.hasKey("rp_" + param.getName())) {
-                    jp.remove();
-                }
-            }
-            // pull in previous values
-            for (JobParameter param : job.getParameters()) {
-                setParams.put(param.getName(), param.getValue());
-            }
-        }
-        /** set specified parameters */
-        for (KVPair kvp : kv) {
-            if (kvp.getKey().startsWith("sp_")) {
-                setParams.put(kvp.getKey().substring(3), kvp.getValue());
-            }
-        }
+    public Response saveJob(@QueryParam("pairs") KVPairs kv, @Auth User user) {
+        String id = KVUtils.getValue(kv, "", "id", "job");
+        String username = user.getUsername();
         try {
-            /** set params from hash and build new param set */
-            setJobParameters(spawn, job, setParams);
-            /** update job */
-            spawn.updateJob(job);
-            spawn.submitConfigUpdate(kv.getValue("id"), kv.getValue("commit"));
-        } catch (Exception ex) {
-            return buildServerError(ex);
+            Job job = requestHandler.createOrUpdateJob(kv, username);
+            log.info("[job/save][user={}][id={}] Job {}", username, job.getId(), jobUpdateAction(id));
+            return Response.ok("{\"id\":\"" + job.getId() + "\",\"updated\":\"true\"}").build();
+        } catch (IllegalArgumentException e) {
+            log.warn("[job/save][user={}][id={}] Bad parameter: {}", username, id, e.getMessage(), e);
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error("[job/save][user={}][id={}] Internal error: {}", username, id, e.getMessage(), e);
+            return buildServerError(e);
         }
-        return Response.ok("{\"id\":\"" + kv.getValue("id") + "\",\"updated\":\"true\"}").build();
+    }
+    
+    private String jobUpdateAction(String id) {
+        return Strings.isEmpty(id) ? "created" : "updated";
     }
 
     /**
-     * @throws IllegalStateException if expanded config exceeds the max length allowed.
+     * Creates or updates a job, and optionally kicks it or its tasks. (THIS IS A LEGACY METHOD!)
+     * 
+     * The functionality of this end point is a legacy from spawn v1's job.submit end point (where
+     * one specifies spawn=1 to kick a job). Spawn v2 uses the /job/save end point to create or
+     * update a job, and /job/start to kick a job to separate the logic. We keep this end point to
+     * avoid breaking anything, but consider this end point deprecated.
      */
-    public static void setJobParameters(Spawn spawn, IJob job, Map<String, String> setParams)
-            throws TokenReplacerOverflowException, IllegalStateException {
-        /** set params from hash and build new param set */
-        String expandedConfig = JobExpand.macroExpand(spawn, spawn.getJobConfig(job.getId()));
-        Map<String, JobParameter> macroParams = JobExpand.macroFindParameters(expandedConfig);
-        List<JobParameter> newparams = new ArrayList<>(macroParams.size());
-        for (JobParameter param : macroParams.values()) {
-            String name = param.getName();
-            String value = setParams.get(name);
-            param.setValue(value);
-            newparams.add(param);
+    @POST
+    @Path("/submit")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response submitJob(@QueryParam("pairs") KVPairs kv, @Auth User user) {
+        String id = KVUtils.getValue(kv, "", "id", "job");
+        String username = user.getUsername();
+        log.warn("[job/submit][user={}][id={}] This end point is deprecated", username, id);
+        try {
+            Job job = requestHandler.createOrUpdateJob(kv, username);
+            // optionally kicks the job/task
+            requestHandler.maybeKickJobOrTask(kv, job);
+            log.info("[job/submit][user={}][id={}] Job {}", username, job.getId(), jobUpdateAction(id));
+            return Response.ok("{\"id\":\"" + job.getId() + "\",\"updated\":\"true\"}").build();
+        } catch (IllegalArgumentException e) {
+            log.warn("[job/submit][user={}][id={}] Bad parameter: {}", username, id, e.getMessage(), e);
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error("[job/submit][user={}][id={}] Internal error: {}", username, id, e.getMessage(), e);
+            return buildServerError(e);
         }
-        job.setParameters(newparams);
     }
+
 
     @GET
     @Path("/revert")
@@ -839,161 +762,7 @@ public class JobsResource {
         return rb.build();
     }
 
-    @POST
-    @Path("/submit")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response submitJob(@QueryParam("pairs") KVPairs kv, @Auth User user) {
-        try {
-            log.debug("job.submit --> {}", kv);
-            if (kv.count() > 0) {
-                boolean schedule = kv.getValue("spawn", "0").equals("1");
-                boolean manual = kv.getValue("manual", "0").equals("1");
-                String id = kv.getValue("id", "");
-                String config = kv.getValue("config");
-                if ((config != null) && (config.length() > Spawn.inputMaxNumberOfCharacters)) {
-                    throw new IllegalArgumentException("Job config length of " + config.length()
-                                                       + " characters is greater than max length of "
-                                                       + Spawn.inputMaxNumberOfCharacters);
-                }
-//              emitLogLineForAction(kv, "submit job " + id);
-                if (Strings.isEmpty(id) && !schedule) {
-                    String[] hosts = Strings.splitArray(kv.getValue("hosts", ""), ",");
-                    IJob job = spawn.createJob(
-                            kv.getValue("owner", user.getUsername()),
-                            kv.getIntValue("nodes", -1),
-                            Arrays.asList(hosts),
-                            kv.getValue("minionType", Minion.defaultMinionType),
-                            kv.getValue("command"));
-                    kv.addValue("id", job.getId());
-                }
-                updateJobFromCall(kv);
-                if (id != null && schedule) {
-                    int select = kv.getIntValue("select", -1);
-                    if (select >= 0) {
-                        spawn.startTask(id, select, true, manual, false);
-                    } else {
-                        spawn.startJob(id, manual);
-                    }
-                }
-                return Response.ok("{\"id\":\"" + kv.getValue("id") + "\",  \"submitted\": \"true\"}").build();
-            }
-            return Response.status(Response.Status.BAD_REQUEST).entity("no job fields received").build();
-        } catch (Exception ex) {
-            return buildServerError(ex);
-        }
-    }
-
-    private void updateJobFromCall(KVPairs kv) throws Exception {
-        log.debug("[job.update] {}", kv);
-        String id = kv.getValue("id", kv.getValue("job"));
-        SpawnHttp.HTTPService.require(id != null, "missing job id");
-        IJob job = spawn.getJob(id);
-        SpawnHttp.HTTPService.require(job != null, "invalid job id");
-        /** basic command validation */
-        String commandName = kv.getValue("command", job.getCommand());
-        SpawnHttp.HTTPService.require(commandName != null, "missing command key");
-        SpawnHttp.HTTPService.require(spawn.getJobCommandManager().getEntity(commandName) != null, "invalid command key");
-        job.setCommand(commandName);
-        /** update other top-level basic meta-data */
-        job.setOwner(kv.getValue("owner", job.getOwner()));
-        job.setPriority(kv.getIntValue("priority", job.getPriority()));
-        job.setDescription(kv.getValue("description", job.getDescription()));
-        job.setOnCompleteURL(kv.getValue("onComplete", job.getOnCompleteURL()));
-        job.setOnErrorURL(kv.getValue("onError", job.getOnErrorURL()));
-        job.setOnCompleteTimeout(kv.getIntValue("onCompleteTimeout", job.getOnCompleteTimeout()));
-        job.setOnErrorTimeout(kv.getIntValue("onErrorTimeout", job.getOnErrorTimeout()));
-
-        spawn.setJobConfig(id, kv.getValue("config"));
-        job.setEnabled(kv.getIntValue("enable", job.isEnabled() ? 1 : 0) == 1);
-        job.setKillSignal(kv.getValue("logkill", job.getKillSignal()));
-        job.setBackups(kv.getIntValue("backups", job.getBackups()));
-        job.setDailyBackups(kv.getIntValue("dailyBackups", job.getDailyBackups()));
-        job.setHourlyBackups(kv.getIntValue("hourlyBackups", job.getHourlyBackups()));
-        job.setWeeklyBackups(kv.getIntValue("weeklyBackups", job.getWeeklyBackups()));
-        job.setMonthlyBackups(kv.getIntValue("monthlyBackups", job.getMonthlyBackups()));
-        job.setReplicas(kv.getIntValue("replicas", job.getReplicas()));
-        job.setReadOnlyReplicas(kv.getIntValue("readOnlyReplicas", job.getReadOnlyReplicas()));
-        job.setReplicationFactor(kv.getIntValue("replicationFactor", job.getReplicationFactor()));
-        job.setMaxSimulRunning(kv.getIntValue("maxSimulRunning", job.getMaxSimulRunning()));
-        job.setMinionType(kv.getValue("minionType", job.getMinionType()));
-        job.setStomp(kv.getIntValue("stomp", job.getStomp() ? 1 : 0) == 1);
-        job.setRetries(kv.getIntValue("retries", job.getRetries()));
-        //for deprecation purposes
-        boolean dontDelete =
-                kv.getValue("dontDeleteMe", "false").equals("true") || kv.getValue("dontDeleteMe", "0").equals("1");
-        job.setDontDeleteMe(dontDelete);
-        boolean dontAutoBalance = kv.getValue("dontAutoBalanceMe", "false").equals("true") ||
-                                  kv.getValue("dontAutoBalanceMe", "0").equals("1");
-        job.setDontAutoBalanceMe(dontAutoBalance);
-        if (kv.hasKey("maxRunTime")) {
-            job.setMaxRunTime(SpawnHttp.HTTPService.getValidLong(kv, "maxRunTime", job.getMaxRunTime()));
-        } else {
-            job.setMaxRunTime(SpawnHttp.HTTPService.getValidLong(kv, "maxrun", job.getMaxRunTime()));
-        }
-        if (kv.hasKey("rekickTimeout")) {
-            job.setRekickTimeout(SpawnHttp.HTTPService.getValidLong(kv, "rekickTimeout", job.getRekickTimeout()));
-        } else {
-            job.setRekickTimeout(SpawnHttp.HTTPService.getValidLong(kv, "rekick", job.getRekickTimeout()));
-        }
-        if (kv.hasKey("alerts")) {
-            String alertJson = kv.getValue("alerts");
-            List<JobAlert> alerts = MAPPER.readValue(alertJson, TypeFactory.defaultInstance()
-                                                                           .constructParametricType(List.class,
-                                                                                                    JobAlert.class));
-            job.setAlerts(alerts);
-        }
-
-        // queryConfig paramters
-        JobQueryConfig jqc;
-        if (job.getQueryConfig() != null) {
-            jqc = job.getQueryConfig().clone();
-        } else {
-            jqc = new JobQueryConfig();
-        }
-
-        if (kv.hasKey("qc_canQuery")) {
-            jqc.setCanQuery(kv.getValue("qc_canQuery", "true").equals("true"));
-        }
-        if (kv.hasKey("qc_queryTraceLevel")) {
-            jqc.setQueryTraceLevel(kv.getIntValue("qc_queryTraceLevel", 0));
-        }
-        if (kv.hasKey("qc_consecutiveFailureThreshold")) {
-            jqc.setConsecutiveFailureThreshold(kv.getIntValue("qc_consecutiveFailureThreshold", 100));
-        }
-        job.setQueryConfig(jqc);
-
-        /**
-         * collect / merge parameters
-         */
-        Map<String, String> setParams = new LinkedHashMap<>();
-        /** copy values existing in job parameters */
-        if (job.getParameters() != null) {
-            // remove specified parameters
-            for (Iterator<JobParameter> jp = job.getParameters().iterator(); jp.hasNext(); ) {
-                JobParameter param = jp.next();
-                if (kv.hasKey("rp_" + param.getName())) {
-                    jp.remove();
-                }
-            }
-            // pull in previous values
-            for (JobParameter param : job.getParameters()) {
-                setParams.put(param.getName(), param.getValue());
-            }
-        }
-        /** set specified parameters */
-        for (KVPair kvp : kv) {
-            if (kvp.getKey().startsWith("sp_")) {
-                setParams.put(kvp.getKey().substring(3), kvp.getValue());
-            }
-        }
-        /** set params from hash and build new param set */
-        setJobParameters(spawn, job, setParams);
-
-        /** update job */
-        spawn.updateJob(job);
-        spawn.submitConfigUpdate(id, kv.getValue("commit"));
-    }
-
+    
     private static Response validateCreateError(String message, JSONArray lines,
                                                 JSONArray columns, String errorType) throws JSONException {
         JSONObject error = new JSONObject();
