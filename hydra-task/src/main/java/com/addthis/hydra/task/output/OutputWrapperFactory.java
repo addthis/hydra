@@ -178,7 +178,7 @@ public class OutputWrapperFactory {
         return wrappedStream;
     }
 
-    public void setDir(String dir) {
+    protected void setDir(String dir) {
         this.dir = dir;
     }
 
@@ -199,10 +199,6 @@ public class OutputWrapperFactory {
             }
         }
         return modifiedFileName;
-    }
-
-    public String getDir() {
-        return dir;
     }
 
     private String getFileName(String target, PartitionData partitionData, OutputStreamFlags outputFlags, int fileVersion) {
