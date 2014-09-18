@@ -184,8 +184,10 @@ public class OutputWrapperFactory {
 
     private String getModifiedTarget(String target, OutputStreamFlags outputFlags) {
         PartitionData partitionData = getPartitionData(target);
-        String modifiedFileName = target;
-        for (int i = 0; i < 10000; i++) {
+        String modifiedFileName;
+        int i = 0;
+        while (true) {
+            i++;
             modifiedFileName = getFileName(target, partitionData, outputFlags, i);
             File test = new File(dir, modifiedFileName);
             File testTmp = getTempFileName(modifiedFileName);
