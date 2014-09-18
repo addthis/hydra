@@ -187,8 +187,7 @@ public class OutputWrapperFactory {
         String modifiedFileName;
         int i = 0;
         while (true) {
-            i++;
-            modifiedFileName = getFileName(target, partitionData, outputFlags, i);
+            modifiedFileName = getFileName(target, partitionData, outputFlags, i++);
             File test = new File(dir, modifiedFileName);
             File testTmp = getTempFileName(modifiedFileName);
             if (outputFlags.getMaxFileSize() > 0 && (test.length() >= outputFlags.getMaxFileSize() || testTmp.length() >= outputFlags.getMaxFileSize())) {
