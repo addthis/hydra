@@ -258,7 +258,7 @@ public class OutputWrapperFactory {
                 return false;
             } catch (Exception e) {
                 log.warn("Error testing to see if multiplexed file: " + dir + "/" + fileName + " exists", e);
-                }
+            }
         } else {
             exists = file.exists();
         }
