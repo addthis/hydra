@@ -46,17 +46,8 @@ public class Settings {
         return spawn.queryHost;
     }
 
-    public String getSpawnHost() {
-        return spawn.spawnHost;
-    }
-
     public void setQueryHost(String queryHost) {
         spawn.queryHost = queryHost;
-        spawn.writeState();
-    }
-
-    public void setSpawnHost(String spawnHost) {
-        spawn.spawnHost = spawnHost;
         spawn.writeState();
     }
 
@@ -88,7 +79,7 @@ public class Settings {
 
     public JSONObject toJSON() throws JSONException {
         return new JSONObject().put("debug", spawn.debug).put("quiesce", spawn.quiesce)
-                               .put("queryHost", spawn.queryHost).put("spawnHost", spawn.spawnHost)
+                               .put("queryHost", spawn.queryHost)
                                .put("disabled", getDisabled())
                                .put("defaultReplicaCount", Spawn.DEFAULT_REPLICA_COUNT);
     }

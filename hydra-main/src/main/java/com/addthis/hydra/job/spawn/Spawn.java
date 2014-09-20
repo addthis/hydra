@@ -13,11 +13,6 @@
  */
 package com.addthis.hydra.job.spawn;
 
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_UP_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
-
 import javax.annotation.Nonnull;
 
 import java.io.File;
@@ -36,7 +31,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -116,13 +110,8 @@ import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.job.store.SpawnDataStoreKeys;
-import com.addthis.hydra.job.web.SpawnService;
-import com.addthis.hydra.job.web.old.SpawnHttp;
-import com.addthis.hydra.job.web.old.SpawnManager;
 import com.addthis.hydra.task.run.TaskExitState;
-import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.hydra.util.SettableGauge;
-import com.addthis.hydra.util.WebSocketManager;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
@@ -145,9 +134,13 @@ import com.yammer.metrics.core.Meter;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
 
-import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_UP_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
 
 /**
  * manages minions running on remote notes. runs master http server to
@@ -160,11 +153,8 @@ public class Spawn implements Codable {
     private static final Logger log = LoggerFactory.getLogger(Spawn.class);
 
     private static final boolean meshQueue     = Parameter.boolValue("queue.mesh", false);
-    private static final boolean enableSpawn2  = Parameter.boolValue("spawn.v2.enable", true);
-    private static final String  httpHost      = Parameter.value("spawn.localhost");
     private static final String  clusterName   = Parameter.value("cluster.name", "localhost");
     private static final String  queryHttpHost = Parameter.value("spawn.queryhost");
-    private static final int     webPort       = Parameter.intValue("spawn.http.port", 5050);
 
     static final int DEFAULT_REPLICA_COUNT = Parameter.intValue("spawn.defaultReplicaCount", 1);
     static final int TASK_QUEUE_DRAIN_INTERVAL = Parameter.intValue("task.queue.drain.interval", 500);
@@ -172,7 +162,6 @@ public class Spawn implements Codable {
     static final boolean ENABLE_JOB_FIXDIRS_ONCOMPLETE = Parameter.boolValue("job.fixdirs.oncomplete", true);
     static final String stateFilePath = Parameter.value("spawn.state.file", "spawn.state");
 
-    private static final int requestHeaderBufferSize   = Parameter.intValue("spawn.http.bufsize", 8192);
     private static final int hostStatusRequestInterval = Parameter.intValue("spawn.status.interval", 5_000);
 
     private static final int queueKickInterval     = Parameter.intValue("spawn.queue.kick.interval", 3_000);
@@ -237,17 +226,11 @@ public class Spawn implements Codable {
     public static final String SPAWN_STRUCTURED_LOG_DIR =
             Parameter.value("spawn.logger.bundle.dir", "./log/spawn-stats");
 
-    private static final int clientDropTimeMillis =
-            Parameter.intValue("spawn.client.drop.time", 60_000);
-    private static final int clientDropQueueSize  =
-            Parameter.intValue("spawn.client.drop.queue", 2000);
-
     public static void main(String[] args) throws Exception {
         Spawn spawn = new Spawn(
                 new File(args.length > 0 ? args[0] : "etc"),
                 new File(args.length > 1 ? args[1] : "web")
         );
-        if (enableSpawn2) new SpawnService(spawn).start();
     }
 
     // thread pool for expanding jobs and sending kick messages (outside of the main application
@@ -274,7 +257,6 @@ public class Spawn implements Codable {
     private final RollingLog     eventLog;
 
     private final File                                           dataDir;
-    private final ConcurrentHashMap<String, ClientEventListener> listeners;
 
     @FieldConfig(codable = true)
     private String uuid;
@@ -282,8 +264,6 @@ public class Spawn implements Codable {
     String debug;
     @FieldConfig(codable = true)
     String queryHost;
-    @FieldConfig(codable = true)
-    String spawnHost;
     @FieldConfig(codable = true)
     private int queryPort = 2222;
     @FieldConfig(codable = true)
@@ -298,7 +278,6 @@ public class Spawn implements Codable {
 
     private CuratorFramework      zkClient;
     private SpawnMQ               spawnMQ;
-    private Server                jetty;
     private JobConfigManager jobConfigManager;
     SetMembershipListener minionMembers;
     private SetMembershipListener deadMinionMembers;
@@ -315,8 +294,6 @@ public class Spawn implements Codable {
     private final    SpawnJobFixer               spawnJobFixer        = new SpawnJobFixer(this);
     private JobStore       jobStore;
     private SpawnDataStore spawnDataStore;
-    //To track web socket connections
-    private final WebSocketManager webSocketManager = new WebSocketManager();
 
     private final AliasManager aliasManager;
     private final JobAlertManager jobAlertManager;
@@ -335,7 +312,6 @@ public class Spawn implements Codable {
     @VisibleForTesting
     public Spawn(CuratorFramework zkClient) throws Exception {
         this.dataDir = Files.initDirectory(SPAWN_DATA_DIR);
-        this.listeners = new ConcurrentHashMap<>();
         this.monitored = new ConcurrentHashMap<>();
         this.useZk = zkClient != null;
         this.spawnFormattedLogger = useStructuredLogger ?
@@ -376,7 +352,6 @@ public class Spawn implements Codable {
         }
         getSettings().setQuiesced(quiesce);
         this.monitored = new ConcurrentHashMap<>();
-        this.listeners = new ConcurrentHashMap<>();
         this.spawnFormattedLogger = useStructuredLogger ?
                                     SpawnFormattedLogger.createFileBasedLogger(
                                             new File(SPAWN_STRUCTURED_LOG_DIR)) :
@@ -386,9 +361,6 @@ public class Spawn implements Codable {
         this.queryHost = (queryHttpHost != null ?
                           queryHttpHost :
                           InetAddress.getLocalHost().getHostAddress()) + ":" + queryPort;
-        this.spawnHost =
-                (httpHost != null ? httpHost : InetAddress.getLocalHost().getHostAddress()) + ":" +
-                webPort;
         if (uuid == null) {
             uuid = UUID.randomUUID().toString();
             log.warn("[init] uuid was null, creating new one: {}", uuid);
@@ -463,17 +435,6 @@ public class Spawn implements Codable {
                 writeSpawnQueue();
             }
         }, queueKickInterval, queueKickInterval, TimeUnit.MILLISECONDS);
-        // start http commands listener(s)
-        startSpawnWeb(dataDir, webDir);
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                try {
-                    jetty.stop();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
         balancer.startAutobalanceTask();
         balancer.startTaskSizePolling();
         if (ENABLE_JOB_STORE) {
@@ -534,27 +495,12 @@ public class Spawn implements Codable {
         return jobCommandManager;
     }
 
-    public static String getHttpHost() {
-        return httpHost;
-    }
-
     public void acquireJobLock() {
         jobLock.lock();
     }
 
     public void releaseJobLock() {
         jobLock.unlock();
-    }
-
-    private void startSpawnWeb(File dataDir, File webDir) throws Exception {
-        log.info("[init] starting http server");
-        SpawnHttp http = new SpawnHttp(this, webDir);
-        new SpawnManager().register(http);
-        jetty = new Server(webPort);
-        jetty.getConnectors()[0].setRequestBufferSize(65535);
-        jetty.getConnectors()[0].setRequestHeaderSize(requestHeaderBufferSize);
-        jetty.setHandler(http);
-        jetty.start();
     }
 
     public String getUuid() {
@@ -626,36 +572,12 @@ public class Spawn implements Codable {
                 jobLock.unlock();
             }
         }
-        Thread loadDependencies = new Thread() {
-            @Override
-            public void run() {
-                Set<String> jobIds = spawnState.jobs.keySet();
-                for (String jobId : jobIds) {
-                    IJob job = getJob(jobId);
-                    if (job != null) {
-                        updateJobDependencies(jobId);
-                    }
-                }
-            }
-        };
-        loadDependencies.setDaemon(true);
-        loadDependencies.start();
     }
 
     // -------------------- BEGIN API ---------------------
 
     public Settings getSettings() {
         return new Settings(this);
-    }
-
-    public ClientEventListener getClientEventListener(String id) {
-        ClientEventListener listener = listeners.get(id);
-        if (listener == null) {
-            listener = new ClientEventListener();
-            listeners.put(id, listener);
-        }
-        listener.lastSeen = System.currentTimeMillis();
-        return listener;
     }
 
     public HostState getHostState(String hostUuid) {
@@ -683,7 +605,6 @@ public class Spawn implements Codable {
                     log.error("Unable to add host: {} to " + MINION_DEAD_PATH, hostUUID, e);
                 }
             }
-            sendHostUpdateEvent(state);
             updateHostState(state);
         }
         return state;
@@ -765,10 +686,6 @@ public class Spawn implements Codable {
         return dataSources;
     }
 
-    public DirectedGraph<String> getJobDependencies() {
-        return spawnState.jobDependencies;
-    }
-
     //* returns the jobs that depend on a given job. dependency is established if the job's ID is used as a job parameter
     public Collection<Job> listDependentJobs(String jobId) {
         ArrayList<Job> dependents = new ArrayList<>();
@@ -823,7 +740,6 @@ public class Spawn implements Codable {
             HostState state = monitored.remove(hostuuid);
             if (state != null) {
                 log.info("Deleted host {}", hostuuid);
-                sendHostUpdateEvent("host.delete", state);
             } else {
                 log.warn("Attempted to delete host {} But it was not found", hostuuid);
             }
@@ -1750,25 +1666,6 @@ public class Spawn implements Codable {
         return newReplicas;
     }
 
-
-    private void updateJobDependencies(String jobId) {
-        DirectedGraph<String> dependencies = spawnState.jobDependencies;
-        Set<String> sources = dependencies.getSourceEdges(jobId);
-        if (sources != null) {
-            for (String source : sources) {
-                dependencies.removeEdge(source, jobId);
-            }
-        } else {
-            dependencies.addNode(jobId);
-        }
-        Set<String> newSources = this.getDataSources(jobId);
-        if (newSources != null) {
-            for (String source : newSources) {
-                dependencies.addEdge(source, jobId);
-            }
-        }
-    }
-
     /**
      * Submit a config update to the job store
      *
@@ -1799,7 +1696,6 @@ public class Spawn implements Codable {
             jobLock.lock();
             try {
                 require(getJob(job.getId()) != null, "job " + job.getId() + " does not exist");
-                updateJobDependencies(job.getId());
                 Job oldjob = putJobInSpawnState(job);
                 // take action on trigger changes (like # replicas)
                 if (oldjob != job && reviseReplicas) {
@@ -1827,10 +1723,8 @@ public class Spawn implements Codable {
                 return DeleteStatus.JOB_DO_NOT_DELETE;
             }
             spawnState.jobs.remove(jobUUID);
-            spawnState.jobDependencies.removeNode(jobUUID);
             log.warn("[job.delete] " + job.getId());
             spawnMQ.sendControlMessage(new CommandTaskDelete(HostMessage.ALL_HOSTS, job.getId(), null, job.getRunCount()));
-            sendJobUpdateEvent("job.delete", job);
             if (jobConfigManager != null) {
                 jobConfigManager.deleteJob(job.getId());
             }
@@ -2095,7 +1989,6 @@ public class Spawn implements Codable {
             job.setTaskState(task, JobTaskState.IDLE);
             removed = taskQueuesByPriority.remove(job.getPriority(), task.getJobKey());
             queueJobTaskUpdateEvent(job);
-            sendTaskQueueUpdateEvent();
         }
         writeSpawnQueue();
         return removed;
@@ -2197,7 +2090,6 @@ public class Spawn implements Codable {
                     state.setUp(true);
                 }
                 state.setUpdated();
-                sendHostUpdateEvent(state);
                 updateHostState(state);
                 break;
             case STATUS_TASK_BEGIN:
@@ -2532,7 +2424,6 @@ public class Spawn implements Codable {
         } finally {
             jobLock.unlock();
         }
-        sendJobUpdateEvent("job.update", job);
     }
 
     public void queueJobTaskUpdateEvent(Job job) {
@@ -2595,68 +2486,6 @@ public class Spawn implements Codable {
 
     }
 
-    public void sendJobUpdateEvent(String label, Job job) {
-        try {
-            sendEventToClientListeners(label, getJobUpdateEvent(job));
-        } catch (Exception e) {
-            log.warn("", e);
-        }
-    }
-
-    /**
-     * This method adds a cluster.quiesce event to  be sent to clientListeners to notify those using the UI that the cluster
-     * has been quiesced.
-     *
-     * @param username
-     */
-    public void sendClusterQuiesceEvent(String username) {
-        try {
-            boolean quiesce = getSettings().getQuiesced();
-            JSONObject info = new JSONObject();
-            info.put("username", username);
-            info.put("date", JitterClock.globalTime());
-            info.put("quiesced", quiesce);
-            log.info("User " + username + " has " + (quiesce ? "quiesced" : "unquiesed") + " the cluster.");
-            sendEventToClientListeners("cluster.quiesce", info);
-        } catch (Exception e) {
-            log.warn("", e);
-        }
-    }
-
-    /**
-     * Adds the task.queue.size event to be sent to clientListeners on next batch.listen update
-     */
-    public void sendTaskQueueUpdateEvent() {
-        try {
-            int numQueued = 0;
-            int numQueuedWaitingOnError = 0;
-            LinkedList<JobKey>[] queues = null;
-            taskQueuesByPriority.lock();
-            try {
-                //noinspection unchecked
-                queues = taskQueuesByPriority.values().toArray(new LinkedList[taskQueuesByPriority.size()]);
-
-                for (LinkedList<JobKey> queue : queues) {
-                    numQueued += queue.size();
-                    for (JobKey key : queue) {
-                        Job job = getJob(key);
-                        if (job != null && !job.isEnabled()) {
-                            numQueuedWaitingOnError += 1;
-                        }
-                    }
-                }
-                lastQueueSize = numQueued;
-            } finally {
-                taskQueuesByPriority.unlock();
-            }
-            JSONObject json = new JSONObject("{'size':" + Integer.toString(numQueued) + ",'sizeErr':" + Integer.toString(numQueuedWaitingOnError) + "}");
-            sendEventToClientListeners("task.queue.size", json);
-        } catch (Exception e) {
-            log.warn("[task.queue.update] received exception while sending task queue update event (this is ok unless it happens repeatedly) " + e);
-            e.printStackTrace();
-        }
-    }
-
     public int getLastQueueSize() {
         return lastQueueSize;
     }
@@ -2705,17 +2534,6 @@ public class Spawn implements Codable {
         return ojob;
     }
 
-    public void sendHostUpdateEvent(HostState state) {
-        sendHostUpdateEvent("host.update", state);
-    }
-
-    private void sendHostUpdateEvent(String label, HostState state) {
-        try {
-            sendEventToClientListeners(label, getHostStateUpdateEvent(state));
-        } catch (Exception e) {
-            log.warn("", e);
-        }
-    }
 
     public JSONObject getHostStateUpdateEvent(HostState state) throws Exception {
         if (state == null) {
@@ -2742,34 +2560,6 @@ public class Spawn implements Codable {
             return "disabled";
         }
         return hostFailWorker.getFailureStateString(state.getHostUuid(), state.isUp());
-    }
-
-    /**
-     * send codable message to registered listeners as json
-     */
-    private void sendEventToClientListeners(final String topic, final JSONObject message) {
-        long time = System.currentTimeMillis();
-        for (Entry<String, ClientEventListener> ev : listeners.entrySet()) {
-            ClientEventListener client = ev.getValue();
-            boolean queueTooLarge = clientDropQueueSize > 0 && client.events.size() > clientDropQueueSize;
-            // Drop listeners we haven't heard from in a while, or if they don't seem to be consuming from their queue
-            if (time - client.lastSeen > clientDropTimeMillis || queueTooLarge) {
-                ClientEventListener listener = listeners.remove(ev.getKey());
-                if (debug("-listen-")) {
-                    log.warn("[listen] dropping listener queue for " + ev.getKey() + " = " + listener);
-                }
-                if (queueTooLarge) {
-                    nonConsumingClientDropCounter.inc();
-                }
-                continue;
-            }
-            try {
-                client.events.put(new ClientEvent(topic, message));
-            } catch (Exception ex) {
-                log.warn("", ex);
-            }
-        }
-        webSocketManager.addEvent(new ClientEvent(topic, message));
     }
 
     private static void require(boolean test, String msg) throws Exception {
@@ -3210,7 +3000,6 @@ public class Spawn implements Codable {
                 log.info("[taskQueuesByPriority] adding " + jobKey + " to queue with ignoreQuiesce=" + ignoreQuiesce);
                 taskQueuesByPriority.addTaskToQueue(job.getPriority(), jobKey, ignoreQuiesce, toHead);
                 queueJobTaskUpdateEvent(job);
-                sendTaskQueueUpdateEvent();
             } else {
                 log.warn("[task.queue] failed to add task " + jobKey + " with state " + task.getState());
             }
@@ -3236,7 +3025,6 @@ public class Spawn implements Codable {
                     for (LinkedList<SpawnQueueItem> queue : queues) {
                         iterateThroughTaskQueue(queue);
                     }
-                    sendTaskQueueUpdateEvent();
                 }
             } finally {
                 jobLock.unlock();
@@ -3302,10 +3090,6 @@ public class Spawn implements Codable {
         }
     }
 
-    public WebSocketManager getWebSocketManager() {
-        return this.webSocketManager;
-    }
-
     public List<String> getJobsToAutobalance() {
         List<String> rv = new ArrayList<>();
         List<Job> autobalanceJobs = balancer.getJobsToAutobalance(listHostStatus(null));
@@ -3347,7 +3131,6 @@ public class Spawn implements Codable {
         for (HostState host : listHostStatus(null)) {
             if (id.equals(host.getHost()) || id.equals(host.getHostUuid())) {
                 host.setDisabled(disable);
-                sendHostUpdateEvent(host);
                 updateHostState(host);
             }
         }

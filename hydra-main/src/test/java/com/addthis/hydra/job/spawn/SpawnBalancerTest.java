@@ -29,7 +29,6 @@ import com.addthis.basis.util.JitterClock;
 
 import com.addthis.bark.ZkStartUtil;
 import com.addthis.hydra.job.Job;
-import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskMoveAssignment;
 import com.addthis.hydra.job.JobTaskReplica;
@@ -550,17 +549,6 @@ public class SpawnBalancerTest extends ZkStartUtil {
         // If a task is rebalancing, the job _should_ be finished.
         // The idea is that the task successfully ran, got into idle state, then a rebalance action was called afterwards.
         assertTrue("job should be finished", job.isFinished());
-    }
-
-    @Test
-    public void jobDependencyTest() throws Exception {
-        installHostStateWithUUID("a", spawn, true);
-        installHostStateWithUUID("b", spawn, true);
-        Job sourceJob = createSpawnJob(spawn, 1, Arrays.asList("a", "b"), 1l, 1l, 0);
-        Job downstreamJob = createSpawnJob(spawn, 1, Arrays.asList("a", "b"), 1l, 1l, 0);
-        downstreamJob.setParameters(Arrays.asList(new JobParameter("param", sourceJob.getId(), "DEFAULT")));
-        spawn.updateJob(downstreamJob);
-        assertEquals("dependency graph should have two nodes", 2, spawn.getJobDependencies().getNodes().size());
     }
 
     private Job createSpawnJob(Spawn spawn, int numTasks, List<String> hosts, long startTime, long taskSizeBytes, int numReplicas) throws Exception {

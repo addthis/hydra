@@ -98,7 +98,6 @@ public class HostFailWorker {
         if (hostIds != null) {
             for (String host : hostIds.split(",")) {
                 hostFailState.putHost(host, state);
-                spawn.sendHostUpdateEvent(spawn.getHostState(host));
             }
             queueFailNextHost();
         }
@@ -152,7 +151,6 @@ public class HostFailWorker {
         if (hostIds != null) {
             for (String host : hostIds.split(",")) {
                 hostFailState.removeHost(host);
-                spawn.sendHostUpdateEvent(spawn.getHostState(host));
             }
         }
     }

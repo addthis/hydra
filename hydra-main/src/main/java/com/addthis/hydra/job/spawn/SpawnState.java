@@ -19,11 +19,9 @@ import com.addthis.basis.collect.ConcurrentHashMapV8;
 
 import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.Job;
-import com.addthis.hydra.util.DirectedGraph;
 
 public class SpawnState implements Codable {
 
     final ConcurrentMap<String, Job> jobs = new ConcurrentHashMapV8<>();
-    final DirectedGraph<String> jobDependencies = new DirectedGraph<>();
     SpawnBalancerConfig balancerConfig = new SpawnBalancerConfig();
 }

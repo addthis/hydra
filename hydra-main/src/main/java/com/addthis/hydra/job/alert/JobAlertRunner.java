@@ -13,9 +13,6 @@
  */
 package com.addthis.hydra.job.alert;
 
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_LOADED_LEGACY;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
-
 import java.io.IOException;
 
 import java.util.ArrayList;
@@ -28,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 
+import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.codec.json.CodecJSON;
@@ -47,13 +45,16 @@ import com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_LOADED_LEGACY;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
+
 /**
  * This class runs over the set of job alerts, sending trigger/clear emails as appropriate
  */
 public class JobAlertRunner {
 
     private static final Logger log = LoggerFactory.getLogger(JobAlertRunner.class);
-    private static final String clusterHead = Spawn.getHttpHost();
+    private static final String clusterHead = Parameter.value("spawn.localhost");
     private static final String meshHost = SpawnMesh.getMeshHost();
     private static final int meshPort = SpawnMesh.getMeshPort();
 
