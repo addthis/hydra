@@ -13,12 +13,8 @@
  */
 package com.addthis.hydra.job.spawn;
 
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_UP_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
-
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import java.io.File;
 import java.io.IOException;
@@ -64,8 +60,8 @@ import com.addthis.basis.util.TokenReplacerOverflowException;
 import com.addthis.bark.StringSerializer;
 import com.addthis.bark.ZkUtil;
 import com.addthis.codec.Codec;
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
+import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.HostFailWorker;
 import com.addthis.hydra.job.IJob;
@@ -136,6 +132,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
@@ -148,6 +146,11 @@ import org.apache.zookeeper.KeeperException;
 import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_UP_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
 
 /**
  * manages minions running on remote notes. runs master http server to
@@ -243,10 +246,15 @@ public class Spawn implements Codable {
             Parameter.intValue("spawn.client.drop.queue", 2000);
 
     public static void main(String[] args) throws Exception {
-        Spawn spawn = new Spawn(
-                new File(args.length > 0 ? args[0] : "etc"),
-                new File(args.length > 1 ? args[1] : "web")
-        );
+        File dataDir = new File("etc");
+        Files.initDirectory(dataDir);
+        File statefile = new File(dataDir, stateFilePath);
+        Spawn spawn;
+        if (statefile.exists() && statefile.isFile()) {
+            spawn = Jackson.defaultMapper().readValue(statefile, Spawn.class);
+        } else {
+            spawn = Jackson.defaultCodec().newDefault(Spawn.class);
+        }
         if (enableSpawn2) new SpawnService(spawn).start();
     }
 
@@ -276,20 +284,13 @@ public class Spawn implements Codable {
     private final File                                           dataDir;
     private final ConcurrentHashMap<String, ClientEventListener> listeners;
 
-    @FieldConfig(codable = true)
-    private String uuid;
-    @FieldConfig(codable = true)
-    String debug;
-    @FieldConfig(codable = true)
-    String queryHost;
-    @FieldConfig(codable = true)
-    String spawnHost;
-    @FieldConfig(codable = true)
-    private int queryPort = 2222;
-    @FieldConfig(codable = true)
-    boolean quiesce;
-    @FieldConfig(codable = true)
-    final HashSet<String> disabledHosts = new HashSet<>();
+    @JsonProperty private String uuid;
+    @JsonProperty String debug;
+    @JsonProperty String queryHost;
+    @JsonProperty String spawnHost;
+    @JsonProperty private final int queryPort;
+    @JsonProperty boolean quiesce;
+    @JsonProperty HashSet<String> disabledHosts = new HashSet<>();
 
     final ConcurrentHashMap<String, HostState> monitored;
     final SpawnState spawnState = new SpawnState();
@@ -324,16 +325,8 @@ public class Spawn implements Codable {
     private final JobEntityManager<JobCommand> jobCommandManager;
     private final JobOnFinishStateHandler jobOnFinishStateHandler;
 
-    /**
-     * default constructor used for testing purposes only
-     */
     @VisibleForTesting
-    public Spawn() throws Exception {
-        this(null);
-    }
-
-    @VisibleForTesting
-    public Spawn(CuratorFramework zkClient) throws Exception {
+    public Spawn(@Nullable CuratorFramework zkClient) throws Exception {
         this.dataDir = Files.initDirectory(SPAWN_DATA_DIR);
         this.listeners = new ConcurrentHashMap<>();
         this.monitored = new ConcurrentHashMap<>();
@@ -366,15 +359,42 @@ public class Spawn implements Codable {
         this.spawnMesh = new SpawnMesh(this);
         this.eventLog = new RollingLog(new File(logDir, "events-jobs"), "job",
                                        eventLogCompress, logMaxSize, logMaxAge);
+        this.queryPort = 2222;
     }
 
-    private Spawn(File dataDir, File webDir) throws Exception {
-        this.dataDir = Files.initDirectory(dataDir);
-        File statefile = new File(dataDir, stateFilePath);
-        if (statefile.exists() && statefile.isFile()) {
-            codec.decode(this, Files.read(statefile));
+    @JsonCreator
+    private Spawn(@JsonProperty("uuid") String uuid,
+                  @JsonProperty("quiesce") boolean quiesce,
+                  @JsonProperty("disabledHosts") HashSet<String> disabledHosts,
+                  /** Should really be replaced by logging framework settings. */
+                  @JsonProperty("debug") String debug,
+                  /** Query port is read in, but seems to invariably be 2222. */
+                  @JsonProperty("queryPort") int queryPort,
+                  /** These two properties are ignored for deserialization. Probably should not get written. */
+                  @JsonProperty("queryHost") String queryHost,
+                  @JsonProperty("spawnHost") String spawnHost) throws Exception {
+        if (uuid == null) {
+            this.uuid = UUID.randomUUID().toString();
+            log.warn("[init] uuid was null, creating new one: {}", this.uuid);
+        } else {
+            this.uuid = uuid;
         }
-        getSettings().setQuiesced(quiesce);
+        this.quiesce = quiesce;
+        this.disabledHosts = disabledHosts;
+        if (debugOverride != null) {
+            this.debug = debugOverride;
+        } else {
+            this.debug = debug;
+        }
+        this.queryPort = queryPort;
+        this.queryHost = (queryHttpHost != null ?
+                          queryHttpHost :
+                          InetAddress.getLocalHost().getHostAddress()) + ":" + this.queryPort;
+        this.spawnHost =
+                (httpHost != null ? httpHost : InetAddress.getLocalHost().getHostAddress()) + ":" +
+                webPort;
+        this.dataDir = new File("etc");
+        File webDir = new File("web");
         this.monitored = new ConcurrentHashMap<>();
         this.listeners = new ConcurrentHashMap<>();
         this.spawnFormattedLogger = useStructuredLogger ?
@@ -383,19 +403,6 @@ public class Spawn implements Codable {
                                     SpawnFormattedLogger.createNullLogger();
         this.zkClient = ZkUtil.makeStandardClient();
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
-        this.queryHost = (queryHttpHost != null ?
-                          queryHttpHost :
-                          InetAddress.getLocalHost().getHostAddress()) + ":" + queryPort;
-        this.spawnHost =
-                (httpHost != null ? httpHost : InetAddress.getLocalHost().getHostAddress()) + ":" +
-                webPort;
-        if (uuid == null) {
-            uuid = UUID.randomUUID().toString();
-            log.warn("[init] uuid was null, creating new one: {}", uuid);
-        }
-        if (debugOverride != null) {
-            debug = debugOverride;
-        }
         // look for local object to import
         log.info("[init] beginning to load stats from data store");
         jobMacroManager = new JobMacroManager(this);
@@ -464,7 +471,7 @@ public class Spawn implements Codable {
             }
         }, queueKickInterval, queueKickInterval, TimeUnit.MILLISECONDS);
         // start http commands listener(s)
-        startSpawnWeb(dataDir, webDir);
+        startSpawnWeb(webDir);
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 try {
@@ -481,15 +488,15 @@ public class Spawn implements Codable {
         }
         this.eventLog = new RollingLog(new File(logDir, "events-jobs"), "job",
                                        eventLogCompress, logMaxSize, logMaxAge);
+        writeState();
     }
 
     void writeState() {
         try {
             Files.write(new File(dataDir, stateFilePath), codec.encode(this), false);
         } catch (Exception e) {
-            log.warn("WARNING: failed to write spawn state to log file at " + stateFilePath);
+            log.warn("WARNING: failed to write spawn state to log file at {}", stateFilePath, e);
         }
-
     }
 
     public void markHostsForFailure(String hostId, HostFailWorker.FailState failState) {
@@ -546,7 +553,7 @@ public class Spawn implements Codable {
         jobLock.unlock();
     }
 
-    private void startSpawnWeb(File dataDir, File webDir) throws Exception {
+    private void startSpawnWeb(File webDir) throws Exception {
         log.info("[init] starting http server");
         SpawnHttp http = new SpawnHttp(this, webDir);
         new SpawnManager().register(http);

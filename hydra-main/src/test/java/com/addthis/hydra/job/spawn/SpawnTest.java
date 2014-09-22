@@ -73,7 +73,7 @@ public class SpawnTest extends ZkStartUtil {
         HostState tmpDisableHostState = createHostState("tmp");
         tmpDisableHostState.setDisabled(true);
         assertTrue("disabled host states should not be able to run tasks", !tmpDisableHostState.canMirrorTasks());
-        Spawn spawn = new Spawn();
+        Spawn spawn = new Spawn(null);
         HostState toggleHost = createHostState("toggle");
         HostState otherHost = createHostState("other");
         spawn.updateHostState(toggleHost);
