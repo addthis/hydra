@@ -1,10 +1,14 @@
 package com.addthis.hydra.task.output;
 
+import com.addthis.codec.annotations.Pluggable;
+
 import java.io.IOException;
 
 /**
  * Interface for classes capable of [re]opening {@link com.addthis.hydra.task.output.OutputWrapper}s.
+ *
  */
+@Pluggable("output-factory")
 public interface OutputWrapperFactory {
 
     /**

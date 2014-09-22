@@ -115,7 +115,7 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
         if (!targetParent.exists() && requireDirectory(targetParent) == null) {
             throw new IOException("unable to create target " + target);
         }
-        OutputStream outputStream = null;
+        OutputStream outputStream;
         if (multiplex || MuxFileDirectory.isMuxDir(targetParent.toPath())) {
             try {
                 MuxFileDirectory mfm = MuxFileDirectoryCache.getWriteableInstance(targetParent);
@@ -153,7 +153,7 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
                                         outputFlags.getCompressType(), rawTarget);
     }
 
-    private OutputStream wrapOutputStream(OutputStreamFlags outputFlags, boolean exists, OutputStream outputStream) throws IOException {
+    protected OutputStream wrapOutputStream(OutputStreamFlags outputFlags, boolean exists, OutputStream outputStream) throws IOException {
         OutputStream wrappedStream;
         if (outputFlags.isCompress()) {
             if (outputFlags.getCompressType() == 0) {
@@ -172,7 +172,7 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
         } else {
             wrappedStream = IOWrap.buffer(outputStream, BUFFER_SIZE);
         }
-        if (!(outputFlags.getHeader() == null) || exists) {
+        if (!exists && !(outputFlags.getHeader() == null)) {
             wrappedStream.write(Bytes.toBytes(outputFlags.getHeader()));
         }
         return wrappedStream;
@@ -201,7 +201,7 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
         return modifiedFileName;
     }
 
-    private String getFileName(String target, PartitionData partitionData, OutputStreamFlags outputFlags, int fileVersion) {
+    protected String getFileName(String target, PartitionData partitionData, OutputStreamFlags outputFlags, int fileVersion) {
         // by convention the partition can never be greater than 1000
         String result = target;
         if (outputFlags.isNoAppend() || outputFlags.getMaxFileSize() > 0) {
@@ -269,7 +269,7 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
         return new File(dir, fileName.concat(".tmp"));
     }
 
-    private PartitionData getPartitionData(String target) {
+    protected PartitionData getPartitionData(String target) {
         String replacement = null;
         int padTo = DEFAULT_PADDING;
         int startPartitionIndex = target.indexOf(PART_PREFIX);
