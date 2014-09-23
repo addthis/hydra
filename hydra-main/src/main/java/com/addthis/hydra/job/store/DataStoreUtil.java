@@ -17,6 +17,7 @@ import java.io.File;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -51,6 +52,8 @@ public class DataStoreUtil {
     private static final List<String> parentsToImport = Arrays.asList(SPAWN_COMMON_COMMAND_PATH, SPAWN_COMMON_MACRO_PATH, SPAWN_JOB_CONFIG_PATH, AliasBiMap.ALIAS_PATH, SPAWN_COMMON_ALERT_PATH);
     /* A list of nodes beneath each job node */
     private static final List<String> jobParametersToImport = Arrays.asList("config", "queryconfig", "tasks", "alerts");
+    /* A list of properties of certain job nodes that should be imported as flat values rather than children -- necessary for certain kafka broker info */
+    private static final List<String> jobParameterToImportFlat = Arrays.asList("brokerinfo");
 
     private static final Logger log = LoggerFactory.getLogger(DataStoreUtil.class);
 
@@ -194,6 +197,15 @@ public class DataStoreUtil {
         importValue(basePath, sourceDataStore, targetDataStore, checkAllWrites);
         for (String parameter : jobParametersToImport) {
             importValue(basePath + "/" + parameter, sourceDataStore, targetDataStore, checkAllWrites);
+        }
+        for (String flatParameter : jobParameterToImportFlat) {
+            String path = basePath + "/" + flatParameter;
+            if (sourceDataStore.get(path) != null) {
+                Map<String, String> children = sourceDataStore.getAllChildren(path);
+                for (Map.Entry<String, String> child : children.entrySet()) {
+                    targetDataStore.put(path + "/" + child.getKey(), child.getValue());
+                }
+            }
         }
     }
 
