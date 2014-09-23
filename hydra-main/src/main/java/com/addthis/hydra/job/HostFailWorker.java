@@ -31,6 +31,7 @@ import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.store.SpawnDataStore;
+import com.addthis.hydra.job.store.SpawnDataStoreKeys;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
@@ -63,7 +64,6 @@ public class HostFailWorker {
     // Use a smaller max when a disk is being failed, to avoid a 'thundering herds' scenario
     private static final int maxMovingTasksDiskFull = Parameter.intValue("host.fail.maxMovingTasksDiskFull", 2);
 
-    private static final String dataStoragePath = "/spawn/hostfailworker";
     private static final Counter failHostCount = Metrics.newCounter(Spawn.class, "failHostCount");
 
     // Various keys used to make JSON objects to send to the UI
@@ -485,7 +485,7 @@ public class HostFailWorker {
             if (spawnDataStore == null) {
                 return false;
             }
-            String raw = spawnDataStore.get(dataStoragePath);
+            String raw = spawnDataStore.get(SpawnDataStoreKeys.SPAWN_HOST_FAIL_WORKER_PATH);
             if (raw == null) {
                 return false;
             }
@@ -525,7 +525,7 @@ public class HostFailWorker {
                     jsonObject.put(filesystemDeadKey, new JSONArray(failFsDead));
                     jsonObject.put(filesystemOkayKey, new JSONArray(failFsOkay));
                     jsonObject.put(filesystemFullKey, new JSONArray(fsFull));
-                    spawn.getSpawnDataStore().put(dataStoragePath, jsonObject.toString());
+                    spawn.getSpawnDataStore().put(SpawnDataStoreKeys.SPAWN_HOST_FAIL_WORKER_PATH, jsonObject.toString());
                 }
             } catch (Exception e) {
                 log.warn("Failed to save HostFailState: " + e, e);
