@@ -52,7 +52,7 @@ public class ValueFilterChain extends ValueFilter {
     @Override
     public ValueObject filterValue(ValueObject value) {
         for (ValueFilter f : filter) {
-            if (value != null || !nullStop || f.nullAccept()) {
+            if (value != null || !nullStop || f.getNullAccept()) {
                 value = f.filter(value);
             } else {
                 return null;

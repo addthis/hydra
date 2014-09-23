@@ -20,8 +20,6 @@ import java.util.regex.Pattern;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.util.JSONFetcher;
 
-
-
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">filters the input based on one or more string-matching criteria</span>.
  * <p/>

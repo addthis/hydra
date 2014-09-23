@@ -13,14 +13,18 @@
  */
 package com.addthis.hydra.data.filter.value;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.Nullable;
+
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * A value filter applies a transformation on a value and returns
@@ -34,30 +38,24 @@ import com.addthis.codec.codables.Codable;
 public abstract class ValueFilter implements Codable {
 
     /**
-     * If true and input is array then apply filter once on input.
-     * Otherwise apply filter to each element of the array.
+     * Disables special {@link ValueArray} handling logic. By default (false), it will map over elements
+     * of an array. When this flag is turned on, filters will try to process the array as a whole.
      * Default is false.
      */
-    @FieldConfig(codable = true)
-    private boolean once;
+    @JsonProperty private boolean once;
+
     /**
      * If true then a parent {@link ValueFilterChain chain} filter does not exit on null values.
      * This indicates that the filter wishes to accept a null
      * returned by the previous filter in the chain. Default is false.
-     *
-     * @return
      */
-    @FieldConfig(codable = true)
-    private boolean nullAccept;
+    @JsonProperty private boolean nullAccept;
 
-    /**
-     * overrides default chain behavior to exit on null values.
-     * this indicates that the filter wishes to accept a null
-     * returned by a previous filter in the chain.
-     *
-     * @return
-     */
-    public boolean nullAccept() {
+    // used for setup and requireSetup to do one-time-only initialization logic
+    private final Lock setupLock = new ReentrantLock();
+    private boolean setup = false;
+
+    public boolean getNullAccept() {
         return nullAccept;
     }
 
@@ -65,17 +63,13 @@ public abstract class ValueFilter implements Codable {
         return once;
     }
 
+    @Deprecated
     public ValueFilter setOnce(boolean o) {
         once = o;
         return this;
     }
 
-    public ValueFilter setNullAccept(boolean na) {
-        nullAccept = na;
-        return this;
-    }
-
-    private ValueObject filterArray(ValueObject value) {
+    @Nullable private ValueObject filterArray(ValueObject value) {
         ValueArray in = value.asArray();
         ValueArray out = null;
         for (ValueObject vo : in) {
@@ -91,27 +85,23 @@ public abstract class ValueFilter implements Codable {
     }
 
     /**
-     * handles array iteration
+     * Wrapper method for {@link #filterValue(ValueObject)} that has special logic for {@link ValueArray}s.
+     * This should be the primary method to be called in most circumstances, and should not be overridden unless
+     * special, different array handling logic is needed. When {@link #once} is true, or when the ValueObject
+     * is not an array, this is the same as directly calling {@link #filterValue(ValueObject)}.
      */
-    public ValueObject filter(ValueObject value) {
+    @Nullable public ValueObject filter(@Nullable ValueObject value) {
         if (once) {
             return filterValue(value);
         }
         // TODO why is this behaviour not there for TYPE.MAPS ?
-        if (value != null && value.getObjectType() == ValueObject.TYPE.ARRAY) {
+        if ((value != null) && (value.getObjectType() == ValueObject.TYPE.ARRAY)) {
             return filterArray(value);
         }
         return filterValue(value);
     }
 
-    /**
-     * override in subclasses
-     */
-    public abstract ValueObject filterValue(ValueObject value);
-
-    private AtomicBoolean setup = new AtomicBoolean(false);
-    private AtomicBoolean setupOnce = new AtomicBoolean(false);
-    private Object setupLock = new Object();
+    @Nullable public abstract ValueObject filterValue(@Nullable ValueObject value);
 
     /**
      * ensures setup() is called exactly once and that all other
@@ -119,17 +109,19 @@ public abstract class ValueFilter implements Codable {
      * be efficient over time by avoiding sync calls on each filter call.
      */
     public final void requireSetup() {
-        if (!setup.get()) {
-            synchronized (setupLock) {
-                if (setupOnce.compareAndSet(false, true)) {
+        if (!setup) {
+            setupLock.lock();
+            try {
+                if (!setup) {
                     setup();
-                    setup.set(true);
+                    setup = true;
                 }
+            } finally {
+                setupLock.unlock();
             }
         }
     }
 
-    public void setup() {
-        // TODO override in subclasses that need atomic setup
-    }
+    // override in subclasses that need atomic setup
+    public void setup() {}
 }
