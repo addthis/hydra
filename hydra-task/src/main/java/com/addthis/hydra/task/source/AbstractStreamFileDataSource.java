@@ -684,17 +684,25 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         }
     }
 
+    @Override
+    public String toString() {
+        return populateToString(Objects.toStringHelper(this));
+    }
+
     private String fileStatsToString(String reason) {
-        return Objects.toStringHelper(reason)
-                .add("reading", reading.count())
-                .add("opening", opening.count())
-                .add("unseen", openNew.count())
-                .add("continued", openIndex.count())
-                .add("skipping", skipping.count())
-                .add("skipped", openSkip.count())
-                .add("bundles-skipped", globalBundleSkip.count())
-                .add("median-size", fileSizeHisto.getSnapshot().getMedian())
-                .toString();
+        return populateToString(Objects.toStringHelper(reason));
+    }
+
+    private String populateToString(Objects.ToStringHelper helper) {
+        return helper.add("reading", reading.count())
+                     .add("opening", opening.count())
+                     .add("unseen", openNew.count())
+                     .add("continued", openIndex.count())
+                     .add("skipping", skipping.count())
+                     .add("skipped", openSkip.count())
+                     .add("bundles-skipped", globalBundleSkip.count())
+                     .add("median-size", fileSizeHisto.getSnapshot().getMedian())
+                     .toString();
     }
 
     @Override
