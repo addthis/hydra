@@ -241,7 +241,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
      * If true, the process will error if the source throws an exception during the streaming operation
      */
     @FieldConfig(codable = true)
-    private boolean strictSourceChecking = false;
+    private boolean strictSourceChecking;
 
     private final ListBundleFormat bundleFormat = new ListBundleFormat();
     private final Bundle termBundle = new ListBundle(bundleFormat);
