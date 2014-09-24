@@ -236,6 +236,12 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
     @FieldConfig(codable = true, required = true)
     private int magicMarksNumber;
+    
+    /**
+     * If true, the process will error if the source throws an exception during the streaming operation
+     */
+    @FieldConfig(codable = true)
+    private boolean strictSourceChecking = false;
 
     private final ListBundleFormat bundleFormat = new ListBundleFormat();
     private final Bundle termBundle = new ListBundle(bundleFormat);
@@ -600,7 +606,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 }
                 return next;
             } catch (Exception ex) {
-                if (!IGNORE_MARKS_ERRORS) {
+                if (strictSourceChecking) {
                     log.error("(rethrowing) source error with mark: {}, stream file: {}", mark, stream, ex);
                     throw ex;
                 }
