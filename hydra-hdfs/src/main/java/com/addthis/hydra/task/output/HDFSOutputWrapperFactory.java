@@ -1,3 +1,16 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.addthis.hydra.task.output;
 
 import com.addthis.codec.annotations.FieldConfig;
@@ -27,7 +40,7 @@ public class HDFSOutputWrapperFactory extends DefaultOutputWrapperFactory {
     /**
      * URL for HDFS name node
      */
-    @FieldConfig(codable = true)
+    @FieldConfig(codable = true, required = true)
     private String hdfsURL;
 
     /**
@@ -69,8 +82,10 @@ public class HDFSOutputWrapperFactory extends DefaultOutputWrapperFactory {
                 String path = workingDirectory.getAbsolutePath();
                 String[] tokens = path.split("/");
                 if (tokens.length > 3 && includeTaskId) {
+                    // include job id and task id in path
                     dir = tokens[tokens.length - 4] + "/" + tokens[tokens.length - 3] + "/" + dir;
                 } else if (tokens.length > 3) {
+                    // include job id only in path
                     dir = tokens[tokens.length - 4] + "/" + dir;
                 }
                 fileSystemInitialized = true;
