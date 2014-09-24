@@ -29,6 +29,22 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * OutputWrapperFactory implementation for HDFS systems.
+ * <p>Example:</p>
+ * <pre>writer : {
+ *   maxOpen : 1024,
+ *   flags : {
+ *     maxSize : "64M",
+ *     compress : true,
+ *   },
+ *   factory : {
+ *     dir : "split",
+ *     type: "hdfs",
+ *     hdfsURL:"hdfs://hadoop-name-node:8020",
+ *   },
+ *   format : {
+ *     type : "channel",
+ *   },
+ * }</pre>
  */
 public class HDFSOutputWrapperFactory extends DefaultOutputWrapperFactory {
 
