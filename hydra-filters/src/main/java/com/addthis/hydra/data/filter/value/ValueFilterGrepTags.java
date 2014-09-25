@@ -50,7 +50,15 @@ public class ValueFilterGrepTags extends ValueFilter {
      */
     @FieldConfig(codable = true, required = true)
     private String[] tagAttrs;
+
+    /**
+     * Log error once for every N instances
+     */
+    @FieldConfig(codable = true)
+    private int logEveryN = 100;
+
     private static final Logger log = LoggerFactory.getLogger(ValueFilterGrepTags.class);
+    private int parserErrors = 0;
 
     @Override
     public ValueObject filterValue(ValueObject value) {
@@ -60,8 +68,7 @@ public class ValueFilterGrepTags extends ValueFilter {
             String html = value.asString().asNative();
 
             if (html != null) {
-                try
-                {
+                try {
                     Parser parser = Parser.htmlParser().setTrackErrors(0);
                     Document doc = parser.parseInput(html, "");
 
@@ -70,8 +77,7 @@ public class ValueFilterGrepTags extends ValueFilter {
 
                         if (tags != null) {
                             for (Element tag : tags) {
-                                for(String tagAttr : tagAttrs)
-                                {
+                                for (String tagAttr : tagAttrs) {
                                     String attrValue = tag.attr(tagAttr);
 
                                     if (attrValue != null) {
@@ -81,10 +87,10 @@ public class ValueFilterGrepTags extends ValueFilter {
                             }
                         }
                     }
-                }
-                catch (Exception e)
-                {
-                    log.error("Failed to extract tags due to : " + e.getMessage());
+                } catch (Exception e) {
+                    if (parserErrors++ % logEveryN == 0) {
+                        log.error("Failed to extract tags due to : " + e.getMessage() + " Total Parser Errors : " + parserErrors);
+                    }
                 }
             }
         }
