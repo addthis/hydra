@@ -25,6 +25,8 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A utility to match values to extracted tags from raw html
@@ -48,6 +50,7 @@ public class ValueFilterGrepTags extends ValueFilter {
      */
     @FieldConfig(codable = true, required = true)
     private String[] tagAttrs;
+    private static final Logger log = LoggerFactory.getLogger(ValueFilterGrepTags.class);
 
     @Override
     public ValueObject filterValue(ValueObject value) {
@@ -57,24 +60,31 @@ public class ValueFilterGrepTags extends ValueFilter {
             String html = value.asString().asNative();
 
             if (html != null) {
-                Parser parser = Parser.htmlParser().setTrackErrors(0);
-                Document doc = parser.parseInput(html, "");
+                try
+                {
+                    Parser parser = Parser.htmlParser().setTrackErrors(0);
+                    Document doc = parser.parseInput(html, "");
 
-                if (doc != null) {
-                    Elements tags = doc.select(tagName);
+                    if (doc != null) {
+                        Elements tags = doc.select(tagName);
 
-                    if (tags != null) {
-                        for (Element tag : tags) {
-                            for(String tagAttr : tagAttrs)
-                            {
-                                String attrValue = tag.attr(tagAttr);
+                        if (tags != null) {
+                            for (Element tag : tags) {
+                                for(String tagAttr : tagAttrs)
+                                {
+                                    String attrValue = tag.attr(tagAttr);
 
-                                if (attrValue != null) {
-                                    match(attrValue.toLowerCase(), values, matches);
+                                    if (attrValue != null) {
+                                        match(attrValue.toLowerCase(), values, matches);
+                                    }
                                 }
                             }
                         }
                     }
+                }
+                catch (Exception e)
+                {
+                    log.error("Failed to extract tags due to : " + e.getMessage());
                 }
             }
         }
