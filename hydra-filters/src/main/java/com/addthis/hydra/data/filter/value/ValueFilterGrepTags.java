@@ -13,13 +13,17 @@
  */
 package com.addthis.hydra.data.filter.value;
 
-import java.util.HashMap;
-import java.util.Map;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
+
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -29,106 +33,68 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A utility to match values to extracted tags from raw html
+ * Matches values to extracted tags from raw html.
  */
 public class ValueFilterGrepTags extends ValueFilter {
-
-    /**
-     * The set of values to match against.
-     */
-    @FieldConfig(codable = true, required = true)
-    private String[] values;
-
-    /**
-     * The tag name to search for
-     */
-    @FieldConfig(codable = true, required = true)
-    private String tagName;
-
-    /**
-     * The tag attribute to search for
-     */
-    @FieldConfig(codable = true, required = true)
-    private String[] tagAttrs;
-
-    /**
-     * Log error once for every N instances
-     */
-    @FieldConfig(codable = true)
-    private int logEveryN = 100;
-
     private static final Logger log = LoggerFactory.getLogger(ValueFilterGrepTags.class);
+
+    /** Set of values to match against. */
+    @JsonProperty(required = true) private String[] values;
+
+    /** Tag name to search for. */
+    @JsonProperty(required = true) private String tagName;
+
+    /** Tag attribute to search for. */
+    @JsonProperty(required = true) private String[] tagAttrs;
+
+    /** Log error once for every N instances. */
+    @JsonProperty private int logEveryN = 100;
+
     private int parserErrors = 0;
 
     @Override
+    @Nullable
     public ValueObject filterValue(ValueObject value) {
-        Map<String, Integer> matches = new HashMap<>();
+        if (value == null) {
+            return null;
+        }
 
-        if (value != null) {
-            String html = value.asString().asNative();
+        String html = value.asString().asNative();
+        if (html == null) {
+            return null;
+        }
 
-            if (html != null) {
-                try {
-                    Parser parser = Parser.htmlParser().setTrackErrors(0);
-                    Document doc = parser.parseInput(html, "");
+        @Nonnull Multiset<String> valueCounts = HashMultiset.create();
+        try {
+            Parser parser = Parser.htmlParser().setTrackErrors(0);
+            @Nonnull Document doc = parser.parseInput(html, "");
+            @Nonnull Elements tags = doc.select(tagName);
 
-                    if (doc != null) {
-                        Elements tags = doc.select(tagName);
-
-                        if (tags != null) {
-                            for (Element tag : tags) {
-                                for (String tagAttr : tagAttrs) {
-                                    String attrValue = tag.attr(tagAttr);
-
-                                    if (attrValue != null) {
-                                        match(attrValue.toLowerCase(), values, matches);
-                                    }
-                                }
-                            }
+            for (Element tag : tags) {
+                for (String tagAttr : tagAttrs) {
+                    @Nonnull String attrValue = tag.attr(tagAttr).toLowerCase();
+                    for (String matchValue : values) {
+                        if (attrValue.contains(matchValue)) {
+                            valueCounts.add(matchValue);
                         }
                     }
-                } catch (Exception e) {
-                    if (parserErrors++ % logEveryN == 0) {
-                        log.error("Failed to extract tags due to : " + e.getMessage() + " Total Parser Errors : " + parserErrors);
-                    }
                 }
+            }
+        } catch (Exception e) {
+            if (parserErrors++ % logEveryN == 0) {
+                log.error("Failed to extract tags due to : {} Total Parser Errors : {}",
+                          e.getMessage(), parserErrors);
             }
         }
 
-        return matches != null && matches.size() > 0 ? toValueMap(matches) : null;
+        return valueCounts.isEmpty() ? null : multisetToValueMap(valueCounts);
     }
 
-    private ValueObject toValueMap(Map<String, Integer> matches) {
-        ValueMap valueMap = ValueFactory.createMap();
-
-        for (String match : matches.keySet()) {
-            valueMap.put(match, ValueFactory.create(matches.get(match)));
+    private static ValueMap<Long> multisetToValueMap(Multiset<String> matches) {
+        ValueMap<Long> valueMap = ValueFactory.createMap();
+        for (Multiset.Entry<String> match : matches.entrySet()) {
+            valueMap.put(match.getElement(), ValueFactory.create(match.getCount()));
         }
-
         return valueMap;
-    }
-
-    private void match(String attrValue, String[] values, Map<String, Integer> matchCounts) {
-        Integer count = null;
-
-        if (attrValue != null) {
-            for (String value : values) {
-                if (attrValue.contains(value)) {
-                    matchCounts.put(value, (count = matchCounts.get(value)) != null ? count + 1 : 1);
-                }
-            }
-        }
-    }
-
-    public void setValues(String[] values) {
-        this.values = values;
-    }
-
-    public void setTagName(String tagName) {
-        this.tagName = tagName;
-    }
-
-    public void setTagAttrs(String... tagAttrs) {
-        this.tagAttrs = tagAttrs;
     }
 }

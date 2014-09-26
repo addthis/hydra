@@ -13,26 +13,40 @@
  */
 package com.addthis.hydra.data.filter.value;
 
+import javax.annotation.Syntax;
+
+import java.io.IOException;
+
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.codec.config.Configs;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 public class TestValueFilterGrepTags {
 
     @Test
-    public void testBasic() {
-        String html = "<html> <head> <meta charset=\"UTF-8\" /> <title>Peacock</title> <LINK href=\"lib/bootstrap/bootstrap.css\" rel=\"stylesheet\" type=\"text/css\"> <script type='text/javascript' src='lib/jquery.js'></script> <script type='text/javascript' src='lib/underscore.js'></script> <script type='text/javascript' src='lib/backbone.js'></script> <script type='text/javascript' src='lib/moment.js'></script> <script type='text/javascript' src='lib/bootstrap/bootstrap-dropdown.js'></script> <script src='peacock.js'></script> </head> <body> <div id='peacock'></div> <!--script src='demo.js'></script--> </body> </html>";
-        ValueFilterGrepTags grepTags = new ValueFilterGrepTags();
-        grepTags.setValues(new String[]{"bootstrap", "jquery"});
-        grepTags.setTagAttrs("src");
-        grepTags.setTagName("script");
+    public void basic() throws IOException {
+        @Syntax("HTML") String html =
+                "<html> <head> <meta charset=\"UTF-8\" /> <title>Peacock</title> " +
+                "<LINK href=\"lib/bootstrap/bootstrap.css\" rel=\"stylesheet\" type=\"text/css\"> " +
+                "<script type='text/javascript' src='lib/jquery.js'></script> " +
+                "<script type='text/javascript' src='lib/underscore.js'></script> " +
+                "<script type='text/javascript' src='lib/backbone.js'></script> " +
+                "<script type='text/javascript' src='lib/moment.js'></script> " +
+                "<script type='text/javascript' src='lib/bootstrap/bootstrap-dropdown.js'></script> " +
+                "<script src='peacock.js'></script> </head> <body> <div id='peacock'></div> " +
+                "<!--script src='demo.js'></script--> </body> </html>";
 
-        assertTrue(grepTags.filterValue(ValueFactory.create(html)) != null);
+        ValueFilterGrepTags grepTags = Configs.decodeObject(
+                ValueFilterGrepTags.class, "values = [bootstrap, jquery], tagAttrs = src, tagName = script");
+        assertNotNull(grepTags.filterValue(ValueFactory.create(html)));
 
-        grepTags.setValues(new String[]{"foo", "bar"});
-        assertTrue(grepTags.filterValue(ValueFactory.create(html)) == null);
+        ValueFilterGrepTags failGrepTags = Configs.decodeObject(
+                ValueFilterGrepTags.class, "values = [foo, bar], tagAttrs = src, tagName = script");
+        assertNull(failGrepTags.filterValue(ValueFactory.create(html)));
     }
 }
 
