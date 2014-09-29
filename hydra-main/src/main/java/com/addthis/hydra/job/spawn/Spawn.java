@@ -2573,7 +2573,7 @@ public class Spawn implements Codable {
                 }
             }
         } catch (Exception e) {
-            log.error("Unexpected error when draining job taks update queue: {}", e.getMessage(), e);
+            log.error("Unexpected error when draining job task update queue: {}", e.getMessage(), e);
         }
     }
 
