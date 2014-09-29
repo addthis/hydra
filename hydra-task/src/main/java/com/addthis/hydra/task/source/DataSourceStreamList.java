@@ -40,10 +40,10 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.task.run.TaskRunConfig;
+import com.addthis.hydra.task.stream.MeshyStreamFile;
 import com.addthis.hydra.task.stream.StreamFile;
 import com.addthis.hydra.task.stream.StreamFileSource;
 import com.addthis.hydra.task.stream.StreamSourceHashed;
-import com.addthis.hydra.task.stream.StreamSourceMeshy;
 
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -443,7 +443,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
                 InputStream is;
                 try {
                     is = streamFile.getInputStream();
-                    if (streamFile instanceof StreamSourceMeshy.MeshyStreamFile) {
+                    if (streamFile instanceof MeshyStreamFile) {
                         is = wrapCompressedStream(is, streamFile.name());
                     }
                 } catch (IOException e) {

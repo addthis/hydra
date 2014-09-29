@@ -14,7 +14,6 @@
 package com.addthis.hydra.task.stream;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,10 +25,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -45,9 +42,10 @@ import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
 import com.addthis.meshy.service.file.FileSource;
-import com.addthis.meshy.service.stream.StreamSource;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ConcurrentHashMultiset;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 
@@ -159,7 +157,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
      */
     @Bytes
     @FieldConfig(codable = true)
-    private int meshStreamCache;
+    int meshStreamCache;
 
     @FieldConfig(codable = true)
     private int maxRangeDays;
@@ -175,29 +173,29 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
     @FieldConfig(codable = true)
     private int meshShortCircuitWaitTime;
 
-    private static final ConcurrentMap<String, Integer> lateFileFindMap = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMultiset<String> lateFileFindMap = ConcurrentHashMultiset.create();
 
     private final Map<String, List<MeshyStreamFile>> cacheMap       = new HashMap<>();
     private final LinkedList<String>                 cache          = new LinkedList<>();
     private final Object                             nextSourceLock = new Object();
 
-    private MeshyClient        meshLink;
+    MeshyClient meshLink;
     private MeshHostScoreCache scoreCache;
-    private DateTime           firstDate;
-    private DateTime           lastDate;
+    DateTime firstDate;
+    DateTime lastDate;
 
     private volatile int peerCount = -1;
 
     @Override
     protected boolean doInit() throws IOException {
-         /* establish link to the mesh */
+        /* establish link to the mesh */
         meshLink = new MeshyClient(meshHost, meshPort);
-        log.info("mesh connected to " + meshHost + ":" + meshPort);
+        log.info("mesh connected to {}:{}", meshHost, meshPort);
         scoreCache = new MeshHostScoreCache(meshLink);
         return true;
     }
 
-    private boolean useProcessedTimeRangeMax() {
+    boolean useProcessedTimeRangeMax() {
         return (maxRangeDays + maxRangeHours) > 0;
     }
 
@@ -273,14 +271,12 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
                 }
                 String hostId = ref.getHostUUID().substring(0, ref.getHostUUID().indexOf("-"));
                 if (shortCircuited.get()) {
-                    int lateCount =
-                            (lateFileFindMap.get(hostId) == null ? 1 : lateFileFindMap.get(hostId));
-                    lateFileFindMap.put(hostId, lateCount + 1);
+                    lateFileFindMap.add(hostId);
                     // we are done here
                     return;
                 }
                 long receiveTime = System.currentTimeMillis();
-                fileReferences.add(new MeshyStreamFile(date, ref));
+                fileReferences.add(new MeshyStreamFile(StreamSourceMeshy.this, date, ref));
                 if (responseTimeMap.containsKey(hostId)) {
                     Histogram histo = responseTimeMap.get(hostId);
                     histo.update((receiveTime - startTime));
@@ -322,7 +318,8 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
                         && respondingPeerCount.get() > (meshPeerThreshold * peerCount)) {
                         // break early
                         shortCircuited.set(true);
-                        log.warn("Breaking after receiving responses from " + respondingPeerCount.get() + " of " + peerCount + " peers");
+                        log.warn("Breaking after receiving responses from {} of {} peers",
+                                 respondingPeerCount.get(), peerCount);
                         break;
                     } else {
                         try {
@@ -383,7 +380,8 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
                 }
             }
             if (log.isDebugEnabled()) {
-                log.debug("@ next source dates={} cache={} peek={} map={}", dates.size(), cache.size(), cache.peekFirst(), cacheMap.get(cache.peekFirst()));
+                log.debug("@ next source dates={} cache={} peek={} map={}",
+                          dates.size(), cache.size(), cache.peekFirst(), cacheMap.get(cache.peekFirst()));
             }
             if (cache.isEmpty()) {
                 return null;
@@ -532,92 +530,10 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
         return c;
     }
 
-    /** */
-    public class MeshyStreamFile implements StreamFile {
-
-        private final FileReference meshFile;
-        private final DateTime date;
-
-        MeshyStreamFile(DateTime date, FileReference meshFile) {
-            this.date = date;
-            this.meshFile = meshFile;
-        }
-
-        @Override
-        public String toString() {
-            return "{n=" + name() + ",p=" + getPath() + ",u=" + meshFile.getHostUUID() + "}";
-        }
-
-        @Override
-        public InputStream getInputStream() throws IOException {
-            if (useProcessedTimeRangeMax()) {
-                if ((firstDate == null) || (date.getMillis() < firstDate.getMillis())) {
-                    firstDate = date;
-                    log.debug("FIRST DATE = {}", firstDate);
-                }
-            }
-            if ((lastDate == null) || (date.getMillis() > lastDate.getMillis())) {
-                lastDate = date;
-                log.debug("LAST DATE = {}", lastDate);
-            }
-            // this fails on linux with out the explicit cast to InputStream
-            return new StreamSource(meshLink, meshFile.getHostUUID(),
-                    meshFile.name, meshStreamCache).getInputStream();
-        }
-
-        @Override
-        public long lastModified() {
-            return meshFile.lastModified;
-        }
-
-        @Override
-        public long length() {
-            return meshFile.size;
-        }
-
-        @Override
-        public String name() {
-            return meshFile.name;
-        }
-
-        @Override
-        public String getPath() {
-            return getPathOffset(meshFile.name);
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            if (this == other) {
-                return true;
-            }
-            if (!(other instanceof MeshyStreamFile)) {
-                return false;
-            }
-            MeshyStreamFile otherFile = (MeshyStreamFile) other;
-            if (!Objects.equals(meshFile, otherFile.meshFile)) {
-                return false;
-            }
-            if (!Objects.equals(date, otherFile.date)) {
-                return false;
-            }
-            return true;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(meshFile, date);
-        }
-    }
-
     @Override
     public void doShutdown() {
         if (!lateFileFindMap.isEmpty()) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("Late File Finds:").append("\n");
-            for (Map.Entry<String, Integer> entry : lateFileFindMap.entrySet()) {
-                sb.append("\t").append(entry.getKey()).append(" - ").append(entry.getValue()).append("\n");
-            }
-            log.warn(sb.toString());
+            log.warn("Late File Finds:\n{}", Joiner.on('\n').join(lateFileFindMap.entrySet()));
         }
         if (meshLink != null) {
             meshLink.close();
