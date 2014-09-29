@@ -116,18 +116,17 @@ public class OutputWriter extends AbstractOutputWriter {
             log.debug("OutputWriter initialized with max openFiles: " + maxOpen);
         }
 
+    }
+
+    @Override
+    public void open() {
+        super.open();
         Metrics.newGauge(OutputWriter.class, "openOutputsGauge", new Gauge<Integer>() {
             @Override
             public Integer value() {
                 return openOutputs.size();
             }
         });
-
-    }
-
-    @Override
-    public void open() {
-        super.open();
 
         // thread to close open outputs if the maxopen value has been exceeded
         writerMaintenanceThread.scheduleAtFixedRate(new Runnable() {
