@@ -2552,20 +2552,28 @@ public class Spawn implements Codable {
     }
 
     private void drainJobTaskUpdateQueue() {
-        long start = System.currentTimeMillis();
-        Set<String> jobIds = new HashSet<>();
-        jobUpdateQueue.drainTo(jobIds);
-        if (jobIds.size() > 0) {
-            if (log.isTraceEnabled()) {
-                log.trace("[drain] Draining " + jobIds.size() + " jobs from the update queue");
+        try {
+            long start = System.currentTimeMillis();
+            Set<String> jobIds = new HashSet<>();
+            jobUpdateQueue.drainTo(jobIds);
+            if (jobIds.size() > 0) {
+                if (log.isTraceEnabled()) {
+                    log.trace("[drain] Draining {} jobs from the update queue", jobIds.size());
+                }
+                for (String jobId : jobIds) {
+                    Job job = getJob(jobId);
+                    if (job == null) {
+                        log.warn("[drain] job {} does not exist - it may have been deleted", jobId);
+                    } else {
+                        sendJobUpdateEvent(job);
+                    }
+                }
+                if (log.isTraceEnabled()) {
+                    log.trace("[drain] Finished Draining {} jobs from the update queue in {}ms", jobIds.size(), System.currentTimeMillis() - start);
+                }
             }
-            for (String jobId : jobIds) {
-                Job job = getJob(jobId);
-                sendJobUpdateEvent(job);
-            }
-            if (log.isTraceEnabled()) {
-                log.trace("[drain] Finished Draining " + jobIds.size() + " jobs from the update queue in " + (System.currentTimeMillis() - start) + "ms");
-            }
+        } catch (Exception e) {
+            log.error("Unexpected error when draining job taks update queue: {}", e.getMessage(), e);
         }
     }
 
