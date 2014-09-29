@@ -284,14 +284,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
     private StreamFileSource source;
 
-    public AbstractStreamFileDataSource() {
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                exiting.set(true);
-                shutdown();
-            }
-        });
-    }
+    public AbstractStreamFileDataSource() {}
 
     public File getMarkDirFile() {
         return markDirFile;
@@ -331,6 +324,12 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     }
 
     @Override public void init(TaskRunConfig config) {
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                exiting.set(true);
+                shutdown();
+            }
+        });
         if (legacyMode != null) {
             magicMarksNumber = 0;
             useSimpleMarks = true;
