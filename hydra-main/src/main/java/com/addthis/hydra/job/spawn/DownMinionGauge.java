@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.spawn;
 
+import com.addthis.hydra.job.mq.HostState;
+
 import com.yammer.metrics.core.Gauge;
 
 class DownMinionGauge extends Gauge<Integer> {
@@ -23,18 +25,12 @@ class DownMinionGauge extends Gauge<Integer> {
     }
 
     @Override public Integer value() {
-        int total = 0;
-        if (spawn.monitored != null) {
-            synchronized (spawn.monitored) {
-                total = spawn.monitored.size();
+        int down = 0;
+        for (HostState host : spawn.listHostStatus(null)) {
+            if (host != null && !host.isDead() && !host.isUp()) {
+                down++;
             }
         }
-        int up;
-        if (spawn.minionMembers == null) {
-            up = 0;
-        } else {
-            up = spawn.minionMembers.getMemberSetSize();
-        }
-        return total - up;
+        return down;
     }
 }
