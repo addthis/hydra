@@ -49,6 +49,14 @@ public class KVUtilsTest {
         assertEquals("default value", new Long(0), KVUtils.getLongValue(kv, 0L, "bogus", "bogus_too"));
     }
 
+    /** The first non-null value is used even if it's not valid number (return default) */
+    @Test
+    public void getLongValue_FirstIsUsed() {
+        kv.add("foo", "bogus_number");
+        kv.add("toto", "2");
+        assertEquals(new Long(0), KVUtils.getLongValue(kv, 0L, "foo", "toto"));
+    }
+
     @Test
     public void getBooleanValue() {
         kv.add("foo", "true");
@@ -56,6 +64,13 @@ public class KVUtilsTest {
         assertTrue("primary key", KVUtils.getBooleanValue(kv, false, "foo", "toto"));
         assertFalse("secondary key", KVUtils.getBooleanValue(kv, true, "bogus", "toto"));
         assertTrue("default value", KVUtils.getBooleanValue(kv, true, "bogus", "bogus_too"));
+    }
+
+    /** default should be used if kv value is empty */
+    @Test
+    public void getBooleanValue_UseDefaultIfEmpty() {
+        kv.add("foo", "");
+        assertTrue(KVUtils.getBooleanValue(kv, true, "foo"));
     }
 
 }

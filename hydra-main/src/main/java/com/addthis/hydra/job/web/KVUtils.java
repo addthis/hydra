@@ -17,6 +17,7 @@ import java.util.Set;
 
 import com.addthis.basis.kv.KVPairs;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 
 public class KVUtils {
@@ -24,7 +25,7 @@ public class KVUtils {
     /** String values that are mapped to boolean {@code true} */
     private static final Set<String> TRUE_STR_VALUES = Sets.newHashSet("true", "1");
 
-    public static String getValue(KVPairs kv, String[] keys) {
+    private static String findFirstNonNullValue(KVPairs kv, String[] keys) {
         for (String key : keys) {
             if (kv.hasKey(key)) {
                 String v = kv.getValue(key);
@@ -36,22 +37,48 @@ public class KVUtils {
         return null;
     }
 
+    private static String findFirstNonEmptyValue(KVPairs kv, String[] keys) {
+        for (String key : keys) {
+            if (kv.hasKey(key)) {
+                String v = kv.getValue(key);
+                if (!Strings.isNullOrEmpty(v)) {
+                    return v;
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Returns the first non-null value of the given sequence of keys. */
     public static String getValue(KVPairs kv, String defaultValue, String... keys) {
-        String v = getValue(kv, keys);
+        String v = findFirstNonNullValue(kv, keys);
         return v == null ? defaultValue : v;
     }
 
+    /**
+     * Returns the first non-null value of the given sequence of keys as Long.
+     * 
+     * If all given keys have {@code null} value, the default is returned. Note that this method
+     * stops scanning the keys upon finding the first non-null value, even if it's not a valid 
+     * number (in which case, the default is returned, even a subsequent key may be a valid value).
+     */
     public static Long getLongValue(KVPairs kv, Long defaultValue, String... keys) {
-        String v = getValue(kv, keys);
+        String v = findFirstNonNullValue(kv, keys);
         try {
             return v == null ? defaultValue : Long.parseLong(v);
         } catch (Exception e) {
-            return null;
+            return defaultValue;
         }
     }
 
+    /**
+     * Returns the first non-empty value of the given sequence of keys as boolean.
+     * 
+     * If all given keys are {@code null} or empty, the default value is returned. This method
+     * converts "true" and "1" to boolean {@code true}, and all other values to {@code false}.
+     */
     public static boolean getBooleanValue(KVPairs kv, boolean defaultValue, String... keys) {
-        String v = getValue(kv, keys);
+        String v = findFirstNonEmptyValue(kv, keys);
         return v == null ? defaultValue : TRUE_STR_VALUES.contains(v);
     }
 }
