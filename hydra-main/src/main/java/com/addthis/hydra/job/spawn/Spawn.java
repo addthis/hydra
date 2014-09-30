@@ -2558,11 +2558,15 @@ public class Spawn implements Codable {
             jobUpdateQueue.drainTo(jobIds);
             log.trace("[drain] Draining {} jobs from the update queue", jobIds.size());
             for (String jobId : jobIds) {
-                Job job = getJob(jobId);
-                if (job == null) {
-                    log.warn("[drain] Job {} does not exist - it may have been deleted", jobId);
-                } else {
-                    sendJobUpdateEvent(job);
+                try {
+                    Job job = getJob(jobId);
+                    if (job == null) {
+                        log.warn("[drain] Job {} does not exist - it may have been deleted", jobId);
+                    } else {
+                        sendJobUpdateEvent(job);
+                    }
+                } catch (Throwable e) {
+                    log.error("[drain] Unexpected error when saving job update for {}", jobId, e);
                 }
             }
             log.trace("[drain] Finished Draining {} jobs from the update queue in {}ms",
