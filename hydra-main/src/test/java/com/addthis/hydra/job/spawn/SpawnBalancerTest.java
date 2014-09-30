@@ -90,7 +90,7 @@ public class SpawnBalancerTest extends ZkStartUtil {
             zkClient.delete().forPath("/minon/dead");
         }
         Files.deleteDir(new File(tmpRoot));
-        spawn.runtimeShutdownHook();
+        spawn.close();
     }
 
     @Test

@@ -116,6 +116,7 @@ import com.addthis.hydra.job.web.SpawnService;
 import com.addthis.hydra.job.web.old.SpawnHttp;
 import com.addthis.hydra.job.web.old.SpawnManager;
 import com.addthis.hydra.task.run.TaskExitState;
+import com.addthis.hydra.util.CloseTask;
 import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.hydra.util.SettableGauge;
 import com.addthis.hydra.util.WebSocketManager;
@@ -159,7 +160,7 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
-public class Spawn implements Codable {
+public class Spawn implements Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Spawn.class);
 
     private static final boolean meshQueue     = Parameter.boolValue("queue.mesh", false);
@@ -256,6 +257,8 @@ public class Spawn implements Codable {
             spawn = Jackson.defaultCodec().newDefault(Spawn.class);
         }
         if (enableSpawn2) new SpawnService(spawn).start();
+        // register jvm shutdown hook to clean up resources
+        Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(spawn), "Spawn Shutdown Hook"));
     }
 
     // thread pool for expanding jobs and sending kick messages (outside of the main application
@@ -417,12 +420,6 @@ public class Spawn implements Codable {
             }
         }
         loadJobs();
-        // register jvm shutdown hook to clean up resources
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                runtimeShutdownHook();
-            }
-        });
         // connect to message broker or fail
         // connect to mesh
         this.spawnMesh = new SpawnMesh(this);
@@ -2792,10 +2789,8 @@ public class Spawn implements Codable {
         }
     }
 
-    /**
-     * called by Thread registered to Runtime triggered by sig-kill
-     */
-    void runtimeShutdownHook() {
+    /** Called by Thread registered to Runtime triggered by sig-term. */
+    @Override public void close() {
         shuttingDown.set(true);
         try {
             drainJobTaskUpdateQueue();

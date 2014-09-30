@@ -25,8 +25,6 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobConfigManager;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.mq.HostState;
-import com.addthis.hydra.job.spawn.Spawn;
-import com.addthis.hydra.job.spawn.SpawnBalancerConfig;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
 
@@ -87,10 +85,8 @@ public class SpawnStateTest extends ZkStartUtil {
         File tmpRoot = Files.createTempDir();
         System.setProperty("SPAWN_DATA_DIR", tmpRoot + "/tmp/spawn/data");
         System.setProperty("SPAWN_LOG_DIR", tmpRoot + "/tmp/spawn/log/events");
-        try {
-            Spawn spawn = new Spawn(zkClient);
+        try (Spawn spawn = new Spawn(zkClient)) {
             assertEquals(0, spawn.getJobCommandManager().size());
-            spawn.runtimeShutdownHook();
         } finally {
             Files.deleteDir(tmpRoot);
         }
@@ -103,14 +99,13 @@ public class SpawnStateTest extends ZkStartUtil {
         File tmpRoot = Files.createTempDir();
         System.setProperty("SPAWN_DATA_DIR", tmpRoot + "/tmp/spawn/data");
         System.setProperty("SPAWN_LOG_DIR", tmpRoot + "/tmp/spawn/log/events");
-        try {
-            Spawn spawn = new Spawn(zkClient);
+        try (Spawn spawn = new Spawn(zkClient)) {
             jcmd = new JobCommand("me", new String[]{"ls"}, 1, 1, 1);
             spawn.getJobCommandManager().putEntity("test1", jcmd, true);
             assertEquals(1, spawn.getJobCommandManager().size());
             // todo: brittle, but this is the easiest way to test job equality right now
-            assertEquals(jcmd.toJSON().toString(), spawn.getJobCommandManager().getEntity("test1").toJSON().toString());
-            spawn.runtimeShutdownHook();
+            assertEquals(jcmd.toJSON().toString(),
+                         spawn.getJobCommandManager().getEntity("test1").toJSON().toString());
         } finally {
             Files.deleteDir(tmpRoot);
         }
@@ -121,18 +116,17 @@ public class SpawnStateTest extends ZkStartUtil {
         File tmpRoot = Files.createTempDir();
         System.setProperty("SPAWN_DATA_DIR", tmpRoot + "/tmp/spawn/data");
         System.setProperty("SPAWN_LOG_DIR", tmpRoot + "/tmp/spawn/log/events");
-        try {
-            Spawn spawn = new Spawn(zkClient);
+        try (Spawn spawn = new Spawn(zkClient)) {
             SpawnBalancerConfig config = new SpawnBalancerConfig();
             long newVal = 123456;
             config.setBytesMovedFullRebalance(newVal);
             spawn.updateSpawnBalancerConfig(config);
             spawn.writeSpawnBalancerConfig();
-            assertEquals("expected to see updated balancer value", newVal, spawn.getSpawnBalancer().getConfig().getBytesMovedFullRebalance());
+            assertEquals("expected to see updated balancer value", newVal,
+                         spawn.getSpawnBalancer().getConfig().getBytesMovedFullRebalance());
             spawn.loadSpawnBalancerConfig();
             assertEquals("expect to see changed balance parameter persisted", 123456l,
-                    spawn.getSpawnBalancer().getConfig().getBytesMovedFullRebalance());
-            spawn.runtimeShutdownHook();
+                         spawn.getSpawnBalancer().getConfig().getBytesMovedFullRebalance());
         } finally {
             Files.deleteDir(tmpRoot);
         }
