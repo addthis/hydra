@@ -58,7 +58,6 @@ import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.bark.StringSerializer;
 import com.addthis.bark.ZkUtil;
-import com.addthis.codec.Codec;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.config.Configs;
 import com.addthis.codec.jackson.Jackson;
@@ -163,6 +162,8 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
 public class Spawn implements Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Spawn.class);
 
+    // misc spawn configs
+
     private static final boolean meshQueue     = Parameter.boolValue("queue.mesh", false);
     private static final boolean enableSpawn2  = Parameter.boolValue("spawn.v2.enable", true);
     private static final String  clusterName   = Parameter.value("cluster.name", "localhost");
@@ -171,7 +172,6 @@ public class Spawn implements Codable, AutoCloseable {
     static final int TASK_QUEUE_DRAIN_INTERVAL = Parameter.intValue("task.queue.drain.interval", 500);
     static final boolean ENABLE_JOB_STORE = Parameter.boolValue("job.store.enable", true);
     static final boolean ENABLE_JOB_FIXDIRS_ONCOMPLETE = Parameter.boolValue("job.fixdirs.oncomplete", true);
-    static final String stateFilePath = Parameter.value("spawn.state.file", "spawn.state");
 
     private static final int requestHeaderBufferSize   = Parameter.intValue("spawn.http.bufsize", 8192);
     private static final int hostStatusRequestInterval = Parameter.intValue("spawn.status.interval", 5_000);
@@ -181,9 +181,18 @@ public class Spawn implements Codable, AutoCloseable {
     public static final  long   inputMaxNumberOfCharacters =
             Parameter.longValue("spawn.input.max.length", 1_000_000);
 
+    private static final long JOB_TASK_UPDATE_HEARTBEAT_INTERVAL =
+            Parameter.longValue("spawn.jobtask.update.interval", 30000);
+
+    private static final int clientDropTimeMillis = Parameter.intValue("spawn.client.drop.time", 60_000);
+    private static final int clientDropQueueSize  = Parameter.intValue("spawn.client.drop.queue", 2000);
+
+    // log configs
+
     private static final boolean useStructuredLogger = Parameter.boolValue("spawn.logger.bundle.enable",
                                                                            clusterName.equals("localhost"));
-
+    public static final String SPAWN_STRUCTURED_LOG_DIR =
+            Parameter.value("spawn.logger.bundle.dir", "./log/spawn-stats");
     private static final boolean eventLogCompress =
             Parameter.boolValue("spawn.eventlog.compress", true);
     private static final int     logMaxAge        =
@@ -192,8 +201,7 @@ public class Spawn implements Codable, AutoCloseable {
             Parameter.intValue("spawn.event.log.maxSize", 100 * 1024 * 1024);
     private static final String logDir = Parameter.value("spawn.event.log.dir", "log");
 
-    static final Codec   codec        = CodecJSON.INSTANCE;
-    static final Counter quiesceCount = Metrics.newCounter(Spawn.class, "quiesced");
+    // metrics
 
     static final SettableGauge<Integer> runningTaskCount =
             SettableGauge.newSettableGauge(Spawn.class, "runningTasks", 0);
@@ -218,31 +226,20 @@ public class Spawn implements Codable, AutoCloseable {
             Metrics.newMeter(Spawn.class, "jobsStartedPerHour", "jobsStartedPerHour", TimeUnit.HOURS);
     private static final Meter   jobsCompletedPerHour                 =
             Metrics.newMeter(Spawn.class, "jobsCompletedPerHour", "jobsCompletedPerHour", TimeUnit.HOURS);
+    private static final Meter   jobTaskUpdateHeartbeatSuccessMeter   =
+            Metrics.newMeter(Spawn.class, "jobTaskUpdateHeartbeatSuccess",
+                             "jobTaskUpdateHeartbeatSuccess", TimeUnit.MINUTES);
+
+    static final Counter quiesceCount = Metrics.newCounter(Spawn.class, "quiesced");
     private static final Counter nonConsumingClientDropCounter        =
             Metrics.newCounter(Spawn.class, "clientDrops");
     private static final Counter nonHostTaskMessageCounter            =
             Metrics.newCounter(Spawn.class, "nonHostTaskMessage");
-    private static final Meter   jobTaskUpdateHeartbeatSuccessMeter   =
-            Metrics.newMeter(Spawn.class, "jobTaskUpdateHeartbeatSuccess",
-                             "jobTaskUpdateHeartbeatSuccess", TimeUnit.MINUTES);
     private static final Counter jobTaskUpdateHeartbeatFailureCounter =
             Metrics.newCounter(Spawn.class, "jobTaskUpdateHeartbeatFailure");
 
-    private static final long JOB_TASK_UPDATE_HEARTBEAT_INTERVAL =
-            Parameter.longValue("spawn.jobtask.update.interval", 30000);
-
-    public static final String SPAWN_DATA_DIR           =
-            Parameter.value("SPAWN_DATA_DIR", "./data");
-    public static final String SPAWN_STRUCTURED_LOG_DIR =
-            Parameter.value("spawn.logger.bundle.dir", "./log/spawn-stats");
-
-    private static final int clientDropTimeMillis =
-            Parameter.intValue("spawn.client.drop.time", 60_000);
-    private static final int clientDropQueueSize  =
-            Parameter.intValue("spawn.client.drop.queue", 2000);
-
     public static void main(String[] args) throws Exception {
-        Spawn spawn = Jackson.defaultCodec().newDefault(Spawn.class);
+        Spawn spawn = Configs.newDefault(Spawn.class);
         if (enableSpawn2) new SpawnService(spawn).start();
         // register jvm shutdown hook to clean up resources
         Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(spawn), "Spawn Shutdown Hook"));
@@ -271,7 +268,8 @@ public class Spawn implements Codable, AutoCloseable {
     private final HostFailWorker hostFailWorker;
     private final RollingLog     eventLog;
 
-    private final File                                           dataDir;
+    private final File stateFile;
+
     private final ConcurrentHashMap<String, ClientEventListener> listeners;
 
     final SpawnState spawnState;
@@ -314,7 +312,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     @VisibleForTesting
     public Spawn(@Nullable CuratorFramework zkClient) throws Exception {
-        this.dataDir = Files.initDirectory(SPAWN_DATA_DIR);
+        this.stateFile = new File(Files.initDirectory("etc"), "spawn.statefile");
         this.spawnState = new SpawnState("test-uuid", new AtomicBoolean(), new CopyOnWriteArraySet<String>());
         this.listeners = new ConcurrentHashMap<>();
         this.monitored = new ConcurrentHashMap<>();
@@ -354,13 +352,14 @@ public class Spawn implements Codable, AutoCloseable {
                   @JsonProperty("queryPort") int queryPort,
                   @JsonProperty("queryHttpHost") String queryHttpHost,
                   @JsonProperty("webPort") int webPort,
-                  @JsonProperty("httpHost") String httpHost
+                  @JsonProperty("httpHost") String httpHost,
+                  @JsonProperty("dataDir") File dataDir,
+                  @JsonProperty("stateFile") File stateFile
     ) throws Exception {
-        this.dataDir = new File("etc");
         Files.initDirectory(dataDir);
-        File statefile = new File(dataDir, stateFilePath);
-        if (statefile.exists() && statefile.isFile()) {
-            spawnState = Jackson.defaultMapper().readValue(statefile, SpawnState.class);
+        this.stateFile = stateFile;
+        if (stateFile.exists() && stateFile.isFile()) {
+            spawnState = Jackson.defaultMapper().readValue(stateFile, SpawnState.class);
         } else {
             spawnState = Jackson.defaultCodec().newDefault(SpawnState.class);
         }
@@ -451,9 +450,9 @@ public class Spawn implements Codable, AutoCloseable {
 
     void writeState() {
         try {
-            Files.write(new File(dataDir, stateFilePath), codec.encode(spawnState), false);
+            Files.write(stateFile, CodecJSON.INSTANCE.encode(spawnState), false);
         } catch (Exception e) {
-            log.warn("WARNING: failed to write spawn state to log file at {}", stateFilePath, e);
+            log.warn("WARNING: failed to write spawn state to log file at {}", stateFile, e);
         }
     }
 
@@ -3335,7 +3334,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     public void writeSpawnBalancerConfig() {
         try {
-            spawnDataStore.put(SPAWN_BALANCE_PARAM_PATH, new String(codec.encode(spawnState.balancerConfig)));
+            spawnDataStore.put(SPAWN_BALANCE_PARAM_PATH, new String(CodecJSON.INSTANCE.encode(spawnState.balancerConfig)));
         } catch (Exception e) {
             log.warn("Warning: failed to persist SpawnBalancer parameters: ", e);
         }
