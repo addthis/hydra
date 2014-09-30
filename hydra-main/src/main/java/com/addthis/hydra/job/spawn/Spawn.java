@@ -38,6 +38,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -61,6 +62,7 @@ import com.addthis.bark.StringSerializer;
 import com.addthis.bark.ZkUtil;
 import com.addthis.codec.Codec;
 import com.addthis.codec.codables.Codable;
+import com.addthis.codec.config.Configs;
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.HostFailWorker;
@@ -196,7 +198,6 @@ public class Spawn implements Codable, AutoCloseable {
             Parameter.intValue("spawn.event.log.maxSize", 100 * 1024 * 1024);
     private static final String logDir = Parameter.value("spawn.event.log.dir", "log");
 
-    // default to true if-and-only-if we are running local stack
     static final Codec   codec        = CodecJSON.INSTANCE;
     static final Counter quiesceCount = Metrics.newCounter(Spawn.class, "quiesced");
 
@@ -247,15 +248,7 @@ public class Spawn implements Codable, AutoCloseable {
             Parameter.intValue("spawn.client.drop.queue", 2000);
 
     public static void main(String[] args) throws Exception {
-        File dataDir = new File("etc");
-        Files.initDirectory(dataDir);
-        File statefile = new File(dataDir, stateFilePath);
-        Spawn spawn;
-        if (statefile.exists() && statefile.isFile()) {
-            spawn = Jackson.defaultMapper().readValue(statefile, Spawn.class);
-        } else {
-            spawn = Jackson.defaultCodec().newDefault(Spawn.class);
-        }
+        Spawn spawn = Jackson.defaultCodec().newDefault(Spawn.class);
         if (enableSpawn2) new SpawnService(spawn).start();
         // register jvm shutdown hook to clean up resources
         Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(spawn), "Spawn Shutdown Hook"));
@@ -287,16 +280,14 @@ public class Spawn implements Codable, AutoCloseable {
     private final File                                           dataDir;
     private final ConcurrentHashMap<String, ClientEventListener> listeners;
 
-    @JsonProperty private String uuid;
-    @JsonProperty String debug;
-    @JsonProperty String queryHost;
-    @JsonProperty String spawnHost;
-    @JsonProperty private final int queryPort;
-    @JsonProperty boolean quiesce;
-    @JsonProperty HashSet<String> disabledHosts = new HashSet<>();
+    final SpawnState spawnState;
+
+    String debug;
+    private final int queryPort;
+    String queryHost;
+    String spawnHost;
 
     final ConcurrentHashMap<String, HostState> monitored;
-    final SpawnState spawnState = new SpawnState();
     private final SpawnMesh spawnMesh;
     final SpawnFormattedLogger spawnFormattedLogger;
 
@@ -331,6 +322,7 @@ public class Spawn implements Codable, AutoCloseable {
     @VisibleForTesting
     public Spawn(@Nullable CuratorFramework zkClient) throws Exception {
         this.dataDir = Files.initDirectory(SPAWN_DATA_DIR);
+        this.spawnState = new SpawnState("test-uuid", new AtomicBoolean(), new CopyOnWriteArraySet<String>());
         this.listeners = new ConcurrentHashMap<>();
         this.monitored = new ConcurrentHashMap<>();
         this.useZk = zkClient != null;
@@ -366,24 +358,19 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     @JsonCreator
-    private Spawn(@JsonProperty("uuid") String uuid,
-                  @JsonProperty("quiesce") boolean quiesce,
-                  @JsonProperty("disabledHosts") HashSet<String> disabledHosts,
-                  /** Should really be replaced by logging framework settings. */
-                  @JsonProperty("debug") String debug,
-                  /** Query port is read in, but seems to invariably be 2222. */
-                  @JsonProperty("queryPort") int queryPort,
-                  /** These two properties are ignored for deserialization. Probably should not get written. */
-                  @JsonProperty("queryHost") String queryHost,
-                  @JsonProperty("spawnHost") String spawnHost) throws Exception {
-        if (uuid == null) {
-            this.uuid = UUID.randomUUID().toString();
-            log.warn("[init] uuid was null, creating new one: {}", this.uuid);
+    private Spawn(
+            /** Should really be replaced by logging framework settings. */
+            @JsonProperty("debug") String debug,
+            /** Query port is read in, but seems to invariably be 2222. */
+            @JsonProperty("queryPort") int queryPort) throws Exception {
+        this.dataDir = new File("etc");
+        Files.initDirectory(dataDir);
+        File statefile = new File(dataDir, stateFilePath);
+        if (statefile.exists() && statefile.isFile()) {
+            spawnState = Jackson.defaultMapper().readValue(statefile, SpawnState.class);
         } else {
-            this.uuid = uuid;
+            spawnState = Jackson.defaultCodec().newDefault(SpawnState.class);
         }
-        this.quiesce = quiesce;
-        this.disabledHosts = disabledHosts;
         if (debugOverride != null) {
             this.debug = debugOverride;
         } else {
@@ -396,7 +383,6 @@ public class Spawn implements Codable, AutoCloseable {
         this.spawnHost =
                 (httpHost != null ? httpHost : InetAddress.getLocalHost().getHostAddress()) + ":" +
                 webPort;
-        this.dataDir = new File("etc");
         File webDir = new File("web");
         this.monitored = new ConcurrentHashMap<>();
         this.listeners = new ConcurrentHashMap<>();
@@ -432,7 +418,7 @@ public class Spawn implements Codable, AutoCloseable {
         hostFailWorker = new HostFailWorker(this, scheduledExecutor);
         balancer = new SpawnBalancer(this);
         loadSpawnBalancerConfig();
-        this.spawnMQ.connectToMQ(uuid);
+        this.spawnMQ.connectToMQ(getUuid());
 
         // start JobAlertManager
         jobAlertManager = new JobAlertManagerImpl(this, scheduledExecutor);
@@ -490,7 +476,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     void writeState() {
         try {
-            Files.write(new File(dataDir, stateFilePath), codec.encode(this), false);
+            Files.write(new File(dataDir, stateFilePath), codec.encode(spawnState), false);
         } catch (Exception e) {
             log.warn("WARNING: failed to write spawn state to log file at {}", stateFilePath, e);
         }
@@ -562,7 +548,11 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     public String getUuid() {
-        return uuid;
+        return spawnState.uuid;
+    }
+
+    public boolean getQuiesced() {
+        return spawnState.quiesce.get();
     }
 
     public MeshyClient getMeshyClient() {
@@ -2029,9 +2019,9 @@ public class Spawn implements Codable, AutoCloseable {
         require(task.getState() != JobTaskState.BUSY && task.getState() != JobTaskState.ALLOCATED &&
                 task.getState() != JobTaskState.QUEUED, "invalid task state");
         if (addToQueue) {
-            addToTaskQueue(task.getJobKey(), isManualKick && quiesce, toQueueHead);
+            addToTaskQueue(task.getJobKey(), isManualKick && getQuiesced(), toQueueHead);
         } else {
-            kickIncludingQueue(job, task, expandJob(job), false, isManualKick && quiesce);
+            kickIncludingQueue(job, task, expandJob(job), false, isManualKick && getQuiesced());
         }
         log.warn("[task.kick] started " + job.getId() + " / " + task.getTaskID() + " = " + job.getDescription());
         queueJobTaskUpdateEvent(job);
@@ -2188,13 +2178,12 @@ public class Spawn implements Codable, AutoCloseable {
                     taskQueuesByPriority.updateHostAvailSlots(state);
                 }
                 boolean hostEnabled = true;
-                synchronized (disabledHosts) {
-                    if (disabledHosts.contains(state.getHost()) || disabledHosts.contains(state.getHostUuid())) {
-                        hostEnabled = false;
-                        state.setDisabled(true);
-                    } else {
-                        state.setDisabled(false);
-                    }
+                if (spawnState.disabledHosts.contains(state.getHost()) ||
+                    spawnState.disabledHosts.contains(state.getHostUuid())) {
+                    hostEnabled = false;
+                    state.setDisabled(true);
+                } else {
+                    state.setDisabled(false);
                 }
                 // Propagate minion state for ui
                 if (upMinions.contains(state.getHostUuid()) && hostEnabled) {
@@ -2451,7 +2440,7 @@ public class Spawn implements Codable, AutoCloseable {
         jobsCompletedPerHour.mark();
         job.setFinishTime(System.currentTimeMillis());
         spawnFormattedLogger.finishJob(job);
-        if (!quiesce) {
+        if (!getQuiesced()) {
             if (job.isEnabled() && !errored) {
                 // rekick if any task had more work to do
                 if (job.hadMoreData()) {
@@ -2909,7 +2898,7 @@ public class Spawn implements Codable, AutoCloseable {
             if (task == null || task.getState() != JobTaskState.IDLE) {
                 continue;
             }
-            addToTaskQueue(task.getJobKey(), isManualKick && quiesce, false);
+            addToTaskQueue(task.getJobKey(), isManualKick && getQuiesced(), false);
         }
         updateJob(job);
         return true;
@@ -3182,7 +3171,7 @@ public class Spawn implements Codable, AutoCloseable {
     private boolean attemptMigrateTask(Job job, JobTask task, long timeOnQueue) {
         HostState target;
         if (
-                !quiesce &&  // If spawn is not quiesced,
+                !getQuiesced() &&  // If spawn is not quiesced,
                 taskQueuesByPriority.checkSizeAgeForMigration(task.getByteCount(), timeOnQueue) &&
                 // and the task is small enough that migration is sensible
                 (target = findHostWithAvailableSlot(task, timeOnQueue, listHostStatus(job.getMinionType()), true)) != null)
@@ -3284,7 +3273,7 @@ public class Spawn implements Codable, AutoCloseable {
                     iter.remove();
                     continue;
                 }
-                if (quiesce && !key.getIgnoreQuiesce()) {
+                if (getQuiesced() && !key.getIgnoreQuiesce()) {
                     skippedQuiesceCount++;
                     if (log.isDebugEnabled()) {
                         log.debug("[task.queue] skipping " + key + " because spawn is quiesced and the kick wasn't manual");
@@ -3341,9 +3330,7 @@ public class Spawn implements Codable, AutoCloseable {
                     continue;
                 }
                 boolean changed;
-                synchronized (disabledHosts) {
-                    changed = disable ? disabledHosts.add(host) : disabledHosts.remove(host);
-                }
+                changed = disable ? spawnState.disabledHosts.add(host) : spawnState.disabledHosts.remove(host);
                 if (changed) {
                     updateToggledHosts(host, disable);
                 }
@@ -3378,9 +3365,8 @@ public class Spawn implements Codable, AutoCloseable {
     protected final void loadSpawnBalancerConfig() {
         String configString = spawnDataStore.get(SPAWN_BALANCE_PARAM_PATH);
         if (configString != null && !configString.isEmpty()) {
-            SpawnBalancerConfig loadedConfig = new SpawnBalancerConfig();
             try {
-                codec.decode(loadedConfig, configString.getBytes());
+                SpawnBalancerConfig loadedConfig = Configs.decodeObject(SpawnBalancerConfig.class, configString);
                 updateSpawnBalancerConfig(loadedConfig);
             } catch (Exception e) {
                 log.warn("Warning: failed to decode SpawnBalancerConfig: ", e);

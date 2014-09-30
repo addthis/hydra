@@ -14,6 +14,7 @@
 package com.addthis.hydra.job.spawn;
 
 import java.util.Arrays;
+import java.util.List;
 
 import com.addthis.basis.util.Strings;
 
@@ -25,9 +26,11 @@ import com.addthis.maljson.JSONObject;
  */
 public class Settings {
 
-    private Spawn spawn;
+    private final Spawn spawn;
 
-    public Settings(Spawn spawn) {this.spawn = spawn;}
+    public Settings(Spawn spawn) {
+        this.spawn = spawn;
+    }
 
     public String getDebug() {
         return spawn.debug;
@@ -35,7 +38,6 @@ public class Settings {
 
     public void setDebug(String debug) {
         spawn.debug = debug;
-        spawn.writeState();
     }
 
     public int getDefaultReplicaCount() {
@@ -52,16 +54,14 @@ public class Settings {
 
     public void setQueryHost(String queryHost) {
         spawn.queryHost = queryHost;
-        spawn.writeState();
     }
 
     public void setSpawnHost(String spawnHost) {
         spawn.spawnHost = spawnHost;
-        spawn.writeState();
     }
 
     public boolean getQuiesced() {
-        return spawn.quiesce;
+        return spawn.getQuiesced();
     }
 
     public void setQuiesced(boolean quiesced) {
@@ -69,26 +69,26 @@ public class Settings {
         if (quiesced) {
             Spawn.quiesceCount.inc();
         }
-        spawn.quiesce = quiesced;
+        spawn.spawnState.quiesce.set(quiesced);
         spawn.writeState();
     }
 
     public String getDisabled() {
-        synchronized (spawn.disabledHosts) {
-            return Strings.join(spawn.disabledHosts.toArray(), ",");
-        }
+        return Strings.join(spawn.spawnState.disabledHosts.toArray(), ",");
     }
 
     public void setDisabled(String disabled) {
-        synchronized (spawn.disabledHosts) {
-            spawn.disabledHosts.clear();
-            spawn.disabledHosts.addAll(Arrays.asList(disabled.split(",")));
-        }
+        List<String> newDisabledHosts = Arrays.asList(disabled.split(","));
+        spawn.spawnState.disabledHosts.addAll(newDisabledHosts);
+        spawn.spawnState.disabledHosts.retainAll(newDisabledHosts);
+        spawn.writeState();
     }
 
     public JSONObject toJSON() throws JSONException {
-        return new JSONObject().put("debug", spawn.debug).put("quiesce", spawn.quiesce)
-                               .put("queryHost", spawn.queryHost).put("spawnHost", spawn.spawnHost)
+        return new JSONObject().put("debug", spawn.debug)
+                               .put("quiesce", spawn.spawnState.quiesce.get())
+                               .put("queryHost", spawn.queryHost)
+                               .put("spawnHost", spawn.spawnHost)
                                .put("disabled", getDisabled())
                                .put("defaultReplicaCount", Spawn.DEFAULT_REPLICA_COUNT);
     }

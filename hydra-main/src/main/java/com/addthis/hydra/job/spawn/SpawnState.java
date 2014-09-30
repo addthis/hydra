@@ -13,7 +13,10 @@
  */
 package com.addthis.hydra.job.spawn;
 
+import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.collect.ConcurrentHashMapV8;
 
@@ -21,9 +24,34 @@ import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.util.DirectedGraph;
 
-public class SpawnState implements Codable {
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-    final ConcurrentMap<String, Job> jobs = new ConcurrentHashMapV8<>();
-    final DirectedGraph<String> jobDependencies = new DirectedGraph<>();
-    SpawnBalancerConfig balancerConfig = new SpawnBalancerConfig();
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+@JsonIgnoreProperties({"queryHost", "spawnHost", "debug", "queryPort"}) // ignore legacy fields
+public class SpawnState implements Codable {
+    private static final Logger log = LoggerFactory.getLogger(SpawnState.class);
+
+    @JsonProperty public final String uuid;
+    @JsonProperty final AtomicBoolean quiesce;
+    @JsonProperty final CopyOnWriteArraySet<String> disabledHosts;
+
+    final transient ConcurrentMap<String, Job> jobs = new ConcurrentHashMapV8<>();
+    final transient DirectedGraph<String> jobDependencies = new DirectedGraph<>();
+    transient SpawnBalancerConfig balancerConfig = new SpawnBalancerConfig();
+
+    SpawnState(@JsonProperty("uuid") String uuid,
+               @JsonProperty("quiesce") AtomicBoolean quiesce,
+               @JsonProperty("disabledHosts") CopyOnWriteArraySet<String> disabledHosts) {
+        if (uuid == null) {
+            this.uuid = UUID.randomUUID().toString();
+            log.warn("[init] uuid was null, creating new one: {}", this.uuid);
+        } else {
+            this.uuid = uuid;
+        }
+        this.quiesce = quiesce;
+        this.disabledHosts = disabledHosts;
+    }
 }

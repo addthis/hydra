@@ -39,7 +39,7 @@ class JobRekickTask implements Runnable {
              * allocated. lock to prevent other RPCs from conflicting with scheduling.
              */
             try {
-                if (!spawn.quiesce) {
+                if (!spawn.getQuiesced()) {
                     String[] jobids = null;
                     spawn.jobLock.lock();
                     try {
