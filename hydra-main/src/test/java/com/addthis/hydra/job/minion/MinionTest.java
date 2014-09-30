@@ -18,7 +18,7 @@ import java.util.List;
 import com.addthis.basis.test.SlowTest;
 
 import com.addthis.bark.ZkStartUtil;
-import com.addthis.hydra.job.minion.Minion;
+import com.addthis.codec.config.Configs;
 
 import com.google.common.collect.ImmutableList;
 
@@ -37,5 +37,10 @@ public class MinionTest extends ZkStartUtil {
         List<String> upMinions = zkClient.getChildren().forPath("/minion/up");
         assertEquals(ImmutableList.of(minion.getUUID()), upMinions);
         minion.closeZkClient();
+    }
+
+    @Test
+    public void decodeDefault() throws Exception {
+        Minion minion = Configs.newDefault(Minion.class);
     }
 }

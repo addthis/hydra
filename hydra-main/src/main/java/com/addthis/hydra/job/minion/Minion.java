@@ -74,6 +74,7 @@ import com.addthis.hydra.mq.RabbitMessageConsumer;
 import com.addthis.hydra.mq.RabbitMessageProducer;
 import com.addthis.hydra.mq.RabbitQueueingConsumer;
 import com.addthis.hydra.mq.ZKMessageProducer;
+import com.addthis.hydra.util.CloseTask;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
 import com.addthis.meshy.MeshyClient;
@@ -114,7 +115,7 @@ import org.slf4j.LoggerFactory;
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
-public class Minion implements MessageListener, Codable {
+public class Minion implements MessageListener, Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Minion.class);
 
     static final boolean meshQueue = Parameter.boolValue("queue.mesh", false);
@@ -149,7 +150,8 @@ public class Minion implements MessageListener, Codable {
     public static final String defaultMinionType = Parameter.value("minion.type", "default");
 
     public static void main(String[] args) throws Exception {
-        Configs.newDefault(Minion.class);
+        Minion minion = Configs.newDefault(Minion.class);
+        Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(minion), "Minion Shutdown Hook"));
     }
 
     @FieldConfig String uuid;
@@ -231,7 +233,7 @@ public class Minion implements MessageListener, Codable {
     }
 
     @JsonCreator
-    public Minion(@JsonProperty("dataDir") File rootDir) throws Exception {
+    private Minion(@JsonProperty("dataDir") File rootDir) throws Exception {
         this.rootDir = rootDir;
         nextPort = minJobPort;
         startTime = System.currentTimeMillis();
@@ -262,23 +264,11 @@ public class Minion implements MessageListener, Codable {
         jetty.start();
         waitForJetty();
         sendStatusFailCount = Metrics.newCounter(Minion.class, "sendStatusFail-" + getJettyPort() + "-JMXONLY");
-        sendStatusFailAfterRetriesCount = Metrics.newCounter(Minion.class, "sendStatusFailAfterRetries-" + getJettyPort() + "-JMXONLY");
+        sendStatusFailAfterRetriesCount = Metrics.newCounter(Minion.class,
+                                                             "sendStatusFailAfterRetries-" + getJettyPort() +
+                                                             "-JMXONLY");
         fileStatsTimer = Metrics.newTimer(Minion.class, "JobTask-byte-size-timer");
         metricsHandler = MetricsServletMaker.makeHandler();
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                try {
-                    jetty.stop();
-                    minionTaskDeleter.stopDeletionThread();
-                    if (zkClient != null && zkClient.getState() == CuratorFrameworkState.STARTED) {
-                        minionGroupMembership.removeFromGroup("/minion/up", getUUID());
-                        zkClient.close();
-                    }
-                } catch (Exception e) {
-                    log.error("Error shutting down", e);
-                }
-            }
-        });
         activeTaskHistogram = Metrics.newHistogram(Minion.class, "activeTasks");
         new HostMetricUpdater(this);
         try {
@@ -908,6 +898,15 @@ public class Minion implements MessageListener, Codable {
 
     public boolean getShutdown() {
         return shutdown.get();
+    }
+
+    @Override public void close() throws Exception {
+        jetty.stop();
+        minionTaskDeleter.stopDeletionThread();
+        if (zkClient != null && zkClient.getState() == CuratorFrameworkState.STARTED) {
+            minionGroupMembership.removeFromGroup("/minion/up", getUUID());
+            zkClient.close();
+        }
     }
 }
 
