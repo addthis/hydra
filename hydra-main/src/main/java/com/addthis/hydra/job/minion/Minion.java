@@ -52,6 +52,7 @@ import com.addthis.bark.ZkGroupMembership;
 import com.addthis.bark.ZkUtil;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
+import com.addthis.codec.config.Configs;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.JobTaskErrorCode;
 import com.addthis.hydra.job.mq.CommandTaskKick;
@@ -82,6 +83,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AlreadyClosedException;
 import com.rabbitmq.client.Channel;
@@ -121,7 +124,6 @@ public class Minion implements MessageListener, Codable {
     private static final int webPort = Parameter.intValue("minion.web.port", 5051);
     private static final int minJobPort = Parameter.intValue("minion.job.baseport", 0);
     private static final int maxJobPort = Parameter.intValue("minion.job.maxport", 0);
-    private static final String dataDir = System.getProperty("minion.data.dir", "minion");
     private static final String group = System.getProperty("minion.group", "none");
     private static final String localHost = System.getProperty("minion.localhost");
     private static final String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
@@ -147,16 +149,10 @@ public class Minion implements MessageListener, Codable {
     public static final String defaultMinionType = Parameter.value("minion.type", "default");
 
     public static void main(String[] args) throws Exception {
-        File rootDir;
-        if (args.length > 0) {
-            rootDir = new File(args[0]);
-        } else {
-            rootDir = new File(dataDir);
-        }
-        new Minion(rootDir);
+        Configs.newDefault(Minion.class);
     }
 
-    @FieldConfig(required = true) String uuid;
+    @FieldConfig String uuid;
     @FieldConfig MinionTaskDeleter minionTaskDeleter;
     @FieldConfig ConcurrentMap<String, Integer> stopped = new ConcurrentHashMap<>();
     @FieldConfig List<CommandTaskKick> jobQueue = new ArrayList<>(10);
@@ -234,8 +230,8 @@ public class Minion implements MessageListener, Codable {
         activeTaskKeys = new HashSet<>();
     }
 
-    @VisibleForTesting
-    public Minion(File rootDir) throws Exception {
+    @JsonCreator
+    public Minion(@JsonProperty("dataDir") File rootDir) throws Exception {
         this.rootDir = rootDir;
         nextPort = minJobPort;
         startTime = System.currentTimeMillis();

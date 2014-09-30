@@ -173,8 +173,9 @@ function startOthers() {
         if [ ! -f pid/pid.${minion} ]; then
             echo "starting ${minion}"
             jvmname="-Dvisualvm.display.name=${minion}"
-            echo "${JAVA_CMD} ${MINION_OPT} ${jvmname} -jar ${HYDRA_EXEC} minion ${minion}" > log/${minion}.cmd
-            ${JAVA_CMD} ${MINION_OPT} ${jvmname} -jar ${HYDRA_EXEC} minion ${minion} > log/${minion}.log 2>&1 &
+            dataDir="-Dcom.addthis.hydra.job.minion.Minion.dataDir=${minion}"
+            echo "${JAVA_CMD} ${MINION_OPT} ${jvmname} ${dataDir} -jar ${HYDRA_EXEC} minion ${minion}" > log/${minion}.cmd
+            ${JAVA_CMD} ${MINION_OPT} ${jvmname} ${dataDir} -jar ${HYDRA_EXEC} minion ${minion} > log/${minion}.log 2>&1 &
             echo "$!" > pid/pid.${minion}
         fi
     done
