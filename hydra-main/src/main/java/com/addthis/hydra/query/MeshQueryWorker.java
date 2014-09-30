@@ -13,14 +13,13 @@
  */
 package com.addthis.hydra.query;
 
-import java.io.Closeable;
-
-import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.codec.codables.SuperCodable;
 import com.addthis.codec.config.Configs;
+import com.addthis.hydra.data.query.source.MeshQuerySource;
+import com.addthis.hydra.query.web.QueryServer;
+import com.addthis.hydra.util.CloseTask;
 
-import com.google.common.base.Throwables;
-
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yammer.metrics.reporting.MetricsServlet;
 
 import org.eclipse.jetty.server.Connector;
@@ -33,61 +32,44 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A sort of wrapper class for mesh query workers; similar to MeshQueryMaster but this one only starts up
- * a jetty server to spit out metrics for nest and then starts up meshy the same way meshy used to be called
- * from main.
+ * A sort of wrapper class for mesh query workers; similar to {@link QueryServer} but this one only starts up a
+ * jetty server to display metrics and then starts up meshy as if meshy was the class whose main method was invoked.
  * <p/>
- * FOR ACTUAL QUERY WORKER LOGIC: see MeshQuerySource
- * <p/>
- * Has a shutdown hook which calls stop on the jetty server -- presumably helpful; copied from MQM
+ * For query worker's actual query processing logic, {@link MeshQuerySource}.
  */
-public class MeshQueryWorker implements SuperCodable, Closeable {
-
+public class MeshQueryWorker implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(MeshQueryWorker.class);
 
     /**
-     * The port on which the worker reports metrics. The default is fine unless at some point
-     * we have multiple mqworkers on one machine for some reason. If that happens, use the system
-     * property to give them different ports.
+     * The port on which the worker reports metrics. The default is fine unless at some point we want multiple
+     * mqworkers on one machine. If that happens, use codec to give them different ports.
      */
-    @FieldConfig(required = true)
-    private int webPort;
+    private final int webPort;
 
     /** server listens for query requests using HTML protoc */
-    private transient Server htmlQueryServer;
+    private final transient Server htmlQueryServer;
 
     /** thread pool for jetty */
     private final transient ThreadPool queuedThreadPool = new QueuedThreadPool(20);
 
     public static void main(String[] args) throws Exception {
-        final MeshQueryWorker qs = Configs.newDefault(MeshQueryWorker.class);
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                qs.close();
-            }
-        });
-        //run meshy as per current standard
+        final MeshQueryWorker queryWorker = Configs.newDefault(MeshQueryWorker.class);
+        Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(queryWorker), "Query Worker Shutdown Hook"));
+
+        // execute meshy main method and rely on system properties to register query file system
         com.addthis.meshy.Main.main(args);
     }
 
-    @Override public void postDecode() {
-        try {
-            //start jetty for metrics servlet
-            htmlQueryServer = startHtmlQueryServer();
-            log.info("[init]  web port={}", webPort);
-        } catch (Exception e) {
-            Throwables.propagate(e);
-        }
+    @JsonCreator
+    private MeshQueryWorker(@JsonProperty(value = "webPort", required = true) int webPort) throws Exception {
+        // start jetty for metrics servlet
+        this.webPort = webPort;
+        this.htmlQueryServer = startHtmlQueryServer();
+        log.info("[init]  web port={}", webPort);
     }
 
-    @Override public void preEncode() {}
-
-    @Override public void close() {
-        try {
-            htmlQueryServer.stop();
-        } catch (Exception e) {
-            log.error("mystery error while shutting down query worker's http server", e);
-        }
+    @Override public void close() throws Exception {
+        htmlQueryServer.stop();
     }
 
     /**
