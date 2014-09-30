@@ -19,8 +19,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 
-import java.net.InetAddress;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -167,10 +165,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     private static final boolean meshQueue     = Parameter.boolValue("queue.mesh", false);
     private static final boolean enableSpawn2  = Parameter.boolValue("spawn.v2.enable", true);
-    private static final String  httpHost      = Parameter.value("spawn.localhost");
     private static final String  clusterName   = Parameter.value("cluster.name", "localhost");
-    private static final String  queryHttpHost = Parameter.value("spawn.queryhost");
-    private static final int     webPort       = Parameter.intValue("spawn.http.port", 5050);
 
     static final int DEFAULT_REPLICA_COUNT = Parameter.intValue("spawn.defaultReplicaCount", 1);
     static final int TASK_QUEUE_DRAIN_INTERVAL = Parameter.intValue("task.queue.drain.interval", 500);
@@ -186,7 +181,6 @@ public class Spawn implements Codable, AutoCloseable {
     public static final  long   inputMaxNumberOfCharacters =
             Parameter.longValue("spawn.input.max.length", 1_000_000);
 
-    private static final String debugOverride = Parameter.value("spawn.debug");
     private static final boolean useStructuredLogger = Parameter.boolValue("spawn.logger.bundle.enable",
                                                                            clusterName.equals("localhost"));
 
@@ -283,7 +277,6 @@ public class Spawn implements Codable, AutoCloseable {
     final SpawnState spawnState;
 
     String debug;
-    private final int queryPort;
     String queryHost;
     String spawnHost;
 
@@ -354,15 +347,15 @@ public class Spawn implements Codable, AutoCloseable {
         this.spawnMesh = new SpawnMesh(this);
         this.eventLog = new RollingLog(new File(logDir, "events-jobs"), "job",
                                        eventLogCompress, logMaxSize, logMaxAge);
-        this.queryPort = 2222;
     }
 
     @JsonCreator
-    private Spawn(
-            /** Should really be replaced by logging framework settings. */
-            @JsonProperty("debug") String debug,
-            /** Query port is read in, but seems to invariably be 2222. */
-            @JsonProperty("queryPort") int queryPort) throws Exception {
+    private Spawn(@JsonProperty("debug") String debug,
+                  @JsonProperty("queryPort") int queryPort,
+                  @JsonProperty("queryHttpHost") String queryHttpHost,
+                  @JsonProperty("webPort") int webPort,
+                  @JsonProperty("httpHost") String httpHost
+    ) throws Exception {
         this.dataDir = new File("etc");
         Files.initDirectory(dataDir);
         File statefile = new File(dataDir, stateFilePath);
@@ -371,18 +364,9 @@ public class Spawn implements Codable, AutoCloseable {
         } else {
             spawnState = Jackson.defaultCodec().newDefault(SpawnState.class);
         }
-        if (debugOverride != null) {
-            this.debug = debugOverride;
-        } else {
-            this.debug = debug;
-        }
-        this.queryPort = queryPort;
-        this.queryHost = (queryHttpHost != null ?
-                          queryHttpHost :
-                          InetAddress.getLocalHost().getHostAddress()) + ":" + this.queryPort;
-        this.spawnHost =
-                (httpHost != null ? httpHost : InetAddress.getLocalHost().getHostAddress()) + ":" +
-                webPort;
+        this.debug = debug;
+        this.queryHost = queryHttpHost + ":" + queryPort;
+        this.spawnHost = httpHost + ":" + webPort;
         File webDir = new File("web");
         this.monitored = new ConcurrentHashMap<>();
         this.listeners = new ConcurrentHashMap<>();
@@ -454,7 +438,7 @@ public class Spawn implements Codable, AutoCloseable {
             }
         }, queueKickInterval, queueKickInterval, TimeUnit.MILLISECONDS);
         // start http commands listener(s)
-        startSpawnWeb(webDir);
+        startSpawnWeb(webDir, webPort);
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 try {
@@ -524,10 +508,6 @@ public class Spawn implements Codable, AutoCloseable {
         return jobCommandManager;
     }
 
-    public static String getHttpHost() {
-        return httpHost;
-    }
-
     public void acquireJobLock() {
         jobLock.lock();
     }
@@ -536,7 +516,7 @@ public class Spawn implements Codable, AutoCloseable {
         jobLock.unlock();
     }
 
-    private void startSpawnWeb(File webDir) throws Exception {
+    private void startSpawnWeb(File webDir, int webPort) throws Exception {
         log.info("[init] starting http server");
         SpawnHttp http = new SpawnHttp(this, webDir);
         new SpawnManager().register(http);
