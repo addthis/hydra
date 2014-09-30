@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
@@ -128,7 +129,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -251,20 +251,9 @@ public class Spawn implements Codable, AutoCloseable {
     // instantaneous
     // - max queue size of 5000 was chosen as a generous upper bound for how many tasks may be
     // queued at once (since the number of scheduled kicks is limited by queue size)
-    private final LinkedBlockingQueue<Runnable> expandKickQueue    = new LinkedBlockingQueue<>(5000);
-    private final ExecutorService               expandKickExecutor = MoreExecutors.getExitingExecutorService(
-            new ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS, expandKickQueue,
-                                   new ThreadFactoryBuilder().setNameFormat("jobExpander-%d").build()));
-    private final ScheduledExecutorService      scheduledExecutor  = MoreExecutors.getExitingScheduledExecutorService(
-            new ScheduledThreadPoolExecutor(6,
-                                            new ThreadFactoryBuilder().setNameFormat( "spawnScheduledTask-%d").build()));
+    private final ExecutorService               expandKickExecutor;
+    private final ScheduledExecutorService      scheduledExecutor;
 
-    private final Gauge<Integer> expandQueueGauge     =
-            Metrics.newGauge(Spawn.class, "expandKickExecutorQueue", new Gauge<Integer>() {
-                public Integer value() {
-                    return expandKickQueue.size();
-                }
-            });
     private final HostFailWorker hostFailWorker;
     private final RollingLog     eventLog;
 
@@ -317,6 +306,12 @@ public class Spawn implements Codable, AutoCloseable {
         this.listeners = new ConcurrentHashMap<>();
         this.monitored = new ConcurrentHashMap<>();
         this.useZk = zkClient != null;
+        final BlockingQueue<Runnable> expandKickQueue = new LinkedBlockingQueue<>(5000);
+        this.expandKickExecutor = new ThreadPoolExecutor(
+                10, 10, 0L, TimeUnit.MILLISECONDS, expandKickQueue,
+                new ThreadFactoryBuilder().setDaemon(true).setNameFormat("jobExpander-%d").build());
+        this.scheduledExecutor = new ScheduledThreadPoolExecutor(
+                6, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("spawnScheduledTask-%d").build());
         this.spawnFormattedLogger = useStructuredLogger ?
                                     SpawnFormattedLogger.createFileBasedLogger(
                                             new File(SPAWN_STRUCTURED_LOG_DIR)) :
@@ -354,7 +349,9 @@ public class Spawn implements Codable, AutoCloseable {
                   @JsonProperty("webPort") int webPort,
                   @JsonProperty("httpHost") String httpHost,
                   @JsonProperty("dataDir") File dataDir,
-                  @JsonProperty("stateFile") File stateFile
+                  @JsonProperty("stateFile") File stateFile,
+                  @JsonProperty("expandKickExecutor") ExecutorService expandKickExecutor,
+                  @JsonProperty("scheduledExecutor") ScheduledExecutorService scheduledExecutor
     ) throws Exception {
         Files.initDirectory(dataDir);
         this.stateFile = stateFile;
@@ -369,6 +366,8 @@ public class Spawn implements Codable, AutoCloseable {
         File webDir = new File("web");
         this.monitored = new ConcurrentHashMap<>();
         this.listeners = new ConcurrentHashMap<>();
+        this.expandKickExecutor = expandKickExecutor;
+        this.scheduledExecutor = scheduledExecutor;
         this.spawnFormattedLogger = useStructuredLogger ?
                                     SpawnFormattedLogger.createFileBasedLogger(
                                             new File(SPAWN_STRUCTURED_LOG_DIR)) :
@@ -2757,6 +2756,15 @@ public class Spawn implements Codable, AutoCloseable {
             } catch (Exception e) {
                 log.warn("", e);
             }
+        }
+
+        try {
+            expandKickExecutor.shutdown();
+            scheduledExecutor.shutdown();
+            expandKickExecutor.awaitTermination(120, TimeUnit.SECONDS);
+            scheduledExecutor.awaitTermination(120, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("", e);
         }
 
         try {
