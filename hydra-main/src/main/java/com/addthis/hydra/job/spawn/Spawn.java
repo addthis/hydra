@@ -439,15 +439,6 @@ public class Spawn implements Codable, AutoCloseable {
         }, queueKickInterval, queueKickInterval, TimeUnit.MILLISECONDS);
         // start http commands listener(s)
         startSpawnWeb(webDir, webPort);
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                try {
-                    jetty.stop();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
         balancer.startAutobalanceTask();
         balancer.startTaskSizePolling();
         if (ENABLE_JOB_STORE) {
@@ -2761,6 +2752,14 @@ public class Spawn implements Codable, AutoCloseable {
     /** Called by Thread registered to Runtime triggered by sig-term. */
     @Override public void close() {
         shuttingDown.set(true);
+        if (jetty != null) {
+            try {
+                jetty.stop();
+            } catch (Exception e) {
+                log.warn("", e);
+            }
+        }
+
         try {
             drainJobTaskUpdateQueue();
         } catch (Exception ex) {
