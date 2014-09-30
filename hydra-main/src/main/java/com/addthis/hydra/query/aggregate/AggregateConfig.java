@@ -23,8 +23,6 @@ import com.yammer.metrics.core.Counter;
 
 public class AggregateConfig {
 
-    // Number of event threads to use to process running queries
-    public static final int FRAME_READER_THREADS = Parameter.intValue("meshSourceAggregator.frameReader.threads", 16);
     // Maximum number of bundles to read before yielding event thread
     public static final int FRAME_READER_READS = Parameter.intValue("meshSourceAggregator.frameReader.reads", 10000);
     // Milliseconds to wait while polling various task sources

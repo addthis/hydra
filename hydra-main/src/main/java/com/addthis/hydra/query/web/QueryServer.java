@@ -13,31 +13,28 @@
  */
 package com.addthis.hydra.query.web;
 
-import com.addthis.basis.util.Files;
-import com.addthis.basis.util.Parameter;
+import java.io.IOException;
 
+import java.util.concurrent.ThreadFactory;
+
+import com.addthis.codec.config.Configs;
 import com.addthis.hydra.query.MeshQueryMaster;
-import com.addthis.hydra.query.aggregate.AggregateConfig;
 import com.addthis.hydra.query.loadbalance.NextQueryTask;
 import com.addthis.hydra.query.loadbalance.QueryQueue;
 import com.addthis.hydra.query.tracker.QueryTracker;
+import com.addthis.hydra.util.CloseTask;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.common.annotations.VisibleForTesting;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Counter;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import org.eclipse.jetty.server.Handler;
-import org.eclipse.jetty.server.NCSARequestLog;
-import org.eclipse.jetty.server.handler.HandlerCollection;
-import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultMessageSizeEstimator;
 import io.netty.channel.EventLoopGroup;
@@ -46,110 +43,71 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
+import static java.lang.System.out;
 
-public class QueryServer {
-
+public class QueryServer implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(QueryServer.class);
-    private static final int DEFAULT_WEB_PORT = Parameter.intValue("qmaster.web.port", 2222);
-    private static final int queryPort = Parameter.intValue("qmaster.query. port", 2601);
-    private static final boolean accessLogEnabled = Parameter.boolValue("qmaster.log.accessLogging", true);
-    private static final String accessLogDir = Parameter.value("qmaster.log.accessLogDir", "log/qmaccess");
-    static final Counter rawQueryCalls = Metrics.newCounter(MeshQueryMaster.class, "rawQueryCalls");
-    static final JsonFactory factory = new JsonFactory(new ObjectMapper());
 
-    private final HttpQueryHandler httpQueryHandler;
-    private final QueryServerInitializer queryServerInitializer;
     private final QueryQueue queryQueue;
-    private final int webPort;
+    private final EventLoopGroup bossGroup;
+    private final EventLoopGroup workerGroup;
+    private final EventExecutorGroup executorGroup;
+    private final ServerBootstrap serverBootstrap;
 
-    private EventLoopGroup bossGroup;
-    private EventLoopGroup workerGroup;
-    private EventExecutorGroup executorGroup;
-
-    public static void main(String[] args) throws Exception {
-        if (args.length > 0 && (args[0].equals("--help") || args[0].equals("-h"))) {
-            System.out.println("usage: qmaster");
+    public static void main(String[] args) throws IOException, InterruptedException {
+        if ((args.length > 0) && ("--help".equals(args[0]) || "-h".equals(args[0]))) {
+            out.println("usage: qmaster");
         }
-        QueryServer qm = new QueryServer();
-        qm.run();
+        QueryServer queryServer = Configs.newDefault(QueryServer.class);
+        queryServer.run();
+        Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(queryServer), "Query Master Shutdown Hook"));
     }
 
-    public QueryServer() throws Exception {
-        this(DEFAULT_WEB_PORT);
-    }
-
-    public QueryServer(int webPort) throws Exception {
-        this.webPort = webPort;
+    @JsonCreator
+    private QueryServer(@JsonProperty(value = "webPort", required = true) int webPort,
+                        @JsonProperty(value = "queryThreads", required = true) int queryThreads,
+                        @JsonProperty(value = "queryThreadFactory", required = true) ThreadFactory queryThreadFactory
+    ) throws Exception {
+        queryQueue = new QueryQueue();
+        bossGroup = new NioEventLoopGroup(1);
+        workerGroup = new NioEventLoopGroup();
+        executorGroup = new DefaultEventExecutorGroup(queryThreads, queryThreadFactory);
 
         QueryTracker queryTracker = new QueryTracker();
         MeshQueryMaster meshQueryMaster = new MeshQueryMaster(queryTracker);
-        queryQueue = new QueryQueue();
-        httpQueryHandler = new HttpQueryHandler(this, queryTracker, meshQueryMaster, queryQueue);
-        queryServerInitializer = new QueryServerInitializer(httpQueryHandler);
+        HttpQueryHandler httpQueryHandler = new HttpQueryHandler(queryTracker, meshQueryMaster, queryQueue);
+        ChannelHandler queryServerInitializer = new QueryServerInitializer(httpQueryHandler);
 
-        log.info("[init] query port={}, web port={}", queryPort, webPort);
-
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                shutdown();
-            }
-        });
+        serverBootstrap = new ServerBootstrap()
+                .option(ChannelOption.SO_BACKLOG, 1024)
+                .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                .childOption(ChannelOption.MESSAGE_SIZE_ESTIMATOR, new DefaultMessageSizeEstimator(200))
+                .childOption(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 100000000)
+                .childOption(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 50000000)
+                .group(bossGroup, workerGroup)
+                .channel(NioServerSocketChannel.class)
+                .childHandler(queryServerInitializer)
+                .localAddress(webPort);
+        log.info("[init] web port={}, query threads={}", webPort, queryThreads);
     }
 
-    public void run() throws Exception {
-        bossGroup = new NioEventLoopGroup(1);
-        workerGroup = new NioEventLoopGroup();
-        executorGroup = new DefaultEventExecutorGroup(AggregateConfig.FRAME_READER_THREADS,
-                new ThreadFactoryBuilder().setDaemon(true).setNameFormat("frame-reader-%d").build());
+    @VisibleForTesting
+    void run() throws InterruptedException {
         for (EventExecutor executor : executorGroup) {
             executor.execute(new NextQueryTask(queryQueue, executor));
         }
-        ServerBootstrap b = new ServerBootstrap();
-        b.option(ChannelOption.SO_BACKLOG, 1024);
-        b.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-        b.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-        b.childOption(ChannelOption.MESSAGE_SIZE_ESTIMATOR, new DefaultMessageSizeEstimator(200));
-        b.childOption(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, 100000000);
-        b.childOption(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 50000000);
-        b.group(bossGroup, workerGroup)
-                .channel(NioServerSocketChannel.class)
-                .childHandler(queryServerInitializer);
-        b.bind(webPort).sync();
+        serverBootstrap.bind().sync();
     }
 
-    protected void shutdown() {
-        try {
-            if (bossGroup != null) {
-                bossGroup.shutdownGracefully().sync();
-            }
-            if (workerGroup != null) {
-                workerGroup.shutdownGracefully().sync();
-            }
-            if (executorGroup != null) {
-                // no sync because there is apparently no easy way to interrupt the take() calls?
-                executorGroup.shutdownGracefully();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private static HandlerCollection wrapWithLogging(Handler seedHandler) {
-        HandlerCollection handlers = new HandlerCollection();
-        RequestLogHandler requestLogHandler = new RequestLogHandler();
-        Files.initDirectory(accessLogDir);
-        NCSARequestLog requestLog = new NCSARequestLog(accessLogDir + "/jetty-yyyy_mm_dd.request.log");
-        requestLog.setPreferProxiedForAddress(true);
-        requestLog.setRetainDays(35);
-        requestLog.setAppend(true);
-        requestLog.setExtended(true);
-        requestLog.setLogLatency(true);
-        // TODO: America/NY?
-        requestLog.setLogTimeZone("EST");
-        requestLogHandler.setRequestLog(requestLog);
-
-        handlers.addHandler(seedHandler);
-        handlers.addHandler(requestLogHandler);
-        return handlers;
+    @Override public void close() throws InterruptedException {
+        log.info("shutting down boss group");
+        bossGroup.shutdownGracefully().sync();
+        log.info("shutting down worker group");
+        workerGroup.shutdownGracefully().sync();
+        // no sync because there is apparently no easy way to interrupt the take() calls?
+        log.info("shutting down query group");
+        executorGroup.shutdownGracefully();
+        log.info("query server shutdown complete");
     }
 }

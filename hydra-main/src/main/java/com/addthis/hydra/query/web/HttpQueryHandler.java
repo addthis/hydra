@@ -25,6 +25,7 @@ import java.nio.CharBuffer;
 
 import com.addthis.basis.kv.KVPairs;
 
+import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.job.IJob;
@@ -43,6 +44,8 @@ import com.addthis.maljson.JSONObject;
 import com.google.common.base.Optional;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Counter;
 
 import org.apache.commons.io.output.StringBuilderWriter;
 
@@ -71,37 +74,31 @@ import io.netty.util.CharsetUtil;
 
 @ChannelHandler.Sharable
 public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
-
     private static final Logger log = LoggerFactory.getLogger(HttpQueryHandler.class);
 
-    private final HttpStaticFileHandler staticFileHandler = new HttpStaticFileHandler();
-
-    private final QueryServer queryServer;
-
     /**
-     * used for tracking metrics and other interesting things about queries
-     * that we have run.  Provides insight into currently running queries
-     * and gives ability to cancel a query before it completes.
+     * Used for tracking metrics and other interesting things about queries that we have run.  Provides insight
+     * into currently running queries and provides the ability to cancel a query before it completes.
      */
     private final QueryTracker tracker;
 
-    /**
-     * primary query source
-     */
+    /** primary query source */
     private final MeshQueryMaster meshQueryMaster;
 
     private final QueryQueue queryQueue;
-
+    private final HttpStaticFileHandler staticFileHandler;
     private final MetricsServletShim fakeMetricsServlet;
 
-    public HttpQueryHandler(QueryServer queryServer, QueryTracker tracker, MeshQueryMaster meshQueryMaster,
-            QueryQueue queryQueue) {
+    // http metrics; may use other classes to derive metric paths for legacy metric namespace consistency
+    private final Counter rawQueryCalls = Metrics.newCounter(MeshQueryMaster.class, "rawQueryCalls");
+
+    public HttpQueryHandler(QueryTracker tracker, MeshQueryMaster meshQueryMaster, QueryQueue queryQueue) {
         super(true); // auto release
-        this.queryServer = queryServer;
         this.tracker = tracker;
         this.meshQueryMaster = meshQueryMaster;
         this.queryQueue = queryQueue;
         this.fakeMetricsServlet = new MetricsServletShim();
+        this.staticFileHandler = new HttpStaticFileHandler();
     }
 
     @Override
@@ -167,7 +164,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 break;
             case "/query/call":
             case "/query/call/":
-                QueryServer.rawQueryCalls.inc();
+                rawQueryCalls.inc();
                 queryQueue.queueQuery(meshQueryMaster, kv, request, ctx);
                 break;
             case "/query/google/authorization":
@@ -300,7 +297,7 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                 break;
             case "/v2/job/list": {
                 StringWriter swriter = new StringWriter();
-                final JsonGenerator json = QueryServer.factory.createGenerator(swriter);
+                final JsonGenerator json = Jackson.defaultMapper().getFactory().createGenerator(swriter);
                 json.writeStartArray();
                 for (IJob job : meshQueryMaster.getSpawnDataStoreHandler().getJobs()) {
                     if (job.getQueryConfig() != null && job.getQueryConfig().getCanQuery()) {
@@ -327,11 +324,11 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
             }
             case "/v2/settings/git.properties": {
                 StringWriter swriter = new StringWriter();
-                final JsonGenerator json = QueryServer.factory.createGenerator(swriter);
+                final JsonGenerator json = Jackson.defaultMapper().getFactory().createGenerator(swriter);
                 Properties gitProperties = new Properties();
                 json.writeStartObject();
                 try {
-                    InputStream in = queryServer.getClass().getResourceAsStream("/git.properties");
+                    InputStream in = getClass().getResourceAsStream("/hydra-git.properties");
                     gitProperties.load(in);
                     in.close();
                     json.writeStringField("commitIdAbbrev", gitProperties.getProperty("git.commit.id.abbrev"));
