@@ -13,27 +13,39 @@
  */
 package com.addthis.hydra.task.output;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import javax.annotation.Nonnull;
 
 import java.io.IOException;
 import java.io.OutputStream;
+
+import java.util.Objects;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static com.google.common.base.Objects.toStringHelper;
 
 /**
  * An output wrapper for HDFS files.
  */
 public class HDFSOutputWrapper extends AbstractOutputWrapper {
-    private final static Logger log = LoggerFactory.getLogger(HDFSOutputWrapper.class);
+    private static final Logger log = LoggerFactory.getLogger(HDFSOutputWrapper.class);
 
-    private final Path tempTargetPath;
-    private final Path targetPath;
-    private final FileSystem fileSystem;
+    @Nonnull private final Path tempTargetPath;
+    @Nonnull private final Path targetPath;
+    @Nonnull private final FileSystem fileSystem;
 
-    public HDFSOutputWrapper(OutputStream out, OutputStreamEmitter lineout,
-                             boolean compress, int compressType, String rawTarget,
-                             Path targetPath, Path tempTargetPath, FileSystem fileSystem) {
+    public HDFSOutputWrapper(OutputStream out,
+                             OutputStreamEmitter lineout,
+                             boolean compress,
+                             int compressType,
+                             String rawTarget,
+                             @Nonnull Path targetPath,
+                             @Nonnull Path tempTargetPath,
+                             @Nonnull FileSystem fileSystem) {
         super(out, lineout, compress, compressType, rawTarget);
         this.targetPath = targetPath;
         this.tempTargetPath = tempTargetPath;
@@ -42,67 +54,62 @@ public class HDFSOutputWrapper extends AbstractOutputWrapper {
 
     @Override
     protected void renameTempTargetFile() {
-        if (tempTargetPath != null && tempTargetPath != targetPath) {
-            if (log.isDebugEnabled()) {
-                log.debug("renaming " + tempTargetPath.toUri() + " to " + targetPath.toUri());
-            }
+        if (tempTargetPath != targetPath) {
+            log.debug("renaming {} to {}", tempTargetPath.toUri(), targetPath.toUri());
             try {
                 if (!fileSystem.rename(tempTargetPath, targetPath)) {
-                    log.warn("Failed to rename " + tempTargetPath.toUri() + " to " + targetPath.toUri());
+                    log.warn("Failed to rename {} to {}", tempTargetPath.toUri(), targetPath.toUri());
                 }
             } catch (IOException e) {
-                log.warn("Failed to rename " + tempTargetPath.toUri() + " to " + targetPath.toUri());
+                log.warn("Failed to rename {} to {}", tempTargetPath.toUri(), targetPath.toUri(), e);
             }
         }
     }
 
     @Override
     public String getFileName() {
-        return targetPath.toUri().toString();
+        return targetPath.toString();
     }
 
     @Override
     public boolean exceedsSize(long maxSizeInBytes) {
         try {
-            return ((targetPath != null && fileSystem.exists(targetPath) && fileSystem.getFileStatus(targetPath).getLen() > maxSizeInBytes) ||
-                    (tempTargetPath != null && fileSystem.exists(tempTargetPath) && fileSystem.getFileStatus(tempTargetPath).getLen() > maxSizeInBytes));
+            return pathExceedsSize(targetPath, maxSizeInBytes) || pathExceedsSize(tempTargetPath, maxSizeInBytes);
         } catch (IOException e)  {
             log.warn("", e);
             return false;
         }
     }
 
+    private boolean pathExceedsSize(Path path, long maxSizeInBytes) throws IOException {
+        return fileSystem.exists(path) && (fileSystem.getFileStatus(path).getLen() > maxSizeInBytes);
+    }
+
     @Override
-    public boolean equals(Object o) {
-        if (this == o) {
+    public boolean equals(Object obj) {
+        if (this == obj) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (!(obj instanceof HDFSOutputWrapper)) {
             return false;
         }
 
-        HDFSOutputWrapper that = (HDFSOutputWrapper) o;
-
-        if (targetPath != null ? !targetPath.equals(that.targetPath) : that.targetPath != null) {
-            return false;
-        }
-        if (tempTargetPath != null ? !tempTargetPath.equals(that.tempTargetPath) : that.tempTargetPath != null) {
-            return false;
-        }
-
-        return true;
+        HDFSOutputWrapper that = (HDFSOutputWrapper) obj;
+        return targetPath.equals(that.targetPath) &&
+               tempTargetPath.equals(that.tempTargetPath) &&
+               fileSystem.equals(that.fileSystem);
     }
 
     @Override
     public int hashCode() {
-        int result = tempTargetPath != null ? tempTargetPath.hashCode() : 0;
-        result = 31 * result + (targetPath != null ? targetPath.hashCode() : 0);
-        return result;
+        return Objects.hash(tempTargetPath, targetPath);
     }
-
 
     @Override
     public String toString() {
-        return "HDFSOutputWrapper{" + "targetFile=" + getFileName() + ", tempTargetFile=" + tempTargetPath.toUri().toString() + '}';
+        return toStringHelper(this)
+                .add("tempTargetPath", tempTargetPath)
+                .add("targetPath", targetPath)
+                .toString();
     }
 }
