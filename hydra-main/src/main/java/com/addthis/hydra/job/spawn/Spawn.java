@@ -162,7 +162,6 @@ public class Spawn implements Codable, AutoCloseable {
 
     private static final boolean meshQueue     = Parameter.boolValue("queue.mesh", false);
     private static final boolean enableSpawn2  = Parameter.boolValue("spawn.v2.enable", true);
-    private static final String  clusterName   = Parameter.value("cluster.name", "localhost");
 
     static final int DEFAULT_REPLICA_COUNT = Parameter.intValue("spawn.defaultReplicaCount", 1);
     static final int TASK_QUEUE_DRAIN_INTERVAL = Parameter.intValue("task.queue.drain.interval", 500);
@@ -184,10 +183,6 @@ public class Spawn implements Codable, AutoCloseable {
 
     // log configs
 
-    private static final boolean useStructuredLogger = Parameter.boolValue("spawn.logger.bundle.enable",
-                                                                           clusterName.equals("localhost"));
-    public static final String SPAWN_STRUCTURED_LOG_DIR =
-            Parameter.value("spawn.logger.bundle.dir", "./log/spawn-stats");
     private static final boolean eventLogCompress =
             Parameter.boolValue("spawn.eventlog.compress", true);
     private static final int     logMaxAge        =
@@ -292,6 +287,7 @@ public class Spawn implements Codable, AutoCloseable {
                   @JsonProperty("stateFile") File stateFile,
                   @JsonProperty("expandKickExecutor") ExecutorService expandKickExecutor,
                   @JsonProperty("scheduledExecutor") ScheduledExecutorService scheduledExecutor,
+                  @Nullable @JsonProperty("structuredLogDir") File structuredLogDir,
                   @Nullable @JsonProperty("jobStore") JobStore jobStore,
                   @Nullable @JacksonInject CuratorFramework providedZkClient
     ) throws Exception {
@@ -310,10 +306,11 @@ public class Spawn implements Codable, AutoCloseable {
         this.listeners = new ConcurrentHashMap<>();
         this.expandKickExecutor = expandKickExecutor;
         this.scheduledExecutor = scheduledExecutor;
-        this.spawnFormattedLogger = useStructuredLogger ?
-                                    SpawnFormattedLogger.createFileBasedLogger(
-                                            new File(SPAWN_STRUCTURED_LOG_DIR)) :
-                                    SpawnFormattedLogger.createNullLogger();
+        if (structuredLogDir == null) {
+            this.spawnFormattedLogger = SpawnFormattedLogger.createNullLogger();
+        } else {
+            this.spawnFormattedLogger =  SpawnFormattedLogger.createFileBasedLogger(structuredLogDir);
+        }
         if (providedZkClient == null) {
             this.zkClient = ZkUtil.makeStandardClient();
         } else {
