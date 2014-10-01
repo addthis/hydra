@@ -57,6 +57,7 @@ import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.bark.StringSerializer;
 import com.addthis.bark.ZkUtil;
+import com.addthis.codec.annotations.Time;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.config.Configs;
 import com.addthis.codec.jackson.Jackson;
@@ -147,6 +148,7 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_UP_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  * manages minions running on remote notes. runs master http server to
@@ -164,19 +166,12 @@ public class Spawn implements Codable, AutoCloseable {
     private static final boolean enableSpawn2  = Parameter.boolValue("spawn.v2.enable", true);
 
     static final int DEFAULT_REPLICA_COUNT = Parameter.intValue("spawn.defaultReplicaCount", 1);
-    static final int TASK_QUEUE_DRAIN_INTERVAL = Parameter.intValue("task.queue.drain.interval", 500);
     static final boolean ENABLE_JOB_FIXDIRS_ONCOMPLETE = Parameter.boolValue("job.fixdirs.oncomplete", true);
 
     private static final int requestHeaderBufferSize   = Parameter.intValue("spawn.http.bufsize", 8192);
-    private static final int hostStatusRequestInterval = Parameter.intValue("spawn.status.interval", 5_000);
-
-    private static final int queueKickInterval     = Parameter.intValue("spawn.queue.kick.interval", 3_000);
 
     public static final  long   inputMaxNumberOfCharacters =
             Parameter.longValue("spawn.input.max.length", 1_000_000);
-
-    private static final long JOB_TASK_UPDATE_HEARTBEAT_INTERVAL =
-            Parameter.longValue("spawn.jobtask.update.interval", 30000);
 
     private static final int clientDropTimeMillis = Parameter.intValue("spawn.client.drop.time", 60_000);
     private static final int clientDropQueueSize  = Parameter.intValue("spawn.client.drop.queue", 2000);
@@ -279,14 +274,22 @@ public class Spawn implements Codable, AutoCloseable {
 
     @JsonCreator
     private Spawn(@JsonProperty("debug") String debug,
-                  @JsonProperty("queryPort") int queryPort,
+                  @JsonProperty(value = "queryPort", required = true) int queryPort,
                   @JsonProperty("queryHttpHost") String queryHttpHost,
-                  @JsonProperty("webPort") int webPort,
+                  @JsonProperty(value = "webPort", required = true) int webPort,
                   @JsonProperty("httpHost") String httpHost,
                   @JsonProperty("dataDir") File dataDir,
                   @JsonProperty("stateFile") File stateFile,
                   @JsonProperty("expandKickExecutor") ExecutorService expandKickExecutor,
                   @JsonProperty("scheduledExecutor") ScheduledExecutorService scheduledExecutor,
+                  @Time(MILLISECONDS) @JsonProperty(value = "taskQueueDrainInterval", required = true)
+                  int taskQueueDrainInterval,
+                  @Time(MILLISECONDS) @JsonProperty(value = "hostStatusRequestInterval", required = true)
+                  int hostStatusRequestInterval,
+                  @Time(MILLISECONDS) @JsonProperty(value = "queueKickInterval", required = true)
+                  int queueKickInterval,
+                  @Time(MILLISECONDS) @JsonProperty("jobTaskUpdateHeartbeatInterval")
+                  int jobTaskUpdateHeartbeatInterval,
                   @Nullable @JsonProperty("structuredLogDir") File structuredLogDir,
                   @Nullable @JsonProperty("jobStore") JobStore jobStore,
                   @Nullable @JacksonInject CuratorFramework providedZkClient
@@ -348,35 +351,33 @@ public class Spawn implements Codable, AutoCloseable {
         jobAlertManager = new JobAlertManagerImpl(this, scheduledExecutor);
         // start job scheduler
         scheduledExecutor.scheduleWithFixedDelay(new UpdateEventRunnable(this), 0, 1, TimeUnit.MINUTES);
-        scheduledExecutor.scheduleWithFixedDelay(new JobRekickTask(this), 0, 500,
-                                                 TimeUnit.MILLISECONDS);
+        scheduledExecutor.scheduleWithFixedDelay(new JobRekickTask(this), 0, 500, MILLISECONDS);
         scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
                 drainJobTaskUpdateQueue();
             }
-        }, TASK_QUEUE_DRAIN_INTERVAL, TASK_QUEUE_DRAIN_INTERVAL, TimeUnit.MILLISECONDS);
+        }, taskQueueDrainInterval, taskQueueDrainInterval, MILLISECONDS);
         scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
                 jobTaskUpdateHeartbeatCheck();
             }
-        }, JOB_TASK_UPDATE_HEARTBEAT_INTERVAL, JOB_TASK_UPDATE_HEARTBEAT_INTERVAL,
-                                                 TimeUnit.MILLISECONDS);
+        }, jobTaskUpdateHeartbeatInterval, jobTaskUpdateHeartbeatInterval, MILLISECONDS);
         // request hosts to send their status
         scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
                 requestHostsUpdate();
             }
-        }, hostStatusRequestInterval, hostStatusRequestInterval, TimeUnit.MILLISECONDS);
+        }, hostStatusRequestInterval, hostStatusRequestInterval, MILLISECONDS);
         scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
                 kickJobsOnQueue();
                 writeSpawnQueue();
             }
-        }, queueKickInterval, queueKickInterval, TimeUnit.MILLISECONDS);
+        }, queueKickInterval, queueKickInterval, MILLISECONDS);
         // start http commands listener(s)
         startSpawnWeb(webDir, webPort);
         balancer.startAutobalanceTask();
