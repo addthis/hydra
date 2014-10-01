@@ -17,8 +17,8 @@ import java.util.List;
 
 import com.addthis.basis.test.SlowTest;
 
-import com.addthis.bark.ZkStartUtil;
 import com.addthis.codec.config.Configs;
+import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import com.google.common.collect.ImmutableList;
 
@@ -28,7 +28,7 @@ import org.junit.experimental.categories.Category;
 import static org.junit.Assert.assertEquals;
 
 @Category(SlowTest.class)
-public class MinionTest extends ZkStartUtil {
+public class MinionTest extends ZkCodecStartUtil {
 
     @Test
     public void testJoinGroup() throws Exception {

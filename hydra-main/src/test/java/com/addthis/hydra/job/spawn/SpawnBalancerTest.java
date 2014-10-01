@@ -27,7 +27,7 @@ import com.addthis.basis.test.SlowTest;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
 
-import com.addthis.bark.ZkStartUtil;
+import com.addthis.codec.config.Configs;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobTask;
@@ -39,6 +39,7 @@ import com.addthis.hydra.job.minion.Minion;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
+import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import org.apache.zookeeper.CreateMode;
 
@@ -53,7 +54,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @Category(SlowTest.class)
-public class SpawnBalancerTest extends ZkStartUtil {
+public class SpawnBalancerTest extends ZkCodecStartUtil {
 
     private Spawn spawn;
     private SpawnBalancer bal;
@@ -74,7 +75,7 @@ public class SpawnBalancerTest extends ZkStartUtil {
         }
         try {
             Thread.sleep(100);
-            spawn = new Spawn(zkClient);
+            spawn = Configs.newDefault(Spawn.class);
             bal = spawn.getSpawnBalancer();
             spawn.setSpawnMQ(EasyMock.createMock(SpawnMQ.class));
         } catch (Exception ex) {
@@ -442,10 +443,11 @@ public class SpawnBalancerTest extends ZkStartUtil {
         JobKey myKey = new JobKey(job.getId(), 0);
         spawn.addToTaskQueue(myKey, false, false);
         spawn.writeSpawnQueue();
-        Spawn spawn2 = new Spawn(zkClient);
-        spawn2.getSettings().setQuiesced(true);
-        spawn2.loadSpawnQueue();
-        assertEquals("should have one queued task", 1, spawn.getTaskQueuedCount());
+        try (Spawn spawn2 = Configs.newDefault(Spawn.class)) {
+            spawn2.getSettings().setQuiesced(true);
+            spawn2.loadSpawnQueue();
+            assertEquals("should have one queued task", 1, spawn.getTaskQueuedCount());
+        }
     }
 
     @Test

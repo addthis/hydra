@@ -15,7 +15,6 @@ package com.addthis.hydra.query;
 
 import com.addthis.basis.test.SlowTest;
 
-import com.addthis.bark.ZkStartUtil;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.JobConfigManager;
 import com.addthis.hydra.job.JobQueryConfig;
@@ -23,6 +22,7 @@ import com.addthis.hydra.job.ZnodeJob;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.job.store.ZookeeperDataStore;
 import com.addthis.hydra.query.spawndatastore.QueryConfigWatcher;
+import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -31,7 +31,7 @@ import org.junit.experimental.categories.Category;
 import static org.junit.Assert.assertEquals;
 
 @Category(SlowTest.class)
-public class QueryConfigWatcherTest extends ZkStartUtil {
+public class QueryConfigWatcherTest extends ZkCodecStartUtil {
 
     JobConfigManager jcm;
     SpawnDataStore spawnDataStore;

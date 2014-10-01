@@ -19,11 +19,11 @@ import java.util.Map;
 import com.addthis.basis.test.SlowTest;
 
 import com.addthis.bark.StringSerializer;
-import com.addthis.bark.ZkStartUtil;
 import com.addthis.codec.Codec;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
+import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
@@ -40,7 +40,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 @Category(SlowTest.class)
-public class JobConfigManagerTest extends ZkStartUtil {
+public class JobConfigManagerTest extends ZkCodecStartUtil {
 
     private static final Codec codec = CodecJSON.INSTANCE;
     private JobConfigManager jobConfigManager;

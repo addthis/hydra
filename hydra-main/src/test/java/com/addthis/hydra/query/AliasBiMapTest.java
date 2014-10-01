@@ -15,8 +15,8 @@ package com.addthis.hydra.query;
 
 import com.addthis.basis.test.SlowTest;
 
-import com.addthis.bark.ZkStartUtil;
 import com.addthis.hydra.query.spawndatastore.AliasBiMap;
+import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import com.google.common.collect.ImmutableList;
 
@@ -28,7 +28,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 @Category(SlowTest.class)
-public class AliasBiMapTest extends ZkStartUtil {
+public class AliasBiMapTest extends ZkCodecStartUtil {
 
     @Test
     public void testConstruction() throws Exception {

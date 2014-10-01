@@ -17,11 +17,12 @@ import java.util.Arrays;
 
 import com.addthis.basis.test.SlowTest;
 
-import com.addthis.bark.ZkStartUtil;
+import com.addthis.codec.config.Configs;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
 import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.util.ZkCodecStartUtil;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
 
@@ -34,20 +35,20 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @Category(SlowTest.class)
-public class HostFailWorkerTest extends ZkStartUtil {
+public class HostFailWorkerTest extends ZkCodecStartUtil {
 
     private Spawn spawn;
     private HostFailWorker hostFailWorker;
 
     @Before
     public void setup() throws Exception {
-        spawn = new Spawn(zkClient);
+        spawn = Configs.newDefault(Spawn.class);
         hostFailWorker = spawn.getHostFailWorker();
     }
 
     @After
     public void cleanup() throws Exception {
-        spawn.getSpawnDataStore().close();
+        spawn.close();
     }
 
     @Test

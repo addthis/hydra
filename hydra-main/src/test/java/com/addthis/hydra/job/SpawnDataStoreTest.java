@@ -15,8 +15,8 @@ package com.addthis.hydra.job;
 
 import java.util.Set;
 
-import com.addthis.bark.ZkStartUtil;
 import com.addthis.hydra.job.store.ZookeeperDataStore;
+import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import com.google.common.collect.Sets;
 
@@ -26,7 +26,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-public class SpawnDataStoreTest extends ZkStartUtil {
+public class SpawnDataStoreTest extends ZkCodecStartUtil {
 
     ZookeeperDataStore spawnDataStore;
 

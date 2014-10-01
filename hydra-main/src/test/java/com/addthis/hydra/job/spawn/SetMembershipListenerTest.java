@@ -15,8 +15,7 @@ package com.addthis.hydra.job.spawn;
 
 import com.addthis.basis.test.SlowTest;
 
-import com.addthis.bark.ZkStartUtil;
-import com.addthis.hydra.job.spawn.SetMembershipListener;
+import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -28,7 +27,7 @@ import org.junit.experimental.categories.Category;
 import static org.junit.Assert.assertEquals;
 
 @Category(SlowTest.class)
-public class SetMembershipListenerTest extends ZkStartUtil {
+public class SetMembershipListenerTest extends ZkCodecStartUtil {
 
     @Test
     public void testAvailableMinions() throws Exception {

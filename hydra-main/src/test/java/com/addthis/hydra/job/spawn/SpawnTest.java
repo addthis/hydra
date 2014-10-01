@@ -18,7 +18,7 @@ import java.util.Map;
 
 import com.addthis.basis.test.SlowTest;
 
-import com.addthis.bark.ZkStartUtil;
+import com.addthis.codec.config.Configs;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobExpand;
@@ -28,6 +28,7 @@ import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
+import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import org.apache.zookeeper.CreateMode;
 
@@ -40,7 +41,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @Category(SlowTest.class)
-public class SpawnTest extends ZkStartUtil {
+public class SpawnTest extends ZkCodecStartUtil {
 
     // todo: use random temp dirs
     @Before
@@ -73,16 +74,18 @@ public class SpawnTest extends ZkStartUtil {
         HostState tmpDisableHostState = createHostState("tmp");
         tmpDisableHostState.setDisabled(true);
         assertTrue("disabled host states should not be able to run tasks", !tmpDisableHostState.canMirrorTasks());
-        Spawn spawn = new Spawn(null);
-        HostState toggleHost = createHostState("toggle");
-        HostState otherHost = createHostState("other");
-        spawn.updateHostState(toggleHost);
-        spawn.updateHostState(otherHost);
-        spawn.toggleHosts(toggleHost.getHost(), true);
-        assertTrue("toggled host should be disabled", spawn.getHostState(toggleHost.getHostUuid()).isDisabled());
-        assertTrue("other host should not be disabled", !spawn.getHostState(otherHost.getHostUuid()).isDisabled());
-        spawn.toggleHosts(toggleHost.getHost(), false);
-        assertTrue("toggled host should now be re-enabled", !spawn.getHostState(toggleHost.getHostUuid()).isDisabled());
+        try (Spawn spawn = Configs.newDefault(Spawn.class)) {
+            HostState toggleHost = createHostState("toggle");
+            HostState otherHost = createHostState("other");
+            spawn.updateHostState(toggleHost);
+            spawn.updateHostState(otherHost);
+            spawn.toggleHosts(toggleHost.getHost(), true);
+            assertTrue("toggled host should be disabled", spawn.getHostState(toggleHost.getHostUuid()).isDisabled());
+            assertTrue("other host should not be disabled", !spawn.getHostState(otherHost.getHostUuid()).isDisabled());
+            spawn.toggleHosts(toggleHost.getHost(), false);
+            assertTrue("toggled host should now be re-enabled",
+                       !spawn.getHostState(toggleHost.getHostUuid()).isDisabled());
+        }
     }
 
     @Test
@@ -136,46 +139,52 @@ public class SpawnTest extends ZkStartUtil {
 
     @Test
     public void fixDirsTest() throws Exception {
-        Spawn spawn = new Spawn(zkClient);
-        spawn.setSpawnMQ(EasyMock.createNiceMock(SpawnMQImpl.class));
-        HostState host0 = createHostState("host0");
-        spawn.updateHostState(host0);
-        HostState host1 = createHostState("host1");
-        spawn.updateHostState(host1);
-        spawn.getJobCommandManager().putEntity("c", new JobCommand(), false);
-        Job job = spawn.createJob("fsm", 3, Arrays.asList("host0"), "default", "c");
-        job.setReplicas(1);
-        spawn.rebalanceReplicas(job);
-        for (JobTask task : job.getCopyOfTasks()) {
-            // Convince spawn these tasks have data
-            task.setByteCount(1000l);
-            task.setFileCount(10);
-        }
-        spawn.updateJob(job);
-        host0.setStopped(new JobKey[]{new JobKey(job.getId(), 0)});
-        spawn.updateHostState(host0);
-        host1.setStopped(new JobKey[]{new JobKey(job.getId(), 0), new JobKey(job.getId(), 1)});
-        spawn.updateHostState(host1);
-        HostState host2 = createHostState("host2");
-        host2.setStopped(new JobKey[] {new JobKey(job.getId(), 2)});
-        spawn.updateHostState(host2);
-        boolean hostsAreUp = false;
-        for (int i=0; i<10; i++) {
-            if (spawn.listHostStatus(null).size() < 3) {
-                Thread.sleep(1000); // Can take a little while for the hosts to appear as up
-            } else {
-                hostsAreUp = true;
-                break;
+        try (Spawn spawn = Configs.newDefault(Spawn.class)) {
+            spawn.setSpawnMQ(EasyMock.createNiceMock(SpawnMQImpl.class));
+            HostState host0 = createHostState("host0");
+            spawn.updateHostState(host0);
+            HostState host1 = createHostState("host1");
+            spawn.updateHostState(host1);
+            spawn.getJobCommandManager().putEntity("c", new JobCommand(), false);
+            Job job = spawn.createJob("fsm", 3, Arrays.asList("host0"), "default", "c");
+            job.setReplicas(1);
+            spawn.rebalanceReplicas(job);
+            for (JobTask task : job.getCopyOfTasks()) {
+                // Convince spawn these tasks have data
+                task.setByteCount(1000l);
+                task.setFileCount(10);
             }
+            spawn.updateJob(job);
+            host0.setStopped(new JobKey[]{new JobKey(job.getId(), 0)});
+            spawn.updateHostState(host0);
+            host1.setStopped(new JobKey[]{new JobKey(job.getId(), 0), new JobKey(job.getId(), 1)});
+            spawn.updateHostState(host1);
+            HostState host2 = createHostState("host2");
+            host2.setStopped(new JobKey[]{new JobKey(job.getId(), 2)});
+            spawn.updateHostState(host2);
+            boolean hostsAreUp = false;
+            for (int i = 0; i < 10; i++) {
+                if (spawn.listHostStatus(null).size() < 3) {
+                    Thread.sleep(1000); // Can take a little while for the hosts to appear as up
+                } else {
+                    hostsAreUp = true;
+                    break;
+                }
+            }
+            if (!hostsAreUp) {
+                throw new RuntimeException("Failed to find hosts after waiting");
+            }
+            assertEquals("should not change task that is on on both hosts", 0,
+                         spawn.fixTaskDir(job.getId(), 0, false, false).get("tasksChanged"));
+            assertEquals("should copy task that is on only one host", 1,
+                         spawn.fixTaskDir(job.getId(), 1, false, false).get("tasksChanged"));
+            assertEquals("new home for task 1 should be the host that had the directory", "host1",
+                         spawn.getTask(job.getId(), 1).getHostUUID());
+            assertEquals("should copy task that is on an unexpected host", 1,
+                         spawn.fixTaskDir(job.getId(), 2, false, false).get("tasksChanged"));
+            assertEquals("new home for task 2 should be the unexpected host that had the directory", "host2",
+                         spawn.getTask(job.getId(), 2).getHostUUID());
         }
-        if (!hostsAreUp) {
-            throw new RuntimeException("Failed to find hosts after waiting");
-        }
-        assertEquals("should not change task that is on on both hosts", 0, spawn.fixTaskDir(job.getId(), 0, false, false).get("tasksChanged"));
-        assertEquals("should copy task that is on only one host", 1, spawn.fixTaskDir(job.getId(), 1, false, false).get("tasksChanged"));
-        assertEquals("new home for task 1 should be the host that had the directory", "host1", spawn.getTask(job.getId(), 1).getHostUUID());
-        assertEquals("should copy task that is on an unexpected host", 1, spawn.fixTaskDir(job.getId(), 2, false, false).get("tasksChanged"));
-        assertEquals("new home for task 2 should be the unexpected host that had the directory", "host2", spawn.getTask(job.getId(), 2).getHostUUID());
     }
 
     private HostState createHostState(String hostUUID) throws Exception {

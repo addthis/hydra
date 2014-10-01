@@ -20,13 +20,14 @@ import java.util.Arrays;
 
 import com.addthis.basis.util.Files;
 
-import com.addthis.bark.ZkStartUtil;
+import com.addthis.codec.config.Configs;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobConfigManager;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
+import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import org.junit.After;
 import org.junit.Test;
@@ -36,7 +37,7 @@ import static org.junit.Assert.assertEquals;
 
 
 // Tests that involve lots of state and setup.
-public class SpawnStateTest extends ZkStartUtil {
+public class SpawnStateTest extends ZkCodecStartUtil {
 
     File logDir;
 
@@ -59,25 +60,27 @@ public class SpawnStateTest extends ZkStartUtil {
 
     @Test
     public void testJobConfigs() throws Exception {
-        Spawn spawn = new Spawn(zkClient);
+        try (Spawn spawn = Configs.newDefault(Spawn.class)) {
 
-        JobConfigManager jobConfigManager = new JobConfigManager(spawn.getSpawnDataStore());
-        String conf1 = "{myjob:[1,2,3]}";
-        jobConfigManager.setConfig("id", conf1);
-        assertEquals("JobConfigManager should correctly put/fetch configs", conf1, jobConfigManager.getConfig("id"));
+            JobConfigManager jobConfigManager = new JobConfigManager(spawn.getSpawnDataStore());
+            String conf1 = "{myjob:[1,2,3]}";
+            jobConfigManager.setConfig("id", conf1);
+            assertEquals("JobConfigManager should correctly put/fetch configs", conf1,
+                         jobConfigManager.getConfig("id"));
 
-        String config = "// MY JOB CONFIG";
-        spawn.getJobCommandManager().putEntity("a", new JobCommand(), true);
-        HostState host = new HostState("h");
-        host.setUp(true);
-        host.setDead(false);
-        spawn.updateHostState(host);
-        Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a");
-        job.setReplicas(0);
-        spawn.setJobConfig(job.getId(), config);
-        spawn.updateJob(job);
-        String jobId = job.getId();
-        assertEquals("updateJob pipeline should correctly put/fetch configs", config, spawn.getJobConfig(jobId));
+            String config = "// MY JOB CONFIG";
+            spawn.getJobCommandManager().putEntity("a", new JobCommand(), true);
+            HostState host = new HostState("h");
+            host.setUp(true);
+            host.setDead(false);
+            spawn.updateHostState(host);
+            Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a");
+            job.setReplicas(0);
+            spawn.setJobConfig(job.getId(), config);
+            spawn.updateJob(job);
+            String jobId = job.getId();
+            assertEquals("updateJob pipeline should correctly put/fetch configs", config, spawn.getJobConfig(jobId));
+        }
     }
 
     @Test
@@ -85,7 +88,7 @@ public class SpawnStateTest extends ZkStartUtil {
         File tmpRoot = Files.createTempDir();
         System.setProperty("SPAWN_DATA_DIR", tmpRoot + "/tmp/spawn/data");
         System.setProperty("SPAWN_LOG_DIR", tmpRoot + "/tmp/spawn/log/events");
-        try (Spawn spawn = new Spawn(zkClient)) {
+        try (Spawn spawn = Configs.newDefault(Spawn.class)) {
             assertEquals(0, spawn.getJobCommandManager().size());
         } finally {
             Files.deleteDir(tmpRoot);
@@ -99,7 +102,7 @@ public class SpawnStateTest extends ZkStartUtil {
         File tmpRoot = Files.createTempDir();
         System.setProperty("SPAWN_DATA_DIR", tmpRoot + "/tmp/spawn/data");
         System.setProperty("SPAWN_LOG_DIR", tmpRoot + "/tmp/spawn/log/events");
-        try (Spawn spawn = new Spawn(zkClient)) {
+        try (Spawn spawn = Configs.newDefault(Spawn.class)) {
             jcmd = new JobCommand("me", new String[]{"ls"}, 1, 1, 1);
             spawn.getJobCommandManager().putEntity("test1", jcmd, true);
             assertEquals(1, spawn.getJobCommandManager().size());
@@ -116,7 +119,7 @@ public class SpawnStateTest extends ZkStartUtil {
         File tmpRoot = Files.createTempDir();
         System.setProperty("SPAWN_DATA_DIR", tmpRoot + "/tmp/spawn/data");
         System.setProperty("SPAWN_LOG_DIR", tmpRoot + "/tmp/spawn/log/events");
-        try (Spawn spawn = new Spawn(zkClient)) {
+        try (Spawn spawn = Configs.newDefault(Spawn.class)) {
             SpawnBalancerConfig config = new SpawnBalancerConfig();
             long newVal = 123456;
             config.setBytesMovedFullRebalance(newVal);

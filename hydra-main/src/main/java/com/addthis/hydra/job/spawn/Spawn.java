@@ -35,14 +35,10 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
@@ -129,8 +125,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -245,12 +241,6 @@ public class Spawn implements Codable, AutoCloseable {
         Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(spawn), "Spawn Shutdown Hook"));
     }
 
-    // thread pool for expanding jobs and sending kick messages (outside of the main application
-    // threads)
-    // - thread pool size of 10 chosen somewhat arbitrarily, most job expansions should be nearly
-    // instantaneous
-    // - max queue size of 5000 was chosen as a generous upper bound for how many tasks may be
-    // queued at once (since the number of scheduled kicks is limited by queue size)
     private final ExecutorService               expandKickExecutor;
     private final ScheduledExecutorService      scheduledExecutor;
 
@@ -299,49 +289,6 @@ public class Spawn implements Codable, AutoCloseable {
     private final JobEntityManager<JobCommand> jobCommandManager;
     private final JobOnFinishStateHandler jobOnFinishStateHandler;
 
-    @VisibleForTesting
-    public Spawn(@Nullable CuratorFramework zkClient) throws Exception {
-        this.stateFile = new File(Files.initDirectory("etc"), "spawn.statefile");
-        this.spawnState = new SpawnState("test-uuid", new AtomicBoolean(), new CopyOnWriteArraySet<String>());
-        this.listeners = new ConcurrentHashMap<>();
-        this.monitored = new ConcurrentHashMap<>();
-        this.useZk = zkClient != null;
-        final BlockingQueue<Runnable> expandKickQueue = new LinkedBlockingQueue<>(5000);
-        this.expandKickExecutor = new ThreadPoolExecutor(
-                10, 10, 0L, TimeUnit.MILLISECONDS, expandKickQueue,
-                new ThreadFactoryBuilder().setDaemon(true).setNameFormat("jobExpander-%d").build());
-        this.scheduledExecutor = new ScheduledThreadPoolExecutor(
-                6, new ThreadFactoryBuilder().setDaemon(true).setNameFormat("spawnScheduledTask-%d").build());
-        this.spawnFormattedLogger = useStructuredLogger ?
-                                    SpawnFormattedLogger.createFileBasedLogger(
-                                            new File(SPAWN_STRUCTURED_LOG_DIR)) :
-                                    SpawnFormattedLogger.createNullLogger();
-        if (useZk) {
-            log.info("[init] starting zkclient, config manager, and listening for minions");
-            this.zkClient = zkClient;
-            this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
-            this.jobConfigManager = new JobConfigManager(this.spawnDataStore);
-            this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
-            this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
-            this.aliasManager = new AliasManagerImpl(spawnDataStore);
-            this.jobAlertManager = new JobAlertManagerImpl(this, null);
-            this.jobMacroManager = new JobMacroManager(this);
-            this.jobCommandManager = new JobCommandManager(this);
-            this.jobOnFinishStateHandler = new JobOnFinishStateHandlerImpl(this);
-        } else {
-            this.aliasManager = null;
-            this.jobAlertManager = null;
-            this.jobMacroManager = null;
-            this.jobCommandManager = null;
-            this.jobOnFinishStateHandler = null;
-        }
-        this.hostFailWorker = new HostFailWorker(this, scheduledExecutor);
-        this.balancer = new SpawnBalancer(this);
-        this.spawnMesh = new SpawnMesh(this);
-        this.eventLog = new RollingLog(new File(logDir, "events-jobs"), "job",
-                                       eventLogCompress, logMaxSize, logMaxAge);
-    }
-
     @JsonCreator
     private Spawn(@JsonProperty("debug") String debug,
                   @JsonProperty("queryPort") int queryPort,
@@ -351,7 +298,8 @@ public class Spawn implements Codable, AutoCloseable {
                   @JsonProperty("dataDir") File dataDir,
                   @JsonProperty("stateFile") File stateFile,
                   @JsonProperty("expandKickExecutor") ExecutorService expandKickExecutor,
-                  @JsonProperty("scheduledExecutor") ScheduledExecutorService scheduledExecutor
+                  @JsonProperty("scheduledExecutor") ScheduledExecutorService scheduledExecutor,
+                  @Nullable @JacksonInject CuratorFramework zkClient
     ) throws Exception {
         Files.initDirectory(dataDir);
         this.stateFile = stateFile;
@@ -372,7 +320,11 @@ public class Spawn implements Codable, AutoCloseable {
                                     SpawnFormattedLogger.createFileBasedLogger(
                                             new File(SPAWN_STRUCTURED_LOG_DIR)) :
                                     SpawnFormattedLogger.createNullLogger();
-        this.zkClient = ZkUtil.makeStandardClient();
+        if (zkClient == null) {
+            this.zkClient = ZkUtil.makeStandardClient();
+        } else {
+            this.zkClient = zkClient;
+        }
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
         // look for local object to import
         log.info("[init] beginning to load stats from data store");
