@@ -802,12 +802,16 @@ public class JobTask implements Codable {
             if (jobConfig != null) {
                 Files.write(new File(jobDir, "job.conf"), Bytes.toBytes(jobConfig), false);
             }
+            String portString = String.valueOf(minion.findNextPort());
             // create exec command
             jobCommand = jobCommand.replace("{{jobdir}}", jobDir.getPath())
                                    .replace("{{jobid}}", jobId)
-                                   .replace("{{port}}", String.valueOf(minion.findNextPort()))
+                                   .replace("{{port}}", portString)
                                    .replace("{{node}}", String.valueOf(jobNode))
                                    .replace("{{nodes}}", String.valueOf(jobNodes));
+            String setEnvironmentPrefix = String.format(
+                    "HYDRA_JOBDIR='%s' HYDRA_JOBID='%s' HYDRA_NODE='%s' HYDRA_NODES='%s' HYDRA_PORT='%s'",
+                    jobDir.getPath(), jobId, jobNode, jobNodes, portString);
             log.warn("[task.exec] starting {} with retries={}", jobDir.getPath(), retries);
             // create shell wrapper
             require(minion.deleteFiles(jobPid, jobPort, jobDone, jobStopped), "failed to delete files");
@@ -822,7 +826,7 @@ public class JobTask implements Codable {
             bash.append("ln -s " + logErrTmp.getName() + " " + logErr + "\n");
             bash.append("(\n");
             bash.append("cd " + jobDir + "\n");
-            bash.append("(" + jobCommand + ") &\n");
+            bash.append('(' + setEnvironmentPrefix + ' ' + jobCommand + ") &\n");
             bash.append("pid=$!\n");
             bash.append("echo ${pid} > " + jobPid.getCanonicalPath() + "\n");
             bash.append("exit=0\n");
