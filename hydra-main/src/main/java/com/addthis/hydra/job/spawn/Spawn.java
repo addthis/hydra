@@ -162,7 +162,6 @@ public class Spawn implements Codable, AutoCloseable {
 
     // misc spawn configs
 
-    private static final boolean meshQueue     = Parameter.boolValue("queue.mesh", false);
     private static final boolean enableSpawn2  = Parameter.boolValue("spawn.v2.enable", true);
 
     static final int DEFAULT_REPLICA_COUNT = Parameter.intValue("spawn.defaultReplicaCount", 1);
@@ -288,6 +287,7 @@ public class Spawn implements Codable, AutoCloseable {
                   int jobTaskUpdateHeartbeatInterval,
                   @Nullable @JsonProperty("structuredLogDir") File structuredLogDir,
                   @Nullable @JsonProperty("jobStore") JobStore jobStore,
+                  @Nullable @JsonProperty("queueType") String queueType,
                   @Nullable @JacksonInject CuratorFramework providedZkClient
     ) throws Exception {
         Files.initDirectory(dataDir);
@@ -333,15 +333,26 @@ public class Spawn implements Codable, AutoCloseable {
         // connect to message broker or fail
         // connect to mesh
         this.spawnMesh = new SpawnMesh(this);
-        log.info("[init] connecting to message queue");
-        this.spawnMQ = meshQueue ? new SpawnMQImplMesh(zkClient, this) : new SpawnMQImpl(zkClient, this);
+        if ("mesh".equals(queueType)) {
+            log.info("[init] connecting to mesh message queue");
+            this.spawnMQ = new SpawnMQImplMesh(zkClient, this);
+            this.spawnMQ.connectToMQ(getUuid());
+        } else if ("rabbit".equals(queueType)) {
+            log.info("[init] connecting to rabbit message queue");
+            this.spawnMQ = new SpawnMQImpl(zkClient, this);
+            this.spawnMQ.connectToMQ(getUuid());
+        } else if (queueType == null) {
+            log.info("[init] skipping message queue");
+        } else {
+            throw new IllegalArgumentException("queueType (" + queueType +
+                                               ") must be either a valid message queue type or null");
+        }
         this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
         this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
         aliasManager = new AliasManagerImpl(spawnDataStore);
         hostFailWorker = new HostFailWorker(this, scheduledExecutor);
         balancer = new SpawnBalancer(this);
         loadSpawnBalancerConfig();
-        this.spawnMQ.connectToMQ(getUuid());
 
         // start JobAlertManager
         jobAlertManager = new JobAlertManagerImpl(this, scheduledExecutor);
