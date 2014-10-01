@@ -30,13 +30,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 @Category(SlowTest.class)
-public class OutputWrapperFactoryTest {
+public class DefaultOutputWrapperFactoryTest {
 
-    private OutputWrapperFactory localWriteStream;
+    private DefaultOutputWrapperFactory localWriteStream;
 
     @Test
     public void testGetReplacement() throws Exception {
-        localWriteStream = new OutputWrapperFactory();
+        localWriteStream = new DefaultOutputWrapperFactory();
 
         Class[] parameterTypes = new Class[1];
         parameterTypes[0] = String.class;
@@ -47,7 +47,7 @@ public class OutputWrapperFactoryTest {
         Object[] parameters = new Object[1];
         parameters[0] = "foo";
 
-        OutputWrapperFactory.PartitionData result = (OutputWrapperFactory.PartitionData) m.invoke(localWriteStream, parameters);
+        PartitionData result = (PartitionData) m.invoke(localWriteStream, parameters);
         assertNotNull(result);
         assertNull(result.getReplacementString());
         assertEquals(3, result.getPadTo());
@@ -55,7 +55,7 @@ public class OutputWrapperFactoryTest {
 
     @Test
     public void testGetReplacement_withPart() throws Exception {
-        localWriteStream = new OutputWrapperFactory();
+        localWriteStream = new DefaultOutputWrapperFactory();
 
         Class[] parameterTypes = new Class[1];
         parameterTypes[0] = String.class;
@@ -66,7 +66,7 @@ public class OutputWrapperFactoryTest {
         Object[] parameters = new Object[1];
         parameters[0] = "foo{{PART:10}}";
 
-        OutputWrapperFactory.PartitionData result = (OutputWrapperFactory.PartitionData) m.invoke(localWriteStream, parameters);
+        PartitionData result = (PartitionData) m.invoke(localWriteStream, parameters);
         assertNotNull(result);
         assertEquals("{{PART:10}}", result.getReplacementString());
         assertEquals(10, result.getPadTo());
@@ -74,11 +74,11 @@ public class OutputWrapperFactoryTest {
 
     @Test
     public void testGetFileName() throws Exception {
-        localWriteStream = new OutputWrapperFactory();
+        localWriteStream = new DefaultOutputWrapperFactory();
 
         Class[] parameterTypes = new Class[4];
         parameterTypes[0] = String.class;
-        parameterTypes[1] = OutputWrapperFactory.PartitionData.class;
+        parameterTypes[1] = PartitionData.class;
         parameterTypes[2] = OutputStreamFlags.class;
         parameterTypes[3] = int.class;
 
@@ -87,7 +87,7 @@ public class OutputWrapperFactoryTest {
 
         Object[] parameters = new Object[4];
         parameters[0] = "foo";
-        parameters[1] = new OutputWrapperFactory.PartitionData(null, 3);
+        parameters[1] = new PartitionData(null, 3);
         parameters[2] = new OutputStreamFlags(1);
         parameters[3] = 0;
 
@@ -99,11 +99,11 @@ public class OutputWrapperFactoryTest {
 
     @Test
     public void testGetFileName_noCompress() throws Exception {
-        localWriteStream = new OutputWrapperFactory();
+        localWriteStream = new DefaultOutputWrapperFactory();
 
         Class[] parameterTypes = new Class[4];
         parameterTypes[0] = String.class;
-        parameterTypes[1] = OutputWrapperFactory.PartitionData.class;
+        parameterTypes[1] = PartitionData.class;
         parameterTypes[2] = OutputStreamFlags.class;
         parameterTypes[3] = int.class;
 
@@ -112,7 +112,7 @@ public class OutputWrapperFactoryTest {
 
         Object[] parameters = new Object[4];
         parameters[0] = "foo";
-        parameters[1] = new OutputWrapperFactory.PartitionData(null, 3);
+        parameters[1] = new PartitionData(null, 3);
         parameters[2] = new OutputStreamFlags(0);
         parameters[3] = 0;
 
@@ -124,11 +124,11 @@ public class OutputWrapperFactoryTest {
 
     @Test
     public void testGetFileName_noAppend() throws Exception {
-        localWriteStream = new OutputWrapperFactory();
+        localWriteStream = new DefaultOutputWrapperFactory();
 
         Class[] parameterTypes = new Class[4];
         parameterTypes[0] = String.class;
-        parameterTypes[1] = OutputWrapperFactory.PartitionData.class;
+        parameterTypes[1] = PartitionData.class;
         parameterTypes[2] = OutputStreamFlags.class;
         parameterTypes[3] = int.class;
 
@@ -137,7 +137,7 @@ public class OutputWrapperFactoryTest {
 
         Object[] parameters = new Object[4];
         parameters[0] = "foo";
-        parameters[1] = new OutputWrapperFactory.PartitionData(null, 3);
+        parameters[1] = new PartitionData(null, 3);
         parameters[2] = new OutputStreamFlags(4);
         parameters[3] = 0;
 
@@ -149,11 +149,11 @@ public class OutputWrapperFactoryTest {
 
     @Test
     public void testGetFileName_noAppend_withCompress() throws Exception {
-        localWriteStream = new OutputWrapperFactory();
+        localWriteStream = new DefaultOutputWrapperFactory();
 
         Class[] parameterTypes = new Class[4];
         parameterTypes[0] = String.class;
-        parameterTypes[1] = OutputWrapperFactory.PartitionData.class;
+        parameterTypes[1] = PartitionData.class;
         parameterTypes[2] = OutputStreamFlags.class;
         parameterTypes[3] = int.class;
 
@@ -162,7 +162,7 @@ public class OutputWrapperFactoryTest {
 
         Object[] parameters = new Object[4];
         parameters[0] = "foo";
-        parameters[1] = new OutputWrapperFactory.PartitionData(null, 3);
+        parameters[1] = new PartitionData(null, 3);
         parameters[2] = new OutputStreamFlags(5);
         parameters[3] = 0;
 
@@ -175,7 +175,7 @@ public class OutputWrapperFactoryTest {
     @Test
     public void testGetFileName_noAppend_withCompress_withExistingFile() throws Exception {
         String tmpDir = Files.createTempDir().toString();
-        localWriteStream = new OutputWrapperFactory();
+        localWriteStream = new DefaultOutputWrapperFactory();
         localWriteStream.setDir(tmpDir);
 
         // create dummy file
@@ -191,7 +191,7 @@ public class OutputWrapperFactoryTest {
 
             Class[] parameterTypes = new Class[4];
             parameterTypes[0] = String.class;
-            parameterTypes[1] = OutputWrapperFactory.PartitionData.class;
+            parameterTypes[1] = PartitionData.class;
             parameterTypes[2] = OutputStreamFlags.class;
             parameterTypes[3] = int.class;
 
@@ -200,7 +200,7 @@ public class OutputWrapperFactoryTest {
 
             Object[] parameters = new Object[4];
             parameters[0] = "foo";
-            parameters[1] = new OutputWrapperFactory.PartitionData(null, 3);
+            parameters[1] = new PartitionData(null, 3);
             parameters[2] = new OutputStreamFlags(5);
             parameters[3] = 1;
 
@@ -216,7 +216,7 @@ public class OutputWrapperFactoryTest {
     @Test
     public void testGetFileName_withExistingFile() throws Exception {
         String tmpDir = Files.createTempDir().toString();
-        localWriteStream = new OutputWrapperFactory();
+        localWriteStream = new DefaultOutputWrapperFactory();
         localWriteStream.setDir(tmpDir);
 
         // create dummy file
@@ -232,7 +232,7 @@ public class OutputWrapperFactoryTest {
 
             Class[] parameterTypes = new Class[4];
             parameterTypes[0] = String.class;
-            parameterTypes[1] = OutputWrapperFactory.PartitionData.class;
+            parameterTypes[1] = PartitionData.class;
             parameterTypes[2] = OutputStreamFlags.class;
             parameterTypes[3] = int.class;
 
@@ -241,7 +241,7 @@ public class OutputWrapperFactoryTest {
 
             Object[] parameters = new Object[4];
             parameters[0] = "foo";
-            parameters[1] = new OutputWrapperFactory.PartitionData(null, 3);
+            parameters[1] = new PartitionData(null, 3);
             parameters[2] = new OutputStreamFlags(0x0F0FFF00);
             parameters[3] = 0;
 
@@ -256,7 +256,7 @@ public class OutputWrapperFactoryTest {
     @Test
     public void testGetFileName_withExistingFile_exceedsMax() throws Exception {
         String tmpDir = Files.createTempDir().toString();
-        localWriteStream = new OutputWrapperFactory();
+        localWriteStream = new DefaultOutputWrapperFactory();
         localWriteStream.setDir(tmpDir);
 
         // create dummy file
@@ -272,7 +272,7 @@ public class OutputWrapperFactoryTest {
 
             Class[] parameterTypes = new Class[4];
             parameterTypes[0] = String.class;
-            parameterTypes[1] = OutputWrapperFactory.PartitionData.class;
+            parameterTypes[1] = PartitionData.class;
             parameterTypes[2] = OutputStreamFlags.class;
             parameterTypes[3] = int.class;
 
@@ -281,7 +281,7 @@ public class OutputWrapperFactoryTest {
 
             Object[] parameters = new Object[4];
             parameters[0] = "foo";
-            parameters[1] = new OutputWrapperFactory.PartitionData(null, 3);
+            parameters[1] = new PartitionData(null, 3);
             parameters[2] = new OutputStreamFlags(0x0F01FF00);
             parameters[3] = 1;
 

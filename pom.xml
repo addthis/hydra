@@ -42,6 +42,7 @@
     <module>hydra-mq</module>
     <module>hydra-store</module>
     <module>hydra-task</module>
+    <module>hydra-hdfs</module>
     <module>hydra-uber</module>
   </modules>
 
@@ -50,7 +51,7 @@
     <!-- surefire junit properties -->
     <at.test.excluded.groups>com.addthis.basis.test.SlowTest,com.addthis.hydra.common.test.LocalStackTest</at.test.excluded.groups>
 
-    <!-- hydra addthis projects dependency versions -->
+    <!-- addthis dependency versions -->
     <hydra.dep.bark.version>2.1.3</hydra.dep.bark.version>
     <hydra.dep.basis.version>2.3.0</hydra.dep.basis.version>
     <hydra.dep.bundle.version>2.3.1</hydra.dep.bundle.version>
@@ -59,7 +60,7 @@
     <hydra.dep.muxy.version>2.1.0</hydra.dep.muxy.version>
     <hydra.dep.maljson.version>0.2.0</hydra.dep.maljson.version>
 
-    <!-- hydra addthis external dependency versions -->
+    <!-- external dependency versions -->
     <hydra.dep.log4j2.version>2.0</hydra.dep.log4j2.version>
     <hydra.dep.apache.commons.lang3.version>3.1</hydra.dep.apache.commons.lang3.version>
     <hydra.dep.jackson.jackson-mapper-asl.version>1.9.13</hydra.dep.jackson.jackson-mapper-asl.version>
@@ -70,8 +71,9 @@
     <hydra.dep.netty3.version>3.9.3.Final</hydra.dep.netty3.version>
     <hydra.dep.netty4.version>4.0.23.Final</hydra.dep.netty4.version>
     <hydra.dep.sleepycat.je.version>5.0.73</hydra.dep.sleepycat.je.version>
+    <hydra.dep.hadoop.version>2.4.0.2.1.1.0-385</hydra.dep.hadoop.version>
 
-    <!-- hydra compression dependency versions -->
+    <!-- compression dependency versions -->
     <hydra.dep.compress.compress-lzf.version>0.9.8</hydra.dep.compress.compress-lzf.version>
     <hydra.dep.compress.jzlib.version>1.1.3</hydra.dep.compress.jzlib.version>
     <hydra.dep.compress.snappy-java.version>1.0.4.1</hydra.dep.compress.snappy-java.version>
@@ -217,6 +219,51 @@
         <artifactId>log4j-slf4j-impl</artifactId>
         <version>${hydra.dep.log4j2.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-client</artifactId>
+        <version>${hydra.dep.hadoop.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdfs</artifactId>
+        <version>${hydra.dep.hadoop.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-common</artifactId>
+        <version>${hydra.dep.hadoop.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
 
       <!-- addthis oss -->
       <dependency>
@@ -274,6 +321,11 @@
       <dependency>
         <groupId>com.addthis.hydra</groupId>
         <artifactId>hydra-filters</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-hdfs</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

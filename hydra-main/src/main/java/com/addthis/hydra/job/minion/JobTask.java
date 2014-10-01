@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.minion;
 
+import javax.annotation.Nonnull;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -751,7 +753,7 @@ public class JobTask implements Codable {
         }
     }
 
-    public void exec(CommandTaskKick kickMessage, boolean execute) throws Exception {
+    public void exec(@Nonnull CommandTaskKick kickMessage, boolean execute) throws Exception {
         // setup data directory
         jobDir = Files.initDirectory(new File(minion.rootDir, id + File.separator + node + File.separator + "live"));
         File configDir = getConfigDir();
@@ -775,9 +777,7 @@ public class JobTask implements Codable {
             replicas = kickMessage.getReplicas();
             String jobId = kickMessage.getJobUuid();
             int jobNode = kickMessage.getJobKey().getNodeNumber();
-            if (log.isDebugEnabled()) {
-                log.debug("[task.exec] {}", kickMessage.getJobKey());
-            }
+            log.debug("[task.exec] {}", kickMessage.getJobKey());
             require(testTaskIdle(), "task is not idle");
             String jobCommand = kickMessage.getCommand();
             require(!Strings.isEmpty(jobCommand), "task command is missing or empty");
@@ -791,7 +791,7 @@ public class JobTask implements Codable {
             node = jobNode;
             nodeCount = jobNodes;
             kick = kickMessage;
-            retries = kick != null ? kick.getRetries() : 0;
+            retries = kick.getRetries();
             // allocate type slot if applicable
             minion.sendStatusMessage(new StatusTaskBegin(minion.uuid, id, node));
             // store in jobs on first run
@@ -802,9 +802,16 @@ public class JobTask implements Codable {
             if (jobConfig != null) {
                 Files.write(new File(jobDir, "job.conf"), Bytes.toBytes(jobConfig), false);
             }
+            String portString = String.valueOf(minion.findNextPort());
             // create exec command
-            jobCommand = jobCommand.replace("{{jobdir}}", jobDir.getPath()).replace("{{jobid}}", jobId).replace("{{port}}", minion.findNextPort() + "").replace("{{node}}", jobNode + "").replace(
-                    "{{nodes}}", jobNodes + "");
+            jobCommand = jobCommand.replace("{{jobdir}}", jobDir.getPath())
+                                   .replace("{{jobid}}", jobId)
+                                   .replace("{{port}}", portString)
+                                   .replace("{{node}}", String.valueOf(jobNode))
+                                   .replace("{{nodes}}", String.valueOf(jobNodes));
+            String setEnvironmentPrefix = String.format(
+                    "HYDRA_JOBDIR='%s' HYDRA_JOBID='%s' HYDRA_NODE='%s' HYDRA_NODES='%s' HYDRA_PORT='%s'",
+                    jobDir.getPath(), jobId, jobNode, jobNodes, portString);
             log.warn("[task.exec] starting {} with retries={}", jobDir.getPath(), retries);
             // create shell wrapper
             require(minion.deleteFiles(jobPid, jobPort, jobDone, jobStopped), "failed to delete files");
@@ -819,7 +826,7 @@ public class JobTask implements Codable {
             bash.append("ln -s " + logErrTmp.getName() + " " + logErr + "\n");
             bash.append("(\n");
             bash.append("cd " + jobDir + "\n");
-            bash.append("(" + jobCommand + ") &\n");
+            bash.append('(' + setEnvironmentPrefix + ' ' + jobCommand + ") &\n");
             bash.append("pid=$!\n");
             bash.append("echo ${pid} > " + jobPid.getCanonicalPath() + "\n");
             bash.append("exit=0\n");

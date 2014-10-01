@@ -30,6 +30,7 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.task.output.DataOutputFile;
 import com.addthis.hydra.task.output.DataOutputTypeList;
+import com.addthis.hydra.task.output.DefaultOutputWrapperFactory;
 import com.addthis.hydra.task.output.OutputStreamChannel;
 import com.addthis.hydra.task.output.OutputWrapperFactory;
 import com.addthis.hydra.task.output.OutputWriter;
@@ -63,7 +64,7 @@ public class SpawnFormattedLogger {
         DataOutputTypeList newOutputSink = null;
         try {
             String absPath = file.getAbsolutePath();
-            OutputWrapperFactory factory = new OutputWrapperFactory(absPath);
+            OutputWrapperFactory factory = new DefaultOutputWrapperFactory(absPath);
             OutputWriter writer = new OutputWriter();
             writer.setMaxOpen(1).setOutputWrapperFactory(factory).setFormat(new OutputStreamChannel());
             newOutputSink = new DataOutputFile().setWriter(writer).setPath(LOG_PATH);

@@ -100,7 +100,7 @@ public class OutputWriter extends AbstractOutputWriter {
             flags = new OutputStreamFlags(true, true, 10000L, (250 * (1024L * 1024L)), null);
         }
         if (factory == null) {
-            factory = new OutputWrapperFactory(DEFAULT_SPLIT_OUTPUT_DIR);
+            factory = new DefaultOutputWrapperFactory(DEFAULT_SPLIT_OUTPUT_DIR);
         }
         if (outputList != null) {
             modifiedFileTracker = new File(outputList);

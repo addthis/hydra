@@ -1,4 +1,7 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 <!--
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -19,36 +22,23 @@
     <version>4.4.11-SNAPSHOT</version>
   </parent>
 
-  <artifactId>hydra-avro</artifactId>
-  <name>Hydra Avro Module</name>
-  <description>Avro input and output</description>
+  <artifactId>hydra-hdfs</artifactId>
+  <name>Hydra HDFS Module</name>
+  <description>HDFS input and output</description>
 
   <dependencies>
-    <!-- module deps -->
     <dependency>
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-task</artifactId>
     </dependency>
-
-    <!-- 3rd party -->
     <dependency>
-      <groupId>com.twitter</groupId>
-      <artifactId>parquet-avro</artifactId>
-      <version>1.5.0</version>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-client</artifactId>
+      <artifactId>hadoop-common</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.xerial.snappy</groupId>
-      <artifactId>snappy-java</artifactId>
-    </dependency>
-    <!-- end 3rd party -->
   </dependencies>
 
   <repositories>

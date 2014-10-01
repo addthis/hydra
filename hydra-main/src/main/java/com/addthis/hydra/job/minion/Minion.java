@@ -482,7 +482,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
                         try {
                             task.exec(nextKick, true);
                         } catch (Exception ex) {
-                            log.warn("[kick] exception while trying to kick " + task.getName() + ": " + ex, ex);
+                            log.warn("[kick] exception while trying to kick {}", task.getName(), ex);
                             task.sendEndStatus(JobTaskErrorCode.EXIT_SCRIPT_EXEC_ERROR);
                         }
                         writeState();
