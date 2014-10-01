@@ -315,6 +315,8 @@ public class Spawn implements Codable, AutoCloseable {
         } else {
             this.zkClient = providedZkClient;
         }
+        this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
+        this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
         this.jobConfigManager = new JobConfigManager(spawnDataStore);
         // look for local object to import
@@ -347,8 +349,6 @@ public class Spawn implements Codable, AutoCloseable {
             throw new IllegalArgumentException("queueType (" + queueType +
                                                ") must be either a valid message queue type or null");
         }
-        this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
-        this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
         aliasManager = new AliasManagerImpl(spawnDataStore);
         hostFailWorker = new HostFailWorker(this, scheduledExecutor);
         balancer = new SpawnBalancer(this);
