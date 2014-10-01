@@ -88,10 +88,9 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
                                          OutputStreamFlags outputFlags,
                                          OutputStreamEmitter streamEmitter) throws IOException {
         log.debug("[open] {}target={} hdfs", outputFlags, target);
-        String rawTarget = target;
-        target = getModifiedTarget(target, outputFlags);
-        Path targetPath = new Path(dir, target);
-        Path targetPathTmp = new Path(dir, target.concat(".tmp"));
+        String modifiedTarget = getModifiedTarget(target, outputFlags);
+        Path targetPath = new Path(dir, modifiedTarget);
+        Path targetPathTmp = new Path(dir, modifiedTarget.concat(".tmp"));
         boolean exists = fileSystem.exists(targetPath);
         FSDataOutputStream outputStream;
         if (exists) {
@@ -106,7 +105,7 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
         }
         OutputStream wrappedStream = wrapOutputStream(outputFlags, exists, outputStream);
         return new HDFSOutputWrapper(wrappedStream, streamEmitter, outputFlags.isCompress(),
-                                     outputFlags.getCompressType(), rawTarget, targetPath, targetPathTmp, fileSystem);
+                                     outputFlags.getCompressType(), target, targetPath, targetPathTmp, fileSystem);
     }
 
     private String getModifiedTarget(String target, OutputStreamFlags outputFlags) throws IOException {
@@ -118,7 +117,9 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
             Path test = new Path(dir, modifiedFileName);
             Path testTmp = new Path(dir, modifiedFileName.concat(".tmp"));
             boolean testExists = fileSystem.exists(test);
-            if (outputFlags.getMaxFileSize() > 0 && (testExists && fileSystem.getFileStatus(test).getLen() >= outputFlags.getMaxFileSize() || (fileSystem.exists(testTmp) && fileSystem.getFileStatus(testTmp).getLen() >= outputFlags.getMaxFileSize()))) {
+            if ((outputFlags.getMaxFileSize() > 0) &&
+                ((testExists && (fileLength(test) >= outputFlags.getMaxFileSize())) ||
+                 (fileSystem.exists(testTmp) && (fileLength(testTmp) >= outputFlags.getMaxFileSize())))) {
                 // to big already
                 continue;
             }
@@ -127,5 +128,9 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
             }
         }
         return modifiedFileName;
+    }
+
+    private long fileLength(Path file) throws IOException {
+        return fileSystem.getFileStatus(file).getLen();
     }
 }
