@@ -166,7 +166,6 @@ public class Spawn implements Codable, AutoCloseable {
 
     static final int DEFAULT_REPLICA_COUNT = Parameter.intValue("spawn.defaultReplicaCount", 1);
     static final int TASK_QUEUE_DRAIN_INTERVAL = Parameter.intValue("task.queue.drain.interval", 500);
-    static final boolean ENABLE_JOB_STORE = Parameter.boolValue("job.store.enable", true);
     static final boolean ENABLE_JOB_FIXDIRS_ONCOMPLETE = Parameter.boolValue("job.fixdirs.oncomplete", true);
 
     private static final int requestHeaderBufferSize   = Parameter.intValue("spawn.http.bufsize", 8192);
@@ -299,6 +298,7 @@ public class Spawn implements Codable, AutoCloseable {
                   @JsonProperty("stateFile") File stateFile,
                   @JsonProperty("expandKickExecutor") ExecutorService expandKickExecutor,
                   @JsonProperty("scheduledExecutor") ScheduledExecutorService scheduledExecutor,
+                  @Nullable @JsonProperty("jobStore") JobStore jobStore,
                   @Nullable @JacksonInject CuratorFramework zkClient
     ) throws Exception {
         Files.initDirectory(dataDir);
@@ -391,9 +391,7 @@ public class Spawn implements Codable, AutoCloseable {
         startSpawnWeb(webDir, webPort);
         balancer.startAutobalanceTask();
         balancer.startTaskSizePolling();
-        if (ENABLE_JOB_STORE) {
-            jobStore = new JobStore(new File(dataDir, "jobstore"));
-        }
+        this.jobStore = jobStore;
         this.eventLog = new RollingLog(new File(logDir, "events-jobs"), "job",
                                        eventLogCompress, logMaxSize, logMaxAge);
         writeState();

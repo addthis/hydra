@@ -27,6 +27,8 @@ import com.addthis.maljson.JSONArray;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +51,7 @@ public class JobStore {
      * @param jobStoreDir The directory that will store job config files
      * @throws Exception If there is a problem instantiating the git store
      */
+    @JsonCreator
     public JobStore(File jobStoreDir) throws Exception {
         this.jobStoreDir = jobStoreDir;
         if (!jobStoreDir.exists()) {
