@@ -19,7 +19,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>4.4.9-SNAPSHOT</version>
+    <version>4.4.11-SNAPSHOT</version>
   </parent>
 
   <artifactId>hydra-hdfs</artifactId>
@@ -30,7 +30,6 @@
     <dependency>
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-task</artifactId>
-      <version>4.4.9-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -61,12 +60,6 @@
           <artifactId>log4j</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.11</version>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 
