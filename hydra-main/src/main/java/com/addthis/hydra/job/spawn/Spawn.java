@@ -35,7 +35,9 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -124,7 +126,6 @@ import com.addthis.meshy.service.file.FileReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -133,7 +134,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
-import com.yammer.metrics.core.Gauge;
 import com.yammer.metrics.core.Meter;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -240,53 +240,47 @@ public class Spawn implements Codable, AutoCloseable {
         Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(spawn), "Spawn Shutdown Hook"));
     }
 
-    private final ExecutorService               expandKickExecutor;
-    private final ScheduledExecutorService      scheduledExecutor;
-
-    private final HostFailWorker hostFailWorker;
-    private final RollingLog     eventLog;
-
-    private final File stateFile;
-
-    private final ConcurrentHashMap<String, ClientEventListener> listeners;
-
-    final SpawnState spawnState;
 
     String debug;
     String queryHost;
     String spawnHost;
+    SpawnQueuesByPriority taskQueuesByPriority = new SpawnQueuesByPriority();
 
-    final ConcurrentHashMap<String, HostState> monitored;
-    private final SpawnMesh spawnMesh;
-    final SpawnFormattedLogger spawnFormattedLogger;
+    private SpawnMQ spawnMQ;
+    private Server jetty;
+    private volatile int lastQueueSize = 0;
 
-    private CuratorFramework      zkClient;
-    private SpawnMQ               spawnMQ;
-    private Server                jetty;
-    private JobConfigManager jobConfigManager;
-    SetMembershipListener minionMembers;
-    private SetMembershipListener deadMinionMembers;
-    private       boolean        useZk         = true;
-    private       Gauge<Integer> minionsDown   =
-            Metrics.newGauge(Spawn.class, "minionsDown", new DownMinionGauge(this));
-
-    private SpawnBalancer balancer;
-    SpawnQueuesByPriority       taskQueuesByPriority = new SpawnQueuesByPriority();
-    private volatile int                         lastQueueSize        = 0;
-    final    Lock                        jobLock              = new ReentrantLock();
-    private final    AtomicBoolean               shuttingDown         = new AtomicBoolean(false);
-    private final    LinkedBlockingQueue<String> jobUpdateQueue       = new LinkedBlockingQueue<>();
-    private final    SpawnJobFixer               spawnJobFixer        = new SpawnJobFixer(this);
-    private JobStore       jobStore;
-    private SpawnDataStore spawnDataStore;
+    final Lock jobLock = new ReentrantLock();
+    private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
+    private final BlockingQueue<String> jobUpdateQueue = new LinkedBlockingQueue<>();
+    private final SpawnJobFixer spawnJobFixer = new SpawnJobFixer(this);
     //To track web socket connections
     private final WebSocketManager webSocketManager = new WebSocketManager();
 
-    private final AliasManager aliasManager;
-    private final JobAlertManager jobAlertManager;
-    private final JobEntityManager<JobMacro> jobMacroManager;
-    private final JobEntityManager<JobCommand> jobCommandManager;
-    private final JobOnFinishStateHandler jobOnFinishStateHandler;
+    @Nonnull final SpawnState spawnState;
+    @Nonnull final ConcurrentMap<String, ClientEventListener> listeners;
+    @Nonnull final ConcurrentMap<String, HostState> monitored;
+    @Nonnull final SpawnFormattedLogger spawnFormattedLogger;
+
+    @Nonnull private final File stateFile;
+    @Nonnull private final ExecutorService expandKickExecutor;
+    @Nonnull private final ScheduledExecutorService scheduledExecutor;
+    @Nonnull private final CuratorFramework zkClient;
+    @Nonnull private final SpawnDataStore spawnDataStore;
+    @Nonnull private final JobConfigManager jobConfigManager;
+    @Nonnull private final AliasManager aliasManager;
+    @Nonnull private final JobAlertManager jobAlertManager;
+    @Nonnull private final SpawnMesh spawnMesh;
+    @Nonnull private final JobEntityManager<JobMacro> jobMacroManager;
+    @Nonnull private final JobEntityManager<JobCommand> jobCommandManager;
+    @Nonnull private final JobOnFinishStateHandler jobOnFinishStateHandler;
+    @Nonnull private final SpawnBalancer balancer;
+    @Nonnull private final HostFailWorker hostFailWorker;
+    @Nonnull private final SetMembershipListener minionMembers;
+    @Nonnull private final SetMembershipListener deadMinionMembers;
+    @Nonnull private final RollingLog eventLog;
+
+    @Nullable private final JobStore jobStore;
 
     @JsonCreator
     private Spawn(@JsonProperty("debug") String debug,
@@ -326,13 +320,13 @@ public class Spawn implements Codable, AutoCloseable {
             this.zkClient = providedZkClient;
         }
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
+        this.jobConfigManager = new JobConfigManager(spawnDataStore);
         // look for local object to import
         log.info("[init] beginning to load stats from data store");
         jobMacroManager = new JobMacroManager(this);
         jobCommandManager = new JobCommandManager(this);
         jobOnFinishStateHandler = new JobOnFinishStateHandlerImpl(this);
         loadSpawnQueue();
-        this.jobConfigManager = new JobConfigManager(spawnDataStore);
         // fix up null pointers
         for (Job job : spawnState.jobs.values()) {
             if (job.getSubmitTime() == null) {
@@ -344,8 +338,7 @@ public class Spawn implements Codable, AutoCloseable {
         // connect to mesh
         this.spawnMesh = new SpawnMesh(this);
         log.info("[init] connecting to message queue");
-        this.spawnMQ =
-                meshQueue ? new SpawnMQImplMesh(zkClient, this) : new SpawnMQImpl(zkClient, this);
+        this.spawnMQ = meshQueue ? new SpawnMQImplMesh(zkClient, this) : new SpawnMQImpl(zkClient, this);
         this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
         this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
         aliasManager = new AliasManagerImpl(spawnDataStore);
@@ -394,6 +387,7 @@ public class Spawn implements Codable, AutoCloseable {
         this.jobStore = jobStore;
         this.eventLog = new RollingLog(new File(logDir, "events-jobs"), "job",
                                        eventLogCompress, logMaxSize, logMaxAge);
+        Metrics.newGauge(Spawn.class, "minionsDown", new DownMinionGauge(this));
         writeState();
     }
 
@@ -484,12 +478,8 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     private void closeZkClients() {
-        if (spawnDataStore != null) {
-            spawnDataStore.close();
-        }
-        if (zkClient != null) {
-            zkClient.close();
-        }
+        spawnDataStore.close();
+        zkClient.close();
     }
 
     public void setSpawnMQ(SpawnMQ spawnMQ) {
@@ -503,8 +493,7 @@ public class Spawn implements Codable, AutoCloseable {
             return;
         }
         try {
-            taskQueuesByPriority =
-                    new ObjectMapper().readValue(queueFromZk, SpawnQueuesByPriority.class);
+            taskQueuesByPriority = new ObjectMapper().readValue(queueFromZk, SpawnQueuesByPriority.class);
         } catch (Exception ex) {
             log.warn("[task.queue] exception during spawn queue deserialization: ", ex);
         }
@@ -515,8 +504,7 @@ public class Spawn implements Codable, AutoCloseable {
         try {
             taskQueuesByPriority.lock();
             try {
-                spawnDataStore.put(SPAWN_QUEUE_PATH,
-                                   new String(om.writeValueAsBytes(taskQueuesByPriority)));
+                spawnDataStore.put(SPAWN_QUEUE_PATH, new String(om.writeValueAsBytes(taskQueuesByPriority)));
             } finally {
                 taskQueuesByPriority.unlock();
             }
@@ -527,17 +515,15 @@ public class Spawn implements Codable, AutoCloseable {
 
     @VisibleForTesting
     protected void loadJobs() {
-        if (jobConfigManager != null) {
-            jobLock.lock();
-            try {
-                for (IJob iJob : jobConfigManager.getJobs().values()) {
-                    if (iJob != null) {
-                        putJobInSpawnState(new Job(iJob));
-                    }
+        jobLock.lock();
+        try {
+            for (IJob iJob : jobConfigManager.getJobs().values()) {
+                if (iJob != null) {
+                    putJobInSpawnState(new Job(iJob));
                 }
-            } finally {
-                jobLock.unlock();
             }
+        } finally {
+            jobLock.unlock();
         }
         Thread loadDependencies = new Thread() {
             @Override
@@ -585,16 +571,14 @@ public class Spawn implements Codable, AutoCloseable {
         if (state != null) {
             state.setDead(true);
             state.setUpdated();
-            if (useZk) {
-                // delete minion state
-                spawnDataStore.delete(Minion.MINION_ZK_PATH + hostUUID);
-                try {
-                    zkClient.create().creatingParentsIfNeeded().forPath(MINION_DEAD_PATH + "/" + hostUUID, null);
-                } catch (KeeperException.NodeExistsException ne) {
-                    // host already marked as dead
-                } catch (Exception e) {
-                    log.error("Unable to add host: {} to " + MINION_DEAD_PATH, hostUUID, e);
-                }
+            // delete minion state
+            spawnDataStore.delete(Minion.MINION_ZK_PATH + hostUUID);
+            try {
+                zkClient.create().creatingParentsIfNeeded().forPath(MINION_DEAD_PATH + "/" + hostUUID, null);
+            } catch (KeeperException.NodeExistsException ne) {
+                // host already marked as dead
+            } catch (Exception e) {
+                log.error("Unable to add host: {} to " + MINION_DEAD_PATH, hostUUID, e);
             }
             sendHostUpdateEvent(state);
             updateHostState(state);
@@ -604,7 +588,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     public void updateHostState(HostState state) {
         synchronized (monitored) {
-            if (deadMinionMembers == null || !deadMinionMembers.getMemberSet().contains(state.getHostUuid())) {
+            if (!deadMinionMembers.getMemberSet().contains(state.getHostUuid())) {
                 log.debug("Updating host state for : {}", state.getHost());
                 monitored.put(state.getHostUuid(), state);
             }
@@ -619,8 +603,8 @@ public class Spawn implements Codable, AutoCloseable {
      */
     public List<HostState> listHostStatus(String minionType) {
         synchronized (monitored) {
-            Set<String> availableMinions = minionMembers == null ? ImmutableSet.<String>of() : minionMembers.getMemberSet();
-            Set<String> deadMinions = deadMinionMembers == null ? ImmutableSet.<String>of() : deadMinionMembers.getMemberSet();
+            Set<String> availableMinions = minionMembers.getMemberSet();
+            Set<String> deadMinions = deadMinionMembers.getMemberSet();
             ArrayList<HostState> allMinions = new ArrayList<>();
             for (HostState minion : monitored.values()) {
                 if (availableMinions.contains(minion.getHostUuid()) && !deadMinions.contains(minion.getHostUuid())) {
@@ -887,9 +871,7 @@ public class Spawn implements Codable, AutoCloseable {
                 host.addJob(job.getId());
             }
             putJobInSpawnState(job);
-            if (jobConfigManager != null) {
-                jobConfigManager.addJob(job);
-            }
+            jobConfigManager.addJob(job);
             submitConfigUpdate(job.getId(), null);
             return job;
         } finally {
@@ -1707,25 +1689,23 @@ public class Spawn implements Codable, AutoCloseable {
      * to clone() any job fetched from cache before submitting to updateJob().
      */
     public void updateJob(IJob ijob, boolean reviseReplicas) throws Exception {
-        if (useZk) {
-            Job job = new Job(ijob);
-            jobLock.lock();
-            try {
-                require(getJob(job.getId()) != null, "job " + job.getId() + " does not exist");
-                updateJobDependencies(job.getId());
-                Job oldjob = putJobInSpawnState(job);
-                // take action on trigger changes (like # replicas)
-                if (oldjob != job && reviseReplicas) {
-                    int oldReplicaCount = oldjob.getReplicas();
-                    int newReplicaCount = job.getReplicas();
-                    require(oldReplicaCount == newReplicaCount || job.getState() == JobState.IDLE || job.getState() == JobState.DEGRADED, "job must be IDLE or DEGRADED to change replicas");
-                    require(newReplicaCount < monitored.size(), "replication factor must be < # live hosts");
-                    rebalanceReplicas(job);
-                }
-                queueJobTaskUpdateEvent(job);
-            } finally {
-                jobLock.unlock();
+        Job job = new Job(ijob);
+        jobLock.lock();
+        try {
+            require(getJob(job.getId()) != null, "job " + job.getId() + " does not exist");
+            updateJobDependencies(job.getId());
+            Job oldjob = putJobInSpawnState(job);
+            // take action on trigger changes (like # replicas)
+            if (oldjob != job && reviseReplicas) {
+                int oldReplicaCount = oldjob.getReplicas();
+                int newReplicaCount = job.getReplicas();
+                require(oldReplicaCount == newReplicaCount || job.getState() == JobState.IDLE || job.getState() == JobState.DEGRADED, "job must be IDLE or DEGRADED to change replicas");
+                require(newReplicaCount < monitored.size(), "replication factor must be < # live hosts");
+                rebalanceReplicas(job);
             }
+            queueJobTaskUpdateEvent(job);
+        } finally {
+            jobLock.unlock();
         }
     }
 
@@ -1744,9 +1724,7 @@ public class Spawn implements Codable, AutoCloseable {
             log.warn("[job.delete] " + job.getId());
             spawnMQ.sendControlMessage(new CommandTaskDelete(HostMessage.ALL_HOSTS, job.getId(), null, job.getRunCount()));
             sendJobUpdateEvent("job.delete", job);
-            if (jobConfigManager != null) {
-                jobConfigManager.deleteJob(job.getId());
-            }
+            jobConfigManager.deleteJob(job.getId());
             if (jobStore != null) {
                 jobStore.delete(jobUUID);
             }
@@ -2438,9 +2416,7 @@ public class Spawn implements Codable, AutoCloseable {
     private void sendJobUpdateEvent(Job job) {
         jobLock.lock();
         try {
-            if (jobConfigManager != null) {
-                jobConfigManager.updateJob(job);
-            }
+            jobConfigManager.updateJob(job);
         } finally {
             jobLock.unlock();
         }
@@ -2724,9 +2700,7 @@ public class Spawn implements Codable, AutoCloseable {
         }
 
         try {
-            if (spawnFormattedLogger != null) {
-                spawnFormattedLogger.close();
-            }
+            spawnFormattedLogger.close();
         } catch (Exception ex) {
             log.warn("", ex);
         }
