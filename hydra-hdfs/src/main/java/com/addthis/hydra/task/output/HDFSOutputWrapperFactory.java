@@ -13,13 +13,10 @@
  */
 package com.addthis.hydra.task.output;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.apache.hadoop.conf.Configuration;
@@ -31,8 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static com.addthis.hydra.task.output.DefaultOutputWrapperFactory.getFileName;
-import static com.addthis.hydra.task.output.PartitionData.getPartitionData;
 import static com.addthis.hydra.task.output.DefaultOutputWrapperFactory.wrapOutputStream;
+import static com.addthis.hydra.task.output.PartitionData.getPartitionData;
 
 /**
  * OutputWrapperFactory implementation for HDFS systems.
@@ -56,18 +53,20 @@ import static com.addthis.hydra.task.output.DefaultOutputWrapperFactory.wrapOutp
 public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
     private static final Logger log = LoggerFactory.getLogger(HDFSOutputWrapperFactory.class);
 
-    /** URL for HDFS name node. */
-    @JsonProperty(required = true) private String hdfsURL;
-
     /** Path to the root directory of the output files. */
-    @JsonProperty private String dir;
+    private final Path dir;
+    private final FileSystem fileSystem;
 
-    /** When true the file name will include the task id. */
-    @JsonProperty private boolean includeTaskId = true;
-
-    private final Lock fileSystemInitLock = new ReentrantLock();
-    private boolean fileSystemInitialized = false;
-    private FileSystem fileSystem;
+    @JsonCreator
+    public HDFSOutputWrapperFactory(@JsonProperty(value = "hdfsUrl", required = true) String hdfsUrl,
+                                    @JsonProperty(value = "dir", required = true) Path dir) throws IOException {
+        Configuration config = new Configuration();
+        config.set("fs.defaultFS", hdfsUrl);
+        config.set("fs.automatic.close", "false");
+        config.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
+        this.fileSystem = FileSystem.get(config);
+        this.dir = dir;
+    }
 
     /**
      * Opens a write stream for an HDFS output. Most of the complexity in this
@@ -90,29 +89,6 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
                                          OutputStreamEmitter streamEmitter) throws IOException {
         log.debug("[open] {}target={} hdfs", outputFlags, target);
         String rawTarget = target;
-        fileSystemInitLock.lock();
-        try {
-            if (!fileSystemInitialized) {
-                File workingDirectory = new File("tmp");
-                String path = workingDirectory.getAbsolutePath();
-                String[] tokens = path.split("/");
-                if (tokens.length > 3 && includeTaskId) {
-                    // include job id and task id in path
-                    dir = tokens[tokens.length - 4] + "/" + tokens[tokens.length - 3] + "/" + dir;
-                } else if (tokens.length > 3) {
-                    // include job id only in path
-                    dir = tokens[tokens.length - 4] + "/" + dir;
-                }
-                fileSystemInitialized = true;
-                Configuration config = new Configuration();
-                config.set("fs.defaultFS", hdfsURL);
-                config.set("fs.automatic.close", "false");
-                config.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
-                fileSystem = FileSystem.get(config);
-            }
-        } finally {
-            fileSystemInitLock.unlock();
-        }
         target = getModifiedTarget(target, outputFlags);
         Path targetPath = new Path(dir, target);
         Path targetPathTmp = new Path(dir, target.concat(".tmp"));

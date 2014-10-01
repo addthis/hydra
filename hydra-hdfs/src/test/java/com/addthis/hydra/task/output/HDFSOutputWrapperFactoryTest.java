@@ -29,7 +29,7 @@ public class HDFSOutputWrapperFactoryTest {
     @Test
     public void openWriteStream() throws Exception {
         HDFSOutputWrapperFactory factory = Configs.decodeObject(
-                HDFSOutputWrapperFactory.class, "hdfsURL = \"hdfs://lhn00.clearspring.local:8020\", dir = ./test2");
+                HDFSOutputWrapperFactory.class, "hdfsUrl = \"hdfs://lhn00.clearspring.local:8020\", dir = ./test2");
         OutputStreamFlags outputFlags = new OutputStreamFlags(false, false, 1000, 100000, "hello");
         OutputStreamChannel channel = new OutputStreamChannel();
         OutputWrapper wrapper = factory.openWriteStream("test_hdfs", outputFlags, channel.createEmitter());
