@@ -299,7 +299,7 @@ public class Spawn implements Codable, AutoCloseable {
                   @JsonProperty("expandKickExecutor") ExecutorService expandKickExecutor,
                   @JsonProperty("scheduledExecutor") ScheduledExecutorService scheduledExecutor,
                   @Nullable @JsonProperty("jobStore") JobStore jobStore,
-                  @Nullable @JacksonInject CuratorFramework zkClient
+                  @Nullable @JacksonInject CuratorFramework providedZkClient
     ) throws Exception {
         Files.initDirectory(dataDir);
         this.stateFile = stateFile;
@@ -320,10 +320,10 @@ public class Spawn implements Codable, AutoCloseable {
                                     SpawnFormattedLogger.createFileBasedLogger(
                                             new File(SPAWN_STRUCTURED_LOG_DIR)) :
                                     SpawnFormattedLogger.createNullLogger();
-        if (zkClient == null) {
+        if (providedZkClient == null) {
             this.zkClient = ZkUtil.makeStandardClient();
         } else {
-            this.zkClient = zkClient;
+            this.zkClient = providedZkClient;
         }
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
         // look for local object to import
