@@ -34,6 +34,7 @@ import static com.google.common.base.Objects.toStringHelper;
 public class HDFSOutputWrapper extends AbstractOutputWrapper {
     private static final Logger log = LoggerFactory.getLogger(HDFSOutputWrapper.class);
 
+    // !---- These are _not_ Java's NIO2 interfaces. ----!
     @Nonnull private final Path tempTargetPath;
     @Nonnull private final Path targetPath;
     @Nonnull private final FileSystem fileSystem;

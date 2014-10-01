@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.output;
 
+import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -24,10 +26,13 @@ import com.addthis.basis.io.IOWrap;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.muxy.MuxFileDirectory;
 import com.addthis.muxy.MuxFileDirectoryCache;
 
+import com.google.common.annotations.VisibleForTesting;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ning.compress.lzf.LZFOutputStream;
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
@@ -62,47 +67,109 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultOutputWrapperFactory.class);
 
-    private static final int DEFAULT_PADDING = 3;
-    protected static final String PART_PREFIX = "{{PART";
-    private static final String PART_POSTFIX = "}}";
     private static final int BUFFER_SIZE = 4096;
 
-    /**
-     * Path to the root directory of the output files.
-     */
-    @FieldConfig(codable = true)
-    private String dir;
+    /** Path to the root directory of the output files. */
+    @JsonProperty private String dir;
 
     /**
-     * If true then generate a small number of large files
-     * to represent a large number of small files.
+     * If true then generate a small number of large files to represent a large number of small files.
      * See comment above. Default is false.
      */
-    @FieldConfig(codable = true)
-    private boolean multiplex;
+    @JsonProperty private boolean multiplex;
 
-    @FieldConfig(codable = true)
-    private int multiplexMaxFileSize;
+    @JsonProperty private int multiplexMaxFileSize;
+    @JsonProperty private int multiplexMaxBlockSize;
+    @JsonProperty private int multiplexWriteThashold;
+    @JsonProperty private int multiplexLogCloseTimeout;
 
-    @FieldConfig(codable = true)
-    private int multiplexMaxBlockSize;
+    /** Used to be required for codec, but now is only required for some old unit tests. */
+    @VisibleForTesting
+    @Deprecated
+    DefaultOutputWrapperFactory() {}
 
-    @FieldConfig(codable = true)
-    private int multiplexWriteThashold;
-
-    @FieldConfig(codable = true)
-    private int multiplexLogCloseTimeout;
-
-    /**
-     * to support Codable
-     */
-    public DefaultOutputWrapperFactory() {
-    }
-
-    public DefaultOutputWrapperFactory(String dir) {
+    @JsonCreator
+    public DefaultOutputWrapperFactory(@JsonProperty("dir") String dir) {
         this.dir = dir;
     }
 
+    static OutputStream wrapOutputStream(OutputStreamFlags outputFlags,
+                                         boolean exists,
+                                         OutputStream outputStream) throws IOException {
+        OutputStream wrappedStream;
+        if (outputFlags.isCompress()) {
+            if (outputFlags.getCompressType() == 0) {
+                wrappedStream = IOWrap.gz(outputStream, BUFFER_SIZE);
+            } else if (outputFlags.getCompressType() == 1) {
+                wrappedStream = new LZFOutputStream(outputStream);
+            } else if (outputFlags.getCompressType() == 2) {
+                wrappedStream = new SnappyOutputStream(outputStream);
+            } else if (outputFlags.getCompressType() == 3) {
+                wrappedStream = new BZip2CompressorOutputStream(outputStream);
+            } else if (outputFlags.getCompressType() == 4) {
+                wrappedStream = new LzmaOutputStream.Builder(outputStream).useMediumDictionarySize().build();
+            } else {
+                throw new IOException("Unknown compression type: " + outputFlags.getCompressType());
+            }
+        } else {
+            wrappedStream = IOWrap.buffer(outputStream, BUFFER_SIZE);
+        }
+        if (!exists && (outputFlags.getHeader() != null)) {
+            wrappedStream.write(Bytes.toBytes(outputFlags.getHeader()));
+        }
+        return wrappedStream;
+    }
+
+    static String getFileName(String target,
+                              PartitionData partitionData,
+                              OutputStreamFlags outputFlags,
+                              int fileVersion) {
+        // by convention the partition can never be greater than 1000
+        String result = target;
+        if (outputFlags.isNoAppend() || outputFlags.getMaxFileSize() > 0) {
+
+            String part = Strings.padleft(Integer.toString(fileVersion), partitionData.getPadTo(), Strings.pad0);
+            if (partitionData.getReplacementString() != null) {
+                result = target.replace(partitionData.getReplacementString(), part);
+            } else {
+                result = target.concat("-").concat(part);
+            }
+            if (outputFlags.isCompress()) {
+                if (outputFlags.getCompressType() == 0) {
+                    result = result.concat(".gz");
+                } else if (outputFlags.getCompressType() == 1) {
+                    result = result.concat(".lzf");
+                } else if (outputFlags.getCompressType() == 2) {
+                    result = result.concat(".snappy");
+                } else if (outputFlags.getCompressType() == 3) {
+                    result = result.concat(".bz2");
+                } else if (outputFlags.getCompressType() == 4) {
+                    result = result.concat(".lzma");
+                } else {
+                    throw new RuntimeException("unexpected compressionType: " + outputFlags.getCompressType());
+                }
+            }
+        }
+
+        if (outputFlags.isCompress()) {
+            if (outputFlags.getCompressType() == 0 && !result.endsWith(".gz")) {
+                result = result.concat(".gz");
+            } else if (outputFlags.getCompressType() == 1 && !result.endsWith(".lzf")) {
+                result = result.concat(".zlf");
+            } else if (outputFlags.getCompressType() == 2 && !result.endsWith(".snappy")) {
+                result = result.concat(".snappy");
+            } else if (outputFlags.getCompressType() == 3 && !result.endsWith(".bz2")) {
+                result = result.concat(".bz2");
+            } else if (outputFlags.getCompressType() == 4 && !result.endsWith(".lzma")) {
+                result = result.concat(".lzma");
+            }
+        }
+        log.debug("[file] compress={} compressType:{} na={} for {}",
+                  outputFlags.isCompress(), outputFlags.getCompressType(), outputFlags.isNoAppend(), result);
+        return result;
+    }
+
+    @Override
     public OutputWrapper openWriteStream(String target,
                                          OutputStreamFlags outputFlags,
                                          OutputStreamEmitter streamEmitter) throws IOException {
@@ -149,41 +216,16 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
             outputStream = new FileOutputStream(targetOutTmp, true);
         }
         OutputStream wrappedStream = wrapOutputStream(outputFlags, targetOut.exists(), outputStream);
-        return new DefaultOutputWrapper(wrappedStream, streamEmitter, targetOut, targetOutTmp, outputFlags.isCompress(),
-                                        outputFlags.getCompressType(), rawTarget);
+        return new DefaultOutputWrapper(wrappedStream, streamEmitter, targetOut, targetOutTmp,
+                                        outputFlags.isCompress(), outputFlags.getCompressType(), rawTarget);
     }
 
-    protected OutputStream wrapOutputStream(OutputStreamFlags outputFlags, boolean exists, OutputStream outputStream) throws IOException {
-        OutputStream wrappedStream;
-        if (outputFlags.isCompress()) {
-            if (outputFlags.getCompressType() == 0) {
-                wrappedStream = IOWrap.gz(outputStream, BUFFER_SIZE);
-            } else if (outputFlags.getCompressType() == 1) {
-                wrappedStream = new LZFOutputStream(outputStream);
-            } else if (outputFlags.getCompressType() == 2) {
-                wrappedStream = new SnappyOutputStream(outputStream);
-            } else if (outputFlags.getCompressType() == 3) {
-                wrappedStream = new BZip2CompressorOutputStream(outputStream);
-            } else if (outputFlags.getCompressType() == 4) {
-                wrappedStream = new LzmaOutputStream.Builder(outputStream).useMediumDictionarySize().build();
-            } else {
-                throw new IOException("Unknown compression type: " + outputFlags.getCompressType());
-            }
-        } else {
-            wrappedStream = IOWrap.buffer(outputStream, BUFFER_SIZE);
-        }
-        if (!exists && !(outputFlags.getHeader() == null)) {
-            wrappedStream.write(Bytes.toBytes(outputFlags.getHeader()));
-        }
-        return wrappedStream;
-    }
-
-    protected void setDir(String dir) {
+    @Deprecated protected void setDir(String dir) {
         this.dir = dir;
     }
 
     private String getModifiedTarget(String target, OutputStreamFlags outputFlags) {
-        PartitionData partitionData = getPartitionData(target);
+        PartitionData partitionData = PartitionData.getPartitionData(target);
         String modifiedFileName;
         int i = 0;
         while (true) {
@@ -199,53 +241,6 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
             }
         }
         return modifiedFileName;
-    }
-
-    protected String getFileName(String target, PartitionData partitionData, OutputStreamFlags outputFlags, int fileVersion) {
-        // by convention the partition can never be greater than 1000
-        String result = target;
-        if (outputFlags.isNoAppend() || outputFlags.getMaxFileSize() > 0) {
-
-            String part = Strings.padleft(Integer.toString(fileVersion), partitionData.getPadTo(), Strings.pad0);
-            if (partitionData.getReplacementString() != null) {
-                result = target.replace(partitionData.getReplacementString(), part);
-            } else {
-                result = target.concat("-").concat(part);
-            }
-            if (outputFlags.isCompress()) {
-                if (outputFlags.getCompressType() == 0) {
-                    result = result.concat(".gz");
-                } else if (outputFlags.getCompressType() == 1) {
-                    result = result.concat(".lzf");
-                } else if (outputFlags.getCompressType() == 2) {
-                    result = result.concat(".snappy");
-                } else if (outputFlags.getCompressType() == 3) {
-                    result = result.concat(".bz2");
-                } else if (outputFlags.getCompressType() == 4) {
-                    result = result.concat(".lzma");
-                } else {
-                    throw new RuntimeException("unexpected compressionType: " + outputFlags.getCompressType());
-                }
-            }
-        }
-
-        if (outputFlags.isCompress()) {
-            if (outputFlags.getCompressType() == 0 && !result.endsWith(".gz")) {
-                result = result.concat(".gz");
-            } else if (outputFlags.getCompressType() == 1 && !result.endsWith(".lzf")) {
-                result = result.concat(".zlf");
-            } else if (outputFlags.getCompressType() == 2 && !result.endsWith(".snappy")) {
-                result = result.concat(".snappy");
-            } else if (outputFlags.getCompressType() == 3 && !result.endsWith(".bz2")) {
-                result = result.concat(".bz2");
-            } else if (outputFlags.getCompressType() == 4 && !result.endsWith(".lzma")) {
-                result = result.concat(".lzma");
-            }
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("[file] compress=" + outputFlags.isCompress() + " compressType:" + outputFlags.getCompressType() + " na=" + outputFlags.isNoAppend() + " for " + result);
-        }
-        return result;
     }
 
     private boolean exists(String fileName, File file) {
@@ -269,43 +264,7 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
         return new File(dir, fileName.concat(".tmp"));
     }
 
-    protected PartitionData getPartitionData(String target) {
-        String replacement = null;
-        int padTo = DEFAULT_PADDING;
-        int startPartitionIndex = target.indexOf(PART_PREFIX);
-        if (startPartitionIndex >= 0) {
-            int closePartitionIndex = target.indexOf(PART_POSTFIX);
-            if (closePartitionIndex > startPartitionIndex) {
-                replacement = target.substring(startPartitionIndex, closePartitionIndex + 2);
-                String[] tok = Strings.splitArray(target.substring(startPartitionIndex + 2, closePartitionIndex), ":");
-                if (tok.length > 1) {
-                    padTo = Integer.parseInt(tok[1]);
-                }
-            }
-        }
-        return new PartitionData(replacement, padTo);
-    }
-
-    protected static class PartitionData {
-
-        private String replacementString;
-        private int padTo;
-
-        PartitionData(String replacementString, int padTo) {
-            this.replacementString = replacementString;
-            this.padTo = padTo;
-        }
-
-        public String getReplacementString() {
-            return replacementString;
-        }
-
-        public int getPadTo() {
-            return padTo;
-        }
-    }
-
-    private static File requireDirectory(File file) throws IOException {
+    @Nullable private static File requireDirectory(File file) throws IOException {
         if (file.isDirectory()) {
             return file;
         }

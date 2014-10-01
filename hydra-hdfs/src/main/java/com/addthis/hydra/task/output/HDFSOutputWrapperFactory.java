@@ -13,19 +13,26 @@
  */
 package com.addthis.hydra.task.output;
 
-import com.addthis.codec.annotations.FieldConfig;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import static com.addthis.hydra.task.output.DefaultOutputWrapperFactory.getFileName;
+import static com.addthis.hydra.task.output.PartitionData.getPartitionData;
+import static com.addthis.hydra.task.output.DefaultOutputWrapperFactory.wrapOutputStream;
 
 /**
  * OutputWrapperFactory implementation for HDFS systems.
@@ -46,50 +53,42 @@ import java.util.concurrent.locks.ReentrantLock;
  *   },
  * }</pre>
  */
-public class HDFSOutputWrapperFactory extends DefaultOutputWrapperFactory {
-
+public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
     private static final Logger log = LoggerFactory.getLogger(HDFSOutputWrapperFactory.class);
-    private Lock fileSystemInitLock    = new ReentrantLock();
+
+    /** URL for HDFS name node. */
+    @JsonProperty(required = true) private String hdfsURL;
+
+    /** Path to the root directory of the output files. */
+    @JsonProperty private String dir;
+
+    /** When true the file name will include the task id. */
+    @JsonProperty private boolean includeTaskId = true;
+
+    private final Lock fileSystemInitLock = new ReentrantLock();
     private boolean fileSystemInitialized = false;
     private FileSystem fileSystem;
 
     /**
-     * URL for HDFS name node
-     */
-    @FieldConfig(codable = true, required = true)
-    private String hdfsURL;
-
-    /**
-     * Path to the root directory of the output files.
-     */
-    @FieldConfig(codable = true)
-    private String dir;
-
-    /**
-     * When true the file name will include the task id
-     */
-    @FieldConfig
-    private boolean includeTaskId = true;
-
-    /**
-     * Opens a write stream for an HDFS output.  Most of the complexity in this
+     * Opens a write stream for an HDFS output. Most of the complexity in this
      * method is related to determining the correct file name based on the given
-     * <code>target</code> parameter.  If the file already exists and we are appending
+     * {@code target} parameter.  If the file already exists and we are appending
      * to an existing file then we will rename that file and open up a new stream which
      * will append data to  that file.  If the file does not exist a new file is created
      * with a .tmp extension.  When the stream is closed the file will be renamed to remove
      * the .tmp extension
+     *
      * @param target - the base file name of the target output stream
      * @param outputFlags - output flags setting various options about the output stream
      * @param streamEmitter - the emitter that can convert bundles into the desired byte arrays for output
      * @return a OutputWrapper which can be used to write bytes to the new stream
-     * @throws IOException
+     * @throws IOException propagated from underlying components
      */
     @Override
-    public OutputWrapper openWriteStream(String target, OutputStreamFlags outputFlags, OutputStreamEmitter streamEmitter) throws IOException {
-        if (log.isDebugEnabled()) {
-            log.debug("[open] " + outputFlags + "target=" + target + " hdfs");
-        }
+    public OutputWrapper openWriteStream(String target,
+                                         OutputStreamFlags outputFlags,
+                                         OutputStreamEmitter streamEmitter) throws IOException {
+        log.debug("[open] {}target={} hdfs", outputFlags, target);
         String rawTarget = target;
         fileSystemInitLock.lock();
         try {
@@ -120,9 +119,8 @@ public class HDFSOutputWrapperFactory extends DefaultOutputWrapperFactory {
         boolean exists = fileSystem.exists(targetPath);
         FSDataOutputStream outputStream;
         if (exists) {
-            if (log.isDebugEnabled()) {
-                log.debug("[open.append]" + targetPath.toUri() + "/ renaming to " + targetPathTmp.toUri() + "/" + fileSystem.exists(targetPathTmp));
-            }
+            log.debug("[open.append]{}/ renaming to {}/{}",
+                      targetPath, targetPathTmp, fileSystem.exists(targetPathTmp));
             if (!fileSystem.rename(targetPath, targetPathTmp)) {
                 throw new IOException("Unable to rename " + targetPath.toUri() + " to " + targetPathTmp.toUri());
             }
@@ -132,7 +130,7 @@ public class HDFSOutputWrapperFactory extends DefaultOutputWrapperFactory {
         }
         OutputStream wrappedStream = wrapOutputStream(outputFlags, exists, outputStream);
         return new HDFSOutputWrapper(wrappedStream, streamEmitter, outputFlags.isCompress(),
-                outputFlags.getCompressType(), rawTarget, targetPath, targetPathTmp, fileSystem);
+                                     outputFlags.getCompressType(), rawTarget, targetPath, targetPathTmp, fileSystem);
     }
 
     private String getModifiedTarget(String target, OutputStreamFlags outputFlags) throws IOException {
@@ -153,13 +151,5 @@ public class HDFSOutputWrapperFactory extends DefaultOutputWrapperFactory {
             }
         }
         return modifiedFileName;
-    }
-
-    public void setHdfsURL(String hdfsURL) {
-        this.hdfsURL = hdfsURL;
-    }
-
-    public void setDir(String dir) {
-        this.dir = dir;
     }
 }

@@ -13,22 +13,23 @@
  */
 package com.addthis.hydra.task.output;
 
+import java.io.ByteArrayOutputStream;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.codec.config.Configs;
+
 import org.junit.Ignore;
 import org.junit.Test;
-
-import java.io.ByteArrayOutputStream;
 
 @Ignore
 public class HDFSOutputWrapperFactoryTest {
 
     @Test
-    public void testOpenWriteStream() throws Exception {
-        HDFSOutputWrapperFactory factory = new HDFSOutputWrapperFactory();
-        factory.setHdfsURL("hdfs://lhn00.clearspring.local:8020");
-        factory.setDir("./test2");
+    public void openWriteStream() throws Exception {
+        HDFSOutputWrapperFactory factory = Configs.decodeObject(
+                HDFSOutputWrapperFactory.class, "hdfsURL = \"hdfs://lhn00.clearspring.local:8020\", dir = ./test2");
         OutputStreamFlags outputFlags = new OutputStreamFlags(false, false, 1000, 100000, "hello");
         OutputStreamChannel channel = new OutputStreamChannel();
         OutputWrapper wrapper = factory.openWriteStream("test_hdfs", outputFlags, channel.createEmitter());

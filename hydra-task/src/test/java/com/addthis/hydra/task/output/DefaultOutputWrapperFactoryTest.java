@@ -47,7 +47,7 @@ public class DefaultOutputWrapperFactoryTest {
         Object[] parameters = new Object[1];
         parameters[0] = "foo";
 
-        DefaultOutputWrapperFactory.PartitionData result = (DefaultOutputWrapperFactory.PartitionData) m.invoke(localWriteStream, parameters);
+        PartitionData result = (PartitionData) m.invoke(localWriteStream, parameters);
         assertNotNull(result);
         assertNull(result.getReplacementString());
         assertEquals(3, result.getPadTo());
@@ -66,7 +66,7 @@ public class DefaultOutputWrapperFactoryTest {
         Object[] parameters = new Object[1];
         parameters[0] = "foo{{PART:10}}";
 
-        DefaultOutputWrapperFactory.PartitionData result = (DefaultOutputWrapperFactory.PartitionData) m.invoke(localWriteStream, parameters);
+        PartitionData result = (PartitionData) m.invoke(localWriteStream, parameters);
         assertNotNull(result);
         assertEquals("{{PART:10}}", result.getReplacementString());
         assertEquals(10, result.getPadTo());
@@ -78,7 +78,7 @@ public class DefaultOutputWrapperFactoryTest {
 
         Class[] parameterTypes = new Class[4];
         parameterTypes[0] = String.class;
-        parameterTypes[1] = DefaultOutputWrapperFactory.PartitionData.class;
+        parameterTypes[1] = PartitionData.class;
         parameterTypes[2] = OutputStreamFlags.class;
         parameterTypes[3] = int.class;
 
@@ -87,7 +87,7 @@ public class DefaultOutputWrapperFactoryTest {
 
         Object[] parameters = new Object[4];
         parameters[0] = "foo";
-        parameters[1] = new DefaultOutputWrapperFactory.PartitionData(null, 3);
+        parameters[1] = new PartitionData(null, 3);
         parameters[2] = new OutputStreamFlags(1);
         parameters[3] = 0;
 
@@ -103,7 +103,7 @@ public class DefaultOutputWrapperFactoryTest {
 
         Class[] parameterTypes = new Class[4];
         parameterTypes[0] = String.class;
-        parameterTypes[1] = DefaultOutputWrapperFactory.PartitionData.class;
+        parameterTypes[1] = PartitionData.class;
         parameterTypes[2] = OutputStreamFlags.class;
         parameterTypes[3] = int.class;
 
@@ -112,7 +112,7 @@ public class DefaultOutputWrapperFactoryTest {
 
         Object[] parameters = new Object[4];
         parameters[0] = "foo";
-        parameters[1] = new DefaultOutputWrapperFactory.PartitionData(null, 3);
+        parameters[1] = new PartitionData(null, 3);
         parameters[2] = new OutputStreamFlags(0);
         parameters[3] = 0;
 
@@ -128,7 +128,7 @@ public class DefaultOutputWrapperFactoryTest {
 
         Class[] parameterTypes = new Class[4];
         parameterTypes[0] = String.class;
-        parameterTypes[1] = DefaultOutputWrapperFactory.PartitionData.class;
+        parameterTypes[1] = PartitionData.class;
         parameterTypes[2] = OutputStreamFlags.class;
         parameterTypes[3] = int.class;
 
@@ -137,7 +137,7 @@ public class DefaultOutputWrapperFactoryTest {
 
         Object[] parameters = new Object[4];
         parameters[0] = "foo";
-        parameters[1] = new DefaultOutputWrapperFactory.PartitionData(null, 3);
+        parameters[1] = new PartitionData(null, 3);
         parameters[2] = new OutputStreamFlags(4);
         parameters[3] = 0;
 
@@ -153,7 +153,7 @@ public class DefaultOutputWrapperFactoryTest {
 
         Class[] parameterTypes = new Class[4];
         parameterTypes[0] = String.class;
-        parameterTypes[1] = DefaultOutputWrapperFactory.PartitionData.class;
+        parameterTypes[1] = PartitionData.class;
         parameterTypes[2] = OutputStreamFlags.class;
         parameterTypes[3] = int.class;
 
@@ -162,7 +162,7 @@ public class DefaultOutputWrapperFactoryTest {
 
         Object[] parameters = new Object[4];
         parameters[0] = "foo";
-        parameters[1] = new DefaultOutputWrapperFactory.PartitionData(null, 3);
+        parameters[1] = new PartitionData(null, 3);
         parameters[2] = new OutputStreamFlags(5);
         parameters[3] = 0;
 
@@ -191,7 +191,7 @@ public class DefaultOutputWrapperFactoryTest {
 
             Class[] parameterTypes = new Class[4];
             parameterTypes[0] = String.class;
-            parameterTypes[1] = DefaultOutputWrapperFactory.PartitionData.class;
+            parameterTypes[1] = PartitionData.class;
             parameterTypes[2] = OutputStreamFlags.class;
             parameterTypes[3] = int.class;
 
@@ -200,7 +200,7 @@ public class DefaultOutputWrapperFactoryTest {
 
             Object[] parameters = new Object[4];
             parameters[0] = "foo";
-            parameters[1] = new DefaultOutputWrapperFactory.PartitionData(null, 3);
+            parameters[1] = new PartitionData(null, 3);
             parameters[2] = new OutputStreamFlags(5);
             parameters[3] = 1;
 
@@ -232,7 +232,7 @@ public class DefaultOutputWrapperFactoryTest {
 
             Class[] parameterTypes = new Class[4];
             parameterTypes[0] = String.class;
-            parameterTypes[1] = DefaultOutputWrapperFactory.PartitionData.class;
+            parameterTypes[1] = PartitionData.class;
             parameterTypes[2] = OutputStreamFlags.class;
             parameterTypes[3] = int.class;
 
@@ -241,7 +241,7 @@ public class DefaultOutputWrapperFactoryTest {
 
             Object[] parameters = new Object[4];
             parameters[0] = "foo";
-            parameters[1] = new DefaultOutputWrapperFactory.PartitionData(null, 3);
+            parameters[1] = new PartitionData(null, 3);
             parameters[2] = new OutputStreamFlags(0x0F0FFF00);
             parameters[3] = 0;
 
@@ -272,7 +272,7 @@ public class DefaultOutputWrapperFactoryTest {
 
             Class[] parameterTypes = new Class[4];
             parameterTypes[0] = String.class;
-            parameterTypes[1] = DefaultOutputWrapperFactory.PartitionData.class;
+            parameterTypes[1] = PartitionData.class;
             parameterTypes[2] = OutputStreamFlags.class;
             parameterTypes[3] = int.class;
 
@@ -281,7 +281,7 @@ public class DefaultOutputWrapperFactoryTest {
 
             Object[] parameters = new Object[4];
             parameters[0] = "foo";
-            parameters[1] = new DefaultOutputWrapperFactory.PartitionData(null, 3);
+            parameters[1] = new PartitionData(null, 3);
             parameters[2] = new OutputStreamFlags(0x0F01FF00);
             parameters[3] = 1;
 
