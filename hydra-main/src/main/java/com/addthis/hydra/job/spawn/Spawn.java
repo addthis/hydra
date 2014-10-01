@@ -170,20 +170,16 @@ public class Spawn implements Codable, AutoCloseable {
 
     private static final int requestHeaderBufferSize   = Parameter.intValue("spawn.http.bufsize", 8192);
 
-    public static final  long   inputMaxNumberOfCharacters =
-            Parameter.longValue("spawn.input.max.length", 1_000_000);
+    public static final long inputMaxNumberOfCharacters = Parameter.longValue("spawn.input.max.length", 1_000_000);
 
     private static final int clientDropTimeMillis = Parameter.intValue("spawn.client.drop.time", 60_000);
     private static final int clientDropQueueSize  = Parameter.intValue("spawn.client.drop.queue", 2000);
 
     // log configs
 
-    private static final boolean eventLogCompress =
-            Parameter.boolValue("spawn.eventlog.compress", true);
-    private static final int     logMaxAge        =
-            Parameter.intValue("spawn.event.log.maxAge", 60 * 60 * 1000);
-    private static final int     logMaxSize       =
-            Parameter.intValue("spawn.event.log.maxSize", 100 * 1024 * 1024);
+    private static final boolean eventLogCompress = Parameter.boolValue("spawn.eventlog.compress", true);
+    private static final int logMaxAge  = Parameter.intValue("spawn.event.log.maxAge", 60 * 60 * 1000);
+    private static final int logMaxSize = Parameter.intValue("spawn.event.log.maxSize", 100 * 1024 * 1024);
     private static final String logDir = Parameter.value("spawn.event.log.dir", "log");
 
     // metrics
