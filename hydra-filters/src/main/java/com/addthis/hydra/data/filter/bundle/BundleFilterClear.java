@@ -14,9 +14,9 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.hydra.data.filter.util.AutoField;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 /**
@@ -40,54 +40,27 @@ import com.addthis.hydra.data.filter.value.ValueFilter;
  */
 public class BundleFilterClear extends BundleFilter {
 
-    public BundleFilterClear setField(String field) {
-        this.field = field;
-        return this;
-    }
-
-    public BundleFilterClear setFilter(ValueFilter filter) {
-        this.filter = filter;
-        return this;
-    }
-
-    public BundleFilterClear setNullFail(boolean nullFail) {
-        this.nullFail = nullFail;
-        return this;
-    }
-
-    /**
-     * The target field for clearing the value. This field is required.
-     */
-    @FieldConfig(codable = true, required = true)
-    private String field;
+    /** The target field for clearing the value. This field is required. */
+    @FieldConfig(required = true) private AutoField field;
 
     /**
      * Optionally apply a filter on the target field. The result of this filter used by nullFail
      * field. The Default is null.
      */
-    @FieldConfig(codable = true)
-    private ValueFilter filter;
+    @FieldConfig private ValueFilter filter;
 
-    /**
-     * If true then return false when the input is null. Default is true.
-     */
-    @FieldConfig(codable = true)
-    private boolean nullFail = true;
+    /** If true then return false when the input is null. Default is true. */
+    @FieldConfig private boolean nullFail = true;
 
     /** If true then remove the field rather than set it to null. Default is false. */
     @FieldConfig private boolean removes = false;
 
-    private String[] fields;
-
     @Override
-    public void initialize() {
-        fields = new String[]{field};
-    }
+    public void initialize() { }
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField[] bound = getBindings(bundle, fields);
-        ValueObject val = bundle.getValue(bound[0]);
+        ValueObject val = field.getValue(bundle);
         if (filter != null) {
             val = filter.filter(val);
         }
@@ -95,9 +68,9 @@ public class BundleFilterClear extends BundleFilter {
             return false;
         }
         if (removes) {
-            bundle.removeValue(bound[0]);
+            field.removeValue(bundle);
         } else {
-            bundle.setValue(bound[0], null);
+            field.setValue(bundle, null);
         }
         return true;
     }
