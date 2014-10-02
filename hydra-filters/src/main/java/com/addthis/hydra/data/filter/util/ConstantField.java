@@ -17,14 +17,26 @@ import javax.annotation.Nullable;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.Pluggable;
 
-@Pluggable("value-field")
-public interface AutoField {
+import com.fasterxml.jackson.annotation.JsonCreator;
 
-    @Nullable public ValueObject<?> getValue(Bundle bundle);
+public class ConstantField implements AutoField {
+    private final ValueObject<?> value;
 
-    public void setValue(Bundle bundle, @Nullable ValueObject<?> value);
+    @JsonCreator
+    public ConstantField(ValueObject<?> value) {
+        this.value = value;
+    }
 
-    public void removeValue(Bundle bundle);
+    @Nullable @Override public ValueObject<?> getValue(Bundle bundle) {
+        return value;
+    }
+
+    @Override public void setValue(Bundle bundle, @Nullable ValueObject<?> value) {
+        throw new UnsupportedOperationException("cannot meaningfully change a static constant");
+    }
+
+    @Override public void removeValue(Bundle bundle) {
+        throw new UnsupportedOperationException("cannot meaningfully delete a static constant");
+    }
 }

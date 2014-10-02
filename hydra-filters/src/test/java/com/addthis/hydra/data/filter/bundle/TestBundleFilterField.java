@@ -13,7 +13,9 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
-import com.addthis.hydra.data.filter.value.ValueFilterDefault;
+import java.io.IOException;
+
+import com.addthis.codec.config.Configs;
 
 import org.junit.Test;
 
@@ -23,11 +25,11 @@ import static org.junit.Assert.assertEquals;
 public class TestBundleFilterField {
 
     @Test
-    public void fieldTest() {
-        BundleFilterField bff = new BundleFilterField().setFromField("foo").setFilter(new ValueFilterDefault().setValue("bar"));
+    public void fieldTest() throws IOException {
+        BundleFilterField bff = Configs.decodeObject(BundleFilterField.class, "from: foo, filter {default = bar}");
         MapBundle bundle = MapBundle.createBundle(new String[]{"dog", "food"});
         bff.filter(bundle);
-        assertEquals(bundle.get("dog"), "food");
-        assertEquals(bundle.get("foo"), "bar");
+        assertEquals("food", bundle.get("dog"));
+        assertEquals("bar", bundle.get("foo"));
     }
 }
