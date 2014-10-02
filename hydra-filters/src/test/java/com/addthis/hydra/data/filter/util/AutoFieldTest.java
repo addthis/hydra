@@ -20,48 +20,39 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.kvp.KVBundle;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.config.Configs;
+import com.addthis.codec.jackson.Jackson;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 
-import org.junit.Assert;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 public class AutoFieldTest {
 
-    private static void setAndFilterBundle(Bundle bundle, BundleFilter filter) {
-        BundleField a = bundle.getFormat().getField("a");
-        BundleField b = bundle.getFormat().getField("b");
-        bundle.setValue(a, ValueFactory.create("SANDWICH"));
-        filter.filter(bundle);
-        filter.filter(bundle);
-        filter.filter(bundle);
-        Assert.assertEquals("SANDWICH", bundle.getValue(b).toString());
-    }
-
     @Test
     public void creation() throws IOException {
-        AutoField autoField = Configs.decodeObject(AutoField.class, "name = fieldName");
-        Assert.assertEquals("fieldName", autoField.getName());
+        CachingField autoField = Jackson.defaultMapper().readValue("\"fieldName\"", CachingField.class);
+        assertEquals("fieldName", autoField.name);
     }
 
     @Test
     public void createAndAccess() throws IOException {
-        SimpleCopyFilter filter = Configs.decodeObject(SimpleCopyFilter.class, "from = a, to = b");
+        BundleFilter filter = createSampleFilter();
         Bundle bundle = new ListBundle();
         setAndFilterBundle(bundle, filter);
     }
 
     @Test
     public void kvBundles() throws IOException {
-        SimpleCopyFilter filter = Configs.decodeObject(SimpleCopyFilter.class, "from = a, to = b");
+        BundleFilter filter = createSampleFilter();
         Bundle bundle = new KVBundle();
         setAndFilterBundle(bundle, filter);
     }
 
     @Test
     public void changingFormats() throws IOException {
-        SimpleCopyFilter filter = Configs.decodeObject(SimpleCopyFilter.class, "from = a, to = b");
+        BundleFilter filter = createSampleFilter();
         Bundle bundle = new KVBundle();
         setAndFilterBundle(bundle, filter);
         bundle = new ListBundle();
@@ -71,16 +62,17 @@ public class AutoFieldTest {
         setAndFilterBundle(bundle, filter);
     }
 
-    public static class SimpleCopyFilter extends BundleFilter {
-        @FieldConfig(required = true) private AutoField from;
-        @FieldConfig(required = true) private AutoField to;
-
-        @Override public void initialize() {}
-
-        @Override public boolean filterExec(Bundle row) {
-            to.setValue(row, from.getValue(row));
-            return true;
-        }
+    protected BundleFilter createSampleFilter() throws IOException {
+        return Configs.decodeObject(SimpleCopyFilter.class, "from = a, to = b");
     }
 
+    protected void setAndFilterBundle(Bundle bundle, BundleFilter filter) {
+        BundleField a = bundle.getFormat().getField("a");
+        BundleField b = bundle.getFormat().getField("b");
+        bundle.setValue(a, ValueFactory.create("SANDWICH"));
+        filter.filter(bundle);
+        filter.filter(bundle);
+        filter.filter(bundle);
+        assertEquals("SANDWICH", bundle.getValue(b).toString());
+    }
 }

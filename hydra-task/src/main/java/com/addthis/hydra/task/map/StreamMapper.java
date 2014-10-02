@@ -39,6 +39,7 @@ import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.filter.bundle.BundleFilterDebugPrint;
+import com.addthis.hydra.data.filter.util.AutoField;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.data.util.TimeField;
 import com.addthis.hydra.task.output.TaskDataOutput;
@@ -235,25 +236,25 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         /**
          * The name of the bundle field source. This is required.
          */
-        @FieldConfig(codable = true, required = true)
-        private String from;
+        @FieldConfig(required = true)
+        private AutoField from;
 
         /**
          * The name of the bundle field destination.
          */
-        @FieldConfig(codable = true, required = true)
-        private String to;
+        @FieldConfig(required = true)
+        private AutoField to;
 
         /**
          * Optionally apply a filter onto the field.
          */
-        @FieldConfig(codable = true)
+        @FieldConfig
         private ValueFilter filter;
 
         /**
          * If true then emit null values to the destination field. The default is false.
          */
-        @FieldConfig(codable = true)
+        @FieldConfig
         private boolean toNull;
     }
 
@@ -332,12 +333,12 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
         }
         Bundle out = getOutput().createBundle();
         for (int i = 0; i < map.fields.length; i++) {
-            ValueObject inVal = in.getValue(in.getFormat().getField(map.fields[i].from));
+            ValueObject inVal = map.fields[i].from.getValue(in);
             if (map.fields[i].filter != null) {
                 inVal = map.fields[i].filter.filter(inVal);
             }
             if (inVal != null || map.fields[i].toNull) {
-                out.setValue(out.getFormat().getField(map.fields[i].to), inVal);
+                map.fields[i].to.setValue(out, inVal);
             }
         }
         return out;

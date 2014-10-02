@@ -14,9 +14,9 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.hydra.data.filter.util.AutoField;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 /**
@@ -39,77 +39,45 @@ import com.addthis.hydra.data.filter.value.ValueFilter;
  */
 public class BundleFilterField extends BundleFilter {
 
-    public BundleFilterField setFromField(String field) {
-        this.from = field;
-        return this;
-    }
-
-    public BundleFilterField setToField(String field) {
-        this.to = field;
-        return this;
-    }
-
-    public BundleFilterField setFilter(ValueFilter filter) {
-        this.filter = filter;
-        return this;
-    }
-
     public BundleFilterField setNullFail(boolean nullFail) {
         this.nullFail = nullFail;
         return this;
     }
 
-    /**
-     * The input to the value filter. If the to field is null, then store the output in this field.
-     */
-    @FieldConfig(codable = true, required = true)
-    private String from;
+    /** The input to the value filter. If the to field is null, then store the output in this field. */
+    @FieldConfig(required = true) private AutoField from;
 
-    /**
-     * The destination field for the output of the value filter. Optional field.
-     */
-    @FieldConfig(codable = true)
-    private String to;
+    /** The destination field for the output of the value filter. Optional field. */
+    @FieldConfig private AutoField to;
 
-    /**
-     * The filter to perform. Optional field.
-     */
-    @FieldConfig(codable = true)
-    private ValueFilter filter;
+    /** The filter to perform. Optional field. */
+    @FieldConfig private ValueFilter filter;
 
     /**
      * If true then do not assign the value filter when the output is null and return the value
      * of the {@link #not not} field. Default is true.
      */
-    @FieldConfig(codable = true)
-    private boolean nullFail = true;
+    @FieldConfig private boolean nullFail = true;
 
-    /**
-     * The value to return when nullFail is true and the value filter output is null. Default is
-     * false.
-     */
-    @FieldConfig(codable = true)
-    private boolean not;
+    /** The value to return when nullFail is true and the value filter output is null. Default is false. */
+    @FieldConfig private boolean not;
 
     @Override public void initialize() { }
 
     @Override
     public boolean filterExec(Bundle row) {
-        BundleField fromField = row.getFormat().getField(from);
-        BundleField toField;
-        if (to != null) {
-            toField = row.getFormat().getField(to);
-        } else {
-            toField = fromField;
-        }
-        ValueObject<?> val = row.getValue(fromField);
+        ValueObject<?> val = from.getValue(row);
         if (filter != null) {
             val = filter.filter(val);
         }
         if (nullFail && (val == null)) {
             return not;
         }
-        row.setValue(toField, val);
+        if (to == null) {
+            from.setValue(row, val);
+        } else {
+            to.setValue(row, val);
+        }
         return !not;
     }
 }

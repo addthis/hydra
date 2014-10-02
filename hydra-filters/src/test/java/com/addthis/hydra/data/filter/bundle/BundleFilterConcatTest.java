@@ -13,18 +13,24 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.list.ListBundle;
+import com.addthis.codec.config.Configs;
+
 import org.junit.Test;
 
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 public class BundleFilterConcatTest {
 
     @Test
-    public void testInitialize() throws Exception {
-        BundleFilterConcat concat = new BundleFilterConcat();
-        concat.setIn(new String[]{"a", "b"});
-        concat.setOut("b");
-        concat.initialize();
-        assertArrayEquals(new String[]{"a", "b", "b"}, concat.getFields());
+    public void basicJoin() throws Exception {
+        BundleFilter concat = Configs.decodeObject(BundleFilterConcat.class, "in = [a, b], out = b, join = \", \"");
+        Bundle bundle = new ListBundle();
+        BundleFilter setup = Configs.decodeObject(
+                BundleFilter.class, "chain: [{from.const: hi, to: a}, {from.const: there, to: b}]");
+        setup.filter(bundle);
+        concat.filter(bundle);
+        assertEquals("hi, there", bundle.getValue(bundle.getFormat().getField("b")).toString());
     }
 }

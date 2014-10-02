@@ -14,12 +14,12 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.hydra.data.filter.util.AutoField;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">concatenates one or more fields in a bundle</span>.
@@ -37,73 +37,43 @@ import com.addthis.codec.annotations.FieldConfig;
  */
 public class BundleFilterConcat extends BundleFilter {
 
-    /**
-     * An array of fields to concatenate. This field is required.
-     */
-    @FieldConfig(codable = true, required = true)
-    private String[] in;
+    /** An array of fields to concatenate. This field is required. */
+    @FieldConfig(required = true) private AutoField[] in;
 
-    /**
-     * The destination for the output string. This field is required.
-     */
-    @FieldConfig(codable = true, required = true)
-    private String out;
+    /** The destination for the output string. This field is required. */
+    @FieldConfig(required = true) private AutoField out;
 
-    /**
-     * An optional separator to place in between elements of the output string.
-     */
-    @FieldConfig(codable = true)
-    private String join;
-
-    private String[] fields;
-
-    public void setIn(String[] in) {
-        this.in = in;
-    }
-
-    public void setOut(String out) {
-        this.out = out;
-    }
-
-    public void setJoin(String join) {
-        this.join = join;
-    }
-
-    public String[] getFields() {
-        return fields;
-    }
+    /** An optional separator to place in between elements of the output string. */
+    @FieldConfig private String join;
 
     @Override
-    public void initialize() {
-        fields = new String[in.length + 1];
-        System.arraycopy(in, 0, fields, 0, in.length);
-        fields[in.length] = out;
-    }
+    public void initialize() { }
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField[] bound = getBindings(bundle, fields);
         StringBuilder sb = new StringBuilder();
-        int end = bound.length - 1;
-        for (int i = 0; i < end; i++) {
-            if (i > 0 && join != null) {
+        boolean appendJoin = false;
+        for (AutoField field : in) {
+            if (appendJoin && (join != null)) {
                 sb.append(join);
             }
-            ValueObject v = bundle.getValue(bound[i]);
-            if (v != null && v.getObjectType().equals(ValueObject.TYPE.ARRAY)) {
+            appendJoin = true;
+            ValueObject v = field.getValue(bundle);
+            if ((v != null) && v.getObjectType().equals(ValueObject.TYPE.ARRAY)) {
                 ValueArray vArray = v.asArray();
-                int count = 0;
+                boolean innerAppendJoin = false;
                 for (ValueObject valueObject : vArray) {
-                    if (count++ > 0) {
+                    if (innerAppendJoin && (join != null)) {
                         sb.append(join);
                     }
+                    innerAppendJoin = true;
                     sb.append(ValueUtil.asNativeString(valueObject));
                 }
             } else {
                 sb.append(ValueUtil.asNativeString(v));
             }
         }
-        bundle.setValue(bound[end], ValueFactory.create(sb.toString()));
+        out.setValue(bundle, ValueFactory.create(sb.toString()));
         return true;
     }
 

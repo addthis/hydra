@@ -13,18 +13,18 @@
  */
 package com.addthis.hydra.data.filter.util;
 
-import javax.annotation.Nullable;
-
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.Pluggable;
+import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.hydra.data.filter.bundle.BundleFilter;
 
-@Pluggable("value-field")
-public interface AutoField {
+class SimpleCopyFilter extends BundleFilter {
+    @FieldConfig(required = true) private AutoField from;
+    @FieldConfig(required = true) private AutoField to;
 
-    @Nullable public ValueObject<?> getValue(Bundle bundle);
+    @Override public void initialize() {}
 
-    public void setValue(Bundle bundle, @Nullable ValueObject<?> value);
-
-    public void removeValue(Bundle bundle);
+    @Override public boolean filterExec(Bundle row) {
+        to.setValue(row, from.getValue(row));
+        return true;
+    }
 }

@@ -14,8 +14,9 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
-import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.hydra.data.filter.util.AutoField;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">returns true if a specified field is not set</span>.
@@ -30,27 +31,18 @@ import com.addthis.codec.annotations.FieldConfig;
  */
 public class BundleFilterNot extends BundleFilter {
 
-    public BundleFilterNot setField(String field) {
+    /** The field to test. This field is required. */
+    private final AutoField field;
+
+    public BundleFilterNot(@JsonProperty("field") AutoField field) {
         this.field = field;
-        return this;
     }
-
-    /**
-     * The field to test. This field is required.
-     */
-    @FieldConfig(codable = true, required = true)
-    private String field;
-
-    private String[] fields;
 
     @Override
-    public void initialize() {
-        fields = new String[]{field};
-    }
+    public void initialize() { }
 
     @Override
     public boolean filterExec(Bundle bundle) {
-        BundleField[] bound = getBindings(bundle, fields);
-        return bundle.getValue(bound[0]) == null;
+        return field.getValue(bundle) == null;
     }
 }

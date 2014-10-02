@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import com.addthis.hydra.data.filter.util.CachingField;
+
 import org.junit.Test;
 
 import static org.junit.Assert.assertFalse;
@@ -22,14 +24,14 @@ public class TestBundleFilterNot {
 
     @Test
     public void fieldTest() {
-        BundleFilterNot bff = new BundleFilterNot().setField("foo");
+        BundleFilterNot bff = new BundleFilterNot(new CachingField("foo"));
         MapBundle bundle = MapBundle.createBundle(new String[]{"dog", "food"});
         assertTrue(bff.filter(bundle));
     }
 
     @Test
     public void fieldTest_False() {
-        BundleFilterNot bff = new BundleFilterNot().setField("foo");
+        BundleFilterNot bff = new BundleFilterNot(new CachingField("foo"));
         MapBundle bundle = MapBundle.createBundle(new String[]{"dog", "food", "foo", "bar"});
         assertFalse(bff.filter(bundle));
     }
