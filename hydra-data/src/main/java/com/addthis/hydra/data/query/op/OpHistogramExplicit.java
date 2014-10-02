@@ -103,7 +103,7 @@ public class OpHistogramExplicit extends AbstractRowOp {
             binder = getSourceColumnBinder(row);
             rowFactory = row.createBundle();
         }
-        Numeric<?> value = ValueUtil.asNumberOrParse(binder.getColumn(row, column));
+        Numeric value = ValueUtil.asNumberOrParse(binder.getColumn(row, column));
         if (mode == Mode.FLOAT) {
             float target = (float) value.asDouble().getDouble();
             int position = Arrays.binarySearch(keys, target);

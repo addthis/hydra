@@ -92,8 +92,8 @@ import io.netty.channel.ChannelProgressivePromise;
  */
 public class OpGather extends AbstractQueryOp {
 
-    public static Numeric<?> num(ValueObject<?> o) {
-        Numeric<?> num = ValueUtil.asNumberOrParseLong(o, 10);
+    public static Numeric num(ValueObject o) {
+        Numeric num = ValueUtil.asNumberOrParseLong(o, 10);
         return num != null ? num : ZERO;
     }
 

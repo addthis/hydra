@@ -133,12 +133,12 @@ public class ValueFilterJoin extends ValueFilter {
         } else if (value.getObjectType() == ValueObject.TYPE.MAP) {
             int count = 0;
             StringBuffer sb = new StringBuffer();
-            ValueMap<?> map = value.asMap();
+            ValueMap map = value.asMap();
             if (sort) {
                 // ValueMap is a wrapper around HashMap; it is unordered
                 throw new RuntimeException("Unsupported operation: cannot sort map input");
             }
-            for (ValueMapEntry<?> e : map) {
+            for (ValueMapEntry e : map) {
                 if (count++ > 0) {
                     sb.append(join);
                 }

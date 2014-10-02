@@ -28,12 +28,12 @@ import com.addthis.bundle.value.ValueObject;
 
 public class MapStringDouble extends AbstractMap<String, Double> implements Map<String, Double> {
 
-    private final ValueMap<Double> data;
+    private final ValueMap data;
 
-    public MapStringDouble(ValueMap<Double> map, boolean copy) {
+    public MapStringDouble(ValueMap map, boolean copy) {
         if (copy) {
             this.data = ValueFactory.createMap();
-            for (ValueMapEntry<Double> entry : map) {
+            for (ValueMapEntry entry : map) {
                 this.data.put(entry.getKey(), entry.getValue());
             }
         } else {
@@ -81,7 +81,7 @@ public class MapStringDouble extends AbstractMap<String, Double> implements Map<
     @Override
     public Double remove(Object key) {
         String stringKey = (String) key;
-        ValueObject<Double> val = data.remove(stringKey);
+        ValueObject val = data.remove(stringKey);
         if (val == null) {
             return null;
         } else {
@@ -91,9 +91,9 @@ public class MapStringDouble extends AbstractMap<String, Double> implements Map<
 
     private static class ViewIterator implements Iterator<Entry<String, Double>> {
 
-        private final Iterator<Entry<String, ValueObject<Double>>> iterator;
+        private final Iterator<Entry<String, ValueObject>> iterator;
 
-        private ViewIterator(Iterator<Entry<String, ValueObject<Double>>> iterator) {
+        private ViewIterator(Iterator<Entry<String, ValueObject>> iterator) {
             this.iterator = iterator;
         }
 
@@ -104,7 +104,7 @@ public class MapStringDouble extends AbstractMap<String, Double> implements Map<
 
         @Override
         public Entry<String, Double> next() {
-            Entry<String, ValueObject<Double>> input = iterator.next();
+            Entry<String, ValueObject> input = iterator.next();
             return new SimpleEntry<>(input.getKey(),
                     input.getValue().asDouble().getDouble());
         }
@@ -117,9 +117,9 @@ public class MapStringDouble extends AbstractMap<String, Double> implements Map<
 
     private static class View extends AbstractSet<Entry<String, Double>> implements Set<Entry<String, Double>> {
 
-        private final Set<Entry<String, ValueObject<Double>>> set;
+        private final Set<Entry<String, ValueObject>> set;
 
-        private View(Set<Entry<String, ValueObject<Double>>> set) {
+        private View(Set<Entry<String, ValueObject>> set) {
             this.set = set;
         }
 

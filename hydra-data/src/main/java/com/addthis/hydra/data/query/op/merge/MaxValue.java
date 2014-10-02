@@ -19,7 +19,7 @@ import com.addthis.bundle.value.Numeric;
 public class MaxValue extends AbstractMergedNumber {
 
     @Override
-    protected Numeric<?> doMerge(Numeric<?> nextValue, Numeric<?> value) {
+    protected Numeric doMerge(Numeric nextValue, Numeric value) {
         return value.max(nextValue);
     }
 }

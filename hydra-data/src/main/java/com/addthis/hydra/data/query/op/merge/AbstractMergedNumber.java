@@ -19,11 +19,11 @@ import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractQueryOp;
 
-public abstract class AbstractMergedNumber extends AbstractMergedValue<Numeric<?>> {
+public abstract class AbstractMergedNumber extends AbstractMergedValue<Numeric> {
 
     @Override
-    protected Numeric<?> convert(ValueObject<?> nextValue) {
-        Numeric<?> num = ValueUtil.asNumberOrParseLong(nextValue, 10);
+    protected Numeric convert(ValueObject nextValue) {
+        Numeric num = ValueUtil.asNumberOrParseLong(nextValue, 10);
         return (num != null) ? num : AbstractQueryOp.ZERO;
     }
 }

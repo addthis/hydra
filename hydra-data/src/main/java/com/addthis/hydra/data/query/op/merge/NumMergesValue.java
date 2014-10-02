@@ -27,7 +27,7 @@ public class NumMergesValue extends AbstractMergedNumber {
     }
 
     @Override
-    protected Numeric<?> doMerge(Numeric<?> nextValue, Numeric<?> value) {
+    protected Numeric doMerge(Numeric nextValue, Numeric value) {
         throw new UnsupportedOperationException(
                 "This method should not be called. Merge(Bundle, MergedRow) should no-op");
     }

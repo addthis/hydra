@@ -19,7 +19,7 @@ import com.addthis.bundle.value.Numeric;
 public class SumValue extends AbstractMergedNumber {
 
     @Override
-    public Numeric<?> doMerge(Numeric<?> nextValue, Numeric<?> value) {
+    public Numeric doMerge(Numeric nextValue, Numeric value) {
         return value.sum(nextValue);
     }
 }

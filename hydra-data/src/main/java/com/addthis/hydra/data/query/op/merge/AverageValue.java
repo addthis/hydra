@@ -20,7 +20,7 @@ import com.addthis.hydra.data.query.op.MergedRow;
 public class AverageValue extends SumValue {
 
     @Override
-    public Numeric<?> doEmit(Numeric<?> value, MergedRow mergedRow) {
+    public Numeric doEmit(Numeric value, MergedRow mergedRow) {
         return value.avg(mergedRow.getMergedCount());
     }
 }

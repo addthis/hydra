@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
-import com.addthis.hydra.data.filter.util.CachingField;
+import com.addthis.bundle.util.CachingField;
 
 import org.junit.Test;
 

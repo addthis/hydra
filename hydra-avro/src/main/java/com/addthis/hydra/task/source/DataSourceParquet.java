@@ -50,7 +50,7 @@ public class DataSourceParquet implements Closeable {
         parquetReader = new AvroParquetReader<>(new Path(path));
     }
 
-    public static ValueObject<?> getValueObject(GenericRecord genericRecord,
+    public static ValueObject getValueObject(GenericRecord genericRecord,
                                                 Schema.Field field,
                                                 GenericData genericData) throws IOException {
         Object recordValue = genericRecord.get(field.name());
@@ -61,7 +61,7 @@ public class DataSourceParquet implements Closeable {
         return getValueObject(recordValue, field.schema(), genericData);
     }
 
-    public static ValueObject<?> getValueObject(Object recordValue,
+    public static ValueObject getValueObject(Object recordValue,
                                                 Schema schema,
                                                 GenericData genericData) throws IOException {
         switch (schema.getType()) {
@@ -94,7 +94,7 @@ public class DataSourceParquet implements Closeable {
                 for (Map.Entry<String, Object> entry : recordMap.entrySet()) {
                     String key = entry.getKey();
                     Object mapValue = entry.getValue();
-                    ValueObject<?> newValue = getValueObject(mapValue,
+                    ValueObject newValue = getValueObject(mapValue,
                                                              schema.getValueType(),
                                                              genericData);
                     newMap.put(key, newValue);
@@ -123,7 +123,7 @@ public class DataSourceParquet implements Closeable {
         Bundle bundle = factory.createBundle();
         Schema inputSchema = nextRecord.getSchema();
         for (Schema.Field field : inputSchema.getFields()) {
-            ValueObject<?> value = DataSourceAvro.getValueObject(
+            ValueObject value = DataSourceAvro.getValueObject(
                     nextRecord, field, genericData);
             if (value != null) {
                 bundle.setValue(bundle.getFormat().getField(field.name()), value);

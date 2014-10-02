@@ -133,14 +133,14 @@ public class OutputStreamParquet implements Closeable {
             case ARRAY:
                 ValueArray valueArray = value.asArray();
                 List<Object> list = new ArrayList<>(valueArray.size());
-                for (ValueObject<?> valueObject : valueArray) {
+                for (ValueObject valueObject : valueArray) {
                     list.add(getAvroNativeFromValue(valueObject, schema.getElementType()));
                 }
                 return list;
             case MAP:
-                ValueMap<?> map = value.asMap();
+                ValueMap map = value.asMap();
                 Map<String, Object> avroMap = new HashMap<>(value.asMap().size());
-                for (ValueMapEntry<?> valueMapEntry : map) {
+                for (ValueMapEntry valueMapEntry : map) {
                     avroMap.put(valueMapEntry.getKey(), getAvroNativeFromValue(valueMapEntry.getValue(),
                                                                                schema.getValueType()));
                 }

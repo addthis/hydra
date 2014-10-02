@@ -28,12 +28,12 @@ import com.addthis.bundle.value.ValueObject;
 
 public class MapStringBytes extends AbstractMap<String, byte[]> implements Map<String, byte[]> {
 
-    private final ValueMap<byte[]> data;
+    private final ValueMap data;
 
-    public MapStringBytes(ValueMap<byte[]> map, boolean copy) {
+    public MapStringBytes(ValueMap map, boolean copy) {
         if (copy) {
             this.data = ValueFactory.createMap();
-            for (ValueMapEntry<byte[]> entry : map) {
+            for (ValueMapEntry entry : map) {
                 this.data.put(entry.getKey(), entry.getValue());
             }
         } else {
@@ -91,9 +91,9 @@ public class MapStringBytes extends AbstractMap<String, byte[]> implements Map<S
 
     private static class ViewIterator implements Iterator<Entry<String, byte[]>> {
 
-        private final Iterator<Entry<String, ValueObject<byte[]>>> iterator;
+        private final Iterator<Entry<String, ValueObject>> iterator;
 
-        private ViewIterator(Iterator<Entry<String, ValueObject<byte[]>>> iterator) {
+        private ViewIterator(Iterator<Entry<String, ValueObject>> iterator) {
             this.iterator = iterator;
         }
 
@@ -104,7 +104,7 @@ public class MapStringBytes extends AbstractMap<String, byte[]> implements Map<S
 
         @Override
         public Entry<String, byte[]> next() {
-            Entry<String, ValueObject<byte[]>> input = iterator.next();
+            Entry<String, ValueObject> input = iterator.next();
             return new SimpleEntry<>(input.getKey(),
                     input.getValue().asBytes().asNative());
         }
@@ -117,9 +117,9 @@ public class MapStringBytes extends AbstractMap<String, byte[]> implements Map<S
 
     private static class View extends AbstractSet<Entry<String, byte[]>> implements Set<Entry<String, byte[]>> {
 
-        private final Set<Entry<String, ValueObject<byte[]>>> set;
+        private final Set<Entry<String, ValueObject>> set;
 
-        private View(Set<Entry<String, ValueObject<byte[]>>> set) {
+        private View(Set<Entry<String, ValueObject>> set) {
             this.set = set;
         }
 

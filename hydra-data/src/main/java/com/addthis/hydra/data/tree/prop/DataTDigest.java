@@ -158,7 +158,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
         if (valueAccess == null) {
             valueAccess = p.getFormat().getField(conf.key);
         }
-        Numeric<?> o = ValueUtil.asNumberOrParseDouble(p.getValue(valueAccess));
+        Numeric o = ValueUtil.asNumberOrParseDouble(p.getValue(valueAccess));
         if (o != null) {
             filter.add(o.asDouble().getDouble());
             return true;
@@ -181,7 +181,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
         }
     }
 
-    public static final class TDigestValue extends AbstractCustom<TDigest> implements Numeric<TDigest> {
+    public static final class TDigestValue extends AbstractCustom<TDigest> implements Numeric {
 
         enum OP {CDF, QUANTILE}
 
@@ -215,7 +215,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
         }
 
         @Override
-        public ValueMap<?> asMap() throws ValueTranslationException {
+        public ValueMap asMap() throws ValueTranslationException {
             ValueMap map = ValueFactory.createMap();
             int bound = heldObject.byteSize();
             ByteBuffer buf = ByteBuffer.allocate(bound);
@@ -226,7 +226,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
             return map;
         }
 
-        @Override public void setValues(ValueMap<?> valueMapEntries) {
+        @Override public void setValues(ValueMap valueMapEntries) {
                 byte[] b = valueMapEntries.get("b").asBytes().asNative();
                 this.quantile = valueMapEntries.get("q").asDouble().getDouble();
                 this.op = OP.valueOf(valueMapEntries.get("o").asString().toString());
@@ -234,7 +234,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
         }
 
         @Override
-        public Numeric<TDigest> asNumeric() throws ValueTranslationException {
+        public Numeric asNumeric() throws ValueTranslationException {
             return this;
         }
 
@@ -261,11 +261,11 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
         }
 
         @Override
-        public ValueSimple<Double> asSimple() {
+        public ValueSimple asSimple() {
             return asDouble();
         }
 
-        @Override public <P extends Numeric<?>> Numeric<?> sum(P val) {
+        @Override public Numeric sum(Numeric val) {
             if (TDigestValue.class == val.getClass()) {
                 return new TDigestValue(TDigest.merge(heldObject.compression(),
                         Arrays.asList(this.heldObject, ((TDigestValue) val).heldObject)), op, quantile);
@@ -277,7 +277,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
             return asLong().getLong();
         }
 
-        @Override public <P extends Numeric<?>> ValueDouble diff(P val) {
+        @Override public ValueDouble diff(Numeric val) {
             return sum(val).asDouble().diff(asDouble());
         }
 
@@ -286,7 +286,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
             return ValueFactory.create(asDouble().getDouble() / (double) count);
         }
 
-        @Override public <P extends Numeric<?>> Numeric<?> min(P val) {
+        @Override public Numeric min(Numeric val) {
             if (val.asDouble().getDouble() < asDouble().getDouble()) {
                 return val;
             } else {
@@ -294,7 +294,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
             }
         }
 
-        @Override public <P extends Numeric<?>> Numeric<?> max(P val) {
+        @Override public Numeric max(Numeric val) {
             if (val.asDouble().getDouble() > asDouble().getDouble()) {
                 return val;
             } else {

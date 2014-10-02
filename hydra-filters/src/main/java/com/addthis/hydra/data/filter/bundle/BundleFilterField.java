@@ -14,9 +14,9 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.data.filter.util.AutoField;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 /**
@@ -66,7 +66,7 @@ public class BundleFilterField extends BundleFilter {
 
     @Override
     public boolean filterExec(Bundle row) {
-        ValueObject<?> val = from.getValue(row);
+        ValueObject val = from.getValue(row);
         if (filter != null) {
             val = filter.filter(val);
         }

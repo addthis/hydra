@@ -90,8 +90,8 @@ public class ValueFilterGrepTags extends ValueFilter {
         return valueCounts.isEmpty() ? null : multisetToValueMap(valueCounts);
     }
 
-    private static ValueMap<Long> multisetToValueMap(Multiset<String> matches) {
-        ValueMap<Long> valueMap = ValueFactory.createMap();
+    private static ValueMap multisetToValueMap(Multiset<String> matches) {
+        ValueMap valueMap = ValueFactory.createMap();
         for (Multiset.Entry<String> match : matches.entrySet()) {
             valueMap.put(match.getElement(), ValueFactory.create(match.getCount()));
         }

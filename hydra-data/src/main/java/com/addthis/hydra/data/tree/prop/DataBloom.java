@@ -183,15 +183,15 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements SuperCo
         }
 
         @Override
-        public ValueMap<byte[]> asMap() throws ValueTranslationException {
-            ValueMap<byte[]> map = ValueFactory.createMap();
+        public ValueMap asMap() throws ValueTranslationException {
+            ValueMap map = ValueFactory.createMap();
             map.put(key, asBytes());
             return map;
         }
 
         @Override
-        public void setValues(ValueMap<?> map) {
-            ValueObject<?> vo = map.get(key);
+        public void setValues(ValueMap map) {
+            ValueObject vo = map.get(key);
             if (vo != null) {
                 BloomFilter.deserialize(vo.asBytes().asNative());
             }

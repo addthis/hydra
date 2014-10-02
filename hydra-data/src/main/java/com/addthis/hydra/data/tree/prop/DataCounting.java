@@ -316,8 +316,8 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
                 }
                 break;
             case MAP:
-                ValueMap<?> map = value.asMap();
-                for (ValueMapEntry<?> o : map) {
+                ValueMap map = value.asMap();
+                for (ValueMapEntry o : map) {
                     updateCounter(ValueFactory.create(o.getKey()));
                 }
                 break;
@@ -427,7 +427,7 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
         postDecode();
     }
 
-    public static final class LCValue extends AbstractCustom<ICardinality> implements Numeric<ICardinality> {
+    public static final class LCValue extends AbstractCustom<ICardinality> implements Numeric {
 
         public LCValue() {
             super(null);
@@ -442,17 +442,17 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
         }
 
         @Override
-        public Numeric<?> avg(int count) {
+        public Numeric avg(int count) {
             return ValueFactory.create(toLong() / count);
         }
 
         @Override
-        public <P extends Numeric<?>> Numeric<?> diff(P val) {
+        public Numeric diff(Numeric val) {
             return sum(val).asLong().diff(asLong());
         }
 
         @Override
-        public <P extends Numeric<?>> Numeric<?> max(P val) {
+        public Numeric max(Numeric val) {
             if (val.asLong().getLong() > toLong()) {
                 return val;
             } else {
@@ -461,7 +461,7 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
         }
 
         @Override
-        public <P extends Numeric<?>> Numeric<?> min(P val) {
+        public Numeric min(Numeric val) {
             if (val.asLong().getLong() < toLong()) {
                 return val;
             } else {
@@ -470,7 +470,7 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
         }
 
         @Override
-        public <P extends Numeric<?>> Numeric<?> sum(P val) {
+        public Numeric sum(Numeric val) {
             try {
                 if (val.getClass() == LCValue.class) {
                     return new LCValue(heldObject.merge(((LCValue) val).heldObject));
@@ -502,7 +502,7 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
         }
 
         @Override
-        public Numeric<?> asNumeric() throws ValueTranslationException {
+        public Numeric asNumeric() throws ValueTranslationException {
             return this;
         }
 
@@ -562,7 +562,7 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
         }
 
         @Override
-        public void setValues(ValueMap<?> map) {
+        public void setValues(ValueMap map) {
             byte[] b = map.get("b").asBytes().asNative();
             switch ((int) map.get("t").asLong().getLong()) {
                 case VER_LINEAR:

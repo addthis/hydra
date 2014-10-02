@@ -117,7 +117,7 @@ public class ValueFilterContains extends ValueFilter {
         String match = null;
         ValueObject.TYPE type = input.getObjectType();
         if (type == ValueObject.TYPE.MAP) {
-            ValueMap<?> inputAsMap = input.asMap();
+            ValueMap inputAsMap = input.asMap();
             for (String cmp : inputAsMap.keySet()) {
                 if (key != null && (match = checkContains(cmp, key)) != null) {
                     return not ? null : returnMatch ? ValueFactory.create(match) : input;

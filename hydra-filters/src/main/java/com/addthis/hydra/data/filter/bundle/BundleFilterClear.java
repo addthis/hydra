@@ -14,9 +14,9 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.data.filter.util.AutoField;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 /**

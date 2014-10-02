@@ -60,7 +60,7 @@ public abstract class AbstractMergedValue<T extends ValueObject> implements Merg
 
     protected abstract T doMerge(T nextValue, T value);
 
-    protected abstract T convert(ValueObject<?> nextValue);
+    protected abstract T convert(ValueObject nextValue);
 
     protected T doEmit(T value, MergedRow mergedRow) {
         return value;

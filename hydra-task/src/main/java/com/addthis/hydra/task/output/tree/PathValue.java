@@ -183,8 +183,8 @@ public class PathValue extends PathElement {
                 }
             }
         } else if (name.getObjectType() == ValueObject.TYPE.MAP) {
-            ValueMap<?> nameAsMap = name.asMap();
-            for (ValueMapEntry<?> e : nameAsMap) {
+            ValueMap nameAsMap = name.asMap();
+            for (ValueMapEntry e : nameAsMap) {
                 String key = e.getKey();
                 if (mapTo != null) {
                     state.getBundle().setValue(mapField, e.getValue());

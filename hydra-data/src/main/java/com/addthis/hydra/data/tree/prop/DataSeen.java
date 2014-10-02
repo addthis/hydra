@@ -164,8 +164,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
     /**
      * for working with bloom filters
      */
-    public static final class ValueBloom extends AbstractCustom<SeenFilterBasic<?>>
-            implements Numeric<SeenFilterBasic<?>> {
+    public static final class ValueBloom extends AbstractCustom<SeenFilterBasic<?>> implements Numeric {
 
         public ValueBloom() {
             super(null);
@@ -189,17 +188,17 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
         }
 
         @Override
-        public Numeric<?> avg(int count) {
+        public Numeric avg(int count) {
             return this;
         }
 
         @Override
-        public <P extends Numeric<?>> Numeric<?> diff(P val) {
+        public Numeric diff(Numeric val) {
             return this;
         }
 
         @Override
-        public <P extends Numeric<?>> Numeric<?> max(P val) {
+        public Numeric max(Numeric val) {
             if (val.getClass() == getClass()) {
                 ValueBloom b = (ValueBloom) val;
                 return b.toLong() > toLong() ? b : this;
@@ -208,7 +207,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
         }
 
         @Override
-        public <P extends Numeric<?>> Numeric<?> min(P val) {
+        public Numeric min(Numeric val) {
             if (val.getClass() == getClass()) {
                 ValueBloom b = (ValueBloom) val;
                 return b.toLong() < toLong() ? b : this;
@@ -217,7 +216,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
         }
 
         @Override
-        public <P extends Numeric<?>> Numeric<?> sum(P val) {
+        public Numeric sum(Numeric val) {
             if (val.getClass() == getClass()) {
                 ValueBloom b = (ValueBloom) val;
                 return new ValueBloom(b.heldObject.mergeSeen(heldObject));
@@ -241,7 +240,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
         }
 
         @Override
-        public Numeric<?> asNumeric() throws ValueTranslationException {
+        public Numeric asNumeric() throws ValueTranslationException {
             return this;
         }
 
@@ -277,7 +276,7 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
         }
 
         @Override
-        public void setValues(ValueMap<?> map) {
+        public void setValues(ValueMap map) {
             try {
                 heldObject = (SeenFilterBasic<?>) CodecBin2.decodeBytes(
                         new SeenFilterBasic(), map.get("b").asBytes().asNative());

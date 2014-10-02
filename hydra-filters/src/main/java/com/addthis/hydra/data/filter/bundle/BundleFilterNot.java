@@ -14,7 +14,7 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.hydra.data.filter.util.AutoField;
+import com.addthis.bundle.util.AutoField;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

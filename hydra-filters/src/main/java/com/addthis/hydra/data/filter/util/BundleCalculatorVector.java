@@ -32,7 +32,7 @@ import com.addthis.bundle.value.ValueTranslationException;
  * IllegalStateException if any attempt is made to read a value from
  * the object.
  */
-class BundleCalculatorVector implements ValueCustom<Object>, Numeric<Object> {
+class BundleCalculatorVector implements ValueCustom<Object>, Numeric {
 
     private static final BundleCalculatorVector singleton = new BundleCalculatorVector();
 
@@ -43,27 +43,27 @@ class BundleCalculatorVector implements ValueCustom<Object>, Numeric<Object> {
     private BundleCalculatorVector() {}
 
     @Override
-    public <P extends Numeric<?>> Numeric<?> sum(P val) {
+    public Numeric sum(Numeric val) {
         throw new IllegalStateException();
     }
 
     @Override
-    public <P extends Numeric<?>> Numeric<?> diff(P val) {
+    public Numeric diff(Numeric val) {
         throw new IllegalStateException();
     }
 
     @Override
-    public <P extends Numeric<?>> Numeric<?> min(P val) {
+    public Numeric min(Numeric val) {
         throw new IllegalStateException();
     }
 
     @Override
-    public <P extends Numeric<?>> Numeric<?> max(P val) {
+    public Numeric max(Numeric val) {
         throw new IllegalStateException();
     }
 
     @Override
-    public Numeric<?> avg(int count) {
+    public Numeric avg(int count) {
         throw new IllegalStateException();
     }
 
@@ -91,16 +91,16 @@ class BundleCalculatorVector implements ValueCustom<Object>, Numeric<Object> {
         throw new IllegalStateException();
     }
 
-    @Override public void setValues(ValueMap<?> map) {
+    @Override public void setValues(ValueMap map) {
         throw new IllegalStateException();
     }
 
-    @Override public ValueSimple<?> asSimple() {
+    @Override public ValueSimple asSimple() {
         throw new IllegalStateException();
     }
 
     @Override
-    public Numeric<?> asNumeric() throws ValueTranslationException {
+    public Numeric asNumeric() throws ValueTranslationException {
         throw new IllegalStateException();
     }
 

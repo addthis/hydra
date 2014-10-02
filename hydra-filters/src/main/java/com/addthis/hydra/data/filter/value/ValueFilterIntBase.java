@@ -66,7 +66,7 @@ public class ValueFilterIntBase extends ValueFilter {
             return value;
         }
         try {
-            Numeric<?> num;
+            Numeric num;
             if (!inDouble) {
                 num = ValueUtil.asNumberOrParseLong(value, in);
             } else {

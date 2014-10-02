@@ -203,8 +203,8 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
                 }
                 break;
             case MAP:
-                ValueMap<?> map = value.asMap();
-                for (ValueMapEntry<?> o : map) {
+                ValueMap map = value.asMap();
+                for (ValueMapEntry o : map) {
                     // use "|" to prevent short circuiting
                     mod = mod | updateCounter(bundle, ValueFactory.create(o.getKey()));
                 }

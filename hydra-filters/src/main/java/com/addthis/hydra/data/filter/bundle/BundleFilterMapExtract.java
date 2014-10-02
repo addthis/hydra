@@ -85,7 +85,7 @@ public class BundleFilterMapExtract extends BundleFilter {
         if (value == null) {
             return true;
         }
-        ValueMap<?> mapValue;
+        ValueMap mapValue;
         try {
             mapValue = value.asMap();
         } catch (ValueTranslationException vte) {

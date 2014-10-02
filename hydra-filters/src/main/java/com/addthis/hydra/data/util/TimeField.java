@@ -95,7 +95,7 @@ public final class TimeField implements SuperCodable {
 
     public long toUnix(ValueObject val) {
         if (radix > 0) {
-            Numeric<?> num = ValueUtil.asNumberOrParseLong(val, radix);
+            Numeric num = ValueUtil.asNumberOrParseLong(val, radix);
             return num != null ? num.asLong().getLong() : JitterClock.globalTime();
         } else {
             try {

@@ -271,7 +271,7 @@ public class BundleCalculator {
      * If the value object contains one or more "," characters then attempt
      * to parse it as an array. Otherwise assume the input is a number.
      */
-    private void insertNumbers(LinkedList<Numeric<?>> stack, ValueObject<?> input) {
+    private void insertNumbers(LinkedList<Numeric> stack, ValueObject input) {
         try {
             /**
              *  When all custom value types implement the asString() method correctly
@@ -303,10 +303,10 @@ public class BundleCalculator {
     }
 
     public Bundle calculate(Bundle line) {
-        LinkedList<Numeric<?>> stack = new LinkedList<>();
+        LinkedList<Numeric> stack = new LinkedList<>();
         long maxcol = line.getCount() - 1;
         for (MathOp op : ops) {
-            Numeric<?> v1, v2;
+            Numeric v1, v2;
             switch (op.type) {
                 case OP_ADD:
                     v1 = stack.pop();
@@ -511,7 +511,7 @@ public class BundleCalculator {
                     break;
                 case OP_SET:
                     int col = (int) stack.pop().asLong().getLong();
-                    Numeric<?> val = stack.pop();
+                    Numeric val = stack.pop();
                     if (col < 0 || col > maxcol) {
                         getSourceColumnBinder(line).appendColumn(line, val);
                     } else {

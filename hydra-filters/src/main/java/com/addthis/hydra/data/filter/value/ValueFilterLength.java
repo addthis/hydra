@@ -43,7 +43,7 @@ public class ValueFilterLength extends ValueFilter {
             if (value.getObjectType() == ValueObject.TYPE.MAP) {
                 return ValueFactory.create(value.asMap().size());
             }
-            Numeric<?> num = ValueUtil.asNumber(value);
+            Numeric num = ValueUtil.asNumber(value);
             if (num != null) {
                 return num;
             }

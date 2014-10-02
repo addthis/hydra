@@ -80,7 +80,7 @@ public class ValueFilterMapSubset extends ValueFilter {
         if (value == null) {
             return null;
         }
-        ValueMap<?> map;
+        ValueMap map;
         try {
             map = value.asMap();
         } catch (ValueTranslationException vte) {
@@ -92,7 +92,7 @@ public class ValueFilterMapSubset extends ValueFilter {
         if ((whitelist != null) && (whitelist.length > 0)) {
             subsetMap = ValueFactory.createMap();
             for (String key : whitelist) {
-                ValueObject<?> valueObject = map.get(key);
+                ValueObject valueObject = map.get(key);
                 if (valueObject != null) {
                     subsetMap.put(key, valueObject);
                 }
@@ -114,7 +114,7 @@ public class ValueFilterMapSubset extends ValueFilter {
         }
     }
 
-    private ValueString toString(ValueMap<?> subsetMap) {
+    private ValueString toString(ValueMap subsetMap) {
         StringBuilder sb = new StringBuilder();
 
         for (ValueMapEntry valueMapEntry : subsetMap) {

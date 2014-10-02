@@ -45,9 +45,6 @@ import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 @Beta
 public class OutputStreamAvro extends OutputStreamFormatter {
 
@@ -134,14 +131,14 @@ public class OutputStreamAvro extends OutputStreamFormatter {
             case ARRAY:
                 ValueArray valueArray = value.asArray();
                 List<Object> list = new ArrayList<>(valueArray.size());
-                for (ValueObject<?> valueObject : valueArray) {
+                for (ValueObject valueObject : valueArray) {
                     list.add(getAvroNativeFromValue(valueObject, schema.getElementType()));
                 }
                 return list;
             case MAP:
-                ValueMap<?> map = value.asMap();
+                ValueMap map = value.asMap();
                 Map<String, Object> avroMap = new HashMap<>(value.asMap().size());
-                for (ValueMapEntry<?> valueMapEntry : map) {
+                for (ValueMapEntry valueMapEntry : map) {
                     avroMap.put(valueMapEntry.getKey(), getAvroNativeFromValue(valueMapEntry.getValue(),
                                                                                schema.getValueType()));
                 }

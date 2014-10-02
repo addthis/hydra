@@ -47,7 +47,7 @@ public class TestValueFilterJoin {
     @Test
     public void mapTest() {
         ValueFilterJoin join = new ValueFilterJoin();
-        ValueMap<?> map = ValueFactory.createMap(ImmutableMap.of(
+        ValueMap map = ValueFactory.createMap(ImmutableMap.of(
                 "b", Arrays.asList("p", "q"),
                 "a", Arrays.asList("x", "y", "z"),
                 "c", Arrays.asList("c", "d", "e")

@@ -80,7 +80,7 @@ public class DataSourceAvro extends BundleizerFactory {
         datumReader = new GenericDatumReader<>(inputSchema);
     }
 
-    public static ValueObject<?> getValueObject(GenericRecord genericRecord,
+    public static ValueObject getValueObject(GenericRecord genericRecord,
                                                 Schema.Field field,
                                                 GenericData genericData) throws IOException {
         Object recordValue = genericRecord.get(field.name());
@@ -91,7 +91,7 @@ public class DataSourceAvro extends BundleizerFactory {
         return getValueObject(recordValue, field.schema(), genericData);
     }
 
-    public static ValueObject<?> getValueObject(Object recordValue,
+    public static ValueObject getValueObject(Object recordValue,
                                                 Schema schema,
                                                 GenericData genericData) throws IOException {
         switch (schema.getType()) {
@@ -124,7 +124,7 @@ public class DataSourceAvro extends BundleizerFactory {
                 for (Map.Entry<String, Object> entry : recordMap.entrySet()) {
                     String key = entry.getKey();
                     Object mapValue = entry.getValue();
-                    ValueObject<?> newValue = getValueObject(mapValue,
+                    ValueObject newValue = getValueObject(mapValue,
                                                              schema.getValueType(),
                                                              genericData);
                     newMap.put(key, newValue);
@@ -158,7 +158,7 @@ public class DataSourceAvro extends BundleizerFactory {
                 GenericData genericData = datumReader.getData();
                 Bundle bundle = factory.createBundle();
                 for (Schema.Field field : inputSchema.getFields()) {
-                    ValueObject<?> value = DataSourceAvro.getValueObject(
+                    ValueObject value = DataSourceAvro.getValueObject(
                             reusableRecord, field, genericData);
                     if (value != null) {
                         bundle.setValue(bundle.getFormat().getField(field.name()), value);

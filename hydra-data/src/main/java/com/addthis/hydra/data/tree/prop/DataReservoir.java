@@ -705,7 +705,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
     }
 
     static final class DataReservoirValue extends AbstractCustom<DataReservoir>
-            implements Numeric<DataReservoir> {
+            implements Numeric {
 
         final long targetEpoch;
         final int numObservations;
@@ -804,39 +804,39 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
 
 
         @Override
-        public <P extends Numeric<?>> Numeric<?> sum(P val) {
+        public Numeric sum(Numeric val) {
             return new DataReservoirValue(asNative().merge((DataReservoir) val.asNative()),
                     targetEpoch, numObservations, doubleToLongBits, raw, percentile,
                     sigma, minMeasurement, mode);
         }
 
         @Override
-        public <P extends Numeric<?>> Numeric<?> diff(P val) {
+        public Numeric diff(Numeric val) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public Numeric<?> avg(int count) {
+        public Numeric avg(int count) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public <P extends Numeric<?>> Numeric<?> min(P val) {
+        public Numeric min(Numeric val) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public <P extends Numeric<?>> Numeric<?> max(P val) {
+        public Numeric max(Numeric val) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ValueMap<?> asMap() {
+        public ValueMap asMap() {
             throw new ValueTranslationException();
         }
 
         @Override
-        public void setValues(ValueMap<?> map) {
+        public void setValues(ValueMap map) {
             throw new UnsupportedOperationException();
         }
 
