@@ -30,6 +30,29 @@ public class TestBundleFilterURL {
     }
 
     @Test
+    public void testTopPrivateDomain() {
+        BundleFilterURL filterURL = new BundleFilterURL().setField("input").setHost("host").setTopPrivateDomain(true);
+        MapBundle bundle = MapBundle.createBundle(new String[]{"input", "http://a.b.c.d.addthis.com", "host", ""});
+        assertTrue(filterURL.filter(bundle));
+        assertEquals("addthis.com", bundle.get("host"));
+        bundle = MapBundle.createBundle(new String[]{"input", "http://addthis.com", "host", ""});
+        assertTrue(filterURL.filter(bundle));
+        assertEquals("addthis.com", bundle.get("host"));
+        bundle = MapBundle.createBundle(new String[]{"input", "http://a.b.c.d.addthis.co.uk", "host", ""});
+        assertTrue(filterURL.filter(bundle));
+        assertEquals("addthis.co.uk", bundle.get("host"));
+        bundle = MapBundle.createBundle(new String[]{"input", "http://foobar", "host", ""});
+        assertTrue(filterURL.filter(bundle));
+        assertEquals("foobar", bundle.get("host"));
+        bundle = MapBundle.createBundle(new String[]{"input", "http://127.0.0.1", "host", ""});
+        assertTrue(filterURL.filter(bundle));
+        assertEquals("127.0.0.1", bundle.get("host"));
+        bundle = MapBundle.createBundle(new String[]{"input", "http://", "host", ""});
+        assertTrue(filterURL.filter(bundle));
+        assertEquals("", bundle.get("host"));
+    }
+
+    @Test
     public void testBaseDomain() {
         BundleFilterURL filterURL = new BundleFilterURL().setField("input").setHost("host").setBaseDomain(true);
         MapBundle bundle = MapBundle.createBundle(new String[]{"input", "http://www.neuron.com", "host", ""});

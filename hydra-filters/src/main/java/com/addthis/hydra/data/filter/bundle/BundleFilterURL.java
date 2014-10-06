@@ -117,10 +117,20 @@ public final class BundleFilterURL extends BundleFilter {
 
     /**
      * If true the host will be resolved to its base domain. Only affects the field specified
-     * by the {@link #setHost setHost} parameter.
+     * by the {@link #setHost setHost} parameter. Cannot be used in conjunction with {@link #toTopPrivateDomain}.
      */
     @FieldConfig(codable = true)
     private boolean toBaseDomain;
+
+    /**
+     * If true the host will be resolved to its
+     * <a href="https://code.google.com/p/guava-libraries/wiki/InternetDomainNameExplained">
+     * top private domain</a>.
+     * Only affects the field specified by the {@link #setHost setHost} parameter.
+     * Cannot be used in conjunction with {@link #toBaseDomain}.
+     */
+    @FieldConfig(codable = true)
+    private boolean toTopPrivateDomain;
 
     /**
      * If true then the URL is a file based URL, e.g. file:///.
@@ -214,6 +224,11 @@ public final class BundleFilterURL extends BundleFilter {
         return this;
     }
 
+    public BundleFilterURL setTopPrivateDomain(boolean value) {
+        this.toTopPrivateDomain = value;
+        return this;
+    }
+
     public BundleFilterURL setFixProto(boolean value) {
         this.fixProto = value;
         return this;
@@ -289,6 +304,14 @@ public final class BundleFilterURL extends BundleFilter {
                 if (setHost != null) {
                     if (toBaseDomain) {
                         returnhost = NetUtil.getBaseDomain(returnhost);
+                    } else if (toTopPrivateDomain) {
+                        if (returnhost != null && InternetDomainName.isValid(returnhost)) {
+                            InternetDomainName domain = InternetDomainName.from(returnhost);
+                            if (domain.hasPublicSuffix()) {
+                                InternetDomainName topPrivateDomain = domain.topPrivateDomain();
+                                returnhost = topPrivateDomain.toString();
+                            }
+                        }
                     }
                     bundle.setValue(bound[1], ValueFactory.create(returnhost));
                 }
