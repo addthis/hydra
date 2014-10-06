@@ -115,7 +115,7 @@ import com.addthis.hydra.job.web.SpawnService;
 import com.addthis.hydra.job.web.old.SpawnHttp;
 import com.addthis.hydra.job.web.old.SpawnManager;
 import com.addthis.hydra.task.run.TaskExitState;
-import com.addthis.hydra.util.CloseTask;
+import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.hydra.util.SettableGauge;
 import com.addthis.hydra.util.WebSocketManager;

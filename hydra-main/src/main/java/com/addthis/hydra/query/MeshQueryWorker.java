@@ -16,7 +16,7 @@ package com.addthis.hydra.query;
 import com.addthis.codec.config.Configs;
 import com.addthis.hydra.data.query.source.MeshQuerySource;
 import com.addthis.hydra.query.web.QueryServer;
-import com.addthis.hydra.util.CloseTask;
+import com.addthis.hydra.common.util.CloseTask;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

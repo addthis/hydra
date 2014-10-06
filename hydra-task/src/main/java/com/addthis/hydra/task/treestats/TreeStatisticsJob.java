@@ -298,14 +298,10 @@ public class TreeStatisticsJob extends TaskRunnable implements Runnable {
     }
 
     @Override
-    public void terminate() {
+    public void close() {
         if (terminating.compareAndSet(false, true)) {
             log.warn("terminate " + config.jobId);
         }
-    }
-
-    @Override
-    public void waitExit() {
         try {
             thread.join();
             log.warn("exit " + config.jobId);

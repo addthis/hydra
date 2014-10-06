@@ -343,15 +343,11 @@ public class Hoover extends TaskRunnable implements Runnable {
     }
 
     @Override
-    public void terminate() {
+    public void close() {
         if (terminated.compareAndSet(false, true)) {
             thread.interrupt();
             log.info("terminate " + config.jobId);
         }
-    }
-
-    @Override
-    public void waitExit() {
         try {
             thread.join();
             log.info("exit " + config.jobId);

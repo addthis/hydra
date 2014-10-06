@@ -23,13 +23,9 @@ import com.addthis.codec.codables.Codable;
  * @hydra-category
  */
 @Pluggable("task")
-public abstract class TaskRunnable implements Codable {
+public abstract class TaskRunnable implements AutoCloseable, Codable {
 
     public abstract void init(TaskRunConfig config);
 
     public abstract void exec();
-
-    public abstract void terminate();
-
-    public abstract void waitExit();
 }

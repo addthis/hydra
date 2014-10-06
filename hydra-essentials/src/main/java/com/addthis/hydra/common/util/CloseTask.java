@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.util;
+package com.addthis.hydra.common.util;
 
 import com.google.common.base.Throwables;
 

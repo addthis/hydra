@@ -24,6 +24,7 @@ import com.addthis.basis.util.Files;
 
 import com.addthis.codec.jackson.CodecJackson;
 import com.addthis.codec.jackson.Jackson;
+import com.addthis.hydra.common.util.CloseTask;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.typesafe.config.Config;
@@ -56,12 +57,7 @@ public class TaskRunner {
         task.init(taskRunConfig);
         task.exec();
 
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                task.terminate();
-                task.waitExit();
-            }
-        });
+        Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(task), "Task Shutdown Hook"));
     }
 
 

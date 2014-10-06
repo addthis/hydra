@@ -305,12 +305,8 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
     }
 
     @Override
-    public void terminate() {
+    public void close() {
         feeder.terminate();
-    }
-
-    @Override
-    public void waitExit() {
         feeder.waitExit();
     }
 

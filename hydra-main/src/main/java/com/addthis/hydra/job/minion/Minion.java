@@ -74,7 +74,7 @@ import com.addthis.hydra.mq.RabbitMessageConsumer;
 import com.addthis.hydra.mq.RabbitMessageProducer;
 import com.addthis.hydra.mq.RabbitQueueingConsumer;
 import com.addthis.hydra.mq.ZKMessageProducer;
-import com.addthis.hydra.util.CloseTask;
+import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
 import com.addthis.meshy.MeshyClient;

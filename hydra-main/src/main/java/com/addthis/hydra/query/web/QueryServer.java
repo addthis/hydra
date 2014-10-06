@@ -22,7 +22,7 @@ import com.addthis.hydra.query.MeshQueryMaster;
 import com.addthis.hydra.query.loadbalance.NextQueryTask;
 import com.addthis.hydra.query.loadbalance.QueryQueue;
 import com.addthis.hydra.query.tracker.QueryTracker;
-import com.addthis.hydra.util.CloseTask;
+import com.addthis.hydra.common.util.CloseTask;
 
 import com.google.common.annotations.VisibleForTesting;
 
