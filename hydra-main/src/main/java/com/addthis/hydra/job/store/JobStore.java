@@ -141,7 +141,7 @@ public class JobStore {
                 return jobStoreGit.fetchJobConfigFromHistory(jobId, commit);
             }
         } catch (Exception e) {
-            log.warn("Failed to get deleted config for job {}: {}", e.getMessage(), e);
+            log.warn("Failed to get deleted config for job", e);
             throw e;
         }
     }

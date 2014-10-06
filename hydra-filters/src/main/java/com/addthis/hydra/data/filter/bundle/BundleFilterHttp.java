@@ -212,10 +212,10 @@ public class BundleFilterHttp extends BundleFilter {
                         System.err.println(urlValue + " returned " + (val != null ? val.length : -1) + " retries left = " + retries);
                     }
                 } catch (IllegalArgumentException e)  {
-                    log.error("error creating url {} : {} ", urlValue, e);
+                    log.error("error creating url {}", urlValue, e);
                     break;
                 } catch (IOException e)  {
-                    log.error("error accessing url {} : {}", urlValue, e);
+                    log.error("error accessing url {}", urlValue, e);
                 }
                 try {
                     Thread.sleep(http.retryTimeout);

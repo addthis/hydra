@@ -128,7 +128,7 @@ public class JobAlertUtil {
                 result[i - 1] = filter.filter(bundle);
                 log.trace("Row {} filter result is {}", i - 1, result[i-1]);
             } catch(Exception ex) {
-                log.warn("Error while evaluating row {}: {}", i - 1, ex);
+                log.warn("Error while evaluating row {}", i - 1, ex);
                 result[i - 1] = false;
             }
         }
@@ -171,7 +171,7 @@ public class JobAlertUtil {
             bFilter = CodecJSON.decodeString(BundleFilter.class, filter);
         } catch (Exception ex) {
             alert.appendCanaryOutputMessage("Error attempting to create bundle filter: " + ex + "\n");
-            log.error("Error attempting to create bundle filter {}", ex);
+            log.error("Error attempting to create bundle filter", ex);
             valid = false;
         }
         if (valid) {

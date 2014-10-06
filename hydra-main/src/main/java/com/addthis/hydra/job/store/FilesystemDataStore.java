@@ -79,7 +79,7 @@ public class FilesystemDataStore implements SpawnDataStore, Codable {
 
     @Override
     public synchronized String get(String path) {
-        if (debug) log.info("get :: ",path);
+        if (debug) log.info("get :: {}", path);
         return map.get(path);
     }
 

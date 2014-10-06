@@ -181,7 +181,7 @@ public class GoogleDriveBundleEncoder extends AbstractBufferingHttpBundleEncoder
                 resource.close();
             }
         } catch (IOException ex) {
-            log.error("Error: {}", ex);
+            log.error("Error", ex);
         }
     }
 

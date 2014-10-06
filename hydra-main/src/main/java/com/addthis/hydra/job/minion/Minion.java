@@ -839,7 +839,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
                 if (startPort == nextPort) {
                     throw new RuntimeException("unable to find any free ports");
                 }
-                log.warn("[nextport] skipping port {} due to {}", nextPort, ex);
+                log.warn("[nextport] skipping port {}", nextPort, ex);
             }
         }
         return nextPort;

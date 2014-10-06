@@ -37,7 +37,7 @@ public class ZKMessageProducer implements MessageProducer {
         try {
             open();
         } catch (IOException e) {
-            log.warn("", "[zk.producer] error opening client: " + e);
+            log.warn("[zk.producer] error opening client: ", e);
         }
     }
 
