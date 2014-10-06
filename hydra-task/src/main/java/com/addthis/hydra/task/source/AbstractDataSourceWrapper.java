@@ -16,7 +16,6 @@ package com.addthis.hydra.task.source;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.task.run.TaskRunConfig;
 
 
 public abstract class AbstractDataSourceWrapper extends TaskDataSource {
@@ -41,8 +40,8 @@ public abstract class AbstractDataSourceWrapper extends TaskDataSource {
     }
 
     @Override
-    public void init(TaskRunConfig config) throws DataChannelError {
-        source.init(config);
+    public void init() throws DataChannelError {
+        source.init();
     }
 
     @Override

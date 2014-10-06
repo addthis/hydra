@@ -53,13 +53,11 @@ public class TaskRunner {
 
     static void runTask(String configString, int nodeCount, int thisNode, String jobId) throws Exception {
         final TaskRunnable task = makeTask(configString);
-        TaskRunConfig taskRunConfig = new TaskRunConfig(thisNode, nodeCount, jobId);
-        task.init(taskRunConfig);
+        task.init();
         task.exec();
 
         Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(task), "Task Shutdown Hook"));
     }
-
 
     /**
      * Creates a TaskRunnable using CodecConfig and a little custom handling. At the root

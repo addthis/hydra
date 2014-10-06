@@ -190,6 +190,8 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
 
     @FieldConfig private boolean profiling = false;
 
+    @FieldConfig private TaskRunConfig config;
+
     private final ConcurrentMap<String, BundleField> fields    = new ConcurrentHashMap<>();
     private final IndexHash<PathElement[]>           pathIndex = new IndexHash();
 
@@ -199,7 +201,6 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
 
     private MeshyServer     liveQueryServer;
     private TreeMapperStats mapstats;
-    private TaskRunConfig   config;
 
     private final AtomicLong    lastHeaderTime  = new AtomicLong(JitterClock.globalTime());
     private final AtomicLong    benchCalls      = new AtomicLong(0);
@@ -260,8 +261,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
     }
 
     @Override
-    public void open(TaskRunConfig config) {
-        this.config = config;
+    public void open() {
         try {
             mapstats = new TreeMapperStats();
             resolve();

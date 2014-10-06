@@ -13,8 +13,6 @@
  */
 package com.addthis.hydra.task.source;
 
-import com.addthis.hydra.task.run.TaskRunConfig;
-
 import org.easymock.EasyMock;
 import org.junit.Test;
 
@@ -29,8 +27,8 @@ public class AggregateTaskDataSourceTest {
         TaskDataSource mockDS2 = EasyMock.createMock(TaskDataSource.class);
         aggregateTaskDataSource.setSources(new TaskDataSource[]{mockDS1, mockDS2});
 
-        mockDS1.init(EasyMock.isA(TaskRunConfig.class));
-        mockDS2.init(EasyMock.isA(TaskRunConfig.class));
+        mockDS1.init();
+        mockDS2.init();
 
         EasyMock.expect(mockDS1.isEnabled()).andReturn(true);
         EasyMock.expect(mockDS2.isEnabled()).andReturn(true);
@@ -39,7 +37,7 @@ public class AggregateTaskDataSourceTest {
         EasyMock.expect(mockDS2.peek()).andReturn(null);
 
         EasyMock.replay(mockDS1, mockDS2);
-        aggregateTaskDataSource.init(new TaskRunConfig(3, 9, "foo"));
+        aggregateTaskDataSource.init();
         EasyMock.verify(mockDS1, mockDS2);
     }
 
@@ -50,8 +48,8 @@ public class AggregateTaskDataSourceTest {
         TaskDataSource mockDS2 = EasyMock.createMock(TaskDataSource.class);
         aggregateTaskDataSource.setSources(new TaskDataSource[]{mockDS1, mockDS2});
 
-        mockDS1.init(EasyMock.isA(TaskRunConfig.class));
-        mockDS2.init(EasyMock.isA(TaskRunConfig.class));
+        mockDS1.init();
+        mockDS2.init();
 
         EasyMock.expect(mockDS1.isEnabled()).andReturn(true);
         EasyMock.expect(mockDS2.isEnabled()).andReturn(true);
@@ -60,7 +58,7 @@ public class AggregateTaskDataSourceTest {
         EasyMock.expect(mockDS2.peek()).andReturn(null);
 
         EasyMock.replay(mockDS1, mockDS2);
-        aggregateTaskDataSource.init(new TaskRunConfig(3, 9, "foo"));
+        aggregateTaskDataSource.init();
         aggregateTaskDataSource.peek();
         EasyMock.verify(mockDS1, mockDS2);
     }

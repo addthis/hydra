@@ -27,7 +27,6 @@ import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.PageDB;
-import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.meshy.service.stream.StreamService;
 
 import org.slf4j.Logger;
@@ -41,10 +40,9 @@ public class SourceTracker {
     private final boolean ignoreBundleCorruption = Parameter.boolValue("sourceTracker.ignoreBundleCorruption", true);
 
     private final PageDB<SimpleMark> db;
-    private final TaskRunConfig sourceConfig;
     private final FileLock lockDir;
 
-    public SourceTracker(String dir, TaskRunConfig sourceConfig) {
+    public SourceTracker(String dir) {
         File dirFile = Files.initDirectory(dir);
         try {
             lockDir = new RandomAccessFile(new File(dirFile, "tracker.lock"), "rw").getChannel().lock();
@@ -52,7 +50,6 @@ public class SourceTracker {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        this.sourceConfig = sourceConfig;
     }
 
     /**
@@ -68,7 +65,7 @@ public class SourceTracker {
     }
 
     public void open(final TaskDataSource source) {
-        source.init(sourceConfig);
+        source.init();
     }
 
     /**

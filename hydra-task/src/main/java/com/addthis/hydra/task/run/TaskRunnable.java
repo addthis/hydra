@@ -25,7 +25,7 @@ import com.addthis.codec.codables.Codable;
 @Pluggable("task")
 public abstract class TaskRunnable implements AutoCloseable, Codable {
 
-    public abstract void init(TaskRunConfig config);
+    public abstract void init();
 
     public abstract void exec();
 }

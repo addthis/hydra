@@ -46,14 +46,17 @@ public class DataSourceHashed extends TaskDataSource {
     @FieldConfig(codable = true, required = true)
     private int shardTotal;
 
+    @FieldConfig
+    private TaskRunConfig config;
+
     private Bundle peek;
 
     private Integer[] shards;
 
     @Override
-    public void init(TaskRunConfig config) {
+    public void init() {
         shards = config.calcShardList(shardTotal);
-        stream.init(config);
+        stream.init();
     }
 
     @Override

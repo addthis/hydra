@@ -279,10 +279,12 @@ public class Hoover extends TaskRunnable implements Runnable {
     @FieldConfig(codable = true)
     private int maxFindAttempts = 5;
 
+    @FieldConfig
+    private TaskRunConfig config;
+
     private AtomicBoolean terminated = new AtomicBoolean(false);
     private SimpleDateFormat dateFormat;
     private Pattern datePattern;
-    private TaskRunConfig config;
     private Thread thread;
     private Integer[] mods;
     private File markRoot;
@@ -302,8 +304,7 @@ public class Hoover extends TaskRunnable implements Runnable {
     }
 
     @Override
-    public void init(TaskRunConfig config) {
-        this.config = config;
+    public void init() {
         this.mods = config.calcShardList(config.nodeCount);
         this.markRoot = Files.initDirectory(new File(markDir));
         this.datePattern = Pattern.compile(dateMatcher);

@@ -116,9 +116,10 @@ public class TreeStatisticsJob extends TaskRunnable implements Runnable {
     @FieldConfig(codable = true)
     private String jeCacheSize = "500MB";
 
-    private Thread thread;
-
+    @FieldConfig
     private TaskRunConfig config;
+
+    private Thread thread;
 
     private AtomicBoolean terminating = new AtomicBoolean(false);
 
@@ -285,9 +286,7 @@ public class TreeStatisticsJob extends TaskRunnable implements Runnable {
     }
 
     @Override
-    public void init(TaskRunConfig config) {
-        this.config = config;
-    }
+    public void init() {}
 
     @Override
     public void exec() {

@@ -22,7 +22,6 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.hydra.task.util.BundleComparator;
 
 /**
@@ -59,8 +58,8 @@ public class SortedTaskDataSource extends TaskDataSource {
         sorted = new TreeMap<>(comparator);
     }
 
-    @Override public void init(TaskRunConfig config) {
-        source.init(config);
+    @Override public void init() {
+        source.init();
     }
 
     private void fill() {

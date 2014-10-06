@@ -19,7 +19,6 @@ import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
-import com.addthis.hydra.task.run.TaskRunConfig;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,8 +48,8 @@ public class FilteredDataOutput extends TaskDataOutput {
     private BundleFilter filter;
 
     @Override
-    protected void open(TaskRunConfig config) {
-        output.open(config);
+    protected void open() {
+        output.open();
     }
 
     @Override

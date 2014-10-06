@@ -45,7 +45,6 @@ import com.addthis.hydra.data.util.TimeField;
 import com.addthis.hydra.task.output.TaskDataOutput;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.task.run.TaskFeeder;
-import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.hydra.task.run.TaskRunTarget;
 import com.addthis.hydra.task.run.TaskRunnable;
 import com.addthis.hydra.task.source.TaskDataSource;
@@ -149,7 +148,6 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
     private final AtomicBoolean emitGate = new AtomicBoolean(false);
     private MBeanRemotingSupport jmxremote;
     private long lastMark;
-    private TaskRunConfig config;
     private TaskFeeder    feeder;
 
     // metrics
@@ -259,19 +257,18 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
     }
 
     @Override
-    public void init(TaskRunConfig config) {
+    public void init() {
         if (getOutput() == null) {
             throw new RuntimeException("missing output definition");
         }
         if (map == null) {
             map = new MapDef();
         }
-        getSource().init(config);
-        getOutput().init(config);
+        getSource().init();
+        getOutput().init();
         if (builder != null) {
             builder.init();
         }
-        this.config = config;
         if (enableJmx) {
             try {
                 //          jmxname = new ObjectName("com..hydra:type=Hydra,node=" + queryPort);
@@ -296,7 +293,7 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
                 log.error("", e);
             }
         }
-        log.info("[init] {}", config);
+        log.info("[init]");
     }
 
     @Override

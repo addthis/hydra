@@ -23,7 +23,6 @@ import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.io.DataChannelReader;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.task.run.TaskRunConfig;
 
 /**
  * This data source <span class="hydra-summary">accepts codec streams</span>.
@@ -43,9 +42,9 @@ public class DataSourceChannel extends TaskDataSource implements BundleFactory {
     private DataChannelReader reader;
     private Bundle peek;
 
-    @Override public void init(TaskRunConfig config) {
+    @Override public void init() {
         try {
-            reader = new DataChannelReader(this, input.createInputStream(config));
+            reader = new DataChannelReader(this, input.createInputStream());
         } catch (IOException e) {
             throw DataChannelError.promote(e);
         }

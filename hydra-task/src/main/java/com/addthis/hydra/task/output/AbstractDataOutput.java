@@ -67,13 +67,16 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
     @FieldConfig(codable = true)
     private DataPurgeConfig dataPurgeConfig;
 
+    @FieldConfig
+    private TaskRunConfig config;
+
     private String[] fileToken;
     private TokenIndex[] varToken;
 
     abstract AbstractOutputWriter getWriter();
 
     @Override
-    public void open(TaskRunConfig config) {
+    public void open() {
         log.info("[init] {}", config);
         AbstractOutputWriter writer = getWriter();
         if (writer != null) {

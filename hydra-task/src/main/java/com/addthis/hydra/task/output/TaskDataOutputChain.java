@@ -19,7 +19,6 @@ import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.Bundles;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.task.run.TaskRunConfig;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,10 +77,10 @@ public class TaskDataOutputChain extends DataOutputTypeList {
     private boolean immutableCopy = false;
 
     @Override
-    protected void open(TaskRunConfig config) {
+    protected void open() {
         log.warn("[init] beginning init chain");
         for (int i = 0; i < outputs.length; i++) {
-            outputs[i].open(config);
+            outputs[i].open();
         }
         log.warn("[init] all outputs initialized");
     }

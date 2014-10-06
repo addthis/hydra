@@ -16,7 +16,6 @@ package com.addthis.hydra.task.source;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.task.run.TaskRunConfig;
 
 /**
  * This {@link TaskDataSource source} <span class="hydra-summary">retrieves a subset of an underlying data source</span>.
@@ -68,8 +67,8 @@ public class DataSourceRange extends TaskDataSource {
         source.close();
     }
 
-    @Override public void init(TaskRunConfig config) {
-        source.init(config);
+    @Override public void init() {
+        source.init();
     }
 
 }

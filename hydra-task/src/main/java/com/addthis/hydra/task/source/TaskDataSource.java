@@ -18,7 +18,6 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
-import com.addthis.hydra.task.run.TaskRunConfig;
 
 /**
  * This section of the job specification handles input sources.
@@ -43,7 +42,7 @@ public abstract class TaskDataSource implements Codable, DataChannelSource, Clon
     @FieldConfig(codable = true)
     private boolean enabled = true;
 
-    public abstract void init(TaskRunConfig config);
+    public abstract void init();
 
     public final BundleField getShardField() {
         return shardField;

@@ -20,7 +20,6 @@ import java.util.NoSuchElementException;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.task.run.TaskRunConfig;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,11 +89,11 @@ public class AggregateTaskDataSource extends TaskDataSource {
     }
 
     @Override
-    public void init(TaskRunConfig config) {
+    public void init() {
         for (TaskDataSource source : sources) {
             if (source.isEnabled()) {
                 log.debug("init {}", source);
-                source.init(config);
+                source.init();
                 sourceList.add(source);
             } else {
                 log.debug("disabled {}", source);

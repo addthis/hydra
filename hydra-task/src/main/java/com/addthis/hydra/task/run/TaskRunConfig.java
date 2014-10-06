@@ -18,6 +18,9 @@ import java.util.List;
 
 import com.google.common.base.Objects;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class TaskRunConfig {
 
     public final int node;
@@ -29,7 +32,11 @@ public class TaskRunConfig {
         this(node, nodeCount, jobid, ".");
     }
 
-    public TaskRunConfig(int node, int nodeCount, String jobid, String dir) {
+    @JsonCreator
+    public TaskRunConfig(@JsonProperty("node") int node,
+                         @JsonProperty("nodeCount") int nodeCount,
+                         @JsonProperty("jobId") String jobid,
+                         @JsonProperty("dir") String dir) {
         this.node = node;
         this.nodeCount = nodeCount;
         this.jobId = jobid;

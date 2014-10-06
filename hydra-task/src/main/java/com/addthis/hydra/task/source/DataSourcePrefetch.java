@@ -17,7 +17,6 @@ import java.util.LinkedList;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.task.run.TaskRunConfig;
 
 /**
  * This {@link TaskDataSource source} <span class="hydra-summary">prefetches bundles from an underlying data source</span>.
@@ -49,8 +48,8 @@ public final class DataSourcePrefetch extends TaskDataSource {
     }
 
     @Override
-    public void init(TaskRunConfig config) {
-        source.init(config);
+    public void init() {
+        source.init();
     }
 
     @Override

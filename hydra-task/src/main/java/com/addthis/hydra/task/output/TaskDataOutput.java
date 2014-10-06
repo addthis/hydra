@@ -15,7 +15,6 @@ package com.addthis.hydra.task.output;
 
 import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.codec.annotations.Pluggable;
-import com.addthis.hydra.task.run.TaskRunConfig;
 
 
 /**
@@ -29,9 +28,9 @@ import com.addthis.hydra.task.run.TaskRunConfig;
 @Pluggable("output-sink")
 public abstract class TaskDataOutput implements DataChannelOutput {
 
-    protected abstract void open(TaskRunConfig config);
+    protected abstract void open();
 
-    public final void init(TaskRunConfig config) {
-        open(config);
+    public final void init() {
+        open();
     }
 }

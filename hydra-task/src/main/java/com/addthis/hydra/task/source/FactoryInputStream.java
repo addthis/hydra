@@ -25,7 +25,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
-import com.addthis.hydra.task.run.TaskRunConfig;
 
 
 /**
@@ -45,7 +44,7 @@ public abstract class FactoryInputStream implements Codable {
     /**
      * @return an InputStream
      */
-    public abstract InputStream createInputStream(TaskRunConfig config) throws IOException;
+    public abstract InputStream createInputStream() throws IOException;
 
     /**
      * @user-reference
@@ -57,7 +56,7 @@ public abstract class FactoryInputStream implements Codable {
         private String file;
 
         @Override
-        public InputStream createInputStream(TaskRunConfig config) throws IOException {
+        public InputStream createInputStream() throws IOException {
             return new FileInputStream(file);
         }
     }
@@ -74,7 +73,7 @@ public abstract class FactoryInputStream implements Codable {
         private int port;
 
         @Override
-        public InputStream createInputStream(TaskRunConfig config) throws IOException {
+        public InputStream createInputStream() throws IOException {
             Socket socket = new Socket(host, port);
             socket.setTcpNoDelay(true);
             socket.setSoTimeout(60000 * 5);
@@ -120,7 +119,7 @@ public abstract class FactoryInputStream implements Codable {
         private LinkedBlockingQueue<InputStream> queue = null;
 
         @Override
-        public InputStream createInputStream(TaskRunConfig config) throws IOException {
+        public InputStream createInputStream() throws IOException {
             try {
                 while (queue == null) {
                     key = key.intern();

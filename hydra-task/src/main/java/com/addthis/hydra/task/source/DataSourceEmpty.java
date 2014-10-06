@@ -19,7 +19,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.kvp.KVBundle;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.task.run.TaskRunConfig;
 
 /**
  * This data source <span class="hydra-summary">creates an arbitrary number of empty bundles</span>.
@@ -48,7 +47,7 @@ public class DataSourceEmpty extends TaskDataSource {
     }
 
     @Override
-    public void init(TaskRunConfig config) {
+    public void init() {
     }
 
     @Override

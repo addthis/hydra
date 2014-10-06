@@ -237,6 +237,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     @FieldConfig(codable = true, required = true)
     private int magicMarksNumber;
 
+    @FieldConfig
+    private TaskRunConfig config;
+
     private final ListBundleFormat bundleFormat = new ListBundleFormat();
     private final Bundle termBundle = new ListBundle(bundleFormat);
     private final ExecutorService workerThreadPool = new ThreadPoolExecutor(
@@ -323,7 +326,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         }
     }
 
-    @Override public void init(TaskRunConfig config) {
+    @Override public void init() {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 exiting.set(true);

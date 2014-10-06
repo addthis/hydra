@@ -27,7 +27,6 @@ import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.hydra.task.source.bundleizer.Bundleizer;
 import com.addthis.hydra.task.source.bundleizer.BundleizerFactory;
 
@@ -49,7 +48,7 @@ public class DataSourceHttp extends TaskDataSource {
     private Bundle nextBundle;
     private InputStream underlyingInputStream;
 
-    @Override public void init(TaskRunConfig config) {
+    @Override public void init() {
         try {
             StringBuilder urlMaker = new StringBuilder(url);
             if (!params.isEmpty()) {

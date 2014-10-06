@@ -133,6 +133,9 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
     @FieldConfig(codable = true)
     protected int maxReadyQueuePollAttempts = 500;
 
+    @FieldConfig
+    private TaskRunConfig config;
+
     private StreamFileSource sources;
     private SourceTracker tracker;
     private ValueObject sourceName;
@@ -179,16 +182,16 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
     }
 
     @Override
-    public void init(TaskRunConfig config) {
+    public void init() {
         try {
-            doOpen(config);
+            doOpen();
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
     }
 
-    private void doOpen(TaskRunConfig config) throws Exception {
-        tracker = new SourceTracker(markDir, config);
+    private void doOpen() throws Exception {
+        tracker = new SourceTracker(markDir);
         if (shardTotal == null || shardTotal == 0) {
             shardTotal = config.nodeCount;
             if (!forceHashFalse) {
