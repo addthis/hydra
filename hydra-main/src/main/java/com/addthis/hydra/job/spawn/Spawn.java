@@ -148,6 +148,7 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_UP_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -1697,15 +1698,16 @@ public class Spawn implements Codable, AutoCloseable {
         Job job = new Job(ijob);
         jobLock.lock();
         try {
-            require(getJob(job.getId()) != null, "job " + job.getId() + " does not exist");
+            checkArgument(getJob(job.getId()) != null, "job " + job.getId() + " does not exist");
             updateJobDependencies(job.getId());
             Job oldjob = putJobInSpawnState(job);
             // take action on trigger changes (like # replicas)
             if (oldjob != job && reviseReplicas) {
                 int oldReplicaCount = oldjob.getReplicas();
                 int newReplicaCount = job.getReplicas();
-                require(oldReplicaCount == newReplicaCount || job.getState() == JobState.IDLE || job.getState() == JobState.DEGRADED, "job must be IDLE or DEGRADED to change replicas");
-                require(newReplicaCount < monitored.size(), "replication factor must be < # live hosts");
+                checkArgument(oldReplicaCount == newReplicaCount || job.getState() == JobState.IDLE ||
+                              job.getState() == JobState.DEGRADED, "job must be IDLE or DEGRADED to change replicas");
+                checkArgument(newReplicaCount < monitored.size(), "replication factor must be < # live hosts");
                 rebalanceReplicas(job);
             }
             queueJobTaskUpdateEvent(job);
@@ -1799,16 +1801,16 @@ public class Spawn implements Codable, AutoCloseable {
      */
     public void startJob(String jobUUID, boolean isManualKick) throws Exception {
         Job job = getJob(jobUUID);
-        require(job != null, "job not found");
-        require(job.isEnabled(), "job disabled");
-        require(scheduleJob(job, isManualKick), "unable to schedule job");
+        checkArgument(job != null, "job not found");
+        checkArgument(job.isEnabled(), "job disabled");
+        checkArgument(scheduleJob(job, isManualKick), "unable to schedule job");
         queueJobTaskUpdateEvent(job);
         Job.logJobEvent(job, JobEvent.START, eventLog);
     }
 
     public String expandJob(String jobUUID) throws Exception {
         Job job = getJob(jobUUID);
-        require(job != null, "job not found");
+        checkArgument(job != null, "job not found");
         return expandJob(job);
     }
 
@@ -1842,7 +1844,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     public void stopJob(String jobUUID) throws Exception {
         Job job = getJob(jobUUID);
-        require(job != null, "job not found");
+        checkArgument(job != null, "job not found");
         for (JobTask task : job.getCopyOfTasks()) {
             if (task.getState() == JobTaskState.QUEUED) {
                 removeFromQueue(task);
@@ -1862,7 +1864,7 @@ public class Spawn implements Codable, AutoCloseable {
                     success = true;
                     Job job = getJob(jobUUID);
                     Job.logJobEvent(job, JobEvent.KILL, eventLog);
-                    require(job != null, "job not found");
+                    checkArgument(job != null, "job not found");
                     for (JobTask task : job.getCopyOfTasks()) {
                         if (task.getState() == JobTaskState.QUEUED) {
                             removeFromQueue(task);
@@ -1912,14 +1914,14 @@ public class Spawn implements Codable, AutoCloseable {
      */
     public void startTask(String jobUUID, int taskID, boolean addToQueue, boolean isManualKick, boolean toQueueHead) throws Exception {
         Job job = getJob(jobUUID);
-        require(job != null, "job not found");
-        require(job.isEnabled(), "job is disabled");
-        require(job.getState() != JobState.DEGRADED, "job in degraded state");
-        require(taskID >= 0, "invalid task id");
+        checkArgument(job != null, "job not found");
+        checkArgument(job.isEnabled(), "job is disabled");
+        checkArgument(job.getState() != JobState.DEGRADED, "job in degraded state");
+        checkArgument(taskID >= 0, "invalid task id");
         JobTask task = getTask(jobUUID, taskID);
-        require(task != null, "no such task");
-        require(task.getState() != JobTaskState.BUSY && task.getState() != JobTaskState.ALLOCATED &&
-                task.getState() != JobTaskState.QUEUED, "invalid task state");
+        checkArgument(task != null, "no such task");
+        checkArgument(task.getState() != JobTaskState.BUSY && task.getState() != JobTaskState.ALLOCATED &&
+                      task.getState() != JobTaskState.QUEUED, "invalid task state");
         if (addToQueue) {
             addToTaskQueue(task.getJobKey(), isManualKick && getQuiesced(), toQueueHead);
         } else {
@@ -2670,12 +2672,6 @@ public class Spawn implements Codable, AutoCloseable {
             }
         }
         webSocketManager.addEvent(new ClientEvent(topic, message));
-    }
-
-    private static void require(boolean test, String msg) throws Exception {
-        if (!test) {
-            throw new Exception("test failed with '" + msg + "'");
-        }
     }
 
     /** Called by Thread registered to Runtime triggered by sig-term. */

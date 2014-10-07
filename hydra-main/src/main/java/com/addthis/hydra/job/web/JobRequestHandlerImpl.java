@@ -14,7 +14,6 @@
 package com.addthis.hydra.job.web;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,7 +21,6 @@ import java.util.Map;
 
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
-import com.addthis.basis.util.Strings;
 
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
@@ -31,6 +29,11 @@ import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobQueryConfig;
 import com.addthis.hydra.job.minion.Minion;
 import com.addthis.hydra.job.spawn.Spawn;
+
+import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 public class JobRequestHandlerImpl implements JobRequestHandler {
     
@@ -41,33 +44,33 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     }
 
     @Override
-    public Job createOrUpdateJob(KVPairs kv, String username) throws IllegalArgumentException, Exception {
+    public Job createOrUpdateJob(KVPairs kv, String username) throws Exception {
         String id = KVUtils.getValue(kv, "", "id", "job");
         String config = kv.getValue("config");
         String expandedConfig = null;
         String command = kv.getValue("command");
         boolean configMayHaveChanged = true;
         Job job;
-        if (Strings.isEmpty(id)) {
-            requireParam(!Strings.isEmpty(command), "Parameter 'command' is missing");
+        if (Strings.isNullOrEmpty(id)) {
+            checkArgument(!Strings.isNullOrEmpty(command), "Parameter 'command' is missing");
             requireValidCommandParam(command);
-            requireParam(config != null, "Parameter 'config' is missing");
+            checkArgument(config != null, "Parameter 'config' is missing");
             expandedConfig = tryExpandJobConfigParam(config);
             job = spawn.createJob(
                     kv.getValue("owner", username),
                     kv.getIntValue("nodes", -1),
-                    Arrays.asList(Strings.splitArray(kv.getValue("hosts", ""), ",")),
+                    Splitter.on(',').omitEmptyStrings().trimResults().splitToList(kv.getValue("hosts", "")),
                     kv.getValue("minionType", Minion.defaultMinionType),
                     command);
         } else {
             job = spawn.getJob(id);
-            requireParam(job != null, "Job " + id + " does not exist");
+            checkArgument(job != null, "Job %s does not exist", id);
             if (config == null) {
                 configMayHaveChanged = false;
                 config = spawn.getJobConfig(id);
             }
             expandedConfig = tryExpandJobConfigParam(config);
-            if (!Strings.isEmpty(command)) {
+            if (!Strings.isNullOrEmpty(command)) {
                 requireValidCommandParam(command);
                 job.setCommand(command);
             }
@@ -88,16 +91,8 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         return job;
     }
 
-    private void requireParam(boolean requirement, String errorMessage) throws IllegalArgumentException {
-        if (!requirement) {
-            throw new IllegalArgumentException(errorMessage);
-        }
-    }
-
     private void requireValidCommandParam(String command) throws IllegalArgumentException {
-        if (spawn.getJobCommandManager().getEntity(command) == null) {
-            throw new IllegalArgumentException("Invalid command key '" + command + "'");
-        }
+        checkArgument(spawn.getJobCommandManager().getEntity(command) == null, "Invalid command key '%s'", command);
     }
 
     private String tryExpandJobConfigParam(String jobConfig) throws IllegalArgumentException {
