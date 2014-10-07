@@ -41,17 +41,10 @@ public class TaskRunner {
         }
         String fileName = args[0];
         String configString = loadStringFromFile(fileName);
-        runTask(configString, args);
+        runTask(configString);
     }
 
-    static void runTask(String configString, String[] args) throws Exception {
-        int nodeCount = Integer.parseInt(args[1]);
-        int thisNode = Integer.parseInt(args[2]);
-        String jobId = (args.length > 3) ? args[3] : null;
-        runTask(configString, nodeCount, thisNode, jobId);
-    }
-
-    static void runTask(String configString, int nodeCount, int thisNode, String jobId) throws Exception {
+    static void runTask(String configString) throws Exception {
         final TaskRunnable task = makeTask(configString);
         task.init();
         task.exec();
