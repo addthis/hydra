@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.run;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 
 import java.util.NoSuchElementException;
@@ -63,23 +65,20 @@ public final class TaskFeeder extends Thread {
     private static final boolean interruptOnExit = Parameter.boolValue("task.exit.interrupt", false);
 
     private boolean exiting = !Parameter.boolValue("task.feed", true);
-    private AtomicBoolean terminated = new AtomicBoolean(false);
-    private long start = System.currentTimeMillis();
-    private BundleField shardField;
+    private final AtomicBoolean terminated = new AtomicBoolean(false);
+    private final long start = System.currentTimeMillis();
+    private final BundleField shardField;
 
     private TaskDataSource source;
     private final TaskRunTarget task;
-    private final int readers;
+    private final int feeders;
 
     private final Thread[] threads;
     private final BlockingQueue<Bundle>[] queues;
-    private volatile boolean queuesInit;
     private final AtomicBoolean errored;
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final AtomicInteger processed = new AtomicInteger(0);
     private final AtomicLong totalReads = new AtomicLong(0);
-    private final AtomicLong currentStreamReads = new AtomicLong(0);
-    private final AtomicInteger threadsRunning = new AtomicInteger(0);
 
     private final Meter stealAttemptMeter;
     private final Meter stealSuccessMeter;
@@ -95,50 +94,15 @@ public final class TaskFeeder extends Thread {
         this.source = task.getSource();
         this.errored = new AtomicBoolean();
         this.task = task;
-        this.readers = feeders;
-
-        log.info("starting {} thread(s) for src={}", feeders, source);
+        this.feeders = feeders;
 
         shardField = source.getShardField();
         threads = new Thread[feeders];
         queues = new LinkedBlockingQueue[feeders];
 
-        threadsRunning.set(threads.length);
         for (int i = 0; i < threads.length; i++) {
-            final int processorID = i;
             queues[i] = new LinkedBlockingQueue<>(QUEUE_DEPTH);
-            threads[i] = new Thread(this, "MapProcessor #" + i) {
-                @Override
-                public void run() {
-                    mapperRun(processorID);
-                }
-            };
-            threads[i].start();
-        }
-        queuesInit = true;
-        start();
-    }
-
-    private void mapperRun(int worker) {
-        while (true) {
-            try {
-                Bundle next = popQueue(worker);
-                if (next == null) {
-                    return;
-                }
-                task.process(next);
-                long proctotal = processed.incrementAndGet();
-                /* optional cap on processing */
-                if (maxProcess > 0 && proctotal >= maxProcess) {
-                    terminate();
-                    return;
-                }
-            } catch (InterruptedException e) {
-                return;
-            } catch (Exception ex) {
-                errored.set(true);
-                log.error("", ex);
-            }
+            threads[i] = new Thread(new MapperTask(this, i), "MapProcessor #" + i);
         }
     }
 
@@ -147,48 +111,12 @@ public final class TaskFeeder extends Thread {
         queue.put(item);
     }
 
-    private Bundle popQueue(int queueNum) throws InterruptedException {
-        BlockingQueue<Bundle> queue = queues[queueNum];
-        Bundle item = null;
-        if (shouldSteal) {
-            item = queue.poll();
-            if (item == null) {
-                stealAttemptMeter.mark();
-                item = steal(queueNum);
-                if (item != null) {
-                    stealSuccessMeter.mark();
-                }
-            }
-        }
-        if (item == null) {
-            item = queue.take();
-        }
-
-        return item == TERM_BUNDLE ? null : item;
-    }
-
-    private Bundle steal(int queueNum) throws InterruptedException {
-        if (!queuesInit) {
-            return null;
-        }
-        int stealQ = 0;
-        Bundle item = null;
-        for (BlockingQueue<Bundle> queue : queues) {
-            if (queue.size() >= stealThreshold) {
-                item = queues[stealQ].poll();
-                if (item != null) {
-                    break;
-                }
-            }
-        }
-        if (item == TERM_BUNDLE) {
-            queues[stealQ].put(item);
-            return null;
-        }
-        return item;
-    }
-
     @Override public void run() {
+        log.info("starting {} thread(s) for src={}", feeders, source);
+        for (Thread thread : threads) {
+            thread.start();
+        }
+
         try {
             if (source.isEnabled()) {
                 while (!errored.get() && fillBuffer()) {
@@ -225,7 +153,7 @@ public final class TaskFeeder extends Thread {
         }
     }
 
-    private void trySleep(long time) {
+    private static void trySleep(long time) {
         try {
             Thread.sleep(time);
         } catch (InterruptedException ex) {
@@ -238,10 +166,8 @@ public final class TaskFeeder extends Thread {
             terminated.set(true);
             exiting = true;
             if (interruptOnExit) {
-                if (threads != null) {
-                    for (Thread thread : threads) {
-                        thread.interrupt();
-                    }
+                for (Thread thread : threads) {
+                    thread.interrupt();
                 }
                 this.interrupt();
             }
@@ -272,21 +198,21 @@ public final class TaskFeeder extends Thread {
         if (terminated.get()) {
             long mark = JitterClock.globalTime();
             long left = 10000;
-            for (int i = 0; i < threads.length; i++) {
+            for (Thread thread : threads) {
                 try {
-                    threads[i].join(left);
+                    thread.join(left);
                     left = Math.max(1, 10000 - (JitterClock.globalTime() - mark));
                 } catch (InterruptedException e) {
                     log.warn("", e);
                 }
             }
-            for (int i = 0; i < threads.length; i++) {
-                threads[i].interrupt();
+            for (Thread thread : threads) {
+                thread.interrupt();
             }
         }
-        for (int i = 0; i < threads.length; i++) {
+        for (Thread thread : threads) {
             try {
-                threads[i].join();
+                thread.join();
             } catch (InterruptedException e) {
                 log.warn("", e);
             }
@@ -312,7 +238,6 @@ public final class TaskFeeder extends Thread {
                                         .toString());
             source.close();
             source = null;
-            currentStreamReads.set(0);
         }
     }
 
@@ -332,7 +257,6 @@ public final class TaskFeeder extends Thread {
             if ((maxRead > 0) && (totalReads.get() >= maxRead)) {
                 terminate();
             }
-            currentStreamReads.incrementAndGet();
             int hash = p.hashCode();
             if (shardField != null) {
                 String val = ValueUtil.asNativeString(p.getValue(shardField));
@@ -357,7 +281,79 @@ public final class TaskFeeder extends Thread {
         return false;
     }
 
-    public boolean isProcessing() {
-        return true;
+    private static class MapperTask implements Runnable {
+        private final int processorID;
+        private final TaskFeeder taskFeeder;
+
+        public MapperTask(TaskFeeder taskFeeder, int processorID) {
+            this.processorID = processorID;
+            this.taskFeeder = taskFeeder;
+        }
+
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    Bundle next = popQueue();
+                    if (next == null) {
+                        return;
+                    }
+                    taskFeeder.task.process(next);
+                    long proctotal = taskFeeder.processed.incrementAndGet();
+                    /* optional cap on processing */
+                    if (maxProcess > 0 && proctotal >= maxProcess) {
+                        taskFeeder.terminate();
+                        return;
+                    }
+                } catch (InterruptedException e) {
+                    return;
+                } catch (Exception ex) {
+                    taskFeeder.errored.set(true);
+                    log.error("", ex);
+                }
+            }
+        }
+
+        @Nullable private Bundle popQueue() throws InterruptedException {
+            BlockingQueue<Bundle> queue = taskFeeder.queues[processorID];
+            Bundle item = null;
+            if (shouldSteal) {
+                item = queue.poll();
+                if (item == null) {
+                    taskFeeder.stealAttemptMeter.mark();
+                    item = steal();
+                    if (item != null) {
+                        taskFeeder.stealSuccessMeter.mark();
+                    }
+                }
+            }
+            if (item == null) {
+                item = queue.take();
+            }
+
+            if (item == TERM_BUNDLE) {
+                return null;
+            } else {
+                return item;
+            }
+        }
+
+        @Nullable private Bundle steal() throws InterruptedException {
+            int stealQ = 0;
+            Bundle item = null;
+            for (BlockingQueue<Bundle> queue : taskFeeder.queues) {
+                if (queue.size() >= stealThreshold) {
+                    item = taskFeeder.queues[stealQ].poll();
+                    if (item != null) {
+                        break;
+                    }
+                }
+            }
+            if (item == TERM_BUNDLE) {
+                taskFeeder.queues[stealQ].put(item);
+                return null;
+            }
+            return item;
+        }
     }
 }

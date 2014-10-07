@@ -295,6 +295,7 @@ public class StreamMapper implements StreamEmitter, TaskRunTarget, TaskRunnable 
         }
         log.info("[init]");
         feeder = new TaskFeeder(this, threads);
+        feeder.start();
     }
 
     @Override
