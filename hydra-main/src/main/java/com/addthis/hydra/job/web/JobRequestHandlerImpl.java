@@ -92,7 +92,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     }
 
     private void requireValidCommandParam(String command) throws IllegalArgumentException {
-        checkArgument(spawn.getJobCommandManager().getEntity(command) == null, "Invalid command key '%s'", command);
+        checkArgument(spawn.getJobCommandManager().getEntity(command) != null, "Invalid command key '%s'", command);
     }
 
     private String tryExpandJobConfigParam(String jobConfig) throws IllegalArgumentException {
