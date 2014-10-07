@@ -46,8 +46,7 @@ public class TaskRunner {
 
     static void runTask(String configString) throws Exception {
         final TaskRunnable task = makeTask(configString);
-        task.init();
-        task.exec();
+        task.start();
 
         Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(task), "Task Shutdown Hook"));
     }

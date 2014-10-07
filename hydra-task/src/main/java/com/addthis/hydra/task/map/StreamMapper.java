@@ -91,7 +91,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name map
  */
-public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRunTarget {
+public class StreamMapper implements StreamEmitter, TaskRunTarget, TaskRunnable {
 
     private static final Logger log = LoggerFactory.getLogger(StreamMapper.class);
 
@@ -257,7 +257,7 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
     }
 
     @Override
-    public void init() {
+    public void start() {
         if (getOutput() == null) {
             throw new RuntimeException("missing output definition");
         }
@@ -294,10 +294,6 @@ public class StreamMapper extends TaskRunnable implements StreamEmitter, TaskRun
             }
         }
         log.info("[init]");
-    }
-
-    @Override
-    public void exec() {
         feeder = new TaskFeeder(this, threads);
     }
 

@@ -91,7 +91,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name hoover
  */
-public class Hoover extends TaskRunnable implements Runnable {
+public class Hoover implements Runnable, TaskRunnable {
 
     private static final Logger log = LoggerFactory.getLogger(Hoover.class);
     private static final SimpleDateFormat dateOut = new SimpleDateFormat("yyyyMMddHH");
@@ -304,7 +304,7 @@ public class Hoover extends TaskRunnable implements Runnable {
     }
 
     @Override
-    public void init() {
+    public void start() {
         this.mods = config.calcShardList(config.nodeCount);
         this.markRoot = Files.initDirectory(new File(markDir));
         this.datePattern = Pattern.compile(dateMatcher);
@@ -333,10 +333,6 @@ public class Hoover extends TaskRunnable implements Runnable {
                 throw new RuntimeException(ex);
             }
         }
-    }
-
-    @Override
-    public void exec() {
         thread = new Thread(this);
         thread.setName("Hoover Rsync");
         thread.start();

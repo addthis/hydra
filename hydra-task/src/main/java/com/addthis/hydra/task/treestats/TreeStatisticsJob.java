@@ -80,7 +80,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name treestats
  */
-public class TreeStatisticsJob extends TaskRunnable implements Runnable {
+public class TreeStatisticsJob implements Runnable, TaskRunnable {
 
     private static final Logger log = LoggerFactory.getLogger(TreeStatisticsJob.class);
 
@@ -286,10 +286,7 @@ public class TreeStatisticsJob extends TaskRunnable implements Runnable {
     }
 
     @Override
-    public void init() {}
-
-    @Override
-    public void exec() {
+    public void start() {
         thread = new Thread(this);
         thread.setName("TreeStatisticsJob main thread");
         thread.start();

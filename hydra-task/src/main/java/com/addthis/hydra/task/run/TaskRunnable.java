@@ -14,7 +14,6 @@
 package com.addthis.hydra.task.run;
 
 import com.addthis.codec.annotations.Pluggable;
-import com.addthis.codec.codables.Codable;
 
 /**
  * This is the specification for a Hydra job.
@@ -23,9 +22,7 @@ import com.addthis.codec.codables.Codable;
  * @hydra-category
  */
 @Pluggable("task")
-public abstract class TaskRunnable implements AutoCloseable, Codable {
+public interface TaskRunnable extends AutoCloseable {
 
-    public abstract void init();
-
-    public abstract void exec();
+    public abstract void start();
 }
