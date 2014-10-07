@@ -40,7 +40,6 @@ import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueString;
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.data.filter.value.StringFilter;
 import com.addthis.hydra.store.db.DBKey;
@@ -57,6 +56,7 @@ import com.addthis.hydra.task.stream.StreamSourceHashed;
 import com.google.common.base.Objects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ning.compress.lzf.LZFInputStream;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
@@ -113,75 +113,45 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
      * null (false), then the file is skipped. Otherwise, it uses whatever string the filter
      * returns. Anything that isn't a StringFilter throws a runtime error.
      */
-    @FieldConfig(codable = true)
-    private StringFilter filter;
+    @JsonProperty private StringFilter filter;
 
-    @FieldConfig
     @Time(TimeUnit.MILLISECONDS)
-    private int pollInterval;
+    @JsonProperty private int pollInterval;
 
-    @FieldConfig
-    private int pollCountdown;
+    @JsonProperty private int pollCountdown;
 
-    @FieldConfig
     @Time(TimeUnit.SECONDS)
-    private int latchTimeout;
+    @JsonProperty private int latchTimeout;
 
-    /**
-     * Specifies conversion to bundles.
-     * The default is type "channel".
-     */
-    @FieldConfig(codable = true)
-    private BundleizerFactory format;
+    /** Specifies conversion to bundles. The default is type "channel". */
+    @JsonProperty private BundleizerFactory format;
 
-    /**
-     * Path to the mark directory.
-     */
-    @FieldConfig(codable = true)
-    private String markDir;
+    /** Path to the mark directory. */
+    @JsonProperty private String markDir;
 
-    /**
-     * Ignore the mark directory
-     */
-    @FieldConfig(codable = true)
-    private boolean ignoreMarkDir;
+    /** Ignore the mark directory */
+    @JsonProperty private boolean ignoreMarkDir;
 
-    /**
-     * Enable metrics visible only from jmx
-     */
-    @FieldConfig(codable = true)
-    private boolean jmxMetrics;
+    /** Enable metrics visible only from jmx */
+    @JsonProperty private boolean jmxMetrics;
 
-    /**
-     * Number of shards in the input source.
-     */
-    @FieldConfig(codable = true)
-    protected Integer shardTotal;
+    /** Number of shards in the input source. */
+    @JsonProperty protected Integer shardTotal;
 
-    /**
-     * If specified then process only the shards specified in this array.
-     */
-    @FieldConfig(codable = true)
-    protected Integer[] shards;
+    /** If specified then process only the shards specified in this array. */
+    @JsonProperty protected Integer[] shards;
 
-    /**
-     * If true then generate a hash of the filename input rather than use the {{mod}} field. Default is false.
-     */
-    @FieldConfig(codable = true)
-    protected boolean hash;
+    /** If true then generate a hash of the filename input rather than use the {{mod}} field. Default is false. */
+    @JsonProperty protected boolean hash;
 
     /**
      * If true then allow all of the Hydra nodes to process all the data when
      * the hash field is false and the filename does not have {{mode}}. Default is false.
      */
-    @FieldConfig(codable = true)
-    protected boolean processAllData;
+    @JsonProperty protected boolean processAllData;
 
-    /**
-     * If non-null, then inject the filename into the bundle field using this field name. Default is null.
-     */
-    @FieldConfig(codable = true)
-    private String injectSourceName;
+    /** If non-null, then inject the filename into the bundle field using this field name. Default is null. */
+    @JsonProperty private String injectSourceName;
 
     /**
      * Number of bundles to attempt to pull from a file before returning it to the
@@ -190,36 +160,31 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
      * potential performance gains you might try increasing this. 25 is a good place
      * to start, I think. The default is 1.
      */
-    @FieldConfig(codable = true)
-    private int multiBundleReads;
+    @JsonProperty private int multiBundleReads;
 
     /**
      * Number of bundles to fetch prior to starting the worker threads.
      * Default is either "dataSourceMeshy2.preopen" configuration value or 2.
      */
-    @FieldConfig(codable = true)
-    private int preOpen;
+    @JsonProperty private int preOpen;
 
     /**
      * Trigger an error when the number of skipped sources is greater than this value.
-     * Default is either "dataSourceMeshy2.skipSourceExit" configuration value  or 0.
+     * Default is either "dataSourceMeshy2.skipSourceExit" configuration value or 0.
      */
-    @FieldConfig(codable = true)
-    private int skipSourceExit;
+    @JsonProperty private int skipSourceExit;
 
     /**
      * Maximum size of the queue that stores bundles prior to their processing.
      * Default is either "dataSourceMeshy2.buffer" configuration value or 128.
      */
-    @FieldConfig(codable = true, required = true)
-    private int buffer;
+    @JsonProperty(required = true) private int buffer;
 
     /**
      * Number of worker threads that request data from the meshy source.
      * Default is either "dataSourceMeshy2.workers" configuration value or 2.
      */
-    @FieldConfig(codable = true, required = true)
-    private int workers;
+    @JsonProperty(required = true) private int workers;
 
     /**
      * Set to enable marks compatibility mode with older source types. eg. 'mesh' for mesh1 and
@@ -231,14 +196,11 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
      * In more detail: Any non-null value will use legacy marks and anything beginning with
      * 'stream' will trim the starting '/' in a mesh path.
      */
-    @FieldConfig(codable = true)
-    private String legacyMode;
+    @JsonProperty private String legacyMode;
 
-    @FieldConfig(codable = true, required = true)
-    private int magicMarksNumber;
+    @JsonProperty(required = true) private int magicMarksNumber;
 
-    @FieldConfig
-    private TaskRunConfig config;
+    @JsonProperty private TaskRunConfig config;
 
     private final ListBundleFormat bundleFormat = new ListBundleFormat();
     private final Bundle termBundle = new ListBundle(bundleFormat);
