@@ -294,7 +294,7 @@ public class StreamMapper implements StreamEmitter, TaskRunTarget, TaskRunnable 
             }
         }
         log.info("[init]");
-        feeder = new Thread(new TaskFeeder(this, threads),"SourceReader");
+        feeder = new Thread(new TaskFeeder(this, threads),"TaskFeeder");
         feeder.start();
     }
 
@@ -302,6 +302,7 @@ public class StreamMapper implements StreamEmitter, TaskRunTarget, TaskRunnable 
     public void close() throws InterruptedException {
         feeder.interrupt();
         feeder.join();
+        log.info("Map Task Complete");
     }
 
     @Override

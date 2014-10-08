@@ -116,7 +116,7 @@ public final class TaskFeeder implements Runnable {
         } catch (Throwable t) {
             handleUncaughtThrowable(t);
         }
-        log.info("[{}] exited", Thread.currentThread().getName());
+        log.debug("task feeder exited");
     }
 
     /**
