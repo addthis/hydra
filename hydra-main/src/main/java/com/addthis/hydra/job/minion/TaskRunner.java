@@ -31,11 +31,16 @@ import org.slf4j.LoggerFactory;
 class TaskRunner extends Thread {
     private static final Logger log = LoggerFactory.getLogger(TaskRunner.class);
 
-    private Minion minion;
     private boolean done;
+
+    private final Minion minion;
+    private final boolean meshQueue;
     private final Backoff backoff = new Backoff(1000, 5000);
 
-    public TaskRunner(Minion minion) {this.minion = minion;}
+    public TaskRunner(Minion minion, boolean meshQueue) {
+        this.minion = minion;
+        this.meshQueue = meshQueue;
+    }
 
     public void stopTaskRunner() {
         done = true;
@@ -44,7 +49,7 @@ class TaskRunner extends Thread {
 
     @Override public void run() {
         while (!done) {
-            if (Minion.meshQueue) {
+            if (meshQueue) {
                 try {
                     HostMessage hostMessage = minion.queuedHostMessages.take();
                     if (hostMessage.getMessageType() != CoreMessage.TYPE.CMD_TASK_KICK) {

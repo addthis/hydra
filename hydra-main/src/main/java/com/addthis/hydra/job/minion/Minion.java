@@ -281,8 +281,10 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
                 log.warn("cutover to live-everywhere tasks");
             }
             writeState();
-            runner = new TaskRunner(this);
-            runner.start();
+            if (queueType != null) {
+                runner = new TaskRunner(this, "mesh".equals(queueType));
+                runner.start();
+            }
             diskHealthCheck = new MinionWriteableDiskCheck(this);
             diskHealthCheck.startHealthCheckThread();
             sendHostStatus();
