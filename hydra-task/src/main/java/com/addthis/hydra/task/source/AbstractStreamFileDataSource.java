@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.validation.constraints.Min;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,9 +37,9 @@ import com.addthis.basis.util.Strings;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFactory;
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.codec.annotations.Time;
@@ -151,7 +153,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     @JsonProperty protected boolean processAllData;
 
     /** If non-null, then inject the filename into the bundle field using this field name. Default is null. */
-    @JsonProperty private String injectSourceName;
+    @JsonProperty private AutoField injectSourceName;
 
     /**
      * Number of bundles to attempt to pull from a file before returning it to the
@@ -184,6 +186,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
      * Number of worker threads that request data from the meshy source.
      * Default is either "dataSourceMeshy2.workers" configuration value or 2.
      */
+    @Min(1)
     @JsonProperty(required = true) private int workers;
 
     /**
@@ -234,7 +237,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     // State control
     private final LinkedBlockingQueue<Wrap> preOpened = new LinkedBlockingQueue<>();
     protected final AtomicBoolean done = new AtomicBoolean(false);
-    protected final AtomicBoolean exiting = new AtomicBoolean(false);
     protected final AtomicBoolean errored = new AtomicBoolean(false);
     private final AtomicBoolean shutdown = new AtomicBoolean(false);
     private CountDownLatch initialized = new CountDownLatch(1);
@@ -242,7 +244,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
     private BlockingQueue<Bundle> queue;
     private PageDB<SimpleMark> markDB;
-    private BundleField injectSourceField;
     private File markDirFile;
     private boolean useSimpleMarks = false;
     private boolean useLegacyStreamPath = false;
@@ -265,8 +266,8 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         if (queue != null) {
             boolean setDone = done.compareAndSet(false, true);
             boolean pushedTerm = queue.offer(termBundle);
-            log.info("initiating shutdown(). setDone={} done={} preOpened={} exiting={} pushedTerm={} queue={}",
-                    setDone, done.get(), preOpened.size(), exiting.get(), pushedTerm, queue.size());
+            log.info("initiating shutdown(). setDone={} done={} preOpened={} pushedTerm={} queue={}",
+                     setDone, done.get(), preOpened.size(), pushedTerm, queue.size());
         }
     }
 
@@ -289,12 +290,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     }
 
     @Override public void init() {
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                exiting.set(true);
-                shutdown();
-            }
-        });
         if (legacyMode != null) {
             magicMarksNumber = 0;
             useSimpleMarks = true;
@@ -324,21 +319,17 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        if (injectSourceName != null) {
-            injectSourceField = bundleFormat.getField(injectSourceName);
-        }
         if (shardTotal == null || shardTotal == 0) {
             shardTotal = config.nodeCount;
         }
         if (shards == null) {
             shards = config.calcShardList(shardTotal);
         }
-        source = getSource();
-        PersistentStreamFileSource persistentStreamFileSource = null;
-        if (source != null) {
-            persistentStreamFileSource = (PersistentStreamFileSource) source;
-        }
-        if (!processAllData && !hash && !(persistentStreamFileSource != null && persistentStreamFileSource.hasMod())) {
+        PersistentStreamFileSource persistentStreamFileSource = getSource();
+        source = persistentStreamFileSource;
+        if (!processAllData &&
+            !hash &&
+            !((persistentStreamFileSource != null) && persistentStreamFileSource.hasMod())) {
             log.error("possible source misconfiguration.  lacks both 'hash' and '{{mod}}'.  fix or set processAllData:true");
             throw new RuntimeException("Possible Source Misconfiguration");
         }
@@ -352,27 +343,17 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             if (hash) {
                 setSource(new StreamSourceHashed(source, shards, shardTotal, useLegacyStreamPath));
             }
-            log.info("buffering[capacity={};workers={};preopen={};marks={};maxSkip={};shards={}]", buffer, workers,
-                    preOpen, markDir, skipSourceExit, Strings.join(shards, ","));
+            log.info("buffering[capacity={};workers={};preopen={};marks={};maxSkip={};shards={}]",
+                     buffer, workers, preOpen, markDir, skipSourceExit, Strings.join(shards, ","));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
         queue = new LinkedBlockingQueue<>(buffer);
 
-        if (workers == 0) {
-            log.error("Either we failed to find any meshy sources or workers was set to 0. Shutting down.");
-            shutdown();
-        }
         runningThreadCountDownLatch = new CountDownLatch(workers);
-        /**
-         * It would be preferable if a new sourceWorker instance was
-         * constructed for each worker but this is not possible for
-         * SourceWorker to be a non-static inner class and
-         * we have static fields.
-         */
-        Runnable sourceWorker = new SourceWorker();
-        int workerId = workers;
-        while (workerId-- > 0) {
+
+        for (int i = 0; i < workers; i++) {
+            Runnable sourceWorker = new SourceWorker(i);
             workerThreadPool.execute(sourceWorker);
         }
     }
@@ -385,8 +366,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             log.info("Waiting up to {} seconds for outstanding threads to complete.",
                     latchTimeout);
             try {
-                success = runningThreadCountDownLatch.await(latchTimeout,
-                        TimeUnit.SECONDS);
+                success = runningThreadCountDownLatch.await(latchTimeout, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 log.warn("", e);
             }
@@ -532,7 +512,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             return in;
         }
 
-
         void close() throws IOException {
             if (!closed) {
                 input.close();
@@ -558,8 +537,8 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                     close();
                 } else {
                     mark.setIndex(mark.getIndex() + 1);
-                    if (injectSourceField != null) {
-                        next.setValue(injectSourceField, sourceName);
+                    if (injectSourceName != null) {
+                        injectSourceName.setValue(next, sourceName);
                     }
                 }
                 return next;
@@ -574,36 +553,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             }
             return null;
         }
-    }
-
-    private Wrap nextWrappedSource() throws IOException {
-        StreamFile stream = source.nextSource();
-        if (stream == null) {
-            return null;
-        }
-        return new Wrap(stream);
-    }
-
-    private boolean multiFill(Wrap wrap, int fillCount) throws IOException, InterruptedException {
-        for (int i = 0; i < fillCount; i++) {
-            Bundle next = wrap.next();
-            if (next == null) //is source exhausted?
-            {
-                return false;
-            }
-            // looks like we can drop a bundle on done == true
-            while (!queue.offer(next, 1, TimeUnit.SECONDS) && !done.get()) {
-            }
-            if (jmxMetrics) {
-                queueSizeHisto.update(queue.size());
-            }
-            // may get called multiple times but only first call matters
-            if (!localInitialized) {
-                initialized.countDown();
-                localInitialized = true;
-            }
-        }
-        return true;
     }
 
     @Override
@@ -635,7 +584,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                     return null;
                 }
                 if (pollCountdown > 0) {
-                    log.info("next polled null, retrying {} more times. done={} exiting={}", countdown, done.get(), exiting.get());
+                    log.info("next polled null, retrying {} more times. done={}", countdown, done.get());
                 }
                 log.info(fileStatsToString("null poll "));
             }
@@ -713,44 +662,15 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     }
 
     private class SourceWorker implements Runnable {
+        private final int workerId;
 
-        /**
-         * generateThreadIDs should be a static field but inner classes cannot have static fields.
-         */
-        private final AtomicInteger generateThreadIDs = new AtomicInteger(0);
-
-        private void fill(int threadID) throws Exception {
-            Wrap wrap = null;
-            try {
-                while (!done.get() && !exiting.get()) {
-                    wrap = preOpened.poll(); //take if immediately available
-                    if (wrap == null) {
-                        return; //exits worker thread
-                    }
-                    if (!multiFill(wrap, multiBundleReads)) {
-                        wrap = nextWrappedSource();
-                    }
-                    if (wrap != null) { //May be null from nextWrappedSource -> decreases size of preOpened
-                        preOpened.put(wrap);
-                    }
-                    wrap = null;
-                }
-                log.debug("[{}] read", threadID);
-            } finally {
-                if (wrap != null) {
-                    try {
-                        wrap.close();
-                    } catch (Exception ex) {
-                        log.warn("", ex);
-                    }
-                }
-            }
+        public SourceWorker(int workerId) {
+            this.workerId = workerId;
         }
 
         @Override
         public void run() {
-            int threadID = generateThreadIDs.incrementAndGet();
-            log.debug("worker {} starting", threadID);
+            log.debug("worker {} starting", workerId);
             try {
                 // preopen a number of sources
                 int preOpenSize = Math.max(1, preOpen / workers);
@@ -764,28 +684,79 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 }
 
                 //fill already has a while loop that checks done
-                fill(threadID);
+                fill();
             } catch (Exception e) {
                 log.warn("Exception while running data source meshy worker thread.", e);
                 if (!IGNORE_MARKS_ERRORS) {
                     errored.set(true);
                 }
             } finally {
-                log.debug("worker {} exiting done={}", threadID, done);
+                log.debug("worker {} exiting done={}", workerId, done);
                 runningThreadCountDownLatch.countDown();
 
-                /**
-                 * This expression can evaluate to true more than once.
-                 * It is OK because the shutdown() method has a guard
-                 * to ensure it is invoked at most once.
-                 */
+                // This expression can evaluate to true more than once. It is OK because the shutdown()
+                // method has a guard to ensure it is invoked at most once.
                 if (runningThreadCountDownLatch.getCount() == 0) {
-                    log.info(
-                            "No more workers are running. One or more threads will attempt to " +
-                            "call shutdown.");
+                    log.info("No more workers are running. One or more threads will attempt to call shutdown.");
                     shutdown();
                 }
             }
+        }
+
+        private Wrap nextWrappedSource() throws IOException {
+            StreamFile stream = source.nextSource();
+            if (stream == null) {
+                return null;
+            }
+            return new Wrap(stream);
+        }
+
+        private void fill() throws Exception {
+            Wrap wrap = null;
+            try {
+                while (!done.get()) {
+                    wrap = preOpened.poll(); //take if immediately available
+                    if (wrap == null) {
+                        return; //exits worker thread
+                    }
+                    if (!multiFill(wrap, multiBundleReads)) {
+                        wrap = nextWrappedSource();
+                    }
+                    if (wrap != null) { //May be null from nextWrappedSource -> decreases size of preOpened
+                        preOpened.put(wrap);
+                    }
+                    wrap = null;
+                }
+                log.debug("[{}] read", workerId);
+            } finally {
+                if (wrap != null) {
+                    try {
+                        wrap.close();
+                    } catch (Exception ex) {
+                        log.warn("", ex);
+                    }
+                }
+            }
+        }
+
+        private boolean multiFill(Wrap wrap, int fillCount) throws IOException, InterruptedException {
+            for (int i = 0; i < fillCount; i++) {
+                Bundle next = wrap.next();
+                // is source exhausted?
+                if (next == null) {
+                    return false;
+                }
+                queue.put(next);
+                if (jmxMetrics) {
+                    queueSizeHisto.update(queue.size());
+                }
+                // may get called multiple times but only first call matters
+                if (!localInitialized) {
+                    initialized.countDown();
+                    localInitialized = true;
+                }
+            }
+            return true;
         }
     }
 }

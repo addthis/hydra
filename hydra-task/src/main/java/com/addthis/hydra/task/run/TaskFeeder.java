@@ -15,8 +15,6 @@ package com.addthis.hydra.task.run;
 
 import javax.annotation.Nullable;
 
-import java.io.IOException;
-
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -27,7 +25,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import java.text.DecimalFormat;
 
-import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
@@ -50,33 +47,28 @@ import org.slf4j.LoggerFactory;
  * reads TaskDataSource list defined in TreeMapJob (config) using a
  * defined set of processor threads that push bundles to TreeMapper.
  */
-public final class TaskFeeder extends Thread {
+public final class TaskFeeder implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(TaskFeeder.class);
     private static final Bundle TERM_BUNDLE = new KVBundle();
-    private static final boolean exit = Parameter.boolValue("task.exit", true);
-    private static final long maxRead = Parameter.longValue("task.read.max", 0);
-    private static final long maxProcess = Parameter.longValue("task.proc.max", 0);
     private static final DecimalFormat timeFormat = new DecimalFormat("#,###.00");
     private static final DecimalFormat countFormat = new DecimalFormat("#,###");
     private static final int QUEUE_DEPTH = Parameter.intValue("task.queue.depth", 100);
     private static final int stealThreshold = Parameter.intValue("task.queue.worksteal.threshold", 50);
     private static final boolean shouldSteal = Parameter.boolValue("task.worksteal", false);
-    private static final boolean interruptOnExit = Parameter.boolValue("task.exit.interrupt", false);
 
-    private boolean exiting = !Parameter.boolValue("task.feed", true);
-    private final AtomicBoolean terminated = new AtomicBoolean(false);
+    // state control
+    private final AtomicBoolean errored = new AtomicBoolean(false);
+
     private final long start = System.currentTimeMillis();
     private final BundleField shardField;
 
-    private TaskDataSource source;
+    private final TaskDataSource source;
     private final TaskRunTarget task;
     private final int feeders;
 
     private final Thread[] threads;
     private final BlockingQueue<Bundle>[] queues;
-    private final AtomicBoolean errored;
-    private final AtomicBoolean closed = new AtomicBoolean(false);
     private final AtomicInteger processed = new AtomicInteger(0);
     private final AtomicLong totalReads = new AtomicLong(0);
 
@@ -85,14 +77,11 @@ public final class TaskFeeder extends Thread {
     private final Histogram modHistrogram;
 
     public TaskFeeder(TaskRunTarget task, int feeders) {
-        super("SourceReader");
-
         stealAttemptMeter = Metrics.newMeter(getClass(), "stealAttemptRate", "steals", TimeUnit.SECONDS);
         stealSuccessMeter = Metrics.newMeter(getClass(), "stealSuccessRate", "steals", TimeUnit.SECONDS);
         modHistrogram = Metrics.newHistogram(getClass(), "mod");
 
         this.source = task.getSource();
-        this.errored = new AtomicBoolean();
         this.task = task;
         this.feeders = feeders;
 
@@ -106,11 +95,6 @@ public final class TaskFeeder extends Thread {
         }
     }
 
-    private void pushQueue(int queueNum, Bundle item) throws InterruptedException {
-        BlockingQueue<Bundle> queue = queues[queueNum];
-        queue.put(item);
-    }
-
     @Override public void run() {
         log.info("starting {} thread(s) for src={}", feeders, source);
         for (Thread thread : threads) {
@@ -119,71 +103,64 @@ public final class TaskFeeder extends Thread {
 
         try {
             if (source.isEnabled()) {
-                while (!errored.get() && fillBuffer()) {
-                    ;
+                while (fillBuffer()) {
                 }
             }
-            if (errored.get()) {
-                log.warn("fill buffer exited in error state");
-            } else {
-                log.debug("fill buffer exited");
-            }
-            joinProcessors();
-            log.info("exit {} threads. bundles read {} processed {}", threads.length, countFormat.format(totalReads),
-                     countFormat.format(processed));
             closeStream();
-            while (!exit && !terminated.get()) {
-                trySleep(1000);
-            }
+            joinProcessors();
+            log.info("exit {} threads. bundles read {} processed {}",
+                     feeders, countFormat.format(totalReads), countFormat.format(processed));
             task.taskComplete();
             // critical to get any file meta data written before process exits
             MuxFileDirectoryCache.waitForWriteClosure();
-        } catch (Throwable e) {
-            errored.set(true);
-            closed.set(true);
-            log.warn("task feeder exception: ", e);
+        } catch (Throwable t) {
+            handleUncaughtThrowable(t);
         }
-        if (errored.get()) {
-            log.warn("[{}] exited with error", Thread.currentThread().getName());
-            if (!terminated.get()) {
-                System.exit(1);
-            }
-        } else {
-            log.info("[{}] exited", Thread.currentThread().getName());
+        log.info("[{}] exited", Thread.currentThread().getName());
+    }
+
+    /**
+     * Immediately halting is the best way we have of ensuring errors are reported without a significantly
+     * more involved system.
+     */
+    private void handleUncaughtThrowable(Throwable t) {
+        if (errored.compareAndSet(false, true)) {
+            log.error("unrecoverable error in task feeder or one of its mapper threads. immediately halting jvm", t);
+            Runtime.getRuntime().halt(1);
         }
     }
 
-    private static void trySleep(long time) {
+    private boolean fillBuffer() {
+        // iterate over inputs and execute default target
         try {
-            Thread.sleep(time);
-        } catch (InterruptedException ex) {
-        }
-    }
-
-    public synchronized void terminate() {
-        if (!terminated.get()) {
-            log.info("terminating");
-            terminated.set(true);
-            exiting = true;
-            if (interruptOnExit) {
-                for (Thread thread : threads) {
-                    thread.interrupt();
+            Bundle p = source.next();
+            if (p == null) {
+                log.info("exiting on null bundle from {}", source);
+                return false;
+            }
+            totalReads.incrementAndGet();
+            int hash = p.hashCode();
+            if (shardField != null) {
+                String val = ValueUtil.asNativeString(p.getValue(shardField));
+                if (!Strings.isEmpty(val)) {
+                    hash = PluggableHashFunction.hash(val);
                 }
-                this.interrupt();
             }
+            int mod = Math.abs(hash % queues.length);
+            modHistrogram.update(mod);
+            pushQueue(mod, p);
+            return true;
+        } catch (NoSuchElementException ignored) {
+            log.info("exiting on premature stream termination");
+        } catch (InterruptedException ignored) {
+            log.info("exiting on interrupt (probably max runtime)");
         }
+        return false;
     }
 
-    public void waitExit() {
-        // if there was an error, this exit was likely caused by this class
-        // and a join would cause a deadlock
-        if (!errored.get() && !closed.getAndSet(true)) {
-            try {
-                join();
-            } catch (InterruptedException e) {
-                log.warn("", e);
-            }
-        }
+    private void pushQueue(int queueNum, Bundle item) throws InterruptedException {
+        BlockingQueue<Bundle> queue = queues[queueNum];
+        queue.put(item);
     }
 
     private void joinProcessors() {
@@ -193,21 +170,6 @@ public final class TaskFeeder extends Thread {
                 pushQueue(i, TERM_BUNDLE);
             } catch (InterruptedException e) {
                 log.error("", e);
-            }
-        }
-        if (terminated.get()) {
-            long mark = JitterClock.globalTime();
-            long left = 10000;
-            for (Thread thread : threads) {
-                try {
-                    thread.join(left);
-                    left = Math.max(1, 10000 - (JitterClock.globalTime() - mark));
-                } catch (InterruptedException e) {
-                    log.warn("", e);
-                }
-            }
-            for (Thread thread : threads) {
-                thread.interrupt();
             }
         }
         for (Thread thread : threads) {
@@ -220,65 +182,22 @@ public final class TaskFeeder extends Thread {
     }
 
     private void closeStream() {
-        if (source != null) {
-            double totalTime = ((System.currentTimeMillis() - start)) / 1000.0;
-            log.info(new StringBuilder().append("closing stream ")
-                                        .append(source.getClass().getSimpleName())
-                                        .append(" after ")
-                                        .append(timeFormat.format(totalTime))
-                                        .append("s [bundles read ")
-                                        .append(countFormat.format(totalReads))
-                                        .append(" (")
-                                        .append(countFormat.format((double) totalReads.get() / totalTime))
-                                        .append("/s) processed ")
-                                        .append(countFormat.format(processed))
-                                        .append(" (")
-                                        .append(countFormat.format((double) processed.get() / totalTime))
-                                        .append("/s) ]")
-                                        .toString());
-            source.close();
-            source = null;
-        }
-    }
-
-    private boolean fillBuffer() throws IOException {
-        // iterate over inputs and execute default target
-        if (exiting) {
-            closeStream();
-            return false;
-        }
-        try {
-            Bundle p = source.next();
-            if (p == null) {
-                log.warn("stream {} returned null packet", source);
-                return false;
-            }
-            totalReads.incrementAndGet();
-            if ((maxRead > 0) && (totalReads.get() >= maxRead)) {
-                terminate();
-            }
-            int hash = p.hashCode();
-            if (shardField != null) {
-                String val = ValueUtil.asNativeString(p.getValue(shardField));
-                if (!Strings.isEmpty(val)) {
-                    hash = PluggableHashFunction.hash(val);
-                }
-            }
-            int mod = Math.abs(hash % queues.length);
-            modHistrogram.update(mod);
-            pushQueue(mod, p);
-            return true;
-        } catch (NoSuchElementException ex) {
-            exiting = true;
-            log.warn("exiting on premature stream termination");
-        } catch (InterruptedException interruptedException) {
-            exiting = true;
-        } catch (Exception ex) {
-            log.warn("Exception during fillBuffer(), setting errored state and exiting: {}", ex, ex);
-            errored.set(true);
-            exiting = true;
-        }
-        return false;
+        double totalTime = (System.currentTimeMillis() - start) / 1000.0;
+        log.info(new StringBuilder().append("closing stream ")
+                                    .append(source.getClass().getSimpleName())
+                                    .append(" after ")
+                                    .append(timeFormat.format(totalTime))
+                                    .append("s [bundles read ")
+                                    .append(countFormat.format(totalReads))
+                                    .append(" (")
+                                    .append(countFormat.format((double) totalReads.get() / totalTime))
+                                    .append("/s) processed ")
+                                    .append(countFormat.format(processed))
+                                    .append(" (")
+                                    .append(countFormat.format((double) processed.get() / totalTime))
+                                    .append("/s) ]")
+                                    .toString());
+        source.close();
     }
 
     private static class MapperTask implements Runnable {
@@ -299,17 +218,11 @@ public final class TaskFeeder extends Thread {
                         return;
                     }
                     taskFeeder.task.process(next);
-                    long proctotal = taskFeeder.processed.incrementAndGet();
-                    /* optional cap on processing */
-                    if (maxProcess > 0 && proctotal >= maxProcess) {
-                        taskFeeder.terminate();
-                        return;
-                    }
+                    taskFeeder.processed.incrementAndGet();
                 } catch (InterruptedException e) {
                     return;
-                } catch (Exception ex) {
-                    taskFeeder.errored.set(true);
-                    log.error("", ex);
+                } catch (Throwable t) {
+                    taskFeeder.handleUncaughtThrowable(t);
                 }
             }
         }

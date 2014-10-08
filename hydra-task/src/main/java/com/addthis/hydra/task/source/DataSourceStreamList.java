@@ -169,17 +169,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
 
     public abstract StreamFileSource getSourceList(Integer[] shards);
 
-    protected DataSourceStreamList() {
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                exiting = true;
-                finished = true;
-                peekerService.shutdownNow();
-                cacheFillerService.shutdownNow();
-            }
-        });
-    }
+    protected DataSourceStreamList() {}
 
     @Override
     public void init() {

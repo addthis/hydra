@@ -148,7 +148,7 @@ public class StreamMapper implements StreamEmitter, TaskRunTarget, TaskRunnable 
     private final AtomicBoolean emitGate = new AtomicBoolean(false);
     private MBeanRemotingSupport jmxremote;
     private long lastMark;
-    private TaskFeeder    feeder;
+    private Thread feeder;
 
     // metrics
     private final Meter      processedMeterMetric  =
@@ -294,14 +294,14 @@ public class StreamMapper implements StreamEmitter, TaskRunTarget, TaskRunnable 
             }
         }
         log.info("[init]");
-        feeder = new TaskFeeder(this, threads);
+        feeder = new Thread(new TaskFeeder(this, threads),"SourceReader");
         feeder.start();
     }
 
     @Override
-    public void close() {
-        feeder.terminate();
-        feeder.waitExit();
+    public void close() throws InterruptedException {
+        feeder.interrupt();
+        feeder.join();
     }
 
     @Override
