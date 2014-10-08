@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.minion;
 
+import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
@@ -54,6 +56,7 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.config.Configs;
 import com.addthis.codec.json.CodecJSON;
+import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.job.JobTaskErrorCode;
 import com.addthis.hydra.job.mq.CommandTaskKick;
 import com.addthis.hydra.job.mq.CoreMessage;
@@ -74,7 +77,6 @@ import com.addthis.hydra.mq.RabbitMessageConsumer;
 import com.addthis.hydra.mq.RabbitMessageProducer;
 import com.addthis.hydra.mq.RabbitQueueingConsumer;
 import com.addthis.hydra.mq.ZKMessageProducer;
-import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
 import com.addthis.meshy.MeshyClient;
@@ -118,7 +120,6 @@ import org.slf4j.LoggerFactory;
 public class Minion implements MessageListener, Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Minion.class);
 
-    static final boolean meshQueue = Parameter.boolValue("queue.mesh", false);
     private static final String meshHost = Parameter.value("mesh.host", "localhost");
     private static final int meshPort = Parameter.intValue("mesh.port", 5000);
     private static final int meshRetryTimeout = Parameter.intValue("mesh.retry.timeout", 5000);
@@ -233,7 +234,8 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     }
 
     @JsonCreator
-    private Minion(@JsonProperty("dataDir") File rootDir) throws Exception {
+    private Minion(@JsonProperty("dataDir") File rootDir,
+                   @Nullable @JsonProperty("queueType") String queueType) throws Exception {
         this.rootDir = rootDir;
         nextPort = minJobPort;
         startTime = System.currentTimeMillis();
@@ -273,7 +275,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         new HostMetricUpdater(this);
         try {
             joinGroup();
-            connectToMQ();
+            connectToMQ(queueType);
             updateJobsMeta(rootDir);
             if (liveEverywhereMarkerFile.createNewFile()) {
                 log.warn("cutover to live-everywhere tasks");
@@ -317,10 +319,10 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         }
     }
 
-    private void connectToMQ() throws Exception {
+    private void connectToMQ(@Nullable String queueType) throws Exception {
         zkBatchControlProducer = new ZKMessageProducer(getZkClient());
-        if (meshQueue) {
-            log.info("Queueing via Mesh");
+        if ("mesh".equals(queueType)) {
+            log.info("[init] connecting to mesh message queue");
             final AtomicBoolean up = new AtomicBoolean(false);
             mesh = new MeshyClientConnector(meshHost, meshPort, 1000, meshRetryTimeout) {
                 @Override
@@ -359,8 +361,14 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
             });
             batchControlConsumer = new MeshMessageConsumer(mesh.getClient(), "CSBatchControl", uuid).addRoutingKey(HostMessage.ALL_HOSTS);
             batchControlConsumer.addMessageListener(Minion.this);
-        } else {
+        } else if ("rabbit".equals(queueType)) {
+            log.info("[init] connecting to rabbit message queue");
             connectToRabbitMQ();
+        } else if (queueType == null) {
+            log.info("[init] skipping message queue");
+        } else {
+            throw new IllegalArgumentException("queueType (" + queueType +
+                                               ") must be either a valid message queue type or null");
         }
     }
 
