@@ -708,11 +708,10 @@ public class JobsResource {
         try {
             IJob job = spawn.getJob(id);
             if (job != null) {
-                return Response.ok(spawn.fixTaskDir(id, node, false, false)).build();
+                return Response.ok(spawn.fixTaskDir(id, node, false, false).toString()).build();
             } else {
                 return Response.status(Response.Status.NOT_FOUND).header("topic", "No Job").build();
             }
-
         } catch (Exception ex) {
             return buildServerError(ex);
         }
