@@ -22,44 +22,36 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 
 import com.addthis.basis.jmx.MBeanRemotingSupport;
 import com.addthis.basis.util.JitterClock;
-import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
-import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.filter.bundle.BundleFilterDebugPrint;
-import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.data.util.TimeField;
 import com.addthis.hydra.task.output.TaskDataOutput;
 import com.addthis.hydra.task.run.TaskExitState;
-import com.addthis.hydra.task.run.TaskFeeder;
-import com.addthis.hydra.task.run.TaskRunTarget;
 import com.addthis.hydra.task.run.TaskRunnable;
 import com.addthis.hydra.task.source.TaskDataSource;
 
 import com.google.common.io.Files;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Meter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
- * <p>This is <span class="hydra-summary">the most common form of Hydra job (either a split job or a map job)</span>. It is specified with
- * <code>type : "map"</code>.</p>
+ * <p>This is <span class="hydra-summary">the most common form of Hydra job (either a split job or a map job)</span>.
+ * It is specified with {@code type : "map"}.</p>
  * <p>There are two common use cases of these jobs:</p>
  * <ul>
  * <li><p>Split jobs. These jobs take in lines of data, such as log files, and emit new lines.
@@ -67,7 +59,7 @@ import org.slf4j.LoggerFactory;
  * or drop lines that fail to some predicate, or create multiple derived lines from each input,
  * or make all strings lowercase, or other arbitrary transformations.
  * But it's always lines in, lines out.</li>
- * <li>TreeBuilder (or Map) jobs. These jobs take in log lines of input,
+ * <li>Tree jobs. These jobs take in log lines of input,
  * such as just emitted by a split job, and build a tree representation of the data.
  * This hierarchical databases can then be explored through the distribute Hydra query system.</li>
  * </ul>
@@ -91,188 +83,66 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name map
  */
-public class StreamMapper implements StreamEmitter, TaskRunTarget, TaskRunnable {
-
+public class StreamMapper implements StreamEmitter, TaskRunnable {
     private static final Logger log = LoggerFactory.getLogger(StreamMapper.class);
 
-    private static final boolean          emitTaskState =
-            Parameter.boolValue("task.mapper.emitState", true);
-    private static final SimpleDateFormat dateFormat    =
-            new SimpleDateFormat(Parameter.value("task.mapper.dateFormat", "yyMMdd-HHmmss"));
+    /** The data source for this job. */
+    @JsonProperty(required = true) private TaskDataSource source;
 
-    /**
-     * The data source for this job.
-     */
-    @FieldConfig(codable = true, required = true)
-    private TaskDataSource source;
+    /** The transformations to apply onto the data. */
+    @JsonProperty private MapDef map;
 
-    /**
-     * The transformations to apply onto the data.
-     */
-    @FieldConfig(codable = true)
-    private MapDef map;
-
-    /**
-     * The data sink for emitting the result of the transformations.
-     */
-    @FieldConfig(codable = true, required = true)
-    private TaskDataOutput output;
+    /** The data sink for emitting the result of the transformations. */
+    @JsonProperty(required = true) private TaskDataOutput output;
 
     /**
      * Allow more flexible stream builders.  For example, asynchronous or builders
      * where one or more bundles roll up into a single bundle or a single bundle causes
      * the emission of multiple bundles.
      */
-    @FieldConfig(codable = true)
-    private StreamBuilder builder;
+    @JsonProperty private StreamBuilder builder;
 
-    /**
-     * Print to the console statistics while processing the data. Default is <code>true</code>.
-     */
-    @FieldConfig(codable = true)
-    private boolean stats = true;
+    /** Print to the console statistics while processing the data. Default is {@code true}. */
+    @JsonProperty private boolean stats = true;
 
-    /**
-     * Optionally extract bundle time and print average of bundles processed since last log line
-     */
-    @FieldConfig(codable = true)
-    private TimeField timeField;
+    /** Optionally extract bundle time and print average of bundles processed since last log line */
+    @JsonProperty private TimeField timeField;
 
-    @FieldConfig
-    private boolean enableJmx = Parameter.boolValue("split.minion.usejmx", true);
-
-    @FieldConfig(required = true)
-    private int threads;
+    @JsonProperty(required = true) private int threads;
+    @JsonProperty private boolean enableJmx;
+    @JsonProperty private boolean emitTaskState;
+    @JsonProperty private SimpleDateFormat dateFormat;
 
     private final AtomicLong totalEmit = new AtomicLong(0);
+    private final AtomicLong bundleTimeSum = new AtomicLong(0);
     private final AtomicBoolean emitGate = new AtomicBoolean(false);
+
     private MBeanRemotingSupport jmxremote;
     private long lastMark;
     private Thread feeder;
 
     // metrics
-    private final Meter      processedMeterMetric  =
+    private final Meter   processedMeterMetric  =
             Metrics.newMeter(getClass(), "streamMapper", "processedMeter", TimeUnit.SECONDS);
-    private final Counter    inputCountMetric      = Metrics.newCounter(getClass(), "inputCount");
-    private final Counter    outputCountMetric     = Metrics.newCounter(getClass(), "outputCount");
-    private final Counter    totalInputCountMetric =
-            Metrics.newCounter(getClass(), "totalInputCount");
-    private final AtomicLong bundleTimeSum         = new AtomicLong(0);
-
-    /**
-     * This section defines the transformations to apply onto the data.
-     * <p/>
-     * <p>The {@link #fields fields} section defines how the fields of the input source
-     * are transformed into a mapped bundle. The {@link #filterIn filterIn} filter is applied
-     * before the fields transformation. The {@link #filterOut filterOut} filter is applied
-     * after the fields transformation. filterIn can be used to improve job performance
-     * by eliminating unneeded records so that they do not need to be transformed.</p>
-     * <p/>
-     * <p>To specify a series of filters for the filterIn or filterOut use
-     * a {@link com.addthis.hydra.data.filter.bundle.BundleFilterChain chain} bundle filter.</p>
-     * <p/>
-     * <p>Example:</p>
-     * <pre>map:{
-     *    filterIn: {op:"chain", filter:[
-     *       {op:"field", from:"TIME", filter:{op:"chain", filter:[
-     *          {op:"empty", not:true},
-     *          {op:"require", match:["[0-9]{13}"]},
-     *       ]}},
-     *    ]},
-     *    fields:[
-     *       {from:"TIME", to:"TIME"},
-     *       {from:"SOURCE", to:"SOURCE"},
-     *       {from:"QUERY_PARAMS"},
-     *    ],
-     *    filterOut:{op:"chain", filter:[
-     *       {op:"time", src:{field:"TIME", format:"native"},
-     *             dst:{field:"DATE", format:"yyMMdd-HHmmss", timeZone:"America/New_York"}},
-     *       {op:"field", from:"DATE", to:"DATE_YMD", filter:{op:"slice", to:6}},
-     *    ]}
-     * }</pre>
-     *
-     * @user-reference
-     */
-    public static final class MapDef implements Codable {
-
-        /**
-         * The filter to apply before field transformation.
-         */
-        @FieldConfig(codable = true)
-        private BundleFilter filterIn;
-
-        /**
-         * The filter to apply after field transformation.
-         */
-        @FieldConfig(codable = true)
-        private BundleFilter filterOut;
-
-        /**
-         * The mapping of fields from the input source into the bundle.
-         */
-        @FieldConfig(codable = true)
-        private FieldFilter[] fields;
-    }
-
-    /**
-     * This section specifies how fields of the input source are transformed into a mapped bundle.
-     * <p/>
-     * <p>Fields are moved from a specified field in the job {@link StreamMapper#source source}
-     * to a destination field in the mapped bundle. By default null values are not written into
-     * the mapped bundle. This behavior can be changed by setting the toNull field to true.</p>
-     * <p/>
-     * <p>Example:</p>
-     * <pre>fields:[
-     *    {from:"TIME", to:"TIME"},
-     *    {from:"SOURCE", to:"SOURCE"},
-     * ]</pre>
-     *
-     * @user-reference
-     */
-    public static final class FieldFilter implements Codable {
-
-        /**
-         * The name of the bundle field source. This is required.
-         */
-        @FieldConfig(required = true)
-        private AutoField from;
-
-        /**
-         * The name of the bundle field destination.
-         */
-        @FieldConfig(required = true)
-        private AutoField to;
-
-        /**
-         * Optionally apply a filter onto the field.
-         */
-        @FieldConfig
-        private ValueFilter filter;
-
-        /**
-         * If true then emit null values to the destination field. The default is false.
-         */
-        @FieldConfig
-        private boolean toNull;
-    }
+    private final Counter inputCountMetric      = Metrics.newCounter(getClass(), "inputCount");
+    private final Counter outputCountMetric     = Metrics.newCounter(getClass(), "outputCount");
+    private final Counter totalInputCountMetric = Metrics.newCounter(getClass(), "totalInputCount");
 
     @Override
     public void start() {
-        if (getOutput() == null) {
+        if (output == null) {
             throw new RuntimeException("missing output definition");
         }
         if (map == null) {
             map = new MapDef();
         }
-        getSource().init();
-        getOutput().init();
+        source.init();
+        output.init();
         if (builder != null) {
             builder.init();
         }
         if (enableJmx) {
             try {
-                //          jmxname = new ObjectName("com..hydra:type=Hydra,node=" + queryPort);
-                //ManagementFactory.getPlatformMBeanServer().registerMBean(mapstats, jmxname);
                 ServerSocket ss = new ServerSocket();
                 ss.setReuseAddress(true);
                 ss.bind(null);
@@ -294,7 +164,7 @@ public class StreamMapper implements StreamEmitter, TaskRunTarget, TaskRunnable 
             }
         }
         log.info("[init]");
-        feeder = new Thread(new TaskFeeder(this, threads),"TaskFeeder");
+        feeder = new Thread(new MapFeeder(this, source, threads),"MapFeeder");
         feeder.start();
     }
 
@@ -302,27 +172,26 @@ public class StreamMapper implements StreamEmitter, TaskRunTarget, TaskRunnable 
     public void close() throws InterruptedException {
         feeder.interrupt();
         feeder.join();
+        if (jmxremote != null) {
+            try {
+                jmxremote.stop();
+                jmxremote = null;
+            } catch (IOException e)  {
+                log.error("", e);
+            }
+        }
         log.info("Map Task Complete");
-    }
-
-    @Override
-    public TaskDataSource getSource() {
-        return source;
-    }
-
-    public TaskDataOutput getOutput() {
-        return output;
     }
 
     private Bundle mapBundle(Bundle in) {
         if (map.fields == null) {
-            Bundle out = getOutput().createBundle();
+            Bundle out = output.createBundle();
             for (BundleField bundleField : in) {
                 out.setValue(out.getFormat().getField(bundleField.getName()), in.getValue(bundleField));
             }
             return out;
         }
-        Bundle out = getOutput().createBundle();
+        Bundle out = output.createBundle();
         for (int i = 0; i < map.fields.length; i++) {
             ValueObject inVal = map.fields[i].from.getValue(in);
             if (map.fields[i].filter != null) {
@@ -335,20 +204,16 @@ public class StreamMapper implements StreamEmitter, TaskRunTarget, TaskRunnable 
         return out;
     }
 
-    /**
-     * called directly or from builder
-     */
-    @Override
-    public void emit(Bundle bundle) {
+    /** called directly or from builder */
+    @Override public void emit(Bundle bundle) {
         log.debug("output: {}", bundle);
-        getOutput().send(bundle);
+        output.send(bundle);
         outputCountMetric.inc();
         processedMeterMetric.mark();
         totalEmit.incrementAndGet();
         if (timeField != null) bundleTimeSum.addAndGet(getBundleTime(bundle) >> 8);
     }
 
-    @Override
     public void process(Bundle bundle) {
         try {
             log.debug("input: {}", bundle);
@@ -379,31 +244,31 @@ public class StreamMapper implements StreamEmitter, TaskRunTarget, TaskRunnable 
                     if (timeField != null) {
                         long avg_t = (bundleTimeSum.getAndSet(0) / Math.max(1,out)) << 8;
                         log.info("bundleTime={} in={} out={} drop={} ms={} rate={} total={}",
-                                dateFormat.format(avg_t),
-                                in, out, Math.max(in - out, 0), time - lastMark,
-                                Math.round(processedMeterMetric.oneMinuteRate()),
-                                totalEmit);
+                                 dateFormat.format(avg_t),
+                                 in, out, Math.max(in - out, 0), time - lastMark,
+                                 Math.round(processedMeterMetric.oneMinuteRate()),
+                                 totalEmit);
                     } else {
                         log.info("in={} out={} drop={} ms={} rate={} total={}",
-                                in, out, Math.max(in - out, 0), time - lastMark,
-                                Math.round(processedMeterMetric.oneMinuteRate()),
-                                totalEmit);
+                                 in, out, Math.max(in - out, 0), time - lastMark,
+                                 Math.round(processedMeterMetric.oneMinuteRate()),
+                                 totalEmit);
                     }
                 }
                 lastMark = time;
                 emitGate.set(false);
             }
         } catch (DataChannelError ex) {
-            getOutput().sourceError(ex);
+            output.sourceError(ex);
             throw ex;
         } catch (RuntimeException ex) {
             log.warn("runtime error :: {}", BundleFilterDebugPrint.formatBundle(bundle));
-            getOutput().sourceError(DataChannelError.promote(ex));
+            output.sourceError(DataChannelError.promote(ex));
             throw ex;
         } catch (Exception ex) {
             log.warn("handling error :: {}", BundleFilterDebugPrint.formatBundle(bundle));
             DataChannelError err = DataChannelError.promote(ex);
-            getOutput().sourceError(err);
+            output.sourceError(err);
             throw err;
         }
     }
@@ -428,54 +293,21 @@ public class StreamMapper implements StreamEmitter, TaskRunTarget, TaskRunnable 
         long bundleTime = JitterClock.globalTime();
         ValueObject vo = bundle.getValue(bundle.getFormat().getField(timeField.getField()));
         if (vo == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("missing time " + timeField.getField() + " in [" + bundle.getCount() + "] --> " + bundle);
-            }
+            log.debug("missing time {} in [{}] --> {}", timeField.getField(), bundle.getCount(), bundle);
         } else {
             bundleTime = timeField.toUnix(vo);
         }
         return bundleTime;
     }
 
-    static final String[] padOpt = {"K", "M", "B", "T"};
-    static final DecimalFormat[] padDCO = {new DecimalFormat("0.00"), new DecimalFormat("0.0"), new DecimalFormat("0")};
-    /**
-     * number right pad utility for log data
-     */
-    private static String pad(long v, int chars) {
-        String sv = Long.toString(v);
-        double div = 1000d;
-        int indx = 0;
-        outer:
-        while (sv.length() > chars - 1 && indx < padOpt.length) {
-            for (DecimalFormat dc : padDCO) {
-                sv = dc.format(v / div).concat(padOpt[indx]);
-                if (sv.length() <= chars - 1) {
-                    break outer;
-                }
-            }
-            div *= 1000;
-            indx++;
-        }
-        return Strings.padright(sv, chars);
-    }
-
-    @Override
+    /** called on process exit */
     public void taskComplete() {
         if (builder != null) {
             builder.streamComplete(this);
             log.info("[streamComplete] builder");
         }
-        getOutput().sendComplete();
+        output.sendComplete();
         log.info("[taskComplete]");
         emitTaskExitState();
-        if (jmxremote != null) {
-            try {
-                jmxremote.stop();
-                jmxremote = null;
-            } catch (IOException e)  {
-                log.error("", e);
-            }
-        }
     }
 }

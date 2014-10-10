@@ -56,6 +56,7 @@ import com.addthis.hydra.task.stream.StreamSourceFiltered;
 import com.addthis.hydra.task.stream.StreamSourceHashed;
 
 import com.google.common.base.Objects;
+import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -567,7 +568,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                     throw new RuntimeException("source workers ran into problems");
                 }
                 long startTime = jmxMetrics ? System.currentTimeMillis() : 0;
-                Bundle next = queue.poll(pollInterval, TimeUnit.MILLISECONDS);
+                Bundle next = pollUninterruptibly(queue, pollInterval, TimeUnit.MILLISECONDS);
                 if (jmxMetrics) {
                     readTimer.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
                 }
@@ -593,7 +594,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             }
             return null;
         } catch (Exception ex) {
-            throw new DataChannelError(ex);
+            throw Throwables.propagate(ex);
         }
     }
 
@@ -625,7 +626,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 Bundle peek = queue.peek();
                 return peek == termBundle ? null : peek;
             } catch (Exception ex) {
-                throw new DataChannelError(ex);
+                throw Throwables.propagate(ex);
             }
         }
         return null;
@@ -757,6 +758,26 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 }
             }
             return true;
+        }
+    }
+
+    private static <T> T pollUninterruptibly(BlockingQueue<T> queue, long pollFor, TimeUnit unit) {
+        boolean interrupted = false;
+        try {
+            long remainingNanos = unit.toNanos(pollFor);
+            long end = System.nanoTime() + remainingNanos;
+            while (true) {
+                try {
+                    return queue.poll(remainingNanos, TimeUnit.NANOSECONDS);
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                    remainingNanos = end - System.nanoTime();
+                }
+            }
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 }

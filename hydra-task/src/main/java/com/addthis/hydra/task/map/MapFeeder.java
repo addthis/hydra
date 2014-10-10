@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.task.run;
+package com.addthis.hydra.task.map;
 
 import javax.annotation.Nullable;
 
@@ -36,6 +36,8 @@ import com.addthis.hydra.common.hash.PluggableHashFunction;
 import com.addthis.hydra.task.source.TaskDataSource;
 import com.addthis.muxy.MuxFileDirectoryCache;
 
+import com.google.common.util.concurrent.Uninterruptibles;
+
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Meter;
@@ -43,13 +45,9 @@ import com.yammer.metrics.core.Meter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * reads TaskDataSource list defined in TreeMapJob (config) using a
- * defined set of processor threads that push bundles to TreeMapper.
- */
-public final class TaskFeeder implements Runnable {
+public final class MapFeeder implements Runnable {
+    private static final Logger log = LoggerFactory.getLogger(MapFeeder.class);
 
-    private static final Logger log = LoggerFactory.getLogger(TaskFeeder.class);
     private static final Bundle TERM_BUNDLE = new KVBundle();
     private static final DecimalFormat timeFormat = new DecimalFormat("#,###.00");
     private static final DecimalFormat countFormat = new DecimalFormat("#,###");
@@ -59,29 +57,32 @@ public final class TaskFeeder implements Runnable {
 
     // state control
     private final AtomicBoolean errored = new AtomicBoolean(false);
+    private boolean hasClosedStreams = false; // not shared with MapperTasks
 
-    private final long start = System.currentTimeMillis();
-    private final BundleField shardField;
-
+    // enclosing task
+    private final StreamMapper task;
     private final TaskDataSource source;
-    private final TaskRunTarget task;
-    private final int feeders;
 
+    // mapper task controls
+    private final int feeders;
+    private final BundleField shardField;
     private final Thread[] threads;
     private final BlockingQueue<Bundle>[] queues;
+
+    // metrics
+    private final long start = System.currentTimeMillis();
     private final AtomicInteger processed = new AtomicInteger(0);
     private final AtomicLong totalReads = new AtomicLong(0);
-
     private final Meter stealAttemptMeter;
     private final Meter stealSuccessMeter;
     private final Histogram modHistrogram;
 
-    public TaskFeeder(TaskRunTarget task, int feeders) {
+    public MapFeeder(StreamMapper task, TaskDataSource source, int feeders) {
         stealAttemptMeter = Metrics.newMeter(getClass(), "stealAttemptRate", "steals", TimeUnit.SECONDS);
         stealSuccessMeter = Metrics.newMeter(getClass(), "stealSuccessRate", "steals", TimeUnit.SECONDS);
         modHistrogram = Metrics.newHistogram(getClass(), "mod");
 
-        this.source = task.getSource();
+        this.source = source;
         this.task = task;
         this.feeders = feeders;
 
@@ -104,9 +105,12 @@ public final class TaskFeeder implements Runnable {
         try {
             if (source.isEnabled()) {
                 while (fillBuffer()) {
+                    if (Thread.interrupted()) {
+                        closeSourceIfNeeded();
+                    }
                 }
             }
-            closeStream();
+            closeSourceIfNeeded();
             joinProcessors();
             log.info("exit {} threads. bundles read {} processed {}",
                      feeders, countFormat.format(totalReads), countFormat.format(processed));
@@ -152,61 +156,54 @@ public final class TaskFeeder implements Runnable {
             return true;
         } catch (NoSuchElementException ignored) {
             log.info("exiting on premature stream termination");
-        } catch (InterruptedException ignored) {
-            log.info("exiting on interrupt (probably max runtime)");
         }
         return false;
     }
 
-    private void pushQueue(int queueNum, Bundle item) throws InterruptedException {
+    private void pushQueue(int queueNum, Bundle item) {
         BlockingQueue<Bundle> queue = queues[queueNum];
-        queue.put(item);
+        Uninterruptibles.putUninterruptibly(queue, item);
     }
 
     private void joinProcessors() {
         log.debug("pushing terminating bundles to {} processors", queues.length);
         for (int i = 0; i < queues.length; i++) {
-            try {
-                pushQueue(i, TERM_BUNDLE);
-            } catch (InterruptedException e) {
-                log.error("", e);
-            }
+            pushQueue(i, TERM_BUNDLE);
         }
         for (Thread thread : threads) {
-            try {
-                thread.join();
-            } catch (InterruptedException e) {
-                log.warn("", e);
-            }
+            Uninterruptibles.joinUninterruptibly(thread);
         }
     }
 
-    private void closeStream() {
-        double totalTime = (System.currentTimeMillis() - start) / 1000.0;
-        log.info(new StringBuilder().append("closing stream ")
-                                    .append(source.getClass().getSimpleName())
-                                    .append(" after ")
-                                    .append(timeFormat.format(totalTime))
-                                    .append("s [bundles read ")
-                                    .append(countFormat.format(totalReads))
-                                    .append(" (")
-                                    .append(countFormat.format((double) totalReads.get() / totalTime))
-                                    .append("/s) processed ")
-                                    .append(countFormat.format(processed))
-                                    .append(" (")
-                                    .append(countFormat.format((double) processed.get() / totalTime))
-                                    .append("/s) ]")
-                                    .toString());
-        source.close();
+    private void closeSourceIfNeeded() {
+        if (!hasClosedStreams) {
+            hasClosedStreams = true;
+            double totalTime = (System.currentTimeMillis() - start) / 1000.0;
+            log.info(new StringBuilder().append("closing stream ")
+                                        .append(source.getClass().getSimpleName())
+                                        .append(" after ")
+                                        .append(timeFormat.format(totalTime))
+                                        .append("s [bundles read ")
+                                        .append(countFormat.format(totalReads))
+                                        .append(" (")
+                                        .append(countFormat.format((double) totalReads.get() / totalTime))
+                                        .append("/s) processed ")
+                                        .append(countFormat.format(processed))
+                                        .append(" (")
+                                        .append(countFormat.format((double) processed.get() / totalTime))
+                                        .append("/s) ]")
+                                        .toString());
+            source.close();
+        }
     }
 
     private static class MapperTask implements Runnable {
         private final int processorID;
-        private final TaskFeeder taskFeeder;
+        private final MapFeeder mapFeeder;
 
-        public MapperTask(TaskFeeder taskFeeder, int processorID) {
+        public MapperTask(MapFeeder mapFeeder, int processorID) {
             this.processorID = processorID;
-            this.taskFeeder = taskFeeder;
+            this.mapFeeder = mapFeeder;
         }
 
         @Override
@@ -217,33 +214,28 @@ public final class TaskFeeder implements Runnable {
                     if (next == null) {
                         return;
                     }
-                    taskFeeder.task.process(next);
-                    taskFeeder.processed.incrementAndGet();
-                } catch (InterruptedException e) {
-                    return;
+                    mapFeeder.task.process(next);
+                    mapFeeder.processed.incrementAndGet();
                 } catch (Throwable t) {
-                    taskFeeder.handleUncaughtThrowable(t);
+                    mapFeeder.handleUncaughtThrowable(t);
                 }
             }
         }
 
         @Nullable private Bundle popQueue() throws InterruptedException {
-            BlockingQueue<Bundle> queue = taskFeeder.queues[processorID];
+            BlockingQueue<Bundle> queue = mapFeeder.queues[processorID];
             Bundle item = null;
             if (shouldSteal) {
+                // first check our own queue
                 item = queue.poll();
                 if (item == null) {
-                    taskFeeder.stealAttemptMeter.mark();
-                    item = steal();
-                    if (item != null) {
-                        taskFeeder.stealSuccessMeter.mark();
-                    }
+                    // then check every other queue
+                    item = steal(queue);
                 }
             }
             if (item == null) {
                 item = queue.take();
             }
-
             if (item == TERM_BUNDLE) {
                 return null;
             } else {
@@ -251,22 +243,20 @@ public final class TaskFeeder implements Runnable {
             }
         }
 
-        @Nullable private Bundle steal() throws InterruptedException {
-            int stealQ = 0;
-            Bundle item = null;
-            for (BlockingQueue<Bundle> queue : taskFeeder.queues) {
-                if (queue.size() >= stealThreshold) {
-                    item = taskFeeder.queues[stealQ].poll();
-                    if (item != null) {
-                        break;
+        @Nullable private Bundle steal(BlockingQueue<Bundle> primaryQueue) throws InterruptedException {
+            mapFeeder.stealAttemptMeter.mark();
+            for (BlockingQueue<Bundle> queue : mapFeeder.queues) {
+                if ((queue != primaryQueue) && (queue.size() >= stealThreshold)) {
+                    Bundle item = queue.poll();
+                    if (item == TERM_BUNDLE) {
+                        queue.put(item);
+                    } else if (item != null) {
+                        mapFeeder.stealSuccessMeter.mark();
+                        return item;
                     }
                 }
             }
-            if (item == TERM_BUNDLE) {
-                taskFeeder.queues[stealQ].put(item);
-                return null;
-            }
-            return item;
+            return null;
         }
     }
 }

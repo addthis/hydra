@@ -20,10 +20,6 @@ import com.addthis.bundle.core.Bundle;
  */
 public interface StreamEmitter {
 
-    /**
-     * Emits a {@link Bundle} to a Stream
-     *
-     * @param bundle - the Bundle to emit
-     */
+    /** Emits a {@link Bundle} to a Stream */
     public void emit(Bundle bundle);
 }

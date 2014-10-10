@@ -29,13 +29,11 @@ import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 /**
  * @user-reference
  */
 public final class TimeField implements SuperCodable {
-
-    private final Logger log = LoggerFactory.getLogger(TimeField.class);
+    private static final Logger log = LoggerFactory.getLogger(TimeField.class);
 
     public TimeField setField(String field) {
         this.field = field;
@@ -68,7 +66,7 @@ public final class TimeField implements SuperCodable {
      * Field within the bundle to interpret as a time value.
      * This field is required.
      */
-    @FieldConfig(codable = true, required = true)
+    @FieldConfig(required = true)
     private String field;
 
     /**
@@ -81,13 +79,13 @@ public final class TimeField implements SuperCodable {
      * .html">DateTimeFormat</a>.
      * This field is required.
      */
-    @FieldConfig(codable = true, required = true)
+    @FieldConfig(required = true)
     private String format;
 
     /**
      * Optionally specify the timezone. Default is null.
      */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String timeZone;
 
     private int               radix;
