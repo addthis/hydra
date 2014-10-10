@@ -172,15 +172,6 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
     public void close() throws InterruptedException {
         feeder.interrupt();
         feeder.join();
-        if (jmxremote != null) {
-            try {
-                jmxremote.stop();
-                jmxremote = null;
-            } catch (IOException e)  {
-                log.error("", e);
-            }
-        }
-        log.info("Map Task Complete");
     }
 
     private Bundle mapBundle(Bundle in) {
@@ -307,7 +298,15 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
             log.info("[streamComplete] builder");
         }
         output.sendComplete();
-        log.info("[taskComplete]");
         emitTaskExitState();
+        if (jmxremote != null) {
+            try {
+                jmxremote.stop();
+                jmxremote = null;
+            } catch (IOException e)  {
+                log.error("", e);
+            }
+        }
+        log.info("[taskComplete]");
     }
 }
