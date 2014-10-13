@@ -18,7 +18,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -28,11 +27,15 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.task.stream.PersistentStreamFileSource;
 import com.addthis.hydra.task.stream.StreamFileUtil;
 import com.addthis.maljson.JSONObject;
+
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -69,76 +72,54 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
      * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html">DateTimeFormat</a>.
      * Default is either "source.mesh.date.format" configuration value or "YYMMdd".
      */
-    @FieldConfig(codable = true)
-    private String dateFormat = DEFAULT_DATE_FORMAT;
+    @JsonProperty private String dateFormat = DEFAULT_DATE_FORMAT;
 
-    /**
-     * files that have been created before this date will not be processed. Default is {{last}}.
-     */
-    @FieldConfig(codable = true)
-    private String startDate = TIME_NOW;
+    /** files that have been created before this date will not be processed. Default is {{last}}. */
+    @JsonProperty private String startDate = TIME_NOW;
 
-    /**
-     * files that have been created after this date will not be processed. Default is {{now}}.
-     */
-    @FieldConfig(codable = true)
-    private String endDate = TIME_NOW;
+    /** files that have been created after this date will not be processed. Default is {{now}}. */
+    @JsonProperty private String endDate = TIME_NOW;
 
-    /**
-     * If true then process the dates from the most recent date to the earliest date. Default is false.
-     */
-    @FieldConfig(codable = true)
-    protected boolean reverse;
+    /** If true then process the dates from the most recent date to the earliest date. Default is false. */
+    @JsonProperty protected boolean reverse;
 
-    /**
-     * list of file paths to process. This field is required.
-     */
-    @FieldConfig(codable = true, required = true)
-    private String[] files;
+    /** list of file paths to process. This field is required. */
+    @JsonProperty(required = true) private List<String> files;
 
     /**
      * When selecting a substring of the input files for either sorting the file names
      * or fetching the file paths then use this token as the path separator.
      * Default is "source.mesh.path.token" configuration value or "/". *
      */
-    @FieldConfig(codable = true)
-    private String sortToken = DEFAULT_PATH_TOKEN;
+    @JsonProperty private String sortToken = DEFAULT_PATH_TOKEN;
+
+    /** shift the sorting suffix by this many characters. Default is 0. */
+    @JsonProperty private int sortOffset;
 
     /**
-     * shift the sorting suffix by this many characters. Default is 0.
+     * skip this number of sortToken characters for the sorting suffix.
+     * Default is "source.mesh.sort.token.offset" configuration value or 5.
      */
-    @FieldConfig(codable = true)
-    private int sortOffset;
+    @JsonProperty private int sortTokenOffset = DEFAULT_SORT_TOKEN_OFFSET;
+
+    /** shift the generated file path by this many characters. Default is 0. */
+    @JsonProperty private int pathOffset;
 
     /**
-     * skip this number of sortToken characters for the sorting suffix. Default is "source.mesh.sort.token.offset" configuration value or 5.
+     * skip this number of sortToken characters for generating file paths.
+     * Default is "source.mesh.path.token.offset" configuration value or 0.
      */
-    @FieldConfig(codable = true)
-    private int sortTokenOffset = DEFAULT_SORT_TOKEN_OFFSET;
+    @JsonProperty private int pathTokenOffset = DEFAULT_PATH_TOKEN_OFFSET;
 
-    /**
-     * shift the generated file path by this many characters. Default is 0.
-     */
-    @FieldConfig(codable = true)
-    private int pathOffset;
+    @JsonProperty private int jitterDays = 1;
 
-    /* skip this number of sortToken characters for generating file paths. Default is "source.mesh.path.token.offset" configuration value or 0. */
-    @FieldConfig(codable = true)
-    private int pathTokenOffset = DEFAULT_PATH_TOKEN_OFFSET;
+    @JsonProperty private String startDateBaseDir;
 
-    @FieldConfig(codable = true)
-    private int jitterDays = 1;
-
-    @FieldConfig(codable = true)
-    private String startDateBaseDir;
-
-    @FieldConfig(codable = true)
-    private String dateIncrements;
+    @JsonProperty private String dateIncrements;
 
     /* note: this is based on which files have been opened. If there is a large preOpen queue or many worker threads
      * then multiple days may be open at once, but this setting will assume that the latest day is the one to resume from. */
-    @FieldConfig(codable = true)
-    private boolean autoResume;
+    @JsonProperty private boolean autoResume;
 
     protected final LinkedList<DateTime> dates = new LinkedList<>();
     protected DateTimeFormatter formatter;
@@ -146,28 +127,19 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
     private File stateDir;
     protected File autoResumeFile;
     private final AtomicBoolean running = new AtomicBoolean(true);
-    private static final List<String> TIME_CONSTANTS = new ArrayList<>(Arrays.asList("YY", "Y", "M", "D", "H"));
+    private static final List<String> TIME_CONSTANTS = Lists.newArrayList("YY", "Y", "M", "D", "H");
 
     /**
      * perform any initialization steps specific to the implementing class
      *
      * @return true if initialization was successful
-     * @throws IOException
      */
     protected abstract boolean doInit() throws IOException;
 
-    /**
-     * perform any shutdown steps specific to the implementing class
-     *
-     * @throws IOException
-     */
+    /** perform any shutdown steps specific to the implementing class */
     public abstract void doShutdown() throws IOException;
 
-    /**
-     * Defines the directory where state for this source will be maintained
-     *
-     * @param dir
-     */
+    /** Defines the directory where state for this source will be maintained */
     public void setStateDir(File dir) {
         stateDir = dir;
         autoResumeFile = new File(stateDir, "job.source");
@@ -193,34 +165,29 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         return false;
     }
 
-    /**
-     * called by data source wrapper and performs common initialization
-     * steps.
-     */
+    /** called by data source wrapper and performs common initialization steps. */
     @Override public boolean init(File stateDir, Integer[] shards) throws Exception {
         if (log.isDebugEnabled()) {
-            log.debug("SSM: " + CodecJSON.encodeString(this));
+            log.debug("SSM: {}", CodecJSON.encodeString(this));
         }
         setStateDir(stateDir);
         if (log.isTraceEnabled()) {
-            log.trace("shards :: " + Strings.join(shards, " :: "));
+            log.trace("shards :: {}", Strings.join(shards, " :: "));
         }
         /* expand files list */
         HashSet<String> matches = new HashSet<>();
-        if (log.isTraceEnabled()) {
-            log.trace("files.1 :: " + Strings.join(files, " -- "));
-        }
+        log.trace("files.1 :: {}", files);
         /* expand mods */
         for (String file : files) {
             for (Integer shard : shards) {
                 matches.add(file.replace("{{mod}}", Strings.padleft(shard.toString(), 3, Strings.pad0)));
             }
         }
-        files = matches.toArray(new String[matches.size()]);
+        files = new ArrayList<>(matches);
         /* expand {US,DE,FR} bash-style string list */
         for (String file : files) {
-            int io1 = file.indexOf("{");
-            int io2 = file.indexOf("}");
+            int io1 = file.indexOf('{');
+            int io2 = file.indexOf('}');
             if (io1 >= 0 && io2 > io1) {
                 String left = file.substring(0, io1);
                 String right = file.substring(io2 + 1);
@@ -229,20 +196,14 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
                     if (!TIME_CONSTANTS.contains(tok)) {
                         String expand = left.concat(tok).concat(right);
                         matches.add(expand);
-                        if (log.isTraceEnabled()) {
-                            log.trace("expand " + file + " to " + expand);
-                        }
+                        log.trace("expand {} to {}", file, expand);
                     }
                 }
             }
         }
-        files = matches.toArray(new String[matches.size()]);
-        if (log.isTraceEnabled()) {
-            log.trace("files.2 :: " + matches);
-        }
-        if (log.isTraceEnabled()) {
-            log.trace("files.3 :: " + Strings.join(files, " -- "));
-        }
+        files = new ArrayList<>(matches);
+        log.trace("files.2 :: {}", matches);
+        log.trace("files.3 :: {}", files);
         /* calculate start/end dates if required */
         formatter = DateTimeFormat.forPattern(dateFormat);
         if (autoResume && autoResumeFile.exists() && autoResumeFile.canRead() && autoResumeFile.length() > 0) {
@@ -250,11 +211,11 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
                 JSONObject jo = new JSONObject(Bytes.toString(Bytes.readFully(new FileInputStream(autoResumeFile))));
                 String resumeDate = jo.optString("lastDate");
                 if (resumeDate != null) {
-                    log.warn("auto resume from " + jo);
+                    log.warn("auto resume from {}", jo);
                     startDate = resumeDate;
                 }
             } catch (Exception ex) {
-                log.warn("corrupted autoResume file: " + autoResumeFile + " ... " + ex);
+                log.warn("corrupted autoResume file: {}", autoResumeFile, ex);
             }
         }
 
@@ -266,19 +227,18 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         DateTime start = parseDateTime(startDate);
         if (endDate == null) {
             endDate = NOW_PREFIX + NOW_POSTFIX;
-            log.warn("End Date not provided, using current time: " + endDate + " as end date for job");
+            log.warn("End Date not provided, using current time: {} as end date for job", endDate);
         }
         DateTime end = parseDateTime(endDate);
         /* populate date list from start/end */
         fillDateList(start, end);
-        log.info("[init] " + start + " to " + end + " = " + dates.size() + " time units");
+        log.info("[init] {} to {} = {} time units", start, end, dates.size());
         return doInit();
     }
 
-
     public void setStartTime(long time) {
         startDate = formatter.print(time);
-        log.warn("override start date with " + startDate);
+        log.warn("override start date with {}", startDate);
     }
 
     @Override public void shutdown() throws IOException {
@@ -286,10 +246,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         doShutdown();
     }
 
-
-    /**
-     * @return a list of dates given the start/end range from the config
-     */
+    /** list of dates given the start/end range from the config */
     private void fillDateList(DateTime start, DateTime end) {
         DateTime mark = start;
         while (mark.isBefore(end) || mark.isEqual(end)) {
@@ -298,22 +255,20 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
             } else {
                 dates.addLast(mark);
             }
-            if ((dateIncrements != null && dateIncrements.equals("DAYS")) || dateFormat.length() == 6) {
+            if ("DAYS".equals(dateIncrements) || (dateFormat.length() == 6)) {
                 mark = mark.plusDays(1);
-            } else if ((dateIncrements != null && dateIncrements.equals("HOURS")) || dateFormat.length() == 8) {
+            } else if ("HOURS".equals(dateIncrements) || (dateFormat.length() == 8)) {
                 mark = mark.plusHours(1);
-            } else if ((dateIncrements != null && dateIncrements.equals("MONTHS"))) {
+            } else if ("MONTHS".equals(dateIncrements)) {
                 mark = mark.plusMonths(1);
             } else if (dateIncrements == null) {
-                log.warn(
-                        "Non-Standard dateFormat: " + dateFormat + " defaulting to daily time increments\n" +
-                        "This can be modified to hourly time increments by setting dateIncrements to 'HOURS'");
+                log.warn("Non-Standard dateFormat: {} defaulting to daily time increments\nThis can be modified to " +
+                         "hourly time increments by setting dateIncrements to 'HOURS'", dateFormat);
                 mark = mark.plusDays(1);
             }
         }
     }
 
-    /** */
     private DateTime parseDateTime(String dateString) {
         DateTime time;
         if (dateString.contains(NOW_PREFIX)) {
@@ -326,8 +281,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         return time;
     }
 
-    /** */
-    private int findDaysOffset(String time) {
+    private static int findDaysOffset(String time) {
         int startIndex = time.indexOf(NOW_PREFIX) + 6;
         int endIndex = time.indexOf(NOW_POSTFIX);
         if (startIndex < 0 || endIndex <= startIndex) {
@@ -340,21 +294,17 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         return offset;
     }
 
-    /** */
-    private String replaceDateElements(DateTime time, String template) {
+    private static String replaceDateElements(DateTime time, String template) {
         template = template.replace("{YY}", time.year().getAsString());
         template = template.replace("{Y}", getTwoDigit(time.year().get()));
         template = template.replace("{M}", getTwoDigit(time.monthOfYear().get()));
         template = template.replace("{D}", getTwoDigit(time.dayOfMonth().get()));
         template = template.replace("{H}", getTwoDigit(time.hourOfDay().get()));
-        if (log.isDebugEnabled()) {
-            log.debug("template=" + template);
-        }
+        log.debug("template={}", template);
         return template;
     }
 
-    /** */
-    private String getTwoDigit(int value) {
+    private static String getTwoDigit(int value) {
         if (value < 10) {
             return "0".concat(Integer.toString(value));
         }
@@ -364,21 +314,19 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         return Integer.toString(value);
     }
 
-    /** */
-    public String[] getDateTemplatedFileList(DateTime timeToLoad) {
-        String[] fileList = new String[files.length];
-        for (int i = 0; i < files.length; i++) {
-            fileList[i] = replaceDateElements(timeToLoad, files[i]);
-        }
-        return fileList;
+    public String[] getDateTemplatedFileList(final DateTime timeToLoad) {
+        List<String> fileList = Lists.transform(files, new Function<String, String>() {
+            @Override public String apply(String input) {
+                return replaceDateElements(timeToLoad, input);
+            }
+        });
+        return fileList.toArray(new String[fileList.size()]);
     }
 
-    /**
-     * return substring getSortOffset into file name
-     */
+    /** return substring getSortOffset into file name */
     public String getSortOffset(String name) {
         int sortOff = sortOffset;
-        if (sortToken != null && sortTokenOffset > 0) {
+        if ((sortToken != null) && (sortTokenOffset > 0)) {
             int pos = 0;
             int off = sortTokenOffset;
             while (off-- > 0 && (pos = name.indexOf(sortToken, pos)) >= 0) {
@@ -391,26 +339,8 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         return name.substring(sortOff);
     }
 
-    /**
-     * return substring getSortOffset into file name
-     */
+    /** return substring getSortOffset into file name */
     public String getPathOffset(String name) {
         return StreamFileUtil.getCanonicalFileReferenceCacheKey(name, pathOffset, sortToken, pathTokenOffset);
-    }
-
-    public String[] getFiles() {
-        return files;
-    }
-
-    public void setFiles(String[] files) {
-        this.files = files;
-    }
-
-    public void setSortTokenOffset(int sortTokenOffset) {
-        this.sortTokenOffset = sortTokenOffset;
-    }
-
-    public void setPathTokenOffset(int pathTokenOffset) {
-        this.pathTokenOffset = pathTokenOffset;
     }
 }
