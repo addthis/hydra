@@ -13,7 +13,10 @@
  */
 package com.addthis.hydra.task.map;
 
+import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.AutoField;
+import com.addthis.bundle.util.CachingField;
+import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -46,4 +49,19 @@ public final class FieldFilter {
 
     /** If true then emit null values to the destination field. The default is false. */
     @JsonProperty boolean toNull;
+
+    public FieldFilter(String copyFieldName) {
+        this.from = CachingField.newAutoField(copyFieldName);
+        this.to   = CachingField.newAutoField(copyFieldName);
+    }
+
+    public void mapField(Bundle in, Bundle out) {
+        ValueObject inVal = from.getValue(in);
+        if (filter != null) {
+            inVal = filter.filter(inVal);
+        }
+        if (inVal != null || toNull) {
+            to.setValue(out, inVal);
+        }
+    }
 }

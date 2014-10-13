@@ -183,14 +183,8 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
             return out;
         }
         Bundle out = output.createBundle();
-        for (int i = 0; i < map.fields.length; i++) {
-            ValueObject inVal = map.fields[i].from.getValue(in);
-            if (map.fields[i].filter != null) {
-                inVal = map.fields[i].filter.filter(inVal);
-            }
-            if (inVal != null || map.fields[i].toNull) {
-                map.fields[i].to.setValue(out, inVal);
-            }
+        for (FieldFilter fieldFilter : map.fields) {
+            fieldFilter.mapField(in, out);
         }
         return out;
     }
