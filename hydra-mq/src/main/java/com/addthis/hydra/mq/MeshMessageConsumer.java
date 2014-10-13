@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
 
 public class MeshMessageConsumer implements MessageConsumer {
 
-    private static Logger log = LoggerFactory.getLogger(MeshMessageConsumer.class);
+    private static final Logger log = LoggerFactory.getLogger(MeshMessageConsumer.class);
     private static final long scanInterval = Parameter.longValue("mesh.queue.scan.interval", 30000);
     private static final long pollInterval = Parameter.longValue("mesh.queue.poll.interval", 10000);
     private static final boolean debug = Parameter.boolValue("mesh.queue.debug", false);

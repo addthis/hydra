@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
 
 public class RabbitMessageProducer implements MessageProducer {
 
-    private static Logger log = LoggerFactory.getLogger(RabbitMessageProducer.class);
+    private static final Logger log = LoggerFactory.getLogger(RabbitMessageProducer.class);
     private static final int DEFAULT_PORT = 5672;
     private String brokerHost;
     private int brokerPort;

@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
 public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
 
-    private static Logger log = LoggerFactory.getLogger(JobTask.class);
+    private static final Logger log = LoggerFactory.getLogger(JobTask.class);
 
     @FieldConfig(codable = true)
     private String                    hostUuid;

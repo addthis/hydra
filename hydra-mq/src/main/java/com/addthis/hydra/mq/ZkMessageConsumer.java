@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 public class ZkMessageConsumer<T extends Serializable> implements MessageConsumer {
 
-    private static Logger log = LoggerFactory.getLogger(ZkMessageConsumer.class);
+    private static final Logger log = LoggerFactory.getLogger(ZkMessageConsumer.class);
 
     private CuratorFramework zkClient;
     private ObjectMapper mapper;

@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 
 public class RabbitMessageConsumer extends DefaultConsumer implements MessageConsumer {
 
-    private static Logger log = LoggerFactory.getLogger(RabbitMessageConsumer.class);
+    private static final Logger log = LoggerFactory.getLogger(RabbitMessageConsumer.class);
 
     private String exchange;
     private String[] routingKeys;

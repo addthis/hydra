@@ -48,7 +48,7 @@ import org.apache.commons.lang3.mutable.MutableInt;
  */
 public class QueryElementNode implements Codable {
 
-    private static String memKey = "";
+    private static final String memKey = "";
 
     @FieldConfig(codable = true)
     public String[] match;

@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
 public final class Job implements IJob, Codable {
 
-    private static Logger log = LoggerFactory.getLogger(Job.class);
+    private static final Logger log = LoggerFactory.getLogger(Job.class);
     private static final Comparator<JobTask> taskNodeComparator = new Comparator<JobTask>() {
         @Override
         public int compare(JobTask jobTask, JobTask jobTask1) {

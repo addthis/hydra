@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 
 public class JavaSimpleCompiler {
 
-    private static Logger log = LoggerFactory.getLogger(JavaSimpleCompiler.class);
+    private static final Logger log = LoggerFactory.getLogger(JavaSimpleCompiler.class);
     private final StandardJavaFileManager fileManager;
     private final JavaCompiler compiler;
     DiagnosticCollector<JavaFileObject> diagnostics;

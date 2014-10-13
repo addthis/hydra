@@ -59,7 +59,7 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class AbstractOutputWriter {
 
-    private static Logger log = LoggerFactory.getLogger(AbstractOutputWriter.class);
+    private static final Logger log = LoggerFactory.getLogger(AbstractOutputWriter.class);
 
     private static final int maxBufferSize = (int) Math.pow(10.0, 8.0);
 

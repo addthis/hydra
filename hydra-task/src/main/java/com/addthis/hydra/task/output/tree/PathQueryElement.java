@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  */
 public class PathQueryElement extends QueryElement {
 
-    private static Logger log = LoggerFactory.getLogger(PathQueryElement.class);
+    private static final Logger log = LoggerFactory.getLogger(PathQueryElement.class);
 
     @FieldConfig(codable = true)
     private ArrayList<PathQueryElementField> field;

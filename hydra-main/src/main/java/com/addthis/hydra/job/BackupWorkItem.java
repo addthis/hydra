@@ -21,7 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 public class BackupWorkItem extends MinionWorkItem {
 
-    private static Logger log = LoggerFactory.getLogger(BackupWorkItem.class);
+    private static final Logger log = LoggerFactory.getLogger(BackupWorkItem.class);
     private final String rebalanceSource;
     private final String rebalanceTarget;
 

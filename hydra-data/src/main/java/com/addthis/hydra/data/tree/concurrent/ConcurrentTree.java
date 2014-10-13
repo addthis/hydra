@@ -73,15 +73,15 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     // number of background deletion threads
     @Configuration.Parameter
-    static int defaultNumDeletionThreads = Parameter.intValue("hydra.tree.clean.threads", 1);
+    static final int defaultNumDeletionThreads = Parameter.intValue("hydra.tree.clean.threads", 1);
 
     // sleep interval of deletion threads in between polls of deletion queue
     @Configuration.Parameter
-    static int deletionThreadSleepMillis = Parameter.intValue("hydra.tree.clean.interval", 10);
+    static final int deletionThreadSleepMillis = Parameter.intValue("hydra.tree.clean.interval", 10);
 
     // number of nodes in between trash removal logging messages
     @Configuration.Parameter
-    static int deletionLogInterval = Parameter.intValue("hydra.tree.clean.logging", 100000);
+    static final int deletionLogInterval = Parameter.intValue("hydra.tree.clean.logging", 100000);
 
     private static final AtomicInteger scopeGenerator = new AtomicInteger();
 

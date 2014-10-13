@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
 public final class JobQueryConfig implements Codable, Cloneable {
 
-    private static Logger log = LoggerFactory.getLogger(JobQueryConfig.class);
+    private static final Logger log = LoggerFactory.getLogger(JobQueryConfig.class);
 
     @FieldConfig(codable = true)
     private boolean canQuery;

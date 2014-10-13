@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  */
 public class SpawnJobFixer {
 
-    private static Logger log = LoggerFactory.getLogger(SpawnJobFixer.class);
+    private static final Logger log = LoggerFactory.getLogger(SpawnJobFixer.class);
     private final Spawn spawn;
     private static final long recentlyFixedTaskTime = Parameter.longValue("spawn.task.fix.time", 20_000);
     private final Cache<JobKey, Boolean> recentlyFixedTaskCache = CacheBuilder.newBuilder().expireAfterWrite(recentlyFixedTaskTime, TimeUnit.MILLISECONDS).build();

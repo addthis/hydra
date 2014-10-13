@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 @Path("/alert")
 public class AlertResource {
 
-    private static Logger log = LoggerFactory.getLogger(AlertResource.class);
+    private static final Logger log = LoggerFactory.getLogger(AlertResource.class);
 
     private final JobAlertManager spawn;
 

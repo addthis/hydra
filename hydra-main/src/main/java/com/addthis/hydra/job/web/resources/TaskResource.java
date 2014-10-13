@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 @Path("/task")
 public class TaskResource {
 
-    private static Logger log = LoggerFactory.getLogger(TaskResource.class);
+    private static final Logger log = LoggerFactory.getLogger(TaskResource.class);
 
     private final Spawn spawn;
 

@@ -27,7 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 public abstract class MinionWorkItem implements Runnable {
 
-    private static Logger log = LoggerFactory.getLogger(MinionWorkItem.class);
+    private static final Logger log = LoggerFactory.getLogger(MinionWorkItem.class);
     protected File pidFile;
     private File runFile;
     protected File doneFile;

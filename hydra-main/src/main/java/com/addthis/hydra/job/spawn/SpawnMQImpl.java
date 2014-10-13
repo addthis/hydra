@@ -39,12 +39,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 public class SpawnMQImpl implements SpawnMQ {
 
-    private static Logger log = LoggerFactory.getLogger(SpawnMQImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(SpawnMQImpl.class);
 
     private MessageProducer batchJobProducer;
 
-    private static String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
-    private static String batchBrokerPort = Parameter.value("batch.brokerPort", "5672");
+    private static final String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
+    private static final String batchBrokerPort = Parameter.value("batch.brokerPort", "5672");
 
     private MessageProducer batchControlProducer;
     private MessageConsumer hostStatusConsumer;

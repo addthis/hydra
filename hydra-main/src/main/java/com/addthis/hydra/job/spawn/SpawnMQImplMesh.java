@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 
 public class SpawnMQImplMesh implements SpawnMQ {
 
-    private static Logger log = LoggerFactory.getLogger(SpawnMQImplMesh.class);
+    private static final Logger log = LoggerFactory.getLogger(SpawnMQImplMesh.class);
 
     private MessageProducer batchJobProducer;
     private MessageProducer batchControlProducer;

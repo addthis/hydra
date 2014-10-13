@@ -43,9 +43,9 @@ import org.joda.time.format.DateTimeFormatter;
  */
 public class BundleFilterTimeRange extends BundleFilter {
 
-    private static DateTimeFormatter ymd   = DateTimeFormat.forPattern("yyMMdd");
-    private static DateTimeFormatter ymdh  = DateTimeFormat.forPattern("yyMMddHH");
-    private static DateTimeFormatter ymdhm = DateTimeFormat.forPattern("yyMMddHHmm");
+    private static final DateTimeFormatter ymd   = DateTimeFormat.forPattern("yyMMdd");
+    private static final DateTimeFormatter ymdh  = DateTimeFormat.forPattern("yyMMddHH");
+    private static final DateTimeFormatter ymdhm = DateTimeFormat.forPattern("yyMMddHHmm");
 
     /**
      * The date/time input as expressed in UNIX milliseconds.

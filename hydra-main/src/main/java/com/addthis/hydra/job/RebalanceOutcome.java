@@ -37,7 +37,7 @@ public class RebalanceOutcome implements Codable {
     private String dirOptimizationMsg;
     @FieldConfig(codable = true)
     private String id;
-    private static Logger log = LoggerFactory.getLogger(RebalanceOutcome.class);
+    private static final Logger log = LoggerFactory.getLogger(RebalanceOutcome.class);
 
     public RebalanceOutcome(String id, String errMsg, String dirCorrectionMsg, String dirOptimizationMsg) {
         this.errMsg = errMsg;

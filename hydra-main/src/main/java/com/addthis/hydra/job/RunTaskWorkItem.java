@@ -23,7 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 public class RunTaskWorkItem extends MinionWorkItem {
 
-    private static Logger log = LoggerFactory.getLogger(RunTaskWorkItem.class);
+    private static final Logger log = LoggerFactory.getLogger(RunTaskWorkItem.class);
     private Integer port = null;
     private int maxStops = 2;
     private int retries;

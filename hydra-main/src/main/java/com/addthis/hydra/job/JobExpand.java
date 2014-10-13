@@ -43,7 +43,7 @@ public class JobExpand {
 
     private static final int maxDepth = Parameter.intValue("spawn.macro.expand.depth", 256);
 
-    private static Logger log = LoggerFactory.getLogger(JobExpand.class);
+    private static final Logger log = LoggerFactory.getLogger(JobExpand.class);
 
     private static class MacroTokenReplacer extends TokenReplacer {
 
@@ -114,7 +114,7 @@ public class JobExpand {
     }
 
     // initialize optional/3rd party job config expanders
-    private static Map<String, JobConfigExpander> expanders = new HashMap<>();
+    private static final Map<String, JobConfigExpander> expanders = new HashMap<>();
 
     static {
         PluginMap expanderMap = PluginRegistry.defaultRegistry().asMap().get("job expander");

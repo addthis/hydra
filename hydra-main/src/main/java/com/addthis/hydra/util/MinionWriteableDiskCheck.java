@@ -31,7 +31,7 @@ public class MinionWriteableDiskCheck extends WriteableDiskCheck {
     private static final int MINION_DISK_CHECK_INTERVAL = Parameter.intValue("minion.disk.check.interval", 1000);
 
     private Minion minion;
-    private static Logger log = LoggerFactory.getLogger(MinionWriteableDiskCheck.class);
+    private static final Logger log = LoggerFactory.getLogger(MinionWriteableDiskCheck.class);
 
 
     public MinionWriteableDiskCheck(Minion minion) {

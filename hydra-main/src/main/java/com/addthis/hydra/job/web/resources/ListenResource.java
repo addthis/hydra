@@ -54,10 +54,10 @@ import org.slf4j.LoggerFactory;
 @Path("/update")
 public class ListenResource {
 
-    private static Logger log = LoggerFactory.getLogger(ListenResource.class);
+    private static final Logger log = LoggerFactory.getLogger(ListenResource.class);
 
     private final Spawn spawn;
-    private static int batchInterval = Integer.parseInt(System.getProperty("spawn.batchtime", "500"));
+    private static final int batchInterval = Integer.parseInt(System.getProperty("spawn.batchtime", "500"));
     private static int pollTimeout = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
 
     private final Properties gitProperties;

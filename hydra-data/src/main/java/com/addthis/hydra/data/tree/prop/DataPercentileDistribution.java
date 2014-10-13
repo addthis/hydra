@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistribution.Config>
         implements Codable {
 
-    private static Logger log = LoggerFactory.getLogger(DataPercentileDistribution.class);
+    private static final Logger log = LoggerFactory.getLogger(DataPercentileDistribution.class);
 
     /**
      * This data attachment <span class="hydra-summary">maintains a percentile distribution</span>.

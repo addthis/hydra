@@ -43,13 +43,13 @@ import org.slf4j.LoggerFactory;
  */
 public class SpawnMesh implements MessageListener {
 
-    private static Logger log = LoggerFactory.getLogger(SpawnMesh.class);
-    private static Codec codec = CodecJSON.INSTANCE;
+    private static final Logger log = LoggerFactory.getLogger(SpawnMesh.class);
+    private static final Codec codec = CodecJSON.INSTANCE;
 
     private static final String meshHost = Parameter.value("mesh.host", "localhost");
     private static final int meshPort = Parameter.intValue("mesh.port", 0);
     private static final int meshRetryTimeout = Parameter.intValue("mesh.retry.timeout", 5000);
-    private static boolean meshQueue = Parameter.boolValue("queue.mesh", false);
+    private static final boolean meshQueue = Parameter.boolValue("queue.mesh", false);
 
     private final Spawn spawn;
     private final String meshPrefix;

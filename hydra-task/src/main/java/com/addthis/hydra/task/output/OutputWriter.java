@@ -58,7 +58,7 @@ import org.slf4j.LoggerFactory;
  */
 public class OutputWriter extends AbstractOutputWriter {
 
-    private static Logger log = LoggerFactory.getLogger(OutputWriter.class);
+    private static final Logger log = LoggerFactory.getLogger(OutputWriter.class);
 
     private static final String DEFAULT_SPLIT_OUTPUT_DIR = "split";
 

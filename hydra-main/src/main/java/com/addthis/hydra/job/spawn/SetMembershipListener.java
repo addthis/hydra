@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 
 public class SetMembershipListener implements PathChildrenCacheListener {
 
-    private static Logger log = LoggerFactory.getLogger(SetMembershipListener.class);
+    private static final Logger log = LoggerFactory.getLogger(SetMembershipListener.class);
 
     private Set<String> memberSet;
     private final String path;

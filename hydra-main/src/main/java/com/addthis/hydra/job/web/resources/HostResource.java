@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 @Path("/host")
 public class HostResource {
 
-    private static Logger log = LoggerFactory.getLogger(HostResource.class);
+    private static final Logger log = LoggerFactory.getLogger(HostResource.class);
 
     private final Spawn spawn;
 

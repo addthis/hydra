@@ -31,8 +31,8 @@ import org.slf4j.LoggerFactory;
 
 public class LogUtil {
 
-    private static Logger log = LoggerFactory.getLogger(LogUtil.class);
-    private static DateTimeFormatter format = DateTimeFormat.forPattern("yyMMdd-HHmmss.SSS");
+    private static final Logger log = LoggerFactory.getLogger(LogUtil.class);
+    private static final DateTimeFormatter format = DateTimeFormat.forPattern("yyMMdd-HHmmss.SSS");
 
     /**
      * @param eventLog - rolling event log

@@ -37,7 +37,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 /** */
 public abstract class QueryEngineSource implements QuerySource {
 
-    private static int maxConcurrency = Parameter.intValue("query.engine.source.maxConcurrency", 4);
+    private static final int maxConcurrency = Parameter.intValue("query.engine.source.maxConcurrency", 4);
 
     private final Logger log = LoggerFactory.getLogger(QueryEngineSource.class);
     private final Semaphore engineGate = new Semaphore(maxConcurrency);

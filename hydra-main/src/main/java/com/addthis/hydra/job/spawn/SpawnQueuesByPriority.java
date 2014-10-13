@@ -39,7 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueueItem>> {
 
-    private static Logger log = LoggerFactory.getLogger(SpawnQueuesByPriority.class);
+    private static final Logger log = LoggerFactory.getLogger(SpawnQueuesByPriority.class);
     private final Lock queueLock = new ReentrantLock();
 
     /* Internal map used to record outgoing task kicks that will not immediately be visible in the HostState */

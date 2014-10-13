@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 @Path("/command")
 public class CommandResource {
 
-    private static Logger log = LoggerFactory.getLogger(CommandResource.class);
+    private static final Logger log = LoggerFactory.getLogger(CommandResource.class);
 
     private final JobEntityManager<JobCommand> jobCommandManager;
 

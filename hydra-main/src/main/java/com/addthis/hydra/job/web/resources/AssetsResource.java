@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
 @Path("/")
 public class AssetsResource {
 
-    private static Logger log = LoggerFactory.getLogger(AssetsResource.class);
+    private static final Logger log = LoggerFactory.getLogger(AssetsResource.class);
 
     @Context
     HttpServletRequest request;
@@ -55,7 +55,7 @@ public class AssetsResource {
     User user;
 
     private final String webDir;
-    private static String INDEX_PATH = "/spawn2/index.html";
+    private static final String INDEX_PATH = "/spawn2/index.html";
 
     public AssetsResource(String webDir) {
         this.webDir = webDir;

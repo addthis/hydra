@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 @Path("/macro")
 public class MacroResource {
 
-    private static Logger log = LoggerFactory.getLogger(MacroResource.class);
+    private static final Logger log = LoggerFactory.getLogger(MacroResource.class);
 
     private final JobEntityManager<JobMacro> jobMacroManager;
 

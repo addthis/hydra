@@ -45,7 +45,7 @@ public class AggregateConfig {
     static final double MULTIPLE_STD_DEVS = Double.parseDouble(Parameter.value("meshSourceAggregator.multipleStdDevs", "2"));
     static final AtomicBoolean exiting = new AtomicBoolean(false);
     /* metrics */
-    static Counter totalQueries = Metrics.newCounter(MeshSourceAggregator.class, "totalQueries");
-    static Counter totalStragglerCheckerRequests = Metrics.newCounter(MeshSourceAggregator.class, "totalStragglerCheckerRequests");
-    static Counter totalRetryRequests = Metrics.newCounter(MeshSourceAggregator.class, "totalRetryRequests");
+    static final Counter totalQueries = Metrics.newCounter(MeshSourceAggregator.class, "totalQueries");
+    static final Counter totalStragglerCheckerRequests = Metrics.newCounter(MeshSourceAggregator.class, "totalStragglerCheckerRequests");
+    static final Counter totalRetryRequests = Metrics.newCounter(MeshSourceAggregator.class, "totalRetryRequests");
 }

@@ -38,7 +38,7 @@ import org.apache.commons.lang3.mutable.MutableInt;
  */
 public class QueryElementField implements Codable {
 
-    private static BoundedValue[] memKey = new BoundedValue[0];
+    private static final BoundedValue[] memKey = new BoundedValue[0];
 
     // output column this element is bound to 'show' (or null if dropped)
     @FieldConfig(codable = true)

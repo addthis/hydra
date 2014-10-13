@@ -48,15 +48,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 public class SpawnService {
 
-    private static Logger log = LoggerFactory.getLogger(SpawnService.class);
-    private static int batchInterval = Integer.parseInt(System.getProperty("spawn.batchtime", "500"));
-    private static int pollTimeout = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
+    private static final Logger log = LoggerFactory.getLogger(SpawnService.class);
+    private static final int batchInterval = Integer.parseInt(System.getProperty("spawn.batchtime", "500"));
+    private static final int pollTimeout = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
     private static final String defaultUser = "UNKNOWN_USER";
-    private static int webPort = Parameter.intValue("spawn.http.port", 5052);
+    private static final int webPort = Parameter.intValue("spawn.http.port", 5052);
 
-    private static boolean useBasicAuth = Parameter.boolValue("spawn.basic.auth", false);
-    private static String webDir = Parameter.value("spawn.web.dir", "web");
-    private static String indexFilename = Parameter.value("spawn.index.file", "index.html");
+    private static final boolean useBasicAuth = Parameter.boolValue("spawn.basic.auth", false);
+    private static final String webDir = Parameter.value("spawn.web.dir", "web");
+    private static final String indexFilename = Parameter.value("spawn.index.file", "index.html");
 
     private final Server jetty;
     private final SpawnConfig config;

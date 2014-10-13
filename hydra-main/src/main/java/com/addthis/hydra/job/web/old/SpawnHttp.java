@@ -49,7 +49,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 public class SpawnHttp extends AbstractHandler {
 
-    private static Logger log = LoggerFactory.getLogger(SpawnHttp.class);
+    private static final Logger log = LoggerFactory.getLogger(SpawnHttp.class);
     private static final String authKey = System.getProperty("auth.key");
     private static final boolean authLocal = System.getProperty("auth.local","true").equals("true");
 

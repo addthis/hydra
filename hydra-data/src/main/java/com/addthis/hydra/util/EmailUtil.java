@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
  */
 public class EmailUtil {
 
-    private static Logger log = LoggerFactory.getLogger(EmailUtil.class);
+    private static final Logger log = LoggerFactory.getLogger(EmailUtil.class);
 
     public static void email(String to, String subject, String body) {
         try {

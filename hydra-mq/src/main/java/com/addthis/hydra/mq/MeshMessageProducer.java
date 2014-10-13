@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
 
 public class MeshMessageProducer implements MessageProducer {
 
-    private static Logger log = LoggerFactory.getLogger(MeshMessageProducer.class);
+    private static final Logger log = LoggerFactory.getLogger(MeshMessageProducer.class);
     private static final long noticeRefreshTime = Parameter.longValue("mesh.queue.notice.interval", 1000);
     private static final boolean debug = Parameter.boolValue("mesh.queue.debug", false);
     private static final boolean removeFailed = Parameter.boolValue("mesh.queue.fail.remove", true);

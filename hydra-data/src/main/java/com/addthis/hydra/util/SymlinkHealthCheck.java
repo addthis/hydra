@@ -38,7 +38,7 @@ public class SymlinkHealthCheck extends CountingHealthCheck {
 
     private static final int SYMLINK_MAX_DEPTH = 64;
 
-    private static Logger log = LoggerFactory.getLogger(SymlinkHealthCheck.class);
+    private static final Logger log = LoggerFactory.getLogger(SymlinkHealthCheck.class);
 
     public SymlinkHealthCheck(Path targetDirectory) {
         super(1, "SymlinkDuplicateFailure", true);

@@ -20,7 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 public class BackupToDelete implements Codable, Comparable {
 
-    private static Logger log = LoggerFactory.getLogger(BackupToDelete.class);
+    private static final Logger log = LoggerFactory.getLogger(BackupToDelete.class);
     @FieldConfig(codable = true)
     private String backupPath;
     @FieldConfig(codable = true)

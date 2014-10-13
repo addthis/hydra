@@ -32,7 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 public class PathQueryElementField extends QueryElementField {
 
-    private static Logger log = LoggerFactory.getLogger(PathQueryElementField.class);
+    private static final Logger log = LoggerFactory.getLogger(PathQueryElementField.class);
 
     @FieldConfig(codable = true)
     public ResolvableBoundedValue[] keys;

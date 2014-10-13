@@ -50,7 +50,7 @@ public abstract class PathElement implements Codable, TreeDataParent {
     protected static final boolean defCountHit = System.getProperty("hydra.default.counthit", "1").equals("1");
 
 
-    public static HashSet<String> featureSet = new HashSet<>();
+    public static final HashSet<String> featureSet = new HashSet<>();
 
     /**
      * If non-null then a parent node is inserted

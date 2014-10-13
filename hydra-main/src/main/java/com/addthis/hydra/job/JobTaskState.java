@@ -37,7 +37,7 @@ public enum JobTaskState {
     }
 
     private static final Set<JobTaskState> inactiveStates = ImmutableSet.of(IDLE, ERROR, UNKNOWN, QUEUED_HOST_UNAVAIL, QUEUED);
-    private static Map<JobTaskState, Set<JobTaskState>> transitions;
+    private static final Map<JobTaskState, Set<JobTaskState>> transitions;
 
     static {
         transitions = new HashMap<>();

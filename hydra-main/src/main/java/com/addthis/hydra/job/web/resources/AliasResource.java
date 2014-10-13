@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 public class AliasResource {
 
     @SuppressWarnings("unused")
-    private static Logger log = LoggerFactory.getLogger(AliasResource.class);
+    private static final Logger log = LoggerFactory.getLogger(AliasResource.class);
 
     private final AliasManager aliasManager;
 

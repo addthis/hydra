@@ -46,8 +46,8 @@ public class SpawnFormattedLogger {
     }
 
 
-    private static Logger log = LoggerFactory.getLogger(SpawnFormattedLogger.class);
-    private static String clusterName = Parameter.value("cluster.name", "localhost");
+    private static final Logger log = LoggerFactory.getLogger(SpawnFormattedLogger.class);
+    private static final String clusterName = Parameter.value("cluster.name", "localhost");
     public static final String[] LOG_PATH = {
             "{{DATE_YEAR}}", "/", "{{DATE_MONTH}}", "/", "{{DATE_DAY}}", "/", "{{FILE_PREFIX_HOUR}}"};
 

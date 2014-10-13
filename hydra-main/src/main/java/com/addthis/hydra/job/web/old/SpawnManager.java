@@ -74,9 +74,9 @@ import org.slf4j.LoggerFactory;
 
 public class SpawnManager {
 
-    private static Logger log = LoggerFactory.getLogger(SpawnManager.class);
-    private static int batchInterval = Integer.parseInt(System.getProperty("spawn.batchtime", "500"));
-    private static int pollTimeout = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
+    private static final Logger log = LoggerFactory.getLogger(SpawnManager.class);
+    private static final int batchInterval = Integer.parseInt(System.getProperty("spawn.batchtime", "500"));
+    private static final int pollTimeout = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
     private static final String defaultUser = "UNKNOWN_USER";
 
     public void register(final SpawnHttp server) {

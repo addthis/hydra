@@ -21,9 +21,9 @@ import com.addthis.codec.codables.BytesCodable;
 
 public final class Raw implements Comparable<Raw>, BytesCodable {
 
-    private static boolean padprintable = System.getProperty("abyss.raw.padprintable", "0").equals("1");
+    private static final boolean padprintable = System.getProperty("abyss.raw.padprintable", "0").equals("1");
     private static boolean longcompare = System.getProperty("abyss.raw.longcompare", "0").equals("1");
-    private static boolean showinfo = System.getProperty("abyss.raw.showinfo", "0").equals("1");
+    private static final boolean showinfo = System.getProperty("abyss.raw.showinfo", "0").equals("1");
 
     static {
         if (showinfo) {
