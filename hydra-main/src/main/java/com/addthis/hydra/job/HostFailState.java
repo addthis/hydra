@@ -47,7 +47,6 @@ public class HostFailState {
     private static final String filesystemFullKey = "fullFs";
 
     private final Spawn spawn;
-    private final Object hostsToFailByTypeLock = new Object();
     private final Set<String> failFsDead;
     private final Set<String> failFsOkay;
     private final Set<String> fsFull;
@@ -55,13 +54,11 @@ public class HostFailState {
 
     public HostFailState(Spawn spawn) {
         this.spawn = spawn;
-        synchronized (hostsToFailByTypeLock) {
-            failFsDead = new LinkedHashSet<>();
-            failFsOkay = new LinkedHashSet<>();
-            fsFull = new LinkedHashSet<>();
-            hostsToFailByType = ImmutableMap.of(FailState.FAILING_FS_DEAD, failFsDead,
-                    FailState.DISK_FULL, fsFull, FailState.FAILING_FS_OKAY, failFsOkay);
-        }
+        failFsDead = new LinkedHashSet<>();
+        failFsOkay = new LinkedHashSet<>();
+        fsFull = new LinkedHashSet<>();
+        hostsToFailByType = ImmutableMap.of(FailState.FAILING_FS_DEAD, failFsDead,
+                FailState.DISK_FULL, fsFull, FailState.FAILING_FS_OKAY, failFsOkay);
     }
 
     /**
@@ -72,7 +69,7 @@ public class HostFailState {
      */
     public void putHost(String hostId, FailState failState) {
 
-        synchronized (hostsToFailByTypeLock) {
+        synchronized (hostsToFailByType) {
             if (failFsDead.contains(hostId)) {
                 log.info("Ignoring fs-okay failure of " + hostId + " because it is already being failed fs-dead");
                 return;
