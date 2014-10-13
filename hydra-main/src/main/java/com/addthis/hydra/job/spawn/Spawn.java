@@ -322,6 +322,7 @@ public class Spawn implements Codable, AutoCloseable {
         this.jobConfigManager = new JobConfigManager(spawnDataStore);
         // look for local object to import
         log.info("[init] beginning to load stats from data store");
+        aliasManager = new AliasManagerImpl(spawnDataStore);
         jobMacroManager = new JobMacroManager(this);
         jobCommandManager = new JobCommandManager(this);
         jobOnFinishStateHandler = new JobOnFinishStateHandlerImpl(this);
@@ -333,6 +334,13 @@ public class Spawn implements Codable, AutoCloseable {
             }
         }
         loadJobs();
+        // XXX Instantiate HostFailWorker/SpawnBalancer before SpawnMQ to avoid NPE during startup
+        // Once connected, SpawnMQ will call HostFailWorker/SpawnBalancer to get host information, 
+        // so the latter comonents must be created first.
+        hostFailWorker = new HostFailWorker(this, scheduledExecutor);
+        balancer = new SpawnBalancer(this);
+        loadSpawnBalancerConfig();
+
         // connect to message broker or fail
         // connect to mesh
         this.spawnMesh = new SpawnMesh(this);
@@ -350,11 +358,11 @@ public class Spawn implements Codable, AutoCloseable {
             throw new IllegalArgumentException("queueType (" + queueType +
                                                ") must be either a valid message queue type or null");
         }
-        aliasManager = new AliasManagerImpl(spawnDataStore);
-        hostFailWorker = new HostFailWorker(this, scheduledExecutor);
-        balancer = new SpawnBalancer(this);
-        loadSpawnBalancerConfig();
 
+        // XXX start FailHostTask schedule separately from HostFailWorker instantiation.
+        // Since FailHostTask has a lot of runtime dependencies on other spawn components such as 
+        // SpawnBalancer, it's safer to start as late in the spawn init cycle as possible.
+        hostFailWorker.initFailHostTaskSchedule();
         // start JobAlertManager
         jobAlertManager = new JobAlertManagerImpl(this, scheduledExecutor);
         // start job scheduler
