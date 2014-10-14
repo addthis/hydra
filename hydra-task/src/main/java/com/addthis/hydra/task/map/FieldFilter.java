@@ -49,6 +49,11 @@ public final class FieldFilter {
 
     /** If true then emit null values to the destination field. The default is false. */
     @JsonProperty boolean toNull;
+    
+    // Default constructor required for codec deserialization
+    @SuppressWarnings("unused")
+    private FieldFilter() {
+    }
 
     public FieldFilter(String copyFieldName) {
         this.from = CachingField.newAutoField(copyFieldName);
