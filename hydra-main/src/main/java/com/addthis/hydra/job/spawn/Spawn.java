@@ -117,7 +117,6 @@ import com.addthis.hydra.job.web.old.SpawnManager;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.util.DirectedGraph;
-import com.addthis.hydra.util.SettableGauge;
 import com.addthis.hydra.util.WebSocketManager;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
@@ -134,8 +133,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Counter;
-import com.yammer.metrics.core.Meter;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
@@ -183,41 +180,6 @@ public class Spawn implements Codable, AutoCloseable {
     private static final String logDir = Parameter.value("spawn.event.log.dir", "log");
 
     // metrics
-
-    static final SettableGauge<Integer> runningTaskCount =
-            SettableGauge.newSettableGauge(Spawn.class, "runningTasks", 0);
-    static final SettableGauge<Integer> queuedTaskCount  =
-            SettableGauge.newSettableGauge(Spawn.class, "queuedTasks", 0);
-    static final SettableGauge<Integer> failTaskCount    =
-            SettableGauge.newSettableGauge(Spawn.class, "failedTasks", 0);
-    static final SettableGauge<Integer> runningJobCount  =
-            SettableGauge.newSettableGauge(Spawn.class, "runningJobs", 0);
-    static final SettableGauge<Integer> queuedJobCount   =
-            SettableGauge.newSettableGauge(Spawn.class, "queuedJobs", 0);
-    static final SettableGauge<Integer> failJobCount     =
-            SettableGauge.newSettableGauge(Spawn.class, "failedJobs", 0);
-    static final SettableGauge<Integer> hungJobCount     =
-            SettableGauge.newSettableGauge(Spawn.class, "hungJobs", 0);
-
-    private static final Meter   tasksStartedPerHour                  =
-            Metrics.newMeter(Spawn.class, "tasksStartedPerHour", "tasksStartedPerHour", TimeUnit.HOURS);
-    private static final Meter   tasksCompletedPerHour                =
-            Metrics.newMeter(Spawn.class, "tasksCompletedPerHour", "tasksCompletedPerHour", TimeUnit.HOURS);
-    private static final Meter   jobsStartedPerHour                   =
-            Metrics.newMeter(Spawn.class, "jobsStartedPerHour", "jobsStartedPerHour", TimeUnit.HOURS);
-    private static final Meter   jobsCompletedPerHour                 =
-            Metrics.newMeter(Spawn.class, "jobsCompletedPerHour", "jobsCompletedPerHour", TimeUnit.HOURS);
-    private static final Meter   jobTaskUpdateHeartbeatSuccessMeter   =
-            Metrics.newMeter(Spawn.class, "jobTaskUpdateHeartbeatSuccess",
-                             "jobTaskUpdateHeartbeatSuccess", TimeUnit.MINUTES);
-
-    static final Counter quiesceCount = Metrics.newCounter(Spawn.class, "quiesced");
-    private static final Counter nonConsumingClientDropCounter        =
-            Metrics.newCounter(Spawn.class, "clientDrops");
-    private static final Counter nonHostTaskMessageCounter            =
-            Metrics.newCounter(Spawn.class, "nonHostTaskMessage");
-    private static final Counter jobTaskUpdateHeartbeatFailureCounter =
-            Metrics.newCounter(Spawn.class, "jobTaskUpdateHeartbeatFailure");
 
     public static void main(String[] args) throws Exception {
         Spawn spawn = Configs.newDefault(Spawn.class);
@@ -2107,7 +2069,7 @@ public class Spawn implements Codable, AutoCloseable {
                 break;
             case STATUS_TASK_BEGIN:
                 StatusTaskBegin begin = (StatusTaskBegin) core;
-                tasksStartedPerHour.mark();
+                SpawnMetrics.tasksStartedPerHour.mark();
                 if (debug("-begin-")) {
                     log.info("[task.begin] :: " + begin.getJobKey());
                 }
@@ -2224,7 +2186,7 @@ public class Spawn implements Codable, AutoCloseable {
             case STATUS_TASK_END:
                 StatusTaskEnd end = (StatusTaskEnd) core;
                 log.info("[task.end] :: " + end.getJobUuid() + "/" + end.getNodeID() + " exit=" + end.getExitCode());
-                tasksCompletedPerHour.mark();
+                SpawnMetrics.tasksCompletedPerHour.mark();
                 try {
                     job = getJob(end.getJobUuid());
                     if (job == null) {
@@ -2255,7 +2217,7 @@ public class Spawn implements Codable, AutoCloseable {
     private static boolean checkTaskMessage(JobTask task, String messageSourceUuid) {
         if (task == null || messageSourceUuid == null || !messageSourceUuid.equals(task.getHostUUID())) {
             log.warn("Ignoring task state message from non-live host {}", messageSourceUuid);
-            nonHostTaskMessageCounter.inc();
+            SpawnMetrics.nonHostTaskMessageCounter.inc();
             return false;
         }
         return true;
@@ -2349,7 +2311,7 @@ public class Spawn implements Codable, AutoCloseable {
     private void finishJob(Job job, boolean errored) {
         String callback = errored ? job.getOnErrorURL() : job.getOnCompleteURL();
         log.info("[job.done] {} :: errored={}. callback={}", job.getId(), errored, callback);
-        jobsCompletedPerHour.mark();
+        SpawnMetrics.jobsCompletedPerHour.mark();
         job.setFinishTime(System.currentTimeMillis());
         spawnFormattedLogger.finishJob(job);
         if (!getQuiesced()) {
@@ -2494,12 +2456,12 @@ public class Spawn implements Codable, AutoCloseable {
             spawnDataStore.put(SpawnDataStoreKeys.SPAWN_JOB_CONFIG_HEARTBEAT_PATH, now);
             String received = spawnDataStore.get(SpawnDataStoreKeys.SPAWN_JOB_CONFIG_HEARTBEAT_PATH);
             if (received != null && received.equals(now)) {
-                jobTaskUpdateHeartbeatSuccessMeter.mark();
+                SpawnMetrics.jobTaskUpdateHeartbeatSuccessMeter.mark();
             } else {
-                jobTaskUpdateHeartbeatFailureCounter.inc();
+                SpawnMetrics.jobTaskUpdateHeartbeatFailureCounter.inc();
             }
         } catch (Exception e) {
-            jobTaskUpdateHeartbeatFailureCounter.inc();
+            SpawnMetrics.jobTaskUpdateHeartbeatFailureCounter.inc();
             log.warn("Failed to perform jobtaskupdate heartbeat check", e);
         }
 
@@ -2669,7 +2631,7 @@ public class Spawn implements Codable, AutoCloseable {
                     log.warn("[listen] dropping listener queue for " + ev.getKey() + " = " + listener);
                 }
                 if (queueTooLarge) {
-                    nonConsumingClientDropCounter.inc();
+                    SpawnMetrics.nonConsumingClientDropCounter.inc();
                 }
                 continue;
             }
@@ -2812,7 +2774,7 @@ public class Spawn implements Codable, AutoCloseable {
         job.incrementRunCount();
         Job.logJobEvent(job, JobEvent.SCHEDULED, eventLog);
         log.info("[job.schedule] assigning " + job.getId() + " with " + job.getCopyOfTasks().size() + " tasks");
-        jobsStartedPerHour.mark();
+        SpawnMetrics.jobsStartedPerHour.mark();
         for (JobTask task : job.getCopyOfTasks()) {
             if (task == null || task.getState() != JobTaskState.IDLE) {
                 continue;

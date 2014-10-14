@@ -121,12 +121,12 @@ class UpdateEventRunnable implements Runnable {
         events.put("files", files);
         events.put("bytes", bytes);
         spawn.spawnFormattedLogger.periodicState(events);
-        Spawn.runningTaskCount.set(taskbusy);
-        Spawn.queuedTaskCount.set(taskqueued);
-        Spawn.failTaskCount.set(taskerrored);
-        Spawn.runningJobCount.set(jobrunning);
-        Spawn.queuedJobCount.set(jobscheduled);
-        Spawn.failJobCount.set(joberrored);
-        Spawn.hungJobCount.set(jobshung);
+        SpawnMetrics.runningTaskCount.set(taskbusy);
+        SpawnMetrics.queuedTaskCount.set(taskqueued);
+        SpawnMetrics.failTaskCount.set(taskerrored);
+        SpawnMetrics.runningJobCount.set(jobrunning);
+        SpawnMetrics.queuedJobCount.set(jobscheduled);
+        SpawnMetrics.failJobCount.set(joberrored);
+        SpawnMetrics.hungJobCount.set(jobshung);
     }
 }

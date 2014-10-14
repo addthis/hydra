@@ -65,9 +65,9 @@ public class Settings {
     }
 
     public void setQuiesced(boolean quiesced) {
-        Spawn.quiesceCount.clear();
+        SpawnMetrics.quiesceCount.clear();
         if (quiesced) {
-            Spawn.quiesceCount.inc();
+            SpawnMetrics.quiesceCount.inc();
         }
         spawn.spawnState.quiesce.set(quiesced);
         spawn.writeState();

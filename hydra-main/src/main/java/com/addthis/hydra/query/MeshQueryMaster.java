@@ -54,41 +54,31 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
 
     private static final Logger log = LoggerFactory.getLogger(MeshQueryMaster.class);
 
-    private static final String tempDir   = Parameter.value("query.tmpdir", "query.tmpdir");
-    private static final int    meshPort  = Parameter.intValue("qmaster.mesh.port", 5100);
-    private static final String meshRoot  = Parameter.value("qmaster.mesh.root", "/home/hydra");
-    private static final String meshPeers = Parameter.value("qmaster.mesh.peers", "localhost");
-    private static final int     meshPeerPort = Parameter.intValue("qmaster.mesh.peer.port", 5101);
-    private static final boolean enableZooKeeper =
-            Parameter.boolValue("qmaster.enableZooKeeper", true);
+    private static final String  tempDir         = Parameter.value("query.tmpdir", "query.tmpdir");
+    private static final int     meshPort        = Parameter.intValue("qmaster.mesh.port", 5100);
+    private static final String  meshRoot        = Parameter.value("qmaster.mesh.root", "/home/hydra");
+    private static final String  meshPeers       = Parameter.value("qmaster.mesh.peers", "localhost");
+    private static final int     meshPeerPort    = Parameter.intValue("qmaster.mesh.peer.port", 5101);
+    private static final boolean enableZooKeeper = Parameter.boolValue("qmaster.enableZooKeeper", true);
 
-    private static final QueryTaskSource EMPTY_TASK_SOURCE =
-            new QueryTaskSource(new QueryTaskSourceOption[0]);
+    private static final QueryTaskSource EMPTY_TASK_SOURCE = new QueryTaskSource(new QueryTaskSourceOption[0]);
 
     /**
-     * used for tracking metrics and other interesting things about queries
-     * that we have run.  Provides insight into currently running queries
-     * and gives ability to cancel a query before it completes.
+     * used for tracking metrics and other interesting things about queries that we have run.
+     * Provides insight into currently running queries and gives ability to cancel a query before it completes.
      */
     private final QueryTracker tracker;
 
-    /**
-     * Primary Mesh server
-     */
+    /** Primary Mesh server */
     private final MeshyServer meshy;
 
-    /**
-     * Abstracts away spawndatastore-reliant functions
-     */
+    /** Abstracts away spawndatastore-reliant functions */
     private final SpawnDataStoreHandler spawnDataStoreHandler;
 
-    /**
-     * Mesh FileRef Cache -- backed by a loading cache
-     */
+    /** Mesh FileRef Cache -- backed by a loading cache */
     private final MeshFileRefCache cachey;
 
     private final WorkerTracker worky;
-
     private final DefaultTaskAllocators allocators;
 
     public MeshQueryMaster(QueryTracker tracker) throws Exception {
