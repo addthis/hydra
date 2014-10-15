@@ -13,28 +13,21 @@
  */
 package com.addthis.hydra.data.filter.value;
 
-import java.io.IOException;
-
 import com.addthis.codec.config.Configs;
 
 import org.junit.Test;
 
+import static com.addthis.bundle.value.ValueFactory.create;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
-public class TestValueFilterGlob {
+public class ValueFilterNotTest {
 
     @Test
-    public void deser() throws IOException {
-        ValueFilterGlob filter = (ValueFilterGlob) Configs.decodeObject(ValueFilter.class, "glob = \"tr?an{g,z}l*\"");
-    }
-
-    @Test
-    public void basics() throws IOException {
-        ValueFilterGlob filter = Configs.decodeObject(ValueFilterGlob.class, "pattern = \"tr?an{g,z}l*\"");
-        assertNotNull(filter.filter("triangles"));
-        assertNotNull(filter.filter("tryanzl"));
-        assertNull(filter.filter("rectangles"));
-        assertNull(filter.filter((String) null));
+    public void inversion() throws Exception {
+        ValueFilter filter = Configs.decodeObject(ValueFilter.class, "not.glob = \"foo*\"");
+        assertNull(filter.filterValue(create("foobar")));
+        assertNotNull(filter.filterValue(create("notfoo")));
+        assertNotNull(filter.filterValue(create("goodbar")));
     }
 }

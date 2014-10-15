@@ -13,11 +13,13 @@
  */
 package com.addthis.hydra.data.filter.value;
 
+import javax.annotation.Nullable;
+
 import java.nio.file.FileSystems;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 
-import com.addthis.codec.annotations.FieldConfig;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">performs glob expression matching on the input string</span>.
@@ -32,24 +34,16 @@ import com.addthis.codec.annotations.FieldConfig;
  */
 public class ValueFilterGlob extends StringFilter {
 
-    /**
-     * Glob expression to match against. This field is required.
-     */
-    @FieldConfig(codable = true, required = true)
-    private String pattern;
+    /** Glob expression to match against. This field is required. */
+    private final PathMatcher compiled;
 
-    private volatile PathMatcher compiled;
-
-    public ValueFilterGlob setPattern(String p) {
-        pattern = p;
-        return this;
+    public ValueFilterGlob(@JsonProperty(value = "pattern", required = true) String pattern) {
+        compiled = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
     }
 
     @Override
+    @Nullable
     public String filter(String sv) {
-        if (compiled == null) {
-            compiled = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
-        }
         if (sv == null) {
             return null;
         }

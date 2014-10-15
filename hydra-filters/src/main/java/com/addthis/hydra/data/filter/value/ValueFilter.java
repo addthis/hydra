@@ -42,14 +42,14 @@ public abstract class ValueFilter implements Codable {
      * of an array. When this flag is turned on, filters will try to process the array as a whole.
      * Default is false.
      */
-    @JsonProperty private boolean once;
+    @JsonProperty protected boolean once;
 
     /**
      * If true then a parent {@link ValueFilterChain chain} filter does not exit on null values.
      * This indicates that the filter wishes to accept a null
      * returned by the previous filter in the chain. Default is false.
      */
-    @JsonProperty private boolean nullAccept;
+    @JsonProperty protected boolean nullAccept;
 
     // used for setup and requireSetup to do one-time-only initialization logic
     private final Lock setupLock = new ReentrantLock();

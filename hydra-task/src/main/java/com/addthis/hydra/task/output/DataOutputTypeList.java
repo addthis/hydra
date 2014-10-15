@@ -13,21 +13,11 @@
  */
 package com.addthis.hydra.task.output;
 
-import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.BundleFormatted;
-import com.addthis.bundle.core.list.ListBundle;
-import com.addthis.bundle.core.list.ListBundleFormat;
 
 
 public abstract class DataOutputTypeList extends TaskDataOutput implements BundleFormatted {
-
-    private final ListBundleFormat format = new ListBundleFormat();
-
-    @Override
-    public Bundle createBundle() {
-        return new ListBundle(format);
-    }
 
     @Override
     public BundleFormat getFormat() {

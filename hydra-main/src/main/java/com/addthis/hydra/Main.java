@@ -23,7 +23,8 @@ import com.addthis.basis.util.Strings;
 import com.addthis.codec.config.Configs;
 import com.addthis.codec.plugins.PluginMap;
 import com.addthis.codec.plugins.PluginRegistry;
-import com.addthis.metrics.reporter.config.ReporterConfig;
+import com.addthis.hydra.common.util.CloseTask;
+import com.addthis.hydra.util.BundleReporter;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
@@ -46,9 +47,11 @@ public class Main {
             Config globalConfig = ConfigFactory.load();
             if (globalConfig.getBoolean("hydra.metrics.enable")) {
                 try {
-                    Configs.decodeObject(ReporterConfig.class,
-                                         globalConfig.getConfig("hydra.metrics.config"))
-                           .enableAll();
+                    BundleReporter bundleReporter = Configs.decodeObject(
+                            BundleReporter.class, globalConfig.getConfig("hydra.metrics.config"));
+                    bundleReporter.start();
+                    Runtime.getRuntime().addShutdownHook(
+                            new Thread(new CloseTask(bundleReporter), "Metrics Bundle Reporter Shutdown Hook"));
                 } catch (Exception e) {
                     log.warn("Failed to enable metrics reporter from config", e);
                 }

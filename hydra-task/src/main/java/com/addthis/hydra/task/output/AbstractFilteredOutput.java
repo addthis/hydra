@@ -13,19 +13,17 @@
  */
 package com.addthis.hydra.task.output;
 
-import com.addthis.bundle.core.BundleFormat;
-import com.addthis.bundle.core.BundleFormatted;
-import com.addthis.bundle.core.kvp.KVBundleFormat;
+import com.addthis.bundle.core.Bundle;
+import com.addthis.hydra.data.filter.bundle.BundleFilter;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 
-public abstract class DataOutputTypeKV extends TaskDataOutput implements BundleFormatted {
+public abstract class AbstractFilteredOutput extends TaskDataOutput {
 
-    protected DataOutputTypeKV() {
-        super(new KVBundleFormat());
-    }
+    @JsonProperty protected BundleFilter filter;
 
-    @Override
-    public BundleFormat getFormat() {
-        return format;
+    public boolean filter(Bundle bundle) {
+        return (filter == null) || filter.filter(bundle);
     }
 }

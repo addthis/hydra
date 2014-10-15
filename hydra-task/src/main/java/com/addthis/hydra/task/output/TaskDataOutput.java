@@ -13,7 +13,12 @@
  */
 package com.addthis.hydra.task.output;
 
+import java.util.List;
+
 import com.addthis.bundle.channel.DataChannelOutput;
+import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.BundleFormat;
+import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.codec.annotations.Pluggable;
 
 
@@ -28,7 +33,27 @@ import com.addthis.codec.annotations.Pluggable;
 @Pluggable("output-sink")
 public abstract class TaskDataOutput implements DataChannelOutput {
 
+    protected final BundleFormat format;
+
+    protected TaskDataOutput() {
+        format = new ListBundleFormat();
+    }
+
+    protected TaskDataOutput(BundleFormat format) {
+        this.format = format;
+    }
+
     protected abstract void open();
+
+    @Override public void send(List<Bundle> bundles) {
+        for (Bundle bundle : bundles) {
+            send(bundle);
+        }
+    }
+
+    @Override public Bundle createBundle() {
+        return format.createBundle();
+    }
 
     public final void init() {
         open();
