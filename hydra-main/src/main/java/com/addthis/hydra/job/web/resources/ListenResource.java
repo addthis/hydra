@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.job.web.resources;
 
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -29,8 +30,10 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.IJob;
+import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.entity.JobEntityManager;
 import com.addthis.hydra.job.entity.JobMacro;
@@ -40,12 +43,14 @@ import com.addthis.hydra.job.spawn.ClientEventListener;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.spawn.SpawnBalancerConfig;
 import com.addthis.hydra.job.store.DataStoreUtil;
+import com.addthis.hydra.job.store.SpawnDataStoreKeys;
 import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Optional;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.sun.jersey.api.core.HttpContext;
 import com.yammer.dropwizard.auth.Auth;
 
@@ -284,4 +289,62 @@ public class ListenResource {
         JSONObject json = event.toJSON();
         return json;
     }
+
+    /**
+     * Validates data store has the most recent update.
+     *  
+     * @param retries   query param for the max number of retries if validation fails on the first 
+     *                  run, e.g. due to concurrent modification to job/data.
+     */
+    @GET
+    @Path("/datastore.validate")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response validateDataStore(@QueryParam("retries") @DefaultValue("0") int retries) {
+        try {
+            for (int i = 0; i <= retries; i++) {
+                if (validateDateStore(spawn)) {
+                    return Response.ok("true").build();
+                } else {
+                    Thread.sleep(100);
+                }
+            }
+            return Response.ok("false").build();
+        } catch (Exception e) {
+            String err = "Error validating data store: " + e.getMessage();
+            log.error(err, e);
+            return Response.serverError().entity(err).build();
+        }
+    }
+
+    /** 
+     * Validates data store update by comparing the most recent job submitTime in memory to that of 
+     * persisted in the data store.
+     */
+    private boolean validateDateStore(Spawn spawn) throws Exception {
+        Job job = getMostRecentlySubmittedJob(spawn);
+        if (job != null) {
+            String s = spawn.getSpawnDataStore().getChild(SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PATH,
+                    job.getId());
+            JsonNode json = Jackson.defaultCodec().getObjectMapper().readTree(s);
+            boolean result = job.getSubmitTime().equals(json.get("submitTime").asLong());
+            log.info("Data store integrity based on submitTime of job {}: {}", job.getId(), result);
+            return result;
+        } else {
+            log.warn("Unable to find a suitable job to use for validating data store integrity");
+            return false;
+        }
+    }
+
+    private Job getMostRecentlySubmittedJob(Spawn spawn) {
+        Job mostRecentJob = null;
+        for (Job job : spawn.listJobsConcurrentImmutable()) {
+            if (job.getSubmitTime() != null) {
+                if (mostRecentJob == null || job.getSubmitTime() > mostRecentJob.getSubmitTime()) {
+                    mostRecentJob = job;
+                }
+            }
+        }
+        return mostRecentJob;
+    }
+
 }

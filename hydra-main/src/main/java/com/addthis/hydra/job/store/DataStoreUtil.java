@@ -129,9 +129,9 @@ public class DataStoreUtil {
      * @throws Exception If any part of the cutover fails
      */
     public static void cutoverBetweenDataStore(SpawnDataStore sourceDataStore, SpawnDataStore targetDataStore, boolean checkAllWrites) throws Exception {
-        log.warn("Beginning cutover from " + sourceDataStore.getDescription() + " to " + targetDataStore.getDescription());
-        for (String value : pathsToImport) {
-            importValue(value, sourceDataStore, targetDataStore, checkAllWrites);
+        log.warn("Beginning cutover from {} to {}", sourceDataStore.getDescription(), targetDataStore.getDescription());
+        for (String path : pathsToImport) {
+            importValue(path, sourceDataStore, targetDataStore, checkAllWrites);
         }
         for (String parent : parentsToImport) {
             importParentAndChildren(parent, sourceDataStore, targetDataStore, checkAllWrites);
@@ -146,7 +146,7 @@ public class DataStoreUtil {
                 importJobDataParallel(jobIds, sourceDataStore, targetDataStore, checkAllWrites);
             }
         }
-        log.warn("Finished cutover from " + sourceDataStore.getDescription() + " to " + targetDataStore.getDescription());
+        log.warn("Finished cutover from {} to {}", sourceDataStore.getDescription(), targetDataStore.getDescription());
     }
 
     private static void importJobDataParallel(List<String> jobIds, SpawnDataStore sourceDataStore, SpawnDataStore targetDataStore, boolean checkAllWrites) throws Exception {
@@ -193,7 +193,7 @@ public class DataStoreUtil {
     }
 
     private static void importJobData(String jobId, SpawnDataStore sourceDataStore, SpawnDataStore targetDataStore, boolean checkAllWrites) throws Exception {
-        log.debug("Cutting over job data for " + jobId);
+        log.debug("Cutting over job data for {}", jobId);
         String basePath = SPAWN_JOB_CONFIG_PATH + "/" + jobId;
         importValue(basePath, sourceDataStore, targetDataStore, checkAllWrites);
         for (String parameter : jobParametersToImport) {
@@ -219,7 +219,7 @@ public class DataStoreUtil {
      * @throws Exception If there is a problem during the transfer
      */
     private static void importValue(String path, SpawnDataStore sourceDataStore, SpawnDataStore targetDataStore, boolean checkAllWrites) throws Exception {
-        log.debug("Cutting over value of path " + path);
+        log.debug("Cutting over value of path {}", path);
         String sourceValue = sourceDataStore.get(path);
         if (sourceValue != null) {
             targetDataStore.put(path, sourceValue);
@@ -241,7 +241,7 @@ public class DataStoreUtil {
      * @throws Exception If there is a problem during the transfer
      */
     private static void importParentAndChildren(String parent, SpawnDataStore sourceDataStore, SpawnDataStore targetDataStore, boolean checkAllWrites) throws Exception {
-        log.debug("Cutting over children of path " + parent);
+        log.debug("Cutting over children of path {}", parent);
         importValue(parent, sourceDataStore, targetDataStore, checkAllWrites);
         List<String> children = sourceDataStore.getChildrenNames(parent);
         if (children == null) {
