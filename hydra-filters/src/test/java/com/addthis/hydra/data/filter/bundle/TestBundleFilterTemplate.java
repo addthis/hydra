@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import com.addthis.bundle.util.map.MapBundle;
+
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;

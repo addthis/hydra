@@ -15,6 +15,8 @@ package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.basis.test.SlowTest;
 
+import com.addthis.bundle.util.map.MapBundle;
+
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 

@@ -15,13 +15,14 @@ package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.kvp.KVBundle;
 import com.addthis.bundle.core.kvp.KVBundleFormat;
+import com.addthis.bundle.util.map.MapBundle;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
 
 import org.junit.Test;
 
-import static com.addthis.hydra.data.filter.bundle.MapBundle.createBundle;
+import static com.addthis.bundle.util.map.MapBundle.createBundle;
 import static org.junit.Assert.assertEquals;
 
 public class TestBundleFilterDebugPrint {

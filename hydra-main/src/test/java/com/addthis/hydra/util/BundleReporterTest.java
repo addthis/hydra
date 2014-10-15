@@ -15,9 +15,9 @@ package com.addthis.hydra.util;
 
 import java.util.concurrent.TimeUnit;
 
-import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.CachingField;
+import com.addthis.bundle.util.map.MapBundle;
 import com.addthis.hydra.task.output.TaskDataOutput;
 
 import com.yammer.metrics.core.Counter;
@@ -29,17 +29,15 @@ import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.stats.Snapshot;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import static com.addthis.bundle.core.Bundles.decode;
+import static com.addthis.bundle.util.map.MapBundle.decode;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@Ignore("ignored to use bundle 2.4.1 until we settle upon better equality contracts/support")
 public class BundleReporterTest {
     TaskDataOutput output;
     AutoField name;
@@ -60,7 +58,7 @@ public class BundleReporterTest {
         reporter = new BundleReporter(output, name, value, group, units, period);
         when(output.createBundle()).thenAnswer(new Answer<Object>() {
             @Override public Object answer(InvocationOnMock invocation) throws Throwable {
-                return new ListBundle();
+                return new MapBundle();
             }
         });
     }
@@ -156,11 +154,11 @@ public class BundleReporterTest {
 
         reporter.processMeter(name("meter"), meter, null);
 
-        verify(output).send(decode("name = t.test.meter.15MinuteRate, value = 5.0, group = metered, units = events/second"));
         verify(output).send(decode("name = t.test.meter.count, value = 1, group = metered, units = events"));
         verify(output).send(decode("name = t.test.meter.meanRate, value = 2.0, group = metered, units = events/second"));
         verify(output).send(decode("name = t.test.meter.1MinuteRate, value = 3.0, group = metered, units = events/second"));
         verify(output).send(decode("name = t.test.meter.5MinuteRate, value = 4.0, group = metered, units = events/second"));
+        verify(output).send(decode("name = t.test.meter.15MinuteRate, value = 5.0, group = metered, units = events/second"));
     }
 
     @Test

@@ -14,6 +14,7 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.util.CachingField;
+import com.addthis.bundle.util.map.MapBundle;
 
 import org.junit.Test;
 

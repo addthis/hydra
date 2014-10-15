@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import com.addthis.bundle.util.map.MapBundle;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 

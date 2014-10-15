@@ -15,6 +15,7 @@ package com.addthis.hydra.data.filter.bundle;
 
 import java.io.IOException;
 
+import com.addthis.bundle.util.map.MapBundle;
 import com.addthis.codec.config.Configs;
 
 import org.junit.Test;
