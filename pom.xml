@@ -47,6 +47,8 @@
   </modules>
 
   <properties>
+    <project.build.targetJdk>1.8</project.build.targetJdk>
+
     <dep.plugin.findbugs.version>3.0.0</dep.plugin.findbugs.version>
     <!-- surefire junit properties -->
     <at.test.excluded.groups>com.addthis.basis.test.SlowTest,com.addthis.hydra.common.test.LocalStackTest</at.test.excluded.groups>
