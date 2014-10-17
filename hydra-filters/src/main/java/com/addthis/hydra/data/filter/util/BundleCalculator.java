@@ -422,7 +422,7 @@ public class BundleCalculator {
                     stack.push(ValueUtil.asNumberOrParseLong(stack.pop(), 10).asLong());
                     break;
                 case OP_TOFLOAT:
-                    stack.push(ValueUtil.asNumberOrParseDouble(stack.pop()));
+                    stack.push(ValueUtil.asNumberOrParseDouble(stack.pop()).asDouble());
                     break;
                 case OP_BITS_TOINT:
                     long bits = Double.doubleToLongBits(stack.pop().asDouble().getDouble());
