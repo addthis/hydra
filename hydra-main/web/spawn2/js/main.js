@@ -790,6 +790,12 @@ function(
     app.authenticate();
     domReady(function(){
         Backbone.history.start();
+        $("#healthCheckLink").click(function(event){
+            event.stopImmediatePropagation();
+            event.preventDefault();
+            app.healthCheck();
+            $(event.target).parents(".open").find("[data-toggle=dropdown]").dropdown("toggle");
+        });
         $("#quiesceLink").click(function(event){
             event.stopImmediatePropagation();
             event.preventDefault();

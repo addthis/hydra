@@ -30,6 +30,7 @@ import com.addthis.hydra.job.web.resources.JobsResource;
 import com.addthis.hydra.job.web.resources.ListenResource;
 import com.addthis.hydra.job.web.resources.MacroResource;
 import com.addthis.hydra.job.web.resources.SpawnConfig;
+import com.addthis.hydra.job.web.resources.SystemResource;
 import com.addthis.hydra.job.web.resources.TaskResource;
 import com.addthis.hydra.util.WebSocketManager;
 
@@ -68,7 +69,8 @@ public class SpawnService {
         this.webSocketManager = spawn.getWebSocketManager();
 
         //instantiate resources
-        ListenResource listenResource = new ListenResource(spawn, pollTimeout);
+        SystemResource systemResource = new SystemResource(spawn.getSystemManager());
+        ListenResource listenResource = new ListenResource(spawn, systemResource, pollTimeout);
         JobsResource jobsResource = new JobsResource(spawn, new JobRequestHandlerImpl(spawn));
         MacroResource macroResource = new MacroResource(spawn.getJobMacroManager());
         CommandResource commandResource = new CommandResource(spawn.getJobCommandManager());
@@ -81,6 +83,7 @@ public class SpawnService {
         Authenticator authenticator = new DefaultAuthenticator();
 
         //register resources
+        config.addResource(systemResource);
         config.addResource(listenResource);
         config.addResource(jobsResource);
         config.addResource(macroResource);

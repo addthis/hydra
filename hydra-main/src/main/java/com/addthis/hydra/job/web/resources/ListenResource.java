@@ -13,7 +13,6 @@
  */
 package com.addthis.hydra.job.web.resources;
 
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -22,18 +21,12 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import java.io.InputStream;
-
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.addthis.codec.jackson.Jackson;
-import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.IJob;
-import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.entity.JobEntityManager;
 import com.addthis.hydra.job.entity.JobMacro;
@@ -41,16 +34,12 @@ import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.ClientEvent;
 import com.addthis.hydra.job.spawn.ClientEventListener;
 import com.addthis.hydra.job.spawn.Spawn;
-import com.addthis.hydra.job.spawn.SpawnBalancerConfig;
-import com.addthis.hydra.job.store.DataStoreUtil;
-import com.addthis.hydra.job.store.SpawnDataStoreKeys;
 import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Optional;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.sun.jersey.api.core.HttpContext;
 import com.yammer.dropwizard.auth.Auth;
 
@@ -61,32 +50,21 @@ public class ListenResource {
 
     private static final Logger log = LoggerFactory.getLogger(ListenResource.class);
 
-    private final Spawn spawn;
     private static final int batchInterval = Integer.parseInt(System.getProperty("spawn.batchtime", "500"));
     private static int pollTimeout = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
 
-    private final Properties gitProperties;
-
+    private final Spawn spawn;
+    private final SystemResource systemResource;
+    private final AtomicInteger clientCounter;
+    
     @Context
     private HttpContext context;
 
-    private AtomicInteger clientCounter;
-
-    private static final CodecJSON codec = CodecJSON.INSTANCE;
-
-    public ListenResource(Spawn spawn, int pollTimeout) {
+    public ListenResource(Spawn spawn, SystemResource systemResource, int pollTimeout) {
         this.spawn = spawn;
+        this.systemResource = systemResource;
         this.pollTimeout = pollTimeout;
         clientCounter = new AtomicInteger(0);
-        gitProperties = new Properties();
-        try {
-            InputStream in = getClass().getResourceAsStream("/hydra-git.properties");
-            gitProperties.load(in);
-            in.close();
-        } catch (Exception ex) {
-            //ex.printStackTrace();
-            log.warn("Error loading git.properties, possibly jar was not compiled with maven.");
-        }
     }
 
     @GET
@@ -127,6 +105,11 @@ public class ListenResource {
             response = Response.serverError().build();
         }
         return response;
+    }
+
+    private JSONObject encodeJson(ClientEvent event) throws Exception {
+        JSONObject json = event.toJSON();
+        return json;
     }
 
     @GET
@@ -182,169 +165,59 @@ public class ListenResource {
         }
     }
 
+    /** @deprecated Use {@link SystemResource#quiesceCluster(String, User)} */
     @GET
     @Path("/quiesce")
     @Produces(MediaType.APPLICATION_JSON)
+    @Deprecated
     public Response quiesceCluster(@QueryParam("quiesce") String quiesce, @Auth User user) {
-        try {
-            if (user.getAdmin()) {
-                spawn.getSettings().setQuiesced(quiesce.equals("1"));
-                spawn.sendClusterQuiesceEvent(user.getUsername());
-                return Response.ok(new JSONObject().put("quiesced", (spawn.getSettings().getQuiesced() ? "1" : "0")).toString()).build();
-            } else {
-                return Response.status(Response.Status.FORBIDDEN).build();
-            }
-        } catch (Exception ex) {
-            return Response.serverError().build();
-        }
+        return systemResource.quiesceCluster(quiesce, user);
     }
 
+    /** @deprecated Use {@link SystemResource#getBalanceParams()} */
     @GET
     @Path("/balance.params.get")
     @Produces(MediaType.APPLICATION_JSON)
+    @Deprecated
     public Response getBalanceParams() {
-        try {
-            return Response.ok(codec.encode(spawn.getSpawnBalancer().getConfig())).build();
-        } catch (Exception e) {
-            return Response.serverError().entity("Error getting balance parameters.").build();
-        }
+        return systemResource.getBalanceParams();
     }
 
+    /** @deprecated Use {@link SystemResource#setBalanceParams(String)} */
     @GET
     @Path("/balance.params.set")
     @Produces(MediaType.APPLICATION_JSON)
+    @Deprecated
     public Response setBalanceParams(@QueryParam("params") String params) {
-        try {
-            SpawnBalancerConfig config = new SpawnBalancerConfig();
-            codec.decode(config, params.getBytes());
-            spawn.updateSpawnBalancerConfig(config);
-            spawn.writeSpawnBalancerConfig();
-            return Response.ok().build();
-        } catch (Exception e) {
-            log.warn("Failed to set SpawnBalanceConfig: " + e, e);
-            return Response.serverError().entity("Error getting balance parameters.").build();
-        }
+        return systemResource.setBalanceParams(params);
     }
 
+    /** @deprecated Use {@link SystemResource#setObeyTaskLimit(boolean)} */
     @GET
     @Path("/hostfailworker.obeyTaskLimit.set")
     @Produces(MediaType.APPLICATION_JSON)
+    @Deprecated
     public Response setObeyTaskLimit(@QueryParam("obey") boolean obey) {
-        spawn.getHostFailWorker().setObeyTaskSlots(obey);
-        return Response.ok().build();
+        return systemResource.setObeyTaskLimit(obey);
     }
 
 
+    /** @deprecated Use {@link SystemResource#getGitProperties()} */
     @GET
     @Path("/git.properties")
     @Produces(MediaType.APPLICATION_JSON)
+    @Deprecated
     public Response getGitProperties() {
-        try {
-            if (gitProperties.size() > 0) {
-                JSONObject prop = new JSONObject();
-                prop.put("commitIdAbbrev", gitProperties.get("git.commit.id.abbrev"));
-                prop.put("commitUserEmail", gitProperties.get("git.commit.user.email"));
-                prop.put("commitMessageFull", gitProperties.get("git.commit.message.full"));
-                prop.put("commitId", gitProperties.get("git.commit.id"));
-                prop.put("commitUserName", gitProperties.get("git.commit.user.name"));
-                prop.put("buildUserName", gitProperties.get("git.build.user.name"));
-                prop.put("commitIdDescribe", gitProperties.get("git.commit.id.describe"));
-                prop.put("buildUserEmail", gitProperties.get("git.build.user.email"));
-                prop.put("branch", gitProperties.get("git.branch"));
-                prop.put("commitTime", gitProperties.get("git.commit.time"));
-                prop.put("buildTime", gitProperties.get("git.build.time"));
-                return Response.ok(prop.toString()).build();
-            } else {
-                return Response.serverError().entity("Error loading git properties file.").build();
-            }
-        } catch (Exception ex) {
-            //ex.printStackTrace();
-            return Response.serverError().entity("Error loading git properties file. This is possibly because maven git plugin was not used for build.").build();
-        }
+        return systemResource.getGitProperties();
     }
 
+    /** @deprecated Use {@link SystemResource#datastoreCutover(String, String, int)} */
     @GET
     @Path("/datastore.cutover")
     @Produces(MediaType.APPLICATION_JSON)
+    @Deprecated
     public Response datastoreCutover(@QueryParam("src") String src, @QueryParam("tar") String tar, @QueryParam("checkAll") int checkAll) {
-        try {
-            if (!spawn.getSettings().getQuiesced()) {
-                return Response.serverError().entity("Spawn must be quiesced to cut over stored data.").build();
-            }
-            DataStoreUtil.DataStoreType srcType = DataStoreUtil.DataStoreType.valueOf(src);
-            DataStoreUtil.DataStoreType tarType = DataStoreUtil.DataStoreType.valueOf(tar);
-            boolean checkAllWrites = (checkAll == 1);
-            if (srcType != null || tarType != null) {
-                DataStoreUtil.cutoverBetweenDataStore(DataStoreUtil.makeSpawnDataStore(srcType), DataStoreUtil.makeSpawnDataStore(tarType), checkAllWrites);
-                return Response.ok("Cut over successfully.").build();
-            } else {
-                return Response.serverError().entity("Source/target not specified.").build();
-            }
-        } catch (Exception e) {
-            return Response.serverError().entity("Error cutting over data store: " + e).build();
-        }
-    }
-
-    private JSONObject encodeJson(ClientEvent event) throws Exception {
-        JSONObject json = event.toJSON();
-        return json;
-    }
-
-    /**
-     * Validates data store has the most recent update.
-     *  
-     * @param retries   query param for the max number of retries if validation fails on the first 
-     *                  run, e.g. due to concurrent modification to job/data.
-     */
-    @GET
-    @Path("/datastore.validate")
-    @Produces(MediaType.TEXT_PLAIN)
-    public Response validateDataStore(@QueryParam("retries") @DefaultValue("0") int retries) {
-        try {
-            for (int i = 0; i <= retries; i++) {
-                if (validateDateStore(spawn)) {
-                    return Response.ok("true").build();
-                } else {
-                    Thread.sleep(100);
-                }
-            }
-            return Response.ok("false").build();
-        } catch (Exception e) {
-            String err = "Error validating data store: " + e.getMessage();
-            log.error(err, e);
-            return Response.serverError().entity(err).build();
-        }
-    }
-
-    /** 
-     * Validates data store update by comparing the most recent job submitTime in memory to that of 
-     * persisted in the data store.
-     */
-    private boolean validateDateStore(Spawn spawn) throws Exception {
-        Job job = getMostRecentlySubmittedJob(spawn);
-        if (job != null) {
-            String s = spawn.getSpawnDataStore().getChild(SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PATH,
-                    job.getId());
-            JsonNode json = Jackson.defaultCodec().getObjectMapper().readTree(s);
-            boolean result = job.getSubmitTime().equals(json.get("submitTime").asLong());
-            log.info("Data store integrity based on submitTime of job {}: {}", job.getId(), result);
-            return result;
-        } else {
-            log.warn("Unable to find a suitable job to use for validating data store integrity");
-            return false;
-        }
-    }
-
-    private Job getMostRecentlySubmittedJob(Spawn spawn) {
-        Job mostRecentJob = null;
-        for (Job job : spawn.listJobsConcurrentImmutable()) {
-            if (job.getSubmitTime() != null) {
-                if (mostRecentJob == null || job.getSubmitTime() > mostRecentJob.getSubmitTime()) {
-                    mostRecentJob = job;
-                }
-            }
-        }
-        return mostRecentJob;
+        return systemResource.datastoreCutover(src, tar, checkAll);
     }
 
 }

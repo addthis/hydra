@@ -224,6 +224,7 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull private final JobOnFinishStateHandler jobOnFinishStateHandler;
     @Nonnull private final SpawnBalancer balancer;
     @Nonnull private final HostFailWorker hostFailWorker;
+    @Nonnull private final SystemManager systemManager;
     @Nonnull private final SetMembershipListener minionMembers;
     @Nonnull private final SetMembershipListener deadMinionMembers;
     @Nonnull private final RollingLog eventLog;
@@ -327,6 +328,7 @@ public class Spawn implements Codable, AutoCloseable {
         hostFailWorker.initFailHostTaskSchedule();
         // start JobAlertManager
         jobAlertManager = new JobAlertManagerImpl(this, scheduledExecutor);
+        systemManager = new SystemManagerImpl(this);
         // start job scheduler
         scheduledExecutor.scheduleWithFixedDelay(new UpdateEventRunnable(this), 0, 1, TimeUnit.MINUTES);
         scheduledExecutor.scheduleWithFixedDelay(new JobRekickTask(this), 0, 500, MILLISECONDS);
@@ -415,6 +417,11 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull
     public JobEntityManager<JobCommand> getJobCommandManager() {
         return jobCommandManager;
+    }
+    
+    @Nonnull
+    public SystemManager getSystemManager() {
+        return systemManager;
     }
 
     public void acquireJobLock() {

@@ -18,7 +18,7 @@ define([
 function(gitPropertiesTemplate){
     var Git={};
     Git.Model = Backbone.Model.extend({
-        url:"/update/git.properties",
+        url:"/system/git.properties",
         defaults:{
             branch:"",
             buildTime:"",
