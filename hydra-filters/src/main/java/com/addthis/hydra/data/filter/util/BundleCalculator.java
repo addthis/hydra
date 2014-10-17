@@ -261,6 +261,8 @@ public class BundleCalculator {
                         ops.add(new MathOp(Operation.OP_VAL, ValueFactory.create(o.substring(1))));
                     } else if (o.startsWith("h")) {
                         ops.add(new MathOp(Operation.OP_HASH, ValueFactory.create(o.substring(1))));
+                    } else {
+                        throw new IllegalArgumentException("Invalid number operation: " + o);
                     }
                 }
             }
