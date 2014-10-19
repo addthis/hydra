@@ -12,6 +12,7 @@
 
 package com.addthis.hydra.job.spawn;
 
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
@@ -22,6 +23,7 @@ import java.util.Properties;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.codec.jackson.Jackson;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.DataStoreUtil.DataStoreType;
@@ -92,8 +94,8 @@ public class SystemManagerImpl implements SystemManager {
 
     @Override
     public void setSpawnBalancerConfig(SpawnBalancerConfig config) {
-        spawn.updateSpawnBalancerConfig(config);
-        spawn.writeSpawnBalancerConfig();
+        spawn.getSpawnBalancer().setConfig(config);
+        spawn.getSpawnBalancer().saveConfigToDataStore();
     }
 
     @Override

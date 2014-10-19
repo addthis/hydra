@@ -143,7 +143,6 @@ import org.slf4j.LoggerFactory;
 
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_UP_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -299,10 +298,9 @@ public class Spawn implements Codable, AutoCloseable {
         loadJobs();
         // XXX Instantiate HostFailWorker/SpawnBalancer before SpawnMQ to avoid NPE during startup
         // Once connected, SpawnMQ will call HostFailWorker/SpawnBalancer to get host information, 
-        // so the latter comonents must be created first.
+        // so the latter components must be created first.
         hostFailWorker = new HostFailWorker(this, scheduledExecutor);
         balancer = new SpawnBalancer(this);
-        loadSpawnBalancerConfig();
 
         // connect to message broker or fail
         // connect to mesh
@@ -3233,31 +3231,6 @@ public class Spawn implements Codable, AutoCloseable {
                 host.setDisabled(disable);
                 sendHostUpdateEvent(host);
                 updateHostState(host);
-            }
-        }
-    }
-
-    public void updateSpawnBalancerConfig(SpawnBalancerConfig newConfig) {
-        spawnState.balancerConfig = newConfig;
-        balancer.setConfig(newConfig);
-    }
-
-    public void writeSpawnBalancerConfig() {
-        try {
-            spawnDataStore.put(SPAWN_BALANCE_PARAM_PATH, new String(CodecJSON.INSTANCE.encode(spawnState.balancerConfig)));
-        } catch (Exception e) {
-            log.warn("Warning: failed to persist SpawnBalancer parameters: ", e);
-        }
-    }
-
-    protected final void loadSpawnBalancerConfig() {
-        String configString = spawnDataStore.get(SPAWN_BALANCE_PARAM_PATH);
-        if (configString != null && !configString.isEmpty()) {
-            try {
-                SpawnBalancerConfig loadedConfig = Configs.decodeObject(SpawnBalancerConfig.class, configString);
-                updateSpawnBalancerConfig(loadedConfig);
-            } catch (Exception e) {
-                log.warn("Warning: failed to decode SpawnBalancerConfig: ", e);
             }
         }
     }
