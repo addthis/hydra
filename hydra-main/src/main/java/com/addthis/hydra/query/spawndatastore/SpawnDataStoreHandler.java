@@ -19,8 +19,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -32,11 +31,12 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobConfigManager;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
-import com.addthis.hydra.query.FileReferenceWrapper;
+import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.Multimap;
 
 public class SpawnDataStoreHandler {
 
@@ -127,7 +127,7 @@ public class SpawnDataStoreHandler {
      *
      * @return The canonical task count according to spawn/ zookeeper
      */
-    public int validateTaskCount(Query query, Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap) {
+    public int validateTaskCount(Query query, Multimap<Integer, FileReference> fileReferenceMap) {
         IJob zkJob;
         try {
             zkJob = jobConfigurationCache.get(query.getJob());
@@ -148,7 +148,7 @@ public class SpawnDataStoreHandler {
             final int numMissing = taskCount - fileReferenceCount;
             final String label = ". Missing the following " + numMissing + " tasks : ";
             final StringBuilder sb = new StringBuilder();
-            final TreeMap<Integer, Set<FileReferenceWrapper>> sortedMap = new TreeMap<>(fileReferenceMap);
+            final SortedMap<Integer, Collection<FileReference>> sortedMap = new TreeMap<>(fileReferenceMap.asMap());
             final Iterator<Integer> it = sortedMap.keySet().iterator();
             Integer key = it.next();
             for (int i = 0; i < taskCount; i++) {

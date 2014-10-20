@@ -199,13 +199,10 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
         return (maxRangeDays + maxRangeHours) > 0;
     }
 
-    /**
-     * query the mesh for a list of matching files
-     */
-    private List<MeshyStreamFile> findMeshFiles(final DateTime date, String[] patterns)
-            throws IOException {
+    /** query the mesh for a list of matching files */
+    private List<MeshyStreamFile> findMeshFiles(final DateTime date, String[] patterns) throws IOException {
         if (log.isTraceEnabled()) {
-            log.trace("find using mesh=" + meshLink + " patterns=" + Arrays.toString(patterns));
+            log.trace("find using mesh={} patterns={}", meshLink, Arrays.toString(patterns));
         }
         // responding peer count should only be mutated by meshy threads
         final AtomicInteger respondingPeerCount = new AtomicInteger();
@@ -221,7 +218,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
         final long startTime = System.currentTimeMillis();
         final AtomicBoolean shortCircuited = new AtomicBoolean(false);
         peerCount = -1;
-        FileSource source = new FileSource(meshLink, patterns, "localF") {
+        FileSource source = new FileSource(meshLink) {
             // both must be initialized in 'peers' to make sense elsewhere; TODO: add explicit state
             boolean localMeshFindRunning;
             Set<String> unfinishedHosts; // purely cosmetic
@@ -309,6 +306,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
                         .toString();
             }
         };
+        source.requestRemoteFilesWithUpdates(patterns);
         while (true) {
             try {
                 if (!gate.tryAcquire(meshShortCircuitWaitTime, TimeUnit.MILLISECONDS)) {

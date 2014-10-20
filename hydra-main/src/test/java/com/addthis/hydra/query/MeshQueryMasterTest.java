@@ -16,7 +16,7 @@ package com.addthis.hydra.query;
 
 import java.io.File;
 
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -24,6 +24,9 @@ import java.util.Set;
 import com.addthis.basis.util.Files;
 
 import com.addthis.meshy.service.file.FileReference;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 
 import org.junit.After;
 import org.junit.Before;
@@ -34,7 +37,6 @@ import static org.junit.Assert.assertEquals;
 public class MeshQueryMasterTest {
 
     private MeshQueryMaster meshQueryMaster;
-    private MeshFileRefCache cachey;
     private String tmpRoot;
 
     @Before
@@ -51,7 +53,6 @@ public class MeshQueryMasterTest {
         System.setProperty("qmaster.enableZooKeeper", "false");
         System.setProperty("qmaster.log.accessLogDir", tmpDir);
         meshQueryMaster = new MeshQueryMaster(null);
-        cachey = new MeshFileRefCache();
     }
 
     @After
@@ -63,47 +64,50 @@ public class MeshQueryMasterTest {
     @Test
     public void testFilterFileReferenceMap_happyPath() throws Exception {
 
-        Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap = new HashMap<>();
+        Multimap<Integer, FileReference> fileReferenceMap = HashMultimap.create();
         for (int i = 0; i < 5; i++) {
-            Set<FileReferenceWrapper> fileReferenceWrappers = new HashSet<>();
+            Set<FileReference> fileReferenceWrappers = new HashSet<>();
             for (int j = 0; j < 3; j++) {
-                fileReferenceWrappers.add(new FileReferenceWrapper(new FileReference("test" + i + ":" + j, 5000, 5000), i));
+                fileReferenceWrappers.add(new FileReference("test" + i + ":" + j, 5000, 5000));
             }
-            fileReferenceMap.put(i, fileReferenceWrappers);
+            fileReferenceMap.putAll(i, fileReferenceWrappers);
         }
-        Map<Integer, Set<FileReferenceWrapper>> filteredFileReferenceMap = cachey.filterFileReferences(fileReferenceMap);
+        Multimap<Integer, FileReference> filteredFileReferenceMap = MeshFileRefCache.filterFileReferences(
+                fileReferenceMap);
         assertEquals(fileReferenceMap.size(), filteredFileReferenceMap.size());
-        for (Map.Entry<Integer, Set<FileReferenceWrapper>> entry : fileReferenceMap.entrySet()) {
-            Set<FileReferenceWrapper> fileReferenceWrappers = entry.getValue();
-            Set<FileReferenceWrapper> filteredFileReferenceWrappers = filteredFileReferenceMap.get(entry.getKey());
-            assertEquals(fileReferenceWrappers.size(), filteredFileReferenceWrappers.size());
+        for (Map.Entry<Integer, Collection<FileReference>> entry : fileReferenceMap.asMap().entrySet()) {
+            Collection<FileReference> fileReferenceWrappers = entry.getValue();
+            Collection<FileReference> filteredFileReferences = filteredFileReferenceMap.get(entry.getKey());
+            assertEquals(fileReferenceWrappers.size(), filteredFileReferences.size());
         }
     }
 
     @Test
     public void testFilterFileReferenceMap_oneOldFile() throws Exception {
-        Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap = new HashMap<>();
+        Multimap<Integer, FileReference> fileReferenceMap = HashMultimap.create();
         for (int i = 0; i < 5; i++) {
-            Set<FileReferenceWrapper> fileReferenceWrappers = new HashSet<>();
+            Set<FileReference> fileReferenceWrappers = new HashSet<>();
             for (int j = 0; j < 3; j++) {
                 if (i == 1 && j == 1) {
-                    fileReferenceWrappers.add(new FileReferenceWrapper(new FileReference("test" + i + ":" + j, 1000, 5000), i));
+                    fileReferenceWrappers.add(new FileReference("test" + i + ":" + j, 1000, 5000));
                 } else {
-                    fileReferenceWrappers.add(new FileReferenceWrapper(new FileReference("test" + i + ":" + j, 5000, 5000), i));
+                    fileReferenceWrappers.add(new FileReference("test" + i + ":" + j, 5000, 5000));
                 }
             }
-            fileReferenceMap.put(i, fileReferenceWrappers);
+            fileReferenceMap.putAll(i, fileReferenceWrappers);
         }
-        Map<Integer, Set<FileReferenceWrapper>> filteredFileReferenceMap = cachey.filterFileReferences(fileReferenceMap);
-        assertEquals(fileReferenceMap.size(), filteredFileReferenceMap.size());
-        for (Map.Entry<Integer, Set<FileReferenceWrapper>> entry : fileReferenceMap.entrySet()) {
-            Set<FileReferenceWrapper> fileReferenceWrappers = entry.getValue();
-            Set<FileReferenceWrapper> filteredFileReferenceWrappers = filteredFileReferenceMap.get(entry.getKey());
+        Multimap<Integer, FileReference> filteredFileReferenceMap =
+                MeshFileRefCache.filterFileReferences(fileReferenceMap);
+
+        assertEquals(fileReferenceMap.keySet(), filteredFileReferenceMap.keySet());
+        for (Map.Entry<Integer, Collection<FileReference>> entry : fileReferenceMap.asMap().entrySet()) {
+            Collection<FileReference> fileReferences = entry.getValue();
+            Collection<FileReference> filteredFileReferences = filteredFileReferenceMap.get(entry.getKey());
             if (entry.getKey() == 1) {
-                assertEquals(fileReferenceWrappers.size() - 1, filteredFileReferenceWrappers.size());
-                assertEquals(fileReferenceWrappers.iterator().next().fileReference.lastModified, 5000);
+                assertEquals(fileReferences.size() - 1, filteredFileReferences.size());
+                assertEquals(5000, filteredFileReferences.iterator().next().lastModified);
             } else {
-                assertEquals(fileReferenceWrappers.size(), filteredFileReferenceWrappers.size());
+                assertEquals(fileReferences.size(), filteredFileReferences.size());
             }
         }
     }
@@ -111,65 +115,67 @@ public class MeshQueryMasterTest {
 //	@Test
 //	public void testFilterFileReferenceMap_oneSmallFile() throws Exception
 //	{
-//		Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap = new HashMap<Integer, Set<FileReferenceWrapper>>();
+//		Multimap<Integer, FileReference> fileReferenceMap = new HashMultimap<Integer, FileReference>();
 //		for (int i = 0; i < 5; i++)
 //		{
-//			Set<FileReferenceWrapper> fileReferenceWrappers = new HashSet<FileReferenceWrapper>();
+//			Set<FileReference> fileReferenceWrappers = new HashSet<FileReference>();
 //			for (int j = 0; j < 3; j++)
 //			{
 //				if (i == 1 && j == 1)
 //				{
-//					fileReferenceWrappers.add(new FileReferenceWrapper(new FileService.FileReference("test" + i + ":" + j, 5000, 1000), i));
+//					fileReferenceWrappers.add(new FileReference(new FileService.FileReference("test" + i + ":" + j, 5000, 1000), i));
 //				}
 //				else
 //				{
-//					fileReferenceWrappers.add(new FileReferenceWrapper(new FileService.FileReference("test" + i + ":" + j, 5000, 5000), i));
+//					fileReferenceWrappers.add(new FileReference(new FileService.FileReference("test" + i + ":" + j, 5000, 5000), i));
 //				}
 //			}
 //			fileReferenceMap.put(i, fileReferenceWrappers);
 //		}
-//		Map<Integer, Set<FileReferenceWrapper>> filteredFileReferenceMap = meshQueryMaster.filterFileReferences(fileReferenceMap);
+//		Multimap<Integer, FileReference> filteredFileReferenceMap = meshQueryMaster.filterFileReferences(fileReferenceMap);
 //		assertEquals(fileReferenceMap.size(), filteredFileReferenceMap.size());
-//		for (Map.Entry<Integer, Set<FileReferenceWrapper>> entry : fileReferenceMap.entrySet())
+//		for (Map.Entry<Integer, Set<FileReference>> entry : fileReferenceMap.entrySet())
 //		{
-//			Set<FileReferenceWrapper> fileReferenceWrappers = entry.getValue();
-//			Set<FileReferenceWrapper> filteredFileReferenceWrappers = filteredFileReferenceMap.get(entry.getKey());
+//			Set<FileReference> fileReferenceWrappers = entry.getValue();
+//			Set<FileReference> filteredFileReferences = filteredFileReferenceMap.get(entry.getKey());
 //			if (entry.getKey() == 1)
 //			{
-//				assertEquals(fileReferenceWrappers.size() - 1, filteredFileReferenceWrappers.size());
+//				assertEquals(fileReferenceWrappers.size() - 1, filteredFileReferences.size());
 //				assertEquals(fileReferenceWrappers.iterator().next().fileReference.size, 5000);
 //			}
 //			else
 //			{
-//				assertEquals(fileReferenceWrappers.size(), filteredFileReferenceWrappers.size());
+//				assertEquals(fileReferenceWrappers.size(), filteredFileReferences.size());
 //			}
 //		}
 //	}
 
     @Test
     public void testFilterFileReferenceMap_oneOldAndSmallFile() throws Exception {
-        Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap = new HashMap<>();
+        Multimap<Integer, FileReference> fileReferenceMap = HashMultimap.create();
         for (int i = 0; i < 5; i++) {
-            Set<FileReferenceWrapper> fileReferenceWrappers = new HashSet<>();
+            Set<FileReference> fileReferenceWrappers = new HashSet<>();
             for (int j = 0; j < 3; j++) {
                 if (i == 1 && j == 1) {
-                    fileReferenceWrappers.add(new FileReferenceWrapper(new FileReference("test" + i + ":" + j, 1000, 1000), i));
+                    fileReferenceWrappers.add(new FileReference("test" + i + ":" + j, 1000, 1000));
                 } else {
-                    fileReferenceWrappers.add(new FileReferenceWrapper(new FileReference("test" + i + ":" + j, 5000, 5000), i));
+                    fileReferenceWrappers.add(new FileReference("test" + i + ":" + j, 5000, 5000));
                 }
             }
-            fileReferenceMap.put(i, fileReferenceWrappers);
+            fileReferenceMap.putAll(i, fileReferenceWrappers);
         }
-        Map<Integer, Set<FileReferenceWrapper>> filteredFileReferenceMap = cachey.filterFileReferences(fileReferenceMap);
-        assertEquals(fileReferenceMap.size(), filteredFileReferenceMap.size());
-        for (Map.Entry<Integer, Set<FileReferenceWrapper>> entry : fileReferenceMap.entrySet()) {
-            Set<FileReferenceWrapper> fileReferenceWrappers = entry.getValue();
-            Set<FileReferenceWrapper> filteredFileReferenceWrappers = filteredFileReferenceMap.get(entry.getKey());
+        Multimap<Integer, FileReference> filteredFileReferenceMap =
+                MeshFileRefCache.filterFileReferences(fileReferenceMap);
+
+        assertEquals(fileReferenceMap.keySet(), filteredFileReferenceMap.keySet());
+        for (Map.Entry<Integer, Collection<FileReference>> entry : fileReferenceMap.asMap().entrySet()) {
+            Collection<FileReference> fileReferences = entry.getValue();
+            Collection<FileReference> filteredFileReferences = filteredFileReferenceMap.get(entry.getKey());
             if (entry.getKey() == 1) {
-                assertEquals(fileReferenceWrappers.size() - 1, filteredFileReferenceWrappers.size());
-                assertEquals(fileReferenceWrappers.iterator().next().fileReference.size, 5000);
+                assertEquals(fileReferences.size() - 1, filteredFileReferences.size());
+                assertEquals(5000, filteredFileReferences.iterator().next().size);
             } else {
-                assertEquals(fileReferenceWrappers.size(), filteredFileReferenceWrappers.size());
+                assertEquals(fileReferences, filteredFileReferences);
             }
         }
     }

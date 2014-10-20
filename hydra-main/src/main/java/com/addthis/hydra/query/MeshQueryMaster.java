@@ -18,8 +18,8 @@ import java.io.IOException;
 
 import java.net.InetSocketAddress;
 
+import java.util.Collection;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
@@ -40,6 +40,8 @@ import com.addthis.hydra.query.tracker.QueryTracker;
 import com.addthis.hydra.query.tracker.TrackerHandler;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
+
+import com.google.common.collect.Multimap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -179,7 +181,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
             spawnDataStoreHandler.validateJobForQuery(query);
         }
 
-        Map<Integer, Set<FileReferenceWrapper>> fileReferenceMap;
+        Multimap<Integer, FileReference> fileReferenceMap;
         try {
             fileReferenceMap = cachey.get(query.getJob());
             if ((fileReferenceMap == null) || fileReferenceMap.isEmpty()) {
@@ -190,28 +192,21 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
             throw new QueryException("Exception getting file references: " + e.getMessage());
         }
 
-        int canonicalTasks = 0;
-
+        int canonicalTasks;
         if (spawnDataStoreHandler != null) {
             canonicalTasks = spawnDataStoreHandler.validateTaskCount(query, fileReferenceMap);
         } else {
-            for (Integer taskId : fileReferenceMap.keySet()) {
-                if (taskId > canonicalTasks) {
-                    canonicalTasks = taskId;
-                }
-            }
-            // tasks are zero indexed
-            canonicalTasks += 1;
+            // task-ids are zero indexed, so add one
+            canonicalTasks = fileReferenceMap.keySet().stream().mapToInt(Integer::intValue).max().orElse(-1) + 1;
         }
 
         QueryTaskSource[] sourcesByTaskID = new QueryTaskSource[canonicalTasks];
         for (int i = 0; i < canonicalTasks; i++) {
-            Set<FileReferenceWrapper> sourceOptions = fileReferenceMap.get(i);
+            Collection<FileReference> sourceOptions = fileReferenceMap.get(i);
             if (sourceOptions != null) {
                 QueryTaskSourceOption[] taskSourceOptions = new QueryTaskSourceOption[sourceOptions.size()];
                 int taskSourceOptionsIndex = 0;
-                for (FileReferenceWrapper wrapper : sourceOptions) {
-                    FileReference queryReference = wrapper.fileReference;
+                for (FileReference queryReference : sourceOptions) {
                     WorkerData workerData = worky.get(queryReference.getHostUUID());
                     taskSourceOptions[taskSourceOptionsIndex] =
                             new QueryTaskSourceOption(queryReference, workerData.queryLeases);
@@ -241,23 +236,19 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
      * @return A replacement FileReference, which is also placed into the cache if it was newly generated
      * @throws IOException If there is a problem fetching a replacement FileReference
      */
-    public QueryTaskSourceOption getReplacementQueryTaskOption(String job, int task, FileReference failedReference) throws IOException, ExecutionException {
-        Set<FileReferenceWrapper> wrappers = cachey.getTaskReferencesIfPresent(job, task);
-        if (wrappers != null) {
-            wrappers.remove(new FileReferenceWrapper(failedReference, task));
-            if (!wrappers.isEmpty()) {
-                cachey.updateFileReferenceForTask(job, task, new HashSet<>(wrappers));
-                FileReference cachedReplacement = wrappers.iterator().next().fileReference;
-                WorkerData workerData = worky.get(cachedReplacement.getHostUUID());
-                return new QueryTaskSourceOption(cachedReplacement, workerData.queryLeases);
-            }
+    public QueryTaskSourceOption getReplacementQueryTaskOption(String job, int task, FileReference failedReference)
+            throws IOException, ExecutionException, InterruptedException {
+        Collection<FileReference> references = cachey.getTaskReferencesIfPresent(job, task);
+        Set<FileReference> newReferences = new HashSet<>(references);
+        newReferences.remove(failedReference);
+        if (newReferences.isEmpty()) {
+            // there was no replacement fileReference in the cache, so we need to fetch a new one
+            FileReference freshFileReference = cachey.getFileReferenceForSingleTask(job, task);
+            newReferences.add(freshFileReference);
         }
-        // If mqm got to this point, there was no replacement fileReference in the cache, so we need to fetch a new one
-        FileReference freshFileReference = cachey.getFileReferenceWrapperForSingleTask(job, task).fileReference;
-        HashSet<FileReferenceWrapper> baseSet = wrappers == null ? new HashSet<FileReferenceWrapper>() : new HashSet<>(wrappers);
-        baseSet.add(new FileReferenceWrapper(freshFileReference, task));
-        cachey.updateFileReferenceForTask(job, task, baseSet);
-        WorkerData workerData = worky.get(freshFileReference.getHostUUID());
-        return new QueryTaskSourceOption(freshFileReference, workerData.queryLeases);
+        cachey.updateFileReferenceForTask(job, task, newReferences);
+        FileReference cachedReplacement = references.iterator().next();
+        WorkerData workerData = worky.get(cachedReplacement.getHostUUID());
+        return new QueryTaskSourceOption(cachedReplacement, workerData.queryLeases);
     }
 }
