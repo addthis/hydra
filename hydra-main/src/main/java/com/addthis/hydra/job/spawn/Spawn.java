@@ -2493,7 +2493,6 @@ public class Spawn implements Codable, AutoCloseable {
             info.put("username", username);
             info.put("date", JitterClock.globalTime());
             info.put("quiesced", quiesce);
-            log.info("User " + username + " has " + (quiesce ? "quiesced" : "unquiesed") + " the cluster.");
             sendEventToClientListeners("cluster.quiesce", info);
         } catch (Exception e) {
             log.warn("", e);

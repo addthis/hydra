@@ -12,7 +12,6 @@
 
 package com.addthis.hydra.job.spawn;
 
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
@@ -23,7 +22,6 @@ import java.util.Properties;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.codec.jackson.Jackson;
-import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.DataStoreUtil.DataStoreType;
@@ -82,20 +80,18 @@ public class SystemManagerImpl implements SystemManager {
 
     @Override
     public boolean quiesceCluster(boolean quiesce, String username) {
-        setQueisced(quiesce);
-        spawn.sendClusterQuiesceEvent(username);
+        if (spawn.spawnState.quiesce.compareAndSet(!quiesce, quiesce)) {
+            SpawnMetrics.quiesceCount.clear();
+            if (quiesce) {
+                SpawnMetrics.quiesceCount.inc();
+            }
+            spawn.writeState();
+            spawn.sendClusterQuiesceEvent(username);
+            log.info("User {} has {} the cluster.", username, (quiesce ? "quiesced" : "unquiesed"));
+        }
         return spawn.spawnState.quiesce.get();
     }
     
-    private void setQueisced(boolean quiesced) {
-        SpawnMetrics.quiesceCount.clear();
-        if (quiesced) {
-            SpawnMetrics.quiesceCount.inc();
-        }
-        spawn.spawnState.quiesce.set(quiesced);
-        spawn.writeState();
-    }
-
     @Override
     public SpawnBalancerConfig getSpawnBalancerConfig() {
         return spawn.getSpawnBalancer().getConfig();
