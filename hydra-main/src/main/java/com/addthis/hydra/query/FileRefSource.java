@@ -39,7 +39,7 @@ class FileRefSource extends FileSource {
     @GuardedBy("lock")
     private boolean shortCircuited;
 
-    public FileRefSource(ChannelMaster master) {
+    FileRefSource(ChannelMaster master) {
         super(master);
         this.lock = new StampedLock();
         this.shortCircuited = false;

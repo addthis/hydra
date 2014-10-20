@@ -41,7 +41,7 @@ class FileRefCacheLoader extends CacheLoader<String, Multimap<Integer, FileRefer
                                                              .setNameFormat("fileReferenceCacheReloader-%d")
                                                              .build());
 
-    public FileRefCacheLoader(MeshyServer meshy) {
+    FileRefCacheLoader(MeshyServer meshy) {
         this.meshy = meshy;
     }
 

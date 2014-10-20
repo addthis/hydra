@@ -52,9 +52,6 @@ public class MeshFileRefCache implements ChannelCloseListener {
     static final Timer fileReferenceFetchTimes = Metrics.newTimer(MeshFileRefCache.class, "fileReferenceFetchTimes", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
     static final Counter fileReferenceFetches = Metrics.newCounter(MeshFileRefCache.class, "fileReferenceFetches");
 
-    /** Primary Mesh server */
-    private final MeshyServer meshy;
-
     private final FileRefCacheLoader loader;
 
     /**
@@ -64,7 +61,6 @@ public class MeshFileRefCache implements ChannelCloseListener {
     @Nonnull private final LoadingCache<String, Multimap<Integer, FileReference>> fileReferenceCache;
 
     public MeshFileRefCache(MeshyServer meshy) throws Exception {
-        this.meshy = meshy;
         this.loader = new FileRefCacheLoader(meshy);
         this.fileReferenceCache = createLoadingCache(loader);
         meshy.addChannelCloseListener(this);
