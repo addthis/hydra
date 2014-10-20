@@ -60,19 +60,6 @@ public class Settings {
         spawn.spawnHost = spawnHost;
     }
 
-    public boolean getQuiesced() {
-        return spawn.getQuiesced();
-    }
-
-    public void setQuiesced(boolean quiesced) {
-        SpawnMetrics.quiesceCount.clear();
-        if (quiesced) {
-            SpawnMetrics.quiesceCount.inc();
-        }
-        spawn.spawnState.quiesce.set(quiesced);
-        spawn.writeState();
-    }
-
     public String getDisabled() {
         return Strings.join(spawn.spawnState.disabledHosts.toArray(), ",");
     }
@@ -86,7 +73,7 @@ public class Settings {
 
     public JSONObject toJSON() throws JSONException {
         return new JSONObject().put("debug", spawn.debug)
-                               .put("quiesce", spawn.spawnState.quiesce.get())
+                               .put("quiesce", spawn.getQuiesced())
                                .put("queryHost", spawn.queryHost)
                                .put("spawnHost", spawn.spawnHost)
                                .put("disabled", getDisabled())

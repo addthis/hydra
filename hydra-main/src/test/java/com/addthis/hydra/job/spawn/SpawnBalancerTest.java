@@ -450,7 +450,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
     @Test
     public void queuePersist() throws Exception {
         spawn.getJobCommandManager().putEntity("foo", new JobCommand(), false);
-        spawn.getSettings().setQuiesced(true);
+        spawn.getSystemManager().quiesceCluster(true, "unknown");
         installHostStateWithUUID("host", spawn, true);
         Job job = createJobAndUpdateHosts(spawn, 4, Arrays.asList("host"), now, 1000, 0);
         JobKey myKey = new JobKey(job.getId(), 0);
@@ -458,7 +458,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         spawn.writeSpawnQueue();
         // FIXME spawn2 can't be instantiated due to 5050 already being used by spawn
         try (Spawn spawn2 = Configs.newDefault(Spawn.class)) {
-            spawn2.getSettings().setQuiesced(true);
+            spawn2.getSystemManager().quiesceCluster(true, "unknown");
             spawn2.loadSpawnQueue();
             assertEquals("should have one queued task", 1, spawn.getTaskQueuedCount());
         }

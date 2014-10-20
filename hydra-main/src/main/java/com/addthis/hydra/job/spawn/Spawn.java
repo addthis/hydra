@@ -2488,7 +2488,7 @@ public class Spawn implements Codable, AutoCloseable {
      */
     public void sendClusterQuiesceEvent(String username) {
         try {
-            boolean quiesce = getSettings().getQuiesced();
+            boolean quiesce = getQuiesced();
             JSONObject info = new JSONObject();
             info.put("username", username);
             info.put("date", JitterClock.globalTime());

@@ -1024,7 +1024,7 @@ public class SpawnBalancer implements Codable {
      */
     public boolean okayToAutobalance() {
         // Don't autobalance if it is disabled, spawn is quiesced, or the number of queued tasks is high
-        if (config.getAutoBalanceLevel() == 0 || spawn.getSettings().getQuiesced() || spawn.getLastQueueSize() > spawn.listHostStatus(null).size()) {
+        if (config.getAutoBalanceLevel() == 0 || spawn.getQuiesced() || spawn.getLastQueueSize() > spawn.listHostStatus(null).size()) {
             return false;
         }
         // Don't autobalance if there are still jobs in rebalance state

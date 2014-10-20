@@ -171,12 +171,12 @@ public class SpawnManager {
                 KVPairs kv = link.getRequestValues();
                 Settings settings = spawn.getSettings();
                 settings.setDebug(kv.getValue("debug", settings.getDebug()));
-                String quiesce = kv.getValue("quiesce", settings.getQuiesced() ? "1" : "0");
-                if (!quiesce.equals(settings.getQuiesced() ? "1" : "0")) {
+                String quiesce = kv.getValue("quiesce", spawn.getQuiesced() ? "1" : "0");
+                if (!quiesce.equals(spawn.getQuiesced() ? "1" : "0")) {
                     String logVerb = quiesce.equals("1") ? "quiesce" : "unquiesce";
                     emitLogLineForAction(kv, logVerb + " the cluster");
                 }
-                settings.setQuiesced(quiesce.equals("1"));
+                spawn.getSystemManager().quiesceCluster(quiesce.equals("1"), kv.getValue("user", "anonymous"));
                 settings.setQueryHost(kv.getValue("queryHost", settings.getQueryHost()));
                 settings.setSpawnHost(kv.getValue("spawnHost", settings.getSpawnHost()));
                 settings.setDisabled(kv.getValue("disabled", settings.getDisabled()));
@@ -1020,7 +1020,7 @@ public class SpawnManager {
             @Override
             public void httpService(HTTPLink link) throws Exception {
                 try {
-                    if (!spawn.getSettings().getQuiesced()) {
+                    if (!spawn.getQuiesced()) {
                         link.sendShortReply(500, "Server Error", new JSONObject().put("error", "Spawn is not quiesced").toString());
                     }
                     KVPairs kv = link.getRequestValues();

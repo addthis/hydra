@@ -236,7 +236,7 @@ public class HostFailWorker {
                     return;
                 }
                 boolean diskFull = (failState == FailState.DISK_FULL);
-                if (!diskFull && spawn.getSettings().getQuiesced()) {
+                if (!diskFull && spawn.getQuiesced()) {
                     // If filesystem is okay, don't do any moves while spawn is quiesced.
                     return;
                 }

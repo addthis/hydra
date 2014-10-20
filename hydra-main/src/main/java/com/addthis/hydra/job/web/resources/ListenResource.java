@@ -155,7 +155,7 @@ public class ListenResource {
             setup.put("hosts", hostlist);
             setup.put("aliases", aliases);
             setup.put("alerts", spawn.getJobAlertManager().fetchAllAlertsMap());
-            setup.put("quiesced", (spawn.getSettings().getQuiesced() ? "1" : "0"));
+            setup.put("quiesced", (spawn.getQuiesced() ? "1" : "0"));
             setup.put("spawnqueuesize", spawn.getTaskQueuedCount());
             setup.put("clientId", clientCounter.incrementAndGet());
             return Response.ok(setup.toString()).build();

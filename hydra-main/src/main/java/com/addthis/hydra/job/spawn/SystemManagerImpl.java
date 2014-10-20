@@ -82,9 +82,18 @@ public class SystemManagerImpl implements SystemManager {
 
     @Override
     public boolean quiesceCluster(boolean quiesce, String username) {
-        spawn.getSettings().setQuiesced(quiesce);
+        setQueisced(quiesce);
         spawn.sendClusterQuiesceEvent(username);
-        return spawn.getSettings().getQuiesced();
+        return spawn.spawnState.quiesce.get();
+    }
+    
+    private void setQueisced(boolean quiesced) {
+        SpawnMetrics.quiesceCount.clear();
+        if (quiesced) {
+            SpawnMetrics.quiesceCount.inc();
+        }
+        spawn.spawnState.quiesce.set(quiesced);
+        spawn.writeState();
     }
 
     @Override
@@ -162,7 +171,7 @@ public class SystemManagerImpl implements SystemManager {
             DataStoreType sourceType,
             DataStoreType targetType,
             boolean checkAllWrites) throws Exception {
-        checkState(spawn.getSettings().getQuiesced(), "Spawn must be quiesced to cut over stored data");
+        checkState(spawn.getQuiesced(), "Spawn must be quiesced to cut over stored data");
         checkArgument(sourceType != null, "Source data store type must be specified");
         checkArgument(targetType != null, "Target data store type must be specified");
         DataStoreUtil.cutoverBetweenDataStore(DataStoreUtil.makeSpawnDataStore(sourceType),
