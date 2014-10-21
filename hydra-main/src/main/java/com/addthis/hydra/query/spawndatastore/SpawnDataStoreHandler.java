@@ -140,11 +140,10 @@ public class SpawnDataStoreHandler {
         }
 
         final int taskCount = new Job(zkJob).getTaskCount();
-        int fileReferenceCount = fileReferenceMap.size();
-        if (!((query.getParameter("allowPartial") != null) && Boolean.valueOf(query.getParameter("allowPartial")))
-            &&
-            (fileReferenceCount != taskCount)) {
-            final String errorMessage = "Did not find data for all tasks (and allowPartial is off): " + fileReferenceCount + " out of " + taskCount;
+        int fileReferenceCount = fileReferenceMap.keySet().size();
+        if (!Boolean.valueOf(query.getParameter("allowPartial")) && (fileReferenceCount != taskCount)) {
+            final String errorMessage = "Did not find data for all tasks (and allowPartial is off): "
+                                        + fileReferenceCount + " out of " + taskCount;
             final int numMissing = taskCount - fileReferenceCount;
             final String label = ". Missing the following " + numMissing + " tasks : ";
             final StringBuilder sb = new StringBuilder();
@@ -152,7 +151,7 @@ public class SpawnDataStoreHandler {
             final Iterator<Integer> it = sortedMap.keySet().iterator();
             Integer key = it.next();
             for (int i = 0; i < taskCount; i++) {
-                if (key == null || i != key) {
+                if ((key == null) || (i != key)) {
                     if (sb.length() > 0) {
                         sb.append(", ");
                     }
