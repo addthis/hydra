@@ -1709,6 +1709,13 @@ function(
             "click input[type='checkbox']":"handleCheckboxClick"
         }),
         initialize:function(options){
+            if (options.isClone) {
+                options.model.attributes.dontDeleteMe = false;
+                options.model.attributes.onComplete = "";
+                options.model.attributes.onCompleteTimeout = 0;
+                options.model.attributes.onError = "";
+                options.model.attributes.onErrorTimeout = 0;
+            }
             DetailView.prototype.initialize.apply(this,[options]);
         },
         render:function(){
