@@ -388,10 +388,6 @@ function renderQueryHosts(hosts,tab){
     var html = '<table><tr><th>';
     html += ['task','lines','finished','host info'].join('</th><th>')+'</th></tr>';
     var finished=0;
-    if(hosts.length>0) {
-        hosts=$(hosts).sortBy(function(el){ return el.lines;}).reverse();
-        // console.log("sorted:"+hosts);
-    }       
     for (var i=0; i<hosts.length; i++) {
         var h = hosts[i];
         var options = h.options;
