@@ -22,6 +22,7 @@ import java.math.RoundingMode;
 import com.addthis.basis.util.ClosableIterator;
 
 import com.addthis.bundle.value.ValueArray;
+import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.tree.DataTreeNode;
 
 import com.google.common.math.DoubleMath;
@@ -207,6 +208,14 @@ public class DataReservoirTest {
         assertEquals(7, DoubleMath.roundToLong(result.get(2).asDouble().getDouble(), RoundingMode.HALF_UP));
         assertEquals(4, DoubleMath.roundToLong(result.get(3).asDouble().getDouble(), RoundingMode.HALF_UP));
         assertEquals(14, result.get(4).asLong().getLong());
+
+        // test mode "get"
+        assertEquals(0, reservoir.getValue("mode=get~epoch=0").asLong().getLong());
+        assertEquals(4, reservoir.getValue("mode=get~epoch=1").asLong().getLong());
+        assertEquals(12, reservoir.getValue("mode=get~epoch=2").asLong().getLong());
+        assertEquals(4, reservoir.getValue("mode=get~epoch=3").asLong().getLong());
+        assertEquals(100, reservoir.getValue("mode=get~epoch=4").asLong().getLong());
+        assertEquals(0, reservoir.getValue("mode=get~epoch=5").asLong().getLong());
     }
 
     @Test

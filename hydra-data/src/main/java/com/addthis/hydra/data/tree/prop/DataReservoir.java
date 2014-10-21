@@ -372,7 +372,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         }
     }
 
-    private DataReservoirValue generateValueObject(String key) {
+    private ValueObject generateValueObject(String key) {
         long targetEpoch = -1;
         int numObservations = -1;
         double sigma = Double.POSITIVE_INFINITY;
@@ -420,17 +420,26 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
                 }
             }
         }
-        DataReservoirValue.Builder builder = new DataReservoirValue.Builder();
-        builder.setTargetEpoch(targetEpoch);
-        builder.setNumObservations(numObservations);
-        builder.setDoubleToLongBits(doubleToLongBits);
-        builder.setRaw(raw);
-        builder.setSigma(sigma);
-        builder.setMinMeasurement(minMeasurement);
-        builder.setPercentile(percentile);
-        builder.setMode(mode);
-        DataReservoirValue value = builder.build(this);
-        return value;
+        if (mode.equals("get")) {
+            long count = retrieveCount(targetEpoch);
+            if (count < 0) {
+                return ValueFactory.create(0L);
+            } else {
+                return ValueFactory.create(count);
+            }
+        } else {
+            DataReservoirValue.Builder builder = new DataReservoirValue.Builder();
+            builder.setTargetEpoch(targetEpoch);
+            builder.setNumObservations(numObservations);
+            builder.setDoubleToLongBits(doubleToLongBits);
+            builder.setRaw(raw);
+            builder.setSigma(sigma);
+            builder.setMinMeasurement(minMeasurement);
+            builder.setPercentile(percentile);
+            builder.setMode(mode);
+            DataReservoirValue value = builder.build(this);
+            return value;
+        }
     }
 
     private List<DataTreeNode> computeResult(DataReservoirValue value) {
@@ -452,8 +461,11 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         if (key == null) {
             return null;
         }
-        DataReservoirValue value = generateValueObject(key);
-        value = value.setDoubleToLongClone(true).setRawClone(false);
+        ValueObject value = generateValueObject(key);
+        if (value instanceof DataReservoirValue) {
+            DataReservoirValue dataReservoirValue = (DataReservoirValue) value;
+            value = dataReservoirValue.setDoubleToLongClone(true).setRawClone(false);
+        }
         return value;
     }
 
@@ -462,7 +474,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         if (key == null) {
             return null;
         }
-        DataReservoirValue value = generateValueObject(key);
+        DataReservoirValue value = (DataReservoirValue) generateValueObject(key);
         return computeResult(value);
     }
 
