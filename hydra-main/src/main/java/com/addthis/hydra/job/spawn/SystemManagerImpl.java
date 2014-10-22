@@ -9,7 +9,6 @@
  * See the License for the specific language governing
  * permissions and limitations under the License.
  */
-
 package com.addthis.hydra.job.spawn;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -17,15 +16,19 @@ import static com.google.common.base.Preconditions.checkState;
 
 import java.io.InputStream;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
-
-import com.addthis.basis.util.Strings;
 
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.DataStoreUtil.DataStoreType;
 import com.addthis.hydra.job.store.SpawnDataStoreKeys;
+
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -38,10 +41,48 @@ public class SystemManagerImpl implements SystemManager {
     private static final String GIT_PROPS = "/hydra-git.properties";
 
     private final Spawn spawn;
+
+    private String debug;
+    private String queryHost;
+    private String spawnHost;
+
     private volatile Properties gitProperties;
 
-    public SystemManagerImpl(Spawn spawn) {
+    public SystemManagerImpl(Spawn spawn, String debug, String queryHost, String spawnHost) {
         this.spawn = spawn;
+        this.debug = debug;
+        this.queryHost = queryHost;
+        this.spawnHost = spawnHost;
+    }
+
+    @Override
+    public boolean debug(String match) {
+        return debug != null && (debug.contains(match) || debug.contains("-all-"));
+    }
+
+    @Override
+    public void updateDebug(Optional<String> opt) {
+        opt.ifPresent(v -> debug = v);
+    }
+
+    @Override
+    public void updateQueryHost(Optional<String> opt) {
+        opt.ifPresent(v -> queryHost = v);
+    }
+
+    @Override
+    public void updateSpawnHost(Optional<String> opt) {
+        opt.ifPresent(v -> spawnHost = v);
+    }
+
+    @Override
+    public void updateDisabled(Optional<String> opt) {
+        opt.ifPresent(v -> {
+            List<String> newDisabledHosts = Splitter.on(',').omitEmptyStrings().splitToList(v);
+            spawn.spawnState.disabledHosts.addAll(newDisabledHosts);
+            spawn.spawnState.disabledHosts.retainAll(newDisabledHosts);
+            spawn.writeState();
+        });
     }
 
     @Override
@@ -50,6 +91,13 @@ public class SystemManagerImpl implements SystemManager {
             gitProperties = remapRawGitProperties(loadRawGitProperties(GIT_PROPS));
         }
         return gitProperties;
+    }
+    
+    @Override
+    public Settings getSettings() {
+        String disabled = Joiner.on(',').skipNulls().join(spawn.spawnState.disabledHosts);
+        return new Settings(debug, isQuiesced(), queryHost, spawnHost, disabled,
+                Spawn.DEFAULT_REPLICA_COUNT);
     }
 
     private Properties loadRawGitProperties(String loc) {
@@ -64,18 +112,23 @@ public class SystemManagerImpl implements SystemManager {
 
     private Properties remapRawGitProperties(Properties raw) {
         Properties p = new Properties();
-        p.put("commitIdAbbrev", Strings.unNull(raw.getProperty("git.commit.id.abbrev")));
-        p.put("commitUserEmail", Strings.unNull(raw.getProperty("git.commit.user.email")));
-        p.put("commitMessageFull", Strings.unNull(raw.getProperty("git.commit.message.full")));
-        p.put("commitId", Strings.unNull(raw.getProperty("git.commit.id")));
-        p.put("commitUserName", Strings.unNull(raw.getProperty("git.commit.user.name")));
-        p.put("buildUserName", Strings.unNull(raw.getProperty("git.build.user.name")));
-        p.put("commitIdDescribe", Strings.unNull(raw.getProperty("git.commit.id.describe")));
-        p.put("buildUserEmail", Strings.unNull(raw.getProperty("git.build.user.email")));
-        p.put("branch", Strings.unNull(raw.getProperty("git.branch")));
-        p.put("commitTime", Strings.unNull(raw.getProperty("git.commit.time")));
-        p.put("buildTime", Strings.unNull(raw.getProperty("git.build.time")));
+        p.put("commitIdAbbrev", Strings.nullToEmpty(raw.getProperty("git.commit.id.abbrev")));
+        p.put("commitUserEmail", Strings.nullToEmpty(raw.getProperty("git.commit.user.email")));
+        p.put("commitMessageFull", Strings.nullToEmpty(raw.getProperty("git.commit.message.full")));
+        p.put("commitId", Strings.nullToEmpty(raw.getProperty("git.commit.id")));
+        p.put("commitUserName", Strings.nullToEmpty(raw.getProperty("git.commit.user.name")));
+        p.put("buildUserName", Strings.nullToEmpty(raw.getProperty("git.build.user.name")));
+        p.put("commitIdDescribe", Strings.nullToEmpty(raw.getProperty("git.commit.id.describe")));
+        p.put("buildUserEmail", Strings.nullToEmpty(raw.getProperty("git.build.user.email")));
+        p.put("branch", Strings.nullToEmpty(raw.getProperty("git.branch")));
+        p.put("commitTime", Strings.nullToEmpty(raw.getProperty("git.commit.time")));
+        p.put("buildTime", Strings.nullToEmpty(raw.getProperty("git.build.time")));
         return p;
+    }
+
+    @Override
+    public boolean isQuiesced() {
+        return spawn.spawnState.quiesce.get();
     }
 
     @Override
@@ -90,23 +143,6 @@ public class SystemManagerImpl implements SystemManager {
             log.info("User {} has {} the cluster.", username, (quiesce ? "quiesced" : "unquiesed"));
         }
         return spawn.spawnState.quiesce.get();
-    }
-    
-    @Override
-    public SpawnBalancerConfig getSpawnBalancerConfig() {
-        return spawn.getSpawnBalancer().getConfig();
-    }
-
-    @Override
-    public void setSpawnBalancerConfig(SpawnBalancerConfig config) {
-        spawn.getSpawnBalancer().setConfig(config);
-        spawn.getSpawnBalancer().saveConfigToDataStore();
-    }
-
-    @Override
-    public void setHostFailWorkerObeyTaskSlots(boolean obey) {
-        spawn.getHostFailWorker().setObeyTaskSlots(obey);
-
     }
 
     @Override
@@ -167,7 +203,7 @@ public class SystemManagerImpl implements SystemManager {
             DataStoreType sourceType,
             DataStoreType targetType,
             boolean checkAllWrites) throws Exception {
-        checkState(spawn.getQuiesced(), "Spawn must be quiesced to cut over stored data");
+        checkState(isQuiesced(), "Spawn must be quiesced to cut over stored data");
         checkArgument(sourceType != null, "Source data store type must be specified");
         checkArgument(targetType != null, "Target data store type must be specified");
         DataStoreUtil.cutoverBetweenDataStore(DataStoreUtil.makeSpawnDataStore(sourceType),

@@ -187,10 +187,6 @@ public class Spawn implements Codable, AutoCloseable {
         Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(spawn), "Spawn Shutdown Hook"));
     }
 
-
-    String debug;
-    String queryHost;
-    String spawnHost;
     SpawnQueuesByPriority taskQueuesByPriority = new SpawnQueuesByPriority();
 
     private SpawnMQ spawnMQ;
@@ -260,9 +256,6 @@ public class Spawn implements Codable, AutoCloseable {
         } else {
             spawnState = Jackson.defaultCodec().newDefault(SpawnState.class);
         }
-        this.debug = debug;
-        this.queryHost = queryHttpHost + ":" + queryPort;
-        this.spawnHost = httpHost + ":" + webPort;
         File webDir = new File("web");
         this.monitored = new ConcurrentHashMap<>();
         this.listeners = new ConcurrentHashMap<>();
@@ -281,6 +274,9 @@ public class Spawn implements Codable, AutoCloseable {
         this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
         this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
+        
+        this.systemManager = new SystemManagerImpl(this, debug, queryHttpHost + ":" + queryPort, 
+                httpHost + ":" + webPort);
         this.jobConfigManager = new JobConfigManager(spawnDataStore);
         // look for local object to import
         log.info("[init] beginning to load stats from data store");
@@ -326,7 +322,6 @@ public class Spawn implements Codable, AutoCloseable {
         hostFailWorker.initFailHostTaskSchedule();
         // start JobAlertManager
         jobAlertManager = new JobAlertManagerImpl(this, scheduledExecutor);
-        systemManager = new SystemManagerImpl(this);
         // start job scheduler
         scheduledExecutor.scheduleWithFixedDelay(new UpdateEventRunnable(this), 0, 1, TimeUnit.MINUTES);
         scheduledExecutor.scheduleWithFixedDelay(new JobRekickTask(this), 0, 500, MILLISECONDS);
@@ -445,10 +440,6 @@ public class Spawn implements Codable, AutoCloseable {
         return spawnState.uuid;
     }
 
-    public boolean getQuiesced() {
-        return spawnState.quiesce.get();
-    }
-
     public MeshyClient getMeshyClient() {
         spawnMesh.waitLinkUp();
         return spawnMesh.getClient();
@@ -523,10 +514,6 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     // -------------------- BEGIN API ---------------------
-
-    public Settings getSettings() {
-        return new Settings(this);
-    }
 
     public ClientEventListener getClientEventListener(String id) {
         ClientEventListener listener = listeners.get(id);
@@ -1897,10 +1884,11 @@ public class Spawn implements Codable, AutoCloseable {
         checkArgument(task != null, "no such task");
         checkArgument(task.getState() != JobTaskState.BUSY && task.getState() != JobTaskState.ALLOCATED &&
                       task.getState() != JobTaskState.QUEUED, "invalid task state");
+        boolean ignoreQuiesce = isManualKick && getSystemManager().isQuiesced();
         if (addToQueue) {
-            addToTaskQueue(task.getJobKey(), isManualKick && getQuiesced(), toQueueHead);
+            addToTaskQueue(task.getJobKey(), ignoreQuiesce, toQueueHead);
         } else {
-            kickIncludingQueue(job, task, expandJob(job), false, isManualKick && getQuiesced());
+            kickIncludingQueue(job, task, expandJob(job), false, ignoreQuiesce);
         }
         log.warn("[task.kick] started " + job.getId() + " / " + task.getTaskID() + " = " + job.getDescription());
         queueJobTaskUpdateEvent(job);
@@ -2075,7 +2063,7 @@ public class Spawn implements Codable, AutoCloseable {
             case STATUS_TASK_BEGIN:
                 StatusTaskBegin begin = (StatusTaskBegin) core;
                 SpawnMetrics.tasksStartedPerHour.mark();
-                if (debug("-begin-")) {
+                if (systemManager.debug("-begin-")) {
                     log.info("[task.begin] :: " + begin.getJobKey());
                 }
                 try {
@@ -2319,7 +2307,7 @@ public class Spawn implements Codable, AutoCloseable {
         SpawnMetrics.jobsCompletedPerHour.mark();
         job.setFinishTime(System.currentTimeMillis());
         spawnFormattedLogger.finishJob(job);
-        if (!getQuiesced()) {
+        if (!getSystemManager().isQuiesced()) {
             if (job.isEnabled() && !errored) {
                 // rekick if any task had more work to do
                 if (job.hadMoreData()) {
@@ -2342,14 +2330,6 @@ public class Spawn implements Codable, AutoCloseable {
         }
         Job.logJobEvent(job, JobEvent.FINISH, eventLog);
         balancer.requestJobSizeUpdate(job.getId(), 0);
-    }
-
-
-    /**
-     * debug output, can be disabled by policy
-     */
-    boolean debug(String match) {
-        return debug != null && (debug.contains(match) || debug.contains("-all-"));
     }
 
     public JobMacro createJobHostMacro(String job, int port) {
@@ -2488,11 +2468,10 @@ public class Spawn implements Codable, AutoCloseable {
      */
     public void sendClusterQuiesceEvent(String username) {
         try {
-            boolean quiesce = getQuiesced();
             JSONObject info = new JSONObject();
             info.put("username", username);
             info.put("date", JitterClock.globalTime());
-            info.put("quiesced", quiesce);
+            info.put("quiesced", getSystemManager().isQuiesced());
             sendEventToClientListeners("cluster.quiesce", info);
         } catch (Exception e) {
             log.warn("", e);
@@ -2631,7 +2610,7 @@ public class Spawn implements Codable, AutoCloseable {
             // Drop listeners we haven't heard from in a while, or if they don't seem to be consuming from their queue
             if (time - client.lastSeen > clientDropTimeMillis || queueTooLarge) {
                 ClientEventListener listener = listeners.remove(ev.getKey());
-                if (debug("-listen-")) {
+                if (systemManager.debug("-listen-")) {
                     log.warn("[listen] dropping listener queue for " + ev.getKey() + " = " + listener);
                 }
                 if (queueTooLarge) {
@@ -2783,7 +2762,8 @@ public class Spawn implements Codable, AutoCloseable {
             if (task == null || task.getState() != JobTaskState.IDLE) {
                 continue;
             }
-            addToTaskQueue(task.getJobKey(), isManualKick && getQuiesced(), false);
+            boolean ignoreQuiesce = isManualKick && getSystemManager().isQuiesced();
+            addToTaskQueue(task.getJobKey(), ignoreQuiesce, false);
         }
         updateJob(job);
         return true;
@@ -3056,7 +3036,7 @@ public class Spawn implements Codable, AutoCloseable {
     private boolean attemptMigrateTask(Job job, JobTask task, long timeOnQueue) {
         HostState target;
         if (
-                !getQuiesced() &&  // If spawn is not quiesced,
+                !getSystemManager().isQuiesced() &&  // If spawn is not quiesced,
                 taskQueuesByPriority.checkSizeAgeForMigration(task.getByteCount(), timeOnQueue) &&
                 // and the task is small enough that migration is sensible
                 (target = findHostWithAvailableSlot(task, timeOnQueue, listHostStatus(job.getMinionType()), true)) != null)
@@ -3158,7 +3138,7 @@ public class Spawn implements Codable, AutoCloseable {
                     iter.remove();
                     continue;
                 }
-                if (getQuiesced() && !key.getIgnoreQuiesce()) {
+                if (getSystemManager().isQuiesced() && !key.getIgnoreQuiesce()) {
                     skippedQuiesceCount++;
                     if (log.isDebugEnabled()) {
                         log.debug("[task.queue] skipping " + key + " because spawn is quiesced and the kick wasn't manual");

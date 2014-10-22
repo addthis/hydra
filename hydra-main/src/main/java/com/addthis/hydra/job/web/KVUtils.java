@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.job.web;
 
+import java.util.Optional;
 import java.util.Set;
 
 import com.addthis.basis.kv.KVPairs;
@@ -80,5 +81,14 @@ public class KVUtils {
     public static boolean getBooleanValue(KVPairs kv, boolean defaultValue, String... keys) {
         String v = findFirstNonEmptyValue(kv, keys);
         return v == null ? defaultValue : TRUE_STR_VALUES.contains(v);
+    }
+    
+    /** 
+     * Returns the non-null value of a given key wrapped in an {@link java.util.Optional}.
+     * 
+     * @return an empty Optional if the key doesn't exist or the value is {@code null}.
+     */
+    public static Optional<String> getValueOpt(KVPairs kv, String key) {
+        return kv.hasKey(key) ? Optional.ofNullable(kv.getValue(key)) : Optional.empty();
     }
 }

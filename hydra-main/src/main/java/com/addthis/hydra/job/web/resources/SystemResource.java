@@ -23,8 +23,8 @@ import javax.ws.rs.core.Response;
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.spawn.HealthCheckResult;
+import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.spawn.SpawnBalancerConfig;
-import com.addthis.hydra.job.spawn.SystemManager;
 import com.addthis.hydra.job.store.DataStoreUtil.DataStoreType;
 import com.addthis.hydra.job.web.jersey.User;
 
@@ -38,10 +38,10 @@ public class SystemResource {
 
     private static final Logger log = LoggerFactory.getLogger(SystemResource.class);
 
-    private final SystemManager systemManager;
+    private final Spawn spawn;
 
-    public SystemResource(SystemManager systemManager) {
-        this.systemManager = systemManager;
+    public SystemResource(Spawn spawn) {
+        this.spawn = spawn;
     }
 
     @GET
@@ -50,7 +50,7 @@ public class SystemResource {
     public Response quiesceCluster(@QueryParam("quiesce") String quiesce, @Auth User user) {
         try {
             if (user.getAdmin()) {
-                boolean quiesced = systemManager.quiesceCluster(quiesce.equals("1"), user.getUsername());
+                boolean quiesced = spawn.getSystemManager().quiesceCluster(quiesce.equals("1"), user.getUsername());
                 String json = Jackson.defaultMapper().createObjectNode()
                         .put("quiesced", (quiesced ? "1" : "0")).toString();
                 return Response.ok(json).build();
@@ -67,7 +67,7 @@ public class SystemResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getBalanceParams() {
         try {
-            return Response.ok(CodecJSON.encodeString(systemManager.getSpawnBalancerConfig())).build();
+            return Response.ok(CodecJSON.encodeString(spawn.getSpawnBalancer().getConfig())).build();
         } catch (Exception e) {
             return Response.serverError().entity("Error getting balance parameters: " + e.getMessage()).build();
         }
@@ -79,7 +79,8 @@ public class SystemResource {
     public Response setBalanceParams(@QueryParam("params") String params) {
         try {
             SpawnBalancerConfig config = CodecJSON.decodeString(SpawnBalancerConfig.class, params);
-            systemManager.setSpawnBalancerConfig(config);
+            spawn.getSpawnBalancer().setConfig(config);
+            spawn.getSpawnBalancer().saveConfigToDataStore();
             return Response.ok().build();
         } catch (Exception e) {
             String err = "Failed to set SpawnBalanceConfig: " + e.getMessage();
@@ -92,7 +93,7 @@ public class SystemResource {
     @Path("/hostfailworker.obeyTaskLimit.set")
     @Produces(MediaType.APPLICATION_JSON)
     public Response setObeyTaskLimit(@QueryParam("obey") boolean obey) {
-        systemManager.setHostFailWorkerObeyTaskSlots(obey);
+        spawn.getHostFailWorker().setObeyTaskSlots(obey);
         return Response.ok().build();
     }
 
@@ -101,7 +102,7 @@ public class SystemResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getGitProperties() {
         try {
-            return Response.ok(CodecJSON.encodeString(systemManager.getGitProperties())).build();
+            return Response.ok(CodecJSON.encodeString(spawn.getSystemManager().getGitProperties())).build();
         } catch (Exception e) {
             String err = "Error loading git properties: " + e.getMessage();
             log.warn(err, e);
@@ -121,7 +122,7 @@ public class SystemResource {
             DataStoreType sourceType = DataStoreType.valueOf(src);
             DataStoreType targetType = DataStoreType.valueOf(tar);
             boolean checkAllWrites = (checkAll == 1);
-            systemManager.cutoverDataStore(sourceType, targetType, checkAllWrites);
+            spawn.getSystemManager().cutoverDataStore(sourceType, targetType, checkAllWrites);
             return Response.ok("Cut over successfully.").build();
         } catch (IllegalStateException e) {
             return Response.serverError().entity("Spawn must be quiesced to cut over stored data.").build();
@@ -150,7 +151,7 @@ public class SystemResource {
             @QueryParam("retries") @DefaultValue("2") int retries,
             @QueryParam("details") @DefaultValue("false") boolean details) {
         try {
-            HealthCheckResult result = systemManager.healthCheck(retries);
+            HealthCheckResult result = spawn.getSystemManager().healthCheck(retries);
             if (details) {
                 return Response.ok(CodecJSON.encodeString(result)).build();
             } else {

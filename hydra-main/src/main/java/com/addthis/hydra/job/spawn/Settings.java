@@ -13,70 +13,29 @@
  */
 package com.addthis.hydra.job.spawn;
 
-import java.util.Arrays;
-import java.util.List;
-
-import com.addthis.basis.util.Strings;
-
-import com.addthis.maljson.JSONException;
-import com.addthis.maljson.JSONObject;
-
-/**
- * simple settings wrapper allows changes to Spawn
- */
+/** Simple immutable wrapper of various system settings/states (mostly for generating ui json). */
 public class Settings {
 
-    private final Spawn spawn;
-
-    public Settings(Spawn spawn) {
-        this.spawn = spawn;
+    public final String debug;
+    public final boolean quiesce;
+    public final String queryHost;
+    public final String spawnHost;
+    public final String disabled;
+    public final int defaultReplicaCount;
+    
+    public Settings(
+            String debug, 
+            boolean quiesce, 
+            String queryHost, 
+            String spawnHost, 
+            String disabled, 
+            int defaultReplicaCount) {
+        this.debug = debug;
+        this.queryHost = queryHost;
+        this.spawnHost = spawnHost;
+        this.quiesce = quiesce;
+        this.disabled = disabled;
+        this.defaultReplicaCount = defaultReplicaCount;
     }
-
-    public String getDebug() {
-        return spawn.debug;
-    }
-
-    public void setDebug(String debug) {
-        spawn.debug = debug;
-    }
-
-    public int getDefaultReplicaCount() {
-        return Spawn.DEFAULT_REPLICA_COUNT;
-    }
-
-    public String getQueryHost() {
-        return spawn.queryHost;
-    }
-
-    public String getSpawnHost() {
-        return spawn.spawnHost;
-    }
-
-    public void setQueryHost(String queryHost) {
-        spawn.queryHost = queryHost;
-    }
-
-    public void setSpawnHost(String spawnHost) {
-        spawn.spawnHost = spawnHost;
-    }
-
-    public String getDisabled() {
-        return Strings.join(spawn.spawnState.disabledHosts.toArray(), ",");
-    }
-
-    public void setDisabled(String disabled) {
-        List<String> newDisabledHosts = Arrays.asList(disabled.split(","));
-        spawn.spawnState.disabledHosts.addAll(newDisabledHosts);
-        spawn.spawnState.disabledHosts.retainAll(newDisabledHosts);
-        spawn.writeState();
-    }
-
-    public JSONObject toJSON() throws JSONException {
-        return new JSONObject().put("debug", spawn.debug)
-                               .put("quiesce", spawn.getQuiesced())
-                               .put("queryHost", spawn.queryHost)
-                               .put("spawnHost", spawn.spawnHost)
-                               .put("disabled", getDisabled())
-                               .put("defaultReplicaCount", Spawn.DEFAULT_REPLICA_COUNT);
-    }
+    
 }

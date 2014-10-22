@@ -64,7 +64,7 @@ public class ScheduledTaskKick implements Runnable {
             }
             kick.setConfig(jobConfig);
             spawnMQ.sendJobMessage(kick);
-            if (spawn.debug("-task-")) {
+            if (spawn.getSystemManager().debug("-task-")) {
                 log.info("[task.schedule] assigned {}[{}/{}] to {}", jobId, kick.getNodeID(), kick.getJobNodes() - 1,
                          kick.getHostUuid());
             }

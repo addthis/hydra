@@ -69,7 +69,7 @@ public class SpawnService {
         this.webSocketManager = spawn.getWebSocketManager();
 
         //instantiate resources
-        SystemResource systemResource = new SystemResource(spawn.getSystemManager());
+        SystemResource systemResource = new SystemResource(spawn);
         ListenResource listenResource = new ListenResource(spawn, systemResource, pollTimeout);
         JobsResource jobsResource = new JobsResource(spawn, new JobRequestHandlerImpl(spawn));
         MacroResource macroResource = new MacroResource(spawn.getJobMacroManager());

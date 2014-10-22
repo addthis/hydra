@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.entity.JobEntityManager;
@@ -117,7 +118,7 @@ public class ListenResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getSetup() {
         try {
-            JSONObject setup = new JSONObject();
+            JSONObject setup = CodecJSON.encodeJSON(spawn.getSystemManager().getSettings());
             JSONArray jobs = new JSONArray();
             for (IJob job : spawn.listJobsConcurrentImmutable()) {
                 JSONObject jobUpdateEvent = Spawn.getJobUpdateEvent(job);
@@ -149,13 +150,11 @@ public class ListenResource {
                 }
                 aliases.put(alias.getKey(), aliasJson.put("name", alias.getKey()).put("jobs", aliasJobs));
             }
-            setup.put("queryHost", spawn.getSettings().getQueryHost());
             setup.put("macros", macrolist);
             setup.put("commands", commandlist);
             setup.put("hosts", hostlist);
             setup.put("aliases", aliases);
             setup.put("alerts", spawn.getJobAlertManager().fetchAllAlertsMap());
-            setup.put("quiesced", (spawn.getQuiesced() ? "1" : "0"));
             setup.put("spawnqueuesize", spawn.getTaskQueuedCount());
             setup.put("clientId", clientCounter.incrementAndGet());
             return Response.ok(setup.toString()).build();

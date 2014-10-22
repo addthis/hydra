@@ -11,26 +11,35 @@
  */
 package com.addthis.hydra.job.spawn;
 
+import java.util.Optional;
 import java.util.Properties;
 
 import com.addthis.hydra.job.store.DataStoreUtil.DataStoreType;
 
-/** Provides various system functions and manages system settings. */
+/** Provides access to various system functions, settings and states. */
 public interface SystemManager {
+
+    /** debug output, can be disabled by policy */
+    public boolean debug(String match);
+    
+    public void updateDebug(Optional<String> debug);
+
+    public void updateQueryHost(Optional<String> queryHost);
+
+    public void updateSpawnHost(Optional<String> spawnHost);
+
+    public void updateDisabled(Optional<String> disabled);
+    
+    public Settings getSettings();
 
     /** Returns git properties */
     public Properties getGitProperties();
+    
+    /** Returns {@code true} if spawn is quiesced */
+    public boolean isQuiesced();
 
     /** Set the quiesce status of the cluster and returns the new status */
     public boolean quiesceCluster(boolean quiesce, String username);
-
-    /** Returns the current spawn balancer settings */
-    public SpawnBalancerConfig getSpawnBalancerConfig();
-
-    /** Sets spawn balancer settings */
-    public void setSpawnBalancerConfig(SpawnBalancerConfig config);
-
-    public void setHostFailWorkerObeyTaskSlots(boolean obey);
 
     /**
      * Performs spawn health check and returns the result.

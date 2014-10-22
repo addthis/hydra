@@ -801,7 +801,7 @@ function(
             event.preventDefault();
             app.quiesce();
         });
-        app.isQuiesced = _.isEqual(setupData.quiesced,"1");
+        app.isQuiesced = setupData.quiesce;
         app.checkQuiesced();
         new Jobs.InfoMetricView({
             el:"div#infoMetricBox",
