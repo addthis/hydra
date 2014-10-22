@@ -114,24 +114,4 @@ public class SpawnStateTest extends ZkCodecStartUtil {
         }
     }
 
-    @Test
-    public void testBalanceConfigSet() throws Exception {
-        File tmpRoot = Files.createTempDir();
-        System.setProperty("SPAWN_DATA_DIR", tmpRoot + "/tmp/spawn/data");
-        System.setProperty("SPAWN_LOG_DIR", tmpRoot + "/tmp/spawn/log/events");
-        try (Spawn spawn = Configs.newDefault(Spawn.class)) {
-            SpawnBalancerConfig config = new SpawnBalancerConfig();
-            long newVal = 123456;
-            config.setBytesMovedFullRebalance(newVal);
-            spawn.updateSpawnBalancerConfig(config);
-            spawn.writeSpawnBalancerConfig();
-            assertEquals("expected to see updated balancer value", newVal,
-                         spawn.getSpawnBalancer().getConfig().getBytesMovedFullRebalance());
-            spawn.loadSpawnBalancerConfig();
-            assertEquals("expect to see changed balance parameter persisted", 123456l,
-                         spawn.getSpawnBalancer().getConfig().getBytesMovedFullRebalance());
-        } finally {
-            Files.deleteDir(tmpRoot);
-        }
-    }
 }

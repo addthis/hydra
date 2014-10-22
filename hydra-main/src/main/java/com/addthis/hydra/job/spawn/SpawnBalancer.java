@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.spawn;
 
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -38,6 +40,8 @@ import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
+import com.addthis.codec.config.Configs;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.HostFailWorker;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
@@ -50,6 +54,7 @@ import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
@@ -77,7 +82,7 @@ public class SpawnBalancer implements Codable {
     private static final Logger log = LoggerFactory.getLogger(SpawnBalancer.class);
 
     @FieldConfig(codable = true)
-    private SpawnBalancerConfig config = new SpawnBalancerConfig();
+    private SpawnBalancerConfig config;
 
     // How often to update aggregate host statistics
     private static final long AGGREGATE_STAT_UPDATE_INTERVAL = Parameter.intValue("spawnbalance.stat.update", 15 * 1000);
@@ -150,10 +155,33 @@ public class SpawnBalancer implements Codable {
 
     public SpawnBalancer(Spawn spawn) {
         this.spawn = spawn;
+        this.config = loadConfigFromDataStore(new SpawnBalancerConfig());
         taskExecutor = MoreExecutors.getExitingScheduledExecutorService(
                 new ScheduledThreadPoolExecutor(2, new ThreadFactoryBuilder().setNameFormat("spawnBalancer-%d").build()));
         taskExecutor.scheduleAtFixedRate(new AggregateStatUpdaterTask(), AGGREGATE_STAT_UPDATE_INTERVAL, AGGREGATE_STAT_UPDATE_INTERVAL, TimeUnit.MILLISECONDS);
         this.taskSizer = new SpawnBalancerTaskSizer(spawn);
+    }
+    
+    /** Loads SpawnBalancerConfig from data store; if no data or failed, returns the default. */
+    @VisibleForTesting
+    protected SpawnBalancerConfig loadConfigFromDataStore(SpawnBalancerConfig defaultValue) {
+        String configString = spawn.getSpawnDataStore().get(SPAWN_BALANCE_PARAM_PATH);
+        if (!Strings.isNullOrEmpty(configString)) {
+            try {
+                return Configs.decodeObject(SpawnBalancerConfig.class, configString);
+            } catch (Exception e) {
+                log.warn("Failed to decode SpawnBalancerConfig: {}", e.getMessage(), e);
+            }
+        }
+        return defaultValue;
+    }
+    
+    public void saveConfigToDataStore() {
+        try {
+            spawn.getSpawnDataStore().put(SPAWN_BALANCE_PARAM_PATH, CodecJSON.encodeString(config));
+        } catch (Exception e) {
+            log.warn("Failed to save SpawnBalancerConfig to data store: {}", e.getMessage(), e);
+        }
     }
 
     public void startTaskSizePolling() {
@@ -996,7 +1024,9 @@ public class SpawnBalancer implements Codable {
      */
     public boolean okayToAutobalance() {
         // Don't autobalance if it is disabled, spawn is quiesced, or the number of queued tasks is high
-        if (config.getAutoBalanceLevel() == 0 || spawn.getSettings().getQuiesced() || spawn.getLastQueueSize() > spawn.listHostStatus(null).size()) {
+        if (config.getAutoBalanceLevel() == 0 ||
+                spawn.getSystemManager().isQuiesced() ||
+                spawn.getLastQueueSize() > spawn.listHostStatus(null).size()) {
             return false;
         }
         // Don't autobalance if there are still jobs in rebalance state
@@ -1493,10 +1523,6 @@ public class SpawnBalancer implements Codable {
         public long getBytesUsed() {
             return bytesUsed;
         }
-    }
-
-    public void setAllowSameHostReplica(boolean allowSameHostReplica) {
-        config.setAllowSameHostReplica(allowSameHostReplica);
     }
 
     public SpawnBalancerConfig getConfig() {

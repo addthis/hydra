@@ -19,7 +19,7 @@ function(
     settingsRebalanceTemplate
 ){
     var RebalanceModel = Backbone.Model.extend({
-        url:"/update/balance.params.get",
+        url:"/system/balance.params.get",
         defaults:{
             autoBalanceLevel:"",
             bytesMovedFullRebalance:"",
@@ -32,7 +32,7 @@ function(
         save:function(){
             var self=this;
             return $.ajax({
-                url: "/update/balance.params.set",
+                url: "/system/balance.params.set",
                 type: "GET",
                 data: {
                     params:JSON.stringify(self.toJSON())

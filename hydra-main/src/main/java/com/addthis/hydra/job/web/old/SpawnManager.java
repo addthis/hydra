@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.web.old;
 
+import static com.addthis.hydra.job.web.KVUtils.getValueOpt;
+
 import java.io.InputStream;
 import java.io.StringWriter;
 
@@ -53,8 +55,8 @@ import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.ClientEvent;
 import com.addthis.hydra.job.spawn.ClientEventListener;
 import com.addthis.hydra.job.spawn.DeleteStatus;
-import com.addthis.hydra.job.spawn.Settings;
 import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.job.spawn.SystemManager;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.web.JobRequestHandler;
 import com.addthis.hydra.job.web.JobRequestHandlerImpl;
@@ -72,6 +74,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 public class SpawnManager {
 
     private static final Logger log = LoggerFactory.getLogger(SpawnManager.class);
@@ -85,6 +88,7 @@ public class SpawnManager {
         final JobEntityManager<JobMacro> jobMacroManager = spawn.getJobMacroManager();
         final JobEntityManager<JobCommand> jobCommandManager = spawn.getJobCommandManager();
         final JobRequestHandler jobRequestHandler = new JobRequestHandlerImpl(spawn);
+        final SystemManager systemManager = spawn.getSystemManager();
         /** url called via ajax to listen for change events */
         server.mapService("/listen", new HTTPService() {
             @Override
@@ -169,18 +173,19 @@ public class SpawnManager {
             @Override
             public void httpService(HTTPLink link) throws Exception {
                 KVPairs kv = link.getRequestValues();
-                Settings settings = spawn.getSettings();
-                settings.setDebug(kv.getValue("debug", settings.getDebug()));
-                String quiesce = kv.getValue("quiesce", settings.getQuiesced() ? "1" : "0");
-                if (!quiesce.equals(settings.getQuiesced() ? "1" : "0")) {
-                    String logVerb = quiesce.equals("1") ? "quiesce" : "unquiesce";
-                    emitLogLineForAction(kv, logVerb + " the cluster");
-                }
-                settings.setQuiesced(quiesce.equals("1"));
-                settings.setQueryHost(kv.getValue("queryHost", settings.getQueryHost()));
-                settings.setSpawnHost(kv.getValue("spawnHost", settings.getSpawnHost()));
-                settings.setDisabled(kv.getValue("disabled", settings.getDisabled()));
-                JSONObject ret = settings.toJSON();
+                systemManager.updateDebug(getValueOpt(kv, "debug"));
+                systemManager.updateQueryHost(getValueOpt(kv, "queryHost"));
+                systemManager.updateSpawnHost(getValueOpt(kv, "spawnHost"));
+                systemManager.updateDisabled(getValueOpt(kv, "disabled"));
+                getValueOpt(kv, "quiesce").ifPresent(v -> {
+                    boolean q = "1".equals(v);
+                    if (q != systemManager.isQuiesced()) {
+                        String logVerb = q ? "quiesce" : "unquiesce";
+                        emitLogLineForAction(kv, logVerb + " the cluster");
+                        systemManager.quiesceCluster(q, kv.getValue("user", "anonymous"));
+                    }
+                });
+                JSONObject ret = CodecJSON.encodeJSON(systemManager.getSettings());
                 if (kv.getValue("all", "0").equals("1")) {
                     JSONObject macrolist = new JSONObject();
                     JSONObject commandlist = new JSONObject();
@@ -206,7 +211,6 @@ public class SpawnManager {
                     ret.put("commands", commandlist);
                     ret.put("jobs", joblist);
                     ret.put("hosts", hostlist);
-                    ret.put("defaultReplicaCount", spawn.getSettings().getDefaultReplicaCount());
                     ret.put("spawnqueuesize", spawn.getTaskQueuedCount());
                 }
                 link.sendJSON(200, "OK", ret);
@@ -1020,7 +1024,7 @@ public class SpawnManager {
             @Override
             public void httpService(HTTPLink link) throws Exception {
                 try {
-                    if (!spawn.getSettings().getQuiesced()) {
+                    if (!systemManager.isQuiesced()) {
                         link.sendShortReply(500, "Server Error", new JSONObject().put("error", "Spawn is not quiesced").toString());
                     }
                     KVPairs kv = link.getRequestValues();

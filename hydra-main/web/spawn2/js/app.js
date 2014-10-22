@@ -89,12 +89,24 @@ function(
             var title = hostname + " " + title;
             document.title=title;
         },
+        healthCheck:function(){
+            $.ajax({
+                url: "/system/healthcheck",
+                type: "GET"
+            }).done(function(data){
+                if (data) {
+                    Alertify.log.info("Health check passed");
+                } else {
+                    Alertify.dialog.alert("Health check failed! Make sure Spawn data store is up-to-date!");
+                }
+            });
+        },
         isQuiesced:false,
         quiesce:function(){
             var self=this;
             Alertify.dialog.confirm( ((this.isQuiesced?"un":"")+"quiesce the cluster? (if you don't know what you're doing, hit cancel!)"), function (e) {
                 $.ajax({
-                    url: "/update/quiesce",
+                    url: "/system/quiesce",
                     type: "GET",
                     data: {quiesce:(self.isQuiesced?"0":"1")}
                 }).done(function(data){

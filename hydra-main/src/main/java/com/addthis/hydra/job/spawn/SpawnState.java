@@ -40,7 +40,6 @@ public class SpawnState implements Codable {
 
     final transient ConcurrentMap<String, Job> jobs = new ConcurrentHashMapV8<>();
     final transient DirectedGraph<String> jobDependencies = new DirectedGraph<>();
-    transient SpawnBalancerConfig balancerConfig = new SpawnBalancerConfig();
 
     SpawnState(@JsonProperty("uuid") String uuid,
                @JsonProperty("quiesce") AtomicBoolean quiesce,

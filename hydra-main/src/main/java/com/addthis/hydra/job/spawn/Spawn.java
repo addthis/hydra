@@ -143,7 +143,6 @@ import org.slf4j.LoggerFactory;
 
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_UP_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -188,10 +187,6 @@ public class Spawn implements Codable, AutoCloseable {
         Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(spawn), "Spawn Shutdown Hook"));
     }
 
-
-    String debug;
-    String queryHost;
-    String spawnHost;
     SpawnQueuesByPriority taskQueuesByPriority = new SpawnQueuesByPriority();
 
     private SpawnMQ spawnMQ;
@@ -224,6 +219,7 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull private final JobOnFinishStateHandler jobOnFinishStateHandler;
     @Nonnull private final SpawnBalancer balancer;
     @Nonnull private final HostFailWorker hostFailWorker;
+    @Nonnull private final SystemManager systemManager;
     @Nonnull private final SetMembershipListener minionMembers;
     @Nonnull private final SetMembershipListener deadMinionMembers;
     @Nonnull private final RollingLog eventLog;
@@ -260,9 +256,6 @@ public class Spawn implements Codable, AutoCloseable {
         } else {
             spawnState = Jackson.defaultCodec().newDefault(SpawnState.class);
         }
-        this.debug = debug;
-        this.queryHost = queryHttpHost + ":" + queryPort;
-        this.spawnHost = httpHost + ":" + webPort;
         File webDir = new File("web");
         this.monitored = new ConcurrentHashMap<>();
         this.listeners = new ConcurrentHashMap<>();
@@ -281,6 +274,9 @@ public class Spawn implements Codable, AutoCloseable {
         this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
         this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
+        
+        this.systemManager = new SystemManagerImpl(this, debug, queryHttpHost + ":" + queryPort, 
+                httpHost + ":" + webPort);
         this.jobConfigManager = new JobConfigManager(spawnDataStore);
         // look for local object to import
         log.info("[init] beginning to load stats from data store");
@@ -298,10 +294,9 @@ public class Spawn implements Codable, AutoCloseable {
         loadJobs();
         // XXX Instantiate HostFailWorker/SpawnBalancer before SpawnMQ to avoid NPE during startup
         // Once connected, SpawnMQ will call HostFailWorker/SpawnBalancer to get host information, 
-        // so the latter comonents must be created first.
+        // so the latter components must be created first.
         hostFailWorker = new HostFailWorker(this, scheduledExecutor);
         balancer = new SpawnBalancer(this);
-        loadSpawnBalancerConfig();
 
         // connect to message broker or fail
         // connect to mesh
@@ -416,6 +411,11 @@ public class Spawn implements Codable, AutoCloseable {
     public JobEntityManager<JobCommand> getJobCommandManager() {
         return jobCommandManager;
     }
+    
+    @Nonnull
+    public SystemManager getSystemManager() {
+        return systemManager;
+    }
 
     public void acquireJobLock() {
         jobLock.lock();
@@ -438,10 +438,6 @@ public class Spawn implements Codable, AutoCloseable {
 
     public String getUuid() {
         return spawnState.uuid;
-    }
-
-    public boolean getQuiesced() {
-        return spawnState.quiesce.get();
     }
 
     public MeshyClient getMeshyClient() {
@@ -518,10 +514,6 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     // -------------------- BEGIN API ---------------------
-
-    public Settings getSettings() {
-        return new Settings(this);
-    }
 
     public ClientEventListener getClientEventListener(String id) {
         ClientEventListener listener = listeners.get(id);
@@ -1892,10 +1884,11 @@ public class Spawn implements Codable, AutoCloseable {
         checkArgument(task != null, "no such task");
         checkArgument(task.getState() != JobTaskState.BUSY && task.getState() != JobTaskState.ALLOCATED &&
                       task.getState() != JobTaskState.QUEUED, "invalid task state");
+        boolean ignoreQuiesce = isManualKick && systemManager.isQuiesced();
         if (addToQueue) {
-            addToTaskQueue(task.getJobKey(), isManualKick && getQuiesced(), toQueueHead);
+            addToTaskQueue(task.getJobKey(), ignoreQuiesce, toQueueHead);
         } else {
-            kickIncludingQueue(job, task, expandJob(job), false, isManualKick && getQuiesced());
+            kickIncludingQueue(job, task, expandJob(job), false, ignoreQuiesce);
         }
         log.warn("[task.kick] started " + job.getId() + " / " + task.getTaskID() + " = " + job.getDescription());
         queueJobTaskUpdateEvent(job);
@@ -2070,7 +2063,7 @@ public class Spawn implements Codable, AutoCloseable {
             case STATUS_TASK_BEGIN:
                 StatusTaskBegin begin = (StatusTaskBegin) core;
                 SpawnMetrics.tasksStartedPerHour.mark();
-                if (debug("-begin-")) {
+                if (systemManager.debug("-begin-")) {
                     log.info("[task.begin] :: " + begin.getJobKey());
                 }
                 try {
@@ -2314,7 +2307,7 @@ public class Spawn implements Codable, AutoCloseable {
         SpawnMetrics.jobsCompletedPerHour.mark();
         job.setFinishTime(System.currentTimeMillis());
         spawnFormattedLogger.finishJob(job);
-        if (!getQuiesced()) {
+        if (!systemManager.isQuiesced()) {
             if (job.isEnabled() && !errored) {
                 // rekick if any task had more work to do
                 if (job.hadMoreData()) {
@@ -2337,14 +2330,6 @@ public class Spawn implements Codable, AutoCloseable {
         }
         Job.logJobEvent(job, JobEvent.FINISH, eventLog);
         balancer.requestJobSizeUpdate(job.getId(), 0);
-    }
-
-
-    /**
-     * debug output, can be disabled by policy
-     */
-    boolean debug(String match) {
-        return debug != null && (debug.contains(match) || debug.contains("-all-"));
     }
 
     public JobMacro createJobHostMacro(String job, int port) {
@@ -2483,12 +2468,10 @@ public class Spawn implements Codable, AutoCloseable {
      */
     public void sendClusterQuiesceEvent(String username) {
         try {
-            boolean quiesce = getSettings().getQuiesced();
             JSONObject info = new JSONObject();
             info.put("username", username);
             info.put("date", JitterClock.globalTime());
-            info.put("quiesced", quiesce);
-            log.info("User " + username + " has " + (quiesce ? "quiesced" : "unquiesed") + " the cluster.");
+            info.put("quiesced", systemManager.isQuiesced());
             sendEventToClientListeners("cluster.quiesce", info);
         } catch (Exception e) {
             log.warn("", e);
@@ -2627,7 +2610,7 @@ public class Spawn implements Codable, AutoCloseable {
             // Drop listeners we haven't heard from in a while, or if they don't seem to be consuming from their queue
             if (time - client.lastSeen > clientDropTimeMillis || queueTooLarge) {
                 ClientEventListener listener = listeners.remove(ev.getKey());
-                if (debug("-listen-")) {
+                if (systemManager.debug("-listen-")) {
                     log.warn("[listen] dropping listener queue for " + ev.getKey() + " = " + listener);
                 }
                 if (queueTooLarge) {
@@ -2779,7 +2762,8 @@ public class Spawn implements Codable, AutoCloseable {
             if (task == null || task.getState() != JobTaskState.IDLE) {
                 continue;
             }
-            addToTaskQueue(task.getJobKey(), isManualKick && getQuiesced(), false);
+            boolean ignoreQuiesce = isManualKick && systemManager.isQuiesced();
+            addToTaskQueue(task.getJobKey(), ignoreQuiesce, false);
         }
         updateJob(job);
         return true;
@@ -3041,31 +3025,32 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     /**
-     * Consider migrating a task to a new host and run it there, subject to a limit on the overall number of such migrations
-     * to do per time interval and how many bytes are allowed to be migrated.
+     * Consider migrating a task to a new host and run it there, subject to a limit on the overall 
+     * number of such migrations to do per time interval and how many bytes are allowed to be 
+     * migrated.
      *
-     * @param job         The job for the task to kick
-     * @param task        The task to kick
-     * @param timeOnQueue How long the task has been on the queue
+     * @param job           The job for the task to kick
+     * @param task          The task to kick
+     * @param timeOnQueue   How long the task has been on the queue
      * @return True if the task was migrated
      */
     private boolean attemptMigrateTask(Job job, JobTask task, long timeOnQueue) {
-        HostState target;
-        if (
-                !getQuiesced() &&  // If spawn is not quiesced,
-                taskQueuesByPriority.checkSizeAgeForMigration(task.getByteCount(), timeOnQueue) &&
-                // and the task is small enough that migration is sensible
-                (target = findHostWithAvailableSlot(task, timeOnQueue, listHostStatus(job.getMinionType()), true)) != null)
-        // and there is a host with available capacity that can run the job,
-        {
-            // Migrate the task to the target host and kick it on completion
-            log.warn("Migrating " + task.getJobKey() + " to " + target.getHostUuid());
-            taskQueuesByPriority.markMigrationBetweenHosts(task.getHostUUID(), target.getHostUuid());
-            taskQueuesByPriority.markHostTaskActive(target.getHostUuid());
-            TaskMover tm = new TaskMover(this, task.getJobKey(), target.getHostUuid(), task.getHostUUID());
-            tm.setMigration(true);
-            tm.execute();
-            return true;
+        // If spawn is not quiesced, and the task is small enough that migration is sensible, and 
+        // there is a host with available capacity that can run the job, Migrate the task to the 
+        // target host and kick it on completion
+        if (!systemManager.isQuiesced() && 
+                taskQueuesByPriority.checkSizeAgeForMigration(task.getByteCount(), timeOnQueue)) {
+            HostState target = findHostWithAvailableSlot(task, timeOnQueue, 
+                    listHostStatus(job.getMinionType()), true);
+            if (target != null) {
+                log.warn("Migrating {} to {}", task.getJobKey(), target.getHostUuid());
+                taskQueuesByPriority.markMigrationBetweenHosts(task.getHostUUID(), target.getHostUuid());
+                taskQueuesByPriority.markHostTaskActive(target.getHostUuid());
+                TaskMover tm = new TaskMover(this, task.getJobKey(), target.getHostUuid(), task.getHostUUID());
+                tm.setMigration(true);
+                tm.execute();
+                return true;
+            }
         }
         return false;
     }
@@ -3154,7 +3139,7 @@ public class Spawn implements Codable, AutoCloseable {
                     iter.remove();
                     continue;
                 }
-                if (getQuiesced() && !key.getIgnoreQuiesce()) {
+                if (systemManager.isQuiesced() && !key.getIgnoreQuiesce()) {
                     skippedQuiesceCount++;
                     if (log.isDebugEnabled()) {
                         log.debug("[task.queue] skipping " + key + " because spawn is quiesced and the kick wasn't manual");
@@ -3226,31 +3211,6 @@ public class Spawn implements Codable, AutoCloseable {
                 host.setDisabled(disable);
                 sendHostUpdateEvent(host);
                 updateHostState(host);
-            }
-        }
-    }
-
-    public void updateSpawnBalancerConfig(SpawnBalancerConfig newConfig) {
-        spawnState.balancerConfig = newConfig;
-        balancer.setConfig(newConfig);
-    }
-
-    public void writeSpawnBalancerConfig() {
-        try {
-            spawnDataStore.put(SPAWN_BALANCE_PARAM_PATH, new String(CodecJSON.INSTANCE.encode(spawnState.balancerConfig)));
-        } catch (Exception e) {
-            log.warn("Warning: failed to persist SpawnBalancer parameters: ", e);
-        }
-    }
-
-    protected final void loadSpawnBalancerConfig() {
-        String configString = spawnDataStore.get(SPAWN_BALANCE_PARAM_PATH);
-        if (configString != null && !configString.isEmpty()) {
-            try {
-                SpawnBalancerConfig loadedConfig = Configs.decodeObject(SpawnBalancerConfig.class, configString);
-                updateSpawnBalancerConfig(loadedConfig);
-            } catch (Exception e) {
-                log.warn("Warning: failed to decode SpawnBalancerConfig: ", e);
             }
         }
     }
