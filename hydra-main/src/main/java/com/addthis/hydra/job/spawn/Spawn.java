@@ -1884,7 +1884,7 @@ public class Spawn implements Codable, AutoCloseable {
         checkArgument(task != null, "no such task");
         checkArgument(task.getState() != JobTaskState.BUSY && task.getState() != JobTaskState.ALLOCATED &&
                       task.getState() != JobTaskState.QUEUED, "invalid task state");
-        boolean ignoreQuiesce = isManualKick && getSystemManager().isQuiesced();
+        boolean ignoreQuiesce = isManualKick && systemManager.isQuiesced();
         if (addToQueue) {
             addToTaskQueue(task.getJobKey(), ignoreQuiesce, toQueueHead);
         } else {
@@ -2307,7 +2307,7 @@ public class Spawn implements Codable, AutoCloseable {
         SpawnMetrics.jobsCompletedPerHour.mark();
         job.setFinishTime(System.currentTimeMillis());
         spawnFormattedLogger.finishJob(job);
-        if (!getSystemManager().isQuiesced()) {
+        if (!systemManager.isQuiesced()) {
             if (job.isEnabled() && !errored) {
                 // rekick if any task had more work to do
                 if (job.hadMoreData()) {
@@ -2471,7 +2471,7 @@ public class Spawn implements Codable, AutoCloseable {
             JSONObject info = new JSONObject();
             info.put("username", username);
             info.put("date", JitterClock.globalTime());
-            info.put("quiesced", getSystemManager().isQuiesced());
+            info.put("quiesced", systemManager.isQuiesced());
             sendEventToClientListeners("cluster.quiesce", info);
         } catch (Exception e) {
             log.warn("", e);
@@ -2762,7 +2762,7 @@ public class Spawn implements Codable, AutoCloseable {
             if (task == null || task.getState() != JobTaskState.IDLE) {
                 continue;
             }
-            boolean ignoreQuiesce = isManualKick && getSystemManager().isQuiesced();
+            boolean ignoreQuiesce = isManualKick && systemManager.isQuiesced();
             addToTaskQueue(task.getJobKey(), ignoreQuiesce, false);
         }
         updateJob(job);
@@ -3025,31 +3025,32 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     /**
-     * Consider migrating a task to a new host and run it there, subject to a limit on the overall number of such migrations
-     * to do per time interval and how many bytes are allowed to be migrated.
+     * Consider migrating a task to a new host and run it there, subject to a limit on the overall 
+     * number of such migrations to do per time interval and how many bytes are allowed to be 
+     * migrated.
      *
-     * @param job         The job for the task to kick
-     * @param task        The task to kick
-     * @param timeOnQueue How long the task has been on the queue
+     * @param job           The job for the task to kick
+     * @param task          The task to kick
+     * @param timeOnQueue   How long the task has been on the queue
      * @return True if the task was migrated
      */
     private boolean attemptMigrateTask(Job job, JobTask task, long timeOnQueue) {
-        HostState target;
-        if (
-                !getSystemManager().isQuiesced() &&  // If spawn is not quiesced,
-                taskQueuesByPriority.checkSizeAgeForMigration(task.getByteCount(), timeOnQueue) &&
-                // and the task is small enough that migration is sensible
-                (target = findHostWithAvailableSlot(task, timeOnQueue, listHostStatus(job.getMinionType()), true)) != null)
-        // and there is a host with available capacity that can run the job,
-        {
-            // Migrate the task to the target host and kick it on completion
-            log.warn("Migrating " + task.getJobKey() + " to " + target.getHostUuid());
-            taskQueuesByPriority.markMigrationBetweenHosts(task.getHostUUID(), target.getHostUuid());
-            taskQueuesByPriority.markHostTaskActive(target.getHostUuid());
-            TaskMover tm = new TaskMover(this, task.getJobKey(), target.getHostUuid(), task.getHostUUID());
-            tm.setMigration(true);
-            tm.execute();
-            return true;
+        // If spawn is not quiesced, and the task is small enough that migration is sensible, and 
+        // there is a host with available capacity that can run the job, Migrate the task to the 
+        // target host and kick it on completion
+        if (!systemManager.isQuiesced() && 
+                taskQueuesByPriority.checkSizeAgeForMigration(task.getByteCount(), timeOnQueue)) {
+            HostState target = findHostWithAvailableSlot(task, timeOnQueue, 
+                    listHostStatus(job.getMinionType()), true);
+            if (target != null) {
+                log.warn("Migrating {} to {}", task.getJobKey(), target.getHostUuid());
+                taskQueuesByPriority.markMigrationBetweenHosts(task.getHostUUID(), target.getHostUuid());
+                taskQueuesByPriority.markHostTaskActive(target.getHostUuid());
+                TaskMover tm = new TaskMover(this, task.getJobKey(), target.getHostUuid(), task.getHostUUID());
+                tm.setMigration(true);
+                tm.execute();
+                return true;
+            }
         }
         return false;
     }
@@ -3138,7 +3139,7 @@ public class Spawn implements Codable, AutoCloseable {
                     iter.remove();
                     continue;
                 }
-                if (getSystemManager().isQuiesced() && !key.getIgnoreQuiesce()) {
+                if (systemManager.isQuiesced() && !key.getIgnoreQuiesce()) {
                     skippedQuiesceCount++;
                     if (log.isDebugEnabled()) {
                         log.debug("[task.queue] skipping " + key + " because spawn is quiesced and the kick wasn't manual");

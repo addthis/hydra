@@ -1024,7 +1024,7 @@ public class SpawnManager {
             @Override
             public void httpService(HTTPLink link) throws Exception {
                 try {
-                    if (!spawn.getSystemManager().isQuiesced()) {
+                    if (!systemManager.isQuiesced()) {
                         link.sendShortReply(500, "Server Error", new JSONObject().put("error", "Spawn is not quiesced").toString());
                     }
                     KVPairs kv = link.getRequestValues();
