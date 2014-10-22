@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
@@ -26,10 +25,7 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.RollingLog;
 
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.job.alert.JobAlert;
-import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.minion.Minion;
 import com.addthis.hydra.util.LogUtil;
 import com.addthis.hydra.util.StringMapHelper;
@@ -51,131 +47,64 @@ import org.slf4j.LoggerFactory;
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
-public final class Job implements IJob, Codable {
+public final class Job implements IJob {
 
     private static final Logger log = LoggerFactory.getLogger(Job.class);
-    private static final Comparator<JobTask> taskNodeComparator = new Comparator<JobTask>() {
-        @Override
-        public int compare(JobTask jobTask, JobTask jobTask1) {
-            return Integer.compare(jobTask.getTaskID(), jobTask1.getTaskID());
-        }
-    };
+    private static final Comparator<JobTask> taskNodeComparator =
+            (jobTask, jobTask1) -> Integer.compare(jobTask.getTaskID(), jobTask1.getTaskID());
 
-    /* what is the state of this job */
-    @FieldConfig
-    private int state;
-    /* how many tasks are active */
-    @FieldConfig
-    private int countActiveTasks;
-    /* who created this job */
-    @FieldConfig
-    private String creator;
+    @FieldConfig private int state;
+    @FieldConfig private int countActiveTasks;
+    @FieldConfig private String creator;
     /* who last modified this job */
-    @FieldConfig
-    private String owner;
+    @FieldConfig private String owner;
     /* purely ornamental description of this job */
-    @FieldConfig
-    private String description;
+    @FieldConfig private String description;
     /* key used for storing / retrieving this job */
-    @FieldConfig
-    private String id;
+    @FieldConfig private String id;
     /* higher means more important */
-    @FieldConfig
-    private int priority;
-    /* will stomp lower pri jobs to create capacity */
-    @FieldConfig
-    private boolean stomp;
+    @FieldConfig private int priority;
     /* Unix epoch offset of time job was created */
-    @FieldConfig
-    private Long createTime;
+    @FieldConfig private Long createTime;
     /* Unix epoch offset of time job was last submitted */
-    @FieldConfig
-    private Long submitTime;
+    @FieldConfig private Long submitTime;
     /* Unix epoch offset of time first job node was assigned */
-    @FieldConfig
-    private Long startTime;
+    @FieldConfig private Long startTime;
     /* Unix epoch offset of time last job node completed */
-    @FieldConfig
-    private Long endTime;
+    @FieldConfig private Long endTime;
     /* hours between re-kicking */
-    @FieldConfig
-    private Long rekickTimeout;
+    @FieldConfig private Long rekickTimeout;
     /* minutes max time to allocate to job before it's interrupted */
-    @FieldConfig
-    private Long maxRunTime;
+    @FieldConfig private Long maxRunTime;
     /* list of nodes and their state */
-    @FieldConfig
-    private ArrayList<JobTask> nodes;
+    @FieldConfig private ArrayList<JobTask> nodes;
     /* JSON configuration url -- only read at submit time if conf empty */
-    @FieldConfig
-    private String config;
-    /* alerts on the job */
-    @FieldConfig
-    private List<JobAlert> alerts;
+    @FieldConfig private String config;
     /* URL for spawn to call on job complete. for automating workflows */
-    @FieldConfig
-    private String onComplete;
-    @FieldConfig
-    private String onError;
+    @FieldConfig private String onComplete;
+    @FieldConfig private String onError;
     /* timeout in seconds */
-    @FieldConfig
-    private int onCompleteTimeout;
-    @FieldConfig
-    private int onErrorTimeout;
-    @FieldConfig
-    private int runCount;
-    @FieldConfig
-    private long runTime;
-    @FieldConfig
-    private String command;
-    @FieldConfig
-    private String killSignal;
-    @FieldConfig
-    private boolean disabled;
-    @FieldConfig
-    private ArrayList<JobParameter> parameters;
-    @FieldConfig
-    private int backups; //Leaving in for cutover
-    @FieldConfig
-    private int hourlyBackups;
-    @FieldConfig
-    private int dailyBackups;
-    @FieldConfig
-    private int weeklyBackups;
-    @FieldConfig
-    private int monthlyBackups;
-    @FieldConfig
-    private int replicas;
-    @FieldConfig
-    private int readOnlyReplicas;
-    // Unused
-    @FieldConfig
-    private int replicationFactor;
-    /* restrict replicas to hosts in current job/task space */
-    @FieldConfig
-    private boolean strictReplicas;
-    @FieldConfig
-    private boolean dontAutoBalanceMe;
-    @FieldConfig
-    private boolean dontDeleteMe;
-    @FieldConfig
-    private HashMap<String, String> properties;
-    @FieldConfig
-    private boolean hadMoreData;
-    @FieldConfig
-    private boolean wasStopped;
-    @FieldConfig
-    private int maxSimulRunning;
-    @FieldConfig
-    private String minionType;
-    @FieldConfig
-    private int retries;
+    @FieldConfig private int onCompleteTimeout;
+    @FieldConfig private int onErrorTimeout;
+    @FieldConfig private int runCount;
+    @FieldConfig private long runTime;
+    @FieldConfig private String command;
+    @FieldConfig private boolean disabled;
+    @FieldConfig private ArrayList<JobParameter> parameters;
+    @FieldConfig private int hourlyBackups;
+    @FieldConfig private int dailyBackups;
+    @FieldConfig private int weeklyBackups;
+    @FieldConfig private int monthlyBackups;
+    @FieldConfig private int replicas;
+    @FieldConfig private int readOnlyReplicas;
+    @FieldConfig private boolean dontAutoBalanceMe;
+    @FieldConfig private boolean dontDeleteMe;
+    @FieldConfig private boolean wasStopped;
+    @FieldConfig private int maxSimulRunning;
+    @FieldConfig private String minionType;
+    @FieldConfig private int retries;
+    @FieldConfig private JobQueryConfig queryConfig;
 
-    // Query Config, eventually the job class needs to be teased apart.
-    @FieldConfig
-    private JobQueryConfig queryConfig;
-
-    private JobCommand submitCommand;
 
     /* If all errored tasks from an errored job are resolved and the job has started within this cutoff, automatically
     enable the job. Default is 3 days. */
@@ -183,11 +112,11 @@ public final class Job implements IJob, Codable {
 
     /* Task states that indicate that a job can be considered done. Rebalance/host-failure replications are included so
     these long-running operations will not delay the job rekick. */
-    private static final Set<JobTaskState> taskStatesToFinishJob = ImmutableSet.of(JobTaskState.IDLE, JobTaskState.ERROR, JobTaskState.REBALANCE, JobTaskState.FULL_REPLICATE);
+    private static final Set<JobTaskState> taskStatesToFinishJob = ImmutableSet.of(
+            JobTaskState.IDLE, JobTaskState.ERROR, JobTaskState.REBALANCE, JobTaskState.FULL_REPLICATE);
 
     // For codec only
-    public Job() {
-    }
+    public Job() {}
 
     public Job(String id) {
         this(id, null);
@@ -211,8 +140,6 @@ public final class Job implements IJob, Codable {
         this.owner = job.getOwner();
         this.description = job.getDescription();
         this.priority = job.getPriority();
-        this.stomp = job.getStomp();
-        this.replicationFactor = job.getReplicationFactor();
         this.createTime = job.getCreateTime();
         this.submitTime = job.getSubmitTime();
         this.startTime = job.getStartTime();
@@ -220,7 +147,6 @@ public final class Job implements IJob, Codable {
         this.rekickTimeout = job.getRekickTimeout();
         this.maxRunTime = job.getMaxRunTime();
         this.setTasks(job.getCopyOfTasks());
-        setAlerts(job.getAlerts());
         recountActiveTasks();
         this.config = job.getConfig();
         this.onComplete = job.getOnCompleteURL();
@@ -230,30 +156,19 @@ public final class Job implements IJob, Codable {
         this.runCount = job.getRunCount();
         this.runTime = job.getRunTime();
         this.command = job.getCommand();
-        this.killSignal = job.getKillSignal();
         this.parameters = job.getParameters() != null ? Lists.newArrayList(job.getParameters()) : null;
-        this.backups = job.getBackups();
         this.hourlyBackups = job.getHourlyBackups();
-        // Cutover logic: set dailyBackups to legacyBackups * 2
-        if (job.getDailyBackups() == 0 && job.getBackups() != 0) {
-            this.dailyBackups = 2 * this.backups;
-        } else {
-            this.dailyBackups = job.getDailyBackups();
-        }
+        this.dailyBackups = job.getDailyBackups();
         this.weeklyBackups = job.getWeeklyBackups();
         this.monthlyBackups = job.getMonthlyBackups();
         this.retries = job.getRetries();
         this.replicas = job.getReplicas();
-        this.readOnlyReplicas = job.getReadOnlyReplicas();
-        this.strictReplicas = job.getStrictReplicas();
         this.queryConfig = job.getQueryConfig();
-        this.submitCommand = job.getSubmitCommand();
         this.dontAutoBalanceMe = job.getDontAutoBalanceMe();
         this.dontDeleteMe = job.getDontDeleteMe();
         this.maxSimulRunning = job.getMaxSimulRunning();
         this.minionType = job.getMinionType();
         this.wasStopped = job.getWasStopped();
-        this.properties = job.getProperties();
         setEnabled(job.isEnabled());
     }
 
@@ -303,16 +218,6 @@ public final class Job implements IJob, Codable {
     }
 
     @Override
-    public String getKillSignal() {
-        return killSignal;
-    }
-
-    @Override
-    public void setKillSignal(String killSignal) {
-        this.killSignal = killSignal;
-    }
-
-    @Override
     public int getPriority() {
         return priority;
     }
@@ -320,16 +225,6 @@ public final class Job implements IJob, Codable {
     @Override
     public void setPriority(int priority) {
         this.priority = priority;
-    }
-
-    @Override
-    public boolean getStomp() {
-        return stomp;
-    }
-
-    @Override
-    public void setStomp(boolean stomp) {
-        this.stomp = stomp;
     }
 
     @Override
@@ -468,16 +363,6 @@ public final class Job implements IJob, Codable {
     public void setOnErrorTimeout(int timeout) { this.onErrorTimeout = timeout; }
 
     @Override
-    public int getBackups() {
-        return backups;
-    }
-
-    @Override
-    public void setBackups(int backups) {
-        this.backups = backups;
-    }
-
-    @Override
     public int getReplicas() {
         return replicas;
     }
@@ -485,16 +370,6 @@ public final class Job implements IJob, Codable {
     @Override
     public void setReplicas(int replicas) {
         this.replicas = replicas;
-    }
-
-    @Override
-    public int getReadOnlyReplicas() {
-        return readOnlyReplicas;
-    }
-
-    @Override
-    public void setReadOnlyReplicas(int readOnlyReplicas) {
-        this.readOnlyReplicas = readOnlyReplicas;
     }
 
     @Override
@@ -516,22 +391,6 @@ public final class Job implements IJob, Codable {
     public JobState getState() {
         JobState jobState = JobState.makeState(state);
         return jobState == null ? JobState.UNKNOWN : jobState;
-    }
-
-    @Override
-    public void setAlerts(List<JobAlert> alerts) {
-        if (alerts != null) {
-
-            this.alerts = new ArrayList<>(alerts.size());
-            this.alerts.addAll(alerts);
-        } else {
-            this.alerts = null;
-        }
-    }
-
-    @Override
-    public List<JobAlert> getAlerts() {
-        return this.alerts;
     }
 
     @Override
@@ -628,36 +487,6 @@ public final class Job implements IJob, Codable {
     @Override
     public void setQueryConfig(JobQueryConfig queryConfig) {
         this.queryConfig = queryConfig;
-    }
-
-    @Override
-    public JobCommand getSubmitCommand() {
-        return submitCommand;
-    }
-
-    @Override
-    public void setSubmitCommand(JobCommand submitCommand) {
-        this.submitCommand = submitCommand;
-    }
-
-    @Override
-    public boolean getStrictReplicas() {
-        return strictReplicas;
-    }
-
-    @Override
-    public void setStrictReplicas(boolean strictReplicas) {
-        this.strictReplicas = strictReplicas;
-    }
-
-    @Override
-    public HashMap<String, String> getProperties() {
-        return properties;
-    }
-
-    @Override
-    public void setProperties(HashMap<String, String> properties) {
-        this.properties = properties;
     }
 
     @Override public JSONObject toJSON() throws Exception {
@@ -762,16 +591,6 @@ public final class Job implements IJob, Codable {
     }
 
     @Override
-    public int getReplicationFactor() {
-        return replicationFactor;
-    }
-
-    @Override
-    public void setReplicationFactor(int replicationFactor) {
-        this.replicationFactor = replicationFactor;
-    }
-
-    @Override
     public boolean getDontAutoBalanceMe() {
         return dontAutoBalanceMe;
     }
@@ -827,22 +646,6 @@ public final class Job implements IJob, Codable {
     @Override
     public void setMonthlyBackups(int monthlyBackups) {
         this.monthlyBackups = monthlyBackups;
-    }
-
-    public boolean hadMoreData() {
-        return hadMoreData;
-    }
-
-    public boolean getHadMoreData() {
-        return hadMoreData;
-    }
-
-    public void setHadMoreData(boolean hadMore) {
-        this.hadMoreData = hadMore;
-    }
-
-    public boolean wasStopped() {
-        return wasStopped;
     }
 
     @Override
@@ -966,7 +769,6 @@ public final class Job implements IJob, Codable {
                         .put("state", job.getState())
                         .put("taskCount", job.getTaskCount())
                         .put("avgTaskSize", job.calcAverageTaskSizeBytes())
-                        .put("hasMoreData", job.hadMoreData())
                         .put("startTime", job.getStartTime())
                         .put("endTime", job.getEndTime())
                         .put("submitTime", job.getSubmitTime())

@@ -122,22 +122,25 @@ class TaskMover {
     }
 
     private void startReplicate() throws Exception {
-        ReplicaTarget[] target = new ReplicaTarget[]{
-                new ReplicaTarget(
-                        targetHostUUID,
-                        targetHost.getHost(),
-                        targetHost.getUser(),
-                        targetHost.getPath(),
-                        task.getReplicationFactor())
+        ReplicaTarget[] target = { new ReplicaTarget(targetHostUUID,
+                                                     targetHost.getHost(),
+                                                     targetHost.getUser(),
+                                                     targetHost.getPath())
         };
-        job.setSubmitCommand(spawn.getJobCommandManager().getEntity(job.getCommand()));
-        JobCommand jobcmd = job.getSubmitCommand();
-        CommandTaskReplicate replicate = new CommandTaskReplicate(
-                task.getHostUUID(), task.getJobUUID(), task.getTaskID(), target, Strings.join(jobcmd.getCommand(), " "), choreWatcherKey(), true, kickOnComplete);
+        JobCommand jobcmd = spawn.getJobCommandManager().getEntity(job.getCommand());
+        CommandTaskReplicate replicate = new CommandTaskReplicate(task.getHostUUID(),
+                                                                  task.getJobUUID(),
+                                                                  task.getTaskID(),
+                                                                  target,
+                                                                  Strings.join(jobcmd.getCommand(), " "),
+                                                                  choreWatcherKey(),
+                                                                  true,
+                                                                  kickOnComplete);
         replicate.setRebalanceSource(sourceHostUUID);
         replicate.setRebalanceTarget(targetHostUUID);
         spawn.sendControlMessage(replicate);
-        log.warn("[task.mover] replicating job/task " + task.getJobKey() + " from " + sourceHostUUID + " onto host " + targetHostUUID);
+        log.warn("[task.mover] replicating job/task {} from {} onto host {}",
+                 task.getJobKey(), sourceHostUUID, targetHostUUID);
     }
 
     @Override

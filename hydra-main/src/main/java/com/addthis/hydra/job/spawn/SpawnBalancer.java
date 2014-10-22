@@ -86,11 +86,11 @@ public class SpawnBalancer implements Codable {
 
     // How often to update aggregate host statistics
     private static final long AGGREGATE_STAT_UPDATE_INTERVAL = Parameter.intValue("spawnbalance.stat.update", 15 * 1000);
-    private static long lastAggregateStatUpdateTime = 0;
 
     private ConcurrentHashMap<String, HostScore> cachedHostScores = new ConcurrentHashMap<>();
     private Set<String> activeJobIDs;
     private ReentrantLock aggregateStatisticsLock = new ReentrantLock();
+    private long lastAggregateStatUpdateTime = 0;
 
     private static final Set<JobTaskState> movableTaskStates = ImmutableSet.of(JobTaskState.IDLE, JobTaskState.QUEUED, JobTaskState.QUEUED_HOST_UNAVAIL);
 
@@ -317,7 +317,7 @@ public class SpawnBalancer implements Codable {
         for (JobTask task : tasks) {
             Job job;
             if (task.getJobUUID() != null && (job = spawn.getJob(task.getJobUUID())) != null) {
-                List<JobTask> taskList = tasksByJobID.get(job.getId()) != null ? tasksByJobID.get(job.getId()) : new ArrayList<JobTask>();
+                List<JobTask> taskList = tasksByJobID.get(job.getId()) != null ? tasksByJobID.get(job.getId()) : new ArrayList<>();
                 taskList.add(task);
                 tasksByJobID.put(job.getId(), taskList);
             }
@@ -515,8 +515,8 @@ public class SpawnBalancer implements Codable {
             this.maxPulledFromHost = maxPulledFromHost;
             this.maxPushedToHost = maxPushedToHost;
             for (HostState host : hosts) {
-                if (!host.isReadOnly() && host.isUp() && !host.isDead()) {
-                    put(host.getHostUuid(), new HashSet<JobTaskItem>());
+                if (host.isUp() && !host.isDead()) {
+                    put(host.getHostUuid(), new HashSet<>());
                 }
             }
         }
@@ -1072,7 +1072,7 @@ public class SpawnBalancer implements Codable {
      * @return A list of assignments to perform the specified balancing operation
      */
     public List<JobTaskMoveAssignment> getAssignmentsForAutoBalance(RebalanceType type, RebalanceWeight weight) {
-        List<HostState> hosts = spawn.getLiveHostsByReadOnlyStatus(null, false);
+        List<HostState> hosts = spawn.getLiveHosts(null);
         switch (type) {
             case HOST:
                 if (hosts.isEmpty()) {
@@ -1174,39 +1174,35 @@ public class SpawnBalancer implements Codable {
      * Given a job, for each task, remove duplicate replicas, replicas pointing at the live host
      *
      * @param job      The job to modify
-     * @param readOnly Whether regular or readonly replicas should be modified
      */
-    protected void removeInvalidReplicas(Job job, boolean readOnly) {
-        if (job != null && job.getCopyOfTasks() != null) {
+    protected void removeInvalidReplicas(Job job) {
+        if ((job != null) && (job.getCopyOfTasks() != null)) {
             List<JobTask> tasks = job.getCopyOfTasks();
             for (JobTask task : tasks) {
-                List<JobTaskReplica> newReplicas = readOnly ? new ArrayList<JobTaskReplica>(job.getReadOnlyReplicas()) : new ArrayList<JobTaskReplica>(job.getReplicas());
-                if (readOnly ? task.getReadOnlyReplicas() != null : task.getReplicas() != null) {
-                    List<JobTaskReplica> oldReplicas = readOnly ? new ArrayList<>(task.getReadOnlyReplicas()) : new ArrayList<>(task.getReplicas());
+                List<JobTaskReplica> newReplicas = new ArrayList<>(job.getReplicas());
+                if (task.getReplicas() != null) {
+                    List<JobTaskReplica> oldReplicas = new ArrayList<>(task.getReplicas());
                     for (JobTaskReplica replica : oldReplicas) {
                         List<String> replicasSeen = new ArrayList<>();
                         String replicaHostID = replica.getHostUUID();
                         if (spawn.getHostState(replicaHostID) == null) {
-                            log.warn("[spawn.balancer] removing replica for missing host " + replicaHostID);
-                        } else if ((readOnly && !job.getQueryConfig().getCanQuery()) || replicaHostID.equals(task.getHostUUID()) || replicasSeen.contains(replicaHostID)) {
-                            log.warn("[spawn.balancer] removing erroneous replica for " + task.getJobKey() + " on " + replicaHostID);
-                        } else if (!readOnly && isReadOnlyHost(replicaHostID)) {
-                            log.warn("[spawn.balancer] removing non-readonly replica for " + task.getJobKey() + " from readonly host " + replicaHostID);
-                        } else if (readOnly && !isReadOnlyHost(replicaHostID)) {
-                            log.warn("[spawn.balancer] removing readonly replica for " + task.getJobKey() + " from non-readonly host " + replicaHostID);
-                        } else if ((!config.allowSameHostReplica()) && onSameHost(replicaHostID, task.getHostUUID())) {
-                            log.warn("[spawn.balancer] removing replica on same host for " + task.getJobKey() + "live=" + task.getHostUUID() + " replica=" + replicaHostID);
+                            log.warn("[spawn.balancer] removing replica for missing host {}", replicaHostID);
+                        } else if (replicaHostID.equals(task.getHostUUID()) || replicasSeen.contains(replicaHostID)) {
+                            log.warn("[spawn.balancer] removing erroneous replica for {} on {}",
+                                     task.getJobKey(), replicaHostID);
+                        } else if (false) {
+                            log.warn("[spawn.balancer] removing non-readonly replica for {} from readonly host {}",
+                                     task.getJobKey(), replicaHostID);
+                        } else if (!config.allowSameHostReplica() && onSameHost(replicaHostID, task.getHostUUID())) {
+                            log.warn("[spawn.balancer] removing replica on same host for {}live={} replica={}",
+                                     task.getJobKey(), task.getHostUUID(), replicaHostID);
                         } else {
                             replicasSeen.add(replicaHostID);
                             newReplicas.add(replica);
                         }
                     }
                 }
-                if (readOnly) {
-                    task.setReadOnlyReplicas(newReplicas);
-                } else {
-                    task.setReplicas(newReplicas);
-                }
+                task.setReplicas(newReplicas);
             }
         }
     }
@@ -1222,7 +1218,7 @@ public class SpawnBalancer implements Codable {
     }
 
     public boolean canReceiveNewTasks(HostState host, boolean isReplica) {
-        if (host == null || (!isReplica && host.isReadOnly())) {
+        if (host == null) {
             return false;
         }
         if (spawn.getHostFailWorker().getFailureState(host.getHostUuid()) != HostFailWorker.FailState.ALIVE) {
@@ -1250,15 +1246,14 @@ public class SpawnBalancer implements Codable {
      *
      * @param job      The job in question (not altered)
      * @param taskID   The task that needs replicas, or -1 for all tasks
-     * @param readOnly Whether to assign new read-only replicas or regular replicas
      * @return Map sending nodeid => list of host IDs for which to make new replicas
      */
-    protected Map<Integer, List<String>> getAssignmentsForNewReplicas(Job job, int taskID, boolean readOnly) {
+    protected Map<Integer, List<String>> getAssignmentsForNewReplicas(Job job, int taskID) {
         Map<Integer, List<String>> rv = new HashMap<>();
-        if (job == null || (readOnly && job.getQueryConfig() != null && !job.getQueryConfig().getCanQuery())) {
+        if (job == null) {
             return rv;
         }
-        int replicaCount = readOnly ? job.getReadOnlyReplicas() : job.getReplicas();
+        int replicaCount = job.getReplicas();
         Map<String, Double> scoreMap = generateTaskCountHostScoreMap(job);
         PriorityQueue<HostAndScore> scoreHeap = new PriorityQueue<>(1, hostAndScoreComparator);
         for (Entry<String, Double> entry : scoreMap.entrySet()) {
@@ -1267,9 +1262,7 @@ public class SpawnBalancer implements Codable {
         Map<String, Integer> allocationMap = new HashMap<>();
         List<JobTask> tasks = taskID > 0 ? Arrays.asList(job.getTask(taskID)) : job.getCopyOfTasks();
         for (JobTask task : tasks) {
-            int numExistingReplicas = readOnly ?
-                                      (task.getReadOnlyReplicas() != null ? task.getReadOnlyReplicas().size() : 0)
-                                               : (task.getReplicas() != null ? task.getReplicas().size() : 0);
+            int numExistingReplicas = (task.getReplicas() != null ? task.getReplicas().size() : 0);
             List<String> hostIDsToAdd = new ArrayList<>(replicaCount);
             // Add new replicas as long as the task needs them & there are remaining hosts
             for (int i = 0; i < replicaCount - numExistingReplicas; i++) {
@@ -1278,11 +1271,14 @@ public class SpawnBalancer implements Codable {
                     if (candidateHost == null || !candidateHost.canMirrorTasks()) {
                         continue;
                     }
-                    int currentCount = allocationMap.containsKey(candidateHost.getHostUuid()) ? allocationMap.get(candidateHost.getHostUuid()) : 0;
-                    if (readOnly && currentCount >= config.getMaxReadonlyReplicas()) {
-                        continue;
+                    int currentCount;
+                    if (allocationMap.containsKey(candidateHost.getHostUuid())) {
+                        currentCount = allocationMap.get(candidateHost.getHostUuid());
+                    } else {
+                        currentCount = 0;
                     }
-                    if ((candidateHost.isReadOnly() == readOnly) && okToPutReplicaOnHost(candidateHost, task)) {
+
+                    if (okToPutReplicaOnHost(candidateHost, task)) {
                         hostIDsToAdd.add(candidateHost.getHostUuid());
                         scoreHeap.remove(hostAndScore);
                         scoreHeap.add(new HostAndScore(candidateHost, hostAndScore.score + 1));
@@ -1298,13 +1294,8 @@ public class SpawnBalancer implements Codable {
         return rv;
     }
 
-    public Map<Integer, List<String>> getAssignmentsForNewReplicas(Job job, boolean readOnly) {
-        return getAssignmentsForNewReplicas(job, -1, readOnly);
-    }
-
-    private boolean isReadOnlyHost(String hostUUID) {
-        HostState hostState = spawn.getHostState(hostUUID);
-        return hostState != null && hostState.isReadOnly();
+    public Map<Integer, List<String>> getAssignmentsForNewReplicas(Job job) {
+        return getAssignmentsForNewReplicas(job, -1);
     }
 
     /**

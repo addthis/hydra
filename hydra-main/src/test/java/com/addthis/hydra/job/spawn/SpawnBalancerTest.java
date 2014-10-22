@@ -18,7 +18,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -144,7 +143,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         }
         Job job = createJobAndUpdateHosts(spawn, numLightHosts + 1, hostIDs, now, 1000, 0);
         job.setReplicas(1);
-        Map<Integer, List<String>> assignments = bal.getAssignmentsForNewReplicas(job, false);
+        Map<Integer, List<String>> assignments = bal.getAssignmentsForNewReplicas(job);
         HashSet<String> usedHosts = new HashSet<>(numLightHosts);
         for (List<String> targets : assignments.values()) {
             assertEquals("should make one replica per task", 1, targets.size());
@@ -153,82 +152,6 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         }
         assertTrue("should use many light hosts", numLightHosts > .75 * usedHosts.size());
     }
-
-    @Test
-    public void replicaAllocationForReadOnlyNodesTest() throws Exception {
-        // Suppose we allocate a job with N tasks to a cluster with N hosts, with one of the hosts near full disk.
-        // Then we should put replicas on all the light hosts, but not the heavy one
-        String readOnlyHostId = "readOnlyHost";
-        HostState readOnlyHost = installHostStateWithUUID(readOnlyHostId, spawn, true, true, 0, "default");
-        readOnlyHost.setUsed(new HostCapacity(0, 0, 0, 30));
-        readOnlyHost.setMax(new HostCapacity(0, 0, 0, 10_000));
-        int numLightHosts = 9;
-        ArrayList<String> hostIDs = new ArrayList<>(numLightHosts + 1);
-        hostIDs.add(readOnlyHostId);
-        for (int i = 0; i < numLightHosts; i++) {
-            String hostID = "light" + i;
-            hostIDs.add(hostID);
-            HostState lightHost = installHostStateWithUUID(hostID, spawn, true);
-            lightHost.setUsed(new HostCapacity(0, 0, 0, 30));
-            lightHost.setMax(new HostCapacity(0, 0, 0, 10_000));
-        }
-        Job job = createJobAndUpdateHosts(spawn, numLightHosts + 1, hostIDs, now, 1000, 0);
-        job.setReadOnlyReplicas(1);
-        Map<Integer, List<String>> assignments = bal.getAssignmentsForNewReplicas(job, true);
-        assertTrue(!assignments.isEmpty());
-        for (List<String> targets : assignments.values()) {
-            assertEquals("should make one replica per task", 1, targets.size());
-            assertTrue("should put one replica on the read only host", targets.contains(readOnlyHostId));
-        }
-    }
-
-
-    @Test
-    public void replicaAllocationForReadOnlyNodesTest_tooManyNodes() throws Exception {
-        // Suppose we have assign read-only replicas to a job where the number of tasks greatly exceeds the number of read-only minions.
-        // We should assign read-only replicas up to the specified limits and not go over.
-        String readOnlyHostId = "readOnlyHost";
-        HostState readOnlyHost = installHostStateWithUUID(readOnlyHostId, spawn, true, true, 0, "default");
-        readOnlyHost.setUsed(new HostCapacity(0, 0, 0, 30));
-        readOnlyHost.setMax(new HostCapacity(0, 0, 0, 10_000));
-
-        String readOnlyHostId2 = "readOnlyHost2";
-        HostState readOnlyHost2 = installHostStateWithUUID(readOnlyHostId2, spawn, true, true, 0, "default");
-        readOnlyHost2.setUsed(new HostCapacity(0, 0, 0, 30));
-        readOnlyHost2.setMax(new HostCapacity(0, 0, 0, 10_000));
-        int numLightHosts = 9;
-        ArrayList<String> hostIDs = new ArrayList<>(numLightHosts + 1);
-        hostIDs.add(readOnlyHostId);
-        hostIDs.add(readOnlyHostId2);
-        for (int i = 0; i < numLightHosts; i++) {
-            String hostID = "light" + i;
-            hostIDs.add(hostID);
-            HostState lightHost = installHostStateWithUUID(hostID, spawn, true);
-            lightHost.setUsed(new HostCapacity(0, 0, 0, 30));
-            lightHost.setMax(new HostCapacity(0, 0, 0, 10_000));
-        }
-        int maxPerHost = bal.getConfig().getMaxReadonlyReplicas();
-        Job job = createJobAndUpdateHosts(spawn, numLightHosts + 1000, hostIDs, now, 1000, 0);
-        job.setReadOnlyReplicas(1);
-        Map<Integer, List<String>> assignments = bal.getAssignmentsForNewReplicas(job, true);
-        assertEquals("should make correct number of readonly replicas", 2 * maxPerHost, assignments.size());
-        Map<String, Integer> hostCountMap = new HashMap<>();
-        for (List<String> targets : assignments.values()) {
-            assertEquals("should make one replica per task", 1, targets.size());
-            assertTrue("should put replica on the read only host", (targets.contains(readOnlyHostId) || targets.contains(readOnlyHostId2)));
-
-            for (String target : targets) {
-                Integer count = hostCountMap.get(target);
-                if (count == null) {
-                    hostCountMap.put(target, 1);
-                } else {
-                    hostCountMap.put(target, count + 1);
-                }
-                assertTrue("no more than the max # of replicas should be put on one host", hostCountMap.get(target) <= maxPerHost);
-            }
-        }
-    }
-
 
     @Test
     public void sortHostsTest() throws Exception {
@@ -438,11 +361,8 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
 
     @Test
     public void kickOnSuitableHosts() throws Exception {
-        String readOnlyHostID = "host1";
         String availHostID = "host2";
-        HostState readOnly = installHostStateWithUUID(readOnlyHostID, spawn, true, true, 0, "default");
         HostState avail = installHostStateWithUUID(availHostID, spawn, true, false, 1, "default");
-        assertTrue("read only host shouldn't be able to run task", readOnly.isReadOnly());
         assertTrue("available host should be able to run task", avail.canMirrorTasks());
     }
 
@@ -647,7 +567,6 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         newHostState.setUsed(new HostCapacity(0, 0, 0, 100));
         newHostState.setHost("hostname-for:" + hostUUID);
         newHostState.setUp(isUp);
-        newHostState.setReadOnly(readOnly);
         newHostState.setAvailableTaskSlots(availableSlots);
         newHostState.setMinionTypes(minionType);
         spawn.updateHostState(newHostState);

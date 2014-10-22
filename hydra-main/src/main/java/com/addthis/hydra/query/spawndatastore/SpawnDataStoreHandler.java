@@ -98,21 +98,12 @@ public class SpawnDataStoreHandler {
     }
 
     public void validateJobForQuery(Query query) {
-        if (!queryConfigWatcher.jobIsTracked(query.getJob())) {
-            throw new QueryException("job not found (wrong job id or not detected yet): " + query.getJob());
-        }
         if (!queryConfigWatcher.safeToQuery(query.getJob())) {
             throw new QueryException("job is not safe to query (are queries enabled for this job in spawn?): " + query.getJob());
-        }
-        if (!query.isTraced() && queryConfigWatcher.shouldTrace(query.getJob())) {
-            query.setTraced(true);
         }
     }
 
     public void resolveAlias(Query query) {
-        if (aliasBiMap == null) {
-            throw new QueryException("QueryMaster has not been initialized, try query again soon...");
-        }
         List<String> possibleJobs = aliasBiMap.getJobs(query.getJob());
         if ((possibleJobs != null) && !possibleJobs.isEmpty()) {
             query.setJob(possibleJobs.get(0));

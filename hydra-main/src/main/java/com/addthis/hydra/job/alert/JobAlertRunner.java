@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import java.text.DecimalFormat;
@@ -46,7 +45,6 @@ import com.typesafe.config.ConfigFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_LOADED_LEGACY;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
 
 /**
@@ -254,15 +252,6 @@ public class JobAlertRunner {
                     loadAlert(entry.getKey(), entry.getValue());
                 }
             }
-            if (spawnDataStore.get(SPAWN_COMMON_ALERT_LOADED_LEGACY) == null) {
-                // One time only, iterate through jobs looking for their alerts.
-                try {
-                    loadLegacyAlerts();
-                    spawnDataStore.put(SPAWN_COMMON_ALERT_LOADED_LEGACY, "1");
-                } catch (Exception ex) {
-                    log.error("Failed to fetch legacy alerts:", ex);
-                }
-            }
             log.info("{} alerts loaded", alertMap.size());
         }
     }
@@ -298,33 +287,6 @@ public class JobAlertRunner {
                 spawnDataStore.deleteChild(SPAWN_COMMON_ALERT_PATH, id);
             }
         }
-    }
-
-    /**
-     * A method called one time to retrieve any job alerts that were saved within Job objects
-     */
-    private void loadLegacyAlerts() {
-        List<JobAlert> alerts;
-        spawn.acquireJobLock();
-        try {
-            synchronized (alertMap) {
-                for (Job job : spawn.listJobs()) {
-                    if (job != null && (alerts = job.getAlerts()) != null) {
-                        for (JobAlert alert : alerts) {
-                            alert.setJobIds(new String[] { job.getId() });
-                            String newUUID = UUID.randomUUID().toString();
-                            alert.setAlertId(newUUID);
-                            alertMap.put(newUUID, alert);
-                            storeAlert(newUUID, alert);
-                        }
-                        job.setAlerts(null);
-                    }
-                }
-            }
-        } finally {
-            spawn.releaseJobLock();
-        }
-
     }
 
     private void storeAlert(String alertId, JobAlert alert) {

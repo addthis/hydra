@@ -28,7 +28,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 @Category(SlowTest.class)
 public class QueryConfigWatcherTest extends ZkCodecStartUtil {
@@ -47,33 +48,29 @@ public class QueryConfigWatcherTest extends ZkCodecStartUtil {
     public JobConfigManager setUpSampleState() throws Exception {
         JobConfigManager jcm = new JobConfigManager(spawnDataStore);
         IJob job = new ZnodeJob("j1");
-        job.setQueryConfig(new JobQueryConfig(true, 0));
+        job.setQueryConfig(new JobQueryConfig(true));
         jcm.addJob(job);
         IJob job2 = new ZnodeJob("j2");
-        job2.setQueryConfig(new JobQueryConfig(false, 5));
+        job2.setQueryConfig(new JobQueryConfig(false));
         jcm.addJob(job2);
         return jcm;
     }
 
     @Test
     public void sampleInit() throws Exception {
-
-        assertEquals(true, qcw.safeToQuery("j1"));
-        assertEquals(false, qcw.safeToQuery("j2"));
-
-        assertEquals(false, qcw.shouldTrace("j1"));
-        assertEquals(true, qcw.shouldTrace("j2"));
+        assertTrue(qcw.safeToQuery("j1"));
+        assertFalse(qcw.safeToQuery("j2"));
     }
 
 
     @Test
     public void sampleRemove() throws Exception {
-        assertEquals(true, qcw.safeToQuery("j1"));
-        assertEquals(false, qcw.safeToQuery("j2"));
+        assertTrue(qcw.safeToQuery("j1"));
+        assertFalse(qcw.safeToQuery("j2"));
         jcm.deleteJob("j1");
         qcw.invalidateQueryConfigCache();
-        assertEquals(false, qcw.safeToQuery("j1")); // del == false
-        assertEquals(false, qcw.safeToQuery("j2"));
+        assertFalse(qcw.safeToQuery("j1")); // del == false
+        assertFalse(qcw.safeToQuery("j2"));
     }
 
 
@@ -82,18 +79,17 @@ public class QueryConfigWatcherTest extends ZkCodecStartUtil {
         JobConfigManager jcm = setUpSampleState();
 
         IJob job = new ZnodeJob("j3");
-        job.setQueryConfig(new JobQueryConfig(true, 137));
+        job.setQueryConfig(new JobQueryConfig(true));
         jcm.addJob(job);
-        assertEquals(true, qcw.safeToQuery("j3"));
+        assertTrue(qcw.safeToQuery("j3"));
     }
 
     @Test
     public void sampleChangeConfig() throws Exception {
         IJob job = new ZnodeJob("j1");
-        job.setQueryConfig(new JobQueryConfig(false, 10));
+        job.setQueryConfig(new JobQueryConfig(false));
         jcm.updateJob(job);
-        assertEquals(false, qcw.safeToQuery("j1"));
-        assertEquals(true, qcw.shouldTrace("j1"));
+        assertFalse(qcw.safeToQuery("j1"));
     }
 
 }

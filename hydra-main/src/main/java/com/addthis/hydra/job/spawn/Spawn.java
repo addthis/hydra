@@ -935,11 +935,11 @@ public class Spawn implements Codable, AutoCloseable {
         return false;
     }
 
-    public List<HostState> getLiveHostsByReadOnlyStatus(String minionType, boolean readonly) {
+    public List<HostState> getLiveHosts(String minionType) {
         List<HostState> allHosts = listHostStatus(minionType);
         List<HostState> rv = new ArrayList<>(allHosts.size());
         for (HostState host : allHosts) {
-            if (host.isUp() && !host.isDead() && host.isReadOnly() == readonly) {
+            if (host.isUp() && !host.isDead()) {
                 rv.add(host);
             }
         }
@@ -962,7 +962,8 @@ public class Spawn implements Codable, AutoCloseable {
             log.warn("[job.reallocate] can't reallocate non-idle job");
             return null;
         }
-        List<JobTaskMoveAssignment> assignments = balancer.getAssignmentsForJobReallocation(job, tasksToMove, getLiveHostsByReadOnlyStatus(job.getMinionType(), readonly));
+        List<JobTaskMoveAssignment> assignments = balancer.getAssignmentsForJobReallocation(job, tasksToMove, getLiveHosts(
+                job.getMinionType()));
         return executeReallocationAssignments(assignments, false);
     }
 
@@ -1011,7 +1012,7 @@ public class Spawn implements Codable, AutoCloseable {
      * @return A replacement host ID, if one can be found; null otherwise
      */
     private String getReplacementHost(Job job) {
-        List<HostState> hosts = getLiveHostsByReadOnlyStatus(job.getMinionType(), false);
+        List<HostState> hosts = getLiveHosts(job.getMinionType());
         for (HostState host : hosts) {
             if (host.canMirrorTasks()) {
                 return host.getHostUuid();
@@ -1106,9 +1107,10 @@ public class Spawn implements Codable, AutoCloseable {
             return new RebalanceOutcome(hostUUID, "missing host", null, null);
         }
         HostState host = monitored.get(hostUUID);
-        boolean readOnly = host.isReadOnly();
-        log.warn("[job.reallocate] starting reallocation for host: " + hostUUID + " host is " + (readOnly ? "" : "not") + " a read only host");
-        List<JobTaskMoveAssignment> assignments = balancer.getAssignmentsToBalanceHost(host, getLiveHostsByReadOnlyStatus(null, host.isReadOnly()));
+        log.warn("[job.reallocate] starting reallocation for host: {} host is not a read only host", hostUUID);
+        List<JobTaskMoveAssignment> assignments = balancer.getAssignmentsToBalanceHost(host,
+                                                                                       getLiveHosts(
+                                                                                               null));
         return new RebalanceOutcome(hostUUID, null, null, Strings.join(executeReallocationAssignments(assignments, false).toArray(), "\n"));
     }
 
@@ -1500,8 +1502,7 @@ public class Spawn implements Codable, AutoCloseable {
      * @return true if rebalance was successful
      */
     public boolean rebalanceReplicas(Job job) throws Exception {
-        // perform read/write and read only replication
-        return rebalanceReplicas(job, false) && rebalanceReplicas(job, true);
+        return rebalanceReplicas(job, -1);
     }
 
     /**
@@ -1520,36 +1521,23 @@ public class Spawn implements Codable, AutoCloseable {
      *
      * @param job      the job to rebalance replicas
      * @param taskID   The task # to fill out replicas, or -1 for all tasks
-     * @param readOnly Whether to fill out readonly replicas or standard replicas
      * @return true if rebalance was successful
      */
-    public boolean rebalanceReplicas(Job job, int taskID, boolean readOnly) throws Exception {
+    public boolean rebalanceReplicas(Job job, int taskID) throws Exception {
         if (job == null) {
             return false;
         }
-        boolean success = true;
         // Ensure that there aren't any replicas pointing towards the live host or duplicate replicas
-        balancer.removeInvalidReplicas(job, readOnly);
+        balancer.removeInvalidReplicas(job);
         // Ask SpawnBalancer where new replicas should be sent
-        Map<Integer, List<String>> replicaAssignments = balancer.getAssignmentsForNewReplicas(job, taskID, readOnly);
+        Map<Integer, List<String>> replicaAssignments = balancer.getAssignmentsForNewReplicas(job, taskID);
         List<JobTask> tasks = taskID > 0 ? Arrays.asList(job.getTask(taskID)) : job.getCopyOfTasks();
         for (JobTask task : tasks) {
             List<String> replicasToAdd = replicaAssignments.get(task.getTaskID());
             // Make the new replicas as dictated by SpawnBalancer
-            if (readOnly) {
-                task.setReadOnlyReplicas(addReplicasAndRemoveExcess(task, replicasToAdd, job.getReadOnlyReplicas(), task.getReadOnlyReplicas()));
-            } else {
-                task.setReplicas(addReplicasAndRemoveExcess(task, replicasToAdd, job.getReplicas(), task.getReplicas()));
-            }
+            task.setReplicas(addReplicasAndRemoveExcess(task, replicasToAdd, job.getReplicas(), task.getReplicas()));
         }
-        if (!readOnly) {
-            success = validateReplicas(job);
-        }
-        return success;
-    }
-
-    public boolean rebalanceReplicas(Job job, boolean readOnly) throws Exception {
-        return rebalanceReplicas(job, -1, readOnly);
+        return validateReplicas(job);
     }
 
     /**
@@ -1579,10 +1567,16 @@ public class Spawn implements Codable, AutoCloseable {
         return true;
     }
 
-    private List<JobTaskReplica> addReplicasAndRemoveExcess(JobTask task, List<String> replicaHostsToAdd,
-            int desiredNumberOfReplicas,
-            List<JobTaskReplica> currentReplicas) throws Exception {
-        List<JobTaskReplica> newReplicas = (currentReplicas == null ? new ArrayList<JobTaskReplica>() : new ArrayList<>(currentReplicas));
+    private List<JobTaskReplica> addReplicasAndRemoveExcess(JobTask task,
+                                                            List<String> replicaHostsToAdd,
+                                                            int desiredNumberOfReplicas,
+                                                            List<JobTaskReplica> currentReplicas) throws Exception {
+        List<JobTaskReplica> newReplicas;
+        if (currentReplicas == null) {
+            newReplicas = new ArrayList<>();
+        } else {
+            newReplicas = new ArrayList<>(currentReplicas);
+        }
         if (replicaHostsToAdd != null) {
             newReplicas.addAll(replicateTask(task, replicaHostsToAdd));
         }
@@ -1605,7 +1599,7 @@ public class Spawn implements Codable, AutoCloseable {
             newReplicas.add(replica);
         }
         Job job = getJob(task.getJobUUID());
-        JobCommand jobcmd = job.getSubmitCommand();
+        JobCommand jobcmd = getJobCommandManager().getEntity(job.getCommand());
         String command = (jobcmd != null && jobcmd.getCommand() != null) ? Strings.join(jobcmd.getCommand(), " ") : null;
         spawnMQ.sendControlMessage(new CommandTaskReplicate(task.getHostUUID(), task.getJobUUID(), task.getTaskID(), getTaskReplicaTargets(task, newReplicas), command, null, false, false));
         log.warn("[replica.add] " + task.getJobUUID() + "/" + task.getTaskID() + " to " + targetHosts);
@@ -1730,7 +1724,6 @@ public class Spawn implements Codable, AutoCloseable {
             if (isReplica && job != null) {
                 JobTask task = job.getTask(node);
                 task.setReplicas(removeReplicasForHost(hostUuid, task.getReplicas()));
-                task.setReadOnlyReplicas(removeReplicasForHost(hostUuid, task.getReadOnlyReplicas()));
                 queueJobTaskUpdateEvent(job);
             }
             return true;
@@ -1813,7 +1806,6 @@ public class Spawn implements Codable, AutoCloseable {
             }
             stopTask(jobUUID, task.getTaskID());
         }
-        job.setHadMoreData(false);
         Job.logJobEvent(job, JobEvent.STOP, eventLog);
     }
 
@@ -1833,7 +1825,6 @@ public class Spawn implements Codable, AutoCloseable {
                         }
                         killTask(jobUUID, task.getTaskID());
                     }
-                    job.setHadMoreData(false);
                 }
             } finally {
                 jobLock.unlock();
@@ -2225,7 +2216,6 @@ public class Spawn implements Codable, AutoCloseable {
      */
     private void handleStatusTaskEnd(Job job, JobTask task, StatusTaskEnd update) {
         TaskExitState exitState = update.getExitState();
-        boolean more = exitState != null && exitState.hadMoreData();
         boolean wasStopped = exitState != null && exitState.getWasStopped();
         task.setFileCount(update.getFileCount());
         task.setByteCount(update.getByteCount());
@@ -2237,9 +2227,6 @@ public class Spawn implements Codable, AutoCloseable {
                 task.setInput(exitState.getInput());
                 task.setMeanRate(exitState.getMeanRate());
                 task.setTotalEmitted(exitState.getTotalEmitted());
-            }
-            if (more) {
-                job.setHadMoreData(more);
             }
             task.setWasStopped(wasStopped);
         }
@@ -2309,20 +2296,10 @@ public class Spawn implements Codable, AutoCloseable {
         spawnFormattedLogger.finishJob(job);
         if (!systemManager.isQuiesced()) {
             if (job.isEnabled() && !errored) {
-                // rekick if any task had more work to do
-                if (job.hadMoreData()) {
-                    log.warn("[job.done] {} :: rekicking on more data", job.getId());
-                    try {
-                        scheduleJob(job, false);
-                    } catch (Exception ex) {
-                        log.warn("[job.done] {} :: error scheduling job: {}", job.getId(), ex.getMessage(), ex);
-                    }
-                } else {
-                    jobOnFinishStateHandler.handle(job, JobOnFinishState.OnComplete);
-                    if (ENABLE_JOB_FIXDIRS_ONCOMPLETE && job.getRunCount() > 1) {
-                        // Perform a fixDirs on completion, cleaning up missing replicas/orphans.
-                        fixTaskDir(job.getId(), -1, false, true);
-                    }
+                jobOnFinishStateHandler.handle(job, JobOnFinishState.OnComplete);
+                if (ENABLE_JOB_FIXDIRS_ONCOMPLETE && job.getRunCount() > 1) {
+                    // Perform a fixDirs on completion, cleaning up missing replicas/orphans.
+                    fixTaskDir(job.getId(), -1, false, true);
                 }
             } else {
                 jobOnFinishStateHandler.handle(job, JobOnFinishState.OnError);
@@ -2682,9 +2659,9 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     private boolean schedulePrep(Job job) {
-        job.setSubmitCommand(getJobCommandManager().getEntity(job.getCommand()));
-        if (job.getSubmitCommand() == null) {
-            log.warn("[schedule] failed submit : invalid command " + job.getCommand());
+        JobCommand jobCommand = getJobCommandManager().getEntity(job.getCommand());
+        if (jobCommand == null) {
+            log.warn("[schedule] failed submit : invalid command {}", job.getCommand());
             return false;
         }
         return job.isEnabled();
@@ -2701,7 +2678,7 @@ public class Spawn implements Codable, AutoCloseable {
                     log.warn("[getTaskReplicaTargets] error - replica host: " + replica.getHostUUID() + " does not exist!");
                     throw new RuntimeException("[getTaskReplicaTargets] error - replica host: " + replica.getHostUUID() + " does not exist.  Rebalance the job to correct issue");
                 }
-                replicas[next++] = new ReplicaTarget(host.getHostUuid(), host.getHost(), host.getUser(), host.getPath(), task.getReplicationFactor());
+                replicas[next++] = new ReplicaTarget(host.getHostUuid(), host.getHost(), host.getUser(), host.getPath());
             }
         }
         return replicas;
@@ -2753,7 +2730,6 @@ public class Spawn implements Codable, AutoCloseable {
         job.setSubmitTime(JitterClock.globalTime());
         job.setStartTime(null);
         job.setEndTime(null);
-        job.setHadMoreData(false);
         job.incrementRunCount();
         Job.logJobEvent(job, JobEvent.SCHEDULED, eventLog);
         log.info("[job.schedule] assigning " + job.getId() + " with " + job.getCopyOfTasks().size() + " tasks");
@@ -2771,7 +2747,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     /* helper for SpawnMesh */
     CommandTaskKick getCommandTaskKick(Job job, JobTask task) {
-        JobCommand jobCmd = job.getSubmitCommand();
+        JobCommand jobCmd = getJobCommandManager().getEntity(job.getCommand());
         final String expandedJob;
         try {
             expandedJob = expandJob(job);
@@ -2787,7 +2763,6 @@ public class Spawn implements Codable, AutoCloseable {
                 job.getRunCount(),
                 expandedJob,
                 Strings.join(jobCmd.getCommand(), " "),
-                Strings.isEmpty(job.getKillSignal()) ? null : job.getKillSignal(),
                 job.getHourlyBackups(),
                 job.getDailyBackups(),
                 job.getWeeklyBackups(),
@@ -2824,7 +2799,7 @@ public class Spawn implements Codable, AutoCloseable {
         task.setRunCount(job.getRunCount());
         task.setErrorCode(0);
         task.setPreFailErrorCode(0);
-        JobCommand jobcmd = job.getSubmitCommand();
+        JobCommand jobcmd = getJobCommandManager().getEntity(job.getCommand());
 
         if (task.getRebalanceSource() != null && task.getRebalanceTarget() != null) {
             // If a rebalance was stopped cleanly, resume it.
@@ -2845,7 +2820,6 @@ public class Spawn implements Codable, AutoCloseable {
                 job.getRunCount(),
                 null,
                 Strings.join(jobcmd.getCommand(), " "),
-                Strings.isEmpty(job.getKillSignal()) ? null : job.getKillSignal(),
                 job.getHourlyBackups(),
                 job.getDailyBackups(),
                 job.getWeeklyBackups(),
@@ -2891,7 +2865,7 @@ public class Spawn implements Codable, AutoCloseable {
     }
 
     private boolean shouldBlockTaskKick(HostState host) {
-        if (host == null || !host.canMirrorTasks() || host.isReadOnly()) {
+        if (host == null || !host.canMirrorTasks()) {
             return true;
         }
         HostFailWorker.FailState failState = hostFailWorker.getFailureState(host.getHostUuid());
@@ -3017,7 +2991,7 @@ public class Spawn implements Codable, AutoCloseable {
                 // Not a valid target for new tasks
                 continue;
             }
-            if (host.canMirrorTasks() && !host.isReadOnly() && taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid())) {
+            if (host.canMirrorTasks()  && taskQueuesByPriority.shouldKickTaskOnHost(host.getHostUuid())) {
                 filteredHosts.add(host);
             }
         }

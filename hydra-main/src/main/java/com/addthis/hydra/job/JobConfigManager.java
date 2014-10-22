@@ -116,10 +116,6 @@ public class JobConfigManager {
     }
 
     public void updateJob(IJob ijob) {
-        this.updateJob(ijob, null);
-    }
-
-    public void updateJob(IJob ijob, JobTask changedTask) {
         TimerContext updateJobTimerContext = updateJobTimer.time();
         ZnodeJob job = new ZnodeJob(ijob);
         String jobPath = getJobPath(ijob.getId());
@@ -130,7 +126,6 @@ public class JobConfigManager {
             final String jobCodec = new String(codec.encode(job.getRootData()));
             jobSizePersistHisto.update(jobCodec.length());
             spawnDataStore.putAsChild(SPAWN_JOB_CONFIG_PATH, job.getId(), jobCodec);
-            writeUpdateIfDataNotNull(jobPath + alertChildName, new String(codec.encode(job.getAlerts())));
             writeUpdateIfDataNotNull(jobPath + queryConfigChildName, new String(codec.encode(job.getQueryConfig())));
             // this is just a marker so that we know to use the 'new' configuration
             spawnDataStore.put(jobPath + tasksChildName, "");
@@ -184,16 +179,16 @@ public class JobConfigManager {
         String tasksData = queryData.get(jobPath + tasksChildName);
         if (tasksData != null) {
             // load from new config where task data is stored on root node
-            return new ZnodeJob(rznd, config, jqc, alerts);
+            return new ZnodeJob(rznd, config, jqc);
         } else {
             String taskData = queryData.get(jobPath + taskChildName);
             if (taskData != null) {
                 // old style, will be removed in future versions
-                return loadLegacyTaskData(jobPath, rznd, config, jqc, alerts);
+                return loadLegacyTaskData(jobPath, rznd, config, jqc);
             }
         }
-        logger.info("No tasks available for path: " + jobPath);
-        return new ZnodeJob(rznd, config, jqc, alerts);
+        logger.info("No tasks available for path: {}", jobPath);
+        return new ZnodeJob(rznd, config, jqc);
     }
 
     public IJob getJob(String jobId) {
@@ -221,7 +216,10 @@ public class JobConfigManager {
         return spawnDataStore.get(queryPaths);
     }
 
-    private IJob loadLegacyTaskData(String jobPath, ZnodeJob.RootZnodeData rznd, String config, JobQueryConfig jqc, List<JobAlert> alerts) throws Exception {
+    private IJob loadLegacyTaskData(String jobPath,
+                                    ZnodeJob.RootZnodeData rznd,
+                                    String config,
+                                    JobQueryConfig jqc) throws Exception {
         List<JobTask> tasks = new ArrayList<>();
         List<String> children = (spawnDataStore.getChildrenNames(jobPath + taskChildName));
         Collections.sort(children);
@@ -230,7 +228,7 @@ public class JobConfigManager {
             JobTask task = codec.decode(JobTask.class, taskString.getBytes());
             tasks.add(task);
         }
-        return new ZnodeJob(rznd, config, jqc, alerts, tasks);
+        return new ZnodeJob(rznd, config, jqc, tasks);
     }
 
     /**
@@ -246,8 +244,7 @@ public class JobConfigManager {
             try {
                 rv.put(jobId, createJobFromQueryData(jobId, fetchJobData(jobId)));
             } catch (Exception ex) {
-                logger.error("Failed while reconstituting job " + jobId);
-                logger.trace("Failed while reconstituting job ", ex);
+                logger.error("Failed while reconstituting job {}", jobId, ex);
             }
         }
         return rv;

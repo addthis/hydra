@@ -115,16 +115,11 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         job.setMaxRunTime(KVUtils.getLongValue(kv, job.getMaxRunTime(), "maxRunTime", "maxrun"));
         job.setRekickTimeout(KVUtils.getLongValue(kv, job.getRekickTimeout(), "rekickTimeout", "rekick"));
         job.setEnabled(KVUtils.getBooleanValue(kv, job.isEnabled(), "enable"));
-        job.setKillSignal(kv.getValue("logkill", job.getKillSignal()));
-        job.setBackups(kv.getIntValue("backups", job.getBackups()));
         job.setDailyBackups(kv.getIntValue("dailyBackups", job.getDailyBackups()));
         job.setHourlyBackups(kv.getIntValue("hourlyBackups", job.getHourlyBackups()));
         job.setWeeklyBackups(kv.getIntValue("weeklyBackups", job.getWeeklyBackups()));
         job.setMonthlyBackups(kv.getIntValue("monthlyBackups", job.getMonthlyBackups()));
         job.setReplicas(kv.getIntValue("replicas", job.getReplicas()));
-        job.setReadOnlyReplicas(kv.getIntValue("readOnlyReplicas", job.getReadOnlyReplicas()));
-        job.setReplicationFactor(kv.getIntValue("replicationFactor", job.getReplicationFactor()));
-        job.setStomp(KVUtils.getBooleanValue(kv, job.getStomp(), "stomp"));
         job.setDontDeleteMe(KVUtils.getBooleanValue(kv, job.getDontDeleteMe(), "dontDeleteMe"));
         job.setDontAutoBalanceMe(KVUtils.getBooleanValue(kv, job.getDontAutoBalanceMe(), "dontAutoBalanceMe"));
         job.setMaxSimulRunning(kv.getIntValue("maxSimulRunning", job.getMaxSimulRunning()));
@@ -135,18 +130,12 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     private void updateQueryConfig(KVPairs kv, IJob job) {
         JobQueryConfig jqc;
         if (job.getQueryConfig() != null) {
-            jqc = job.getQueryConfig().clone();
+            jqc = new JobQueryConfig(job.getQueryConfig());
         } else {
             jqc = new JobQueryConfig();
         }
         if (kv.hasKey("qc_canQuery")) {
             jqc.setCanQuery(KVUtils.getBooleanValue(kv, true, "qc_canQuery"));
-        }
-        if (kv.hasKey("qc_queryTraceLevel")) {
-            jqc.setQueryTraceLevel(kv.getIntValue("qc_queryTraceLevel", 0));
-        }
-        if (kv.hasKey("qc_consecutiveFailureThreshold")) {
-            jqc.setConsecutiveFailureThreshold(kv.getIntValue("qc_consecutiveFailureThreshold", 100));
         }
         job.setQueryConfig(jqc);
     }

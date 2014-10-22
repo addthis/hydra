@@ -31,10 +31,11 @@ import org.slf4j.LoggerFactory;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_JOB_CONFIG_PATH;
 
 
-@ThreadSafe
 /**
- * A class to watch job config data within the SpawnDataStore, cache it, and serve information relevant to query functions
+ * A class to watch job config data within the SpawnDataStore, cache it, and serve information relevant to
+ * query functions
  */
+@ThreadSafe
 public class QueryConfigWatcher {
 
     private static final CodecJSON codec = CodecJSON.INSTANCE;
@@ -50,7 +51,7 @@ public class QueryConfigWatcher {
 
     /* A SpawnDataStore used to fetch the config data. Should be the same type (zookeeper/priam)
     as the one used by Spawn to store job data */
-    private SpawnDataStore spawnDataStore;
+    private final SpawnDataStore spawnDataStore;
 
     /* A LoadingCache used to save configs fetched from the SpawnDataStore */
     private final AvailableCache<JobQueryConfig> configCache;
@@ -59,8 +60,7 @@ public class QueryConfigWatcher {
         this.spawnDataStore = spawnDataStore;
         // This cache will not block on queryconfig fetches unless no data has been fetched for
         // that job before
-        this.configCache = new AvailableCache<JobQueryConfig>(queryConfigRefreshMillis, -1,
-                                                              queryConfigCacheSize, 2) {
+        this.configCache = new AvailableCache<JobQueryConfig>(queryConfigRefreshMillis, -1, queryConfigCacheSize, 2) {
             @Override
             public JobQueryConfig fetchValue(String id) {
                 return fetchJobQueryConfig(id);
@@ -78,17 +78,13 @@ public class QueryConfigWatcher {
         try {
             return configCache.get(jobId);
         } catch (ExecutionException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Exception during JobQueryConfig fetch: " + e, e);
-            }
+            log.warn("Exception during JobQueryConfig fetch", e);
             // JobQueryConfig was not found, return null
             return null;
         }
     }
 
-    /**
-     * Throw away the contents of the cache, primarily for testing
-     */
+    /** Throw away the contents of the cache, primarily for testing */
     public void invalidateQueryConfigCache() {
         configCache.clear();
     }
@@ -126,27 +122,4 @@ public class QueryConfigWatcher {
         JobQueryConfig jqc = getJobQueryConfig(jobID);
         return jqc != null && jqc.getCanQuery();
     }
-
-    /**
-     * Check whether job data exists for a jobId, using the cache if possible
-     *
-     * @param jobID The jobId to check
-     * @return True if any query config data exists
-     */
-    public boolean jobIsTracked(String jobID) {
-        JobQueryConfig jqc = getJobQueryConfig(jobID);
-        return jqc != null;
-    }
-
-    /**
-     * Check whether a jobId should be traced according to its query config data
-     *
-     * @param jobID The jobId to check
-     * @return True if it should be traced
-     */
-    public boolean shouldTrace(String jobID) {
-        JobQueryConfig jqc = getJobQueryConfig(jobID);
-        return jqc != null && jqc.getQueryTraceLevel() > 0;
-    }
-
 }

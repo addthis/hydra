@@ -312,7 +312,6 @@ public class HttpQueryHandler extends SimpleChannelInboundHandler<FullHttpReques
                         json.writeNumberField("startTime", Optional.fromNullable(job.getStartTime()).or(-1L));
                         json.writeNumberField("endTime", Optional.fromNullable(job.getStartTime()).or(-1L));
                         json.writeNumberField("replicas", Optional.fromNullable(job.getReplicas()).or(0));
-                        json.writeNumberField("backups", Optional.fromNullable(job.getBackups()).or(0));
                         json.writeNumberField("nodes", tasks.size());
                         json.writeEndObject();
                     }

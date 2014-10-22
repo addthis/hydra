@@ -25,7 +25,7 @@ import com.google.common.base.Objects;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-@JsonIgnoreProperties({"messageType", "totalLive"})
+@JsonIgnoreProperties({"messageType", "totalLive", "readOnly"})
 public class HostState implements HostMessage {
 
     private static final long serialVersionUID = 7252930788607795642L;
@@ -58,7 +58,6 @@ public class HostState implements HostMessage {
     @FieldConfig private double histWaitTime;
     //TODO:  remove but need this in for now because de-serialization fails without it
     @FieldConfig private HashMap<String, Double> jobRuntimes = new HashMap<>();
-    @FieldConfig private boolean readOnly;
     @FieldConfig private boolean diskReadOnly;
     @FieldConfig private boolean disabled;
     @FieldConfig private double meanActiveTasks;
@@ -216,7 +215,6 @@ public class HostState implements HostMessage {
                 .add("max", getMax())
                 .add("up", isUp())
                 .add("dead", isDead())
-                .add("readOnly", isReadOnly())
                 .add("diskReadOnly", isDiskReadOnly())
                 .toString();
     }
@@ -385,14 +383,6 @@ public class HostState implements HostMessage {
 
     public boolean isDead() {
         return dead;
-    }
-
-    public boolean isReadOnly() {
-        return readOnly;
-    }
-
-    public void setReadOnly(boolean readOnly) {
-        this.readOnly = readOnly;
     }
 
     public boolean isDiskReadOnly() {

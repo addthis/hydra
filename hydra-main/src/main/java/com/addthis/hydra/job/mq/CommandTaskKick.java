@@ -16,43 +16,28 @@ package com.addthis.hydra.job.mq;
 import com.addthis.codec.annotations.FieldConfig;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+@JsonIgnoreProperties("killSignal")
 public class CommandTaskKick implements JobMessage {
 
     private static final long serialVersionUID = -7588140676324569250L;
 
-    @FieldConfig(codable = true)
-    private String hostUuid;
-    @FieldConfig(codable = true)
-    private JobKey jobKey;
-    @FieldConfig(codable = true)
-    private int priority;
-    @FieldConfig(codable = true)
-    private int jobNodes;
-    @FieldConfig(codable = true)
-    private long runTime;
-    @FieldConfig(codable = true)
-    private Long submitTime;
-    @FieldConfig(codable = true)
-    private int runCount;
-    @FieldConfig(codable = true)
-    private String config;
-    @FieldConfig(codable = true)
-    private String command;
-    @FieldConfig(codable = true)
-    private String killSignal;
-    @FieldConfig(codable = true)
-    private int hourlyBackups;
-    @FieldConfig(codable = true)
-    private int dailyBackups;
-    @FieldConfig(codable = true)
-    private int weeklyBackups;
-    @FieldConfig(codable = true)
-    private int monthlyBackups;
-    @FieldConfig(codable = true)
-    private ReplicaTarget[] replicas;
-    @FieldConfig(codable = true)
-    private int retries;
+    @FieldConfig private String hostUuid;
+    @FieldConfig private JobKey jobKey;
+    @FieldConfig private int priority;
+    @FieldConfig private int jobNodes;
+    @FieldConfig private long runTime;
+    @FieldConfig private Long submitTime;
+    @FieldConfig private int runCount;
+    @FieldConfig private String config;
+    @FieldConfig private String command;
+    @FieldConfig private int hourlyBackups;
+    @FieldConfig private int dailyBackups;
+    @FieldConfig private int weeklyBackups;
+    @FieldConfig private int monthlyBackups;
+    @FieldConfig private ReplicaTarget[] replicas;
+    @FieldConfig private int retries;
 
     @Override
     public String toString() {
@@ -63,12 +48,11 @@ public class CommandTaskKick implements JobMessage {
         return getJobKey().toString();
     }
 
-    public CommandTaskKick() {
-    }
+    public CommandTaskKick() {}
 
     public CommandTaskKick(String host, JobKey jobKey, int priority, int jobNodes, long runTime,
-            int runCount, String config, String command, String killSignal, int hourlyBackups,
-            int dailyBackups, int weeklyBackups, int monthlyBackups, ReplicaTarget[] replicas) {
+                           int runCount, String config, String command, int hourlyBackups,
+                           int dailyBackups, int weeklyBackups, int monthlyBackups, ReplicaTarget[] replicas) {
         this.hostUuid = host;
         this.jobKey = jobKey;
         this.priority = priority;
@@ -78,7 +62,6 @@ public class CommandTaskKick implements JobMessage {
         this.runCount = runCount;
         this.config = config;
         this.command = command;
-        this.killSignal = killSignal;
         this.hourlyBackups = hourlyBackups;
         this.dailyBackups = dailyBackups;
         this.weeklyBackups = weeklyBackups;
@@ -143,14 +126,6 @@ public class CommandTaskKick implements JobMessage {
 
     public int getPriority() {
         return priority;
-    }
-
-    public String getKillSignal() {
-        return killSignal;
-    }
-
-    public void setKillSignal(String killSignal) {
-        this.killSignal = killSignal;
     }
 
     public ReplicaTarget[] getReplicas() {

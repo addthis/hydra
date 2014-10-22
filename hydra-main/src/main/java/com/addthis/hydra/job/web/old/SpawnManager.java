@@ -13,8 +13,6 @@
  */
 package com.addthis.hydra.job.web.old;
 
-import static com.addthis.hydra.job.web.KVUtils.getValueOpt;
-
 import java.io.InputStream;
 import java.io.StringWriter;
 
@@ -73,6 +71,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.addthis.hydra.job.web.KVUtils.getValueOpt;
 
 
 public class SpawnManager {
@@ -1113,16 +1113,11 @@ public class SpawnManager {
         job.setMaxRunTime(HTTPService.getValidLong(kv, "maxrun", job.getMaxRunTime()));
         job.setRekickTimeout(HTTPService.getValidLong(kv, "rekick", job.getRekickTimeout()));
         job.setEnabled(kv.getIntValue("enable", job.isEnabled() ? 1 : 0) == 1);
-        job.setKillSignal(kv.getValue("logkill", job.getKillSignal()));
-        job.setBackups(kv.getIntValue("backups", job.getBackups()));
         job.setDailyBackups(kv.getIntValue("dailyBackups", job.getDailyBackups()));
         job.setHourlyBackups(kv.getIntValue("hourlyBackups", job.getHourlyBackups()));
         job.setWeeklyBackups(kv.getIntValue("weeklyBackups", job.getWeeklyBackups()));
         job.setMonthlyBackups(kv.getIntValue("monthlyBackups", job.getMonthlyBackups()));
         job.setReplicas(kv.getIntValue("replicas", job.getReplicas()));
-        job.setReadOnlyReplicas(kv.getIntValue("readOnlyReplicas", job.getReadOnlyReplicas()));
-        job.setReplicationFactor(kv.getIntValue("replicationFactor", job.getReplicationFactor()));
-        job.setStomp(kv.getIntValue("stomp", job.getStomp() ? 1 : 0) == 1);
         job.setDontDeleteMe(kv.getIntValue("dontDeleteMe", job.getDontDeleteMe() ? 1 : 0) > 0);
         job.setDontAutoBalanceMe(kv.getIntValue("dontAutoBalanceMe", job.getDontAutoBalanceMe() ? 1 : 0) > 0);
         job.setMaxSimulRunning(kv.getIntValue("maxSimulRunning", job.getMaxSimulRunning()));
@@ -1132,19 +1127,13 @@ public class SpawnManager {
         // queryConfig paramters
         JobQueryConfig jqc = null;
         if (job.getQueryConfig() != null) {
-            jqc = job.getQueryConfig().clone();
+            jqc = new JobQueryConfig(job.getQueryConfig());
         } else {
             jqc = new JobQueryConfig();
         }
 
         if (kv.hasKey("qc_canQuery")) {
             jqc.setCanQuery(kv.getValue("qc_canQuery", "true").equals("true"));
-        }
-        if (kv.hasKey("qc_queryTraceLevel")) {
-            jqc.setQueryTraceLevel(kv.getIntValue("qc_queryTraceLevel", 0));
-        }
-        if (kv.hasKey("qc_consecutiveFailureThreshold")) {
-            jqc.setConsecutiveFailureThreshold(kv.getIntValue("qc_consecutiveFailureThreshold", 100));
         }
         job.setQueryConfig(jqc);
 

@@ -19,7 +19,6 @@ import java.io.FileNotFoundException;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
 
 import com.addthis.hydra.job.mq.CommandTaskKick;
 
@@ -139,7 +138,7 @@ public abstract class MinionWorkItem implements Runnable {
         if (exitString != null) {
             exit = getExitStatusFromString(exitString);
         } else {
-            log.warn(getLogPrefix() + " " + task.getName() + " exited with null");
+            log.warn("{} {} exited with null", getLogPrefix(), task.getName());
         }
         return exit;
     }
@@ -153,26 +152,12 @@ public abstract class MinionWorkItem implements Runnable {
         String name = task.getName();
         CommandTaskKick kick = task.getKick();
         if (kick != null) {
-            log.warn("[exit.wait] " + name + " maxTime=" + kick.getRunTime() + " start=" + getStartTime());
+            log.warn("[exit.wait] {} maxTime={} start={}", name, kick.getRunTime(), getStartTime());
         }
         try {
-            FileWatcher stdoutWatch = null;
-            FileWatcher stderrWatch = null;
-            if (kick != null && !Strings.isEmpty(kick.getKillSignal())) {
-                stdoutWatch = new FileWatcher(logOut, kick.getKillSignal());
-                stderrWatch = new FileWatcher(logErr, kick.getKillSignal());
-            }
             while (!task.isDeleted() && !doneFile.exists() && doneFile.getParentFile().exists()) {
                 Thread.sleep(100);
                 executeWaitingCommands();
-                if (stdoutWatch != null && stdoutWatch.containsKill()) {
-                    log.warn("[exit.wait] stdout kill " + name);
-                    task.stopWait(true);
-                }
-                if (stderrWatch != null && stderrWatch.containsKill()) {
-                    log.warn("[exit.wait] stderr kill " + name);
-                    task.stopWait(true);
-                }
                 task.createDoneFileIfNoProcessRunning(pidFile, doneFile);
             }
             Thread.sleep(100);

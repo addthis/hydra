@@ -52,12 +52,12 @@ public class ListenResource {
     private static final Logger log = LoggerFactory.getLogger(ListenResource.class);
 
     private static final int batchInterval = Integer.parseInt(System.getProperty("spawn.batchtime", "500"));
-    private static int pollTimeout = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
 
     private final Spawn spawn;
     private final SystemResource systemResource;
     private final AtomicInteger clientCounter;
-    
+    private final int pollTimeout;
+
     @Context
     private HttpContext context;
 
@@ -65,7 +65,7 @@ public class ListenResource {
         this.spawn = spawn;
         this.systemResource = systemResource;
         this.pollTimeout = pollTimeout;
-        clientCounter = new AtomicInteger(0);
+        this.clientCounter = new AtomicInteger(0);
     }
 
     @GET

@@ -78,7 +78,7 @@ public class CommandResource {
             String label = kv.getValue("name");
             String command = kv.getValue("command", "").trim();
             String owner = kv.getValue("owner", "unknown").trim();
-            if (label == null || command.length() == 0) {
+            if ((label == null) || command.isEmpty()) {
                 throw new Exception("missing required field");
             }
             String[] cmdtok = Strings.splitArray(command, ",");

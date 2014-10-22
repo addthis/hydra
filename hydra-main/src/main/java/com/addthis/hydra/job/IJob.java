@@ -14,15 +14,14 @@
 package com.addthis.hydra.job;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 
-import com.addthis.hydra.job.alert.JobAlert;
-import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.maljson.JSONObject;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-
+@JsonIgnoreProperties({"stomp", "killSignal", "readOnlyReplicas", "strictReplicas", "hadMoreData",
+                       "replicationFactor", "alerts", "properties", "backups", "submitCommand"})
 public interface IJob extends Comparable<IJob> {
 
     public String getId();
@@ -43,17 +42,9 @@ public interface IJob extends Comparable<IJob> {
 
     public void setCommand(String command);
 
-    public String getKillSignal();
-
-    public void setKillSignal(String killSignal);
-
     public int getPriority();
 
     public void setPriority(int priority);
-
-    public boolean getStomp();
-
-    public void setStomp(boolean stomp);
 
     public Long getSubmitTime();
 
@@ -104,8 +95,6 @@ public interface IJob extends Comparable<IJob> {
 
     public void setOnErrorTimeout(int timeout);
 
-    public int getBackups();
-
     public int getHourlyBackups();
 
     public int getDailyBackups();
@@ -122,15 +111,9 @@ public interface IJob extends Comparable<IJob> {
 
     public void setMonthlyBackups(int weeklyBackups);
 
-    public void setBackups(int backups);
-
     public int getReplicas();
 
     public void setReplicas(int replicas);
-
-    public int getReadOnlyReplicas();
-
-    public void setReadOnlyReplicas(int readOnlyReplicas);
 
     public int getRunCount();
 
@@ -141,10 +124,6 @@ public interface IJob extends Comparable<IJob> {
     public JobState getState();
 
     public boolean setState(JobState state);
-
-    public void setAlerts(List<JobAlert> alerts);
-
-    public List<JobAlert> getAlerts();
 
     public JobTask getTask(int id);
 
@@ -158,23 +137,7 @@ public interface IJob extends Comparable<IJob> {
 
     public void setQueryConfig(JobQueryConfig queryConfig);
 
-    public JobCommand getSubmitCommand();
-
-    public void setSubmitCommand(JobCommand submitCommand);
-
-    public boolean getStrictReplicas();
-
-    public void setStrictReplicas(boolean strictReplicas);
-
     public JSONObject toJSON() throws Exception;
-
-    public HashMap<String, String> getProperties();
-
-    public void setProperties(HashMap<String, String> properties);
-
-    public int getReplicationFactor();
-
-    public void setReplicationFactor(int replicationFactor);
 
     public boolean getDontAutoBalanceMe();
 

@@ -194,7 +194,6 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     final Server jetty;
     final ServletHandler metricsHandler;
     final MinionHandler minionHandler = new MinionHandler(this);
-    final boolean readOnly;
     boolean diskReadOnly;
     MinionWriteableDiskCheck diskHealthCheck;
     int minionPid = -1;
@@ -227,7 +226,6 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         path = null;
         jetty = null;
         metricsHandler = null;
-        readOnly = false;
         diskReadOnly = false;
         minionPid = -1;
         activeTaskKeys = new HashSet<>();
@@ -251,7 +249,6 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         diskTotal.set(rootDir.getTotalSpace());
         diskFree.set(rootDir.getFreeSpace());
         diskReadOnly = false;
-        readOnly = Boolean.getBoolean("minion.readOnly");
         minionTaskDeleter = new MinionTaskDeleter();
         if (stateFile.exists()) {
             CodecJSON.decodeString(this, Bytes.toString(Files.read(stateFile)));
@@ -662,12 +659,11 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         status.setTime(time);
         status.setUser(user);
         status.setPath(path);
-        status.setReadOnly(readOnly);
         status.setDiskReadOnly(diskReadOnly);
         status.setUptime(time - startTime);
         capacityLock.lock();
         try {
-            int availSlots = readOnly ? 0 : maxActiveTasks - activeTaskKeys.size();
+            int availSlots = maxActiveTasks - activeTaskKeys.size();
             status.setAvailableTaskSlots(Math.max(0, availSlots));
         } finally {
             capacityLock.unlock();

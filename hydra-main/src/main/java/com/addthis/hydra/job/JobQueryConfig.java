@@ -19,6 +19,7 @@ import com.addthis.codec.codables.Codable;
 import com.google.common.base.Objects;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,32 +28,24 @@ import org.slf4j.LoggerFactory;
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonIgnoreProperties({"queryTraceLevel", "consecutiveFailureThreshold"})
 public final class JobQueryConfig implements Codable, Cloneable {
 
     private static final Logger log = LoggerFactory.getLogger(JobQueryConfig.class);
 
-    @FieldConfig(codable = true)
-    private boolean canQuery;
-    @FieldConfig(codable = true)
-    private int queryTraceLevel;
-    @FieldConfig(codable = true)
-    private int consecutiveFailureThreshold;
+    @FieldConfig private boolean canQuery;
 
     public JobQueryConfig() {
-        this(true, 0, 100);
+        this(true);
     }
 
-    public JobQueryConfig(boolean canQuery, int queryTraceLevel) {
-        this(canQuery, queryTraceLevel, 100);
-    }
-
-
-    public JobQueryConfig(boolean canQuery, int queryTraceLevel, int consecutiveFailureThreshold) {
+    public JobQueryConfig(boolean canQuery) {
         this.canQuery = canQuery;
-        this.queryTraceLevel = queryTraceLevel;
-        this.consecutiveFailureThreshold = consecutiveFailureThreshold;
     }
 
+    public JobQueryConfig(JobQueryConfig source) {
+        this.canQuery = source.canQuery;
+    }
 
     public boolean getCanQuery() {
         return canQuery;
@@ -62,52 +55,23 @@ public final class JobQueryConfig implements Codable, Cloneable {
         this.canQuery = canQuery;
     }
 
-    public int getQueryTraceLevel() {
-        return queryTraceLevel;
-    }
-
-    public void setQueryTraceLevel(int queryTraceLevel) {
-        this.queryTraceLevel = queryTraceLevel;
-    }
-
-    public int getConsecutiveFailureThreshold() {
-        return consecutiveFailureThreshold;
-    }
-
-    public void setConsecutiveFailureThreshold(int consecutiveFailureThreshold) {
-        this.consecutiveFailureThreshold = consecutiveFailureThreshold;
-    }
-
-    @Override public JobQueryConfig clone() {
-        try {
-            return (JobQueryConfig) super.clone();
-        } catch (CloneNotSupportedException e)  {
-            log.warn("", e);
-            return null;
-        }
-    }
-
     @Override
     public String toString() {
         return Objects.toStringHelper(this)
                 .add("can-query", getCanQuery())
-                .add("query-trace-level", getQueryTraceLevel())
-                .add("consecutiveFailureThreshold", getConsecutiveFailureThreshold())
                 .toString();
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(getCanQuery(), getQueryTraceLevel(), getConsecutiveFailureThreshold());
+        return Objects.hashCode(getCanQuery());
     }
 
     @Override
     public boolean equals(final Object obj) {
         if (obj instanceof JobQueryConfig) {
             final JobQueryConfig other = (JobQueryConfig) obj;
-            return Objects.equal(getCanQuery(), other.getCanQuery())
-                   && Objects.equal(getQueryTraceLevel(), other.getQueryTraceLevel())
-                   && Objects.equal(getConsecutiveFailureThreshold(), other.getConsecutiveFailureThreshold());
+            return Objects.equal(getCanQuery(), other.getCanQuery());
         } else {
             return false;
         }

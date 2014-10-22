@@ -14,7 +14,6 @@
 package com.addthis.hydra.job;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -31,6 +30,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,57 +41,34 @@ import org.slf4j.LoggerFactory;
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonIgnoreProperties({"readOnlyReplicas", "replicationFactor"})
 public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
 
     private static final Logger log = LoggerFactory.getLogger(JobTask.class);
 
-    @FieldConfig(codable = true)
-    private String                    hostUuid;
-    @FieldConfig(codable = true)
-    private String                    jobUuid;
-    @FieldConfig(codable = true)
-    private int                       node;
-    @FieldConfig(codable = true)
-    private int                       state;
-    @FieldConfig(codable = true)
-    private int                       runCount;
-    @FieldConfig(codable = true)
-    private int                       starts;
-    @FieldConfig(codable = true)
-    private int                       errors;
-    @FieldConfig(codable = true)
-    private long                      fileCount;
-    @FieldConfig(codable = true)
-    private long                      fileBytes;
-    @FieldConfig(codable = true)
-    private ArrayList<JobTaskReplica> replicas;
-    @FieldConfig(codable = true)
-    private ArrayList<JobTaskReplica> readOnlyReplicas;
-    @FieldConfig(codable = true)
-    private int                       port;
-    @FieldConfig(codable = true)
-    private int                       replicationFactor;
-    @FieldConfig(codable = true)
-    private int                       errorCode;
-    @FieldConfig(codable = true)
-    private boolean                   wasStopped;
-    @FieldConfig(codable = true)
-    private int                       preFailErrorCode;
-    @FieldConfig(codable = true)
-    private long                      input;
-    @FieldConfig(codable = true)
-    private double                    meanRate;
-    @FieldConfig(codable = true)
-    private long                      totalEmitted;
-    @FieldConfig(codable = true)
-    private String                    rebalanceSource;
-    @FieldConfig(codable = true)
-    private String                    rebalanceTarget;
+    @FieldConfig private String hostUuid;
+    @FieldConfig private String jobUuid;
+    @FieldConfig private int node;
+    @FieldConfig private int state;
+    @FieldConfig private int runCount;
+    @FieldConfig private int starts;
+    @FieldConfig private int errors;
+    @FieldConfig private long fileCount;
+    @FieldConfig private long fileBytes;
+    @FieldConfig private int port;
+    @FieldConfig private int errorCode;
+    @FieldConfig private boolean wasStopped;
+    @FieldConfig private int preFailErrorCode;
+    @FieldConfig private long input;
+    @FieldConfig private double meanRate;
+    @FieldConfig private long totalEmitted;
+    @FieldConfig private String rebalanceSource;
+    @FieldConfig private String rebalanceTarget;
+    @FieldConfig private ArrayList<JobTaskReplica> replicas;
 
     private volatile JobKey jobKey;
 
-    public JobTask() {
-    }
+    public JobTask() {}
 
     // Only used for Testing right now
     @VisibleForTesting
@@ -103,26 +80,12 @@ public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
         jobKey = new JobKey(jobUuid, node);
     }
 
-
-    @Override
-    public JobTask clone() {
-        try {
-            return (JobTask) super.clone();
-        } catch (CloneNotSupportedException e) {
-            log.warn("", e);
-            return null;
-        }
-    }
-
-    private static final Set<JobTaskState> nonRunningStates;
-
-    static {
-        nonRunningStates = ImmutableSet.copyOf(Arrays.asList(JobTaskState.IDLE, JobTaskState.ERROR,
-                                                             JobTaskState.ALLOCATED,
-                                                             JobTaskState.REBALANCE,
-                                                             JobTaskState.QUEUED_HOST_UNAVAIL,
-                                                             JobTaskState.QUEUED));
-    }
+    private static final Set<JobTaskState> nonRunningStates = ImmutableSet.of(JobTaskState.IDLE,
+                                                                              JobTaskState.ERROR,
+                                                                              JobTaskState.ALLOCATED,
+                                                                              JobTaskState.REBALANCE,
+                                                                              JobTaskState.QUEUED_HOST_UNAVAIL,
+                                                                              JobTaskState.QUEUED);
 
     public boolean isRunning() {
         JobTaskState taskState = getState();
@@ -248,14 +211,6 @@ public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
         this.replicas = Lists.newArrayList(replicas);
     }
 
-    public List<JobTaskReplica> getReadOnlyReplicas() {
-        return readOnlyReplicas;
-    }
-
-    public void setReadOnlyReplicas(List<JobTaskReplica> readOnlyReplicas) {
-        this.readOnlyReplicas = Lists.newArrayList(readOnlyReplicas);
-    }
-
     public int getPort() {
         return port;
     }
@@ -285,21 +240,10 @@ public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
         return jobKey;
     }
 
-    public int getReplicationFactor() {
-        return replicationFactor;
-    }
-
-    public void setReplicationFactor(int replicationFactor) {
-        this.replicationFactor = replicationFactor;
-    }
-
     public List<JobTaskReplica> getAllReplicas() {
         List<JobTaskReplica> replicaList = new ArrayList<>();
         if (replicas != null) {
             replicaList.addAll(replicas);
-        }
-        if (readOnlyReplicas != null) {
-            replicaList.addAll(readOnlyReplicas);
         }
         return replicaList;
     }
