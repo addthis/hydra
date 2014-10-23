@@ -13,9 +13,13 @@
  */
 package com.addthis.hydra.job.spawn;
 
+import java.util.concurrent.TimeUnit;
+
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.codec.annotations.Bytes;
 import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.Time;
 import com.addthis.codec.codables.Codable;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -29,14 +33,15 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 public class SpawnBalancerConfig implements Codable {
 
     // How aggressively balancing should be done. For now, 0=no rebalancing, 1=rebalance jobs that are over/under-allocated, 2=rebalance all jobs
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int autoBalanceLevel = 0;
 
     // During reallocation, don't move more than this many tasks
-    @FieldConfig(codable = true)
+    @FieldConfig
     private int tasksMovedFullRebalance = Parameter.intValue("spawnbalance.tasks.fullbalance", 10);
     // During reallocation, don't move more than this many bytes
-    @FieldConfig(codable = true)
+    @Bytes
+    @FieldConfig
     private long bytesMovedFullRebalance = Parameter.longValue("spawnbalance.bytes.fullbalance", 300L * 1000 * 1000 * 1000);
     // During host reallocation, a single moved task can only be this portion of the overall byte maximum
     private double singleTaskBytesFactor = Double.parseDouble(Parameter.value("spawnbalance.task.factor", ".8"));
@@ -57,10 +62,12 @@ public class SpawnBalancerConfig implements Codable {
 
     private int autobalanceCheckInterval = Parameter.intValue("spawnbalance.check.autobalance", 60 * 1000);
     // Only do job autobalancing once per time interval
-    @FieldConfig(codable = true)
+    @Time(TimeUnit.MILLISECONDS)
+    @FieldConfig
     private int jobAutobalanceIntervalMillis = Parameter.intValue("spawnbalance.interval.job.autobalance", 4 * 60 * 60 * 1000);
     // Only do host autobalancing once per time interval
-    @FieldConfig(codable = true)
+    @Time(TimeUnit.MILLISECONDS)
+    @FieldConfig
     private int hostAutobalanceIntervalMillis = Parameter.intValue("spawnbalance.interval.host.autobalance", 6 * 60 * 60 * 1000);
     // Track the last time a job autobalance was done
     private long lastJobAutobalanceTime = 0L;
@@ -89,7 +96,7 @@ public class SpawnBalancerConfig implements Codable {
         return autoBalanceLevel;
     }
 
-    public void setAutoBalanceLevel(int allowAutoBalance) {
+    public void setAutoBalanceLevel(int autoBalanceLevel) {
         this.autoBalanceLevel = autoBalanceLevel;
     }
 
