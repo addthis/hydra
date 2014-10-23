@@ -19,7 +19,6 @@ import com.addthis.codec.codables.Codable;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * marker data for a replica copy of data
@@ -27,8 +26,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
-@JsonIgnoreProperties("lastUpdate")
-public class JobTaskReplica implements Codable, Cloneable {
+public class JobTaskReplica implements Codable {
 
     @FieldConfig(codable = true)
     private String hostUuid;
