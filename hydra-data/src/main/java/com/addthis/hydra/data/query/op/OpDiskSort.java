@@ -44,7 +44,7 @@ import com.addthis.bundle.util.BundleColumnBinder;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractRowOp;
-import com.addthis.muxy.MuxFile;
+import com.addthis.muxy.WritableMuxFile;
 import com.addthis.muxy.MuxFileDirectory;
 import com.addthis.muxy.MuxyEventListener;
 import com.addthis.muxy.MuxyFileEvent;
@@ -180,7 +180,7 @@ public class OpDiskSort extends AbstractRowOp {
             log.debug("dumpBufferToMFM buffer={} chunk={}", bufferIndex, chunk);
             try {
                 Arrays.sort(buffer, 0, bufferIndex, comparator);
-                MuxFile meta = mfm.openFile("l0-c" + (chunk++), true);
+                WritableMuxFile meta = mfm.openFile("l0-c" + (chunk++), true);
                 OutputStream out = wrapOutputStream(meta.append());
                 DataChannelWriter writer = new DataChannelWriter(out);
                 for (int i = 0; i < bufferIndex; i++) {
@@ -286,7 +286,7 @@ public class OpDiskSort extends AbstractRowOp {
                 }
                 nextChunk += readers;
                 merges++;
-                MuxFile meta = mfm.openFile("l" + levelOut + "-c" + (chunkOut++), true);
+                WritableMuxFile meta = mfm.openFile("l" + levelOut + "-c" + (chunkOut++), true);
                 log.debug(" output to level={} chunk={}", levelOut, chunkOut - 1);
                 try (OutputStream out = wrapOutputStream(meta.append());
                      DataChannelWriter writer = new DataChannelWriter(out);) {
@@ -435,7 +435,7 @@ public class OpDiskSort extends AbstractRowOp {
             while (count-- > 0) {
                 try {
                     // TODO figure out how to delete these files after consuming them to keep the index small in mem
-                    MuxFile meta = mfm.openFile("l" + level + "-c" + (chunk++), false);
+                    WritableMuxFile meta = mfm.openFile("l" + level + "-c" + (chunk++), false);
                     DataChannelReader reader = new DataChannelReader(factory, wrapInputStream(meta.read(0)));
                     Bundle next = null;
                     try {
