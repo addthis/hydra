@@ -29,6 +29,7 @@ import com.addthis.bundle.value.AbstractCustom;
 import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueString;
@@ -131,6 +132,11 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
     public DataReservoir(DataReservoir other) {
         reservoir = (other.reservoir == null) ? null : other.reservoir.clone();
         minEpoch = other.minEpoch;
+    }
+
+    public DataReservoir(long minEpoch, int[] reservoir) {
+        this.minEpoch = minEpoch;
+        this.reservoir = reservoir;
     }
 
     /**
@@ -719,14 +725,14 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
     static final class DataReservoirValue extends AbstractCustom<DataReservoir>
             implements Numeric {
 
-        final long targetEpoch;
-        final int numObservations;
-        final boolean doubleToLongBits;
-        final boolean raw;
-        final double percentile;
-        final double sigma;
-        final int minMeasurement;
-        final String mode;
+        long targetEpoch;
+        int numObservations;
+        boolean doubleToLongBits;
+        boolean raw;
+        double percentile;
+        double sigma;
+        int minMeasurement;
+        String mode;
 
         /**
          * The Builder pattern allows many different variations of a class to
@@ -790,6 +796,11 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
             }
         }
 
+        @SuppressWarnings("unused")
+        public DataReservoirValue() {
+            super(null);
+        }
+
         private DataReservoirValue(DataReservoir reservoir, long targetEpoch, int numObservations,
                 boolean doubleToLongBits, boolean raw, double percentile, double sigma,
                 int minMeasurement, String mode) {
@@ -844,13 +855,46 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
 
         @Override
         public ValueMap asMap() {
-            throw new ValueTranslationException();
+            ValueMap result = ValueFactory.createMap();
+            result.put("targetEpoch", ValueFactory.create(targetEpoch));
+            result.put("numObservations", ValueFactory.create(numObservations));
+            result.put("doubleToLongBits", ValueFactory.create(doubleToLongBits ? 1 : 0));
+            result.put("raw", ValueFactory.create(raw ? 1 : 0));
+            result.put("percentile", ValueFactory.create(percentile));
+            result.put("sigma", ValueFactory.create(sigma));
+            result.put("minMeasurement", ValueFactory.create(minMeasurement));
+            result.put("mode", ValueFactory.create(mode));
+            result.put("minEpoch", ValueFactory.create(heldObject.minEpoch));
+            ValueArray reservoir = ValueFactory.createArray(heldObject.reservoir.length);
+            for (int i = 0; i < heldObject.reservoir.length; i++) {
+                reservoir.add(i, ValueFactory.create(heldObject.reservoir[i]));
+            }
+            result.put("reservoir", reservoir);
+            return result;
         }
 
         @Override
         public void setValues(ValueMap map) {
-            throw new UnsupportedOperationException();
+            targetEpoch = map.get("targetEpoch").asLong().asNative();
+            numObservations = map.get("numObservations").asLong().asNative().intValue();
+            doubleToLongBits = map.get("doubleToLongBits").asLong().asNative().intValue() == 1;
+            raw = map.get("raw").asLong().asNative().intValue() == 1;
+            percentile = map.get("percentile").asDouble().asNative();
+            sigma = map.get("sigma").asDouble().asNative();
+            minMeasurement = map.get("minMeasurement").asLong().asNative().intValue();
+            mode = map.get("mode").asString().asNative();
+            long minEpoch = map.get("minEpoch").asLong().asNative();
+            ValueArray reservoirValueObject = map.get("reservoir").asArray();
+            int size = reservoirValueObject.size();
+            int[] reservoir = new int[size];
+            for (int i = 0; i < size; i++) {
+                reservoir[i] = reservoirValueObject.get(i).asLong().asNative().intValue();
+            }
+            this.heldObject = new DataReservoir(minEpoch, reservoir);
         }
+
+        @Override
+        public ValueLong asLong() { return ValueFactory.create(asArray().size()); }
 
         @Override
         public ValueArray asArray() throws ValueTranslationException {
