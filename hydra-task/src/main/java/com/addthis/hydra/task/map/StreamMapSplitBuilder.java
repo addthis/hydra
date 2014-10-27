@@ -47,7 +47,7 @@ public class StreamMapSplitBuilder extends StreamBuilder {
         if ((obj != null) && (obj.getObjectType() == ValueObject.TYPE.MAP)) {
             ValueMap map = obj.asMap();
             for (ValueMapEntry entry : map) {
-                Bundle newBundle = Bundles.shallowCopyBundle(bundle);
+                Bundle newBundle = Bundles.deepCopyBundle(bundle);
                 keyField.setValue(newBundle, ValueFactory.create(entry.getKey()));
                 valueField.setValue(newBundle, entry.getValue());
                 emitter.emit(newBundle);
