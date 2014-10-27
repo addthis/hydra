@@ -219,6 +219,34 @@ public class DataReservoirTest {
     }
 
     @Test
+    public void testGetSerialization() {
+        DataReservoir reservoir = new DataReservoir();
+        reservoir.updateReservoir(1, 4, 4);
+        reservoir.updateReservoir(2, 4, 12);
+        reservoir.updateReservoir(3, 4, 4);
+        reservoir.updateReservoir(4, 4, 100);
+        DataReservoir.DataReservoirValue original = (DataReservoir.DataReservoirValue) reservoir.getValue("epoch=4~sigma=2.0~obs=3");
+        DataReservoir.DataReservoirValue translated = new DataReservoir.DataReservoirValue();
+        translated.setValues(original.asMap());
+        ValueArray result = translated.asArray();
+        assertEquals(5, result.size());
+        assertEquals(86, DoubleMath.roundToLong(result.get(0).asDouble().getDouble(), RoundingMode.HALF_UP));
+        assertEquals(100, result.get(1).asLong().getLong());
+        assertEquals(7, DoubleMath.roundToLong(result.get(2).asDouble().getDouble(), RoundingMode.HALF_UP));
+        assertEquals(4, DoubleMath.roundToLong(result.get(3).asDouble().getDouble(), RoundingMode.HALF_UP));
+        assertEquals(14, result.get(4).asLong().getLong());
+
+        // test mode "get"
+        assertEquals(0, reservoir.getValue("mode=get~epoch=0").asLong().getLong());
+        assertEquals(4, reservoir.getValue("mode=get~epoch=1").asLong().getLong());
+        assertEquals(12, reservoir.getValue("mode=get~epoch=2").asLong().getLong());
+        assertEquals(4, reservoir.getValue("mode=get~epoch=3").asLong().getLong());
+        assertEquals(100, reservoir.getValue("mode=get~epoch=4").asLong().getLong());
+        assertEquals(0, reservoir.getValue("mode=get~epoch=5").asLong().getLong());
+    }
+
+
+    @Test
     public void testGetNodesWithMin() {
         DataReservoir reservoir = new DataReservoir();
         reservoir.updateReservoir(1, 4, 4);
