@@ -185,6 +185,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         try {
             fileReferenceMap = cachey.get(query.getJob());
             if ((fileReferenceMap == null) || fileReferenceMap.isEmpty()) {
+                cachey.invalidate(query.getJob());
                 throw new QueryException("[MeshQueryMaster] No file references found for job: " + query.getJob());
             }
         } catch (ExecutionException e) {
@@ -194,7 +195,12 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
 
         int canonicalTasks;
         if (spawnDataStoreHandler != null) {
-            canonicalTasks = spawnDataStoreHandler.validateTaskCount(query, fileReferenceMap);
+            try {
+                canonicalTasks = spawnDataStoreHandler.validateTaskCount(query, fileReferenceMap);
+            } catch (Exception ex) {
+                cachey.invalidate(query.getJob());
+                throw ex;
+            }
         } else {
             // task-ids are zero indexed, so add one
             canonicalTasks = fileReferenceMap.keySet().stream().mapToInt(Integer::intValue).max().orElse(-1) + 1;
