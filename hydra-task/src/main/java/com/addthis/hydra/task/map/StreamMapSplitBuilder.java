@@ -36,7 +36,11 @@ public class StreamMapSplitBuilder extends StreamBuilder {
     @JsonProperty(required = true) private AutoField keyField;
     /** The field name in which to place each value in the new bundle */
     @JsonProperty(required = true) private AutoField valueField;
-
+    /** If true, a copy of the bundle without any key and value set will also be emitted
+     * (map field will also be excluded)
+     * The bundle will be emitted even if there is no map field in the bundle. */
+    @JsonProperty private boolean emitOriginal = false;
+    
     @Override
     public void init() {}
 
@@ -52,6 +56,9 @@ public class StreamMapSplitBuilder extends StreamBuilder {
                 valueField.setValue(newBundle, entry.getValue());
                 emitter.emit(newBundle);
             }
+        }
+        if (emitOriginal) {
+            emitter.emit(bundle);
         }
     }
 }

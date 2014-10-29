@@ -14,11 +14,14 @@
 package com.addthis.hydra.task.map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.any;
 
 import java.io.IOException;
 
@@ -51,7 +54,7 @@ public class StreamMapSplitBuilderTest {
     }
     
     @Test
-    public void testCorrect() {
+    public void basicFunctionality() {
         map.put("hello", ValueFactory.create("boo"));
         map.put("hi", ValueFactory.create("hoo"));
         ValueMap map2 = ValueFactory.createMap();
@@ -75,17 +78,49 @@ public class StreamMapSplitBuilderTest {
                 assertEquals("hoo", newBundle.getValue(newBundle.getFormat().getField("value")).asString().asNative());
             } else if (key.equals("nest")) {
                 assertEquals(ValueObject.TYPE.MAP, newBundle.getValue(newBundle.getFormat().getField("value")).getObjectType());
+            } else {
+                fail("An unexpected bundle was emitted");
             }
         }
     }
     
     @Test
-    public void testErrors() {
+    public void noErrorsShouldBeThrown() {
         // there is no map
         builder.process(bundle, emitter);
         // map not a map
         bundle.setValue(bundle.getFormat().getField("foo"), ValueFactory.create("notamap"));
         builder.process(bundle, emitter);
-        verify(emitter, never()).emit(Mockito.<Bundle>any());
+        verify(emitter, never()).emit(any());
+    }
+    
+    @Test
+    public void emitOriginal() throws IOException {
+        map.put("hello", ValueFactory.create("boo"));
+        map.put("hi", ValueFactory.create("hoo"));
+        bundle.setValue(bundle.getFormat().getField("foo"), map);
+        bundle.setValue(bundle.getFormat().getField("bar"), ValueFactory.create("biz"));
+        builder = Configs.decodeObject(StreamMapSplitBuilder.class, "field: foo, keyField: key, valueField: value, emitOriginal: true");
+        builder.process(bundle, emitter);
+        ArgumentCaptor<Bundle> bundleCapture = ArgumentCaptor.forClass(Bundle.class);
+        verify(emitter, times(3)).emit(bundleCapture.capture());
+        List<Bundle> newBundles = bundleCapture.getAllValues();
+        int originalSeen = 0;
+        for (Bundle b : newBundles) {
+            if (b.getValue(b.getFormat().getField("key")) == null) {
+                originalSeen++;
+                assertEquals("biz", b.getValue(b.getFormat().getField("bar")).asString().asNative());
+                assertNull(b.getValue(b.getFormat().getField("foo")));
+            }
+        }
+        assertEquals(1, originalSeen);
+    }
+    
+    @Test
+    public void emitOriginalNoMapField() throws IOException {
+        bundle.setValue(bundle.getFormat().getField("bar"), ValueFactory.create("biz"));
+        builder = Configs.decodeObject(StreamMapSplitBuilder.class, "field: foo, keyField: key, valueField: value, emitOriginal: false");
+        builder.process(bundle, emitter);
+        verify(emitter, never()).emit(any());;
     }
 }
