@@ -152,11 +152,6 @@ public class CommandTaskKick implements JobMessage {
         return monthlyBackups;
     }
 
-    @JsonIgnore
-    public int getBackups() {
-        return hourlyBackups + dailyBackups + weeklyBackups;
-    }
-
     public int getRetries() {
         return retries;
     }

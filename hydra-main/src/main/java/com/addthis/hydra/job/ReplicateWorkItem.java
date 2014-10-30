@@ -15,26 +15,29 @@ package com.addthis.hydra.job;
 
 import java.io.File;
 
-import com.addthis.hydra.job.minion.*;
+import com.addthis.hydra.job.minion.JobTask;
+import com.addthis.hydra.job.minion.MinionWorkItem;
 import com.addthis.hydra.job.mq.ReplicaTarget;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-public class ReplicateWorkItem extends MinionWorkItem {
 
+public class ReplicateWorkItem extends MinionWorkItem {
     private static final Logger log = LoggerFactory.getLogger(ReplicateWorkItem.class);
+
     private String rebalanceSource;
     private String rebalanceTarget;
 
-    public ReplicateWorkItem(File jobDir, File pidFile, File runFile, File doneFile, com.addthis.hydra.job.minion.JobTask task, String rebalanceSource, String rebalanceTarget, boolean execute) {
-        super(jobDir, pidFile, runFile, doneFile, task, execute);
+    public ReplicateWorkItem(File pidFile,
+                             File runFile,
+                             File doneFile,
+                             JobTask task,
+                             String rebalanceSource,
+                             String rebalanceTarget,
+                             boolean execute) {
+        super(pidFile, runFile, doneFile, task, execute);
         this.rebalanceSource = rebalanceSource;
         this.rebalanceTarget = rebalanceTarget;
-    }
-
-    @Override
-    public String getLogPrefix() {
-        return "[replicate.work.item]";
     }
 
     @Override
@@ -55,8 +58,7 @@ public class ReplicateWorkItem extends MinionWorkItem {
             task.execBackup(rebalanceSource, rebalanceTarget, true);
         } else if (task.getRebalanceSource() != null) {
             task.sendEndStatus(JobTaskErrorCode.REBALANCE_PAUSE);
-        }
-        else {
+        } else {
             if (!doneFile.exists()) {
                 doneFile.createNewFile();
             }
@@ -79,7 +81,7 @@ public class ReplicateWorkItem extends MinionWorkItem {
 
     @Override
     public void clear() {
-        log.warn(getLogPrefix() + " clearing " + task.getName());
+        log.warn("clearing {}", task.getName());
         setStartTime(0);
         task.setProcess(null);
         task.save();

@@ -24,29 +24,23 @@ import com.addthis.hydra.job.mq.CommandTaskKick;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 public abstract class MinionWorkItem implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(MinionWorkItem.class);
     protected File pidFile;
     private File runFile;
     protected File doneFile;
-    private File logOut;
-    private File logErr;
     private boolean execute;
     protected final JobTask task;
 
-    public MinionWorkItem(File jobDir, File pidFile, File runFile, File doneFile, JobTask task, boolean execute) {
+    public MinionWorkItem(File pidFile, File runFile, File doneFile, JobTask task, boolean execute) {
         this.pidFile = pidFile;
         this.runFile = runFile;
         this.doneFile = doneFile;
         this.task = task;
-        File logRoot = new File(jobDir, "log");
-        logOut = new File(logRoot, "log.out");
-        logErr = new File(logRoot, "log.err");
         this.execute = execute;
     }
-
-    public abstract String getLogPrefix();
 
     public abstract long getStartTime();
 
@@ -83,7 +77,6 @@ public abstract class MinionWorkItem implements Runnable {
      */
     @Override public void run() {
         int exit = -1;
-        String logPrefix = getLogPrefix();
         task.allocate();
         boolean interrupted = false;
         try {
@@ -106,19 +99,17 @@ public abstract class MinionWorkItem implements Runnable {
             try {
                 pid = Bytes.toString(Files.read(pidFile)).trim();
             } catch (FileNotFoundException ex) {
-                log.warn(logPrefix + " " + task.getName() + " pid file not found");
+                log.warn("{} pid file not found", task.getName());
             }
             if (waited > 500) {
-                log.warn(logPrefix + " " + task.getName() + " pid [" + pid + "] after " + waited + "ms");
+                log.warn("{} pid [{}] after {}ms", task.getName(), pid, waited);
             }
-            if (log.isDebugEnabled()) {
-                log.debug(logPrefix + " " + task.getName() + " waiting for exit pid=" + pid);
-            }
+            log.debug("{} waiting for exit pid={}", task.getName(), pid);
             exit = waitForProcessExit();
         } catch (InterruptedException ie) {
             interrupted = true;
         } catch (Exception e) {
-            log.warn(logPrefix + " " + task.getName() + " exception during script execution: " + e, e);
+            log.warn("{} exception during script execution: {}", task.getName(), e, e);
             } finally {
             task.deallocate();
             try {
@@ -126,10 +117,10 @@ public abstract class MinionWorkItem implements Runnable {
                     sendFinishStatusMessages(exit);
                 }
             } catch (Exception ex) {
-                log.warn(logPrefix + " " + task.getName() + " exception when sending exit status: " + ex, ex);
-                }
+                log.warn("{} exception when sending exit status: {}", task.getName(), ex, ex);
+            }
         }
-        log.warn(logPrefix + " " + task.getName() + " exited with " + exit);
+        log.warn("{} exited with {}", task.getName(), exit);
     }
 
     protected int waitForProcessExit() {
@@ -138,7 +129,7 @@ public abstract class MinionWorkItem implements Runnable {
         if (exitString != null) {
             exit = getExitStatusFromString(exitString);
         } else {
-            log.warn("{} {} exited with null", getLogPrefix(), task.getName());
+            log.warn("{} exited with null", task.getName());
         }
         return exit;
     }

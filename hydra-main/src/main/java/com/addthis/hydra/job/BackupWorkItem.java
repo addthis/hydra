@@ -15,18 +15,26 @@ package com.addthis.hydra.job;
 
 import java.io.File;
 
-import com.addthis.hydra.job.minion.*;
+import com.addthis.hydra.job.minion.JobTask;
+import com.addthis.hydra.job.minion.MinionWorkItem;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-public class BackupWorkItem extends MinionWorkItem {
 
+public class BackupWorkItem extends MinionWorkItem {
     private static final Logger log = LoggerFactory.getLogger(BackupWorkItem.class);
+
     private final String rebalanceSource;
     private final String rebalanceTarget;
 
-    public BackupWorkItem(File jobDir, File pidFile, File runFile, File doneFile, com.addthis.hydra.job.minion.JobTask task, String rebalanceSource, String rebalanceTarget, boolean execute) {
-        super(jobDir, pidFile, runFile, doneFile, task, execute);
+    public BackupWorkItem(File pidFile,
+                          File runFile,
+                          File doneFile,
+                          JobTask task,
+                          String rebalanceSource,
+                          String rebalanceTarget,
+                          boolean execute) {
+        super(pidFile, runFile, doneFile, task, execute);
         this.rebalanceSource = rebalanceSource;
         this.rebalanceTarget = rebalanceTarget;
     }
@@ -34,11 +42,6 @@ public class BackupWorkItem extends MinionWorkItem {
     @Override
     public void updateStats() {
         task.updateFileStats();
-    }
-
-    @Override
-    public String getLogPrefix() {
-        return "[backup.work.item]";
     }
 
     @Override
@@ -66,7 +69,7 @@ public class BackupWorkItem extends MinionWorkItem {
 
     @Override
     public void clear() {
-        log.warn(getLogPrefix() + " clearing " + task.getName());
+        log.warn("clearing {}", task.getName());
         setStartTime(0);
         task.setProcess(null);
         task.save();

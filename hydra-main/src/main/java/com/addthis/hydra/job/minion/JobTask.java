@@ -99,7 +99,6 @@ public class JobTask implements Codable {
     File jobDone;
     File replicateDone;
     File backupDone;
-    File jobBackup;
     File jobStopped;
     File jobDir;
     File logOut;
@@ -849,7 +848,7 @@ public class JobTask implements Codable {
             Minion.capacityLock.unlock();
         }
         // start watcher, which will fire it up
-        workItemThread = new Thread(new RunTaskWorkItem(jobDir, jobPid, jobRun, jobDone, this, execute, retries));
+        workItemThread = new Thread(new RunTaskWorkItem(jobPid, jobRun, jobDone, this, execute, retries));
         workItemThread.setName("RunTask-WorkItem-" + getName());
         workItemThread.start();
     }
@@ -895,8 +894,9 @@ public class JobTask implements Codable {
             // save it
             save();
             // start watcher
-            workItemThread = new Thread(new ReplicateWorkItem(jobDir, replicatePid, replicateRun, replicateDone, this, rebalanceSource, rebalanceTarget, execute));
-            workItemThread.setName("Replicate-WorkItem-" + getName());
+            Runnable workItem = new ReplicateWorkItem(replicatePid, replicateRun, replicateDone, this,
+                                                      rebalanceSource, rebalanceTarget, execute);
+            workItemThread = new Thread(workItem, "Replicate-WorkItem-" + getName());
             workItemThread.start();
         } catch (Exception ex) {
             sendEndStatus(JobTaskErrorCode.EXIT_SCRIPT_EXEC_ERROR);
@@ -927,7 +927,7 @@ public class JobTask implements Codable {
             }
             backupStartTime = System.currentTimeMillis();
             save();
-            workItemThread = new Thread(new BackupWorkItem(jobDir, backupPid, backupRun, backupDone, this, rebalanceSource, rebalanceTarget, execute));
+            workItemThread = new Thread(new BackupWorkItem(backupPid, backupRun, backupDone, this, rebalanceSource, rebalanceTarget, execute));
             workItemThread.setName("Backup-WorkItem-" + getName());
             workItemThread.start();
         } catch (Exception ex) {
