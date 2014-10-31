@@ -130,7 +130,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     @JsonProperty private BundleizerFactory format;
 
     /** Path to the mark directory. */
-    @JsonProperty private String markDir;
+    @JsonProperty(required = true) private String markDir;
 
     /** Ignore the mark directory */
     @JsonProperty private boolean ignoreMarkDir;
