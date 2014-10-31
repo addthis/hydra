@@ -15,6 +15,10 @@ package com.addthis.hydra.util;
 
 import java.io.OutputStreamWriter;
 
+import java.util.concurrent.TimeUnit;
+
+import com.google.common.io.ByteStreams;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,8 +36,20 @@ public class EmailUtil {
             OutputStreamWriter osw = new OutputStreamWriter(p.getOutputStream());
             osw.write(body);
             osw.close();
+            boolean exited = p.waitFor(10, TimeUnit.SECONDS);
+            if (exited) {
+                String standardError = new String(ByteStreams.toByteArray(p.getErrorStream()));
+                int exitCode = p.exitValue();
+                if (!standardError.isEmpty() || (exitCode != 0)) {
+                    log.warn("Unable to send email with subject: {} to : {} due to subshell error : {} {}",
+                             subject, to, exitCode, standardError);
+                }
+            } else {
+                log.warn("Waited 10 seconds for subshell to send email with subject: {} to : {}, but it did not exit.",
+                         subject, to);
+            }
         } catch (Exception e) {
-            log.warn("Unable to send email to : " + to + " due to : " + e.getMessage());
+            log.warn("Unable to send email with subject: {} to : {}", subject, to, e);
         }
     }
 }

@@ -82,8 +82,7 @@ public class JobAlertUtil {
             } catch (IOException e) {
                 log.warn("Job alert mesh look up failed", e);
             }
-        }
-        else {
+        } else {
             log.warn("Received mesh lookup request job={} dirPath={} while meshy client was not instantiated; returning zero", jobId, dirPath);
         }
         return 0;
@@ -110,8 +109,8 @@ public class JobAlertUtil {
 
     }
 
-    private static boolean[] testQueryResult(JSONArray array, BundleFilter filter) {
-        boolean[] result = new boolean[array.length() - 1];
+    private static String testQueryResult(JSONArray array, BundleFilter filter) {
+        StringBuilder errorBuilder = new StringBuilder();
         JSONArray headerRow = array.optJSONArray(0);
         String[] header = new String[headerRow.length()];
         for(int i = 0; i < header.length; i++) {
@@ -125,25 +124,38 @@ public class JobAlertUtil {
                 bundle.setValue(format.getField(header[j]), ValueFactory.create(row.optString(j)));
             }
             try {
-                result[i - 1] = filter.filter(bundle);
-                log.trace("Row {} filter result is {}", i - 1, result[i-1]);
+                if (!filter.filter(bundle)) {
+                    errorBuilder.append("filter failed for row: ")
+                                .append(i -1)
+                                .append(" bundle: ")
+                                .append(bundle)
+                                .append('\n');
+                    log.trace("Row {} filter result is FAILURE", i - 1);
+                } else {
+                    log.trace("Row {} filter result is SUCCESS", i - 1);
+                }
             } catch(Exception ex) {
                 log.warn("Error while evaluating row {}", i - 1, ex);
-                result[i - 1] = false;
+                errorBuilder.append(ex.toString());
             }
         }
-        return result;
+        if (errorBuilder.length() > 0) {
+            return errorBuilder.toString();
+        } else {
+            return null;
+        }
     }
 
-    public static boolean[] evaluateQueryWithFilter(JobAlert alert, String jobId) {
-        String query = alert.getCanaryPath();
-        String ops = alert.getCanaryOps();
-        String rops = alert.getCanaryRops();
-        String filter = alert.getCanaryFilter();
+    public static String evaluateQueryWithFilter(JobAlert alert, String jobId) {
+        String query = alert.canaryPath;
+        String ops = alert.canaryOps;
+        String rops = alert.canaryRops;
+        String filter = alert.canaryFilter;
         String url = getQueryURL(jobId, query, ops, rops);
         log.trace("Emitting query with url {}", url);
         JSONArray array = JSONFetcher.staticLoadJSONArray(url, alertQueryTimeout, alertQueryRetries);
-        alert.appendCanaryOutputMessage(array.toString() + "\n");
+        StringBuilder errorBuilder = new StringBuilder();
+        errorBuilder.append(array.toString() + "\n");
         boolean valid = true;
         /**
          * Test the following conditions:
@@ -170,16 +182,14 @@ public class JobAlertUtil {
         try {
             bFilter = CodecJSON.decodeString(BundleFilter.class, filter);
         } catch (Exception ex) {
-            alert.appendCanaryOutputMessage("Error attempting to create bundle filter: " + ex + "\n");
+            errorBuilder.append("Error attempting to create bundle filter: " + ex + "\n");
             log.error("Error attempting to create bundle filter", ex);
             valid = false;
         }
         if (valid) {
             return testQueryResult(array, bFilter);
         } else {
-            boolean[] result = new boolean[1];
-            result[0] = false;
-            return result;
+            return errorBuilder.toString();
         }
     }
 

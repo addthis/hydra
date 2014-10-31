@@ -14,18 +14,17 @@
 
 package com.addthis.hydra.job.alert;
 
-import java.util.Arrays;
-
-import com.addthis.basis.util.Strings;
-
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
+import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
 import org.junit.Test;
 
+import static com.addthis.codec.config.Configs.decodeObject;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 public class JobAlertTest {
 
@@ -37,42 +36,52 @@ public class JobAlertTest {
         Job errorJob = createJobWithState(JobState.ERROR);
         Job runningJob = createJobWithState(JobState.RUNNING);
 
-        JobAlert errorAlert = new JobAlert("errorAlert", 0, -1, null, null, null);
-        assertTrue("Error alert should trigger with at least one error job", errorAlert.checkAlertForJobs(Arrays.asList(idleJob, errorJob), null));
-        errorAlert.clear();
-        assertTrue("Error alert should not trigger with only idle job", !errorAlert.checkAlertForJobs(Arrays.asList(idleJob), null));
+        JobAlert errorAlert = decodeObject(JobAlert.class, "alertId = errorAlert, type = 0, jobIds = []");
+        assertNotNull("Error alert should trigger with at least one error job",
+                      errorAlert.alertActiveForJob(null, errorJob));
+        assertNull("Error alert should not trigger with only idle job",
+                   errorAlert.alertActiveForJob(null, idleJob));
 
-        JobAlert completeAlert = new JobAlert("completeAlert", 1, -1, null, null, null);
-        assertTrue("Complete alert should not trigger with running job", !completeAlert.checkAlertForJobs(Arrays.asList(runningJob), null));
+        JobAlert completeAlert = decodeObject(JobAlert.class, "alertId = completeAlert, type = 1, jobIds = []");
+        assertNull("Complete alert should not trigger with running job",
+                   completeAlert.alertActiveForJob(null, runningJob));
         runningJob.setState(JobState.IDLE);
-        assertTrue("Complete alert should trigger on job completion", completeAlert.checkAlertForJobs(Arrays.asList(runningJob), null));
+        assertNotNull("Complete alert should trigger on job completion",
+                      completeAlert.alertActiveForJob(null, runningJob));
         runningJob.setState(JobState.RUNNING);
 
-        JobAlert runtimeAlert = new JobAlert("runtimeAlert", 2, 60, null, null, null);
-        assertTrue("Runtime alert should not trigger with idle job", !runtimeAlert.checkAlertForJobs(Arrays.asList(idleJob), null));
+        JobAlert runtimeAlert = decodeObject(JobAlert.class,
+                                             "alertId = runtimeAlert, type = 2, timeout = 1 hour, jobIds = []");
+        assertNull("Runtime alert should not trigger with idle job",
+                   runtimeAlert.alertActiveForJob(null, idleJob));
         runningJob.setStartTime(now - 1000);
-        assertTrue("Runtime alert should not trigger with recently-submitted job", !runtimeAlert.checkAlertForJobs(Arrays.asList(runningJob), null));
+        assertNull("Runtime alert should not trigger with recently-submitted job",
+                   runtimeAlert.alertActiveForJob(null, runningJob));
         runningJob.setStartTime(now - 180 * 60 * 1000);
-        assertTrue("Runtime alert should trigger with long-running job", runtimeAlert.checkAlertForJobs(Arrays.asList(runningJob), null));
+        assertNotNull("Runtime alert should trigger with long-running job",
+                      runtimeAlert.alertActiveForJob(null, runningJob));
 
-        JobAlert rekickAlert = new JobAlert("rekickAlert", 3, 60, null, null, null);
+        JobAlert rekickAlert = decodeObject(JobAlert.class,
+                                            "alertId = rekickAlert, type = 3, timeout = 1 hour, jobIds = []");
         idleJob.setEndTime(now - 10 * 60 * 1000);
-        assertTrue("Rekick alert should not fire after short time period", !rekickAlert.checkAlertForJobs(Arrays.asList(idleJob), null));
+        assertNull("Rekick alert should not fire after short time period",
+                   rekickAlert.alertActiveForJob(null, idleJob));
         idleJob.setEndTime(now - 300 * 60 * 1000);
-        assertTrue("Rekick alert should fire after long time period", rekickAlert.checkAlertForJobs(Arrays.asList(idleJob), null));
-
+        assertNotNull("Rekick alert should fire after long time period",
+                      rekickAlert.alertActiveForJob(null, idleJob));
     }
 
     @Test
     public void jsonTest() throws Exception {
-        JobAlert initialAlert = new JobAlert("sampleid", 0, 0, "someone@domain.com",
-                "this is a test alert", new String[] {"j1", "j2"});
+        JobAlert initialAlert = decodeObject(JobAlert.class,
+                                             "alertId = sampleid, type = 0, email = \"someone@domain.com\", " +
+                                             "description = this is a new alert, jobIds = [j1, j2]");
         JSONObject json = initialAlert.toJSON();
-        assertEquals(initialAlert.getAlertId(), json.getString("alertId"));
-        assertEquals(initialAlert.getType(), json.getInt("type"));
-        assertEquals(initialAlert.getEmail(), json.getString("email"));
-        assertEquals(initialAlert.getDescription(), json.getString("description"));
-        assertEquals(Strings.join(initialAlert.getJobIds(), ","), json.getString("jobIds"));
+        assertEquals(initialAlert.alertId, json.getString("alertId"));
+        assertEquals(initialAlert.type, json.getInt("type"));
+        assertEquals(initialAlert.email, json.getString("email"));
+        assertEquals(initialAlert.description, json.getString("description"));
+        assertEquals(new JSONArray(initialAlert.jobIds), json.getJSONArray("jobIds"));
     }
 
     private Job createJobWithState(JobState jobState) throws Exception {

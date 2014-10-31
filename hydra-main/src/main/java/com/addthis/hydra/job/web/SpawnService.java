@@ -15,6 +15,7 @@ package com.addthis.hydra.job.web;
 
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.codec.jackson.Jackson;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.web.jersey.BasicAuthProvider;
 import com.addthis.hydra.job.web.jersey.DefaultAuthenticator;
@@ -34,6 +35,7 @@ import com.addthis.hydra.job.web.resources.SystemResource;
 import com.addthis.hydra.job.web.resources.TaskResource;
 import com.addthis.hydra.util.WebSocketManager;
 
+import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 import com.yammer.dropwizard.auth.Authenticator;
@@ -102,6 +104,7 @@ public class SpawnService {
         } else {
             config.addProvider(new SpawnAuthProvider<User>(authenticator, "spawn"));
         }
+        config.addProvider(new JacksonJsonProvider(Jackson.defaultMapper()));
 
         //Feature settings
         config.getFeatures().put(JSONConfiguration.FEATURE_POJO_MAPPING, Boolean.TRUE);

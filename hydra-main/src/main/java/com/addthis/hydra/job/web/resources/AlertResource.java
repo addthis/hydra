@@ -21,7 +21,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import java.util.UUID;
+import java.io.IOException;
 
 import com.addthis.basis.kv.KVPairs;
 
@@ -45,36 +45,13 @@ public class AlertResource {
     @POST
     @Path("/save")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response putAlert(@QueryParam("pairs") KVPairs kv) {
-
-        String alertId = kv.getValue("alertId", UUID.randomUUID().toString());
-        String jobIds = kv.getValue("jobIds");
-        int type = kv.getIntValue("type", -1);
-        int timeout = kv.getIntValue("timeout", 0);
-        String email = kv.getValue("email", "");
-        String description = kv.getValue("description", "");
-        String canaryPath = kv.getValue("canaryPath");
-        String canaryOps = kv.getValue("canaryOps");
-        String canaryRops = kv.getValue("canaryRops");
-        String canaryFilter = kv.getValue("canaryFilter");
-        int canaryConfigThreshold = kv.getIntValue("canaryConfigThreshold", 0);
-        if (jobIds != null) {
-            JobAlert jobAlert = new JobAlert(alertId, type, timeout, email, description, jobIds.split(","));
-            jobAlert.setCanaryPath(canaryPath == null ? "" : canaryPath);
-            jobAlert.setCanaryOps(canaryOps == null ? "" : canaryOps);
-            jobAlert.setCanaryRops(canaryRops == null ? "" : canaryRops);
-            jobAlert.setCanaryFilter(canaryFilter == null ? "" : canaryFilter);
-            jobAlert.setCanaryConfigThreshold(canaryConfigThreshold);
-            String msg = jobAlert.isValid();
-            if (msg != null) {
-                return Response.ok("{\"message\" : \"" + msg + "\"}").build();
-            }
-            spawn.putAlert(alertId, jobAlert);
-            return Response.ok("{\"alertId\":\"" + alertId +"\"}").build();
+    public Response putAlert(JobAlert jobAlert) throws IOException {
+        String msg = jobAlert.isValid();
+        if (msg != null) {
+            return Response.ok("{\"message\" : \"" + msg + "\"}").build();
         }
-        else {
-            return Response.ok("{\"message\" : \"Job id is missing\"}").build();
-        }
+        spawn.putAlert(jobAlert.alertId, jobAlert);
+        return Response.ok("{\"alertId\":\"" + jobAlert.alertId +"\"}").build();
     }
 
     @POST

@@ -27,15 +27,12 @@ import java.util.concurrent.TimeUnit;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.Codec;
-import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.job.alert.JobAlert;
 import com.addthis.hydra.job.store.SpawnDataStore;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Timer;
@@ -138,23 +135,6 @@ public class JobConfigManager {
     }
 
     /**
-     * Internal function to load job alerts if any are set
-     *
-     * @param alertData The raw alert config string loaded from the SpawnDataStore
-     * @return A List of JobAlerts decoded from the config
-     */
-    private List<JobAlert> loadAlerts(String alertData) {
-        if (alertData != null) {
-            try {
-                return Jackson.defaultMapper().readValue(alertData, new TypeReference<List<JobAlert>>() {});
-            } catch (Exception ex) {
-                return null;
-            }
-        }
-        return null;
-    }
-
-    /**
      * Use query data fetched from a SpawnDataStore to create the job object
      *
      * @param jobId     The jobId in question
@@ -172,8 +152,6 @@ public class JobConfigManager {
         String config = queryData.get(jobPath + configChildName);
         String queryConfigString = queryData.get(jobPath + queryConfigChildName);
         JobQueryConfig jqc = codec.decode(JobQueryConfig.class, queryConfigString.getBytes());
-        String jobAlertsConfig = queryData.get(jobPath + alertChildName);
-        List<JobAlert> alerts = loadAlerts(jobAlertsConfig);
         // Make sure job config path exists
         spawnDataStore.put(SPAWN_JOB_CONFIG_PATH, "");
         String tasksData = queryData.get(jobPath + tasksChildName);

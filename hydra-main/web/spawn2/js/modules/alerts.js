@@ -48,7 +48,7 @@ function(
         			timeout:this.get("timeout"),
         			email:this.get("email"),
         			description:((this.get("description") instanceof Array) ? this.get("description")[0] : this.get("description")),
-        			jobIds:this.get("jobIds"),
+        			jobIds:this.get("jobIds").split(","),
         			canaryPath:this.get("canaryPath"),
         			canaryConfigThreshold:this.get("canaryConfigThreshold"),
                     canaryOps:this.get("canaryOps"),
@@ -61,8 +61,9 @@ function(
         		return $.ajax({
         			url: "/alert/save",
         			type: "POST",
-        			data: postData,
-        			dataType: "json"
+        			data: JSON.stringify(postData),
+        			dataType: "json",
+        			contentType: "application/json"
         		});
         	},
         	delete:function(){
@@ -75,6 +76,10 @@ function(
         		});
         	},
         	parse:function(data) {
+        	    var jobIdsArray = data.jobIds;
+        	    if (jobIdsArray) {
+                    data.jobIds = jobIdsArray.join(",");
+        	    }
         		return data;
         	}
     	});

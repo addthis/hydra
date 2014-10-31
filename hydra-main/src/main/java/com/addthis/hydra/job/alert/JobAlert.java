@@ -13,14 +13,18 @@
  */
 package com.addthis.hydra.job.alert;
 
-import java.util.HashMap;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
-import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Strings;
 
-import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.annotations.Time;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
@@ -29,9 +33,14 @@ import com.addthis.hydra.job.JobState;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,8 +48,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Bean to hold a job specific alert
  */
+@JsonIgnoreProperties("alertStatus")
 public class JobAlert implements Codable {
-
     private static final Logger log = LoggerFactory.getLogger(JobAlert.class);
 
     //Alert types
@@ -52,274 +61,146 @@ public class JobAlert implements Codable {
     public static final int MAP_CANARY = 5;
     public static final int MAP_FILTER_CANARY = 6;
 
-    @FieldConfig(codable = true)
-    private String alertId;
-    @FieldConfig(codable = true)
-    private long lastAlertTime;
-    @FieldConfig(codable = true)
-    private int type;
-    @FieldConfig(codable = true)
-    private int timeout;
-    @FieldConfig(codable = true)
-    private String email;
-    @FieldConfig(codable = true)
-    private String[] jobIds;
-    @FieldConfig(codable = true)
-    private String canaryPath;
-    @FieldConfig(codable = true)
-    private String canaryRops;
-    @FieldConfig(codable = true)
-    private String canaryOps;
-    @FieldConfig(codable = true)
-    private String canaryFilter;
-    @FieldConfig(codable = true)
-    private int canaryConfigThreshold;
-    @FieldConfig(codable = true)
-    private String description;
+    private static final ImmutableMap<Integer, String> alertMessageMap =
+            new ImmutableMap.Builder<Integer,String>().put(ON_ERROR, "Task is in Error ")
+                                                      .put(ON_COMPLETE, "Task has Completed ")
+                                                      .put(RUNTIME_EXCEEDED, "Task runtime exceeded ")
+                                                      .put(REKICK_TIMEOUT, "Task rekick exceeded ")
+                                                      .put(SPLIT_CANARY, "Split canary ")
+                                                      .put(MAP_CANARY, "Map canary ")
+                                                      .put(MAP_FILTER_CANARY, "Bundle canary ")
+                                                      .build();
 
-    private String canaryOutputMessage;
+    @Nonnull @JsonProperty public final String alertId;
+    @JsonProperty public final String description;
+    @JsonProperty public final int type;
+    @JsonProperty public final int timeout;
+    @JsonProperty public final String email;
+    @JsonProperty public final ImmutableList<String> jobIds;
+    @JsonProperty public final String canaryPath;
+    @JsonProperty public final String canaryOps;
+    @JsonProperty public final String canaryRops;
+    @JsonProperty public final String canaryFilter;
+    @JsonProperty public final int canaryConfigThreshold;
 
-    /* For alerts tracking multiple jobs, this variable marks if the set of active jobs has changed since the last alert check */
-    private boolean hasChanged = false;
+    /* Map storing {job id : error description} for all alerted jobs the last time this alert was checked */
+    @JsonProperty private volatile ImmutableMap<String, String> activeJobs;
+    // does not distinguish between multiple jobs, and racey wrt activeJobs, but only used for web-ui code for humans
+    @JsonProperty private volatile long lastAlertTime;
 
-    /* Number of milliseconds in one minute */
-    private static final int MINUTE = 60 * 1000;
-
-    /* Map storing {job id : job description} for all alerted jobs the last time this alert was checked */
-    @FieldConfig(codable = true)
-    private final HashMap<String, String> activeJobs;
-
-    /* Map temporarily storing prior active jobs that have since cleared */
-    private final HashMap<String, String> priorActiveJobs;
-
-    private Long lastActual = 0l;
-
-    private static final ImmutableMap<Integer, String> alertMessageMap = new ImmutableMap.Builder<Integer,String>().put(ON_ERROR, "Task is in Error ")
-            .put(ON_COMPLETE, "Task has Completed ")
-            .put(RUNTIME_EXCEEDED, "Task runtime exceeded ")
-            .put(REKICK_TIMEOUT, "Task rekick exceeded ")
-            .put(SPLIT_CANARY, "Split canary ")
-            .put(MAP_CANARY, "Map canary ")
-            .put(MAP_FILTER_CANARY, "Bundle canary ")
-            .build();
-
-    public JobAlert() {
-        this.lastAlertTime = -1;
-        this.type = 0;
-        this.timeout = 0;
-        this.email = "";
-        this.description = "";
-        activeJobs = new HashMap<>();
-        priorActiveJobs = new HashMap<>();
-    }
-
-    public JobAlert(String alertId, int type, int timeout, String email, String description, String[] jobIds) {
-        this.alertId = alertId;
-        this.lastAlertTime = -1;
+    @JsonCreator
+    public JobAlert(@Nullable @JsonProperty("alertId") String alertId,
+                    @JsonProperty("description") String description,
+                    @JsonProperty(value = "type", required = true) int type,
+                    @Time(TimeUnit.MINUTES) @JsonProperty("timeout") int timeout,
+                    @JsonProperty("email") String email,
+                    @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
+                    @JsonProperty("canaryPath") String canaryPath,
+                    @JsonProperty("canaryOps") String canaryOps,
+                    @JsonProperty("canaryRops") String canaryRops,
+                    @JsonProperty("canaryFilter") String canaryFilter,
+                    @JsonProperty("canaryConfigThreshold") int canaryConfigThreshold,
+                    @JsonProperty("lastAlertTime") long lastAlertTime,
+                    @JsonProperty("activeJobs") Map<String, String> activeJobs) {
+        if (alertId == null) {
+            String newAlertId = UUID.randomUUID().toString();
+            log.debug("creating new alert with uuid: {}", newAlertId);
+            this.alertId = newAlertId;
+        } else {
+            this.alertId = alertId;
+        }
+        this.description = description;
         this.type = type;
         this.timeout = timeout;
         this.email = email;
-        this.description = description;
-        this.jobIds = jobIds;
-        activeJobs = new HashMap<>();
-        priorActiveJobs = new HashMap<>();
-    }
-
-    public String getAlertId() {
-        return alertId;
-    }
-
-    public void setAlertId(String alertId) {
-        this.alertId = alertId;
-    }
-
-    public boolean hasAlerted() {
-        return this.lastAlertTime > 0;
-    }
-
-    public void alerted() {
-        this.lastAlertTime = JitterClock.globalTime();
-    }
-
-    public void clear() {
-        synchronized (activeJobs) {
-            activeJobs.clear();
-        }
-        this.lastAlertTime = -1;
-    }
-
-    public void setActiveJobs(Map<String, String> activeJobsNew) {
-        synchronized (activeJobs) {
-            activeJobs.clear();
-            activeJobs.putAll(activeJobsNew);
-        }
-    }
-
-    public long getLastAlertTime() {
-        return lastAlertTime;
-    }
-
-    public void setLastAlertTime(long lastAlertTime) {
+        this.jobIds = ImmutableList.copyOf(jobIds);
+        this.canaryPath = canaryPath;
+        this.canaryOps = canaryOps;
+        this.canaryRops = canaryRops;
+        this.canaryFilter = canaryFilter;
+        this.canaryConfigThreshold = canaryConfigThreshold;
+        this.activeJobs = ImmutableMap.copyOf(activeJobs);
         this.lastAlertTime = lastAlertTime;
     }
 
-    public int getType() {
-        return type;
-    }
-
-    public void setType(int type) {
-        this.type = type;
-    }
-
-    public int getTimeout() {
-        return timeout;
-    }
-
-    public void setTimeout(int timeout) {
-        this.timeout = timeout;
-    }
-
-    public String getEmail() {return email; }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getDescription() {return description; }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String[] getJobIds() {
-        return jobIds;
-    }
-
-    public void setJobIds(String[] jobIds) {
-        this.jobIds = jobIds;
-    }
-
-    public String getCanaryPath() {
-        return canaryPath;
-    }
-
-    public void setCanaryPath(String canaryPath) { this.canaryPath = canaryPath; }
-
-    public String getCanaryRops() { return canaryRops; }
-
-    public void setCanaryRops(String canaryRops) {
-        this.canaryRops = canaryRops;
-    }
-
-    public String getCanaryOps() { return canaryOps; }
-
-    public void setCanaryOps(String canaryOps) {
-        this.canaryOps = canaryOps;
-    }
-
-    public String getCanaryFilter() { return canaryFilter; }
-
-    public void setCanaryFilter(String canaryFilter) {
-        this.canaryFilter = canaryFilter;
-    }
-
-    public Integer getCanaryConfigThreshold() {
-        return canaryConfigThreshold;
-    }
-
-    public void setCanaryConfigThreshold(Integer canaryConfigThreshold) {
-        this.canaryConfigThreshold = canaryConfigThreshold;
-    }
-
-    @JsonIgnore public String getCanaryOutputMessage() {
-        return canaryOutputMessage;
-    }
-
-    public void appendCanaryOutputMessage(String canaryOutputMessage) {
-        this.canaryOutputMessage += canaryOutputMessage;
-    }
-
-
-
-    public JSONObject toJSON() throws Exception {
-        JSONObject rv = CodecJSON.encodeJSON(this);
-        if (jobIds != null) {
-            rv.put("jobIds", Strings.join(jobIds, ","));
-        }
-        return rv;
-    }
-
-    /**
-     * Check this alert's jobs to see if any are active.
-     * @param jobs A list of jobs to check
-     * @return True if the alert has changed state from fired to cleared or vice versa
-     */
-    public boolean checkAlertForJobs(List<Job> jobs, MeshyClient meshyClient) {
-        boolean activeNow = false;
-        HashMap<String, String> activeJobBefore;
-        HashMap<String, String> activeJobAfter;
-        synchronized (activeJobs) {
-            activeJobBefore = new HashMap<>(activeJobs);
-            activeJobs.clear();
-            for (Job job : jobs) {
-                if (alertActiveForJob(meshyClient, job)) {
-                    activeNow = true;
-                    activeJobs.put(job.getId(), job.getDescription());
-                    // Don't break the loop to ensure that all triggering jobs will be added to activeJobs
-                }
-            }
-            activeJobAfter = new HashMap<>(activeJobs);
-        }
-        if (activeNow && !hasAlerted()) {
-            alerted();
-            return true;
-        } else if (!activeNow && hasAlerted()) {
-            priorActiveJobs.clear();
-            priorActiveJobs.putAll(activeJobBefore);
-            clear();
-            return true;
-        } else if (!activeJobBefore.equals(activeJobAfter)) {
-            hasChanged = true;
-            return true;
-        }
-        return false;
-    }
+    // getters/setters that trigger ser/deser and are not vanilla (also have in-code usages)
 
     public Map<String, String> getActiveJobs() {
-        synchronized (activeJobs) {
-            return ImmutableMap.copyOf(activeJobs);
+        return activeJobs;
+    }
+
+    public void setActiveJobs(Map<String, String> activeJobsNew) {
+        this.activeJobs = ImmutableMap.copyOf(activeJobsNew);
+    }
+
+    // used by the ui/ web code
+    @Deprecated public JSONObject toJSON() throws Exception {
+        return CodecJSON.encodeJSON(this);
+    }
+
+    public ImmutableMap<String, String> checkAlertForJobs(List<Job> jobs, MeshyClient meshyClient) {
+        ImmutableMap.Builder<String, String> newActiveJobsBuilder = new ImmutableMap.Builder<>();
+        for (Job job : jobs) {
+            String errorMessage = alertActiveForJob(meshyClient, job);
+            if (errorMessage != null) {
+                newActiveJobsBuilder.put(job.getId(), errorMessage);
+            }
         }
+        this.activeJobs = newActiveJobsBuilder.build();
+        if (activeJobs.isEmpty()) {
+            lastAlertTime = 0;
+        } else if (lastAlertTime <= 0) {
+            lastAlertTime = System.currentTimeMillis();
+        }
+        return activeJobs;
     }
 
     @JsonIgnore
-    public String getAlertStatus() {
-        hasChanged = false;
-        StringBuilder sb = new StringBuilder();
-        sb.append( hasAlerted() ? (hasChanged ? "[CHANGE] " : "[TRIGGER] ") : "[CLEAR] " );
-        sb.append( alertMessageMap.containsKey(type) ? alertMessageMap.get(type) : "unknown alert" );
-        sb.append(" - ");
-        sb.append(JobAlertRunner.getClusterHead());
-        sb.append(" - ");
-        sb.append(hasAlerted() ? getActiveJobs().toString() : priorActiveJobs.toString());
-        if (hasLastActual()) {
-            sb.append(" - expected=" + canaryConfigThreshold + " actual=" + lastActual);
+    public String getTypeString() {
+        if (alertMessageMap.containsKey(type)) {
+            return alertMessageMap.get(type);
+        } else {
+            return "unknown alert";
         }
-        return sb.toString();
     }
 
-    private boolean alertActiveForJob(MeshyClient meshClient, Job job) {
+    @VisibleForTesting
+    @Nullable
+    String alertActiveForJob(@Nullable MeshyClient meshClient, Job job) {
+        String validationError = isValid();
+        if (validationError != null) {
+            return validationError;
+        }
         long currentTime = System.currentTimeMillis();
         switch (type) {
             case ON_ERROR:
-                return job.getState().equals(JobState.ERROR);
+                if (job.getState() == JobState.ERROR) {
+                    return job.getCopyOfTasks().stream()
+                              .map(task -> task.getTaskID() + " -> " + task.getErrorCode())
+                              .collect(Collectors.joining("\n"));
+                }
+                break;
             case ON_COMPLETE:
-                return job.getState().equals(JobState.IDLE);
+                if (job.getState() == JobState.IDLE) {
+                    return job.getState().name();
+                }
+                break;
             case RUNTIME_EXCEEDED:
-                return (job.getState().equals(JobState.RUNNING) && (job.getStartTime() != null) &&
-                    ((currentTime - job.getStartTime()) > timeout * MINUTE));
+                if ((job.getState() == JobState.RUNNING) && (job.getStartTime() != null)) {
+                    long runningTime = currentTime - job.getStartTime();
+                    if (runningTime > TimeUnit.MINUTES.toMillis(timeout)) {
+                        return String.valueOf(runningTime);
+                    }
+                }
+                break;
             case REKICK_TIMEOUT:
-                return (!job.getState().equals(JobState.RUNNING) && (job.getEndTime() != null) &&
-                    ((currentTime - job.getEndTime()) > timeout * MINUTE));
+                if ((job.getState() != JobState.RUNNING) && (job.getEndTime() != null)) {
+                    long rekickTime = currentTime - job.getEndTime();
+                    if (rekickTime > TimeUnit.MINUTES.toMillis(timeout)) {
+                        return String.valueOf(rekickTime);
+                    }
+                }
+                break;
             case SPLIT_CANARY:
                 return checkSplitCanary(meshClient, job);
             case MAP_CANARY:
@@ -327,53 +208,43 @@ public class JobAlert implements Codable {
             case MAP_FILTER_CANARY:
                 return checkMapFilterCanary(job);
             default:
-                log.warn("Warning: alert " + alertId + " has unexpected type " + type);
-                return false;
+                log.warn("Warning: alert {} has unexpected type {}", alertId, type);
+                return "unexpected alert type: " + type;
         }
+        return null;
     }
 
-    private boolean checkMapCanary(Job job) {
-        if (isValid() != null) {
-            return false;
-        }
+    @Nullable private String checkMapCanary(Job job) {
         try {
             long queryVal = JobAlertUtil.getQueryCount(job.getId(), canaryPath);
-            lastActual = queryVal;
-            return queryVal < canaryConfigThreshold;
-        } catch (Exception ex) {
-            log.warn("Exception during canary check: ", ex);
-            return false;
-        }
-    }
-
-    private boolean checkMapFilterCanary(Job job) {
-        if (isValid() != null) {
-            return false;
-        }
-        try {
-            canaryOutputMessage = "";
-            boolean[] result = JobAlertUtil.evaluateQueryWithFilter(this, job.getId());
-            boolean failure = false;
-            for(int i = 0; i < result.length; i++) {
-                failure = failure || !result[i];
+            if (queryVal < canaryConfigThreshold) {
+                return "query value: " + queryVal + " < " + canaryConfigThreshold;
             }
-            return failure;
         } catch (Exception ex) {
             log.warn("Exception during canary check: ", ex);
-            canaryOutputMessage += ex.toString() + "\n";
-            return false;
+            return ex.getMessage();
+        }
+        return null;
+    }
+
+    @Nullable private String checkMapFilterCanary(Job job) {
+        try {
+            return JobAlertUtil.evaluateQueryWithFilter(this, job.getId());
+        } catch (Exception ex) {
+            log.warn("Exception during canary check: ", ex);
+            return ex.toString();
         }
     }
 
-    private boolean checkSplitCanary(MeshyClient meshClient, Job job) {
-        if (isValid() != null) {
-            return false;
-        }
+    @Nullable private String checkSplitCanary(MeshyClient meshClient, Job job) {
         // Strip off preceding slash, if it exists.
         String finalPath = canaryPath.startsWith("/") ? canaryPath.substring(1) : canaryPath;
         long totalBytes = JobAlertUtil.getTotalBytesFromMesh(meshClient, job.getId(), finalPath);
-        lastActual = totalBytes;
-        return totalBytes < canaryConfigThreshold;
+        if (totalBytes < canaryConfigThreshold) {
+            return "total bytes: " + totalBytes + " < " + canaryConfigThreshold;
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -382,7 +253,7 @@ public class JobAlert implements Codable {
      *
      * @return null if configuration is valid.
      */
-    public String isValid() {
+    @JsonIgnore public String isValid() {
         switch (type) {
             case ON_ERROR:
             case ON_COMPLETE:
@@ -422,9 +293,5 @@ public class JobAlert implements Codable {
         } catch (Exception e) {
             return super.toString();
         }
-    }
-
-    public boolean hasLastActual() {
-        return type == SPLIT_CANARY || type == MAP_CANARY;
     }
 }
