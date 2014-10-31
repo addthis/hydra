@@ -46,6 +46,12 @@
         </td>
     </tr>
     <tr class="row">
+        <td width="30%">Enable Automatic Retries</td>
+        <td width="70%">
+            <input name="autoRetry" type="checkbox" class="trackable" <%-(job.autoRetry?"checked='true'":"")%>>
+        </td>
+    </tr>
+    <tr class="row">
         <th colspan="2">Backup Settings</th>
     </tr>
     <tr class="row">
@@ -73,24 +79,12 @@
         </td>
     </tr>
     <tr class="row">
-        <td width="30%">Retries</td>
-        <td width="70%">
-            <input name="retries" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.retries%>"></input>
-        </td>
-    </tr>
-    <tr class="row">
         <th colspan="2">Replica Settings</th>
     </tr>
     <tr class="row">
         <td width="30%">Number of Replicas</td>
         <td width="70%">
             <input name="replicas" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.replicas%>"></input>
-        </td>
-    </tr>
-    <tr class="row">
-        <td width="30%">Read Only Replicas</td>
-        <td width="70%">
-            <input name="readOnlyReplicas" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.readOnlyReplicas%>"></input>
         </td>
     </tr>
     <tr class="row">
@@ -103,18 +97,6 @@
     </tr>
     <tr class="row">
         <th colspan="2">Query Settings</th>
-    </tr>
-    <tr class="row">
-        <td width="30%">Query Trace Level</td>
-        <td width="70%">
-            <input name="qc_queryTraceLevel" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.qc_queryTraceLevel%>"></input>
-        </td>
-    </tr>
-    <tr class="row">
-        <td width="30%">Consecutive Failure Threshold</td>
-        <td width="70%">
-            <input name="qc_consecutiveFailureThreshold" class="form-control trackable" style="margin:0px;" type="number" value="<%-job.qc_consecutiveFailureThreshold%>"></input>
-        </td>
     </tr>
     <tr class="row">
         <td width="30%">Enable querying on this job</td>

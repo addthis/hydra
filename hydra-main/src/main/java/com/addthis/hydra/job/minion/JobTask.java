@@ -57,6 +57,7 @@ import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.maljson.JSONObject;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.yammer.metrics.core.TimerContext;
 
 import org.slf4j.Logger;
@@ -65,6 +66,7 @@ import org.slf4j.LoggerFactory;
 @JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonIgnoreProperties("retries")
 public class JobTask implements Codable {
     private static final Logger log = LoggerFactory.getLogger(JobTask.class);
 
@@ -80,7 +82,7 @@ public class JobTask implements Codable {
     @FieldConfig long fileCount;
     @FieldConfig long fileBytes;
     @FieldConfig volatile boolean deleted;
-    @FieldConfig int retries;
+    @FieldConfig boolean autoRetry;
     @FieldConfig boolean wasQueued;
     @FieldConfig long replicateStartTime;
     @FieldConfig long backupStartTime;
@@ -160,12 +162,12 @@ public class JobTask implements Codable {
         }
     }
 
-    public int getRetries() {
-        return retries;
+    public boolean getAutoRetry() {
+        return autoRetry;
     }
 
-    public void setRetries(int retries) {
-        this.retries = retries;
+    public void setAutoRetry(boolean autoRetry) {
+        this.autoRetry = autoRetry;
     }
 
     public void clearFailureReplicas() {
@@ -790,7 +792,7 @@ public class JobTask implements Codable {
             node = jobNode;
             nodeCount = jobNodes;
             kick = kickMessage;
-            retries = kick.getRetries();
+            autoRetry = kick.getAutoRetry();
             // allocate type slot if applicable
             minion.sendStatusMessage(new StatusTaskBegin(minion.uuid, id, node));
             // store in jobs on first run
@@ -811,7 +813,7 @@ public class JobTask implements Codable {
             String setEnvironmentPrefix = String.format(
                     "HYDRA_JOBDIR='%s' HYDRA_JOBID='%s' HYDRA_NODE='%s' HYDRA_NODES='%s' HYDRA_PORT='%s'",
                     jobDir.getPath(), jobId, jobNode, jobNodes, portString);
-            log.warn("[task.exec] starting {} with retries={}", jobDir.getPath(), retries);
+            log.warn("[task.exec] starting {} with autoRetry={}", jobDir.getPath(), autoRetry);
             // create shell wrapper
             require(minion.deleteFiles(jobPid, jobPort, jobDone, jobStopped), "failed to delete files");
             port = null;
@@ -848,7 +850,7 @@ public class JobTask implements Codable {
             Minion.capacityLock.unlock();
         }
         // start watcher, which will fire it up
-        workItemThread = new Thread(new RunTaskWorkItem(jobPid, jobRun, jobDone, this, execute, retries));
+        workItemThread = new Thread(new RunTaskWorkItem(jobPid, jobRun, jobDone, this, execute, autoRetry));
         workItemThread.setName("RunTask-WorkItem-" + getName());
         workItemThread.start();
     }

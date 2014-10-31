@@ -18,7 +18,7 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-@JsonIgnoreProperties("killSignal")
+@JsonIgnoreProperties({"killSignal", "retries"})
 public class CommandTaskKick implements JobMessage {
 
     private static final long serialVersionUID = -7588140676324569250L;
@@ -37,7 +37,7 @@ public class CommandTaskKick implements JobMessage {
     @FieldConfig private int weeklyBackups;
     @FieldConfig private int monthlyBackups;
     @FieldConfig private ReplicaTarget[] replicas;
-    @FieldConfig private int retries;
+    @FieldConfig private boolean autoRetry;
 
     @Override
     public String toString() {
@@ -52,7 +52,8 @@ public class CommandTaskKick implements JobMessage {
 
     public CommandTaskKick(String host, JobKey jobKey, int priority, int jobNodes, long runTime,
                            int runCount, String config, String command, int hourlyBackups,
-                           int dailyBackups, int weeklyBackups, int monthlyBackups, ReplicaTarget[] replicas) {
+                           int dailyBackups, int weeklyBackups, int monthlyBackups, ReplicaTarget[] replicas,
+                           boolean autoRetry) {
         this.hostUuid = host;
         this.jobKey = jobKey;
         this.priority = priority;
@@ -67,6 +68,7 @@ public class CommandTaskKick implements JobMessage {
         this.weeklyBackups = weeklyBackups;
         this.monthlyBackups = monthlyBackups;
         this.replicas = replicas;
+        this.autoRetry = autoRetry;
     }
 
     @Override @JsonIgnore
@@ -152,11 +154,11 @@ public class CommandTaskKick implements JobMessage {
         return monthlyBackups;
     }
 
-    public int getRetries() {
-        return retries;
+    public boolean getAutoRetry() {
+        return autoRetry;
     }
 
-    public void setRetries(int retries) {
-        this.retries = retries;
+    public void setAutoRetry(boolean autoRetry) {
+        this.autoRetry = autoRetry;
     }
 }

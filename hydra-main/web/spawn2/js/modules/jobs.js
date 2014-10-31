@@ -122,13 +122,9 @@ function(
             data.onError=data.onError || "";
             if(!_.isEmpty(data.queryConfig)){
                 data.qc_canQuery=data.queryConfig.canQuery;
-                data.qc_queryTraceLevel=data.queryConfig.queryTraceLevel;
-                data.qc_consecutiveFailureThreshold=data.queryConfig.consecutiveFailureThreshold;
             }
             else{
                 data.qc_canQuery=false;
-                data.qc_queryTraceLevel=0;
-                data.qc_consecutiveFailureThreshold=100;
             }
             data.queryConfig=undefined;
             return data;
@@ -151,7 +147,7 @@ function(
             stateText:"",
             stateLabel:"",
             minionType:"default",
-            retries:0
+            autoRetry:false
         },
         rebalance:function(){
             var self=this;

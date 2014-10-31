@@ -485,7 +485,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
                         if (task == null) {
                             task = createNewTask(nextKick.getJobUuid(), nextKick.getNodeID());
                         }
-                        task.setRetries(nextKick.getRetries());
+                        task.setAutoRetry(nextKick.getAutoRetry());
                         try {
                             task.exec(nextKick, true);
                         } catch (Exception ex) {

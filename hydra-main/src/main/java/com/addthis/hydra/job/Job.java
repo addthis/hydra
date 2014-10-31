@@ -102,7 +102,7 @@ public final class Job implements IJob {
     @FieldConfig private boolean wasStopped;
     @FieldConfig private int maxSimulRunning;
     @FieldConfig private String minionType;
-    @FieldConfig private int retries;
+    @FieldConfig private boolean autoRetry;
     @FieldConfig private JobQueryConfig queryConfig;
 
 
@@ -161,7 +161,7 @@ public final class Job implements IJob {
         this.dailyBackups = job.getDailyBackups();
         this.weeklyBackups = job.getWeeklyBackups();
         this.monthlyBackups = job.getMonthlyBackups();
-        this.retries = job.getRetries();
+        this.autoRetry = job.getAutoRetry();
         this.replicas = job.getReplicas();
         this.queryConfig = job.getQueryConfig();
         this.dontAutoBalanceMe = job.getDontAutoBalanceMe();
@@ -691,13 +691,13 @@ public final class Job implements IJob {
     }
 
     @Override
-    public int getRetries() {
-        return retries;
+    public boolean getAutoRetry() {
+        return autoRetry;
     }
 
     @Override
-    public void setRetries(int retries) {
-        this.retries = retries;
+    public void setAutoRetry(boolean autoRetry) {
+        this.autoRetry = autoRetry;
     }
 
     private int countErrorTasks() {

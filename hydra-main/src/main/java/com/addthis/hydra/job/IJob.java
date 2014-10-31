@@ -21,7 +21,7 @@ import com.addthis.maljson.JSONObject;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties({"stomp", "killSignal", "readOnlyReplicas", "strictReplicas", "hadMoreData",
-                       "replicationFactor", "alerts", "properties", "backups", "submitCommand"})
+                       "replicationFactor", "alerts", "properties", "backups", "submitCommand", "retries"})
 public interface IJob extends Comparable<IJob> {
 
     public String getId();
@@ -159,7 +159,7 @@ public interface IJob extends Comparable<IJob> {
 
     public void setMinionType(String minionType);
 
-    public int getRetries();
+    public boolean getAutoRetry();
 
-    public void setRetries(int retries);
+    public void setAutoRetry(boolean autoRetry);
 }

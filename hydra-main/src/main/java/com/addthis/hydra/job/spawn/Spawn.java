@@ -2767,9 +2767,9 @@ public class Spawn implements Codable, AutoCloseable {
                 job.getDailyBackups(),
                 job.getWeeklyBackups(),
                 job.getMonthlyBackups(),
-                getTaskReplicaTargets(task, task.getAllReplicas())
+                getTaskReplicaTargets(task, task.getAllReplicas()),
+                job.getAutoRetry()
                 );
-        kick.setRetries(job.getRetries());
         return kick;
     }
 
@@ -2824,9 +2824,9 @@ public class Spawn implements Codable, AutoCloseable {
                 job.getDailyBackups(),
                 job.getWeeklyBackups(),
                 job.getMonthlyBackups(),
-                getTaskReplicaTargets(task, task.getAllReplicas())
+                getTaskReplicaTargets(task, task.getAllReplicas()),
+                job.getAutoRetry()
         );
-        kick.setRetries(job.getRetries());
 
         // Creating a runnable to expand the job and send kick message outside of the main queue-iteration thread.
         // Reason: the jobLock is held for duration of the queue-iteration and expanding some (kafka) jobs can be very

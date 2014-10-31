@@ -124,7 +124,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         job.setDontAutoBalanceMe(KVUtils.getBooleanValue(kv, job.getDontAutoBalanceMe(), "dontAutoBalanceMe"));
         job.setMaxSimulRunning(kv.getIntValue("maxSimulRunning", job.getMaxSimulRunning()));
         job.setMinionType(kv.getValue("minionType", job.getMinionType()));
-        job.setRetries(kv.getIntValue("retries", job.getRetries()));
+        job.setAutoRetry(KVUtils.getBooleanValue(kv, job.getAutoRetry(), "autoRetry"));
     }
 
     private void updateQueryConfig(KVPairs kv, IJob job) {

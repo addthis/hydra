@@ -38,7 +38,7 @@ public class ZnodeJob implements IJob {
 
     // Codable bundle of basic state
     @JsonIgnoreProperties({"stomp", "killSignal", "readOnlyReplicas", "strictReplicas", "hadMoreData",
-                           "replicationFactor", "alerts", "properties", "backups", "submitCommand"})
+                           "replicationFactor", "alerts", "properties", "backups", "submitCommand", "retries"})
     public static class RootZnodeData {
 
         @FieldConfig private JobState state;
@@ -84,7 +84,7 @@ public class ZnodeJob implements IJob {
         @FieldConfig private int monthlyBackups;
         @FieldConfig private int maxSimulRunning;
         @FieldConfig private String minionType;
-        @FieldConfig private int retries;
+        @FieldConfig private boolean autoRetry;
 
         @FieldConfig private ArrayList<JobTask> tasks;
 
@@ -122,7 +122,7 @@ public class ZnodeJob implements IJob {
                     .add("tasks", tasks == null ? 0 : tasks.size())
                     .add("maxSimulRunning", maxSimulRunning)
                     .add("minionType", minionType)
-                    .add("retries", retries)
+                    .add("autoRetry", autoRetry)
                     .toString();
         }
     }
@@ -196,7 +196,7 @@ public class ZnodeJob implements IJob {
         rznData.tasks = new ArrayList<>(job.getCopyOfTasks());
         rznData.maxSimulRunning = job.getMaxSimulRunning();
         rznData.minionType = job.getMinionType();
-        rznData.retries = job.getRetries();
+        rznData.autoRetry = job.getAutoRetry();
 
         setTasks(job.getCopyOfTasks());
 
@@ -524,13 +524,13 @@ public class ZnodeJob implements IJob {
     }
 
     @Override
-    public int getRetries() {
-        return rznData.retries;
+    public boolean getAutoRetry() {
+        return rznData.autoRetry;
     }
 
     @Override
-    public void setRetries(int retries) {
-        rznData.retries = retries;
+    public void setAutoRetry(boolean autoRetry) {
+        rznData.autoRetry = autoRetry;
     }
 
 

@@ -15,6 +15,7 @@ package com.addthis.hydra.job.minion;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
@@ -80,31 +81,7 @@ public abstract class MinionWorkItem implements Runnable {
         task.allocate();
         boolean interrupted = false;
         try {
-            long start = System.currentTimeMillis();
-            if (execute) {
-                task.setProcess(Runtime.getRuntime().exec("sh " + runFile));
-            }
-            for (int j = 0; j < numPidFileTries && !pidFile.exists(); j++) {
-                // Watch for the pid file. If it still doesn't exist after some time, fail noisily.
-                Thread.sleep(1000);
-            }
-            if (!pidFile.exists()) {
-                // We must interrupt the task process so that the replicate won't suddenly kick in at a future time
-                task.interruptProcess();
-                String msg = "failed to find pid file for " + task.getName() + " at " + pidFile + " after waiting";
-                throw new RuntimeException(msg);
-            }
-            long waited = System.currentTimeMillis() - start;
-            String pid = null;
-            try {
-                pid = Bytes.toString(Files.read(pidFile)).trim();
-            } catch (FileNotFoundException ex) {
-                log.warn("{} pid file not found", task.getName());
-            }
-            if (waited > 500) {
-                log.warn("{} pid [{}] after {}ms", task.getName(), pid, waited);
-            }
-            log.debug("{} waiting for exit pid={}", task.getName(), pid);
+            startAndWaitForPid();
             exit = waitForProcessExit();
         } catch (InterruptedException ie) {
             interrupted = true;
@@ -123,7 +100,35 @@ public abstract class MinionWorkItem implements Runnable {
         log.warn("{} exited with {}", task.getName(), exit);
     }
 
-    protected int waitForProcessExit() {
+    protected void startAndWaitForPid() throws IOException, InterruptedException {
+        long start = System.currentTimeMillis();
+        if (execute) {
+            task.setProcess(Runtime.getRuntime().exec("sh " + runFile));
+        }
+        for (int j = 0; j < numPidFileTries && !pidFile.exists(); j++) {
+            // Watch for the pid file. If it still doesn't exist after some time, fail noisily.
+            Thread.sleep(1000);
+        }
+        if (!pidFile.exists()) {
+            // We must interrupt the task process so that the replicate won't suddenly kick in at a future time
+            task.interruptProcess();
+            String msg = "failed to find pid file for " + task.getName() + " at " + pidFile + " after waiting";
+            throw new RuntimeException(msg);
+        }
+        long waited = System.currentTimeMillis() - start;
+        String pid = null;
+        try {
+            pid = Bytes.toString(Files.read(pidFile)).trim();
+        } catch (FileNotFoundException ex) {
+            log.warn("{} pid file not found", task.getName());
+        }
+        if (waited > 500) {
+            log.warn("{} pid [{}] after {}ms", task.getName(), pid, waited);
+        }
+        log.debug("{} waiting for exit pid={}", task.getName(), pid);
+    }
+
+    protected int waitForProcessExit() throws Exception {
         int exit = 0;
         String exitString = exitWait();
         if (exitString != null) {

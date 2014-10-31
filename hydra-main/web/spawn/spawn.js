@@ -1783,7 +1783,7 @@ function fillFormsFromJob(uuid, clone) {
 	$('form_job_dailyBackups').value = typeof job.dailyBackups == 'undefined' ? '3' : job.dailyBackups;
 	$('form_job_weeklyBackups').value = typeof job.weeklyBackups == 'undefined' ? '0' : job.weeklyBackups;
 	$('form_job_monthlyBackups').value = typeof job.monthlyBackups == 'undefined' ? '0' : job.monthlyBackups;
-	$('form_job_retries').value = typeof job.retries == 'undefined' ? '0' : job.retries;
+	$('form_job_autoRetry').value = typeof job.autoRetry == 'undefined' ? '0' : job.autoRetry ? '1' : '0';
 	$('form_job_replicas').value = typeof job.replicas == 'undefined' ? defaultReplicaCount.toString() : job.replicas;
 	$('form_job_readOnlyReplicas').value = typeof job.readOnlyReplicas == 'undefined' ? '0' : job.readOnlyReplicas;
 	$('form_job_dontDeleteMe').value = typeof job.dontDeleteMe == 'undefined' ? '0' : job.dontDeleteMe ? '1' : '0';

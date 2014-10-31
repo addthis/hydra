@@ -58,6 +58,7 @@ import com.addthis.hydra.job.spawn.SystemManager;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.web.JobRequestHandler;
 import com.addthis.hydra.job.web.JobRequestHandlerImpl;
+import com.addthis.hydra.job.web.KVUtils;
 import com.addthis.hydra.job.web.old.SpawnHttp.HTTPLink;
 import com.addthis.hydra.job.web.old.SpawnHttp.HTTPService;
 import com.addthis.maljson.JSONArray;
@@ -1122,7 +1123,7 @@ public class SpawnManager {
         job.setDontAutoBalanceMe(kv.getIntValue("dontAutoBalanceMe", job.getDontAutoBalanceMe() ? 1 : 0) > 0);
         job.setMaxSimulRunning(kv.getIntValue("maxSimulRunning", job.getMaxSimulRunning()));
         job.setMinionType(kv.getValue("minionType", job.getMinionType()));
-        job.setRetries(kv.getIntValue("retries", job.getRetries()));
+        job.setAutoRetry(KVUtils.getBooleanValue(kv, job.getAutoRetry(), "autoRetry"));
 
         // queryConfig paramters
         JobQueryConfig jqc = null;

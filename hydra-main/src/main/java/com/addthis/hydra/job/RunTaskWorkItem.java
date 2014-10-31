@@ -16,28 +16,36 @@ package com.addthis.hydra.job;
 import java.io.File;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import com.addthis.hydra.job.minion.JobTask;
 import com.addthis.hydra.job.minion.MinionWorkItem;
+
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Meter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RunTaskWorkItem extends MinionWorkItem {
-
     private static final Logger log = LoggerFactory.getLogger(RunTaskWorkItem.class);
+
+    private static final Meter autoRetryMeter = Metrics.newMeter(RunTaskWorkItem.class,
+                                                                 "autoRetries", "autoRetries", TimeUnit.HOURS);
+
     private Integer port = null;
     private int maxStops = 2;
-    private int retries;
+
+    private final boolean autoRetry;
 
     public RunTaskWorkItem(File pidFile,
                            File runFile,
                            File doneFile,
                            JobTask task,
                            boolean execute,
-                           int retries) {
+                           boolean autoRetry) {
         super(pidFile, runFile, doneFile, task, execute);
-        this.retries = retries;
+        this.autoRetry = autoRetry;
     }
 
     @Override
@@ -91,42 +99,49 @@ public class RunTaskWorkItem extends MinionWorkItem {
     }
 
     /**
-     * If a task has retries specified, revert further and further back until the task gets exit=0 (success)
-     * or all retries have been exhausted.
+     * If a task has autoRetry enabled, sometimes revert + retry to get around transient errors. The conditions under
+     * which or the number of times that revert + retry may be performed is undefined and may vary over time. AutoRetry
+     * should only be enabled on jobs where this is acceptable.
      */
     @Override
-    public int waitForProcessExit() {
-        int lastExit = 0;
-        List<String> backups = task.getBackupsOrdered();
-        // When retries=0, the following loop should be run exactly once (thus the <=)
-        for (int i = 0; i <= retries; i++) {
-            if (i > 0) {
-                // After failing at least once, put more info into the minion log
-                log.warn("[exit.wait] attempting retry #{} for {} due to failed exit={}", i, task.getName(), lastExit);
-                if (i >= backups.size()) {
-                    log.warn("[exit.wait] exhausted backups for {}; sending error code", task.getName());
-                    break;
-                } else {
-                    String backupName = backups.get(i);
-                    log.warn("[exit.wait] restoring {} to {} and retrying, delete={}",
-                             task.getJobDir(), backupName, doneFile.delete());
-                    File backupDir = new File(task.getJobDir().getParentFile(), backupName);
-                    task.promoteBackupToLive(backupDir, task.getLiveDir());
-                }
-            }
-            // Wait for the job.done to exist and attempt to parse the exit code
-            String exitString = exitWait();
-            if (exitString != null) {
-                lastExit = getExitStatusFromString(exitString);
-            } else {
-                log.warn("{} exited with null", task.getName());
-            }
+    public int waitForProcessExit() throws Exception {
+        int lastExit = waitAndGetExit();
+        if (autoRetry
+            // Only auto retry for exit codes that java returns for JVM errors (128 + 6 (SIGABRT))
+            && (lastExit == 134)
             // Do not retry if the task was manually killed
-            if ((lastExit == 0) || task.wasStopped()) {
-                return lastExit;
+            && !task.wasStopped()) {
+            List<String> backups = task.getBackupsOrdered();
+            // After failing at least once, put more info into the minion log
+            log.warn("[exit.wait] attempting retry for {} due to failed exit={}", task.getName(), lastExit);
+            if (!backups.isEmpty()) {
+                String backupName = backups.get(0);
+                log.warn("[exit.wait] restoring {} to {} and retrying, delete={}",
+                         task.getJobDir(), backupName, doneFile.delete());
+                File backupDir = new File(task.getJobDir().getParentFile(), backupName);
+                if (task.promoteBackupToLive(backupDir, task.getLiveDir())) {
+                    autoRetryMeter.mark();
+                    startAndWaitForPid();
+                    lastExit = waitAndGetExit();
+                } else {
+                    log.warn("cancelling retry for {} due to failed revert", task.getName());
+                }
+            } else {
+                log.warn("[exit.wait] exhausted backups for {}; sending error code", task.getName());
             }
         }
         return lastExit;
+    }
+
+    private int waitAndGetExit() {
+        // Wait for the job.done to exist and attempt to parse the exit code
+        String exitString = exitWait();
+        if (exitString != null) {
+            return getExitStatusFromString(exitString);
+        } else {
+            log.warn("{} exited with null", task.getName());
+            return -1;
+        }
     }
 
     @Override
