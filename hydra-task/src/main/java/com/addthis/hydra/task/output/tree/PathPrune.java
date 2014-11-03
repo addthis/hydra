@@ -13,7 +13,8 @@
  */
 package com.addthis.hydra.task.output.tree;
 
-import java.util.Map;
+import javax.annotation.Nullable;
+
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.ClosableIterator;
@@ -22,13 +23,17 @@ import com.addthis.basis.util.JitterClock;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.data.tree.DataTreeNode;
-import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.TreeNodeList;
 import com.addthis.hydra.data.tree.prop.DataTime;
 
+import com.google.common.annotations.VisibleForTesting;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 /**
  * This {@link PathElement PathElement} <span class="hydra-summary">eliminates child nodes based on a time stamp</span>.
@@ -46,31 +51,30 @@ import org.slf4j.LoggerFactory;
  * @hydra-name prune
  */
 public class PathPrune extends PathElement {
-
     private static final Logger logger = LoggerFactory.getLogger(PathPrune.class);
 
-    /**
-     * Maximum age in milliseconds.
-     */
-    @Time(TimeUnit.MILLISECONDS)
-    @FieldConfig(codable = true)
-    private long ttl;
+    /** Maximum age in milliseconds. */
+    @Time(TimeUnit.MILLISECONDS) @FieldConfig private long ttl;
+
+    /** Property key name for extracting the time stamp of a node. Default is "time". */
+    @FieldConfig private String timePropKey = "time";
+    @FieldConfig private boolean ignoreMissingTimeProp = false;
 
     /**
-     * Property key name for extracting the time stamp of a node. Default is "time".
+     * When traversing the tree in search of the nodes to prune, if this parameter is a positive integer then begin
+     * the traversal this many levels lower than the current location. Default is zero.
      */
-    @FieldConfig(codable = true)
-    private String timePropKey = "time";
+    @FieldConfig private int relativeDown = 0;
 
-    /**
-     * When traversing the tree in search of the nodes to prune,
-     * if this parameter is a positive integer then begin
-     * the traversal this many levels lower than the
-     * current location. Default is zero.
-     */
-    @FieldConfig(codable = true)
-    private int relativeDown = 0;
+    @Nullable private final DateTimeFormatter nameFormat;
 
+    public PathPrune(@Nullable @JsonProperty("nameFormat") String nameFormatString) {
+        if (nameFormatString != null) {
+            this.nameFormat = DateTimeFormat.forPattern(nameFormatString);
+        } else {
+            this.nameFormat = null;
+        }
+    }
 
     // Is it better to try to do the pruning in this method or
     // whatever is getting the TreeNodeList back?
@@ -102,24 +106,35 @@ public class PathPrune extends PathElement {
         int total = 0;
         while (keyNodeItr.hasNext()) {
             DataTreeNode treeNode = keyNodeItr.next();
-            Map<String, TreeNodeData> dataMap = treeNode.getDataMap();
-            if (dataMap != null) {
-                TreeNodeData timeNodeData = dataMap.get(timePropKey);
-                DataTime dt = (DataTime) timeNodeData;
-                if (dt != null && now - dt.last() > ttl) {
-                    root.deleteNode(treeNode.getName());
-                    deleted++;
-                } else {
-                    kept++;
-                }
-                total++;
-                if (total % 100000 == 0) {
-                    logger.info("Iterating through children of {}, deleted: {} kept: {}", new Object[]{root.getName(), deleted, kept});
-                }
+            long nodeTime = getNodeTime(treeNode);
+            if ((nodeTime > 0) && ((now - nodeTime) > ttl)) {
+                root.deleteNode(treeNode.getName());
+                deleted++;
+            } else {
+                kept++;
+            }
+            total++;
+            if ((total % 100000) == 0) {
+                logger.info("Iterating through children of {}, deleted: {} kept: {}", root.getName(), deleted, kept);
             }
         }
-        logger.info("Iterated through children of {}, deleted: {} kept: {}", new Object[]{root.getName(), deleted, kept});
+        logger.info("Iterated through children of {}, deleted: {} kept: {}", root.getName(), deleted, kept);
         keyNodeItr.close();
     }
 
+    @VisibleForTesting long getNodeTime(DataTreeNode treeNode) {
+        if (nameFormat != null) {
+            return nameFormat.parseMillis(treeNode.getName());
+        } else {
+            DataTime dt = (DataTime) treeNode.getData(timePropKey);
+            if (dt == null) {
+                if (ignoreMissingTimeProp) {
+                    return -1;
+                }
+                throw new RuntimeException("missing time attachment with key " + timePropKey);
+            } else {
+                return dt.last();
+            }
+        }
+    }
 }
