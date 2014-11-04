@@ -14,6 +14,7 @@
 package com.addthis.hydra.data.query.engine;
 
 import java.io.File;
+import java.io.IOException;
 
 import java.util.concurrent.TimeUnit;
 
@@ -66,7 +67,7 @@ public class QueryEngineDirectory extends QueryEngine {
     }
 
     @Override
-    public void close() {
+    public void close() throws IOException {
         super.close();
         currentlyOpenEngines.dec();
     }

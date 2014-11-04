@@ -24,6 +24,8 @@ import com.addthis.basis.util.Parameter;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.VirtualFileSystem;
 
+import com.google.common.base.Throwables;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +53,11 @@ public class LiveMeshyServer extends MeshyServer {
     @Override
     public void close() {
         liveClosed.set(true);
-        liveQueryFileSystem.getFileRoot().engine().closeWhenIdle();
+        try {
+            liveQueryFileSystem.getFileRoot().engine().closeWhenIdle();
+        } catch (Exception ex) {
+            throw Throwables.propagate(ex);
+        }
         log.info("Shutting down live query server. Disabled finding this job from mqm.");
         try {
             log.info("Going to wait up to {} seconds for any queries still running.", LIVE_QUERY_WAIT);

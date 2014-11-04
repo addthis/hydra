@@ -14,6 +14,7 @@
 package com.addthis.hydra.data.tree;
 
 import java.io.File;
+import java.io.IOException;
 
 import com.addthis.hydra.data.tree.concurrent.ConcurrentTree;
 
@@ -24,7 +25,7 @@ public class TreeIntegrity {
 
     private static final Logger log = LoggerFactory.getLogger(TreeIntegrity.class);
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         File root = new File(args[0]);
         if (args.length > 1 && args[1].equals("repair")) {
             ConcurrentTree tree = null;

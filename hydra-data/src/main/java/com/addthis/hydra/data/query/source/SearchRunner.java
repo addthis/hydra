@@ -107,7 +107,12 @@ class SearchRunner implements Runnable {
             }
             if (finalEng != null) {
                 log.debug("Releasing engine: {}", finalEng);
-                finalEng.release();
+                try {
+                    finalEng.release();
+                } catch (Throwable t) {
+                    log.warn("Generic Error while closing query engine.", t);
+                    reportError(t);
+                }
             }
         }
     }

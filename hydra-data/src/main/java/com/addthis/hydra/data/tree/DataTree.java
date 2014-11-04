@@ -19,7 +19,7 @@ import com.addthis.hydra.store.db.CloseOperation;
 
 public interface DataTree extends DataTreeNode {
 
-    public void close();
+    public void close() throws IOException;
 
     /**
      * Close the tree.
@@ -27,7 +27,7 @@ public interface DataTree extends DataTreeNode {
      * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
      * @param operation optionally test or repair the berkeleyDB.
      */
-    public void close(boolean cleanLog, CloseOperation operation);
+    public void close(boolean cleanLog, CloseOperation operation) throws IOException;
 
     public void sync() throws IOException;
 

@@ -50,7 +50,11 @@ class EngineRemovalListener implements RemovalListener<String, QueryEngine> {
         QueryEngine currentEngine = engineCache.loadingEngineCache.asMap().get(notification.getKey());
         if (currentEngine != qe) {
             assert qe != null; //we only use strong references
-            qe.closeWhenIdle();
+            try {
+                qe.closeWhenIdle();
+            } catch (Throwable t) {
+                log.error("Generic Error while closing Engine", t);
+            }
             if (currentEngine == null) {
                 directoriesEvicted.mark();
             }

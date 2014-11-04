@@ -272,13 +272,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         }
     }
 
-    protected void closePreOpenedQueue() {
+    protected void closePreOpenedQueue() throws IOException {
         for (Wrap wrap : preOpened) {
-            try {
-                wrap.close();
-            } catch (IOException e) {
-                log.warn("", e);
-            }
+            wrap.close();
         }
     }
 
@@ -359,13 +355,12 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         }
     }
 
-    protected void shutdownBody() {
+    protected void shutdownBody() throws IOException {
         // shutdown adds termBundle to queue
         pushTermBundle();
         if (runningThreadCountDownLatch != null) {
             boolean success = false;
-            log.info("Waiting up to {} seconds for outstanding threads to complete.",
-                    latchTimeout);
+            log.info("Waiting up to {} seconds for outstanding threads to complete.", latchTimeout);
             try {
                 success = runningThreadCountDownLatch.await(latchTimeout, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
@@ -384,11 +379,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         //we may overwrite the local source variable and in doing so throw away the Persistance flag
         PersistentStreamFileSource baseSource = getSource();
         if (baseSource != null) {
-            try {
-                baseSource.shutdown();
-            } catch (IOException e) {
-                log.warn("", e);
-            }
+            baseSource.shutdown();
         } else {
             log.warn("getSource() returned null and no source was shutdown");
         }
@@ -406,7 +397,12 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
              * and place synchronization constructs at the end of the overridden
              * method.
              */
-            shutdownBody();
+            try {
+                shutdownBody();
+            } catch (Throwable t) {
+                log.error("unrecoverable error in stream file data source shutdown method. immediately halting jvm", t);
+                Runtime.getRuntime().halt(1);
+            }
         }
     }
 
@@ -731,11 +727,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 log.debug("[{}] read", workerId);
             } finally {
                 if (wrap != null) {
-                    try {
-                        wrap.close();
-                    } catch (Exception ex) {
-                        log.warn("", ex);
-                    }
+                    wrap.close();
                 }
             }
         }

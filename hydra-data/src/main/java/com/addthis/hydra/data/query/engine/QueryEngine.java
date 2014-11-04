@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.query.engine;
 
+import java.io.IOException;
+
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -95,7 +97,7 @@ public class QueryEngine {
 
     /**
      */
-    public synchronized void release() {
+    public synchronized void release() throws IOException {
         int uv = used.decrementAndGet();
         assert (uv >= 0);
         if (uv == 0 && closeWhenIdle) {
@@ -106,7 +108,7 @@ public class QueryEngine {
         }
     }
 
-    public synchronized void closeWhenIdle() {
+    public synchronized void closeWhenIdle() throws IOException {
         closeWhenIdle = true;
         if (used.get() == 0) {
             close();
@@ -130,7 +132,7 @@ public class QueryEngine {
     /**
      * Calls close on the tree object
      */
-    public void close() {
+    public void close() throws IOException {
         synchronized (this) {
             try {
                 if (isClosed.compareAndSet(false, true) && isOpen.compareAndSet(true, false)) {

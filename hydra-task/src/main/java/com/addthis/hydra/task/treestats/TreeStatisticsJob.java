@@ -15,8 +15,6 @@ package com.addthis.hydra.task.treestats;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -27,9 +25,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.data.tree.concurrent.ConcurrentTree;
 import com.addthis.hydra.data.tree.ReadTree;
 import com.addthis.hydra.data.tree.TreeStatistics;
+import com.addthis.hydra.data.tree.concurrent.ConcurrentTree;
 import com.addthis.hydra.store.db.SettingsDB;
 import com.addthis.hydra.store.db.SettingsJE;
 import com.addthis.hydra.task.run.TaskRunConfig;
@@ -37,6 +35,7 @@ import com.addthis.hydra.task.run.TaskRunnable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * This Hydra job is <span class="hydra-summary">a diagnostic utility for map jobs</span>.
  * <p/>
@@ -160,16 +159,17 @@ public class TreeStatisticsJob implements Runnable, TaskRunnable {
             statistics.generateStatistics();
 
 
-        } catch (Exception ex) {
-            System.err.println(ex.toString());
-            StringWriter sw = new StringWriter();
-            PrintWriter pw = new PrintWriter(sw);
-            ex.printStackTrace(pw);
-            System.err.println(sw.toString());
+        } catch (Throwable t) {
+            log.error("unhandled error", t);
             failure = true;
         } finally {
             if (outputTree != null) {
-                outputTree.close();
+                try {
+                    outputTree.close();
+                } catch (Throwable t) {
+                    log.error("unhandled error", t);
+                    failure = true;
+                }
             }
 
             if (inputTree != null) {
@@ -178,18 +178,11 @@ public class TreeStatisticsJob implements Runnable, TaskRunnable {
 
             if (failure) {
                 /**
-                 * We need to exit in a separate thread. We setup a
-                 * shutdown hook that invokes join on this thread and
-                 * that was a bad idea.
-                 * An alternative to System.exit would be
-                 * ideal but that would require some more invasive
-                 * changes.
-                 **/
-                new Thread(new Runnable() {
-                    public void run() {
-                        System.exit(1);
-                    }
-                }, "TreeStatisticsExit").start();
+                 * We need to exit in a separate thread. We setup a shutdown hook that invokes join on
+                 * this thread and that was a bad idea. An alternative to System.exit would be ideal
+                 * but that would require some more invasive changes.
+                 */
+                new Thread(() -> System.exit(1), "TreeStatisticsExit").start();
             }
         }
     }

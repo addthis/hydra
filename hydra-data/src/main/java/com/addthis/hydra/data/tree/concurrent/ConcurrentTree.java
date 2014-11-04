@@ -452,43 +452,29 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
      * @param operation optionally test or repair the berkeleyDB.
      */
     @Override
-    public void close(boolean cleanLog, CloseOperation operation) {
+    public void close(boolean cleanLog, CloseOperation operation) throws IOException {
         if (!closed.compareAndSet(false, true)) {
             log.trace("already closed");
             return;
         }
-        if (log.isDebugEnabled()) {
-            log.debug("closing " + this);
-        }
-        try {
-            waitOnDeletions();
-        } catch (Exception e) {
-            log.warn("", e);
-        }
+        log.debug("closing {}", this);
+        waitOnDeletions();
         if (treeRootNode != null) {
             treeRootNode.markChanged();
             treeRootNode.release();
             if (treeRootNode.getLeaseCount() != 0) {
-                log.warn("invalid root state on shutdown : {}", treeRootNode);
+                throw new IllegalStateException("invalid root state on shutdown : " + treeRootNode);
             }
         }
         if (treeTrashNode != null) {
             treeTrashNode.markChanged();
             treeTrashNode.release();
         }
-        try {
-            sync();
-        } catch (Exception e) {
-            log.warn("", e);
-        }
+        sync();
         if (source != null) {
-            try {
-                int status = source.close(cleanLog, operation);
-                if (status != 0) {
-                    Runtime.getRuntime().halt(status);
-                }
-            } catch (Exception ex) {
-                log.warn("", ex);
+            int status = source.close(cleanLog, operation);
+            if (status != 0) {
+                throw new RuntimeException("page db close returned a non-zero exit code : " + status);
             }
         }
         if (logger != null) {
@@ -498,7 +484,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
 
     @Override
-    public void close() {
+    public void close() throws IOException {
         close(false, CloseOperation.NONE);
     }
 
