@@ -66,7 +66,7 @@ public class OpDateFormat extends AbstractRowOp {
                 for (int i = 0; i < cval.length; i++) {
                     incols[i] = Integer.parseInt(cval[i]);
                 }
-                outcol = opt.length > 2 ? Integer.parseInt(opt[3]) : incols[0];
+                outcol = opt.length > 3 ? Integer.parseInt(opt[3]) : incols[0];
                 if ((fromMillis = parseMillis(opt[1])) == 0) {
                     inFormat = DateTimeFormat.forPattern(opt[1]);
                 }
