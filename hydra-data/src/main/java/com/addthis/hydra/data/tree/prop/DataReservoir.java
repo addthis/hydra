@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import java.math.RoundingMode;
+import java.util.regex.Pattern;
 
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Varint;
@@ -95,10 +96,11 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * {@code /delta:+hits/measurement:+hits/mean:+hits/stddev:+hits/mode:+hits/percentile:+hits}.
      *
      * <p>The data attachment can also be queried with the notation
-     * {@code /$name=epoch=N~percentile=N~obs=N~min=N~mode=modelfit}.
-     * The query parameters are identical to those from the previous paragraph.
-     * The output returned is a value array with six elements. The contents of the
-     * array are ["delta", "measurement", "mean", "stddev", "mode", "percentile"].
+     * {@code /$name=epoch||N~percentile||N~obs||N~min||N~mode||modelfit}.
+     * The query parameters are identical to those from the previous paragraph
+     * with the exception that "=" separator has been replaced with the "||" separator
+     * (sideways equals?). The output returned is a value array with six elements.
+     * The contents of the array are ["delta", "measurement", "mean", "stddev", "mode", "percentile"].
      *
      * @user-reference
      * @hydra-name reservoir
@@ -378,7 +380,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         }
     }
 
-    private ValueObject generateValueObject(String key) {
+    private ValueObject generateValueObject(String key, String separator) {
         long targetEpoch = -1;
         int numObservations = -1;
         double sigma = Double.POSITIVE_INFINITY;
@@ -390,9 +392,9 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         if (key == null) {
             return null;
         }
-        String[] kvpairs = key.split("~");
+        String[] kvpairs = key.split(Pattern.quote("~"));
         for(String kvpair : kvpairs) {
-            String[] kv = kvpair.split("=");
+            String[] kv = kvpair.split(Pattern.quote(separator));
             if (kv.length == 2) {
                 String kvkey = kv[0];
                 String kvvalue = kv[1];
@@ -467,7 +469,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         if (key == null) {
             return null;
         }
-        ValueObject value = generateValueObject(key);
+        ValueObject value = generateValueObject(key, "||");
         if (value instanceof DataReservoirValue) {
             DataReservoirValue dataReservoirValue = (DataReservoirValue) value;
             value = dataReservoirValue.setDoubleToLongClone(true).setRawClone(false);
@@ -480,7 +482,7 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
         if (key == null) {
             return null;
         }
-        DataReservoirValue value = (DataReservoirValue) generateValueObject(key);
+        DataReservoirValue value = (DataReservoirValue) generateValueObject(key, "=");
         return computeResult(value);
     }
 
