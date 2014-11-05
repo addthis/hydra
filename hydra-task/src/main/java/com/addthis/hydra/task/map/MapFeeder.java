@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -114,7 +115,12 @@ public final class MapFeeder implements Runnable {
             joinProcessors();
             log.info("exit {} threads. bundles read {} processed {}",
                      feeders, countFormat.format(totalReads), countFormat.format(processed));
-            task.taskComplete();
+
+            // run task::complete in a different thread to isolate it from interrupts. ie. "taskCompleteUninterruptibly"
+            CompletableFuture<Void> taskCompleteFuture = CompletableFuture.runAsync(task::taskComplete);
+            // join awaits completion, is uninterruptible, and will propogate any exception
+            taskCompleteFuture.join();
+
             // critical to get any file meta data written before process exits
             MuxFileDirectoryCache.waitForWriteClosure();
         } catch (Throwable t) {
