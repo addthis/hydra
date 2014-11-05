@@ -51,7 +51,7 @@ public final class Job implements IJob {
 
     private static final Logger log = LoggerFactory.getLogger(Job.class);
     private static final Comparator<JobTask> taskNodeComparator =
-            (jobTask, jobTask1) -> Integer.compare(jobTask.getTaskID(), jobTask1.getTaskID());
+            (t1, t2) -> Integer.compare(t1.getTaskID(), t2.getTaskID());
 
     @FieldConfig private int state;
     @FieldConfig private int countActiveTasks;
@@ -444,7 +444,10 @@ public final class Job implements IJob {
     }
 
     public List<JobTask> getCopyOfTasksSorted() {
-        List<JobTask> tasksCopy = new ArrayList<>(getCopyOfTasks());
+        if (nodes == null) {
+            nodes = new ArrayList<>();
+        }
+        List<JobTask> tasksCopy = Lists.newArrayList(nodes);
         Collections.sort(tasksCopy, taskNodeComparator);
         return tasksCopy;
     }

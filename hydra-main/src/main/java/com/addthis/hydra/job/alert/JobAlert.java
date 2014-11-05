@@ -16,6 +16,7 @@ package com.addthis.hydra.job.alert;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -175,8 +176,8 @@ public class JobAlert implements Codable {
         switch (type) {
             case ON_ERROR:
                 if (job.getState() == JobState.ERROR) {
-                    return job.getCopyOfTasks().stream()
-                              .map(task -> task.getTaskID() + " -> " + task.getErrorCode())
+                    return job.getCopyOfTasksSorted().stream()
+                              .map(task -> "Task " + task.getTaskID() + " -> " + task.getErrorCode())
                               .collect(Collectors.joining("\n"));
                 }
                 break;
@@ -189,7 +190,7 @@ public class JobAlert implements Codable {
                 if ((job.getState() == JobState.RUNNING) && (job.getStartTime() != null)) {
                     long runningTime = currentTime - job.getStartTime();
                     if (runningTime > TimeUnit.MINUTES.toMillis(timeout)) {
-                        return String.valueOf(runningTime);
+                        return "Job startTime is " + new Date(job.getStartTime());
                     }
                 }
                 break;
@@ -197,7 +198,7 @@ public class JobAlert implements Codable {
                 if ((job.getState() != JobState.RUNNING) && (job.getEndTime() != null)) {
                     long rekickTime = currentTime - job.getEndTime();
                     if (rekickTime > TimeUnit.MINUTES.toMillis(timeout)) {
-                        return String.valueOf(rekickTime);
+                        return "Job endTime is " + new Date(job.getEndTime());
                     }
                 }
                 break;

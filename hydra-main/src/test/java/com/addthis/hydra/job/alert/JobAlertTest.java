@@ -89,4 +89,25 @@ public class JobAlertTest {
         job.setState(jobState);
         return job;
     }
+
+    /** Error message should stay unchanged on repeated scan of triggered runtime or rekick exceeded alert */
+    @Test
+    public void noErrorChangeOnTriggeredTimeoutAlertRescan() throws Exception {
+        JobAlert runtimeAlert = decodeObject(JobAlert.class,
+                                             "alertId = sampleid, type = 2, email = \"someone@domain.com\", " +
+                                             "description = runtime alert, jobIds = [j1], timeout = 1000");
+        JobAlert rekickAlert = decodeObject(JobAlert.class,
+                                             "alertId = sampleid, type = 3, email = \"someone@domain.com\", " +
+                                             "description = rekick alert, jobIds = [j1], timeout = 1000");
+        Job j1 = createJobWithState(JobState.RUNNING);
+        j1.setStartTime(0L);
+        j1.setEndTime(1L);
+        String runtimeAlertMsg1 = runtimeAlert.alertActiveForJob(null, j1);
+        String rekickAlertMsg1 = runtimeAlert.alertActiveForJob(null, j1);
+        Thread.sleep(10);
+        String runtimeAlertMsg2 = runtimeAlert.alertActiveForJob(null, j1);
+        String rekickAlertMsg2 = runtimeAlert.alertActiveForJob(null, j1);
+        assertEquals("runtime alert message unchanged", runtimeAlertMsg1, runtimeAlertMsg2);
+        assertEquals("rekick alert message unchanged", rekickAlertMsg1, rekickAlertMsg2);
+    }
 }

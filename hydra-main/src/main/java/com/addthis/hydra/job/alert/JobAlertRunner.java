@@ -227,17 +227,17 @@ public class JobAlertRunner {
         String subject = String.format("%s %s - %s - %s", reason, jobAlert.getTypeString(),
                                        JobAlertRunner.getClusterHead(), errors.keySet());
         log.info("Alerting {} :: jobs : {} : {}", jobAlert.email, errors.keySet(), reason);
-        StringBuilder sb = new StringBuilder();
-        sb.append("Alert link : http://" + clusterHead + ":5052/spawn2/index.html#alerts/" + jobAlert.alertId + " \n");
+        StringBuilder sb = new StringBuilder(subject + "\n");
+        sb.append("Alert link : http://" + clusterHead + ":5052/spawn2/index.html#alerts/" + jobAlert.alertId + "\n");
         String description = jobAlert.description;
         if (Strings.isNotEmpty(description)) {
             sb.append("Alert Description : " + description + "\n");
         }
         for (Map.Entry<String, String> entry : errors.entrySet()) {
             sb.append(summary(spawn.getJob(entry.getKey())) + "\n");
-            sb.append("Error Message \n");
+            sb.append("Error Message\n");
             sb.append(entry.getValue());
-            sb.append("------------------------------ \n");
+            sb.append("\n------------------------------\n");
         }
         EmailUtil.email(jobAlert.email, subject, sb.toString());
     }
