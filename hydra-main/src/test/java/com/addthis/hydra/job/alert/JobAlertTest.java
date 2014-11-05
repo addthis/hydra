@@ -14,6 +14,8 @@
 
 package com.addthis.hydra.job.alert;
 
+import java.net.SocketTimeoutException;
+
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
 import com.addthis.maljson.JSONArray;
@@ -94,10 +96,10 @@ public class JobAlertTest {
     @Test
     public void noErrorChangeOnTriggeredTimeoutAlertRescan() throws Exception {
         JobAlert runtimeAlert = decodeObject(JobAlert.class,
-                                             "alertId = sampleid, type = 2, email = \"someone@domain.com\", " +
+                                             "alertId = a, type = 2, email = \"someone@domain.com\", " +
                                              "description = runtime alert, jobIds = [j1], timeout = 1000");
         JobAlert rekickAlert = decodeObject(JobAlert.class,
-                                             "alertId = sampleid, type = 3, email = \"someone@domain.com\", " +
+                                             "alertId = b, type = 3, email = \"someone@domain.com\", " +
                                              "description = rekick alert, jobIds = [j1], timeout = 1000");
         Job j1 = createJobWithState(JobState.RUNNING);
         j1.setStartTime(0L);
@@ -109,5 +111,18 @@ public class JobAlertTest {
         String rekickAlertMsg2 = runtimeAlert.alertActiveForJob(null, j1);
         assertEquals("runtime alert message unchanged", runtimeAlertMsg1, runtimeAlertMsg2);
         assertEquals("rekick alert message unchanged", rekickAlertMsg1, rekickAlertMsg2);
+    }
+
+    @Test
+    public void conditionallyTriggerAlertOnCanaryException() throws Exception {
+        JobAlert alert = decodeObject(JobAlert.class, "alertId = a, type = 5, description = canary alert, jobIds = []");
+        RuntimeException definitelyBadException = new RuntimeException("error");
+        SocketTimeoutException normallyOkException = new SocketTimeoutException("socket timeout");
+
+        assertEquals("bad exception", "error", alert.handleCanaryException(definitelyBadException));
+        assertNull("benign exception #1", alert.handleCanaryException(normallyOkException));
+        assertNull("benign exception #2", alert.handleCanaryException(normallyOkException));
+        assertNotNull("benign exception #3", alert.handleCanaryException(normallyOkException));
+        assertNull("benign exception #4", alert.handleCanaryException(normallyOkException));
     }
 }

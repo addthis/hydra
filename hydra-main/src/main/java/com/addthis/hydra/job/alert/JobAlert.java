@@ -16,11 +16,14 @@ package com.addthis.hydra.job.alert;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import java.net.SocketTimeoutException;
+
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import com.addthis.basis.util.Strings;
@@ -52,6 +55,9 @@ import org.slf4j.LoggerFactory;
 @JsonIgnoreProperties("alertStatus")
 public class JobAlert implements Codable {
     private static final Logger log = LoggerFactory.getLogger(JobAlert.class);
+
+    /** Trigger alert if number of consecutive canary check exception is >= this limit */
+    private static final int MAX_CONSECUTIVE_CANARY_EXCEPTION = 3;
 
     //Alert types
     public static final int ON_ERROR = 0;
@@ -88,6 +94,9 @@ public class JobAlert implements Codable {
     @JsonProperty private volatile ImmutableMap<String, String> activeJobs;
     // does not distinguish between multiple jobs, and racey wrt activeJobs, but only used for web-ui code for humans
     @JsonProperty private volatile long lastAlertTime;
+
+    /** Running count of consecutive canary query exceptions. Reset on success. */
+    private final transient AtomicInteger consecutiveCanaryExceptionCount = new AtomicInteger(0);
 
     @JsonCreator
     public JobAlert(@Nullable @JsonProperty("alertId") String alertId,
@@ -218,23 +227,41 @@ public class JobAlert implements Codable {
     @Nullable private String checkMapCanary(Job job) {
         try {
             long queryVal = JobAlertUtil.getQueryCount(job.getId(), canaryPath);
+            consecutiveCanaryExceptionCount.set(0);
             if (queryVal < canaryConfigThreshold) {
                 return "query value: " + queryVal + " < " + canaryConfigThreshold;
             }
         } catch (Exception ex) {
-            log.warn("Exception during canary check: ", ex);
-            return ex.getMessage();
+            return handleCanaryException(ex);
         }
         return null;
     }
 
     @Nullable private String checkMapFilterCanary(Job job) {
         try {
-            return JobAlertUtil.evaluateQueryWithFilter(this, job.getId());
+            String s = JobAlertUtil.evaluateQueryWithFilter(this, job.getId());
+            consecutiveCanaryExceptionCount.set(0);
+            return s;
         } catch (Exception ex) {
-            log.warn("Exception during canary check: ", ex);
-            return ex.toString();
+            return handleCanaryException(ex);
         }
+    }
+
+    @VisibleForTesting
+    @Nullable String handleCanaryException(Exception ex) {
+        log.warn("Exception during canary check: ", ex);
+        // special handling for SocketTimeoutException which is mostly trasient
+        if (ex instanceof SocketTimeoutException) {
+            int c = consecutiveCanaryExceptionCount.incrementAndGet();
+            if (c >= MAX_CONSECUTIVE_CANARY_EXCEPTION) {
+                consecutiveCanaryExceptionCount.set(0);
+                return "Canary check threw exception at least " + MAX_CONSECUTIVE_CANARY_EXCEPTION + " times in a row. " +
+                       "The most recent error is: " + ex.getMessage();
+            } else {
+                return null;
+            }
+        }
+        return ex.getMessage();
     }
 
     @Nullable private String checkSplitCanary(MeshyClient meshClient, Job job) {
