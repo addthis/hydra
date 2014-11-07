@@ -53,7 +53,7 @@ the various components of a hydra cluster by name.
 
 ## System dependencies
 
-JDK 7 is required.  Hydra has been developed on Linux (Centos 6) and
+JDK 8 is required.  Hydra has been developed on Linux (Centos 6) and
 should work on any modern Linux distro.  Other unix-like systems
 should work with minor changes but have not been tested.  Mac OSX
 should work for building and running local-stack (see below).
