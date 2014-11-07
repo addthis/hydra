@@ -63,7 +63,7 @@ public class SpawnMQImpl implements SpawnMQ {
     @Override
     public void connectToMQ(String hostUUID) {
         hostStatusConsumer = new ZkMessageConsumer<>(zkClient, "/minion", this, HostState.class);
-        batchJobProducer = new RabbitMessageProducer("CSBatchJob", "localhost");
+        batchJobProducer = new RabbitMessageProducer("CSBatchJob", batchBrokerHost, Integer.valueOf(batchBrokerPort));
         batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, Integer.valueOf(batchBrokerPort));
         try {
             Connection connection = RabbitMQUtil.createConnection(batchBrokerHost, Integer.valueOf(batchBrokerPort));
