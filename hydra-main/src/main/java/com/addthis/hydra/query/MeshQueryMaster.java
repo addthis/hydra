@@ -172,14 +172,15 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
     protected void writeQuery(ChannelHandlerContext ctx, Query query, ChannelPromise promise) throws Exception {
         String[] opsLog = query.getOps();   // being able to log and monitor rops is kind of important
 
-        // creates query for worker and updates local query ops (!mutates query!)
-        // TODO: fix this pipeline interface
-        Query remoteQuery = query.createPipelinedQuery();
-
+        // resolves alias, checks querying enabled (!mutates query!)
         if (spawnDataStoreHandler != null) {
             spawnDataStoreHandler.resolveAlias(query);
             spawnDataStoreHandler.validateJobForQuery(query);
         }
+
+        // creates query for worker and updates local query ops (!mutates query!)
+        // TODO: fix this pipeline interface
+        Query remoteQuery = query.createPipelinedQuery();
 
         Multimap<Integer, FileReference> fileReferenceMap;
         try {
