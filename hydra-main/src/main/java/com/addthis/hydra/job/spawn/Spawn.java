@@ -62,6 +62,7 @@ import com.addthis.codec.codables.Codable;
 import com.addthis.codec.config.Configs;
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
+import com.addthis.hydra.discovery.MarathonServiceDiscovery;
 import com.addthis.hydra.job.HostFailWorker;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
@@ -134,6 +135,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yammer.metrics.Metrics;
 
+import mesosphere.marathon.client.Marathon;
+import mesosphere.marathon.client.MarathonClient;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
 
@@ -247,7 +250,9 @@ public class Spawn implements Codable, AutoCloseable {
                   @Nullable @JsonProperty("structuredLogDir") File structuredLogDir,
                   @Nullable @JsonProperty("jobStore") JobStore jobStore,
                   @Nullable @JsonProperty("queueType") String queueType,
-                  @Nullable @JacksonInject CuratorFramework providedZkClient
+                  @Nullable @JacksonInject CuratorFramework providedZkClient,
+                  @Nullable @JsonProperty("marathonEndpoint") String marathonEndpoint,
+                  @Nullable @JsonProperty("zkAppId") String zkAppId
     ) throws Exception {
         Files.initDirectory(dataDir);
         this.stateFile = stateFile;
@@ -267,7 +272,12 @@ public class Spawn implements Codable, AutoCloseable {
             this.spawnFormattedLogger =  SpawnFormattedLogger.createFileBasedLogger(structuredLogDir);
         }
         if (providedZkClient == null) {
-            this.zkClient = ZkUtil.makeStandardClient();
+            if (marathonEndpoint != null && zkAppId != null) {
+                Marathon marathon = MarathonClient.getInstance(marathonEndpoint);
+                this.zkClient = ZkUtil.makeStandardClient(MarathonServiceDiscovery.getHostsWithPort(marathon, zkAppId, 0), true);
+            } else {
+                this.zkClient = ZkUtil.makeStandardClient();
+            }
         } else {
             this.zkClient = providedZkClient;
         }

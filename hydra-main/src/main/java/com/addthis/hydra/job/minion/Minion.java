@@ -57,6 +57,7 @@ import com.addthis.codec.codables.Codable;
 import com.addthis.codec.config.Configs;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.common.util.CloseTask;
+import com.addthis.hydra.discovery.MarathonServiceDiscovery;
 import com.addthis.hydra.job.JobTaskErrorCode;
 import com.addthis.hydra.job.mq.CommandTaskKick;
 import com.addthis.hydra.job.mq.CoreMessage;
@@ -97,10 +98,11 @@ import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Timer;
 
+import mesosphere.marathon.client.Marathon;
+import mesosphere.marathon.client.MarathonClient;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.framework.state.ConnectionState;
-import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.zookeeper.KeeperException;
 
 import org.eclipse.jetty.server.Server;
@@ -120,6 +122,9 @@ import org.slf4j.LoggerFactory;
 public class Minion implements MessageListener, Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Minion.class);
 
+    private static final String marathonEndpoint = Parameter.value("marathonEndpoint");
+    private static final String zkAppId = Parameter.value("zkAppId", "zookeeper");
+    private static final String rabbitAppId = Parameter.value("rabbitAppId", "rabbitmq");
     private static final String meshHost = Parameter.value("mesh.host", "localhost");
     private static final int meshPort = Parameter.intValue("mesh.port", 5000);
     private static final int meshRetryTimeout = Parameter.intValue("mesh.retry.timeout", 5000);
@@ -128,8 +133,8 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     private static final int maxJobPort = Parameter.intValue("minion.job.maxport", 0);
     private static final String group = System.getProperty("minion.group", "none");
     private static final String localHost = System.getProperty("minion.localhost");
-    private static final String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
-    private static final String batchBrokerPort = Parameter.value("batch.brokerPort", "5672");
+    private String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
+    private String batchBrokerPort = Parameter.value("batch.brokerPort", "5672");
     private static final int sendStatusRetries = Parameter.intValue("send.status.retries", 5);
     private static final int sendStatusRetryDelay = Parameter.intValue("send.status.delay", 5000);
     static final long hostMetricUpdaterInterval = Parameter.longValue("minion.host.metric.interval", 30 * 1000);
@@ -373,6 +378,10 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
 
     private synchronized boolean connectToRabbitMQ() {
         String[] routingKeys = {uuid, HostMessage.ALL_HOSTS};
+        if (marathonEndpoint != null && !marathonEndpoint.isEmpty()) {
+            Marathon marathon = MarathonClient.getInstance(marathonEndpoint);
+            batchBrokerHost = MarathonServiceDiscovery.getHost(marathon, rabbitAppId);
+        }
         batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, Integer.valueOf(batchBrokerPort));
         queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerHost, Integer.valueOf(batchBrokerPort));
         try {
@@ -729,14 +738,16 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     // Not Thread Safe!
     private CuratorFramework getZkClient() {
         if (zkClient == null) {
-            zkClient = ZkUtil.makeStandardClient();
+            if (marathonEndpoint != null && zkAppId != null) {
+                Marathon marathon = MarathonClient.getInstance(marathonEndpoint);
+                this.zkClient = ZkUtil.makeStandardClient(MarathonServiceDiscovery.getHostsWithPort(marathon, zkAppId, 0), true);
+            } else {
+                zkClient = ZkUtil.makeStandardClient();
+            }
         }
-        zkClient.getConnectionStateListenable().addListener(new ConnectionStateListener() {
-            @Override
-            public void stateChanged(CuratorFramework client, ConnectionState newState) {
-                if (newState == ConnectionState.RECONNECTED) {
-                    joinGroup();
-                }
+        zkClient.getConnectionStateListenable().addListener((client, newState) -> {
+            if (newState == ConnectionState.RECONNECTED) {
+                joinGroup();
             }
         });
         return zkClient;

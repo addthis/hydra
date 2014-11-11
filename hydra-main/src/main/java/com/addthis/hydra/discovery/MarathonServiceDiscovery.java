@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 /**
- * simple utility service for discovering mesos services
+ * simple utility service for discovering services deployed via Apache Marathon
  */
 public class MarathonServiceDiscovery {
 

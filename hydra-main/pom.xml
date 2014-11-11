@@ -146,6 +146,13 @@
       <artifactId>metrics-ganglia</artifactId>
     </dependency>
 
+    <!-- mesos/marathon -->
+    <dependency>
+      <groupId>com.github.mohitsoni</groupId>
+      <artifactId>marathon-client</artifactId>
+      <version>0.4.1</version>
+    </dependency>
+
     <!-- test deps -->
     <dependency>
       <groupId>org.easymock</groupId>
