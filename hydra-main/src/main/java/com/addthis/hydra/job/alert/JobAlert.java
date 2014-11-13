@@ -38,6 +38,7 @@ import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -251,7 +252,7 @@ public class JobAlert implements Codable {
     @Nullable String handleCanaryException(Exception ex) {
         log.warn("Exception during canary check: ", ex);
         // special handling for SocketTimeoutException which is mostly trasient
-        if (ex instanceof SocketTimeoutException) {
+        if (Throwables.getRootCause(ex) instanceof SocketTimeoutException) {
             int c = consecutiveCanaryExceptionCount.incrementAndGet();
             if (c >= MAX_CONSECUTIVE_CANARY_EXCEPTION) {
                 consecutiveCanaryExceptionCount.set(0);

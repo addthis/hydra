@@ -116,8 +116,8 @@ public class JobAlertTest {
     @Test
     public void conditionallyTriggerAlertOnCanaryException() throws Exception {
         JobAlert alert = decodeObject(JobAlert.class, "alertId = a, type = 5, description = canary alert, jobIds = []");
-        RuntimeException definitelyBadException = new RuntimeException("error");
-        SocketTimeoutException normallyOkException = new SocketTimeoutException("socket timeout");
+        Exception definitelyBadException = new RuntimeException("error");
+        Exception normallyOkException = new RuntimeException(new SocketTimeoutException("socket timeout"));
 
         assertEquals("bad exception", "error", alert.handleCanaryException(definitelyBadException));
         assertNull("benign exception #1", alert.handleCanaryException(normallyOkException));
