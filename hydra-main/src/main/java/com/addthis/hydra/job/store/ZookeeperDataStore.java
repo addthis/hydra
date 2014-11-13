@@ -13,22 +13,17 @@
  */
 package com.addthis.hydra.job.store;
 
+import com.addthis.bark.StringSerializer;
+import com.addthis.bark.ZkUtil;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.zookeeper.KeeperException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.addthis.bark.StringSerializer;
-import com.addthis.bark.ZkUtil;
-
-import com.addthis.basis.util.Parameter;
-import com.addthis.hydra.discovery.MarathonServiceDiscovery;
-import mesosphere.marathon.client.Marathon;
-import mesosphere.marathon.client.MarathonClient;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.zookeeper.KeeperException;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 /**
  * A class for persisting key-value data within zookeeper.
  */
@@ -36,20 +31,16 @@ public class ZookeeperDataStore implements SpawnDataStore {
 
     private static final Logger log = LoggerFactory.getLogger(ZookeeperDataStore.class);
     private static final String description = "zookeeper";
-    private static final String marathonEndpoint = Parameter.value("marathonEndpoint");
-    private static final String zkAppId = Parameter.value("zkAppId");
 
     private final CuratorFramework zkClient;
 
     public ZookeeperDataStore(CuratorFramework zkClient) {
         if (zkClient != null) {
             this.zkClient = zkClient;
-        } else if (marathonEndpoint != null && zkAppId != null) {
-            Marathon marathon = MarathonClient.getInstance(marathonEndpoint);
-            this.zkClient = ZkUtil.makeStandardClient(MarathonServiceDiscovery.getHostsWithPort(marathon, zkAppId, 0), true);
         } else {
             this.zkClient = ZkUtil.makeStandardClient();
         }
+
     }
 
     @Override

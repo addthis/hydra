@@ -13,56 +13,21 @@
  */
 package com.addthis.hydra.job.spawn;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import java.io.File;
-import java.io.IOException;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
-import java.text.ParseException;
-
+import com.addthis.bark.StringSerializer;
+import com.addthis.bark.ZkUtil;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.RollingLog;
 import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
-
-import com.addthis.bark.StringSerializer;
-import com.addthis.bark.ZkUtil;
 import com.addthis.codec.annotations.Time;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.config.Configs;
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.discovery.MarathonServiceDiscovery;
+import com.addthis.hydra.common.util.CloseTask;
+import com.addthis.hydra.discovery.MesosServiceDiscoveryUtility;
 import com.addthis.hydra.job.HostFailWorker;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
@@ -116,37 +81,60 @@ import com.addthis.hydra.job.web.SpawnService;
 import com.addthis.hydra.job.web.old.SpawnHttp;
 import com.addthis.hydra.job.web.old.SpawnManager;
 import com.addthis.hydra.task.run.TaskExitState;
-import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.util.DirectedGraph;
 import com.addthis.hydra.util.WebSocketManager;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableMap;
-
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableMap;
 import com.yammer.metrics.Metrics;
-
-import mesosphere.marathon.client.Marathon;
-import mesosphere.marathon.client.MarathonClient;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
-
 import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_UP_PATH;
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.io.File;
+import java.io.IOException;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.*;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -250,9 +238,7 @@ public class Spawn implements Codable, AutoCloseable {
                   @Nullable @JsonProperty("structuredLogDir") File structuredLogDir,
                   @Nullable @JsonProperty("jobStore") JobStore jobStore,
                   @Nullable @JsonProperty("queueType") String queueType,
-                  @Nullable @JacksonInject CuratorFramework providedZkClient,
-                  @Nullable @JsonProperty("marathonEndpoint") String marathonEndpoint,
-                  @Nullable @JsonProperty("zkAppId") String zkAppId
+                  @Nullable @JacksonInject CuratorFramework providedZkClient
     ) throws Exception {
         Files.initDirectory(dataDir);
         this.stateFile = stateFile;
@@ -272,12 +258,7 @@ public class Spawn implements Codable, AutoCloseable {
             this.spawnFormattedLogger =  SpawnFormattedLogger.createFileBasedLogger(structuredLogDir);
         }
         if (providedZkClient == null) {
-            if (marathonEndpoint != null && zkAppId != null) {
-                Marathon marathon = MarathonClient.getInstance(marathonEndpoint);
-                this.zkClient = ZkUtil.makeStandardClient(MarathonServiceDiscovery.getHostsWithPort(marathon, zkAppId, 0), true);
-            } else {
-                this.zkClient = ZkUtil.makeStandardClient();
-            }
+            this.zkClient = ZkUtil.makeStandardClient();
         } else {
             this.zkClient = providedZkClient;
         }

@@ -13,14 +13,8 @@
  */
 package com.addthis.hydra.job.spawn;
 
-import java.io.IOException;
-import java.io.Serializable;
-
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.addthis.basis.util.Parameter;
-
-import com.addthis.hydra.discovery.MarathonServiceDiscovery;
+import com.addthis.hydra.discovery.MesosServiceDiscoveryUtility;
 import com.addthis.hydra.job.mq.CoreMessage;
 import com.addthis.hydra.job.mq.HostMessage;
 import com.addthis.hydra.job.mq.HostState;
@@ -30,25 +24,21 @@ import com.addthis.hydra.mq.RabbitMQUtil;
 import com.addthis.hydra.mq.RabbitMessageConsumer;
 import com.addthis.hydra.mq.RabbitMessageProducer;
 import com.addthis.hydra.mq.ZkMessageConsumer;
-
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
-
-import mesosphere.marathon.client.Marathon;
-import mesosphere.marathon.client.MarathonClient;
 import org.apache.curator.framework.CuratorFramework;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SpawnMQImpl implements SpawnMQ {
 
     private static final Logger log = LoggerFactory.getLogger(SpawnMQImpl.class);
 
     private MessageProducer batchJobProducer;
-
-    private final String marathonEndpoint = Parameter.value("marathonEndpoint");
-    private final String rabbitAppId = Parameter.value("rabbitAppId", "rabbitmq");
 
     private String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
     private Integer batchBrokerPort = Integer.valueOf(Parameter.value("batch.brokerPort", "5672"));
@@ -65,9 +55,10 @@ public class SpawnMQImpl implements SpawnMQ {
     public SpawnMQImpl(CuratorFramework zkClient, Spawn spawn) {
         this.spawn = spawn;
         this.zkClient = zkClient;
-        if (marathonEndpoint != null && !marathonEndpoint.isEmpty()) {
-            Marathon marathon = MarathonClient.getInstance(marathonEndpoint);
-            batchBrokerHost = MarathonServiceDiscovery.getHost(marathon, rabbitAppId);
+
+        if (Parameter.boolValue("mesos.useMesos", false)) {
+            batchBrokerHost = MesosServiceDiscoveryUtility.getMesosProxy();
+            batchBrokerPort = MesosServiceDiscoveryUtility.getAssignedPort(Parameter.value("mesos.rabbitAppId", "rabbitmq"), Parameter.intValue("mesos.rabbitPortIndex", 0));
         }
     }
 

@@ -13,51 +13,20 @@
  */
 package com.addthis.hydra.job.minion;
 
-import javax.annotation.Nullable;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.Serializable;
-
-import java.lang.management.ManagementFactory;
-
-import java.net.InetAddress;
-import java.net.ServerSocket;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
+import com.addthis.bark.ZkGroupMembership;
+import com.addthis.bark.ZkUtil;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Numbers;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.SimpleExec;
-
-import com.addthis.bark.ZkGroupMembership;
-import com.addthis.bark.ZkUtil;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.config.Configs;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.common.util.CloseTask;
-import com.addthis.hydra.discovery.MarathonServiceDiscovery;
+import com.addthis.hydra.discovery.MesosServiceDiscoveryUtility;
 import com.addthis.hydra.job.JobTaskErrorCode;
 import com.addthis.hydra.job.mq.CommandTaskKick;
 import com.addthis.hydra.job.mq.CoreMessage;
@@ -82,13 +51,11 @@ import com.addthis.hydra.util.MetricsServletMaker;
 import com.addthis.hydra.util.MinionWriteableDiskCheck;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.MeshyClientConnector;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.MoreExecutors;
-
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AlreadyClosedException;
 import com.rabbitmq.client.Channel;
@@ -97,14 +64,10 @@ import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Timer;
-
-import mesosphere.marathon.client.Marathon;
-import mesosphere.marathon.client.MarathonClient;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.framework.state.ConnectionState;
 import org.apache.zookeeper.KeeperException;
-
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.util.BlockingArrayQueue;
@@ -112,6 +75,32 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
+import java.io.File;
+import java.io.IOException;
+import java.io.Serializable;
+import java.lang.management.ManagementFactory;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * TODO implement APIs for extended probing, sanity, clearing of job state
@@ -122,9 +111,6 @@ import org.slf4j.LoggerFactory;
 public class Minion implements MessageListener, Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Minion.class);
 
-    private static final String marathonEndpoint = Parameter.value("marathonEndpoint");
-    private static final String zkAppId = Parameter.value("zkAppId", "zookeeper");
-    private static final String rabbitAppId = Parameter.value("rabbitAppId", "rabbitmq");
     private static final String meshHost = Parameter.value("mesh.host", "localhost");
     private static final int meshPort = Parameter.intValue("mesh.port", 5000);
     private static final int meshRetryTimeout = Parameter.intValue("mesh.retry.timeout", 5000);
@@ -134,7 +120,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     private static final String group = System.getProperty("minion.group", "none");
     private static final String localHost = System.getProperty("minion.localhost");
     private String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
-    private String batchBrokerPort = Parameter.value("batch.brokerPort", "5672");
+    private int batchBrokerPort = Parameter.intValue("batch.brokerPort", 5672);
     private static final int sendStatusRetries = Parameter.intValue("send.status.retries", 5);
     private static final int sendStatusRetryDelay = Parameter.intValue("send.status.delay", 5000);
     static final long hostMetricUpdaterInterval = Parameter.longValue("minion.host.metric.interval", 30 * 1000);
@@ -378,14 +364,14 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
 
     private synchronized boolean connectToRabbitMQ() {
         String[] routingKeys = {uuid, HostMessage.ALL_HOSTS};
-        if (marathonEndpoint != null && !marathonEndpoint.isEmpty()) {
-            Marathon marathon = MarathonClient.getInstance(marathonEndpoint);
-            batchBrokerHost = MarathonServiceDiscovery.getHost(marathon, rabbitAppId);
+        if (Parameter.boolValue("mesos.useMesos", false)) {
+            batchBrokerHost = MesosServiceDiscoveryUtility.getMesosProxy();
+            batchBrokerPort = MesosServiceDiscoveryUtility.getAssignedPort(Parameter.value("mesos.rabbitAppId", "rabbitmq"), Parameter.intValue("mesos.rabbitPortIndex", 0));
         }
-        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, Integer.valueOf(batchBrokerPort));
-        queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerHost, Integer.valueOf(batchBrokerPort));
+        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, batchBrokerPort);
+        queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerHost, batchBrokerPort);
         try {
-            Connection connection = RabbitMQUtil.createConnection(batchBrokerHost, Integer.valueOf(batchBrokerPort));
+            Connection connection = RabbitMQUtil.createConnection(batchBrokerHost, batchBrokerPort);
             channel = connection.createChannel();
             channel.exchangeDeclare("CSBatchJob", "direct");
             AMQP.Queue.DeclareOk result = channel.queueDeclare(uuid + ".batchJob", true, false, false, null);
@@ -738,12 +724,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     // Not Thread Safe!
     private CuratorFramework getZkClient() {
         if (zkClient == null) {
-            if (marathonEndpoint != null && zkAppId != null) {
-                Marathon marathon = MarathonClient.getInstance(marathonEndpoint);
-                this.zkClient = ZkUtil.makeStandardClient(MarathonServiceDiscovery.getHostsWithPort(marathon, zkAppId, 0), true);
-            } else {
-                zkClient = ZkUtil.makeStandardClient();
-            }
+            this.zkClient = ZkUtil.makeStandardClient();
         }
         zkClient.getConnectionStateListenable().addListener((client, newState) -> {
             if (newState == ConnectionState.RECONNECTED) {
