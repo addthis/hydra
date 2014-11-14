@@ -131,7 +131,6 @@ public class JobAlertRunner {
                                                         MapDifference.ValueDifference::rightValue));
                     }
                 }
-                if (true) throw new RuntimeException("crap");
                 lastAlertScanFailed = false;
                 log.info("Finished alert scan");
             } catch (Exception e) {
