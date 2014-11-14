@@ -11,16 +11,23 @@
  */
 package com.addthis.hydra.job.spawn;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class HealthCheckResult {
 
     private boolean dataStoreOK;
+    private boolean alertCheckOK;
 
-    public boolean isEverythingOK() {
+    @JsonProperty public boolean isEverythingOK() {
+        return dataStoreOK && alertCheckOK;
+    }
+
+    @JsonProperty public boolean isDataStoreOK() {
         return dataStoreOK;
     }
 
-    public boolean isDataStoreOK() {
-        return dataStoreOK;
+    @JsonProperty public boolean isAlertCheckOK() {
+        return alertCheckOK;
     }
 
     public HealthCheckResult setDataStoreOK(boolean dataStoreOK) {
@@ -28,4 +35,8 @@ public class HealthCheckResult {
         return this;
     }
 
+    public HealthCheckResult setAlertCheckOK(boolean alertCheckOK) {
+        this.alertCheckOK = alertCheckOK;
+        return this;
+    }
 }

@@ -68,6 +68,7 @@ public class JobAlertRunner {
 
     private MeshyClient meshyClient;
     private boolean alertsEnabled;
+    private volatile boolean lastAlertScanFailed;
 
     public JobAlertRunner(Spawn spawn, boolean alertEnabled) {
         this.spawn = spawn;
@@ -83,18 +84,22 @@ public class JobAlertRunner {
         loadAlertMap();
     }
 
-    /**
-     * Method that disables alert scanning
-     */
+    /** Disables alert scanning */
     public void disableAlerts() {
         this.alertsEnabled = false;
     }
 
-    /**
-     * Method that enables alert scanning
-     */
+    /** Enables alert scanning */
     public void enableAlerts() {
         this.alertsEnabled = true;
+    }
+
+    public boolean isAlertsEnabled() {
+        return alertsEnabled;
+    }
+
+    public boolean isLastAlertScanFailed() {
+        return lastAlertScanFailed;
     }
 
     /**
@@ -102,27 +107,36 @@ public class JobAlertRunner {
      */
     public void scanAlerts() {
         if (alertsEnabled) {
-            for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
-                JobAlert oldAlert = entry.getValue();
-                Map<String, String> currentErrors = oldAlert.getActiveJobs();
-                JobAlert alert = alertMap.computeIfPresent(entry.getKey(), (id, currentAlert) -> {
-                    currentAlert.checkAlertForJobs(getAlertJobs(currentAlert), meshyClient);
-                    if (!currentAlert.getActiveJobs().equals(currentErrors)) {
-                        storeAlert(currentAlert.alertId, currentAlert);
+            log.info("Started alert scan of {} alerts...", alertMap.size());
+            try {
+                for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
+                    JobAlert oldAlert = entry.getValue();
+                    Map<String, String> currentErrors = oldAlert.getActiveJobs();
+                    JobAlert alert = alertMap.computeIfPresent(entry.getKey(), (id, currentAlert) -> {
+                        currentAlert.checkAlertForJobs(getAlertJobs(currentAlert), meshyClient);
+                        if (!currentAlert.getActiveJobs().equals(currentErrors)) {
+                            storeAlert(currentAlert.alertId, currentAlert);
+                        }
+                        return currentAlert;
+                    });
+                    if (alert == null) {
+                        emailAlert(oldAlert, "[CLEAR] ", currentErrors);
+                    } else {
+                        Map<String, String> newErrors = alert.getActiveJobs();
+                        MapDifference<String, String> difference = Maps.difference(currentErrors, newErrors);
+                        emailAlert(oldAlert, "[CLEAR] ", difference.entriesOnlyOnLeft());
+                        emailAlert(alert, "[TRIGGER] ", difference.entriesOnlyOnRight());
+                        emailAlert(alert, "[ERROR CHANGED] ",
+                                   Maps.transformValues(difference.entriesDiffering(),
+                                                        MapDifference.ValueDifference::rightValue));
                     }
-                    return currentAlert;
-                });
-                if (alert == null) {
-                    emailAlert(oldAlert, "[CLEAR] ", currentErrors);
-                } else {
-                    Map<String, String> newErrors = alert.getActiveJobs();
-                    MapDifference<String, String> difference = Maps.difference(currentErrors, newErrors);
-                    emailAlert(oldAlert, "[CLEAR] ", difference.entriesOnlyOnLeft());
-                    emailAlert(alert, "[TRIGGER] ", difference.entriesOnlyOnRight());
-                    emailAlert(alert, "[ERROR CHANGED] ",
-                               Maps.transformValues(difference.entriesDiffering(),
-                                                    MapDifference.ValueDifference::rightValue));
                 }
+                if (true) throw new RuntimeException("crap");
+                lastAlertScanFailed = false;
+                log.info("Finished alert scan");
+            } catch (Exception e) {
+                lastAlertScanFailed = true;
+                log.error("Unexpected error while scanning alerts: {}", e.getMessage(), e);
             }
         }
     }
