@@ -65,7 +65,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
     private static final int     meshPeerPort     = Parameter.intValue("qmaster.mesh.peer.port", 5101);
     private static final int     meshPeerInterval = Parameter.intValue("qmaster.mesh.peer.interval", 60);
     private static final boolean enableZooKeeper  = Parameter.boolValue("qmaster.enableZooKeeper", true);
-    private static final boolean useMesos         = Parameter.boolValue("qmaster.useMesos", true);
+    private static final boolean useMesos         = Parameter.boolValue("qmaster.useMesos", false);
     private static final String  minionAppName    = Parameter.value("qmaster.minionAppName", "minion");
 
     private static final QueryTaskSource EMPTY_TASK_SOURCE = new QueryTaskSource(new QueryTaskSourceOption[0]);
