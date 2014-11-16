@@ -27,7 +27,6 @@ import com.addthis.codec.config.Configs;
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.common.util.CloseTask;
-import com.addthis.hydra.discovery.MesosServiceDiscoveryUtility;
 import com.addthis.hydra.job.HostFailWorker;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
