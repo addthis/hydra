@@ -13,21 +13,11 @@
  */
 package com.addthis.hydra.query;
 
-import java.io.File;
-import java.io.IOException;
-
-import java.net.InetSocketAddress;
-
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
-
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
-
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
+import com.addthis.hydra.discovery.MesosServiceDiscoveryUtility;
 import com.addthis.hydra.query.aggregate.BalancedAllocator;
 import com.addthis.hydra.query.aggregate.DefaultTaskAllocators;
 import com.addthis.hydra.query.aggregate.MeshSourceAggregator;
@@ -40,30 +30,52 @@ import com.addthis.hydra.query.tracker.QueryTracker;
 import com.addthis.hydra.query.tracker.TrackerHandler;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
-
 import com.google.common.collect.Multimap;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 @ChannelHandler.Sharable
 public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
 
     private static final Logger log = LoggerFactory.getLogger(MeshQueryMaster.class);
 
-    private static final String  tempDir         = Parameter.value("query.tmpdir", "query.tmpdir");
-    private static final int     meshPort        = Parameter.intValue("qmaster.mesh.port", 5100);
-    private static final String  meshRoot        = Parameter.value("qmaster.mesh.root", "/home/hydra");
-    private static final String  meshPeers       = Parameter.value("qmaster.mesh.peers", "localhost");
-    private static final int     meshPeerPort    = Parameter.intValue("qmaster.mesh.peer.port", 5101);
-    private static final boolean enableZooKeeper = Parameter.boolValue("qmaster.enableZooKeeper", true);
+    private static final String  tempDir          = Parameter.value("query.tmpdir", "query.tmpdir");
+    private static final int     meshPort         = Parameter.intValue("qmaster.mesh.port", 5100);
+    private static final String  meshRoot         = Parameter.value("qmaster.mesh.root", "/home/hydra");
+    private static final String  meshPeers        = Parameter.value("qmaster.mesh.peers", "localhost");
+    private static final int     meshPeerPort     = Parameter.intValue("qmaster.mesh.peer.port", 5101);
+    private static final int     meshPeerInterval = Parameter.intValue("qmaster.mesh.peer.interval", 60);
+    private static final boolean enableZooKeeper  = Parameter.boolValue("qmaster.enableZooKeeper", true);
+    private static final boolean useMesos         = Parameter.boolValue("qmaster.useMesos", true);
+    private static final String  minionAppName    = Parameter.value("qmaster.minionAppName", "minion");
 
     private static final QueryTaskSource EMPTY_TASK_SOURCE = new QueryTaskSource(new QueryTaskSourceOption[0]);
+
+    /**
+     * thread pool for peer maintenance runs.
+     */
+    private final ScheduledExecutorService queryMeshPeerMaintainer = MoreExecutors
+            .getExitingScheduledExecutorService(new ScheduledThreadPoolExecutor(1,
+                    new ThreadFactoryBuilder().setNameFormat("queryMeshPeerMaintainer=%d").build()));
 
     /**
      * used for tracking metrics and other interesting things about queries that we have run.
@@ -90,8 +102,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         cachey = new MeshFileRefCache(meshy);
         worky = new WorkerTracker();
         allocators = new DefaultTaskAllocators(new BalancedAllocator(worky));
-        connectToMeshPeers();
-
+        queryMeshPeerMaintainer.scheduleAtFixedRate(this::connectToMeshPeers, 0, meshPeerInterval, TimeUnit.SECONDS);
         try {
             // Delete the tmp directory (disk sort directory)
             File tempDirFile = new File(tempDir).getCanonicalFile();
@@ -145,7 +156,10 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
     }
 
     private void connectToMeshPeers() {
-        if (meshPeers != null) {
+        if (useMesos) {
+            Optional<List<String>> peerList = MesosServiceDiscoveryUtility.getTaskHosts(minionAppName);
+            peerList.ifPresent(hostList -> hostList.stream().forEach(h -> meshy.connectPeer(new InetSocketAddress(h, meshPeerPort))));
+        } else if (meshPeers != null) {
             String[] peers = meshPeers.split(",");
             for (String peer : peers) {
                 meshy.connectPeer(new InetSocketAddress(peer, meshPeerPort));
