@@ -29,7 +29,7 @@ import com.addthis.meshy.service.file.FileSource;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ConcurrentHashMultiset;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.SetMultimap;
 
 import io.netty.util.internal.PlatformDependent;
 
@@ -90,8 +90,8 @@ class FileRefSource extends FileSource {
         }
     }
 
-    public Multimap<Integer, FileReference> getWithShortCircuit() throws InterruptedException {
-        Multimap<Integer, FileReference> fileRefMap = HashMultimap.create();
+    public SetMultimap<Integer, FileReference> getWithShortCircuit() throws InterruptedException {
+        SetMultimap<Integer, FileReference> fileRefMap = HashMultimap.create();
         long end = System.nanoTime() + MAX_WAIT_NANOS;
         long remaining = MAX_WAIT_NANOS;
         while (true) {

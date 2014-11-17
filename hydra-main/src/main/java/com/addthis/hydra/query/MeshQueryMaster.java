@@ -245,8 +245,8 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
      */
     public QueryTaskSourceOption getReplacementQueryTaskOption(String job, int task, FileReference failedReference)
             throws IOException, ExecutionException, InterruptedException {
-        Collection<FileReference> references = cachey.getTaskReferencesIfPresent(job, task);
-        Set<FileReference> newReferences = new HashSet<>(references);
+        Set<FileReference> oldReferences = cachey.getTaskReferencesIfPresent(job, task);
+        Set<FileReference> newReferences = new HashSet<>(oldReferences);
         newReferences.remove(failedReference);
         if (newReferences.isEmpty()) {
             // there was no replacement fileReference in the cache, so we need to fetch a new one
@@ -254,7 +254,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
             newReferences.add(freshFileReference);
         }
         cachey.updateFileReferenceForTask(job, task, newReferences);
-        FileReference cachedReplacement = references.iterator().next();
+        FileReference cachedReplacement = newReferences.iterator().next();
         WorkerData workerData = worky.get(cachedReplacement.getHostUUID());
         return new QueryTaskSourceOption(cachedReplacement, workerData.queryLeases);
     }

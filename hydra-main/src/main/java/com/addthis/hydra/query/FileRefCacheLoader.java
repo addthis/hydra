@@ -24,13 +24,13 @@ import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.cache.CacheLoader;
-import com.google.common.collect.ImmutableMultimap;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.ImmutableSetMultimap;
+import com.google.common.collect.SetMultimap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableFutureTask;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-class FileRefCacheLoader extends CacheLoader<String, Multimap<Integer, FileReference>> {
+class FileRefCacheLoader extends CacheLoader<String, SetMultimap<Integer, FileReference>> {
     private final MeshyServer meshy;
 
     /** thread pool for refreshing cache keys asynchronously */
@@ -45,14 +45,14 @@ class FileRefCacheLoader extends CacheLoader<String, Multimap<Integer, FileRefer
         this.meshy = meshy;
     }
 
-    @Override public Multimap<Integer, FileReference> load(String key) throws InterruptedException {
+    @Override public SetMultimap<Integer, FileReference> load(String key) throws InterruptedException {
         return loadFileReferencesForJob(key);
     }
 
     @Override
-    public ListenableFuture<Multimap<Integer, FileReference>> reload(String key,
-                                                                     Multimap<Integer, FileReference> oldValue) {
-        ListenableFutureTask<Multimap<Integer, FileReference>> task =
+    public ListenableFuture<SetMultimap<Integer, FileReference>> reload(String key,
+                                                                        SetMultimap<Integer, FileReference> oldValue) {
+        ListenableFutureTask<SetMultimap<Integer, FileReference>> task =
                 ListenableFutureTask.create(() -> loadFileReferencesForJob(key));
         fileReferenceCacheReloader.submit(task);
         return task;
@@ -65,15 +65,15 @@ class FileRefCacheLoader extends CacheLoader<String, Multimap<Integer, FileRefer
      * @return - a map of the 'best' file references for each task in the given job
      */
     @Nonnull
-    private Multimap<Integer, FileReference> loadFileReferencesForJob(String job) throws InterruptedException {
+    private SetMultimap<Integer, FileReference> loadFileReferencesForJob(String job) throws InterruptedException {
         final long startTime = System.currentTimeMillis();
         MeshFileRefCache.fileReferenceFetches.inc();
         if (meshy.getChannelCount() == 0) {
             MeshFileRefCache.log.warn("[MeshQueryMaster] Error: there are no available mesh peers.");
-            return ImmutableMultimap.of();
+            return ImmutableSetMultimap.of();
         }
 
-        Multimap<Integer, FileReference> fileRefDataSet = getFileReferences(job, "*");
+        SetMultimap<Integer, FileReference> fileRefDataSet = getFileReferences(job, "*");
         MeshFileRefCache.log.trace("file reference details before filtering:\n {}", fileRefDataSet);
         fileRefDataSet = MeshFileRefCache.filterFileReferences(fileRefDataSet);
         MeshFileRefCache.log.trace("file reference details after filtering:\n{}", fileRefDataSet);
@@ -91,11 +91,11 @@ class FileRefCacheLoader extends CacheLoader<String, Multimap<Integer, FileRefer
      * @param task task to search for, or "*" for all
      */
     @Nonnull
-    Multimap<Integer, FileReference> getFileReferences(String job, String task) throws InterruptedException {
+    SetMultimap<Integer, FileReference> getFileReferences(String job, String task) throws InterruptedException {
         final String prefix = "*/" + job + "/" + task + "/gold/data/query";
         FileRefSource fileRefSource = new FileRefSource(meshy);
         fileRefSource.requestLocalFiles(prefix);
-        Multimap<Integer, FileReference> fileRefMap = fileRefSource.getWithShortCircuit();
+        SetMultimap<Integer, FileReference> fileRefMap = fileRefSource.getWithShortCircuit();
         MeshFileRefCache.log.debug("found: {} pairs", fileRefMap.keySet().size());
         return fileRefMap;
     }

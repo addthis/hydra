@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -33,8 +34,9 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.SetMultimap;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.yammer.metrics.Metrics;
@@ -58,7 +60,7 @@ public class MeshFileRefCache implements ChannelCloseListener {
      * Maintains a LRU cache of {@code FileReference} objects for a given job id.  If a Job
      * has 32 tasks then there should be 32 references in the set to indicate a correctly functioning job
      */
-    @Nonnull private final LoadingCache<String, Multimap<Integer, FileReference>> fileReferenceCache;
+    @Nonnull private final LoadingCache<String, SetMultimap<Integer, FileReference>> fileReferenceCache;
 
     public MeshFileRefCache(MeshyServer meshy) throws Exception {
         this.loader = new FileRefCacheLoader(meshy);
@@ -71,10 +73,10 @@ public class MeshFileRefCache implements ChannelCloseListener {
         return fileReferenceCache.get(job);
     }
 
-    @Nonnull public Collection<FileReference> getTaskReferencesIfPresent(String job, int taskId) {
-        Multimap<Integer, FileReference> refMap = fileReferenceCache.getIfPresent(job);
+    @Nonnull public Set<FileReference> getTaskReferencesIfPresent(String job, int taskId) {
+        SetMultimap<Integer, FileReference> refMap = fileReferenceCache.getIfPresent(job);
         if (refMap != null) {
-            return refMap.asMap().get(taskId);
+            return (Set<FileReference>) refMap.asMap().get(taskId);
         }
         return Collections.emptySet();
     }
@@ -83,7 +85,7 @@ public class MeshFileRefCache implements ChannelCloseListener {
         fileReferenceCache.invalidate(job);
     }
 
-    private LoadingCache<String, Multimap<Integer, FileReference>> createLoadingCache(FileRefCacheLoader loader) {
+    private LoadingCache<String, SetMultimap<Integer, FileReference>> createLoadingCache(FileRefCacheLoader loader) {
         return CacheBuilder.newBuilder()
                            .maximumSize(200)
                            .refreshAfterWrite(2, TimeUnit.MINUTES)
@@ -113,13 +115,13 @@ public class MeshFileRefCache implements ChannelCloseListener {
      * @return - filtered file reference map containing only valid file references
      */
     @Nonnull
-    protected static Multimap<Integer, FileReference> filterFileReferences(
-            @Nonnull Multimap<Integer, FileReference> fileRefDataSet) {
+    protected static SetMultimap<Integer, FileReference> filterFileReferences(
+            @Nonnull SetMultimap<Integer, FileReference> fileRefDataSet) {
         if (fileRefDataSet.isEmpty()) {
             return fileRefDataSet;
         }
         int baseKeySetSize = fileRefDataSet.keySet().size();
-        Multimap<Integer, FileReference> filteredFileReferenceSet =
+        SetMultimap<Integer, FileReference> filteredFileReferenceSet =
                 HashMultimap.create(baseKeySetSize, fileRefDataSet.size() / baseKeySetSize);
         for (Map.Entry<Integer, Collection<FileReference>> entry : fileRefDataSet.asMap().entrySet()) {
             int key = entry.getKey();
@@ -163,13 +165,17 @@ public class MeshFileRefCache implements ChannelCloseListener {
     }
 
     public void updateFileReferenceForTask(String job, int task, Iterable<FileReference> baseSet) {
-        Multimap<Integer, FileReference> existing = fileReferenceCache.getIfPresent(job);
+        SetMultimap<Integer, FileReference> existing = fileReferenceCache.getIfPresent(job);
         if (existing != null) {
-            Multimap<Integer, FileReference> withReplacement = ImmutableMultimap.<Integer, FileReference>builder()
-                                                                                .putAll(existing)
-                                                                                .putAll(task, baseSet)
-                                                                                .build();
-            fileReferenceCache.put(job, withReplacement);
+            ImmutableSetMultimap.Builder<Integer, FileReference> withReplacement =
+                    ImmutableSetMultimap.<Integer, FileReference>builder();
+            for (Map.Entry<Integer, Collection<FileReference>> entry : existing.asMap().entrySet()) {
+                if (entry.getKey() != task) {
+                    withReplacement.putAll(entry.getKey(), entry.getValue());
+                }
+            }
+            withReplacement.putAll(task, baseSet);
+            fileReferenceCache.put(job, withReplacement.build());
         }
     }
 
