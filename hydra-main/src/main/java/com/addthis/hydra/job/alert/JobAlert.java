@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Bean to hold a job specific alert
  */
-@JsonIgnoreProperties("alertStatus")
+@JsonIgnoreProperties({"alertStatus", "canaryOutputMessage"})
 public class JobAlert implements Codable {
     private static final Logger log = LoggerFactory.getLogger(JobAlert.class);
 
