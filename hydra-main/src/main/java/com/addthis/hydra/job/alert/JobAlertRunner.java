@@ -15,10 +15,11 @@ package com.addthis.hydra.job.alert;
 
 import java.io.IOException;
 
-import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import java.text.DecimalFormat;
@@ -140,8 +141,8 @@ public class JobAlertRunner {
         }
     }
 
-    private List<Job> getAlertJobs(JobAlert alert) {
-        List<Job> rv = new ArrayList<>();
+    private Set<Job> getAlertJobs(JobAlert alert) {
+        Set<Job> rv = new HashSet<>();
         if (alert != null && alert.jobIds != null) {
             Map<String, List<String>> aliases = spawn.getAliasManager().getAliases();
             for (String lookupId : alert.jobIds) {

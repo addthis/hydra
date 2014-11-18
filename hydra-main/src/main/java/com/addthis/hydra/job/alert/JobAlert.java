@@ -21,6 +21,7 @@ import java.net.SocketTimeoutException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -149,7 +150,7 @@ public class JobAlert implements Codable {
         return CodecJSON.encodeJSON(this);
     }
 
-    public ImmutableMap<String, String> checkAlertForJobs(List<Job> jobs, MeshyClient meshyClient) {
+    public ImmutableMap<String, String> checkAlertForJobs(Set<Job> jobs, MeshyClient meshyClient) {
         ImmutableMap.Builder<String, String> newActiveJobsBuilder = new ImmutableMap.Builder<>();
         for (Job job : jobs) {
             String errorMessage = alertActiveForJob(meshyClient, job);
