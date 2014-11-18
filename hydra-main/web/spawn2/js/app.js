@@ -94,7 +94,7 @@ function(
                 url: "/system/healthcheck?details=true",
                 type: "GET"
             }).done(function(data){
-                if (data.isEverythingOK) {
+                if (data.everythingOK) {
                     Alertify.log.info("Health check passed");
                 } else {
                     Alertify.dialog.alert("Health check failed: " + JSON.stringify(data));
