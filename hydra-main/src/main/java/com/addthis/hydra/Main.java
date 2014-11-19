@@ -13,9 +13,17 @@
  */
 package com.addthis.hydra;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Method;
 
+import java.net.InetSocketAddress;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Strings;
@@ -24,11 +32,15 @@ import com.addthis.codec.config.Configs;
 import com.addthis.codec.plugins.PluginMap;
 import com.addthis.codec.plugins.PluginRegistry;
 import com.addthis.hydra.common.util.CloseTask;
+import com.addthis.hydra.discovery.MesosServiceDiscoveryUtility;
 import com.addthis.hydra.util.BundleReporter;
 
+import com.addthis.meshy.MeshyServer;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
 
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigObject;
@@ -42,7 +54,7 @@ import org.slf4j.LoggerFactory;
 public class Main {
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         if (args.length > 0) {
             Config globalConfig = ConfigFactory.load();
             if (globalConfig.getBoolean("hydra.metrics.enable")) {
@@ -62,9 +74,35 @@ public class Main {
                         String mssRoot = Parameter.value("mss.root", "streams");
                         String meshyPorts = Parameter.value("mss.mesh.ports", "5000");
                         String meshyPeers = Parameter.value("mss.mesh.peers", "");
-                        for (String portGroup : Strings.splitArray(meshyPorts, ";")) {
-                            log.info("[mss] starting meshy with port group: " + portGroup);
-                            com.addthis.meshy.Main.main(new String[]{"server", portGroup, mssRoot, meshyPeers});
+                        String meshyAppName = Parameter.value("mss.appName");
+                        int portIndex = Parameter.intValue("mss.portIndex", 0);
+                        int peerInterval = Parameter.intValue("mss.peerInterval", 15);
+
+                        // TODO:  this only supports one port and default network interface
+                        int portNum = Integer.parseInt(meshyPorts);
+                        MeshyServer meshy = new MeshyServer(portNum, new File(mssRoot));
+
+                        if (meshyPeers != null && !meshyPeers.isEmpty()) {
+                            for (String peer : Strings.splitArray(meshyPeers, ",")) {
+                                String hostPort[] = Strings.splitArray(peer, ":");
+                                int port = hostPort.length > 1 ? Integer.parseInt(hostPort[1]) : meshy.getLocalAddress().getPort();
+                                meshy.connectPeer(new InetSocketAddress(hostPort[0], port));
+                            }
+                        }
+
+                        if (meshyAppName != null) {
+                            ScheduledExecutorService queryMeshPeerMaintainer = MoreExecutors
+                                    .getExitingScheduledExecutorService(new ScheduledThreadPoolExecutor(1,
+                                            new ThreadFactoryBuilder().setNameFormat("meshPeerMaintainer=%d").build()));
+                            queryMeshPeerMaintainer.scheduleAtFixedRate(() -> {
+                                Optional<Map<String, Integer>> peerMap = MesosServiceDiscoveryUtility.getTaskHosts(meshyAppName, portIndex);
+                                if (peerMap.isPresent()) {
+                                    for (Map.Entry<String, Integer> entry : peerMap.get().entrySet()) {
+                                        System.out.println("peering with " + entry.getKey() + ":" + entry.getValue());
+                                        meshy.connectPeer(new InetSocketAddress(entry.getKey(), entry.getValue()));
+                                    }
+                                }
+                            }, 0, peerInterval, TimeUnit.SECONDS);
                         }
                         break;
                     default:
