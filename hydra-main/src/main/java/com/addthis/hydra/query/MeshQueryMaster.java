@@ -58,15 +58,16 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
 
     private static final Logger log = LoggerFactory.getLogger(MeshQueryMaster.class);
 
-    private static final String  tempDir          = Parameter.value("query.tmpdir", "query.tmpdir");
-    private static final int     meshPort         = Parameter.intValue("qmaster.mesh.port", 5100);
-    private static final String  meshRoot         = Parameter.value("qmaster.mesh.root", "/home/hydra");
-    private static final String  meshPeers        = Parameter.value("qmaster.mesh.peers", "localhost");
-    private static final int     meshPeerPort     = Parameter.intValue("qmaster.mesh.peer.port", 5101);
-    private static final int     meshPeerInterval = Parameter.intValue("qmaster.mesh.peer.interval", 60);
-    private static final boolean enableZooKeeper  = Parameter.boolValue("qmaster.enableZooKeeper", true);
-    private static final boolean useMesos         = Parameter.boolValue("qmaster.useMesos", false);
-    private static final String  mqWorkerAppName    = Parameter.value("qmaster.mqWorkerAppName", "hydraworker");
+    private static final String  tempDir           = Parameter.value("query.tmpdir", "query.tmpdir");
+    private static final int     meshPort          = Parameter.intValue("qmaster.mesh.port", 5100);
+    private static final String  meshRoot          = Parameter.value("qmaster.mesh.root", "/home/hydra");
+    private static final String  meshPeers         = Parameter.value("qmaster.mesh.peers", "localhost");
+    private static final int     meshPeerPort      = Parameter.intValue("qmaster.mesh.peer.port", 5101);
+    private static final int     meshPeerInterval  = Parameter.intValue("qmaster.mesh.peer.interval", 60);
+    private static final boolean enableZooKeeper   = Parameter.boolValue("qmaster.enableZooKeeper", true);
+    private static final boolean useMesos          = Parameter.boolValue("qmaster.useMesos", false);
+    private static final String  mqWorkerAppName   = Parameter.value("qmaster.mqWorkerAppName", "hydraworker");
+    private static final int     mqWorkerPortIndex = Parameter.intValue("qmaster.mwWorkerAppPortIndex", 1);
 
     private static final QueryTaskSource EMPTY_TASK_SOURCE = new QueryTaskSource(new QueryTaskSourceOption[0]);
 
@@ -157,7 +158,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
 
     private void connectToMeshPeers() {
         if (useMesos) {
-            Optional<Map<String, Integer>> peerMap = MesosServiceDiscoveryUtility.getTaskHosts(mqWorkerAppName, 1);
+            Optional<Map<String, Integer>> peerMap = MesosServiceDiscoveryUtility.getTaskHosts(mqWorkerAppName, mqWorkerPortIndex);
             if (peerMap.isPresent()) {
                 Map<String, Integer> m = peerMap.get();
                 for (Map.Entry<String, Integer> entry : m.entrySet()) {
