@@ -45,7 +45,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -66,16 +66,9 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
     private static final int     meshPeerInterval = Parameter.intValue("qmaster.mesh.peer.interval", 60);
     private static final boolean enableZooKeeper  = Parameter.boolValue("qmaster.enableZooKeeper", true);
     private static final boolean useMesos         = Parameter.boolValue("qmaster.useMesos", false);
-    private static final String  minionAppName    = Parameter.value("qmaster.minionAppName", "minion");
+    private static final String  mqWorkerAppName    = Parameter.value("qmaster.mqWorkerAppName", "hydraworker");
 
     private static final QueryTaskSource EMPTY_TASK_SOURCE = new QueryTaskSource(new QueryTaskSourceOption[0]);
-
-    /**
-     * thread pool for peer maintenance runs.
-     */
-    private final ScheduledExecutorService queryMeshPeerMaintainer = MoreExecutors
-            .getExitingScheduledExecutorService(new ScheduledThreadPoolExecutor(1,
-                    new ThreadFactoryBuilder().setNameFormat("queryMeshPeerMaintainer=%d").build()));
 
     /**
      * used for tracking metrics and other interesting things about queries that we have run.
@@ -102,6 +95,13 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         cachey = new MeshFileRefCache(meshy);
         worky = new WorkerTracker();
         allocators = new DefaultTaskAllocators(new BalancedAllocator(worky));
+
+        /*
+         * thread pool for peering
+         */
+        ScheduledExecutorService queryMeshPeerMaintainer = MoreExecutors
+                .getExitingScheduledExecutorService(new ScheduledThreadPoolExecutor(1,
+                        new ThreadFactoryBuilder().setNameFormat("queryMeshPeerMaintainer=%d").build()));
         queryMeshPeerMaintainer.scheduleAtFixedRate(this::connectToMeshPeers, 0, meshPeerInterval, TimeUnit.SECONDS);
         try {
             // Delete the tmp directory (disk sort directory)
@@ -157,8 +157,13 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
 
     private void connectToMeshPeers() {
         if (useMesos) {
-            Optional<List<String>> peerList = MesosServiceDiscoveryUtility.getTaskHosts(minionAppName);
-            peerList.ifPresent(hostList -> hostList.stream().forEach(h -> meshy.connectPeer(new InetSocketAddress(h, meshPeerPort))));
+            Optional<Map<String, Integer>> peerMap = MesosServiceDiscoveryUtility.getTaskHosts(mqWorkerAppName, 1);
+            if (peerMap.isPresent()) {
+                Map<String, Integer> m = peerMap.get();
+                for (Map.Entry<String, Integer> entry : m.entrySet()) {
+                       meshy.connectPeer(new InetSocketAddress(entry.getKey(), entry.getValue()));
+                }
+            }
         } else if (meshPeers != null) {
             String[] peers = meshPeers.split(",");
             for (String peer : peers) {
