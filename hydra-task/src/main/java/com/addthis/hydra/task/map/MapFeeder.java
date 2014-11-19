@@ -116,13 +116,11 @@ public final class MapFeeder implements Runnable {
             log.info("exit {} threads. bundles read {} processed {}",
                      feeders, countFormat.format(totalReads), countFormat.format(processed));
 
-            // run task::complete in a different thread to isolate it from interrupts. ie. "taskCompleteUninterruptibly"
-            CompletableFuture<Void> taskCompleteFuture = CompletableFuture.runAsync(task::taskComplete);
+            // run in different threads to isolate them from interrupts. ie. "taskCompleteUninterruptibly"
             // join awaits completion, is uninterruptible, and will propogate any exception
-            taskCompleteFuture.join();
-
+            CompletableFuture.runAsync(task::taskComplete).join();
             // critical to get any file meta data written before process exits
-            MuxFileDirectoryCache.waitForWriteClosure();
+            CompletableFuture.runAsync(MuxFileDirectoryCache::waitForWriteClosure).join();
         } catch (Throwable t) {
             handleUncaughtThrowable(t);
         }
@@ -199,7 +197,8 @@ public final class MapFeeder implements Runnable {
                                         .append(countFormat.format((double) processed.get() / totalTime))
                                         .append("/s) ]")
                                         .toString());
-            source.close();
+            // TODO: better API/ force sources to behave more sensibly
+            CompletableFuture.runAsync(source::close).join();
         }
     }
 
