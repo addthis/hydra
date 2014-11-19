@@ -27,6 +27,7 @@ import com.addthis.codec.config.Configs;
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.common.util.CloseTask;
+import com.addthis.hydra.discovery.MesosServiceDiscoveryUtility;
 import com.addthis.hydra.job.HostFailWorker;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
@@ -237,7 +238,9 @@ public class Spawn implements Codable, AutoCloseable {
                   @Nullable @JsonProperty("structuredLogDir") File structuredLogDir,
                   @Nullable @JsonProperty("jobStore") JobStore jobStore,
                   @Nullable @JsonProperty("queueType") String queueType,
-                  @Nullable @JacksonInject CuratorFramework providedZkClient
+                  @Nullable @JacksonInject CuratorFramework providedZkClient,
+                  @Nullable @JsonProperty("queryMasterAppName") String queryMasterAppName,
+                  @Nullable @JsonProperty("queryMasterAppPortIndex") int queryMasterAppPortIndex
     ) throws Exception {
         Files.initDirectory(dataDir);
         this.stateFile = stateFile;
@@ -264,7 +267,10 @@ public class Spawn implements Codable, AutoCloseable {
         this.minionMembers = new SetMembershipListener(zkClient, MINION_UP_PATH);
         this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
-        
+
+        if (queryMasterAppName != null) {
+            queryPort = MesosServiceDiscoveryUtility.getAssignedPort(queryMasterAppName, queryMasterAppPortIndex);
+        }
         this.systemManager = new SystemManagerImpl(this, debug, queryHttpHost + ":" + queryPort, 
                 httpHost + ":" + webPort);
         this.jobConfigManager = new JobConfigManager(spawnDataStore);
