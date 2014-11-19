@@ -37,18 +37,21 @@ import org.slf4j.LoggerFactory;
 class TaskMover {
     private static final Logger log = LoggerFactory.getLogger(TaskMover.class);
 
-    private final JobKey taskKey;
-    private final String targetHostUUID;
-    private final String sourceHostUUID;
     private HostState targetHost;
     private Job job;
     private JobTask task;
     private boolean kickOnComplete;
     private boolean isMigration;
-    private final Spawn spawn;
 
-    TaskMover(Spawn spawn, JobKey taskKey, String targetHostUUID, String sourceHostUUID) {
+    private final JobKey taskKey;
+    private final String targetHostUUID;
+    private final String sourceHostUUID;
+    private final Spawn spawn;
+    private final HostManager hostManager;
+
+    TaskMover(Spawn spawn, HostManager hostManager, JobKey taskKey, String targetHostUUID, String sourceHostUUID) {
         this.spawn = spawn;
+        this.hostManager = hostManager;
         this.taskKey = taskKey;
         this.targetHostUUID = targetHostUUID;
         this.sourceHostUUID = sourceHostUUID;
@@ -63,7 +66,7 @@ class TaskMover {
     }
 
     public boolean execute() {
-        targetHost = spawn.getHostState(targetHostUUID);
+        targetHost = hostManager.getHostState(targetHostUUID);
         if (taskKey == null || !spawn.checkStatusForMove(targetHostUUID) || !spawn.checkStatusForMove(sourceHostUUID)) {
             log.warn("[task.mover] erroneous input; terminating for: " + taskKey);
             return false;
@@ -74,7 +77,7 @@ class TaskMover {
             log.warn("[task.mover] failed to find job or task for: " + taskKey);
             return false;
         }
-        HostState liveHost = spawn.getHostState(task.getHostUUID());
+        HostState liveHost = hostManager.getHostState(task.getHostUUID());
         if (liveHost == null || !liveHost.hasLive(task.getJobKey())) {
             log.warn("[task.mover] failed to find live task for: " + taskKey);
             spawn.fixTaskDir(taskKey.getJobUuid(), taskKey.getNodeNumber(), false, false);

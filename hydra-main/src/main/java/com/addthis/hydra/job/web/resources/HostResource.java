@@ -150,7 +150,7 @@ public class HostResource {
     public Response listHosts() {
         JSONArray hosts = new JSONArray();
         try {
-            for (HostState host : spawn.listHostStatus(null)) {
+            for (HostState host : spawn.hostManager.listHostStatus(null)) {
                 hosts.put(spawn.getHostStateUpdateEvent(host));
             }
             return Response.ok(hosts.toString()).build();

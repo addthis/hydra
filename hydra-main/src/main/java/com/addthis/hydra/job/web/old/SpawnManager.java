@@ -198,7 +198,7 @@ public class SpawnManager {
                     for (String key : jobCommandManager.getKeys()) {
                         commandlist.put(key, jobCommandManager.getEntity(key).toJSON());
                     }
-                    for (HostState host : spawn.listHostStatus(null)) {
+                    for (HostState host : spawn.hostManager.listHostStatus(null)) {
                         hostlist.put(spawn.getHostStateUpdateEvent(host));
                     }
                     HashSet<String> ids = csvListToSet(link.getRequestValues().getValue("id"));
@@ -340,7 +340,7 @@ public class SpawnManager {
             public void httpService(HTTPLink link) throws Exception {
                 HashSet<String> ids = csvListToSet(link.getRequestValues().getValue("id"));
                 JSONArray list = new JSONArray();
-                for (HostState host : spawn.listHostStatus(null)) {
+                for (HostState host : spawn.hostManager.listHostStatus(null)) {
                     if (ids == null || ids.contains(host.getHost()) || ids.contains(host.getHostUuid())) {
                         list.put(spawn.getHostStateUpdateEvent(host));
                     }

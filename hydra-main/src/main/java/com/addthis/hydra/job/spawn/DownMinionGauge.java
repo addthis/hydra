@@ -18,16 +18,16 @@ import com.addthis.hydra.job.mq.HostState;
 import com.yammer.metrics.core.Gauge;
 
 class DownMinionGauge extends Gauge<Integer> {
-    private Spawn spawn;
+    private final HostManager hostManager;
 
-    public DownMinionGauge(Spawn spawn) {
-        this.spawn = spawn;
+    public DownMinionGauge(HostManager hostManager) {
+        this.hostManager = hostManager;
     }
 
     @Override public Integer value() {
         int down = 0;
-        for (HostState host : spawn.listHostStatus(null)) {
-            if (host != null && !host.isDead() && !host.isUp()) {
+        for (HostState host : hostManager.listHostStatus(null)) {
+            if ((host != null) && !host.isDead() && !host.isUp()) {
                 down++;
             }
         }

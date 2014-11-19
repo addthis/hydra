@@ -31,6 +31,7 @@ import com.google.common.cache.CacheBuilder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * A class in charge of estimating the full size of job tasks, since JobTask.getByteCount does not include backups.
  * <p/>
@@ -39,22 +40,28 @@ import org.slf4j.LoggerFactory;
  * this ratio will remain roughly constant on the time scale of hours.
  */
 public class SpawnBalancerTaskSizer {
+    private static final Logger log = LoggerFactory.getLogger(SpawnBalancerTaskSizer.class);
 
-    private final LinkedHashMap<String, Integer> queuedJobIds;
-    private final Cache<String, Double> cachedJobRatios;
     private static final double defaultRatio = Double.parseDouble(Parameter.value("spawn.balancer.task.sizer.defaultratio", "1.5"));
     private static final double maxRatio = Double.parseDouble(Parameter.value("spawn.balancer.task.sizer.maxratio", "10.0"));
-    private static final double minRatio = Double.parseDouble(Parameter.value("spawn.balancer.task.sizer.minratio", "1.0"));
-    private static final long queueConsumptionInterval = Parameter.longValue("spawn.balancer.task.sizer.interval", 60 * 1000);
+    private static final double minRatio = Double.parseDouble(
+            Parameter.value("spawn.balancer.task.sizer.minratio", "1.0"));
+    private static final long queueConsumptionInterval = Parameter.longValue("spawn.balancer.task.sizer.interval",
+                                                                             60 * 1000);
     private static final int ratioExpirationHours = Parameter.intValue("spawn.balancer.task.sizer.ratio.expire", 12);
-    private final Spawn spawn;
-    private static final Logger log = LoggerFactory.getLogger(SpawnBalancerTaskSizer.class);
+
     private static final AtomicBoolean pollingStarted = new AtomicBoolean(false);
 
-    public SpawnBalancerTaskSizer(Spawn spawn) {
+    private final Spawn spawn;
+    private final HostManager hostManager;
+    private final LinkedHashMap<String, Integer> queuedJobIds;
+    private final Cache<String, Double> cachedJobRatios;
+
+    public SpawnBalancerTaskSizer(Spawn spawn, HostManager hostManager) {
         queuedJobIds = new LinkedHashMap<>();
         cachedJobRatios = CacheBuilder.newBuilder().expireAfterWrite(ratioExpirationHours, TimeUnit.HOURS).build();
         this.spawn = spawn;
+        this.hostManager = hostManager;
     }
 
     public void startPolling(ScheduledExecutorService executor) {
@@ -115,9 +122,12 @@ public class SpawnBalancerTaskSizer {
      * @return A non-negative number of bytes on success; -1 otherwise
      */
     private long fetchTaskTrueSize(String jobId, int taskId) {
-        JobTask task;
-        HostState liveHost;
-        if ((task = spawn.getTask(jobId, taskId)) == null || (liveHost = spawn.getHostState(task.getHostUUID())) == null) {
+        JobTask task = spawn.getTask(jobId, taskId);
+        if (task == null) {
+            return -1;
+        }
+        HostState liveHost = hostManager.getHostState(task.getHostUUID());
+        if (liveHost == null) {
             return -1;
         }
         String url = "http://" + liveHost.getHost() + ":" + liveHost.getPort() + "/task.size?id=" + jobId + "&node=" + taskId;

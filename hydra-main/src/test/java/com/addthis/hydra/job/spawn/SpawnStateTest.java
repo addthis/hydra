@@ -73,7 +73,7 @@ public class SpawnStateTest extends ZkCodecStartUtil {
             HostState host = new HostState("h");
             host.setUp(true);
             host.setDead(false);
-            spawn.updateHostState(host);
+            spawn.hostManager.updateHostState(host);
             Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a");
             job.setReplicas(0);
             spawn.setJobConfig(job.getId(), config);

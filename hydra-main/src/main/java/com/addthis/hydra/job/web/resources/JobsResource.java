@@ -611,7 +611,7 @@ public class JobsResource {
             if (job != null) {
                 JSONArray tasksJson = new JSONArray();
                 for (JobTask task : job.getCopyOfTasks()) {
-                    HostState host = spawn.getHostState(task.getHostUUID());
+                    HostState host = spawn.hostManager.getHostState(task.getHostUUID());
                     JSONObject json = task.toJSON();
                     json.put("host", host.getHost());
                     json.put("hostPort", host.getPort());
@@ -619,7 +619,7 @@ public class JobsResource {
                     JSONArray taskReplicas = new JSONArray();
                     for (JobTaskReplica replica : task.getAllReplicas()) {
                         JSONObject replicaJson = new JSONObject();
-                        HostState replicaHost = spawn.getHostState(replica.getHostUUID());
+                        HostState replicaHost = spawn.hostManager.getHostState(replica.getHostUUID());
                         replicaJson.put("hostUrl", replicaHost.getHost());
                         replicaJson.put("hostPort", replicaHost.getPort());
                         replicaJson.put("lastUpdate", replica.getLastUpdate());
