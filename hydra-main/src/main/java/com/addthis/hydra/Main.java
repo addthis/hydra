@@ -104,11 +104,11 @@ public class Main {
                                     for (Map.Entry<String, Integer> entry : peerMap.get().entrySet()) {
                                         String peerId = peerKeyMap.getOrDefault(entry.getKey(), entry.getKey());
                                         log.debug(String.format("mesh node peering with %s : %d", peerId, entry.getValue()));
-                                        ChannelFuture future = meshy.connectToPeer(entry.getKey(), new InetSocketAddress(peerId, entry.getValue()));
+                                        ChannelFuture future = meshy.connectToPeer(peerId, new InetSocketAddress(entry.getKey(), entry.getValue()));
                                         if (future == null) {
                                             if (log.isDebugEnabled()) {
                                                 // means we've already connected
-                                                log.debug("Meshy peer connect returned null future to " + new InetSocketAddress(peerId, entry.getValue()));
+                                                log.debug("Meshy peer connect returned null future to " + new InetSocketAddress(entry.getKey(), entry.getValue()));
                                             }
                                             continue;
                                         }
