@@ -32,7 +32,7 @@ import io.netty.channel.ChannelProgressivePromise;
  * number of rows that are emitted to N rows.
  *
  * @user-reference
- * @hydra-name sendCount
+ * @hydra-name limit
  */
 public class OpLimit extends AbstractQueryOp {
 
