@@ -111,6 +111,7 @@ public class Main {
                                         /* wait for connection to complete */
                                         future.awaitUninterruptibly();
                                         if (!future.isSuccess()) {
+                                            meshy.dropPeer(entry.getKey());
                                             log.warn("Meshy peer connect fail to " + new InetSocketAddress(entry.getKey(), entry.getValue()));
                                         }
                                     }
