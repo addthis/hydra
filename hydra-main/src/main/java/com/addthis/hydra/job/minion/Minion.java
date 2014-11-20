@@ -88,7 +88,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -140,6 +142,9 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
 
     public static final String MINION_ZK_PATH = "/minion/";
     public static final String defaultMinionType = Parameter.value("minion.type", "default");
+    private static final boolean useMesos = Parameter.boolValue("mesos.useMesos", false);
+    private static final int minionWebPortIndex = Parameter.intValue("mesos.minionWebPortIndex", 2);
+    private static final String minionAppId = Parameter.value("mesos.minionAppId", "hydraworker");
 
     public static void main(String[] args) throws Exception {
         Minion minion = Configs.newDefault(Minion.class);
@@ -188,6 +193,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     boolean diskReadOnly;
     MinionWriteableDiskCheck diskHealthCheck;
     int minionPid = -1;
+    int mesosWebPort = -1;
 
     RabbitQueueingConsumer batchJobConsumer;
     BlockingArrayQueue<HostMessage> queuedHostMessages;
@@ -253,6 +259,14 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         jetty.setHandler(minionHandler);
         jetty.start();
         waitForJetty();
+        if (useMesos) {
+            Optional<Map<String,Integer>> optionalHostMap = MesosServiceDiscoveryUtility.getTaskHosts(minionAppId, minionWebPortIndex);
+            if (optionalHostMap.isPresent()) {
+                mesosWebPort = optionalHostMap.get().get(localHost);
+            } else {
+                throw new RuntimeException("Could not find host map for mesos app: " + minionAppId);
+            }
+        }
         sendStatusFailCount = Metrics.newCounter(Minion.class, "sendStatusFail-" + getJettyPort() + "-JMXONLY");
         sendStatusFailAfterRetriesCount = Metrics.newCounter(Minion.class,
                                                              "sendStatusFailAfterRetries-" + getJettyPort() +
@@ -364,7 +378,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
 
     private synchronized boolean connectToRabbitMQ() {
         String[] routingKeys = {uuid, HostMessage.ALL_HOSTS};
-        if (Parameter.boolValue("mesos.useMesos", false)) {
+        if (useMesos) {
             batchBrokerHost = MesosServiceDiscoveryUtility.getMesosProxy();
             batchBrokerPort = MesosServiceDiscoveryUtility.getAssignedPort(Parameter.value("mesos.rabbitAppId", "rabbitmq"), Parameter.intValue("mesos.rabbitPortIndex", 0));
         }
@@ -649,7 +663,11 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         long time = System.currentTimeMillis();
         HostState status = new HostState(uuid);
         status.setHost(myHost);
-        status.setPort(getJettyPort());
+        if (useMesos) {
+            status.setPort(mesosWebPort);
+        } else {
+            status.setPort(getJettyPort());
+        }
         status.setGroup(group);
         status.setTime(time);
         status.setUser(user);
