@@ -98,7 +98,7 @@ public class Main {
                                 Optional<Map<String, Integer>> peerMap = MesosServiceDiscoveryUtility.getTaskHosts(meshyAppName, portIndex);
                                 if (peerMap.isPresent()) {
                                     for (Map.Entry<String, Integer> entry : peerMap.get().entrySet()) {
-                                        System.out.println("peering with " + entry.getKey() + ":" + entry.getValue());
+                                        log.debug(String.format("mesh node peering with %s : %d", entry.getKey(), entry.getValue()));
                                         meshy.connectPeer(new InetSocketAddress(entry.getKey(), entry.getValue()));
                                     }
                                 }
