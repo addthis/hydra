@@ -18,9 +18,11 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 
 import java.net.InetSocketAddress;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -95,23 +97,26 @@ public class Main {
                             ScheduledExecutorService queryMeshPeerMaintainer = MoreExecutors
                                     .getExitingScheduledExecutorService(new ScheduledThreadPoolExecutor(1,
                                             new ThreadFactoryBuilder().setNameFormat("meshPeerMaintainer=%d").build()));
+                            final Map<String, String> peerKeyMap = new HashMap<>();
                             queryMeshPeerMaintainer.scheduleAtFixedRate(() -> {
                                 Optional<Map<String, Integer>> peerMap = MesosServiceDiscoveryUtility.getTaskHosts(meshyAppName, portIndex);
                                 if (peerMap.isPresent()) {
                                     for (Map.Entry<String, Integer> entry : peerMap.get().entrySet()) {
-                                        log.debug(String.format("mesh node peering with %s : %d", entry.getKey(), entry.getValue()));
-                                        ChannelFuture future = meshy.connectToPeer(entry.getKey(), new InetSocketAddress(entry.getKey(), entry.getValue()));
+                                        String peerId = peerKeyMap.getOrDefault(entry.getKey(), entry.getKey());
+                                        log.debug(String.format("mesh node peering with %s : %d", peerId, entry.getValue()));
+                                        ChannelFuture future = meshy.connectToPeer(entry.getKey(), new InetSocketAddress(peerId, entry.getValue()));
                                         if (future == null) {
                                             if (log.isDebugEnabled()) {
                                                 // means we've already connected
-                                                log.debug("Meshy peer connect returned null future to " + new InetSocketAddress(entry.getKey(), entry.getValue()));
+                                                log.debug("Meshy peer connect returned null future to " + new InetSocketAddress(peerId, entry.getValue()));
                                             }
                                             continue;
                                         }
                                         /* wait for connection to complete */
                                         future.awaitUninterruptibly();
                                         if (!future.isSuccess()) {
-                                            meshy.dropPeer(entry.getKey());
+                                            meshy.dropPeer(peerId);
+                                            peerKeyMap.put(entry.getKey(), entry.getKey() + UUID.randomUUID());
                                             log.warn("Meshy peer connect fail to " + new InetSocketAddress(entry.getKey(), entry.getValue()));
                                         }
                                     }
