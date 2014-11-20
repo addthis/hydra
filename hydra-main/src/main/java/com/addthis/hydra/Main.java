@@ -45,6 +45,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigObject;
 
+import org.jboss.netty.channel.ChannelFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,7 +100,19 @@ public class Main {
                                 if (peerMap.isPresent()) {
                                     for (Map.Entry<String, Integer> entry : peerMap.get().entrySet()) {
                                         log.debug(String.format("mesh node peering with %s : %d", entry.getKey(), entry.getValue()));
-                                        meshy.connectPeer(new InetSocketAddress(entry.getKey(), entry.getValue()));
+                                        ChannelFuture future = meshy.connectToPeer(entry.getKey(), new InetSocketAddress(entry.getKey(), entry.getValue()));
+                                        if (future == null) {
+                                            if (log.isDebugEnabled()) {
+                                                // means we've already connected
+                                                log.debug("Meshy peer connect returned null future to " + new InetSocketAddress(entry.getKey(), entry.getValue()));
+                                            }
+                                            continue;
+                                        }
+                                        /* wait for connection to complete */
+                                        future.awaitUninterruptibly();
+                                        if (!future.isSuccess()) {
+                                            log.warn("Meshy peer connect fail to " + new InetSocketAddress(entry.getKey(), entry.getValue()));
+                                        }
                                     }
                                 }
                             }, 0, peerInterval, TimeUnit.SECONDS);
