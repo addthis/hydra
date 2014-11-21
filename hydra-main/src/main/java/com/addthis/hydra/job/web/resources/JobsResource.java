@@ -40,6 +40,7 @@ import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.codec.config.Configs;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.codec.plugins.PluginRegistry;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
@@ -65,6 +66,7 @@ import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableMap;
 
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -102,7 +104,7 @@ public class JobsResource {
 
     @GET
     @Path("/enable")
-    @Produces(MediaType.TEXT_PLAIN)
+    @Produces(MediaType.APPLICATION_JSON)
     public Response enableJob(@QueryParam("jobs") String jobarg,
                               @QueryParam("enable") @DefaultValue("1") String enableParam,
                               @QueryParam("unsafe") @DefaultValue("false") boolean unsafe,
@@ -117,6 +119,7 @@ public class JobsResource {
             List<String> unchanged = new ArrayList<>();
             List<String> notFound = new ArrayList<>();
             List<String> notAllowed = new ArrayList<>();
+
             try {
                 for (String jobId : jobIds) {
                     Job job = spawn.getJob(jobId);
@@ -134,41 +137,22 @@ public class JobsResource {
                         notFound.add(jobId);
                     }
                 }
+                log.info("{} jobs: changed={}, unchanged={}, not found={}, cannot safely enable={}",
+                         action, changed, unchanged, notFound, notAllowed);
             } catch (Exception e) {
                 return buildServerError(e);
             }
-            Response response;
-            if (jobIds.size() == 1) {
-                // better response text for single job request
-                String jobId = jobIds.get(0);
-                if (!notFound.isEmpty()) {
-                    response = Response.status(Response.Status.NOT_FOUND).entity(
-                            "job " + jobId + " is not found").build();
-                } else if (!notAllowed.isEmpty()) {
-                    response = Response.status(Response.Status.BAD_REQUEST).entity(
-                            "job " + jobId + " cannot be safely enabled because it is not IDLE").build();
-                } else if (!unchanged.isEmpty()) {
-                    response = Response.ok("job " + jobId + " state is unchanged").build();
-                } else {
-                    response = Response.ok("job " + jobId + " has been " + action + "d").build();
-                }
-            } else {
-                StringBuilder sb = new StringBuilder();
-                if (!notFound.isEmpty()) {
-                    sb.append("not found: " + notFound.size() + "; ");
-                }
-                if (!notAllowed.isEmpty()) {
-                    sb.append("unsafe to enable: " + notAllowed.size() + "; ");
-                }
-                if (!unchanged.isEmpty()) {
-                    sb.append("unchanged: " + unchanged.size() + "; ");
-                }
-                sb.append(action + "d: " + changed.size());
-                response = Response.ok(sb.toString()).build();
+
+            try {
+                String json = CodecJSON.encodeString(ImmutableMap.of(
+                        "changed", changed,
+                        "unchanged", unchanged,
+                        "notFound", notFound,
+                        "notAllowed", notAllowed));
+                return Response.ok(json).build();
+            } catch (JsonProcessingException e) {
+                return buildServerError(e);
             }
-            log.info("{} jobs: changed: {}, unchanged: {}, not found: {}, cannot safely enable: {}",
-                     action, changed, unchanged, notFound, notAllowed);
-            return response;
         } else {
             return Response.status(Response.Status.BAD_REQUEST).entity("Missing 'jobs' parameter").build();
         }

@@ -171,11 +171,11 @@ function(
             $.ajax({
                 url: "/job/enable?jobs="+self.id+"&enable=1&unsafe="+unsafe,
                 type: "GET",
-                dataType: "text"
+                dataType: "json"
             }).done(function(data){
-                Alertify.log.info(data,5000)
+                self.showEnableStateChange(data, "enabled", unsafe);
             }).fail(function(e){
-                Alertify.log.error("Error enabling job "+self.id+". <br/>"+e.responseText);
+                Alertify.log.error("Error enabling job "+self.id+"<br/>" + e.responseText);
             });
         },
         disable:function(){
@@ -183,12 +183,28 @@ function(
             $.ajax({
                 url: "/job/enable?jobs="+self.id+"&enable=0",
                 type: "GET",
-                dataType: "text"
+                dataType: "json"
             }).done(function(data){
-                Alertify.log.info(data,5000);
+                self.showEnableStateChange(data, "disabled");
             }).fail(function(e){
-                Alertify.log.error("Error disabling job "+self.id+". <br/>"+e.responseText);
+                Alertify.log.error("Error disabling job "+self.id+"<br/>" + e.responseText);
             });
+        },
+        showEnableStateChange:function(data, state, unsafe){
+            var jobId = this.id;
+            if (data.changed.length > 0) {
+                var v = (unsafe ? "unsafely " : "") + state;
+                Alertify.log.success("Job " + jobId + " has been " + v, 2000);
+            } else if (data.unchanged.length > 0) {
+                Alertify.log.info("Job " + jobId + " is already " + state, 2000);
+            } else if (data.notFound.length > 0) {
+                Alertify.log.error("Job " + jobId + " is not found");
+            } else if (data.notAllowed.length > 0) {
+                Alertify.log.error("Job " + jobId + " must be IDLE to be enabled safely");
+            } else {
+                Alertify.log.error("Unexpected response data. Check console log")
+                console.log("Unexpected response data from /job/enable call: " + data);
+            }
         },
         revert:function(params){
             var self=this;
@@ -565,28 +581,45 @@ function(
             });
         },
         enableBatch:function(jobIds, unsafe){
+            var self=this;
             var count = jobIds.length;
             $.ajax({
                 url: "/job/enable?jobs="+jobIds+"&enable=1&unsafe="+unsafe,
                 type: "GET",
-                dataType: "text"
+                dataType: "json"
             }).done(function(data){
-                Alertify.log.info(data,5000)
+                self.showEnableStateChange(data, "enabled", unsafe);
             }).fail(function(e){
                 Alertify.log.error("Error enabling: "+count+" jobs. <br/> "+e.responseText);
             });
         },
         disableBatch:function(jobIds){
+            var self=this;
             var count = jobIds.length;
             $.ajax({
                 url: "/job/enable?jobs="+jobIds+"&enable=0",
                 type: "GET",
-                dataType: "text"
+                dataType: "json"
             }).done(function(data){
-                Alertify.log.info(data,5000);
+                self.showEnableStateChange(data, "disabled");
             }).fail(function(e){
                 Alertify.log.error("Error disabling: "+count+" jobs. <br/> "+e.responseText);
             });
+        },
+        showEnableStateChange:function(data, state, unsafe){
+            if (data.changed.length > 0) {
+                var v = (unsafe ? "unsafely " : "") + state;
+                Alertify.log.success(data.changed.length + " job(s) have been " + v, 5000);
+            }
+            if (data.unchanged.length > 0) {
+                Alertify.log.info(data.unchanged.length + " job(s) are already " + state, 5000);
+            }
+            if (data.notFound.length > 0) {
+                Alertify.log.error(data.notFound.length + " job(s) are not found");
+            }
+            if (data.notAllowed.length > 0) {
+                Alertify.log.error(data.notAllowed.length + " job(s) cannot be enabled safely - they must be IDLE");
+            }
         },
         deleteSelected:function(jobIds){
             var count = jobIds.length;
