@@ -27,6 +27,8 @@ import javax.ws.rs.core.Response;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
@@ -62,6 +64,7 @@ import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Splitter;
 
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -99,27 +102,75 @@ public class JobsResource {
 
     @GET
     @Path("/enable")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_PLAIN)
     public Response enableJob(@QueryParam("jobs") String jobarg,
                               @QueryParam("enable") @DefaultValue("1") String enableParam,
+                              @QueryParam("unsafe") @DefaultValue("false") boolean unsafe,
                               @Auth User user) {
         boolean enable = enableParam.equals("1");
         if (jobarg != null) {
-            String[] joblist = Strings.splitArray(jobarg, ",");
-            emitLogLineForAction(user.getUsername(), (enable ? "enable" : "disable") + " jobs " + jobarg);
-            for (String jobid : joblist) {
-                IJob job = spawn.getJob(jobid);
-                if (job != null && job.setEnabled(enable)) {
-                    try {
-                        spawn.updateJob(job);
-                    } catch (Exception ex) {
-                        return buildServerError(ex);
+            List<String> jobIds = Splitter.on(',').omitEmptyStrings().trimResults().splitToList(jobarg);
+            String action = enable ? (unsafe ? "unsafely enable" : "enable") : "disable";
+            emitLogLineForAction(user.getUsername(), action + " jobs " + jobarg);
+
+            List<String> changed = new ArrayList<>();
+            List<String> unchanged = new ArrayList<>();
+            List<String> notFound = new ArrayList<>();
+            List<String> notAllowed = new ArrayList<>();
+            try {
+                for (String jobId : jobIds) {
+                    Job job = spawn.getJob(jobId);
+                    if (job != null) {
+                        if (enable && !unsafe && job.getState() != JobState.IDLE) {
+                            // request to enable safely, so do not allow if job is not IDLE
+                            notAllowed.add(jobId);
+                        } else if (job.setEnabled(enable)) {
+                            spawn.updateJob(job);
+                            changed.add(jobId);
+                        } else {
+                            unchanged.add(jobId);
+                        }
+                    } else {
+                        notFound.add(jobId);
                     }
                 }
+            } catch (Exception e) {
+                return buildServerError(e);
             }
-            return Response.ok().build();
+            Response response;
+            if (jobIds.size() == 1) {
+                // better response text for single job request
+                String jobId = jobIds.get(0);
+                if (!notFound.isEmpty()) {
+                    response = Response.status(Response.Status.NOT_FOUND).entity(
+                            "job " + jobId + " is not found").build();
+                } else if (!notAllowed.isEmpty()) {
+                    response = Response.status(Response.Status.BAD_REQUEST).entity(
+                            "job " + jobId + " cannot be safely enabled because it is not IDLE").build();
+                } else if (!unchanged.isEmpty()) {
+                    response = Response.ok("job " + jobId + " state is unchanged").build();
+                } else {
+                    response = Response.ok("job " + jobId + " has been " + action + "d").build();
+                }
+            } else {
+                StringBuilder sb = new StringBuilder();
+                if (!notFound.isEmpty()) {
+                    sb.append("not found: " + notFound.size() + "; ");
+                }
+                if (!notAllowed.isEmpty()) {
+                    sb.append("unsafe to enable: " + notAllowed.size() + "; ");
+                }
+                if (!unchanged.isEmpty()) {
+                    sb.append("unchanged: " + unchanged.size() + "; ");
+                }
+                sb.append(action + "d: " + changed.size());
+                response = Response.ok(sb.toString()).build();
+            }
+            log.info("{} jobs: changed: {}, unchanged: {}, not found: {}, cannot safely enable: {}",
+                     action, changed, unchanged, notFound, notAllowed);
+            return response;
         } else {
-            return Response.serverError().entity("Missing job ids").build();
+            return Response.status(Response.Status.BAD_REQUEST).entity("Missing 'jobs' parameter").build();
         }
     }
 

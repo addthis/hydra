@@ -166,16 +166,16 @@ function(
                 dataType: "json"
             });
         },
-        enable:function(){
+        enable:function(unsafe){
             var self=this;
             $.ajax({
-                url: "/job/enable?jobs="+self.id+"&enable=1",
+                url: "/job/enable?jobs="+self.id+"&enable=1&unsafe="+unsafe,
                 type: "GET",
                 dataType: "text"
             }).done(function(data){
-                Alertify.log.info(self.id+" job enabled.",2000)
+                Alertify.log.info(data,5000)
             }).fail(function(e){
-                Alertify.log.error("Error enabling job "+self.id);
+                Alertify.log.error("Error enabling job "+self.id+". <br/>"+e.responseText);
             });
         },
         disable:function(){
@@ -185,9 +185,9 @@ function(
                 type: "GET",
                 dataType: "text"
             }).done(function(data){
-                Alertify.log.info(self.id+" job disabled",2000);
+                Alertify.log.info(data,5000);
             }).fail(function(e){
-                Alertify.log.error("Error disabling job "+self.id);
+                Alertify.log.error("Error disabling job "+self.id+". <br/>"+e.responseText);
             });
         },
         revert:function(params){
@@ -564,14 +564,14 @@ function(
                 Alertify.log.error("Error killing: "+count+" jobs. <br/> "+e.responseText);
             });
         },
-        enableBatch:function(jobIds){
+        enableBatch:function(jobIds, unsafe){
             var count = jobIds.length;
             $.ajax({
-                url: "/job/enable?jobs="+jobIds+"&enable=1",
+                url: "/job/enable?jobs="+jobIds+"&enable=1&unsafe="+unsafe,
                 type: "GET",
                 dataType: "text"
             }).done(function(data){
-                Alertify.log.info(count+" job(s) enabled.",2000)
+                Alertify.log.info(data,5000)
             }).fail(function(e){
                 Alertify.log.error("Error enabling: "+count+" jobs. <br/> "+e.responseText);
             });
@@ -583,7 +583,7 @@ function(
                 type: "GET",
                 dataType: "text"
             }).done(function(data){
-                Alertify.log.info(count+" job(s) disabled",2000);
+                Alertify.log.info(data,5000);
             }).fail(function(e){
                 Alertify.log.error("Error disabling: "+count+" jobs. <br/> "+e.responseText);
             });
@@ -819,7 +819,8 @@ function(
         },
         handleEnableButtonClick:function(event){
             var ids = this.getSelectedIds();
-            this.collection.enableBatch(ids);
+            // shift click triggers unsafe enable!
+            this.collection.enableBatch(ids, event.shiftKey);
         },
         handleDisableButtonClick:function(event){
             var ids = this.getSelectedIds();
@@ -1529,7 +1530,8 @@ function(
         },
         handleEnableButtonClick:function(event){
             event.preventDefault();
-            this.model.enable();
+            // shift click triggers unsafe enable!
+            this.model.enable(event.shiftKey);
         },
         handleDisableButtonClick:function(event){
             event.preventDefault();
