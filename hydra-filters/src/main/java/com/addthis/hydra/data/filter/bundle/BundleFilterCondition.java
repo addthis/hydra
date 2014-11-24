@@ -55,7 +55,8 @@ public class BundleFilterCondition extends BundleFilter {
     BundleFilter elseDo;
 
     /**
-     * If true, return the conditional filter's return value. This field is optional. Default false.
+     * If true then return the result of the {@link #ifDo ifDo} or the {@link #elseDo elseDo}
+     * whichever branch is executed. This field is optional. Default false.
      */
     @FieldConfig(codable = true)
     boolean returnFilter;
@@ -88,21 +89,13 @@ public class BundleFilterCondition extends BundleFilter {
         if (row != null) {
             if (ifCondition != null && ifCondition.filterExec(row)) {
                 if (ifDo != null) {
-                    if (returnFilter) {
-                        returnValue = ifDo.filterExec(row);
-                    } else {
-                        // ignore result
-                        ifDo.filterExec(row);
-                    }
+                    boolean result = ifDo.filterExec(row);
+                    returnValue = returnFilter ? result : returnValue;
                 }
             } else {
                 if (elseDo != null) {
-                    if (returnFilter) {
-                        returnValue = elseDo.filterExec(row);
-                    } else {
-                        // ignore result
-                        elseDo.filterExec(row);
-                    }
+                    boolean result = elseDo.filterExec(row);
+                    returnValue = returnFilter ? result : returnValue;
                 }
             }
         }
