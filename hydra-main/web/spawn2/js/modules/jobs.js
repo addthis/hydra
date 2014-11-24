@@ -1350,84 +1350,95 @@ function(
         className:"modal fade",
         template: _.template(jobRevertModalTemplate),
         events:{
-            "click button#runsButton":"handleRunsButtonClick",
-            "click button#dailyButton":"handleDailyButtonClick",
+            "click button#revertToLastRunButton":"handleRevertToLastRunButtonClick",
+            "click button#goldButton":"handleGoldButtonClick",
             "click button#hourlyButton":"handleHourlyButtonClick",
+            "click button#dailyButton":"handleDailyButtonClick",
             "click button#weeklyButton":"handleWeeklyButtonClick"
         },
         initialize:function(options){
-            _.bindAll(this,'handleButtonClick','handleRunsButtonClick','handleDailyButtonClick','handleHourlyButtonClick','handleWeeklyButtonClick');
+            _.bindAll(this,'handleButtonClick','handleRevertToLastRunButtonClick','handleGoldButtonClick','handleDailyButtonClick','handleHourlyButtonClick','handleWeeklyButtonClick');
             this.backupModel = options.backupModel;
             this.listenTo(this.backupModel,"change",this.handleBackupChange);
         },
         render:function(){
             var node = this.backupModel.get("node");
             var html = this.template({
-                model:this.model.toJSON(),
-                title:(node>-1?"Revert task "+node+"..":"Revert this job..")
+                model: this.model.toJSON(),
+                title: node > -1 ? "Revert task " + node : "Revert job"
             });
             this.$el.html(html);
             this.$el.modal("show");
+            this.showMessage("Searching for availiable backups...");
             return this;
         },
         handleBackupChange:function(){
             var data = this.backupModel.toJSON(),self=this;
-            _.each(_.keys(data),function(type){
+            var count = 0;
+            _.each(["gold", "hourly", "daily", "weekly", "monthly"],function(type){
                 var select = self.$el.find("#"+type+"Select");
                 var options = "";
                 _.each(data[type],function(ts){
                     options+="<option value='"+ts+"'>"+util.convertToDateTimeText(ts)+"</option>"
+                    count++;
                 });
                 select.html(options);
                 if(!_.isEmpty(options)){
                     select.closest("tr").show();
                 }
             });
+            if (count == 0) {
+                this.showMessage("There is no backup!");
+            } else {
+                this.showMessage("");
+            }
+            this.$el.find("#revertToLastRunButton").hide();
         },
-        handleButtonClick:function(params){
-            var self=this;
+        showMessage:function(msg){
+            this.$el.find("#backupMessage").text(msg);
+        },
+        handleButtonClick:function(selectElem, backupType){
+            var node = this.backupModel.get("node");
+            var value = this.$el.find(selectElem).val();
+            var params = {
+                type:backupType, 
+                node:node, 
+                time:value
+            };
+            this.handleButtonClickRaw(node, params);
+        },
+        handleButtonClickRaw:function(node, params){
+            var name = node > -1 ? "Task " + node : "Job";
             this.model.revert(params).done(function(data,result,xhr){
-                var node = self.backupModel.get("node");
-                Alertify.log.success((node>-1?"Task "+node:"Job")+" reverted successfully.");
+                if (params.hasOwnProperty("revision")) {
+                    Alertify.log.info("Attempted to revert to the last run (which may not exist)");
+                } else {
+                    Alertify.log.success(name + " reverted successfully.");
+                }
             }).fail(function(xhr){
-                    Alertify.log.success("Error reverting job:\n"+xhr.responseText);
+                Alertify.log.error("Error reverting " + name + ":<br/>" + xhr.responseText);
             });
         },
-        handleRunsButtonClick:function(event){
-            var revision = this.$el.find("#runSelect").val(),self=this;
-            var params={
-                type:"gold",
-                revision:revision,
-                node:self.backupModel.get("node")
+        handleRevertToLastRunButtonClick:function(event){
+            var node = this.backupModel.get("node");
+            var params = {
+                type:"gold", 
+                node:node, 
+                revision:"0"
             };
-            this.handleButtonClick(params);
+            this.handleButtonClickRaw(node, params);
         },
-        handleDailyButtonClick:function(event){
-            var time = this.$el.find("#dailySelect").val(),self=this;
-            var params={
-                type:"daily",
-                time:time,
-                node:self.backupModel.get("node")
-            };
-            this.handleButtonClick(params);
+        handleGoldButtonClick:function(event){
+            this.handleButtonClick("#goldSelect", "gold", "time");
         },
         handleHourlyButtonClick:function(event){
-            var time = this.$el.find("#hourlySelect").val(),self=this;
-            var params={
-                type:"hourly",
-                time:time,
-                node:self.backupModel.get("node")
-            };
-            this.handleButtonClick(params);
+            this.handleButtonClick("#hourlySelect", "hourly", "time");
+        },
+        handleDailyButtonClick:function(event){
+            this.handleButtonClick("#dailySelect", "daily", "time");
         },
         handleWeeklyButtonClick:function(event){
-            var time = this.$el.find("#weeklySelect").val(),self=this;
-            var params={
-                type:"weekly",
-                time:time,
-                node:self.backupModel.get("node")
-            };
-            this.handleButtonClick(params);
+            this.handleButtonClick("#weeklySelect", "weekly", "time");
         }
     });
     var DetailView = Backbone.View.extend({
