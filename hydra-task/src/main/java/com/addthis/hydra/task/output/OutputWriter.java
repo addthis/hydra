@@ -213,8 +213,10 @@ public class OutputWriter extends AbstractOutputWriter {
 
     private OutputWrapper getOutputWrapperForFile(String fileName) throws IOException {
         OutputWrapper out = openOutputs.get(fileName);
-        if (out != null && (out.getLineCount() % 1000 == 0) &&
-            (flags.getMaxFileSize() > 0 && out.exceedsSize(flags.getMaxFileSize()))) {
+        if ((out != null)
+            && ((out.getLineCount() % 1000) == 0)
+            && (flags.getMaxFileSize() > 0)
+            && out.exceedsSize(flags.getMaxFileSize())) {
             close(out);
             out = null;
         }
