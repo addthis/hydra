@@ -126,11 +126,14 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
                               OutputStreamFlags outputFlags,
                               int fileVersion) {
         // by convention the partition can never be greater than 999
-        checkArgument(fileVersion < 1000, "fileVersion (%s) cannot be > 999 or else padding will break", fileVersion);
         String result = target;
         if (outputFlags.isNoAppend() || (outputFlags.getMaxFileSize() > 0)) {
 
-            String part = Strings.padleft(Integer.toString(fileVersion), partitionData.getPadTo(), Strings.pad0);
+            String versionString = Integer.toString(fileVersion);
+            checkArgument(versionString.length() <= partitionData.getPadTo(),
+                          "fileVersion (%s) cannot be longer than %s digits or else padding will loop; try {{PART:%s}}",
+                          fileVersion, partitionData.getPadTo(), versionString.length());
+            String part = Strings.padleft(versionString, partitionData.getPadTo(), Strings.pad0);
             if (partitionData.getReplacementString() != null) {
                 result = target.replace(partitionData.getReplacementString(), part);
             } else {
