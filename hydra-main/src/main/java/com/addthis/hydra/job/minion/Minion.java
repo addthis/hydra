@@ -128,8 +128,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     private static final int maxJobPort = Parameter.intValue("minion.job.maxport", 0);
     private static final String group = System.getProperty("minion.group", "none");
     private static final String localHost = System.getProperty("minion.localhost");
-    private static final String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
-    private static final String batchBrokerPort = Parameter.value("batch.brokerPort", "5672");
+    private static final String batchBrokerAddresses = Parameter.value("batch.brokerAddresses", "localhost:5672");
     private static final int sendStatusRetries = Parameter.intValue("send.status.retries", 5);
     private static final int sendStatusRetryDelay = Parameter.intValue("send.status.delay", 5000);
     static final long hostMetricUpdaterInterval = Parameter.longValue("minion.host.metric.interval", 30 * 1000);
@@ -373,10 +372,10 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
 
     private synchronized boolean connectToRabbitMQ() {
         String[] routingKeys = {uuid, HostMessage.ALL_HOSTS};
-        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, Integer.valueOf(batchBrokerPort));
-        queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerHost, Integer.valueOf(batchBrokerPort));
+        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerAddresses);
+        queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerAddresses);
         try {
-            Connection connection = RabbitMQUtil.createConnection(batchBrokerHost, Integer.valueOf(batchBrokerPort));
+            Connection connection = RabbitMQUtil.createConnection(batchBrokerAddresses);
             channel = connection.createChannel();
             channel.exchangeDeclare("CSBatchJob", "direct");
             AMQP.Queue.DeclareOk result = channel.queueDeclare(uuid + ".batchJob", true, false, false, null);
@@ -389,7 +388,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
                                                              Minion.this, routingKeys);
             return true;
         } catch (IOException e) {
-            log.error("Error connecting to rabbitmq {}:{}", batchBrokerHost, batchBrokerPort, e);
+            log.error("Error connecting to rabbitmq at {}", batchBrokerAddresses, e);
             return false;
         }
     }

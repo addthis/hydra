@@ -26,13 +26,18 @@ import net.jodah.lyra.util.Duration;
 
 public class RabbitMQUtil {
 
-    public static Connection createConnection(String brokerHost, int brokerPort) throws IOException {
+    /**
+     * Creates a connection to a RabbitMQ cluster.
+     *
+     * @param addresses formatted as "host1[:port],host2[:port]", etc.
+     */
+    public static Connection createConnection(String addresses) throws IOException {
         Config config = new Config()
                 .withRetryPolicy(RetryPolicies.retryAlways())
                 .withRecoveryPolicy(new RecoveryPolicy()
-                        .withMaxDuration(Duration.minutes(60))
-                        .withBackoff(Duration.seconds(1), Duration.seconds(5)));
-        ConnectionOptions options = new ConnectionOptions().withHost(brokerHost).withPort(brokerPort);
+                                            .withMaxDuration(Duration.minutes(60))
+                                            .withBackoff(Duration.seconds(1), Duration.seconds(5)));
+        ConnectionOptions options = new ConnectionOptions().withAddresses(addresses);
         return Connections.create(options, config);
     }
 }
