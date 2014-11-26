@@ -72,7 +72,7 @@ public final class Job implements IJob {
     @FieldConfig private Long startTime;
     /* Unix epoch offset of time last job node completed */
     @FieldConfig private Long endTime;
-    /* hours between re-kicking */
+    /* minutes between re-kicking */
     @FieldConfig private Long rekickTimeout;
     /* minutes max time to allocate to job before it's interrupted */
     @FieldConfig private Long maxRunTime;
