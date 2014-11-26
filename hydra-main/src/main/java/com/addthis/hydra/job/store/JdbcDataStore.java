@@ -44,12 +44,11 @@ import com.yammer.metrics.core.TimerContext;
 
 /**
  *
- * @author Brad Sneade
  */
 public abstract class JdbcDataStore implements SpawnDataStore {
 
     private static final Logger log = LoggerFactory.getLogger(JdbcDataStore.class);
-    
+
     /* The simulated 'child' value used to store data about the parent. */
     protected static final String blankChildValue = "_root";
 
@@ -74,7 +73,7 @@ public abstract class JdbcDataStore implements SpawnDataStore {
     protected final String tableName;
 
     protected final ComboPooledDataSource cpds;
-    
+
     /* Column names. Using default parameters, path and child are VARCHAR(150) and value is a BLOB. */
     private static final String pathKey = "path";
     private static final String valueKey = "val";
@@ -183,8 +182,10 @@ public abstract class JdbcDataStore implements SpawnDataStore {
     }
 
     /**
-     * Query the values of multiple rows using a single query, mandating that childId=blankChildValue to ensure that no children are returned.
-     * Use 'WHERE path IN (s1, s2, ...)' syntax, which performs better than a series of ORs
+     * Query the values of multiple rows using a single query, mandating that
+     * childId=blankChildValue to ensure that no children are returned. Use
+     * 'WHERE path IN (s1, s2, ...)' syntax, which performs better than a series
+     * of ORs
      */
     @Override
     public Map<String, String> get(String[] paths) {
@@ -192,7 +193,7 @@ public abstract class JdbcDataStore implements SpawnDataStore {
             return null;
         }
         StringBuilder sb = new StringBuilder().append(String.format("SELECT %s,%s FROM %s WHERE %s=? AND %s IN (?", pathKey, valueKey, tableName, childKey, pathKey));
-        for (int i=0; i<paths.length-1; i++) {
+        for (int i = 0; i < paths.length - 1; i++) {
             sb.append(",?");
         }
         String command = sb.append(")").toString();
@@ -201,7 +202,7 @@ public abstract class JdbcDataStore implements SpawnDataStore {
             PreparedStatement preparedStatement = conn.prepareStatement(command);
             // The first condition is that the child value is blankChildValue
             preparedStatement.setString(1, blankChildValue);
-            int j=2;
+            int j = 2;
             for (String path : paths) {
                 // The other condition is that the path key is in input set
                 checkValidKey(path);
@@ -216,7 +217,7 @@ public abstract class JdbcDataStore implements SpawnDataStore {
         }
         return rv;
     }
-    
+
     protected Blob valueToBlob(String value) throws SQLException {
         return value != null ? new SerialBlob(LZFEncoder.encode(value.getBytes())) : null;
     }
@@ -232,13 +233,15 @@ public abstract class JdbcDataStore implements SpawnDataStore {
     }
 
     /**
-     * Internal method that uses the 'replace' mysql command to insert the row if it is new, update otherwise.
+     * Internal method that uses the 'replace' mysql command to insert the row
+     * if it is new, update otherwise.
+     *
      * @param path The path to update
      * @param childId The childId to modify
      * @param value The value to insert
      * @throws SQLException If the command fails
      */
-    private void insert(String path, String childId, String value)  throws SQLException {
+    private void insert(String path, String childId, String value) throws SQLException {
         try (Connection connection = cpds.getConnection()) {
             PreparedStatement preparedStatement = connection.prepareStatement(getInsertTemplate());
             preparedStatement.setString(1, path);
@@ -249,10 +252,13 @@ public abstract class JdbcDataStore implements SpawnDataStore {
     }
 
     /**
-     * Query the value for a particular path/childId combination. Return null if no row is found.
+     * Query the value for a particular path/childId combination. Return null if
+     * no row is found.
+     *
      * @param path The path to query
      * @param childId The child to query
-     * @return A String if a row was found; null otherwise. If multiple rows are found, throw a RuntimeException
+     * @return A String if a row was found; null otherwise. If multiple rows are
+     * found, throw a RuntimeException
      * @throws SQLException
      */
     private String querySingleResult(String path, String childId) throws SQLException {
@@ -382,20 +388,20 @@ public abstract class JdbcDataStore implements SpawnDataStore {
         cpds.close();
     }
 
-
     /**
      * On startup, create the table if it doesn't exist, and enforce that
-     * path+childId combinations must be unique. Note: this is invoked from the 
+     * path+childId combinations must be unique. Note: this is invoked from the
      * constructor, DO NOT use any variables that may not be initialized.
      *
      * @throws SQLException If creating execution fails
      */
     protected abstract void runSetupTableCommand() throws SQLException;
-    
+
     /**
-     * Gets the class to use for the JDBC Driver. Note: this is invoked from the 
+     * Gets the class to use for the JDBC Driver. Note: this is invoked from the
      * constructor, DO NOT use any variables that may not be initialized.
-     * @return 
+     *
+     * @return
      */
     protected abstract String getDriverClass();
 
@@ -408,7 +414,7 @@ public abstract class JdbcDataStore implements SpawnDataStore {
     protected abstract String getGetChildNamesTemplate();
 
     protected abstract String getGetChildrenTemplate();
-    
+
     public static int getMaxPathLength() {
         return maxPathLength;
     }
@@ -428,5 +434,5 @@ public abstract class JdbcDataStore implements SpawnDataStore {
     public static String getIdKey() {
         return idKey;
     }
-    
+
 }

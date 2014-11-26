@@ -22,14 +22,15 @@ import java.util.Properties;
 import com.addthis.basis.util.Parameter;
 
 /**
- * A class for storing spawn configuration data into a PostgreSQL database. 
- * Reads and writes values from a single master table which uses partitioning {@link http://www.postgresql.org/docs/9.1/static/ddl-partitioning.html}.
+ * A class for storing spawn configuration data into a PostgreSQL database.
+ * Reads and writes values from a single master table which uses partitioning
+ * {@link http://www.postgresql.org/docs/9.1/static/ddl-partitioning.html}.
  */
 public class PostgresDataStore extends JdbcDataStore {
-    
-   private static final Logger log = LoggerFactory.getLogger(PostgresDataStore.class);
-   
-   private static final String driverClass = Parameter.value("sql.datastore.driverclass", "org.postgresql.Driver");
+
+    private static final Logger log = LoggerFactory.getLogger(PostgresDataStore.class);
+
+    private static final String driverClass = Parameter.value("sql.datastore.driverclass", "org.postgresql.Driver");
 
     public PostgresDataStore(String jdbcUrl, String dbName, String tableName, Properties properties) throws Exception {
         super(jdbcUrl, dbName, tableName, properties);
@@ -73,7 +74,7 @@ public class PostgresDataStore extends JdbcDataStore {
 
     @Override
     public String getDescription() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return "Postgres";
     }
-   
+
 }
