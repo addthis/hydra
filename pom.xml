@@ -54,7 +54,7 @@
     <at.test.excluded.groups>com.addthis.basis.test.SlowTest,com.addthis.hydra.common.test.LocalStackTest</at.test.excluded.groups>
 
     <!-- addthis dependency versions -->
-    <hydra.dep.bark.version>2.1.4-SNAPSHOT</hydra.dep.bark.version>
+    <hydra.dep.bark.version>2.1.4</hydra.dep.bark.version>
     <hydra.dep.basis.version>2.3.0</hydra.dep.basis.version>
     <hydra.dep.bundle.version>2.4.2</hydra.dep.bundle.version>
     <hydra.dep.codec.version>3.2.1</hydra.dep.codec.version>
