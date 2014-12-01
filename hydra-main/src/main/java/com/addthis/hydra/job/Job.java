@@ -673,7 +673,7 @@ public final class Job implements IJob {
             }
         }
         task.setErrorCode(0);
-        setTaskState(task, JobTaskState.IDLE);
+        setTaskState(task, JobTaskState.IDLE, true);
         if (getState() == JobState.IDLE) {
             setEndTime(JitterClock.globalTime());
         }

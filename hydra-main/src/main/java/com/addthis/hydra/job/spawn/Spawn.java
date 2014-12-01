@@ -1890,7 +1890,7 @@ public class Spawn implements Codable, AutoCloseable {
         Job job = getJob(task.getJobUUID());
         if (job != null) {
             log.warn("[taskQueuesByPriority] setting " + task.getJobKey() + " as idle and removing from queue");
-            job.setTaskState(task, JobTaskState.IDLE);
+            job.setTaskState(task, JobTaskState.IDLE, true);
             removed = taskQueuesByPriority.remove(job.getPriority(), task.getJobKey());
             queueJobTaskUpdateEvent(job);
             sendTaskQueueUpdateEvent();
