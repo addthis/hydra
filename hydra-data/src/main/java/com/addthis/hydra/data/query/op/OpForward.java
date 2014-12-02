@@ -16,22 +16,36 @@ package com.addthis.hydra.data.query.op;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.data.query.AbstractQueryOp;
+import com.addthis.hydra.data.query.QueryMemTracker;
+import com.addthis.hydra.data.query.QueryOp;
 
 import io.netty.channel.ChannelProgressivePromise;
 
 public class OpForward extends AbstractQueryOp {
 
-    protected OpForward(ChannelProgressivePromise opPromise) {
+    private QueryOp forwardingTarget;
+
+    protected OpForward(ChannelProgressivePromise opPromise, QueryOp forwardingTarget) {
         super(opPromise);
+        this.forwardingTarget = forwardingTarget;
     }
 
     @Override
     public void send(Bundle bundle) {
-        getNext().send(bundle);
+        forwardingTarget.send(bundle);
+    }
+
+    public void setForwardingTarget(QueryOp forwardingTarget) {
+        this.forwardingTarget = forwardingTarget;
     }
 
     @Override
     public void sendComplete() {
         // sendComplete messages suppressed by this operation
+    }
+
+    @Override
+    public void setNext(QueryMemTracker memTracker, QueryOp next) {
+        throw new UnsupportedOperationException("OpForward must terminate a sub-pipeline");
     }
 }

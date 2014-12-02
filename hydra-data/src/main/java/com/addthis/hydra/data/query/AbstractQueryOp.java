@@ -58,6 +58,10 @@ public abstract class AbstractQueryOp implements QueryOp {
         return sourceBinder;
     }
 
+    @Override public ChannelProgressivePromise getOpPromise() {
+        return opPromise;
+    }
+
     @Override
     public void close() throws IOException {
         // sub-classes should implement for any clean-up they need

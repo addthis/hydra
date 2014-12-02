@@ -154,7 +154,8 @@ public class QueryOpProcessor implements DataChannelOutput, QueryMemTracker, Clo
             return null;
         }
 
-        QueryOp firstOp = null, lastOp = null;
+        QueryOp firstOp = null;
+        QueryOp lastOp = null;
 
         /* remaining ops stack is processed in reverse order */
         for (int i = opslist.length - 1; i >= 0; i--) {

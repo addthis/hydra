@@ -53,4 +53,18 @@ public class TestOpGroupBy extends TestOp {
                  3);
     }
 
+    @Test public void complex() throws Exception {
+        DataTableHelper t2 = new DataTableHelper().tr().td("cat", "a", "1")
+                                                  .tr().td("cat", "b", "1")
+                                                  .tr().td("cat", "b", "1")
+                                                  .tr().td("dog", "a", "6")
+                                                  .tr().td("dog", "a", "7")
+                                                  .tr().td("dog", "b", "6")
+                                                  .tr().td("dog", "c", "6");
+        doOpTest(t2, "groupby=kik:sort=1:s:d%3Blimit=2;limit=2",
+                 new DataTableHelper().tr().td("dog", "a", "7")
+                                      .tr().td("dog", "c", "6"),
+                 3);
+    }
+
 }

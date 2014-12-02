@@ -22,17 +22,16 @@ import com.addthis.basis.util.MemoryCounter;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleOutput;
 import com.addthis.bundle.core.list.ListBundleFormat;
-import com.addthis.bundle.util.ValueUtil;
-import com.addthis.bundle.value.Numeric;
-import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.query.AbstractQueryOp;
+import com.addthis.hydra.data.query.QueryMemTracker;
 import com.addthis.hydra.data.query.QueryOp;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.data.query.op.merge.MergeConfig;
 
-import io.netty.channel.ChannelFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.DefaultChannelProgressivePromise;
@@ -58,13 +57,9 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  * @hydra-name groupby
  */
 public class OpGroupBy extends AbstractQueryOp {
+    private static final Logger log = LoggerFactory.getLogger(OpGroupBy.class);
 
-    public static Numeric num(ValueObject o) {
-        Numeric num = ValueUtil.asNumberOrParseLong(o, 10);
-        return num != null ? num : ZERO;
-    }
-
-    private Map<String, QueryOp> resultTable = new HashMap<>();
+    private final Map<String, QueryOp> resultTable = new HashMap<>();
     private final ListBundleFormat format = new ListBundleFormat();
 
     private final long memTip;
@@ -75,6 +70,8 @@ public class OpGroupBy extends AbstractQueryOp {
 
     private final MergeConfig mergeConfig;
     private final QueryOpProcessor processor;
+    private final OpForward forwardingOp;
+    private final ChannelFutureListener errorForwarder;
 
     public OpGroupBy(QueryOpProcessor processor, String args, ChannelProgressivePromise opPromise) {
         super(opPromise);
@@ -82,12 +79,37 @@ public class OpGroupBy extends AbstractQueryOp {
         this.processor = processor;
         this.memTip = processor.memTip();
         this.rowTip = processor.rowTip();
-        if (args.indexOf(":") < 0) {
+        if (!args.contains(":")) {
             throw new IllegalStateException("groupby query argument missing ':'");
         }
         String[] components = args.split(":", 2);
         this.mergeConfig = new MergeConfig(components[0]);
         this.queryDeclaration = components[1];
+        this.forwardingOp = new OpForward(opPromise, getNext());
+        // ops don't usually fail promises themselves, so this logic is unlikely to activate, but might as well
+        this.errorForwarder = channelFuture -> {
+            if (!channelFuture.isSuccess()) {
+                opPromise.tryFailure(channelFuture.cause());
+            }
+        };
+        opPromise.addListener(channelFuture -> {
+            if (channelFuture.isSuccess()) {
+                for (QueryOp queryOp : resultTable.values()) {
+                    queryOp.getOpPromise().trySuccess();
+                }
+            } else {
+                Throwable failureCause = channelFuture.cause();
+                for (QueryOp queryOp : resultTable.values()) {
+                    queryOp.getOpPromise().tryFailure(failureCause);
+                }
+            }
+        });
+    }
+
+    @Override
+    public void setNext(QueryMemTracker memTracker, QueryOp next) {
+        super.setNext(memTracker, next);
+        forwardingOp.setForwardingTarget(next);
     }
 
     /**
@@ -104,22 +126,7 @@ public class OpGroupBy extends AbstractQueryOp {
         } else {
             result = opPromise.channel().newProgressivePromise();
         }
-        opPromise.addListener(new ChannelFutureListener() {
-            @Override public void operationComplete(ChannelFuture channelFuture) throws Exception {
-                if (!channelFuture.isSuccess()) {
-                    result.tryFailure(channelFuture.cause());
-                } else {
-                    result.trySuccess();
-                }
-            }
-        });
-        result.addListener(new ChannelFutureListener() {
-            @Override public void operationComplete(ChannelFuture channelFuture) throws Exception {
-                if (!channelFuture.isSuccess()) {
-                    opPromise.tryFailure(channelFuture.cause());
-                }
-            }
-        });
+        result.addListener(errorForwarder);
         return result;
     }
 
@@ -129,15 +136,12 @@ public class OpGroupBy extends AbstractQueryOp {
             return;
         }
         String key = mergeConfig.handleBindAndGetKey(row, format);
-        QueryOp queryOp = resultTable.get(key);
-        if (queryOp == null) {
+        QueryOp queryOp = resultTable.computeIfAbsent(key, mapKey -> {
             ChannelProgressivePromise newPromise = generateNewPromise(opPromise);
-            QueryOp forward = new OpForward(newPromise);
-            forward.setNext(getMemTracker(), getNext());
-            queryOp = QueryOpProcessor.generateOps(processor, newPromise, forward, queryDeclaration);
-            resultTable.put(key, queryOp);
-            memTotal += MemoryCounter.estimateSize(queryOp);
-        }
+            QueryOp newQueryOp = QueryOpProcessor.generateOps(processor, newPromise, forwardingOp, queryDeclaration);
+            memTotal += MemoryCounter.estimateSize(newQueryOp);
+            return newQueryOp;
+        });
         memTotal -= MemoryCounter.estimateSize(queryOp);
         queryOp.send(row);
         memTotal += MemoryCounter.estimateSize(queryOp);
@@ -154,11 +158,14 @@ public class OpGroupBy extends AbstractQueryOp {
 
     @Override
     public void sendComplete() {
-        for (BundleOutput queryOp : resultTable.values()) {
-            if (!opPromise.isDone()) {
-                queryOp.sendComplete();
-            } else {
+        for (QueryOp queryOp : resultTable.values()) {
+            if (opPromise.isDone()) {
                 break;
+            } else {
+                if (!queryOp.getOpPromise().isDone()) {
+                    queryOp.sendComplete();
+                    queryOp.getOpPromise().trySuccess();
+                }
             }
         }
         QueryOp next = getNext();
@@ -168,7 +175,16 @@ public class OpGroupBy extends AbstractQueryOp {
     @Override
     public void close() throws IOException {
         for (QueryOp queryOp : resultTable.values()) {
-            queryOp.close();
+            QueryOp currentOp = queryOp;
+            while (currentOp != null) {
+                try {
+                    currentOp.close();
+                } catch (Throwable ex) {
+                    // hopefully an "out of off heap/direct memory" error if not an exception
+                    log.error("unexpected exception or error while closing query op", ex);
+                }
+                currentOp = currentOp.getNext();
+            }
         }
     }
 }
