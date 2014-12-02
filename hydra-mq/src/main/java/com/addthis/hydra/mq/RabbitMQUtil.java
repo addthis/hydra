@@ -31,13 +31,15 @@ public class RabbitMQUtil {
      *
      * @param addresses formatted as "host1[:port],host2[:port]", etc.
      */
-    public static Connection createConnection(String addresses) throws IOException {
+    public static Connection createConnection(String addresses, String username, String password) throws IOException {
         Config config = new Config()
                 .withRetryPolicy(RetryPolicies.retryAlways())
                 .withRecoveryPolicy(new RecoveryPolicy()
                                             .withMaxDuration(Duration.minutes(60))
                                             .withBackoff(Duration.seconds(1), Duration.seconds(5)));
-        ConnectionOptions options = new ConnectionOptions().withAddresses(addresses);
+        ConnectionOptions options = new ConnectionOptions().withAddresses(addresses)
+                                                           .withUsername(username)
+                                                           .withPassword(password);
         return Connections.create(options, config);
     }
 }
