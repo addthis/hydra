@@ -30,7 +30,6 @@ eval exec ${JAVA_CMD:-java} \
 	-XX:+UseParallelOldGC \
 	-Dlog4j.configurationFactory=com.addthis.hydra.uber.HoconConfigurationFactory \
 	-Dorg.jboss.logging.provider=slf4j \
-	-Dbatch.brokerAddresses=${brokerAddresses:-localhost} \
 	-Dbatch.job.log4j=1 \
 	-Dcs.je.cacheSize=128M \
 	-Dcs.je.cacheShared=1 \
