@@ -23,6 +23,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
 
+import java.sql.DriverManager;
+
 /**
  * A class for storing spawn configuration data into a mysql database. Reads and writes values from a single table.
  */
@@ -37,6 +39,16 @@ public class MysqlDataStore extends JdbcDataStore {
     public MysqlDataStore(String jdbcUrl, String dbName, String tableName, Properties properties) throws Exception {
         super(jdbcUrl, dbName, tableName, properties);
         log.info("Mysql Spawn Data Store Initialized");
+    }
+    
+    @Override
+    protected void runSetupDatabaseCommand(final String dbName, final String jdbcUrl, final Properties properties) throws SQLException {
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, properties)) {
+            // Create a connection that excludes the database from the jdbc url.
+            // This is necessary to create the database in the event that it does not exist.
+            String dbSetupCommand = String.format("CREATE DATABASE IF NOT EXISTS %s", dbName);
+            connection.prepareStatement(dbSetupCommand).execute();
+        }
     }
 
     /**
@@ -116,4 +128,5 @@ public class MysqlDataStore extends JdbcDataStore {
     protected String getDriverClass() {
         return driverClass;
     }
+
 }

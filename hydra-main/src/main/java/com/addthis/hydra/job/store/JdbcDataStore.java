@@ -20,11 +20,11 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.Blob;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLTransactionRollbackException;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -100,12 +100,7 @@ public abstract class JdbcDataStore implements SpawnDataStore {
         if (jdbcUrl == null || dbName == null || !jdbcUrl.endsWith("/")) {
             throw new IllegalArgumentException("jdbcUrl and dbName must be non-null, and jdbcUrl must end in '/'");
         }
-        try (Connection connection = DriverManager.getConnection(jdbcUrl, properties)) {
-            // Create a connection that excludes the database from the jdbc url.
-            // This is necessary to create the database in the event that it does not exist.
-            String dbSetupCommand = String.format("CREATE DATABASE IF NOT EXISTS %s", dbName);
-            connection.prepareStatement(dbSetupCommand).execute();
-        }
+        runSetupDatabaseCommand(dbName, jdbcUrl, properties);
         cpds = new ComboPooledDataSource();
         cpds.setDriverClass(getDriverClass());
         cpds.setJdbcUrl(jdbcUrl + dbName);
@@ -387,6 +382,14 @@ public abstract class JdbcDataStore implements SpawnDataStore {
     public void close() {
         cpds.close();
     }
+    
+    /**
+     * On startup, create the database if it doesn't exist.  Note: this is invoked from the
+     * constructor, DO NOT use any variables that may not be initialized.
+     *
+     * @throws SQLException If creating execution fails
+     */
+    protected abstract void runSetupDatabaseCommand(final String dbName, final String jdbcUrl, final Properties properties) throws SQLException;
 
     /**
      * On startup, create the table if it doesn't exist, and enforce that

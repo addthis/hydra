@@ -17,9 +17,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
+
 import java.util.Properties;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+
 import com.addthis.basis.util.Parameter;
+
+import static com.addthis.hydra.job.store.JdbcDataStore.getChildKey;
+import static com.addthis.hydra.job.store.JdbcDataStore.getIdKey;
+import static com.addthis.hydra.job.store.JdbcDataStore.getMaxPathLength;
+import static com.addthis.hydra.job.store.JdbcDataStore.getPathKey;
+import static com.addthis.hydra.job.store.JdbcDataStore.getValueKey;
 
 /**
  * A class for storing spawn configuration data into a PostgreSQL database.
@@ -36,10 +46,37 @@ public class PostgresDataStore extends JdbcDataStore {
         super(jdbcUrl, dbName, tableName, properties);
         log.info("Postgres Spawn Data Store Initialized");
     }
+    
+    @Override
+    protected void runSetupDatabaseCommand(String dbName, String jdbcUrl, Properties properties) throws SQLException {
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, properties)) {
+            // Create a connection that excludes the database from the jdbc url.
+            // This is necessary to create the database in the event that it does not exist.
+            String dbSetupCommand = String.format("CREATE DATABASE %s", dbName);
+            connection.prepareStatement(dbSetupCommand).execute();
+        } catch (final SQLException se) {
+            //the database may already exists
+            if (se.getMessage().endsWith("already exists")) {
+                log.info("Database already exists");
+            } else {
+                throw se;
+            }
+        }
+    }
 
     @Override
     protected void runSetupTableCommand() throws SQLException {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        try (final Connection connection = cpds.getConnection()) {
+            String tableSetupCommand = String.format("CREATE TABLE IF NOT EXISTS %s ( " +
+                                       "%s SERIAL PRIMARY KEY, " + // Auto-incrementing int id
+                                       "%s VARCHAR(%d) NOT NULL, %s VARCHAR, %s VARCHAR(%d), " + // VARCHAR path, VARCHAR value, VARCHAR child
+                                       "CONSTRAINT parent_child UNIQUE (%s,%s)) " + // Use id as primary key, enforce unique (path, child) combo
+                    tableName, 
+                    getIdKey(), 
+                    getPathKey(), getMaxPathLength(), getValueKey(), getChildKey(), getMaxPathLength(),
+                    getPathKey(), getChildKey());
+            connection.prepareStatement(tableSetupCommand).execute();
+        }
     }
 
     @Override
@@ -49,12 +86,12 @@ public class PostgresDataStore extends JdbcDataStore {
 
     @Override
     protected String getQueryTemplate() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return String.format("SELECT %s FROM %s WHERE %s=? AND %s=?", getValueKey(), tableName, getPathKey(), getChildKey());
     }
 
     @Override
     protected String getInsertTemplate() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return String.format("REPLACE INTO %s (%s,%s,%s) VALUES(?,?,?)", tableName, getPathKey(), getValueKey(), getChildKey());
     }
 
     @Override
