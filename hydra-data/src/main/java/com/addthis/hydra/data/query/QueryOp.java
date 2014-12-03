@@ -18,6 +18,8 @@ import java.io.Closeable;
 import com.addthis.bundle.core.BundleOutput;
 import com.addthis.bundle.table.DataTable;
 
+import io.netty.channel.ChannelProgressivePromise;
+
 /**
  * normal lifecycle:
  *
@@ -67,4 +69,6 @@ public interface QueryOp extends BundleOutput, Closeable {
      * @return simple debugging name
      */
     public String getSimpleName();
+
+    public ChannelProgressivePromise getOpPromise();
 }
