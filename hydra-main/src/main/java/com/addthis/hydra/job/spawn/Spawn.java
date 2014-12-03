@@ -268,7 +268,7 @@ public class Spawn implements Codable, AutoCloseable {
         this.deadMinionMembers = new SetMembershipListener(zkClient, MINION_DEAD_PATH);
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
 
-        if (queryMasterAppName != null) {
+        if (queryMasterAppName != null && !queryMasterAppName.isEmpty()) {
             queryPort = MesosServiceDiscoveryUtility.getAssignedPort(queryMasterAppName, queryMasterAppPortIndex);
         }
         this.systemManager = new SystemManagerImpl(this, debug, queryHttpHost + ":" + queryPort, 
