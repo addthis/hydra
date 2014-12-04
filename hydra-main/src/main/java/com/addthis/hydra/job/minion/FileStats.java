@@ -16,9 +16,14 @@ package com.addthis.hydra.job.minion;
 import java.io.File;
 import java.io.IOException;
 
+import java.util.Objects;
+
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,27 +36,15 @@ public class FileStats {
 
     void update(File dir) {
         try {
-            update(dir.toPath());
+            Files.walkFileTree(dir.toPath(), new SimpleFileVisitor<Path>() {
+                @Override public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    count += 1;
+                    bytes += attrs.size();
+                    return super.visitFile(file, attrs);
+                }
+            });
         } catch (IOException e) {
             log.warn("Exception while scanning task files; treating directory as empty", e);
-            count = 0;
-            bytes = 0;
-        }
-    }
-
-    void update(Path dir) throws IOException {
-        if (dir != null) {
-            try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(dir)) {
-                for (Path file : directoryStream) {
-                    if (Files.isDirectory(file)) {
-                        update(file);
-                    } else if (Files.isRegularFile(file)) {
-                        count++;
-                        bytes += Files.size(file);
-                    }
-                }
-            }
-        } else {
             count = 0;
             bytes = 0;
         }

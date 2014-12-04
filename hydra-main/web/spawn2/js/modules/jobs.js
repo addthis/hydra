@@ -1755,6 +1755,7 @@ function(
         template: _.template(jobSettingTemplate),
         events: _.extend(DetailView.prototype.events,{
             "keyup input":"handleInputKeyUp",
+            "change input":"handleInputKeyUp",
             "click input[type='checkbox']":"handleCheckboxClick"
         }),
         initialize:function(options){
@@ -2160,6 +2161,7 @@ function(
         template: _.template(jobParameterTemplate),
         events:{
             "click a#hideParamLink":"handleHideParamClick",
+            "change input":"handleInputKeyUp",
             "keyup input":"handleInputKeyUp"
         },
         initialize:function(){

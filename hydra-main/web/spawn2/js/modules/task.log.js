@@ -22,13 +22,15 @@ function(
             this.node = options.node;
             this.jobUuid=options.jobUuid;
             this.lines=options.lines;
+            this.runsAgo=options.runsAgo;
             this.host=options.host;
             this.port=options.port;
             this.stdout=options.stdout;
             this.stdout=undefined;
         },
         url:function(){
-            var url= "http://"+this.host+":"+this.port+"/job.log?out="+(this.stdout?'1':'0')+"&id="+this.jobUuid+"&lines="+this.lines+"&node="+this.node;
+            var url= "http://"+this.host+":"+this.port+"/job.log?out="+(this.stdout?'1':'0')+
+            "&id="+this.jobUuid+"&lines="+this.lines+"&node="+this.node+"&runsAgo="+this.runsAgo;
             if(!_.isUndefined(this.offset)){
                 url+="&offset="+this.offset;
             }
@@ -44,7 +46,8 @@ function(
                 lines:undefined,
                 node:undefined,
                 offset:undefined,
-                out:""
+                out:"",
+                runsAgo:undefined
             },{silent:true});
             this.trigger("clear");
         }

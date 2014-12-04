@@ -24,6 +24,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.SimpleExec;
@@ -58,6 +61,7 @@ import com.addthis.maljson.JSONObject;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.sun.jersey.spi.scanning.PathProviderScannerListener;
 import com.yammer.metrics.core.TimerContext;
 
 import org.slf4j.Logger;
@@ -103,6 +107,7 @@ public class JobTask implements Codable {
     File backupDone;
     File jobStopped;
     File jobDir;
+    File logDir;
     File logOut;
     File logErr;
     File jobPid;
@@ -357,9 +362,9 @@ public class JobTask implements Codable {
     void initializeFileVariables() {
         jobDir = getLiveDir();
         File configDir = getConfigDir();
-        File logRoot = new File(jobDir, "log");
-        logOut = new File(logRoot, "log.out");
-        logErr = new File(logRoot, "log.err");
+        logDir = new File(jobDir, "log");
+        logOut = new File(logDir, "log.out");
+        logErr = new File(logDir, "log.err");
         jobPid = new File(configDir, "job.pid");
         replicatePid = new File(configDir, "replicate.pid");
         backupPid = new File(configDir, "backup.pid");
@@ -603,7 +608,7 @@ public class JobTask implements Codable {
         if (targetDir != null && backupDir != null && backupDir.exists() && backupDir.isDirectory()) {
             moveAndDeleteAsync(targetDir);
             // Copy the backup directory onto the target directory
-            String cpCMD = MacUtils.cpcmd + (MacUtils.linkBackup ? " -lrf " : " -rf ");
+            String cpCMD = MacUtils.cpcmd + (MacUtils.linkBackup ? " -lrfT " : " -rfT ");
             return ProcessUtils.shell(cpCMD + backupDir + " " + targetDir + " >> /dev/null 2>&1", minion.rootDir) == 0;
         } else {
             log.warn("[restore] invalid backup dir {}", backupDir);
@@ -620,10 +625,27 @@ public class JobTask implements Codable {
         if (file != null && file.exists()) {
             File tmpLocation = new File(file.getParent(), "BAD-" + System.currentTimeMillis());
             if (file.renameTo(tmpLocation)) {
+                copyLogBackAsArchive(file.toPath(), tmpLocation.toPath(), Paths.get("log/log.out"));
+                copyLogBackAsArchive(file.toPath(), tmpLocation.toPath(), Paths.get("log/log.err"));
                 submitPathToDelete(tmpLocation.getPath());
             } else {
                 throw new RuntimeException("Could not rename file for asynchronous deletion: " + file);
             }
+        }
+    }
+
+    private void copyLogBackAsArchive(Path oldName, Path newName, Path logSubpath) {
+        try {
+            Path newLogPath = newName.resolve(logSubpath);
+            if (java.nio.file.Files.isSymbolicLink(newLogPath)) {
+                Path resolvedPath = newLogPath.toRealPath();
+                Path oldLogPath = oldName.resolve(logSubpath).getParent()
+                                         .resolve(resolvedPath.getFileName().toString() + ".bad");
+                java.nio.file.Files.createDirectories(oldLogPath.getParent());
+                java.nio.file.Files.move(resolvedPath, oldLogPath);
+            }
+        } catch (Exception ex) {
+            log.warn("exception while trying to preserve reverted task's old logs -- ignoring", ex);
         }
     }
 
@@ -761,7 +783,7 @@ public class JobTask implements Codable {
         if (!configDir.exists()) {
             Files.initDirectory(configDir);
         }
-        File logDir = new File(jobDir, "log");
+        logDir = new File(jobDir, "log");
         Files.initDirectory(logDir);
         replicateDone = new File(configDir, "replicate.done");
         jobRun = new File(configDir, "job.run");
@@ -863,7 +885,8 @@ public class JobTask implements Codable {
             log.debug("[task.execReplicate] {}", this.getJobKey());
         }
         require(testTaskIdle(), "task is not idle");
-        if ((replicas == null || replicas.length == 0) && (failureRecoveryReplicas == null || failureRecoveryReplicas.length == 0)) {
+        if (((replicas == null) || (replicas.length == 0))
+            && ((failureRecoveryReplicas == null) || (failureRecoveryReplicas.length == 0))) {
             execBackup(rebalanceSource, rebalanceTarget, true);
             return;
         }
@@ -955,7 +978,7 @@ public class JobTask implements Codable {
     }
 
     private String generateReplicateSHScript(boolean replicateAllBackups) throws IOException {
-        File logDir = new File(jobDir, "log");
+        logDir = new File(jobDir, "log");
         Files.initDirectory(logDir);
         StringBuilder bash = new StringBuilder("#!/bin/bash\n");
         bash.append(makeRetryDefinition());
@@ -1006,7 +1029,7 @@ public class JobTask implements Codable {
     }
 
     private String generateBackupSHScript(ReplicaTarget[] replicas) throws IOException {
-        File logDir = new File(jobDir, "log");
+        logDir = new File(jobDir, "log");
         Files.initDirectory(logDir);
         StringBuilder bash = new StringBuilder("#!/bin/bash\n");
         bash.append("cd " + jobDir.getCanonicalPath() + "\n");
@@ -1250,105 +1273,6 @@ public class JobTask implements Codable {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
-        return "";
-    }
-
-    public JSONObject readLogLines(File file, int startOffset, int lines) {
-        JSONObject json = new JSONObject();
-        String content = "";
-        long off = 0;
-        long endOffset = 0;
-        int linesRead = 0;
-        int bytesRead = 0;
-        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-            long len = raf.length();
-            //if startoffset is negative, tail the content
-            if (startOffset < 0 || startOffset > len) {
-                off = len;
-                while (lines > 0 && --off >= 0) {
-                    raf.seek(off);
-                    if (off == 0 || raf.read() == '\n') {
-                        lines--;
-                        linesRead++;
-                    }
-                }
-                bytesRead = (int) (len - off);
-                byte[] buf = new byte[bytesRead];
-                raf.read(buf);
-                content = Bytes.toString(buf);
-                endOffset = len;
-            } else if (len > 0 && startOffset < len) {
-                off = startOffset;
-                while (lines > 0 && off < len) {
-                    raf.seek(off++);
-                    if (raf.read() == '\n') {
-                        lines--;
-                        linesRead++;
-                    }
-                }
-                bytesRead = (int) (off - startOffset);
-                byte[] buf = new byte[bytesRead];
-                raf.seek(startOffset);
-                raf.read(buf);
-                content = Bytes.toString(buf);
-                endOffset = off;
-            } else if (startOffset == len) {
-                endOffset = len;
-                linesRead = 0;
-                content = "";
-            }
-            json.put("offset", endOffset);
-            json.put("lines", linesRead);
-            json.put("lastModified", file.lastModified());
-            json.put("out", content);
-        } catch (Exception e) {
-            log.warn("", e);
-        }
-        return json;
-    }
-
-    public String tail(File file, int lines) {
-        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-            long len = raf.length();
-            if (len <= 0) {
-                return "";
-            }
-            long off = len;
-            while (lines > 0 && --off >= 0) {
-                raf.seek(off);
-                if (off == 0 || raf.read() == '\n') {
-                    lines--;
-                }
-            }
-            byte[] buf = new byte[(int) (len - off)];
-            raf.read(buf);
-            return Bytes.toString(buf);
-        } catch (Exception e) {
-            log.warn("", e);
-        }
-        return "";
-    }
-
-    public String head(File file, int lines) {
-        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-            long len = raf.length();
-            if (len <= 0) {
-                return "";
-            }
-            long off = 0;
-            while (lines > 0 && off < len) {
-                raf.seek(off++);
-                if (raf.read() == '\n') {
-                    lines--;
-                }
-            }
-            byte[] buf = new byte[(int) off];
-            raf.seek(0);
-            raf.read(buf);
-            return Bytes.toString(buf);
-        } catch (Exception e) {
-            log.warn("", e);
         }
         return "";
     }
