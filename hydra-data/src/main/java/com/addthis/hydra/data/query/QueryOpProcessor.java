@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.query;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 import java.io.Closeable;
@@ -75,7 +77,7 @@ public class QueryOpProcessor implements DataChannelOutput, QueryMemTracker, Clo
     private final QueryMemTracker           memTracker;
     private final DataTableFactory          tableFactory;
 
-    private QueryOp firstOp;
+    @Nonnull private QueryOp firstOp;
     private QueryOp lastOp;
     private long    rowsin;
     private long    cellsin;
@@ -145,10 +147,10 @@ public class QueryOpProcessor implements DataChannelOutput, QueryMemTracker, Clo
         return firstOp.toString();
     }
 
-    public static QueryOp generateOps(QueryOpProcessor processor,
-                                      ChannelProgressivePromise promise,
-                                      QueryOp tail,
-                                      String... opslist) {
+    @Nullable public static QueryOp generateOps(QueryOpProcessor processor,
+                                                ChannelProgressivePromise promise,
+                                                QueryOp tail,
+                                                String... opslist) {
 
         if ((opslist == null) || (opslist.length == 0)) {
             return null;
@@ -186,14 +188,13 @@ public class QueryOpProcessor implements DataChannelOutput, QueryMemTracker, Clo
     }
 
     private void parseOps(String... opslist) {
-        firstOp = generateOps(this, opPromise, output, opslist);
+        QueryOp newFirstOp = generateOps(this, opPromise, output, opslist);
         // follow the query operations to the lastOp
-        if (firstOp != null) {
+        if (newFirstOp != null) {
+            firstOp = newFirstOp;
             QueryOp current = firstOp;
-            QueryOp next = current.getNext();
-            while (next != output) {
-                current = next;
-                next = current.getNext();
+            while (current.getNext() != output) {
+                current = current.getNext();
             }
             lastOp = current;
         }
