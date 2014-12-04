@@ -153,7 +153,8 @@ public class JobAlert implements Codable {
     public ImmutableMap<String, String> checkAlertForJobs(Set<Job> jobs, MeshyClient meshyClient) {
         ImmutableMap.Builder<String, String> newActiveJobsBuilder = new ImmutableMap.Builder<>();
         for (Job job : jobs) {
-            String errorMessage = alertActiveForJob(meshyClient, job);
+            String previousErrorMessage = activeJobs.get(job.getId()); // only interesting for certain edge cases
+            String errorMessage = alertActiveForJob(meshyClient, job, previousErrorMessage);
             if (errorMessage != null) {
                 newActiveJobsBuilder.put(job.getId(), errorMessage);
             }
@@ -178,7 +179,7 @@ public class JobAlert implements Codable {
 
     @VisibleForTesting
     @Nullable
-    String alertActiveForJob(@Nullable MeshyClient meshClient, Job job) {
+    String alertActiveForJob(@Nullable MeshyClient meshClient, Job job, String previousErrorMessage) {
         String validationError = isValid();
         if (validationError != null) {
             return validationError;
@@ -216,9 +217,9 @@ public class JobAlert implements Codable {
             case SPLIT_CANARY:
                 return checkSplitCanary(meshClient, job);
             case MAP_CANARY:
-                return checkMapCanary(job);
+                return checkMapCanary(job, previousErrorMessage);
             case MAP_FILTER_CANARY:
-                return checkMapFilterCanary(job);
+                return checkMapFilterCanary(job, previousErrorMessage);
             default:
                 log.warn("Warning: alert {} has unexpected type {}", alertId, type);
                 return "unexpected alert type: " + type;
@@ -226,7 +227,7 @@ public class JobAlert implements Codable {
         return null;
     }
 
-    @Nullable private String checkMapCanary(Job job) {
+    @Nullable private String checkMapCanary(Job job, String previousErrorMessage) {
         try {
             long queryVal = JobAlertUtil.getQueryCount(job.getId(), canaryPath);
             consecutiveCanaryExceptionCount.set(0);
@@ -234,23 +235,23 @@ public class JobAlert implements Codable {
                 return "query value: " + queryVal + " < " + canaryConfigThreshold;
             }
         } catch (Exception ex) {
-            return handleCanaryException(ex);
+            return handleCanaryException(ex, previousErrorMessage);
         }
         return null;
     }
 
-    @Nullable private String checkMapFilterCanary(Job job) {
+    @Nullable private String checkMapFilterCanary(Job job, String previousErrorMessage) {
         try {
             String s = JobAlertUtil.evaluateQueryWithFilter(this, job.getId());
             consecutiveCanaryExceptionCount.set(0);
             return s;
         } catch (Exception ex) {
-            return handleCanaryException(ex);
+            return handleCanaryException(ex, previousErrorMessage);
         }
     }
 
     @VisibleForTesting
-    @Nullable String handleCanaryException(Exception ex) {
+    @Nullable String handleCanaryException(Exception ex, @Nullable String previousErrorMessage) {
         log.warn("Exception during canary check: ", ex);
         // special handling for SocketTimeoutException which is mostly trasient
         if (Throwables.getRootCause(ex) instanceof SocketTimeoutException) {
@@ -260,7 +261,7 @@ public class JobAlert implements Codable {
                 return "Canary check threw exception at least " + MAX_CONSECUTIVE_CANARY_EXCEPTION + " times in a row. " +
                        "The most recent error is: " + ex.getMessage();
             } else {
-                return null;
+                return previousErrorMessage;
             }
         }
         return ex.getMessage();

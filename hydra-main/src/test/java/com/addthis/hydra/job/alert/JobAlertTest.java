@@ -40,37 +40,37 @@ public class JobAlertTest {
 
         JobAlert errorAlert = decodeObject(JobAlert.class, "alertId = errorAlert, type = 0, jobIds = []");
         assertNotNull("Error alert should trigger with at least one error job",
-                      errorAlert.alertActiveForJob(null, errorJob));
+                      errorAlert.alertActiveForJob(null, errorJob, null));
         assertNull("Error alert should not trigger with only idle job",
-                   errorAlert.alertActiveForJob(null, idleJob));
+                   errorAlert.alertActiveForJob(null, idleJob, null));
 
         JobAlert completeAlert = decodeObject(JobAlert.class, "alertId = completeAlert, type = 1, jobIds = []");
         assertNull("Complete alert should not trigger with running job",
-                   completeAlert.alertActiveForJob(null, runningJob));
+                   completeAlert.alertActiveForJob(null, runningJob, null));
         runningJob.setState(JobState.IDLE);
         assertNotNull("Complete alert should trigger on job completion",
-                      completeAlert.alertActiveForJob(null, runningJob));
+                      completeAlert.alertActiveForJob(null, runningJob, null));
         runningJob.setState(JobState.RUNNING);
 
         JobAlert runtimeAlert = decodeObject(JobAlert.class,
                                              "alertId = runtimeAlert, type = 2, timeout = 1 hour, jobIds = []");
         assertNull("Runtime alert should not trigger with idle job",
-                   runtimeAlert.alertActiveForJob(null, idleJob));
+                   runtimeAlert.alertActiveForJob(null, idleJob, null));
         runningJob.setStartTime(now - 1000);
         assertNull("Runtime alert should not trigger with recently-submitted job",
-                   runtimeAlert.alertActiveForJob(null, runningJob));
+                   runtimeAlert.alertActiveForJob(null, runningJob, null));
         runningJob.setStartTime(now - 180 * 60 * 1000);
         assertNotNull("Runtime alert should trigger with long-running job",
-                      runtimeAlert.alertActiveForJob(null, runningJob));
+                      runtimeAlert.alertActiveForJob(null, runningJob, null));
 
         JobAlert rekickAlert = decodeObject(JobAlert.class,
                                             "alertId = rekickAlert, type = 3, timeout = 1 hour, jobIds = []");
         idleJob.setEndTime(now - 10 * 60 * 1000);
         assertNull("Rekick alert should not fire after short time period",
-                   rekickAlert.alertActiveForJob(null, idleJob));
+                   rekickAlert.alertActiveForJob(null, idleJob, null));
         idleJob.setEndTime(now - 300 * 60 * 1000);
         assertNotNull("Rekick alert should fire after long time period",
-                      rekickAlert.alertActiveForJob(null, idleJob));
+                      rekickAlert.alertActiveForJob(null, idleJob, null));
     }
 
     @Test
@@ -104,11 +104,11 @@ public class JobAlertTest {
         Job j1 = createJobWithState(JobState.RUNNING);
         j1.setStartTime(0L);
         j1.setEndTime(1L);
-        String runtimeAlertMsg1 = runtimeAlert.alertActiveForJob(null, j1);
-        String rekickAlertMsg1 = runtimeAlert.alertActiveForJob(null, j1);
+        String runtimeAlertMsg1 = runtimeAlert.alertActiveForJob(null, j1, null);
+        String rekickAlertMsg1 = runtimeAlert.alertActiveForJob(null, j1, null);
         Thread.sleep(10);
-        String runtimeAlertMsg2 = runtimeAlert.alertActiveForJob(null, j1);
-        String rekickAlertMsg2 = runtimeAlert.alertActiveForJob(null, j1);
+        String runtimeAlertMsg2 = runtimeAlert.alertActiveForJob(null, j1, null);
+        String rekickAlertMsg2 = runtimeAlert.alertActiveForJob(null, j1, null);
         assertEquals("runtime alert message unchanged", runtimeAlertMsg1, runtimeAlertMsg2);
         assertEquals("rekick alert message unchanged", rekickAlertMsg1, rekickAlertMsg2);
     }
@@ -119,10 +119,22 @@ public class JobAlertTest {
         Exception definitelyBadException = new RuntimeException("error");
         Exception normallyOkException = new RuntimeException(new SocketTimeoutException("socket timeout"));
 
-        assertEquals("bad exception", "error", alert.handleCanaryException(definitelyBadException));
-        assertNull("benign exception #1", alert.handleCanaryException(normallyOkException));
-        assertNull("benign exception #2", alert.handleCanaryException(normallyOkException));
-        assertNotNull("benign exception #3", alert.handleCanaryException(normallyOkException));
-        assertNull("benign exception #4", alert.handleCanaryException(normallyOkException));
+        assertEquals("bad exception", "error", alert.handleCanaryException(definitelyBadException, null));
+        assertNull("benign exception #1", alert.handleCanaryException(normallyOkException, null));
+        assertNull("benign exception #2", alert.handleCanaryException(normallyOkException, null));
+        assertNotNull("benign exception #3", alert.handleCanaryException(normallyOkException, null));
+        assertNull("benign exception #4", alert.handleCanaryException(normallyOkException, null));
+    }
+
+    @Test
+    public void preserveExistingAlertOnCanaryException() throws Exception {
+        JobAlert alert = decodeObject(JobAlert.class, "alertId = a, type = 5, description = canary alert, jobIds = []");
+        Exception definitelyBadException = new RuntimeException("error");
+        Exception normallyOkException = new RuntimeException(new SocketTimeoutException("socket timeout"));
+
+        assertEquals("bad exception", "error", alert.handleCanaryException(definitelyBadException, null));
+        assertEquals("benign exception #1", "some previous error",
+                     alert.handleCanaryException(normallyOkException, "some previous error"));
+        assertNull("benign exception #2", alert.handleCanaryException(normallyOkException, null));
     }
 }
