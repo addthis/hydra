@@ -16,7 +16,7 @@
   <parent>
     <artifactId>jar-pom</artifactId>
     <groupId>com.addthis.common.build.maven.pom</groupId>
-    <version>3.2.1</version>
+    <version>3.4.0-SNAPSHOT</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
@@ -57,7 +57,7 @@
     <hydra.dep.bark.version>2.1.4</hydra.dep.bark.version>
     <hydra.dep.basis.version>2.3.0</hydra.dep.basis.version>
     <hydra.dep.bundle.version>2.4.2</hydra.dep.bundle.version>
-    <hydra.dep.codec.version>3.2.1</hydra.dep.codec.version>
+    <hydra.dep.codec.version>3.2.2-SNAPSHOT</hydra.dep.codec.version>
     <hydra.dep.meshy.version>2.2.0</hydra.dep.meshy.version>
     <hydra.dep.muxy.version>2.1.2</hydra.dep.muxy.version>
     <hydra.dep.maljson.version>0.2.0</hydra.dep.maljson.version>
