@@ -18,7 +18,12 @@ import java.io.File;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class WriteableDiskCheck extends MeteredHealthCheck {
+
+    private static final Logger log = LoggerFactory.getLogger(WriteableDiskCheck.class);
 
     private List<File> checkedFiles;
 
@@ -38,6 +43,7 @@ public class WriteableDiskCheck extends MeteredHealthCheck {
                 }
             } catch (Exception e) {
                 // keep trying files until one succeeds, or all fail
+                log.warn("check failed for {}", file, e);
             }
         }
         return false;
