@@ -16,7 +16,7 @@
   <parent>
     <artifactId>jar-pom</artifactId>
     <groupId>com.addthis.common.build.maven.pom</groupId>
-    <version>3.4.0-SNAPSHOT</version>
+    <version>3.4.0</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
@@ -418,16 +418,6 @@
  
   <reporting>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>2.9.1</version>
-        <configuration>
-          <configLocation>${dep.plugin.checkstyle.configLocation}</configLocation>
-          <includeTestSourceDirectory>true</includeTestSourceDirectory>
-          <consoleOutput>false</consoleOutput>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
