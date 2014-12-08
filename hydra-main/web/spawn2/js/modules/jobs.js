@@ -1658,11 +1658,11 @@ function(
     });
     var ConfDetailView = DetailView.extend({
         template: _.template(jobConfigurationTemplate),
-        events: _.extend(DetailView.prototype.events,{
+        events: _.defaults({
             'click a#hideParamLink':'handleParamChange',
             'change input':'handleInputChange',
             'change select#command':'handleCommandInputChange'
-        }),
+        }, DetailView.prototype.events),
         initialize:function(options){
             if (options.isClone) {
                 options.model.attributes.dontDeleteMe = false;
@@ -1753,11 +1753,11 @@ function(
     });
     var SettingDetailView = DetailView.extend({
         template: _.template(jobSettingTemplate),
-        events: _.extend(DetailView.prototype.events,{
+        events: _.defaults({
             "keyup input":"handleInputKeyUp",
             "change input":"handleInputKeyUp",
             "click input[type='checkbox']":"handleCheckboxClick"
-        }),
+        }, DetailView.prototype.events),
         initialize:function(options){
             DetailView.prototype.initialize.apply(this,[options]);
         },
