@@ -16,6 +16,7 @@ package com.addthis.hydra.task.map;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.CachingField;
+import com.addthis.bundle.util.FullAutoField;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
@@ -62,10 +63,18 @@ public final class FieldFilter {
         }
     }
 
-    private AutoField cloneFrom(AutoField from) {
-//        if (from instanceof )
-        return null;
-
+    // can't find a good way to copy the json value for "from", copy constructors fail for abstract types,
+    // and clone has its own host of problems. We could just re-use the same object, but that would be even
+    // more wasteful than the caching we perform for unchanging formats. This is a decent stop-gap solution.
+    private static AutoField cloneFrom(AutoField from) {
+        if (from instanceof FullAutoField) {
+            return new FullAutoField(((FullAutoField) from).name, ((FullAutoField) from).subNames);
+        } else if (from instanceof CachingField) {
+            return new CachingField(((CachingField) from).name);
+        } else {
+            throw new IllegalArgumentException("can not use implicit relation (from = to) for AutoField type: "
+                                               + from.getClass());
+        }
     }
 
     public FieldFilter(String copyFieldName) {
