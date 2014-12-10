@@ -39,10 +39,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public final class FieldFilter {
 
     /** The name of the bundle field source. This is required. */
-    @JsonProperty(required = true) AutoField from;
+    final AutoField from;
 
     /** The name of the bundle field destination. */
-    @JsonProperty(required = true) AutoField to;
+    final AutoField to;
 
     /** Optionally apply a filter onto the field. */
     @JsonProperty ValueFilter filter;
@@ -52,7 +52,20 @@ public final class FieldFilter {
     
     // Default constructor required for codec deserialization
     @SuppressWarnings("unused")
-    private FieldFilter() {
+    private FieldFilter(@JsonProperty(value = "from", required = true) AutoField from,
+                        @JsonProperty(value = "to") AutoField to) {
+        this.from = from;
+        if (to == null) {
+            this.to = cloneFrom(from);
+        } else {
+            this.to = to;
+        }
+    }
+
+    private AutoField cloneFrom(AutoField from) {
+//        if (from instanceof )
+        return null;
+
     }
 
     public FieldFilter(String copyFieldName) {
