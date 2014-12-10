@@ -46,6 +46,8 @@ import com.yammer.metrics.core.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.channel.Channel;
+
 public class MeshFileRefCache implements ChannelCloseListener {
 
     static final Logger log = LoggerFactory.getLogger(MeshFileRefCache.class);
@@ -153,10 +155,10 @@ public class MeshFileRefCache implements ChannelCloseListener {
     }
 
     @Override
-    public void channelClosed(int channelId) {
+    public void channelClosed(Channel channel) {
         // if a channel is closed then we need to invalidate the fileReferenceCache so
         // that we get new references the next time a query is run
-        log.debug("[MeshQueryMaster] channel: {} has been closed", channelId);
+        log.debug("[MeshQueryMaster] channel: {} has been closed", channel);
         invalidateFileReferenceCache();
     }
 
