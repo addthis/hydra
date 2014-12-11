@@ -292,7 +292,12 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
                     next = null;
                 }
             }
-            return next != null;
+            if (next == null) {
+                close();
+                return false;
+            } else {
+                return true;
+            }
         }
 
         @Override

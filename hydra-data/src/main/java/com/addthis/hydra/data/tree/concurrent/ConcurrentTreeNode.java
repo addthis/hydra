@@ -540,7 +540,12 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
 
         @Override
         public boolean hasNext() {
-            return next != null;
+            if (next == null) {
+                close();
+                return false;
+            } else {
+                return true;
+            }
         }
 
         @Override

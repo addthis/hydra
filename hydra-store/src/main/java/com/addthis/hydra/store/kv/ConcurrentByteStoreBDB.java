@@ -529,7 +529,12 @@ public class ConcurrentByteStoreBDB implements ByteStore {
                     close();
                 }
             }
-            return next != null;
+            if (next == null) {
+                close();
+                return false;
+            } else {
+                return true;
+            }
         }
 
         @Override
