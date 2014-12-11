@@ -1630,7 +1630,7 @@ public class Spawn implements Codable, AutoCloseable {
             }
             spawnState.jobs.remove(jobUUID);
             spawnState.jobDependencies.removeNode(jobUUID);
-            log.warn("[job.delete] " + job.getId());
+            log.warn("[job.delete] {}", job.getId());
             spawnMQ.sendControlMessage(new CommandTaskDelete(HostMessage.ALL_HOSTS, job.getId(), null, job.getRunCount()));
             sendJobUpdateEvent("job.delete", job);
             jobConfigManager.deleteJob(job.getId());
@@ -3056,15 +3056,13 @@ public class Spawn implements Codable, AutoCloseable {
             try {
                 boolean kicked;
                 if (job == null || task == null || (task.getState() != JobTaskState.QUEUED && task.getState() != JobTaskState.QUEUED_HOST_UNAVAIL)) {
-                    log.warn("[task.queue] removing invalid task " + key);
+                    log.warn("[task.queue] removing invalid task {}", key);
                     iter.remove();
                     continue;
                 }
                 if (systemManager.isQuiesced() && !key.getIgnoreQuiesce()) {
                     skippedQuiesceCount++;
-                    if (log.isDebugEnabled()) {
-                        log.debug("[task.queue] skipping " + key + " because spawn is quiesced and the kick wasn't manual");
-                    }
+                    log.debug("[task.queue] skipping {} because spawn is quiesced and the kick wasn't manual", key);
                     continue;
                 } else {
                     kicked = kickOnExistingHosts(job, task, null, now - key.getCreationTime(), !job.getDontAutoBalanceMe());

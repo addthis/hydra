@@ -17,7 +17,6 @@ import javax.annotation.Nonnull;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,11 +56,9 @@ import com.addthis.hydra.job.mq.StatusTaskReplica;
 import com.addthis.hydra.job.mq.StatusTaskReplicate;
 import com.addthis.hydra.job.mq.StatusTaskRevert;
 import com.addthis.hydra.task.run.TaskExitState;
-import com.addthis.maljson.JSONObject;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.sun.jersey.spi.scanning.PathProviderScannerListener;
 import com.yammer.metrics.core.TimerContext;
 
 import org.slf4j.Logger;
@@ -677,8 +674,8 @@ public class JobTask implements Codable {
                 backupName = getBackupByRevision(revision, type);
             }
             if (backupName == null) {
-                log.warn("[revert] found no backups of type {} and time {} to revert to for {}; failing", type, time,
-                         getName());
+                log.warn("[revert] found no backups of type {} and time {} to revert to for {}; failing",
+                         type, time, getName());
                 return false;
             }
             File oldBackup = new File(jobDir.getParentFile(), backupName);

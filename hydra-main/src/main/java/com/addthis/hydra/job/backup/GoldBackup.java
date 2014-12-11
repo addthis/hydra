@@ -23,7 +23,13 @@ import org.joda.time.format.DateTimeFormatterBuilder;
  */
 public class GoldBackup extends ScheduledBackupType {
 
-    private final DateTimeFormatter dateTimeFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000).appendMonthOfYear(2).appendDayOfMonth(2).appendLiteral("-").appendHourOfDay(2).appendMinuteOfHour(2).toFormatter();
+    private final DateTimeFormatter dateTimeFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000)
+                                                                                      .appendMonthOfYear(2)
+                                                                                      .appendDayOfMonth(2)
+                                                                                      .appendLiteral("-")
+                                                                                      .appendHourOfDay(2)
+                                                                                      .appendMinuteOfHour(2)
+                                                                                      .toFormatter();
 
     @Override
     public String getFormattedDateString(long timeMillis) {

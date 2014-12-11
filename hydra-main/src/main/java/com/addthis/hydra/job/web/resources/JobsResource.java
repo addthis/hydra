@@ -307,8 +307,8 @@ public class JobsResource {
                               @QueryParam("user") Optional<String> user) {
         Job job = spawn.getJob(id);
 
-        if ((job != null) && (job.getState() != JobState.IDLE)) {
-            return Response.serverError().entity("A non IDLE job cannot be deleted").build();
+        if ((job != null) && (job.getCountActiveTasks() != 0)) {
+            return Response.serverError().entity("A job with active tasks cannot be deleted").build();
         } else {
             emitLogLineForAction(user.or(DEFAULT_USER), "job delete on " + id);
             try {
