@@ -243,7 +243,7 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
 
         private Entry<DBKey, V> next;
 
-        private final AtomicBoolean shutdownGuard = new AtomicBoolean();
+        private boolean shutdown = false;
 
         private DR(DBKey start, DBKey to) {
             log.debug("DR(" + start + "-" + to + ")");
@@ -256,13 +256,14 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
 
         @Override
         public void close() {
-            if (!shutdownGuard.getAndSet(true)) {
+            if (shutdown == false) {
                 if (iter instanceof ClosableIterator) {
                     ((ClosableIterator) iter).close();
                 }
                 synchronized (openRanges) {
                     openRanges.remove(this);
                 }
+                shutdown = true;
             }
         }
 
