@@ -513,6 +513,13 @@ public class ConcurrentByteStoreBDB implements ByteStore {
             }
         }
 
+        /**
+         * Returns true if the iteration has more elements.
+         * If the iteration has no more elements then
+         * {@link EntryClosableIterator#close} will be invoked.
+         *
+         * @return true if the iteration has more elements.
+         */
         @Override
         public boolean hasNext() {
             if (next == null && cursor != null) {

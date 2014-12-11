@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.ClosableIterator;
@@ -242,6 +243,8 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
 
         private Entry<DBKey, V> next;
 
+        private final AtomicBoolean shutdownGuard = new AtomicBoolean();
+
         private DR(DBKey start, DBKey to) {
             log.debug("DR(" + start + "-" + to + ")");
             this.iter = eps.range(start, true);
@@ -253,14 +256,23 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
 
         @Override
         public void close() {
-            if (iter instanceof ClosableIterator) {
-                ((ClosableIterator) iter).close();
-            }
-            synchronized (openRanges) {
-                openRanges.remove(this);
+            if (!shutdownGuard.getAndSet(true)) {
+                if (iter instanceof ClosableIterator) {
+                    ((ClosableIterator) iter).close();
+                }
+                synchronized (openRanges) {
+                    openRanges.remove(this);
+                }
             }
         }
 
+        /**
+         * Returns true if the iteration has more elements.
+         * If the iteration has no more elements then
+         * {@link DR#close} will be invoked.
+         *
+         * @return true if the iteration has more elements.
+         */
         @Override
         public boolean hasNext() {
             if (next == null && iter.hasNext()) {
