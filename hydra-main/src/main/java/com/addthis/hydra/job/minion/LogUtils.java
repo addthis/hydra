@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 public final class LogUtils {
     private static final Logger log = LoggerFactory.getLogger(LogUtils.class);
 
-    /** Streams task log files from newest to oldest. */
+    /** Streams task log files from newest to oldest. The returned Stream should be closed. */
     public static Stream<Path> streamTaskLogsByName(JobTask task) throws IOException {
         Path logDir = task.logDir.toPath();
         return Files.list(logDir)
@@ -52,9 +52,11 @@ public final class LogUtils {
                 return Optional.of(task.logOut.toPath());
             }
         }
-        return streamTaskLogsByName(task)
+        try (Stream<Path> paths = streamTaskLogsByName(task)
                 .filter(path -> path.toString().endsWith(suffix))
-                .skip(runsAgo).findFirst();
+                .skip(runsAgo)) {
+            return paths.findFirst();
+        }
     }
 
     public static JSONObject readLogLines(JobTask task, int startOffset, int lines, int runsAgo, String suffix) {
