@@ -97,6 +97,7 @@
                   </excludes>
                 </filter>
               </filters>
+              <finalName>hydra</finalName>
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                   <resource>reference.conf</resource>

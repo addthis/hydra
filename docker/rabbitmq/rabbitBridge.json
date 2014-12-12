@@ -1,0 +1,51 @@
+{
+  "container": {
+    "type": "DOCKER",
+    "volumes": [
+      {
+        "containerPath": "/data/log",
+        "hostPath": "/var/data/log/rabbit",
+        "mode": "RW"
+      },
+      {
+        "containerPath": "/data/mnesia",
+        "hostPath": "/var/data/rabbit/mnesia",
+        "mode": "RW"
+      }
+    ],    
+    "docker": {
+      "image": "docker-registry-iad.clearspring.com:5000/rabbitmq",
+      "network": "BRIDGE",
+      "portMappings": [
+        {"containerPort":"5672"},
+        {"containerPort":"15672"}
+      ]
+    }
+  },
+  "id": "rabbitmq",
+  "instances": "1",
+  "cpus": "1",
+  "mem": "512",
+  "uris": [],
+  "args": [],
+  "backoffSeconds": 1,
+  "backoffFactor": 1.15,
+  "healthChecks": [
+    {
+      "portIndex": 0,
+      "protocol": "TCP",
+      "gracePeriodSeconds": 30,
+      "intervalSeconds": 30,
+      "timeoutSeconds": 30,
+      "maxConsecutiveFailures": 0
+    },
+    {
+      "portIndex": 1,
+      "protocol": "TCP",
+      "gracePeriodSeconds": 30,
+      "intervalSeconds": 30,
+      "timeoutSeconds": 30,
+      "maxConsecutiveFailures": 0
+    }
+  ]
+}
