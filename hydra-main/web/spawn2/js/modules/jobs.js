@@ -1350,14 +1350,21 @@ function(
         className:"modal fade",
         template: _.template(jobRevertModalTemplate),
         events:{
-            "click button#revertToLastRunButton":"handleRevertToLastRunButtonClick",
+            "click button#runButton":"handleRunButtonClick",
             "click button#goldButton":"handleGoldButtonClick",
             "click button#hourlyButton":"handleHourlyButtonClick",
             "click button#dailyButton":"handleDailyButtonClick",
             "click button#weeklyButton":"handleWeeklyButtonClick"
         },
         initialize:function(options){
-            _.bindAll(this,'handleButtonClick','handleRevertToLastRunButtonClick','handleGoldButtonClick','handleDailyButtonClick','handleHourlyButtonClick','handleWeeklyButtonClick');
+            _.bindAll(this,
+                'handleButtonClickForTimestampRevert',
+                'handleButtonClickForRevisionRevert',
+                'handleRunButtonClick',
+                'handleGoldButtonClick',
+                'handleDailyButtonClick',
+                'handleHourlyButtonClick',
+                'handleWeeklyButtonClick');
             this.backupModel = options.backupModel;
             this.listenTo(this.backupModel,"change",this.handleBackupChange);
         },
@@ -1369,13 +1376,21 @@ function(
             });
             this.$el.html(html);
             this.$el.modal("show");
-            this.showMessage("Searching for availiable backups...");
+            this.showMessage("Searching for available backups...");
             return this;
         },
         handleBackupChange:function(){
-            var data = this.backupModel.toJSON(),self=this;
+            var self=this;
+            var node = this.backupModel.get("node");
+            var data = this.backupModel.toJSON()
             var count = 0;
-            _.each(["gold", "hourly", "daily", "weekly", "monthly"],function(type){
+            if (node == -1) {
+                // reverting a job - don't populate/show gold backups by timestamp. see T51329
+                var selects = ["hourly", "daily", "weekly", "monthly"]
+            } else {
+                var selects = ["gold", "hourly", "daily", "weekly", "monthly"]
+            }
+            _.each(selects,function(type){
                 var select = self.$el.find("#"+type+"Select");
                 var options = "";
                 _.each(data[type],function(ts){
@@ -1392,12 +1407,16 @@ function(
             } else {
                 this.showMessage("");
             }
-            this.$el.find("#revertToLastRunButton").hide();
+            if (node >= 0) {
+                // reverting a task - hide the revert by revision selection because it will be
+                // replaced by the dropdown for timestamp based backups
+                this.$el.find("#goldRevertByRevision").hide();
+            }
         },
         showMessage:function(msg){
             this.$el.find("#backupMessage").text(msg);
         },
-        handleButtonClick:function(selectElem, backupType){
+        handleButtonClickForTimestampRevert:function(selectElem, backupType){
             var node = this.backupModel.get("node");
             var value = this.$el.find(selectElem).val();
             var params = {
@@ -1407,11 +1426,20 @@ function(
             };
             this.handleButtonClickRaw(node, params);
         },
+        handleButtonClickForRevisionRevert:function(rev){
+            var node = this.backupModel.get("node");
+            var params = {
+                type:"gold", 
+                node:node, 
+                revision:rev
+            };
+            this.handleButtonClickRaw(node, params);
+        },
         handleButtonClickRaw:function(node, params){
             var name = node > -1 ? "Task " + node : "Job";
             this.model.revert(params).done(function(data,result,xhr){
                 if (params.hasOwnProperty("revision")) {
-                    Alertify.log.info("Attempted to revert to the last run (which may not exist)");
+                    Alertify.log.info("Attempted to revert to a previous run (which may not exist)");
                 } else {
                     Alertify.log.success(name + " reverted successfully.");
                 }
@@ -1419,26 +1447,21 @@ function(
                 Alertify.log.error("Error reverting " + name + ":<br/>" + xhr.responseText);
             });
         },
-        handleRevertToLastRunButtonClick:function(event){
-            var node = this.backupModel.get("node");
-            var params = {
-                type:"gold", 
-                node:node, 
-                revision:"0"
-            };
-            this.handleButtonClickRaw(node, params);
+        handleRunButtonClick:function(event){
+            rev = this.$el.find("#runSelect").val();
+            this.handleButtonClickForRevisionRevert(rev);
         },
         handleGoldButtonClick:function(event){
-            this.handleButtonClick("#goldSelect", "gold", "time");
+            this.handleButtonClickForTimestampRevert("#goldSelect", "gold");
         },
         handleHourlyButtonClick:function(event){
-            this.handleButtonClick("#hourlySelect", "hourly", "time");
+            this.handleButtonClickForTimestampRevert("#hourlySelect", "hourly");
         },
         handleDailyButtonClick:function(event){
-            this.handleButtonClick("#dailySelect", "daily", "time");
+            this.handleButtonClickForTimestampRevert("#dailySelect", "daily");
         },
         handleWeeklyButtonClick:function(event){
-            this.handleButtonClick("#weeklySelect", "weekly", "time");
+            this.handleButtonClickForTimestampRevert("#weeklySelect", "weekly");
         }
     });
     var DetailView = Backbone.View.extend({
