@@ -38,7 +38,7 @@ public class SpawnMQImpl implements SpawnMQ {
 
     private static final Logger log = LoggerFactory.getLogger(SpawnMQImpl.class);
 
-    private static final String batchBrokeAddresses = Parameter.value("batch.brokerAddresses", "localhost:5672");
+    private String batchBrokeAddresses = Parameter.value("batch.brokerAddresses", "localhost:5672");
     private static final String batchBrokerUsername = Parameter.value("batch.brokerUsername", "guest");
     private static final String batchBrokerPassword = Parameter.value("batch.brokerPassword", "guest");
 
@@ -57,8 +57,9 @@ public class SpawnMQImpl implements SpawnMQ {
         this.zkClient = zkClient;
 
         if (Parameter.boolValue("mesos.useMesos", false)) {
-            batchBrokerHost = MesosServiceDiscoveryUtility.getMesosProxy();
-            batchBrokerPort = MesosServiceDiscoveryUtility.getAssignedPort(Parameter.value("mesos.rabbitAppId", "rabbitmq"), Parameter.intValue("mesos.rabbitPortIndex", 0));
+            batchBrokeAddresses = MesosServiceDiscoveryUtility.getMesosProxy() + ":" +
+                MesosServiceDiscoveryUtility.getAssignedPort(Parameter.value("mesos.rabbitAppId", "rabbitmq"),
+                        Parameter.intValue("mesos.rabbitPortIndex", 0));
         }
     }
 

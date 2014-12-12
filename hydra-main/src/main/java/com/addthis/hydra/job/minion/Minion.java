@@ -121,7 +121,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     private static final int maxJobPort = Parameter.intValue("minion.job.maxport", 0);
     private static final String group = System.getProperty("minion.group", "none");
     private static final String localHost = System.getProperty("minion.localhost");
-    private static final String batchBrokerAddresses = Parameter.value("batch.brokerAddresses", "localhost:5672");
+    private String batchBrokerAddresses = Parameter.value("batch.brokerAddresses", "localhost:5672");
     private static final String batchBrokerUsername = Parameter.value("batch.brokerUsername", "guest");
     private static final String batchBrokerPassword = Parameter.value("batch.brokerPassword", "guest");
     private static final int sendStatusRetries = Parameter.intValue("send.status.retries", 5);
@@ -380,13 +380,16 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     private synchronized boolean connectToRabbitMQ() {
         String[] routingKeys = {uuid, HostMessage.ALL_HOSTS};
         if (useMesos) {
-            batchBrokerHost = MesosServiceDiscoveryUtility.getMesosProxy();
-            batchBrokerPort = MesosServiceDiscoveryUtility.getAssignedPort(Parameter.value("mesos.rabbitAppId", "rabbitmq"), Parameter.intValue("mesos.rabbitPortIndex", 0));
+            batchBrokerAddresses = MesosServiceDiscoveryUtility.getMesosProxy() + ":"
+                    + MesosServiceDiscoveryUtility.getAssignedPort(Parameter.value("mesos.rabbitAppId", "rabbitmq"),
+                    Parameter.intValue("mesos.rabbitPortIndex", 0));
         }
-        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, batchBrokerPort);
-        queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerHost, batchBrokerPort);
+        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerAddresses, batchBrokerUsername,
+                batchBrokerPassword);
+        queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerAddresses, batchBrokerUsername,
+                batchBrokerPassword);
         try {
-            Connection connection = RabbitMQUtil.createConnection(batchBrokerHost, batchBrokerPort);
+            Connection connection = RabbitMQUtil.createConnection(batchBrokerAddresses, batchBrokerUsername, batchBrokerPassword);
             channel = connection.createChannel();
             channel.exchangeDeclare("CSBatchJob", "direct");
             AMQP.Queue.DeclareOk result = channel.queueDeclare(uuid + ".batchJob", true, false, false, null);
