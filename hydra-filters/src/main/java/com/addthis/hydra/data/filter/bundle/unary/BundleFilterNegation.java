@@ -11,31 +11,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.filter.value;
+package com.addthis.hydra.data.filter.bundle.unary;
 
 import javax.annotation.Nullable;
 
-import com.addthis.bundle.value.ValueObject;
+import com.addthis.hydra.data.filter.bundle.BundleFilter;
+import com.addthis.hydra.data.filter.util.UnaryOperation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
-public class ValueFilterNot extends ValueFilter {
+public class BundleFilterNegation extends BundleFilterUnary {
 
-    private final ValueFilter filter;
-
-    @JsonCreator public ValueFilterNot(ValueFilter filter) {
-        this.filter = filter;
-        this.once = filter.once;
-        this.nullAccept = filter.nullAccept;
-    }
-
-    @Override
-    @Nullable
-    public ValueObject filterValue(@Nullable ValueObject value) {
-        if (filter.filterValue(value) == null) {
-            return value;
-        } else {
-            return null;
-        }
+    @JsonCreator public BundleFilterNegation(@Nullable BundleFilter filter) {
+        super(UnaryOperation.NEGATION, filter);
     }
 }

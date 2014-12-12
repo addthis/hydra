@@ -14,23 +14,37 @@
 package com.addthis.hydra.job.minion;
 
 import java.io.File;
+import java.io.IOException;
+
+import java.util.Objects;
+
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FileStats {
+    private static final Logger log = LoggerFactory.getLogger(FileStats.class);
 
     public long count;
     public long bytes;
 
     void update(File dir) {
-        if (dir != null) {
-            for (File file : dir.listFiles()) {
-                if (file.isDirectory()) {
-                    update(file);
-                } else if (file.isFile()) {
-                    count++;
-                    bytes += file.length();
+        try {
+            Files.walkFileTree(dir.toPath(), new SimpleFileVisitor<Path>() {
+                @Override public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    count += 1;
+                    bytes += attrs.size();
+                    return super.visitFile(file, attrs);
                 }
-            }
-        } else {
+            });
+        } catch (IOException e) {
+            log.warn("Exception while scanning task files; treating directory as empty", e);
             count = 0;
             bytes = 0;
         }

@@ -26,7 +26,7 @@ import com.addthis.basis.util.Files;
 import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.SetMultimap;
 
 import org.junit.After;
 import org.junit.Before;
@@ -64,7 +64,7 @@ public class MeshQueryMasterTest {
     @Test
     public void testFilterFileReferenceMap_happyPath() throws Exception {
 
-        Multimap<Integer, FileReference> fileReferenceMap = HashMultimap.create();
+        SetMultimap<Integer, FileReference> fileReferenceMap = HashMultimap.create();
         for (int i = 0; i < 5; i++) {
             Set<FileReference> fileReferenceWrappers = new HashSet<>();
             for (int j = 0; j < 3; j++) {
@@ -72,7 +72,7 @@ public class MeshQueryMasterTest {
             }
             fileReferenceMap.putAll(i, fileReferenceWrappers);
         }
-        Multimap<Integer, FileReference> filteredFileReferenceMap = MeshFileRefCache.filterFileReferences(
+        SetMultimap<Integer, FileReference> filteredFileReferenceMap = MeshFileRefCache.filterFileReferences(
                 fileReferenceMap);
         assertEquals(fileReferenceMap.size(), filteredFileReferenceMap.size());
         for (Map.Entry<Integer, Collection<FileReference>> entry : fileReferenceMap.asMap().entrySet()) {
@@ -84,7 +84,7 @@ public class MeshQueryMasterTest {
 
     @Test
     public void testFilterFileReferenceMap_oneOldFile() throws Exception {
-        Multimap<Integer, FileReference> fileReferenceMap = HashMultimap.create();
+        SetMultimap<Integer, FileReference> fileReferenceMap = HashMultimap.create();
         for (int i = 0; i < 5; i++) {
             Set<FileReference> fileReferenceWrappers = new HashSet<>();
             for (int j = 0; j < 3; j++) {
@@ -96,7 +96,7 @@ public class MeshQueryMasterTest {
             }
             fileReferenceMap.putAll(i, fileReferenceWrappers);
         }
-        Multimap<Integer, FileReference> filteredFileReferenceMap =
+        SetMultimap<Integer, FileReference> filteredFileReferenceMap =
                 MeshFileRefCache.filterFileReferences(fileReferenceMap);
 
         assertEquals(fileReferenceMap.keySet(), filteredFileReferenceMap.keySet());
@@ -152,7 +152,7 @@ public class MeshQueryMasterTest {
 
     @Test
     public void testFilterFileReferenceMap_oneOldAndSmallFile() throws Exception {
-        Multimap<Integer, FileReference> fileReferenceMap = HashMultimap.create();
+        SetMultimap<Integer, FileReference> fileReferenceMap = HashMultimap.create();
         for (int i = 0; i < 5; i++) {
             Set<FileReference> fileReferenceWrappers = new HashSet<>();
             for (int j = 0; j < 3; j++) {
@@ -164,7 +164,7 @@ public class MeshQueryMasterTest {
             }
             fileReferenceMap.putAll(i, fileReferenceWrappers);
         }
-        Multimap<Integer, FileReference> filteredFileReferenceMap =
+        SetMultimap<Integer, FileReference> filteredFileReferenceMap =
                 MeshFileRefCache.filterFileReferences(fileReferenceMap);
 
         assertEquals(fileReferenceMap.keySet(), filteredFileReferenceMap.keySet());

@@ -11,27 +11,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.filter.bundle;
+package com.addthis.hydra.data.filter.bundle.unary;
 
 import javax.annotation.Nullable;
 
-import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.filter.util.UnaryOperation;
 
-public class BundleFilterUnary extends BundleFilter {
+import com.fasterxml.jackson.annotation.JsonCreator;
 
-    @FieldConfig(required = true) private UnaryOperation operation;
-    @FieldConfig @Nullable        private BundleFilter   filter;
+public class BundleFilterIdentity extends BundleFilterUnary {
 
-    @Override public void initialize() {
-        if (filter != null) {
-            filter.initOnceOnly();
-        }
-    }
-
-    @Override public boolean filterExec(Bundle row) {
-        boolean filterResult = (filter == null) || filter.filterExec(row);
-        return operation.compute(filterResult);
+    @JsonCreator public BundleFilterIdentity(@Nullable BundleFilter filter) {
+        super(UnaryOperation.IDENTITY, filter);
     }
 }

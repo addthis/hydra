@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.query;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 import java.io.Closeable;
@@ -75,7 +77,7 @@ public class QueryOpProcessor implements DataChannelOutput, QueryMemTracker, Clo
     private final QueryMemTracker           memTracker;
     private final DataTableFactory          tableFactory;
 
-    private QueryOp firstOp;
+    @Nonnull private QueryOp firstOp;
     private QueryOp lastOp;
     private long    rowsin;
     private long    cellsin;
@@ -145,10 +147,17 @@ public class QueryOpProcessor implements DataChannelOutput, QueryMemTracker, Clo
         return firstOp.toString();
     }
 
-    private void parseOps(String... opslist) {
+    @Nullable public static QueryOp generateOps(QueryOpProcessor processor,
+                                                ChannelProgressivePromise promise,
+                                                QueryOp tail,
+                                                String... opslist) {
+
         if ((opslist == null) || (opslist.length == 0)) {
-            return;
+            return null;
         }
+
+        QueryOp firstOp = null;
+        QueryOp lastOp = null;
 
         /* remaining ops stack is processed in reverse order */
         for (int i = opslist.length - 1; i >= 0; i--) {
@@ -165,14 +174,30 @@ public class QueryOpProcessor implements DataChannelOutput, QueryMemTracker, Clo
                 if (op == null) {
                     throw new RuntimeException("unknown op : " + kv);
                 }
-                appendOp(op.build(this, args));
+                QueryOp newOp = op.build(processor, args, promise);
+                if (lastOp == null) {
+                    firstOp = newOp;
+                } else {
+                    lastOp.setNext(processor, newOp);
+                }
+                lastOp = newOp;
+                newOp.setNext(processor, tail);
             }
         }
+        return firstOp;
     }
 
-    @Override
-    public String toString() {
-        return "RP[memtip=" + memTip + ",rowtip=" + rowTip + ",rows=" + rowsin + ",cells=" + cellsin + "]";
+    private void parseOps(String... opslist) {
+        QueryOp newFirstOp = generateOps(this, opPromise, output, opslist);
+        // follow the query operations to the lastOp
+        if (newFirstOp != null) {
+            firstOp = newFirstOp;
+            QueryOp current = firstOp;
+            while (current.getNext() != output) {
+                current = current.getNext();
+            }
+            lastOp = current;
+        }
     }
 
     public QueryOpProcessor appendOp(QueryOp op) {
@@ -184,6 +209,11 @@ public class QueryOpProcessor implements DataChannelOutput, QueryMemTracker, Clo
         lastOp = op;
         op.setNext(this, output);
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return "RP[memtip=" + memTip + ",rowtip=" + rowTip + ",rows=" + rowsin + ",cells=" + cellsin + "]";
     }
 
     public void processRow(Bundle row) throws QueryException {

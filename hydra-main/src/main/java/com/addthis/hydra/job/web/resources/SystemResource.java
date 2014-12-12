@@ -150,7 +150,7 @@ public class SystemResource {
      * Performs system health check.
      *  
      * @param retries   The max number of retries if validation fails on the first run. This 
-     *                  reduces the likelihood of false alarms from certain checks. Default is 2.
+     *                  reduces the likelihood of false alarms from certain checks. Default is 3.
      * @param details   If {@code true}, the response will contain details of the health check
      *                  result; otherwise the response is either "true" (pass) or "false" (failure).
      *                  Default is {@code false}.
@@ -159,7 +159,7 @@ public class SystemResource {
     @Path("/healthcheck")
     @Produces(MediaType.APPLICATION_JSON)
     public Response healthCheck(
-            @QueryParam("retries") @DefaultValue("2") int retries,
+            @QueryParam("retries") @DefaultValue("3") int retries,
             @QueryParam("details") @DefaultValue("false") boolean details) {
         try {
             HealthCheckResult result = systemManager.healthCheck(retries);

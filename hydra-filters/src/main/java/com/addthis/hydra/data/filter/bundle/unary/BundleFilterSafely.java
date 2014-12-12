@@ -11,9 +11,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.addthis.hydra.data.filter.bundle.unary;
 
-({
-    cssIn:"../../css/main.css"
-    ,out:"../../css/main.min.css"
-    ,optimizeCss:"true"
-})
+import javax.annotation.Nullable;
+
+import com.addthis.hydra.data.filter.bundle.BundleFilter;
+import com.addthis.hydra.data.filter.util.UnaryOperation;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+
+public class BundleFilterSafely extends BundleFilterUnary {
+
+    @JsonCreator public BundleFilterSafely(@Nullable BundleFilter filter) {
+        super(UnaryOperation.TRUE, filter);
+    }
+}

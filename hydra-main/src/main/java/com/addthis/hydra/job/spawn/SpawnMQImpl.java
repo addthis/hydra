@@ -38,11 +38,11 @@ public class SpawnMQImpl implements SpawnMQ {
 
     private static final Logger log = LoggerFactory.getLogger(SpawnMQImpl.class);
 
+    private static final String batchBrokeAddresses = Parameter.value("batch.brokerAddresses", "localhost:5672");
+    private static final String batchBrokerUsername = Parameter.value("batch.brokerUsername", "guest");
+    private static final String batchBrokerPassword = Parameter.value("batch.brokerPassword", "guest");
+
     private MessageProducer batchJobProducer;
-
-    private String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
-    private Integer batchBrokerPort = Integer.valueOf(Parameter.value("batch.brokerPort", "5672"));
-
     private MessageProducer batchControlProducer;
     private MessageConsumer hostStatusConsumer;
     private MessageConsumer batchControlConsumer;
@@ -65,14 +65,19 @@ public class SpawnMQImpl implements SpawnMQ {
     @Override
     public void connectToMQ(String hostUUID) {
         hostStatusConsumer = new ZkMessageConsumer<>(zkClient, "/minion", this, HostState.class);
-        batchJobProducer = new RabbitMessageProducer("CSBatchJob", batchBrokerHost, batchBrokerPort);
-        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, batchBrokerPort);
+        batchJobProducer = new RabbitMessageProducer("CSBatchJob", batchBrokeAddresses, batchBrokerUsername,
+                                                     batchBrokerPassword);
+        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokeAddresses, batchBrokerUsername,
+                                                         batchBrokerPassword);
         try {
-            Connection connection = RabbitMQUtil.createConnection(batchBrokerHost, batchBrokerPort);
+            Connection connection = RabbitMQUtil.createConnection(batchBrokeAddresses, batchBrokerUsername,
+                                                                  batchBrokerPassword);
             channel = connection.createChannel();
-            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", hostUUID + ".batchControl", this, "SPAWN");
+            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", hostUUID + ".batchControl",
+                                                             this, "SPAWN");
         } catch (IOException e) {
-            log.error("Exception connection to broker: " + batchBrokerHost + ":" + batchBrokerPort, e);
+            log.error("Exception connecting to RabbitMQ at {} as {}/{}", batchBrokeAddresses, batchBrokerUsername,
+                      batchBrokerPassword, e);
         }
     }
 
@@ -93,7 +98,7 @@ public class SpawnMQImpl implements SpawnMQ {
                 } else {
                     spawn.handleMessage(coreMessage);
                 }
-            } catch (Exception ex) {
+            } catch (Exception ex)  {
                 log.warn("", ex);
             } finally {
                 inHandler.decrementAndGet();
@@ -116,7 +121,7 @@ public class SpawnMQImpl implements SpawnMQ {
     private void sendMessage(HostMessage msg, MessageProducer producer) {
         try {
             producer.sendMessage(msg, msg.getHostUuid());
-        } catch (IOException e) {
+        } catch (IOException e)  {
             log.warn("", e);
         }
     }
@@ -126,27 +131,27 @@ public class SpawnMQImpl implements SpawnMQ {
     public void close() {
         try {
             if (hostStatusConsumer != null) hostStatusConsumer.close();
-        } catch (Exception ex) {
+        } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
             if (batchControlConsumer != null) batchControlConsumer.close();
-        } catch (Exception ex) {
+        } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
             if (batchControlProducer != null) batchControlProducer.close();
-        } catch (Exception ex) {
+        } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
             if (batchJobProducer != null) batchJobProducer.close();
-        } catch (Exception ex) {
+        } catch (Exception ex)  {
             log.warn("", ex);
         }
         try {
             if (channel != null) channel.close();
-        } catch (Exception ex) {
+        } catch (Exception ex)  {
             log.warn("", ex);
         }
     }

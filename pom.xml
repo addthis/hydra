@@ -16,14 +16,14 @@
   <parent>
     <artifactId>jar-pom</artifactId>
     <groupId>com.addthis.common.build.maven.pom</groupId>
-    <version>3.2.1</version>
+    <version>3.4.0</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.addthis.hydra</groupId>
   <artifactId>hydra-parent</artifactId>
   <name>hydra</name>
-  <version>4.6.2-SNAPSHOT</version>
+  <version>4.7.1-SNAPSHOT</version>
   <packaging>pom</packaging>
   <licenses>
     <license>
@@ -54,16 +54,16 @@
     <at.test.excluded.groups>com.addthis.basis.test.SlowTest,com.addthis.hydra.common.test.LocalStackTest</at.test.excluded.groups>
 
     <!-- addthis dependency versions -->
-    <hydra.dep.bark.version>2.1.3</hydra.dep.bark.version>
+    <hydra.dep.bark.version>2.1.4</hydra.dep.bark.version>
     <hydra.dep.basis.version>2.3.0</hydra.dep.basis.version>
     <hydra.dep.bundle.version>2.4.2</hydra.dep.bundle.version>
-    <hydra.dep.codec.version>3.2.1</hydra.dep.codec.version>
-    <hydra.dep.meshy.version>2.2.0</hydra.dep.meshy.version>
+    <hydra.dep.codec.version>3.3.0</hydra.dep.codec.version>
+    <hydra.dep.meshy.version>2.2.1-SNAPSHOT</hydra.dep.meshy.version>
     <hydra.dep.muxy.version>2.1.2</hydra.dep.muxy.version>
     <hydra.dep.maljson.version>0.2.0</hydra.dep.maljson.version>
 
     <!-- external dependency versions -->
-    <hydra.dep.log4j2.version>2.0</hydra.dep.log4j2.version>
+    <hydra.dep.log4j2.version>2.1</hydra.dep.log4j2.version>
     <hydra.dep.apache.commons.lang3.version>3.1</hydra.dep.apache.commons.lang3.version>
     <hydra.dep.jackson.jackson-mapper-asl.version>1.9.13</hydra.dep.jackson.jackson-mapper-asl.version>
     <hydra.dep.commons-codec.version>1.8</hydra.dep.commons-codec.version>
@@ -123,6 +123,13 @@
         <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
         <version>3.4.5</version>
+        <exclusions>
+          <!-- prevent any non-bark transitive zookeeper dependencies from pulling in old netty3 -->
+          <exclusion>
+            <groupId>org.jboss.netty</groupId>
+            <artifactId>netty</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
@@ -189,6 +196,11 @@
         <artifactId>servlet-api</artifactId>
         <version>2.5</version>
       </dependency>
+      <dependency>
+        <groupId>org.jboss.logging</groupId>
+        <artifactId>jboss-logging</artifactId>
+        <version>3.2.0.Final</version>
+      </dependency>
 
       <!-- property controlled versions -->
       <dependency>
@@ -239,18 +251,10 @@
       </dependency>
       <dependency>
         <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-api</artifactId>
+        <artifactId>log4j-bom</artifactId>
         <version>${hydra.dep.log4j2.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-core</artifactId>
-        <version>${hydra.dep.log4j2.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.logging.log4j</groupId>
-        <artifactId>log4j-slf4j-impl</artifactId>
-        <version>${hydra.dep.log4j2.version}</version>
+        <scope>import</scope>
+        <type>pom</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -411,16 +415,6 @@
  
   <reporting>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>2.9.1</version>
-        <configuration>
-          <configLocation>${dep.plugin.checkstyle.configLocation}</configLocation>
-          <includeTestSourceDirectory>true</includeTestSourceDirectory>
-          <consoleOutput>false</consoleOutput>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>

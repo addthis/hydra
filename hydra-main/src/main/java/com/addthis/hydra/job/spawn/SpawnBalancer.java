@@ -13,8 +13,6 @@
  */
 package com.addthis.hydra.job.spawn;
 
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -67,6 +65,8 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_BALANCE_PARAM_PATH;
+
 /**
  * A class in charge of balancing load among spawn's hosts.
  * General assumptions:
@@ -77,9 +77,10 @@ import org.slf4j.LoggerFactory;
                 isGetterVisibility = JsonAutoDetect.Visibility.NONE,
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class SpawnBalancer implements Codable {
+    private static final Logger log = LoggerFactory.getLogger(SpawnBalancer.class);
 
     private final Spawn spawn;
-    private static final Logger log = LoggerFactory.getLogger(SpawnBalancer.class);
+    private final HostManager hostManager;
 
     @FieldConfig(codable = true)
     private SpawnBalancerConfig config;
@@ -153,13 +154,14 @@ public class SpawnBalancer implements Codable {
 
     private final ScheduledExecutorService taskExecutor;
 
-    public SpawnBalancer(Spawn spawn) {
+    public SpawnBalancer(Spawn spawn, HostManager hostManager) {
         this.spawn = spawn;
+        this.hostManager = hostManager;
         this.config = loadConfigFromDataStore(new SpawnBalancerConfig());
         taskExecutor = MoreExecutors.getExitingScheduledExecutorService(
                 new ScheduledThreadPoolExecutor(2, new ThreadFactoryBuilder().setNameFormat("spawnBalancer-%d").build()));
         taskExecutor.scheduleAtFixedRate(new AggregateStatUpdaterTask(), AGGREGATE_STAT_UPDATE_INTERVAL, AGGREGATE_STAT_UPDATE_INTERVAL, TimeUnit.MILLISECONDS);
-        this.taskSizer = new SpawnBalancerTaskSizer(spawn);
+        this.taskSizer = new SpawnBalancerTaskSizer(spawn, hostManager);
     }
     
     /** Loads SpawnBalancerConfig from data store; if no data or failed, returns the default. */
@@ -412,7 +414,7 @@ public class SpawnBalancer implements Codable {
             if (pushHost.equals(pullHost)) {
                 continue;
             }
-            HostState pullHostState = spawn.getHostState(pullHost);
+            HostState pullHostState = hostManager.getHostState(pullHost);
             Iterator<JobTaskItem> itemIterator = new ArrayList<>(tasksByHost.get(pushHost)).iterator();
             while (itemIterator.hasNext() && rv.size() < numToMove && tasksByHost.get(pullHost).size() < maxPerHost) {
                 JobTaskItem nextTaskItem = itemIterator.next();
@@ -453,7 +455,7 @@ public class SpawnBalancer implements Codable {
         if (isExtremeHost(pullHost, false, true)) {
             numToMove = Math.max(1, numToMove / 2); // Move fewer tasks onto a host if it's already doing a lot of work
         }
-        HostState pullHostState = spawn.getHostState(pullHost);
+        HostState pullHostState = hostManager.getHostState(pullHost);
         if (pullHostState == null) {
             return rv;
         }
@@ -745,7 +747,7 @@ public class SpawnBalancer implements Codable {
     }
 
     public List<JobTaskMoveAssignment> pushTasksOffDiskForFilesystemOkayFailure(HostState host, int moveLimit) {
-        List<HostState> hosts = spawn.listHostStatus(null);
+        List<HostState> hosts = hostManager.listHostStatus(null);
         return pushTasksOffHost(host, hosts, false, 1, moveLimit, false);
     }
 
@@ -902,7 +904,7 @@ public class SpawnBalancer implements Codable {
                 log.warn("[spawn.balancer] decided not to move task onto " + newHostID + " because it is already heavily loaded");
                 continue;
             }
-            HostState newHost = spawn.getHostState(newHostID);
+            HostState newHost = hostManager.getHostState(newHostID);
             JobKey jobKey = assignment.getJobKey();
             if (newHost == null || newHost.hasLive(jobKey) || !canReceiveNewTasks(newHost, assignment.isFromReplica())) {
                 log.warn("[spawn.balancer] decided not to move task onto " + newHostID + " because it cannot receive the new task");
@@ -999,7 +1001,7 @@ public class SpawnBalancer implements Codable {
                     rv.put(replica.getHostUUID(), addOrIncrement(rv.get(replica.getHostUUID()), 1d));
                 }
             }
-            for (HostState host : spawn.listHostStatus(job.getMinionType())) {
+            for (HostState host : hostManager.listHostStatus(job.getMinionType())) {
                 if (host.isUp() && !host.isDead()) {
                     double availDisk = 1 - getUsedDiskPercent(host);
                     rv.put(host.getHostUuid(), addOrIncrement(rv.get(host.getHostUuid()), availDisk));
@@ -1026,7 +1028,7 @@ public class SpawnBalancer implements Codable {
         // Don't autobalance if it is disabled, spawn is quiesced, or the number of queued tasks is high
         if (config.getAutoBalanceLevel() == 0 ||
                 spawn.getSystemManager().isQuiesced() ||
-                spawn.getLastQueueSize() > spawn.listHostStatus(null).size()) {
+                spawn.getLastQueueSize() > hostManager.listHostStatus(null).size()) {
             return false;
         }
         // Don't autobalance if there are still jobs in rebalance state
@@ -1072,7 +1074,7 @@ public class SpawnBalancer implements Codable {
      * @return A list of assignments to perform the specified balancing operation
      */
     public List<JobTaskMoveAssignment> getAssignmentsForAutoBalance(RebalanceType type, RebalanceWeight weight) {
-        List<HostState> hosts = spawn.getLiveHosts(null);
+        List<HostState> hosts = hostManager.getLiveHosts(null);
         switch (type) {
             case HOST:
                 if (hosts.isEmpty()) {
@@ -1081,7 +1083,8 @@ public class SpawnBalancer implements Codable {
                 List<HostState> hostsSorted = new ArrayList<>(hosts);
                 Collections.sort(hostsSorted, hostStateScoreComparator);
                 HostState hostToBalance = hostsSorted.get(getWeightedElementIndex(hostsSorted.size(), weight));
-                return getAssignmentsToBalanceHost(hostToBalance, spawn.listHostStatus(hostToBalance.getMinionTypes()));
+                return getAssignmentsToBalanceHost(hostToBalance,
+                                                   hostManager.listHostStatus(hostToBalance.getMinionTypes()));
             case JOB:
                 List<Job> autobalanceJobs = getJobsToAutobalance(hosts);
                 if (autobalanceJobs == null || autobalanceJobs.isEmpty()) {
@@ -1089,7 +1092,8 @@ public class SpawnBalancer implements Codable {
                 }
                 Job jobToBalance = autobalanceJobs.get(getWeightedElementIndex(autobalanceJobs.size(), weight));
                 recentlyAutobalancedJobs.put(jobToBalance.getId(), true);
-                return getAssignmentsForJobReallocation(jobToBalance, -1, spawn.listHostStatus(jobToBalance.getMinionType()));
+                return getAssignmentsForJobReallocation(jobToBalance, -1,
+                                                        hostManager.listHostStatus(jobToBalance.getMinionType()));
             default:
                 return null;
         }
@@ -1154,11 +1158,11 @@ public class SpawnBalancer implements Codable {
      */
     protected boolean hasFullDiskHost(JobTask task) {
         List<HostState> hostsToCheck = new ArrayList<>();
-        hostsToCheck.add(spawn.getHostState(task.getHostUUID()));
+        hostsToCheck.add(hostManager.getHostState(task.getHostUUID()));
         if (task.getReplicas() != null) {
             for (JobTaskReplica replica : task.getReplicas()) {
                 if (replica != null) {
-                    hostsToCheck.add(spawn.getHostState(replica.getHostUUID()));
+                    hostsToCheck.add(hostManager.getHostState(replica.getHostUUID()));
                 }
             }
             for (HostState host : hostsToCheck) {
@@ -1185,7 +1189,7 @@ public class SpawnBalancer implements Codable {
                     for (JobTaskReplica replica : oldReplicas) {
                         List<String> replicasSeen = new ArrayList<>();
                         String replicaHostID = replica.getHostUUID();
-                        if (spawn.getHostState(replicaHostID) == null) {
+                        if (hostManager.getHostState(replicaHostID) == null) {
                             log.warn("[spawn.balancer] removing replica for missing host {}", replicaHostID);
                         } else if (replicaHostID.equals(task.getHostUUID()) || replicasSeen.contains(replicaHostID)) {
                             log.warn("[spawn.balancer] removing erroneous replica for {} on {}",
@@ -1208,8 +1212,8 @@ public class SpawnBalancer implements Codable {
     }
 
     private boolean onSameHost(String hostID1, String hostID2) {
-        HostState host1 = spawn.getHostState(hostID1);
-        HostState host2 = spawn.getHostState(hostID2);
+        HostState host1 = hostManager.getHostState(hostID1);
+        HostState host2 = hostManager.getHostState(hostID2);
         if (host1 == null || host2 == null) {
             return false;
         } else {
@@ -1257,7 +1261,7 @@ public class SpawnBalancer implements Codable {
         Map<String, Double> scoreMap = generateTaskCountHostScoreMap(job);
         PriorityQueue<HostAndScore> scoreHeap = new PriorityQueue<>(1, hostAndScoreComparator);
         for (Entry<String, Double> entry : scoreMap.entrySet()) {
-            scoreHeap.add(new HostAndScore(spawn.getHostState(entry.getKey()), entry.getValue()));
+            scoreHeap.add(new HostAndScore(hostManager.getHostState(entry.getKey()), entry.getValue()));
         }
         Map<String, Integer> allocationMap = new HashMap<>();
         List<JobTask> tasks = taskID > 0 ? Arrays.asList(job.getTask(taskID)) : job.getCopyOfTasks();
@@ -1314,7 +1318,7 @@ public class SpawnBalancer implements Codable {
         if (spawn.getHostFailWorker().getFailureState(hostId) != HostFailWorker.FailState.ALIVE) {
             return false;
         }
-        HostState taskHost = spawn.getHostState(task.getHostUUID());
+        HostState taskHost = hostManager.getHostState(task.getHostUUID());
         /* Protect against npe in case the existing host has disappeared somehow */
         String existingHost = taskHost != null ? taskHost.getHost() : null;
         /* in non-local-stack, prevent replicates to same host (multi-minion-per-host-setup) */
@@ -1351,7 +1355,7 @@ public class SpawnBalancer implements Codable {
         @Override
         public void run() {
             if (JitterClock.globalTime() - lastAggregateStatUpdateTime > AGGREGATE_STAT_UPDATE_INTERVAL) {
-                updateAggregateStatistics(spawn.listHostStatus(null));
+                updateAggregateStatistics(hostManager.listHostStatus(null));
             }
         }
     }

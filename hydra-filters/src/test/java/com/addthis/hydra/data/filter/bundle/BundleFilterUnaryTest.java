@@ -18,6 +18,7 @@ import java.io.IOException;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.codec.config.Configs;
+import com.addthis.hydra.data.filter.bundle.unary.BundleFilterUnary;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,7 +35,7 @@ public class BundleFilterUnaryTest {
     @Test public void isNotAlias() throws IOException {
         Bundle bundle = new ListBundle();
         BundleFilterUnary filter = (BundleFilterUnary) Configs.decodeObject(
-                BundleFilter.class, "is not {false {}}");
+                BundleFilter.class, "is not.false {}");
         Assert.assertTrue(filter.filter(bundle));
     }
 }

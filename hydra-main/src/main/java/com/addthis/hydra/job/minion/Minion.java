@@ -121,8 +121,9 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     private static final int maxJobPort = Parameter.intValue("minion.job.maxport", 0);
     private static final String group = System.getProperty("minion.group", "none");
     private static final String localHost = System.getProperty("minion.localhost");
-    private String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
-    private int batchBrokerPort = Parameter.intValue("batch.brokerPort", 5672);
+    private static final String batchBrokerAddresses = Parameter.value("batch.brokerAddresses", "localhost:5672");
+    private static final String batchBrokerUsername = Parameter.value("batch.brokerUsername", "guest");
+    private static final String batchBrokerPassword = Parameter.value("batch.brokerPassword", "guest");
     private static final int sendStatusRetries = Parameter.intValue("send.status.retries", 5);
     private static final int sendStatusRetryDelay = Parameter.intValue("send.status.delay", 5000);
     static final long hostMetricUpdaterInterval = Parameter.longValue("minion.host.metric.interval", 30 * 1000);
@@ -398,7 +399,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
                                                              Minion.this, routingKeys);
             return true;
         } catch (IOException e) {
-            log.error("Error connecting to rabbitmq {}:{}", batchBrokerHost, batchBrokerPort, e);
+            log.error("Error connecting to rabbitmq at {}", batchBrokerAddresses, e);
             return false;
         }
     }
@@ -663,11 +664,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         long time = System.currentTimeMillis();
         HostState status = new HostState(uuid);
         status.setHost(myHost);
-        if (useMesos) {
-            status.setPort(mesosWebPort);
-        } else {
-            status.setPort(getJettyPort());
-        }
+        status.setPort(getJettyPort());
         status.setGroup(group);
         status.setTime(time);
         status.setUser(user);

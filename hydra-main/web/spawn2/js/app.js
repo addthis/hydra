@@ -91,13 +91,13 @@ function(
         },
         healthCheck:function(){
             $.ajax({
-                url: "/system/healthcheck",
+                url: "/system/healthcheck?details=true",
                 type: "GET"
             }).done(function(data){
-                if (data) {
+                if (data.everythingOK) {
                     Alertify.log.info("Health check passed");
                 } else {
-                    Alertify.dialog.alert("Health check failed! Make sure Spawn data store is up-to-date!");
+                    Alertify.dialog.alert("Health check failed: " + JSON.stringify(data));
                 }
             });
         },

@@ -15,10 +15,11 @@ package com.addthis.hydra.job.alert;
 
 import java.io.IOException;
 
-import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import java.text.DecimalFormat;
@@ -68,6 +69,7 @@ public class JobAlertRunner {
 
     private MeshyClient meshyClient;
     private boolean alertsEnabled;
+    private volatile boolean lastAlertScanFailed;
 
     public JobAlertRunner(Spawn spawn, boolean alertEnabled) {
         this.spawn = spawn;
@@ -83,18 +85,22 @@ public class JobAlertRunner {
         loadAlertMap();
     }
 
-    /**
-     * Method that disables alert scanning
-     */
+    /** Disables alert scanning */
     public void disableAlerts() {
         this.alertsEnabled = false;
     }
 
-    /**
-     * Method that enables alert scanning
-     */
+    /** Enables alert scanning */
     public void enableAlerts() {
         this.alertsEnabled = true;
+    }
+
+    public boolean isAlertsEnabled() {
+        return alertsEnabled;
+    }
+
+    public boolean isLastAlertScanFailed() {
+        return lastAlertScanFailed;
     }
 
     /**
@@ -102,33 +108,45 @@ public class JobAlertRunner {
      */
     public void scanAlerts() {
         if (alertsEnabled) {
-            for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
-                JobAlert oldAlert = entry.getValue();
-                Map<String, String> currentErrors = oldAlert.getActiveJobs();
-                JobAlert alert = alertMap.computeIfPresent(entry.getKey(), (id, currentAlert) -> {
-                    currentAlert.checkAlertForJobs(getAlertJobs(currentAlert), meshyClient);
-                    if (!currentAlert.getActiveJobs().equals(currentErrors)) {
-                        storeAlert(currentAlert.alertId, currentAlert);
+            log.info("Started alert scan of {} alerts...", alertMap.size());
+            try {
+                for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
+                    JobAlert oldAlert = entry.getValue();
+                    Map<String, String> currentErrors = oldAlert.getActiveJobs();
+                    // entry may be concurrently deleted, so only recompute if still present, and while locked
+                    JobAlert alert = alertMap.computeIfPresent(entry.getKey(), (id, currentAlert) -> {
+                        currentAlert.checkAlertForJobs(getAlertJobs(currentAlert), meshyClient);
+                        if (!currentAlert.getActiveJobs().equals(currentErrors)) {
+                            storeAlert(currentAlert.alertId, currentAlert);
+                        }
+                        return currentAlert;
+                    });
+                    // null if it was concurrently removed from the map. Does not catch all removals, but might as well
+                    // make a best effort attempt to send clears when convenient (should probably move clear emails to
+                    // the removal method at some point)
+                    if (alert == null) {
+                        emailAlert(oldAlert, "[CLEAR] ", currentErrors);
+                    } else {
+                        Map<String, String> newErrors = alert.getActiveJobs();
+                        MapDifference<String, String> difference = Maps.difference(currentErrors, newErrors);
+                        emailAlert(oldAlert, "[CLEAR] ", difference.entriesOnlyOnLeft());
+                        emailAlert(alert, "[TRIGGER] ", difference.entriesOnlyOnRight());
+                        emailAlert(alert, "[ERROR CHANGED] ",
+                                   Maps.transformValues(difference.entriesDiffering(),
+                                                        MapDifference.ValueDifference::rightValue));
                     }
-                    return currentAlert;
-                });
-                if (alert == null) {
-                    emailAlert(oldAlert, "[CLEAR] ", currentErrors);
-                } else {
-                    Map<String, String> newErrors = alert.getActiveJobs();
-                    MapDifference<String, String> difference = Maps.difference(currentErrors, newErrors);
-                    emailAlert(oldAlert, "[CLEAR] ", difference.entriesOnlyOnLeft());
-                    emailAlert(alert, "[TRIGGER] ", difference.entriesOnlyOnRight());
-                    emailAlert(alert, "[ERROR CHANGED] ",
-                               Maps.transformValues(difference.entriesDiffering(),
-                                                    MapDifference.ValueDifference::rightValue));
                 }
+                lastAlertScanFailed = false;
+                log.info("Finished alert scan");
+            } catch (Exception e) {
+                lastAlertScanFailed = true;
+                log.error("Unexpected error while scanning alerts: {}", e.getMessage(), e);
             }
         }
     }
 
-    private List<Job> getAlertJobs(JobAlert alert) {
-        List<Job> rv = new ArrayList<>();
+    private Set<Job> getAlertJobs(JobAlert alert) {
+        Set<Job> rv = new HashSet<>();
         if (alert != null && alert.jobIds != null) {
             Map<String, List<String>> aliases = spawn.getAliasManager().getAliases();
             for (String lookupId : alert.jobIds) {

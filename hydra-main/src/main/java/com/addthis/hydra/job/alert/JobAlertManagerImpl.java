@@ -13,8 +13,6 @@
  */
 package com.addthis.hydra.job.alert;
 
-import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
-
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -27,6 +25,8 @@ import com.addthis.maljson.JSONObject;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_PATH;
 
 public class JobAlertManagerImpl implements JobAlertManager {
 
@@ -56,12 +56,10 @@ public class JobAlertManagerImpl implements JobAlertManager {
 
     private void scheduleAlertScan(ScheduledExecutorService scheduledExecutorService) {
         if (scheduledExecutorService != null) {
-            scheduledExecutorService.scheduleWithFixedDelay(new Runnable() {
-                @Override
-                public void run() {
-                    jobAlertRunner.scanAlerts();
-                }
-            }, ALERT_DELAY_MILLIS, ALERT_REPEAT_MILLIS, TimeUnit.MILLISECONDS);
+            scheduledExecutorService.scheduleWithFixedDelay(() -> jobAlertRunner.scanAlerts(),
+                                                            ALERT_DELAY_MILLIS,
+                                                            ALERT_REPEAT_MILLIS,
+                                                            TimeUnit.MILLISECONDS);
             log.info("Alert scan scheduled: delay={}s, repeat={}s", ALERT_DELAY_MILLIS / 1000, ALERT_REPEAT_MILLIS / 1000);
         } else {
             log.warn("ScheduledExecutorService is not provided. Alert scan is disabled");
@@ -76,6 +74,11 @@ public class JobAlertManagerImpl implements JobAlertManager {
     public void enableAlerts() throws Exception {
         spawnDataStore.put(SPAWN_COMMON_ALERT_PATH, "true");
         this.jobAlertRunner.enableAlerts();
+    }
+
+    @Override
+    public boolean isAlertEnabledAndWorking() {
+        return jobAlertRunner.isAlertsEnabled() && !jobAlertRunner.isLastAlertScanFailed();
     }
 
     public void putAlert(String alertId, JobAlert alert) {

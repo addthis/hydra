@@ -16,7 +16,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>4.6.2-SNAPSHOT</version>
+    <version>4.7.1-SNAPSHOT</version>
   </parent>
 
   <artifactId>hydra-task</artifactId>
@@ -95,7 +95,6 @@
     <dependency>
       <groupId>org.jboss.logging</groupId>
       <artifactId>jboss-logging</artifactId>
-      <version>3.1.3.GA</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>

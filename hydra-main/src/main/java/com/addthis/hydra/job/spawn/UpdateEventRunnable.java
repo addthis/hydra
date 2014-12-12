@@ -21,26 +21,18 @@ import com.addthis.basis.util.JitterClock;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
-import com.addthis.hydra.job.mq.HostCapacity;
-import com.addthis.hydra.job.mq.HostState;
 
 class UpdateEventRunnable implements Runnable {
 
-    private Spawn spawn;
+    private final Spawn spawn;
     private final Map<String, Long> events = new HashMap<>();
 
-    public UpdateEventRunnable(Spawn spawn) {this.spawn = spawn;}
+    public UpdateEventRunnable(Spawn spawn) {
+        this.spawn = spawn;
+    }
 
     @Override
     public void run() {
-        HostCapacity hostmax = new HostCapacity();
-        HostCapacity hostused = new HostCapacity();
-        synchronized (spawn.monitored) {
-            for (HostState hs : spawn.monitored.values()) {
-                hostmax.add(hs.getMax());
-                hostused.add(hs.getUsed());
-            }
-        }
         int jobshung = 0;
         int jobrunning = 0;
         int jobscheduled = 0;
@@ -100,16 +92,10 @@ class UpdateEventRunnable implements Runnable {
         }
         events.clear();
         events.put("time", System.currentTimeMillis());
-        events.put("hosts", (long) spawn.monitored.size());
+        events.put("hosts", (long) spawn.hostManager.monitored.size());
         events.put("commands", (long) spawn.getJobCommandManager().size());
         events.put("macros", (long) spawn.getJobMacroManager().size());
         events.put("jobs", (long) spawn.spawnState.jobs.size());
-        events.put("cpus", (long) hostmax.getCpu());
-        events.put("cpus_used", (long) hostused.getCpu());
-        events.put("mem", (long) hostmax.getMem());
-        events.put("mem_used", (long) hostused.getMem());
-        events.put("io", (long) hostmax.getIo());
-        events.put("io_used", (long) hostused.getIo());
         events.put("jobs_running", (long) jobrunning);
         events.put("jobs_scheduled", (long) jobscheduled);
         events.put("jobs_errored", (long) joberrored);

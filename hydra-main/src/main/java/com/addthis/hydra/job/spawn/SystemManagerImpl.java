@@ -11,9 +11,6 @@
  */
 package com.addthis.hydra.job.spawn;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-
 import java.io.InputStream;
 
 import java.util.List;
@@ -34,6 +31,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 public class SystemManagerImpl implements SystemManager {
 
@@ -147,7 +147,8 @@ public class SystemManagerImpl implements SystemManager {
 
     @Override
     public HealthCheckResult healthCheck(int retries) throws Exception {
-        return new HealthCheckResult().setDataStoreOK(checkDataStore(retries));
+        return new HealthCheckResult().setDataStoreOK(checkDataStore(retries))
+                                      .setAlertCheckOK(spawn.getJobAlertManager().isAlertEnabledAndWorking());
     }
 
     /**

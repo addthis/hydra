@@ -28,10 +28,9 @@ eval exec ${JAVA_CMD:-java} \
 	-XX:+AggressiveOpts \
 	-XX:+UseParallelGC \
 	-XX:+UseParallelOldGC \
+	-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager \
 	-Dlog4j.configurationFactory=com.addthis.hydra.uber.HoconConfigurationFactory \
 	-Dorg.jboss.logging.provider=slf4j \
-	-Dbatch.brokerHost=${brokerHost:-localhost} \
-	-Dbatch.brokerPort=${brokerPort:-5672} \
 	-Dbatch.job.log4j=1 \
 	-Dcs.je.cacheSize=128M \
 	-Dcs.je.cacheShared=1 \

@@ -116,7 +116,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
 
     /**
      * Used to schedule synchronous page eviction in the
-     * {@link #put(Object, com.addthis.codec.Codec.BytesCodable)} and {@link #remove(Object)}
+     * {@link #put(Object, BytesCodable)} and {@link #remove(Object)}
      * methods when the background eviction threads are behind schedule.
      */
     private final LinkedBlockingQueue<BackgroundEvictionTask> evictionTaskQueue;
@@ -1360,7 +1360,12 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
                 /** Key of the page that will be loaded from disk. */
                 K externalKey = keyCoder.keyDecode(externalKeyEncoded);
 
-                assert (current == null || compareKeys(current.firstKey, externalKey) < 0);
+                if ((current != null) && (compareKeys(current.firstKey, externalKey) >= 0)) {
+                    String errorMessage =
+                            "[CORRUPT PAGE STORE] current page key is greater or equal than the one being pulled from" +
+                            " disk (%s >= %s). This is unexpected and likely to lead to an infinite loop if allowed.";
+                    throw new AssertionError(String.format(errorMessage, current.firstKey, externalKey));
+                }
                 assert (compareKeys(key, externalKey) >= 0);
 
                 // Transfer ownership of the 'current' variable to the inner method

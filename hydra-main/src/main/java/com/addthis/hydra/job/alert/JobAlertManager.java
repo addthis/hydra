@@ -24,14 +24,16 @@ public interface JobAlertManager {
     /** Disables periodic alert checking */
     void disableAlerts() throws Exception;
 
-    public void putAlert(String alertId, JobAlert alert);
+    boolean isAlertEnabledAndWorking();
 
-    public void removeAlert(String alertId);
+    void putAlert(String alertId, JobAlert alert);
 
-    public JSONArray fetchAllAlertsArray();
+    void removeAlert(String alertId);
 
-    public JSONObject fetchAllAlertsMap();
+    JSONArray fetchAllAlertsArray();
 
-    public String getAlert(String alertId);
+    JSONObject fetchAllAlertsMap();
+
+    String getAlert(String alertId);
 
 }

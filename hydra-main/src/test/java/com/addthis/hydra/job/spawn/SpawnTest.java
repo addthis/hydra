@@ -77,14 +77,16 @@ public class SpawnTest extends ZkCodecStartUtil {
         try (Spawn spawn = Configs.newDefault(Spawn.class)) {
             HostState toggleHost = createHostState("toggle");
             HostState otherHost = createHostState("other");
-            spawn.updateHostState(toggleHost);
-            spawn.updateHostState(otherHost);
+            spawn.hostManager.updateHostState(toggleHost);
+            spawn.hostManager.updateHostState(otherHost);
             spawn.toggleHosts(toggleHost.getHost(), true);
-            assertTrue("toggled host should be disabled", spawn.getHostState(toggleHost.getHostUuid()).isDisabled());
-            assertTrue("other host should not be disabled", !spawn.getHostState(otherHost.getHostUuid()).isDisabled());
+            assertTrue("toggled host should be disabled", spawn.hostManager.getHostState(toggleHost.getHostUuid())
+                                                                           .isDisabled());
+            assertTrue("other host should not be disabled", !spawn.hostManager.getHostState(otherHost.getHostUuid())
+                                                                              .isDisabled());
             spawn.toggleHosts(toggleHost.getHost(), false);
             assertTrue("toggled host should now be re-enabled",
-                       !spawn.getHostState(toggleHost.getHostUuid()).isDisabled());
+                       !spawn.hostManager.getHostState(toggleHost.getHostUuid()).isDisabled());
         }
     }
 
@@ -142,9 +144,9 @@ public class SpawnTest extends ZkCodecStartUtil {
         try (Spawn spawn = Configs.newDefault(Spawn.class)) {
             spawn.setSpawnMQ(EasyMock.createNiceMock(SpawnMQImpl.class));
             HostState host0 = createHostState("host0");
-            spawn.updateHostState(host0);
+            spawn.hostManager.updateHostState(host0);
             HostState host1 = createHostState("host1");
-            spawn.updateHostState(host1);
+            spawn.hostManager.updateHostState(host1);
             spawn.getJobCommandManager().putEntity("c", new JobCommand(), false);
             Job job = spawn.createJob("fsm", 3, Arrays.asList("host0"), "default", "c");
             job.setReplicas(1);
@@ -156,15 +158,15 @@ public class SpawnTest extends ZkCodecStartUtil {
             }
             spawn.updateJob(job);
             host0.setStopped(new JobKey[]{new JobKey(job.getId(), 0)});
-            spawn.updateHostState(host0);
+            spawn.hostManager.updateHostState(host0);
             host1.setStopped(new JobKey[]{new JobKey(job.getId(), 0), new JobKey(job.getId(), 1)});
-            spawn.updateHostState(host1);
+            spawn.hostManager.updateHostState(host1);
             HostState host2 = createHostState("host2");
             host2.setStopped(new JobKey[]{new JobKey(job.getId(), 2)});
-            spawn.updateHostState(host2);
+            spawn.hostManager.updateHostState(host2);
             boolean hostsAreUp = false;
             for (int i = 0; i < 10; i++) {
-                if (spawn.listHostStatus(null).size() < 3) {
+                if (spawn.hostManager.listHostStatus(null).size() < 3) {
                     Thread.sleep(1000); // Can take a little while for the hosts to appear as up
                 } else {
                     hostsAreUp = true;
