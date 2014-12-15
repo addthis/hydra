@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.map;
 
+import javax.annotation.concurrent.GuardedBy;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -21,7 +23,9 @@ import java.net.ServerSocket;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 
 import com.addthis.basis.jmx.MBeanRemotingSupport;
@@ -86,6 +90,8 @@ import org.slf4j.LoggerFactory;
 public class StreamMapper implements StreamEmitter, TaskRunnable {
     private static final Logger log = LoggerFactory.getLogger(StreamMapper.class);
 
+    private static final NumberFormat percentFormat = NumberFormat.getPercentInstance();
+
     /** The data source for this job. */
     @JsonProperty(required = true) private TaskDataSource source;
 
@@ -115,7 +121,11 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
 
     private final AtomicLong totalEmit = new AtomicLong(0);
     private final AtomicLong bundleTimeSum = new AtomicLong(0);
+    private final LongAdder filterTime = new LongAdder();
     private final AtomicBoolean emitGate = new AtomicBoolean(false);
+
+    @GuardedBy("emitGate")
+    private long lastFilterTime = 0;
 
     private MBeanRemotingSupport jmxremote;
     private long lastMark;
@@ -196,7 +206,9 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
         outputCountMetric.inc();
         processedMeterMetric.mark();
         totalEmit.incrementAndGet();
-        if (timeField != null) bundleTimeSum.addAndGet(getBundleTime(bundle) >> 8);
+        if (timeField != null) {
+            bundleTimeSum.addAndGet(getBundleTime(bundle) >> 8);
+        }
     }
 
     public void process(Bundle bundle) {
@@ -205,37 +217,56 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
             inputCountMetric.inc();
             totalInputCountMetric.inc();
             long markBefore = System.nanoTime();
-            if (map.filterIn == null || map.filterIn.filter(bundle)) {
+            long markAfter;
+            if ((map.filterIn == null) || map.filterIn.filter(bundle)) {
                 bundle = mapBundle(bundle);
-                if (map.filterOut == null || map.filterOut.filter(bundle)) {
+                if ((map.filterOut == null) || map.filterOut.filter(bundle)) {
+                    markAfter = System.nanoTime();
                     if (builder != null) {
                         builder.process(bundle, this);
                     } else {
                         emit(bundle);
                     }
                 } else {
+                    markAfter = System.nanoTime();
                     log.debug("filterOut dropped bundle : {}", bundle);
                 }
             } else {
+                markAfter = System.nanoTime();
                 log.debug("filterIn dropped bundle : {}", bundle);
             }
+            long bundleFilterTime = markAfter - markBefore;
+            filterTime.add(bundleFilterTime);
             long time = JitterClock.globalTime();
-            if (time - lastMark > 1000 && emitGate.compareAndSet(false, true)) {
+            if (((time - lastMark) > 1000) && emitGate.compareAndSet(false, true)) {
                 long in = inputCountMetric.count();
                 inputCountMetric.clear();
                 long out = outputCountMetric.count();
                 outputCountMetric.clear();
+                long msCovered = time - lastMark;
+
+                // filter time accounting
+                long filterTimeAtTick = filterTime.sum();
+                long filterTimeForTick = filterTimeAtTick - lastFilterTime;
+                lastFilterTime = filterTimeAtTick;
+                long filterTimePerThread = filterTimeForTick / threads;
+                double filterPercentTime =
+                        (double) TimeUnit.NANOSECONDS.toMillis(filterTimePerThread) / (double) msCovered;
+                String filterPercentTimeFormatted = percentFormat.format(filterPercentTime);
+
                 if (stats) {
                     if (timeField != null) {
                         long avg_t = (bundleTimeSum.getAndSet(0) / Math.max(1,out)) << 8;
-                        log.info("bundleTime={} in={} out={} drop={} ms={} rate={} total={}",
+                        log.info("bundleTime={} in={} out={} drop={} ms={} filtering={} rate={} total={}",
                                  dateFormat.format(avg_t),
-                                 in, out, Math.max(in - out, 0), time - lastMark,
+                                 in, out, Math.max(in - out, 0), msCovered,
+                                 filterPercentTimeFormatted,
                                  Math.round(processedMeterMetric.oneMinuteRate()),
                                  totalEmit);
                     } else {
-                        log.info("in={} out={} drop={} ms={} rate={} total={}",
-                                 in, out, Math.max(in - out, 0), time - lastMark,
+                        log.info("in={} out={} drop={} ms={} filtering={} rate={} total={}",
+                                 in, out, Math.max(in - out, 0), msCovered,
+                                 filterPercentTimeFormatted,
                                  Math.round(processedMeterMetric.oneMinuteRate()),
                                  totalEmit);
                     }
