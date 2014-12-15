@@ -35,14 +35,6 @@ public class PathQueryElement extends QueryElement {
     @FieldConfig(codable = true)
     private ArrayList<PathQueryElementField> field;
 
-    /**
-     * If true then process all the children of the node
-     * that we have matched against. Append all the matching results
-     * into value arrays. Default is false.
-     */
-    @FieldConfig(codable = true)
-    private boolean childMatch;
-
     public void resolve(final TreeMapper mapper) {
         if (field != null) {
             for (PathQueryElementField aField : field) {
@@ -91,7 +83,4 @@ public class PathQueryElement extends QueryElement {
         return updates;
     }
 
-    public boolean childMatch() {
-        return childMatch;
-    }
 }

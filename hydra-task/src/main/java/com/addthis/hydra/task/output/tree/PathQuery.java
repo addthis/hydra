@@ -84,6 +84,14 @@ public final class PathQuery extends PathOp {
     @FieldConfig(codable = true)
     private String debugKey;
 
+    /**
+     * If true then process all the children of the node
+     * that we have matched against. Append all the matching results
+     * into value arrays. Default is false.
+     */
+    @FieldConfig(codable = true)
+    private boolean childMatch;
+
     private int match;
     private int miss;
 
@@ -118,7 +126,7 @@ public final class PathQuery extends PathOp {
             reference = DataTreeUtil.pathLocateFrom(state.current().getTreeRoot(), pathValues);
         }
         boolean updated = false;
-        if (values.childMatch()) {
+        if (childMatch) {
             ClosableIterator<DataTreeNode> children = null;
             try {
                 children = reference.getIterator();
@@ -148,7 +156,7 @@ public final class PathQuery extends PathOp {
             if (values.update(valueList, reference, state) == 0) {
                 return false;
             }
-            if (values.childMatch()) {
+            if (childMatch) {
                 updated = valueList.updateBundleWithAppend(state.getBundle());
             } else {
                 updated = valueList.updateBundle(state.getBundle());
