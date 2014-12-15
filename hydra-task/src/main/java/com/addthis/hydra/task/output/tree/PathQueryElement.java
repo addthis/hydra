@@ -37,8 +37,8 @@ public class PathQueryElement extends QueryElement {
 
     public void resolve(final TreeMapper mapper) {
         if (field != null) {
-            for (int i = 0; i < field.size(); i++) {
-                field.get(i).resolve(mapper);
+            for (PathQueryElementField aField : field) {
+                aField.resolve(mapper);
             }
         }
     }
@@ -48,14 +48,14 @@ public class PathQueryElement extends QueryElement {
             return 0;
         }
         int updates = 0;
-        if (getNode() != null && getNode().show()) {
+        if ((getNode() != null) && getNode().show()) {
             fvlist.push(getNode().field(fvlist.getFormat()), ValueFactory.create(tn.getName()));
             updates++;
         }
         if (getProp() != null) {
             for (QueryElementProperty p : getProp()) {
                 ValueObject val = p.getValue(tn);
-                if (val == null && !emptyok()) {
+                if ((val == null) && !emptyok()) {
                     fvlist.rollback();
                     return 0;
                 }
@@ -68,7 +68,7 @@ public class PathQueryElement extends QueryElement {
         if (field != null) {
             for (PathQueryElementField f : field) {
                 for (ValueObject val : f.getValues(tn, state)) {
-                    if (val == null && !emptyok()) {
+                    if ((val == null) && !emptyok()) {
                         fvlist.rollback();
                         return 0;
                     }
@@ -82,4 +82,5 @@ public class PathQueryElement extends QueryElement {
         fvlist.commit();
         return updates;
     }
+
 }

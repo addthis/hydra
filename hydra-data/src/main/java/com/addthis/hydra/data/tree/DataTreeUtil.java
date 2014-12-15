@@ -13,17 +13,19 @@
  */
 package com.addthis.hydra.data.tree;
 
-public class DataTreeUtil {
+import javax.annotation.Nullable;
 
-    public static final DataTreeNode pathLocateFrom(DataTreeNode node, String[] path) {
-        int plen = path.length;
-        for (int i = 0; i < plen; i++) {
-            node = node.getNode(path[i]);
-            if (node == null || i == plen - 1) {
-                return node;
+public final class DataTreeUtil {
+
+    @Nullable public static DataTreeNode pathLocateFrom(DataTreeNode input, String[] path) {
+        DataTreeNode current = input;
+        for (String aPath : path) {
+            current = current.getNode(aPath);
+            if (current == null) {
+                return null;
             }
         }
-        return node;
+        return current;
     }
 
 }
