@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.output.tree;
 
+import javax.annotation.Nullable;
+
 import java.util.stream.Stream;
 
 import com.addthis.basis.util.Strings;
@@ -101,6 +103,7 @@ public final class PathQuery extends PathOp {
         }
     }
 
+    @Nullable
     @Override
     public TreeNodeList getNextNodeList(TreeMapState state) {
         ValueObject[] paths = new ValueObject[path.length];
@@ -118,8 +121,8 @@ public final class PathQuery extends PathOp {
             } else {
                 references = DataTreeUtil.pathLocateFrom(state.current().getTreeRoot(), paths);
             }
-            updated = references.map((element) -> evaluateNode(state, paths, element))
-                                        .reduce(false, (a, b) -> a || b);
+            updated = references.map(element -> evaluateNode(state, paths, element))
+                                .reduce(false, (a, b) -> a || b);
         } finally {
             if (references != null) {
                 references.close();
@@ -128,9 +131,7 @@ public final class PathQuery extends PathOp {
         return updated ? TreeMapState.empty() : null;
     }
 
-    private boolean evaluateNode(TreeMapState state,
-                                 ValueObject[] paths,
-                                 DataTreeNode reference) {
+    private boolean evaluateNode(TreeMapState state, ValueObject[] paths, DataTreeNode reference) {
         boolean updated = false;
         if (reference != null) {
             FieldValueList valueList = new FieldValueList(state.getFormat());
@@ -151,8 +152,8 @@ public final class PathQuery extends PathOp {
             if (debug > 0) {
                 debug(false);
             }
-            if (log.isDebugEnabled() || debug == 1) {
-                log.warn("query fail, missing " + Strings.join(paths, " / "));
+            if (log.isDebugEnabled() || (debug == 1)) {
+                log.warn("query fail, missing {}", Strings.join(paths, " / "));
             }
         }
         return updated;
@@ -164,8 +165,8 @@ public final class PathQuery extends PathOp {
         } else {
             miss++;
         }
-        if (match + miss >= debug) {
-            log.warn("query[" + debugKey + "]: match=" + match + " miss=" + miss);
+        if ((match + miss) >= debug) {
+            log.warn("query[{}]: match={} miss={}", debugKey, match, miss);
             match = 0;
             miss = 0;
         }

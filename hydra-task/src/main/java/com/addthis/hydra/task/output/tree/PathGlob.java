@@ -38,7 +38,7 @@ public final class PathGlob extends PathValue {
 
     private static final GlobValueCustom GLOB = new GlobValueCustom();
 
-    public ValueObject getPathValue(final TreeMapState state) {
+    @Override public ValueObject getPathValue(final TreeMapState state) {
         return GLOB;
     }
 

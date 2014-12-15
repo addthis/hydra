@@ -95,7 +95,7 @@ public class FieldValueList implements BundleFormatted {
             newValue.add(fv.value);
             bundle.setValue(fv.field, newValue);
         }
-        return list.size() > 0;
+        return !list.isEmpty();
     }
 
     public Bundle createBundle(BundleFactory factory) {
