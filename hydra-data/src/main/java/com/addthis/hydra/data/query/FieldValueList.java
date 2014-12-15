@@ -20,6 +20,8 @@ import com.addthis.bundle.core.BundleFactory;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.BundleFormatted;
+import com.addthis.bundle.value.ValueArray;
+import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 
 
@@ -74,6 +76,24 @@ public class FieldValueList implements BundleFormatted {
     public boolean updateBundle(Bundle bundle) {
         for (FieldValue fv : list) {
             bundle.setValue(fv.field, fv.value);
+        }
+        return list.size() > 0;
+    }
+
+    public boolean updateBundleWithAppend(Bundle bundle) {
+        for (FieldValue fv : list) {
+            ValueObject oldValue = bundle.getValue(fv.field);
+            ValueArray newValue;
+            if (oldValue == null) {
+                newValue = ValueFactory.createArray(1);
+            } else if (oldValue instanceof ValueArray) {
+                newValue = (ValueArray) oldValue;
+            } else {
+                newValue = ValueFactory.createArray(2);
+                newValue.add(oldValue);
+            }
+            newValue.add(fv.value);
+            bundle.setValue(fv.field, newValue);
         }
         return list.size() > 0;
     }

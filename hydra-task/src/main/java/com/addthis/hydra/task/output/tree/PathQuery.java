@@ -13,9 +13,11 @@
  */
 package com.addthis.hydra.task.output.tree;
 
+import java.util.stream.Stream;
+
 import com.addthis.basis.util.Strings;
 
-import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.query.FieldValueList;
 import com.addthis.hydra.data.tree.DataTreeNode;
@@ -75,6 +77,13 @@ public final class PathQuery extends PathOp {
     @FieldConfig(codable = true)
     private String debugKey;
 
+    /**
+     * If true then append all the matching results
+     * into value arrays. Default is false.
+     */
+    @FieldConfig(codable = true)
+    private boolean accumulate;
+
     private int match;
     private int miss;
 
@@ -94,39 +103,59 @@ public final class PathQuery extends PathOp {
 
     @Override
     public TreeNodeList getNextNodeList(TreeMapState state) {
-        String[] p = new String[path.length];
-        for (int i = 0; i < p.length; i++) {
-            p[i] = ValueUtil.asNativeString(path[i].getPathValue(state));
-            if (p[i] == null) {
+        ValueObject[] paths = new ValueObject[path.length];
+        for (int i = 0; i < paths.length; i++) {
+            paths[i] = path[i].getPathValue(state);
+            if (paths[i] == null) {
                 return null;
             }
         }
-        DataTreeNode reference = null;
-        if (relativeUp > 0) {
-            reference = DataTreeUtil.pathLocateFrom(state.peek(relativeUp), p);
-        } else {
-            reference = DataTreeUtil.pathLocateFrom(state.current().getTreeRoot(), p);
+        Stream<DataTreeNode> references = null;
+        boolean updated = false;
+        try {
+            if (relativeUp > 0) {
+                references = DataTreeUtil.pathLocateFrom(state.peek(relativeUp), paths);
+            } else {
+                references = DataTreeUtil.pathLocateFrom(state.current().getTreeRoot(), paths);
+            }
+            updated = references.map((element) -> evaluateNode(state, paths, element))
+                                        .reduce(false, (a, b) -> a || b);
+        } finally {
+            if (references != null) {
+                references.close();
+            }
         }
+        return updated ? TreeMapState.empty() : null;
+    }
+
+    private boolean evaluateNode(TreeMapState state,
+                                 ValueObject[] paths,
+                                 DataTreeNode reference) {
+        boolean updated = false;
         if (reference != null) {
             FieldValueList valueList = new FieldValueList(state.getFormat());
             if (values.update(valueList, reference, state) == 0) {
-                return null;
+                return false;
             }
-            if (valueList.updateBundle(state.getBundle())) {
+            if (accumulate) {
+                updated = valueList.updateBundleWithAppend(state.getBundle());
+            } else {
+                updated = valueList.updateBundle(state.getBundle());
+            }
+            if (updated) {
                 if (debug > 0) {
                     debug(true);
                 }
-                return TreeMapState.empty();
             }
         } else {
             if (debug > 0) {
                 debug(false);
             }
             if (log.isDebugEnabled() || debug == 1) {
-                log.warn("query fail, missing " + Strings.join(p, " / "));
+                log.warn("query fail, missing " + Strings.join(paths, " / "));
             }
         }
-        return null;
+        return updated;
     }
 
     private synchronized void debug(boolean hit) {
