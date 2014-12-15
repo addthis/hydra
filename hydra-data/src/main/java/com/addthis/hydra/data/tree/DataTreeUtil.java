@@ -13,26 +13,9 @@
  */
 package com.addthis.hydra.data.tree;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
-
-import com.addthis.basis.util.ClosableIterator;
-
-import com.addthis.bundle.util.ValueUtil;
-import com.addthis.bundle.value.ValueObject;
-
 public final class DataTreeUtil {
-
-    private static final Object GLOB_OBJECT = new Object();
-
-    public static Object getGlobObject() {
-        return GLOB_OBJECT;
-    }
 
     @Nullable public static DataTreeNode pathLocateFrom(DataTreeNode input, String[] path) {
         DataTreeNode current = input;
@@ -45,49 +28,4 @@ public final class DataTreeUtil {
         return current;
     }
 
-    @Nonnull public static Stream<DataTreeNode> pathLocateFrom(DataTreeNode node, ValueObject[] path) {
-        if ((path == null) || (node == null) || (path.length == 0)) {
-            return Stream.empty();
-        } else {
-            return pathLocateFrom(path, 0, Stream.of(node));
-        }
-    }
-
-    /**
-     * Recursively traverse the paths from beginning to end and generate stream of output nodes.
-     *
-     * @param path      list of specifications of paths to evaluate
-     * @param index     current position in the path list
-     * @param current   stream of input nodes
-     * @return          stream of output nodes
-     */
-    private static Stream<DataTreeNode> pathLocateFrom(ValueObject[] path, int index, Stream<DataTreeNode> current) {
-        if (index < path.length) {
-            Stream<DataTreeNode> next = current.flatMap(element -> pathLocateNext(element, path[index]));
-            return pathLocateFrom(path, index + 1, next);
-        } else {
-            return current;
-        }
-    }
-
-    /**
-     * Evaluate the path at the current node and return a stream of results.
-     *
-     * @param node       current node
-     * @param path       specification of path to evaluate
-     */
-    private static Stream<DataTreeNode> pathLocateNext(DataTreeNode node, ValueObject path) {
-        if ((path.getObjectType() == ValueObject.TYPE.CUSTOM)
-            && (path.asNative() == GLOB_OBJECT)) {
-            ClosableIterator<DataTreeNode> iterator = node.getIterator();
-            Stream<DataTreeNode> stream =  StreamSupport.stream(Spliterators.spliteratorUnknownSize(
-                    iterator, Spliterator.ORDERED | Spliterator.NONNULL), false);
-            stream.onClose(iterator::close);
-            return stream;
-        } else {
-            return Stream.of(node.getNode(ValueUtil.asNativeString(path)));
-        }
-    }
-
-    private DataTreeUtil() {}
 }
