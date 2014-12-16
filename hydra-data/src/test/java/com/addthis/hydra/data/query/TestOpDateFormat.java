@@ -24,5 +24,12 @@ public class TestOpDateFormat extends TestOp {
                         tr().td("140101", "1401").
                         tr().td("140108", "1402")
         );
+        doOpTest(
+                new DataTableHelper().
+                        tr().td("1418078000000", "0"),
+                "datef=0:unixmillis:yyMMdd:1",
+                new DataTableHelper().
+                        tr().td("1418078000000", "141208")
+        );
     }
 }

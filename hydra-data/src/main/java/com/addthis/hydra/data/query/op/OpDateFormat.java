@@ -106,7 +106,7 @@ public class OpDateFormat extends AbstractRowOp {
         String sbuf = buf.toString();
         DateTime dt = null;
         if (fromMillis > 0) {
-            dt = new DateTime(Integer.parseInt(sbuf, fromMillis));
+            dt = new DateTime(Long.parseLong(sbuf, fromMillis));
         } else {
             dt = inFormat.parseDateTime(sbuf);
         }
