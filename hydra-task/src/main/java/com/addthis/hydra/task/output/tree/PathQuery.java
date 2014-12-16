@@ -107,6 +107,15 @@ public final class PathQuery extends PathOp {
         }
     }
 
+    private void logFailure(String[] pathValues) {
+        if (debug > 0) {
+            debug(false);
+        }
+        if (log.isDebugEnabled() || (debug == 1)) {
+            log.warn("query fail, missing {}", Strings.join(pathValues, " / "));
+        }
+    }
+
     @Nullable
     @Override
     public TreeNodeList getNextNodeList(TreeMapState state) {
@@ -122,6 +131,10 @@ public final class PathQuery extends PathOp {
             reference = DataTreeUtil.pathLocateFrom(state.peek(relativeUp), pathValues);
         } else {
             reference = DataTreeUtil.pathLocateFrom(state.current().getTreeRoot(), pathValues);
+        }
+        if (reference == null) {
+            logFailure(pathValues);
+            return null;
         }
         boolean updated = false;
         if (childMatch) {
@@ -165,12 +178,7 @@ public final class PathQuery extends PathOp {
                 }
             }
         } else {
-            if (debug > 0) {
-                debug(false);
-            }
-            if (log.isDebugEnabled() || (debug == 1)) {
-                log.warn("query fail, missing {}", Strings.join(pathValues, " / "));
-            }
+            logFailure(pathValues);
         }
         return updated;
     }
