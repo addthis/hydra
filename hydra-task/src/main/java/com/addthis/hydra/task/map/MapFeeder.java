@@ -21,8 +21,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import java.text.DecimalFormat;
 
@@ -40,7 +38,6 @@ import com.addthis.muxy.MuxFileDirectoryCache;
 import com.google.common.util.concurrent.Uninterruptibles;
 
 import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Meter;
 
 import org.slf4j.Logger;
@@ -72,16 +69,18 @@ public final class MapFeeder implements Runnable {
 
     // metrics
     private final long start = System.currentTimeMillis();
-    private final AtomicInteger processed = new AtomicInteger(0);
-    private final AtomicLong totalReads = new AtomicLong(0);
-    private final Meter stealAttemptMeter;
-    private final Meter stealSuccessMeter;
-    private final Histogram modHistrogram;
+
+    @Nullable private final Meter stealAttemptMeter;
+    @Nullable private final Meter stealSuccessMeter;
 
     public MapFeeder(StreamMapper task, TaskDataSource source, int feeders) {
-        stealAttemptMeter = Metrics.newMeter(getClass(), "stealAttemptRate", "steals", TimeUnit.SECONDS);
-        stealSuccessMeter = Metrics.newMeter(getClass(), "stealSuccessRate", "steals", TimeUnit.SECONDS);
-        modHistrogram = Metrics.newHistogram(getClass(), "mod");
+        if (shouldSteal) {
+            stealAttemptMeter = Metrics.newMeter(getClass(), "stealAttemptRate", "steals", TimeUnit.SECONDS);
+            stealSuccessMeter = Metrics.newMeter(getClass(), "stealSuccessRate", "steals", TimeUnit.SECONDS);
+        } else {
+            stealAttemptMeter = null;
+            stealSuccessMeter = null;
+        }
 
         this.source = source;
         this.task = task;
@@ -113,8 +112,7 @@ public final class MapFeeder implements Runnable {
             }
             closeSourceIfNeeded();
             joinProcessors();
-            log.info("exit {} threads. bundles read {} processed {}",
-                     feeders, countFormat.format(totalReads), countFormat.format(processed));
+            log.info("all ({}) task threads exited; sending taskComplete", feeders);
 
             // run in different threads to isolate them from interrupts. ie. "taskCompleteUninterruptibly"
             // join awaits completion, is uninterruptible, and will propogate any exception
@@ -146,7 +144,6 @@ public final class MapFeeder implements Runnable {
                 log.info("exiting on null bundle from {}", source);
                 return false;
             }
-            totalReads.incrementAndGet();
             int hash = p.hashCode();
             if (shardField != null) {
                 String val = ValueUtil.asNativeString(p.getValue(shardField));
@@ -155,7 +152,6 @@ public final class MapFeeder implements Runnable {
                 }
             }
             int mod = Math.abs(hash % queues.length);
-            modHistrogram.update(mod);
             pushQueue(mod, p);
             return true;
         } catch (NoSuchElementException ignored) {
@@ -182,21 +178,7 @@ public final class MapFeeder implements Runnable {
     private void closeSourceIfNeeded() {
         if (!hasClosedStreams) {
             hasClosedStreams = true;
-            double totalTime = (System.currentTimeMillis() - start) / 1000.0;
-            log.info(new StringBuilder().append("closing stream ")
-                                        .append(source.getClass().getSimpleName())
-                                        .append(" after ")
-                                        .append(timeFormat.format(totalTime))
-                                        .append("s [bundles read ")
-                                        .append(countFormat.format(totalReads))
-                                        .append(" (")
-                                        .append(countFormat.format((double) totalReads.get() / totalTime))
-                                        .append("/s) processed ")
-                                        .append(countFormat.format(processed))
-                                        .append(" (")
-                                        .append(countFormat.format((double) processed.get() / totalTime))
-                                        .append("/s) ]")
-                                        .toString());
+            log.info("closing stream {}", source.getClass().getSimpleName());
             // TODO: better API/ force sources to behave more sensibly
             CompletableFuture.runAsync(source::close).join();
         }
@@ -220,7 +202,6 @@ public final class MapFeeder implements Runnable {
                         return;
                     }
                     mapFeeder.task.process(next);
-                    mapFeeder.processed.incrementAndGet();
                 } catch (Throwable t) {
                     mapFeeder.handleUncaughtThrowable(t);
                 }
