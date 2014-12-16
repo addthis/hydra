@@ -25,8 +25,6 @@ import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeUtil;
 import com.addthis.hydra.data.tree.TreeNodeList;
 
-import com.google.common.collect.Iterators;
-
 /**
  * This {@link PathElement PathElement} <span class="hydra-summary">performs a query against
  * a pre-existing node in the data tree</span>.
