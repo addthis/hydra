@@ -42,7 +42,7 @@ container_build() {
         VERSION=$2
     fi
     mkdir -p $HOME/.m2
-    sed "s/\${MINION_HOST}/${MINION_HOST}/g;s/\${HYDRA_ROOT}/${HYDRA_ROOT}/g;s/\${RABBIT_MQ_HOST}/${RABBIT_MQ_HOST}/g;s/\${RABBIT_MQ_PORT}/${RABBIT_MQ_PORT}/g;s/\${HOST}/${HOST}/g;s/\${CLUSTER_NAME}/${CLUSTER_NAME}/g;s/\${QUERY_HOST}/${QUERY_HOST}/g;s/\${MESH_PORT}/${MESH_PORT}/g;s/\${QUERY_MESH_PORT}/${QUERY_MESH_PORT}/g;s/\${QUERY_MESH_PEER_PORT}/${QUERY_MESH_PEER_PORT}/g;s/\${QUERY_WEB_PORT}/${QUERY_WEB_PORT}/g;s/\${QUERY_API_PORT}/${QUERY_API_PORT}/g;s/\${ZK_SERVERS}/${ZK_SERVERS}/g;s/\${ZK_CHROOT}/${ZK_CHROOT}/g" \
+    sed "s/\${USER}/${USER}/g;s/\${MINION_HOST}/${MINION_HOST}/g;s/\${HYDRA_ROOT}/${HYDRA_ROOT}/g;s/\${RABBIT_MQ_HOST}/${RABBIT_MQ_HOST}/g;s/\${RABBIT_MQ_PORT}/${RABBIT_MQ_PORT}/g;s/\${HOST}/${HOST}/g;s/\${CLUSTER_NAME}/${CLUSTER_NAME}/g;s/\${QUERY_HOST}/${QUERY_HOST}/g;s/\${MESH_PORT}/${MESH_PORT}/g;s/\${QUERY_MESH_PORT}/${QUERY_MESH_PORT}/g;s/\${QUERY_MESH_PEER_PORT}/${QUERY_MESH_PEER_PORT}/g;s/\${QUERY_WEB_PORT}/${QUERY_WEB_PORT}/g;s/\${QUERY_API_PORT}/${QUERY_API_PORT}/g;s/\${ZK_SERVERS}/${ZK_SERVERS}/g;s/\${ZK_CHROOT}/${ZK_CHROOT}/g" \
         < ./$1/Dockerfile.template > ./$1/Dockerfile
     echo "Building docker image"
     docker build -t $USER/$1:$VERSION ./$1
@@ -113,11 +113,19 @@ container_start() {
             echo "starting spawn container $FULL_SCRIPTDIR"
             docker run -v $FULL_SCRIPTDIR/etc:/opt/hydra/etc \
                     -v $FULL_SCRIPTDIR/logs:/var/log/hydra \
-                    -v $FULL_SCRIPTDIR/minion:/opt/hydra/minion \
+                    -v $FULL_SCRIPTDIR/data:/opt/hydra/minion \
                     -v $JAR_DIR:/opt/hydra/jar \
                     -v $WEB_DIR:/opt/hydra/web \
                     -p $SPAWN_WEB_PORT:$SPAWN_WEB_PORT \
-                    -p $QUERY_WEB_PORT:$QUERY_WEB_PORT \
+                    --name $NAME -d $USER/$NAME:$VERSION
+            ;;
+        minion)
+            echo "starting minion container $FULL_SCRIPTDIR"
+            docker run -v $FULL_SCRIPTDIR/etc:/opt/hydra/etc \
+                    -v $FULL_SCRIPTDIR/logs:/var/log/hydra \
+                    -v $FULL_SCRIPTDIR/data:/opt/hydra/minion \
+                    -v $JAR_DIR:/opt/hydra/jar \
+                    -v $WEB_DIR:/opt/hydra/web \
                     --name $NAME -d $USER/$NAME:$VERSION
             ;;
         rabbitmq)
