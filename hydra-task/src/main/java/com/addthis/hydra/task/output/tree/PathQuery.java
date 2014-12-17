@@ -13,6 +13,9 @@
  */
 package com.addthis.hydra.task.output.tree;
 
+import javax.annotation.Nullable;
+
+import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.util.ValueUtil;
@@ -56,7 +59,11 @@ public final class PathQuery extends PathOp {
     @FieldConfig(codable = true)
     private int relativeUp;
 
-    @FieldConfig(codable = true)
+    /**
+     * Specifies the operation to perform on the matching
+     * node or nodes. This field is required.
+     */
+    @FieldConfig(codable = true, required = true)
     private PathQueryElement values;
 
     /**
@@ -75,6 +82,14 @@ public final class PathQuery extends PathOp {
     @FieldConfig(codable = true)
     private String debugKey;
 
+    /**
+     * If true then process all the children of the node
+     * that we have matched against. Append all the matching results
+     * into value arrays. Default is false.
+     */
+    @FieldConfig(codable = true)
+    private boolean childMatch;
+
     private int match;
     private int miss;
 
@@ -92,41 +107,80 @@ public final class PathQuery extends PathOp {
         }
     }
 
+    private void logFailure(String[] pathValues) {
+        if (debug > 0) {
+            debug(false);
+        }
+        if (log.isDebugEnabled() || (debug == 1)) {
+            log.warn("query fail, missing {}", Strings.join(pathValues, " / "));
+        }
+    }
+
+    @Nullable
     @Override
     public TreeNodeList getNextNodeList(TreeMapState state) {
-        String[] p = new String[path.length];
-        for (int i = 0; i < p.length; i++) {
-            p[i] = ValueUtil.asNativeString(path[i].getPathValue(state));
-            if (p[i] == null) {
+        String[] pathValues = new String[path.length];
+        for (int i = 0; i < pathValues.length; i++) {
+            pathValues[i] = ValueUtil.asNativeString(path[i].getPathValue(state));
+            if (pathValues[i] == null) {
                 return null;
             }
         }
-        DataTreeNode reference = null;
+        DataTreeNode reference;
         if (relativeUp > 0) {
-            reference = DataTreeUtil.pathLocateFrom(state.peek(relativeUp), p);
+            reference = DataTreeUtil.pathLocateFrom(state.peek(relativeUp), pathValues);
         } else {
-            reference = DataTreeUtil.pathLocateFrom(state.current().getTreeRoot(), p);
+            reference = DataTreeUtil.pathLocateFrom(state.current().getTreeRoot(), pathValues);
         }
+        if (reference == null) {
+            logFailure(pathValues);
+            return null;
+        }
+        boolean updated = false;
+        if (childMatch) {
+            ClosableIterator<DataTreeNode> children = null;
+            try {
+                children = reference.getIterator();
+                /**
+                 * Apply evaluation to all elements.
+                 * Do not short circuit on first update.
+                 */
+                while (children.hasNext()) {
+                    DataTreeNode child = children.next();
+                    updated |= evaluateNode(state, pathValues, child);
+                }
+            } finally {
+                if (children != null) {
+                    children.close();
+                }
+            }
+        } else {
+            updated = evaluateNode(state, pathValues, reference);
+        }
+        return updated ? TreeMapState.empty() : null;
+    }
+
+    private boolean evaluateNode(TreeMapState state, String[] pathValues, DataTreeNode reference) {
+        boolean updated = false;
         if (reference != null) {
             FieldValueList valueList = new FieldValueList(state.getFormat());
             if (values.update(valueList, reference, state) == 0) {
-                return null;
+                return false;
             }
-            if (valueList.updateBundle(state.getBundle())) {
+            if (childMatch) {
+                updated = valueList.updateBundleWithAppend(state.getBundle());
+            } else {
+                updated = valueList.updateBundle(state.getBundle());
+            }
+            if (updated) {
                 if (debug > 0) {
                     debug(true);
                 }
-                return TreeMapState.empty();
             }
         } else {
-            if (debug > 0) {
-                debug(false);
-            }
-            if (log.isDebugEnabled() || debug == 1) {
-                log.warn("query fail, missing " + Strings.join(p, " / "));
-            }
+            logFailure(pathValues);
         }
-        return null;
+        return updated;
     }
 
     private synchronized void debug(boolean hit) {
@@ -135,8 +189,8 @@ public final class PathQuery extends PathOp {
         } else {
             miss++;
         }
-        if (match + miss >= debug) {
-            log.warn("query[" + debugKey + "]: match=" + match + " miss=" + miss);
+        if ((match + miss) >= debug) {
+            log.warn("query[{}]: match={} miss={}", debugKey, match, miss);
             match = 0;
             miss = 0;
         }

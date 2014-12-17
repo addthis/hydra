@@ -20,12 +20,27 @@
         <div class="modal-body">
             <div>
                 <span id="backupMessage" style="padding:6px;float:left;"></span>
-                <button id="revertToLastRunButton" class="btn btn-default btn-medium" style="float:right;">I can't wait. Try to revert to the last run NOW!</button>
             </div>
             <table class="table table-condensed" style="margin-bottom: 0px; margin-top:10px;">
                 <tbody>
-                    <!-- gold backups -->
-                    <tr style="display:none;">
+                    <!-- revert to gold buackup by revision -->
+                    <tr id="goldRevertByRevision">
+                        <td style="width:25%;padding-top:10px;">
+                            Recent run:
+                        </td>
+                        <td style="width:50%;">
+                            <select id="runSelect" class="form-control">
+                                <option value="0">Last run</option>
+                                <option value="1">2 runs ago</option>
+                                <option value="2">3 runs ago</option>
+                            </select>
+                        </td>
+                        <td style="width:25%;">
+                            <button id="runButton" class="btn btn-default btn-medium">now</button>
+                        </td>
+                    </tr>
+                    <!-- revert to gold backup by timestamp -->
+                    <tr id="goldRevertByTimestamp" style="display:none;">
                         <td style="width:25%;padding-top:10px;">
                             Recent run:
                         </td>
