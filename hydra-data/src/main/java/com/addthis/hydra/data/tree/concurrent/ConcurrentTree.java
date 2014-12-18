@@ -332,24 +332,27 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             return false;
         }
         CacheKey key = new CacheKey(nodedb, child);
-        while (true) {
-            ConcurrentTreeNode node = getNode(parent, child, false);
-            if (node != null) {
-                if (node.getLeaseCount() == -1) {
-                    continue;
-                }
-                node.markDeleted();
-                source.remove(key.dbkey());
-                cache.remove(key);
+        // lease node to prevent eviction from cache and thereby disrupting our {@code source.remove()}
+        ConcurrentTreeNode node = getNode(parent, child, true);
+        if (node != null) {
+            // first ensure no one can rehydrate into a different instance
+            source.remove(key.dbkey());
+            // "markDeleted" causes other threads to remove the node at will, so it is semantically the same
+            // as removing it from the cache ourselves. Since this is the last and only instance, we can safely
+            // coordinate concurrent deletion attempts with the lease count (-2 is used as a special flag) even
+            // though most other code stops bothering with things like "thread safety" around this stage.
+            if (node.markDeleted()) {
+                // node could have already been dropped from the cache, and then re-created (sharing the same cache
+                // key equality). That is a fresh node that needs its own deletion, so only try to remove our instance.
+                cache.remove(key, node);
                 parent.updateNodeCount(-1);
                 if (node.hasNodes() && !node.isAlias()) {
                     markForChildDeletion(node);
                 }
                 return true;
-            } else {
-                return false;
             }
         }
+        return false;
     }
 
     private void markForChildDeletion(final ConcurrentTreeNode node) {
