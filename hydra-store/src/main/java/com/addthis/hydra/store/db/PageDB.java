@@ -76,12 +76,12 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
             this.maxPages = maxPages;
         }
 
-        public Builder dbname(String value) {
+        public Builder<V> dbname(String value) {
             this.dbname = value;
             return this;
         }
 
-        public Builder pageFactory(PageFactory factory) {
+        public Builder<V> pageFactory(PageFactory factory) {
             this.pageFactory = factory;
             return this;
         }
