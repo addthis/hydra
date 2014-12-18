@@ -81,8 +81,8 @@ public class PathValue extends PathElement {
     @FieldConfig(codable = true)
     protected String mapTo;
 
-    @FieldConfig(codable = true)
-    protected boolean delete;
+    /** Deletes a node before attempting to (re)create or update it. Pure deletion requires {@code create: false}. */
+    @FieldConfig protected boolean delete;
 
     @FieldConfig(codable = true)
     protected boolean push;
