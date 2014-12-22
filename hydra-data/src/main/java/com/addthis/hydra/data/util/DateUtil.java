@@ -30,10 +30,14 @@ public final class DateUtil {
     public static final String NOW = NOW_PREFIX + NOW_POSTFIX;
 
     public static DateTime getDateTime(String format, String date) {
-        return getDateTime(getFormatter(format), date);
+        return getDateTime(getFormatter(format), date, false);
     }
 
     public static DateTime getDateTime(DateTimeFormatter formatter, String date) {
+        return getDateTime(formatter, date, false);
+    }
+
+    public static DateTime getDateTime(DateTimeFormatter formatter, String date, boolean hourly) {
         if (date.startsWith(NOW_PREFIX) && date.endsWith(NOW_POSTFIX)) {
             if (date.equals(NOW)) {
                 return new DateTime();
@@ -41,9 +45,11 @@ public final class DateUtil {
             DateTime time = new DateTime();
             int pos;
             if ((pos = date.indexOf("+")) > 0) {
-                time = time.plusDays(Integer.parseInt(date.substring(pos + 1, date.length() - NOW_POSTFIX.length())));
+                int offset = Integer.parseInt(date.substring(pos + 1, date.length() - NOW_POSTFIX.length()));
+                time = hourly ? time.plusHours(offset) : time.plusDays(offset);
             } else if ((pos = date.indexOf("-")) > 0) {
-                time = time.minusDays(Integer.parseInt(date.substring(pos + 1, date.length() - NOW_POSTFIX.length())));
+                int offset = Integer.parseInt(date.substring(pos + 1, date.length() - NOW_POSTFIX.length()));
+                time = hourly ? time.minusHours(offset) : time.minusDays(offset);
             }
             return time;
         }
