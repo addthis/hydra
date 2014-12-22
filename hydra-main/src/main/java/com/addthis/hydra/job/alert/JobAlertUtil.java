@@ -51,7 +51,14 @@ public class JobAlertUtil {
     private static final int alertQueryTimeout = Parameter.intValue("alert.query.timeout", 20_000);
     private static final int alertQueryRetries = Parameter.intValue("alert.query.retries", 4);
     @VisibleForTesting
-    static final DateTimeFormatter ymdFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000).appendMonthOfYear(2).appendDayOfMonth(2).toFormatter();
+    static final DateTimeFormatter ymdFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000)
+                                                                                .appendMonthOfYear(2)
+                                                                                .appendDayOfMonth(2).toFormatter();
+    @VisibleForTesting
+    static final DateTimeFormatter ymdhFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000)
+                                                                                 .appendMonthOfYear(2)
+                                                                                 .appendDayOfMonth(2)
+                                                                                 .appendHourOfDay(2).toFormatter();
     private static final int pathTokenOffset = Parameter.intValue("source.mesh.path.token.offset", 2);
     private static final int pathOff = Parameter.intValue("source.mesh.path.offset", 0);
     private static final String sortToken = Parameter.value("source.mesh.path.token", "/");
@@ -199,7 +206,9 @@ public class JobAlertUtil {
     }
 
     /**
-     * Split a path up and replace any {{now-1}}-style elements with the YYMMDD equivalent
+     * Split a path up and replace any {{now-1}}-style elements with the YYMMDD equivalent.
+     * {{now-1h}} subtracts one hour from the current time and returns a YYMMDDHH formatted string.
+     *
      * @param path The input path to process
      * @return The path with the relevant tokens replaced
      */
@@ -212,7 +221,13 @@ public class JobAlertUtil {
             int end = part.indexOf(DateUtil.NOW_POSTFIX);
             if (end > -1) {
                 String dateEnd = part.substring(0, end + 2);
-                sb.append(DateUtil.getDateTime(ymdFormatter, DateUtil.NOW_PREFIX + dateEnd).toString(ymdFormatter));
+                String dateInput = DateUtil.NOW_PREFIX + dateEnd;
+                if (dateInput.endsWith("h" + DateUtil.NOW_POSTFIX)) {
+                    dateInput = dateInput.replace("h" + DateUtil.NOW_POSTFIX, DateUtil.NOW_POSTFIX);
+                    sb.append(DateUtil.getDateTime(ymdhFormatter, dateInput, true).toString(ymdhFormatter));
+                } else {
+                    sb.append(DateUtil.getDateTime(ymdFormatter, dateInput, false).toString(ymdFormatter));
+                }
                 sb.append(part.substring(end + 2));
             } else {
                 sb.append(DateUtil.NOW_PREFIX);

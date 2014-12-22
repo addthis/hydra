@@ -30,4 +30,12 @@ public class JobAlertUtilTest {
         assertEquals(String.format("%s/%s,%s,123442/{{now, %s",now,nowMinus1,now,now), expanded);
     }
 
+    @Test
+    public void testExpandDateMacroHourly() {
+        String expanded = JobAlertUtil.expandDateMacro("{{now-0h}}/{{now-5h}},{{now+0h}},123442/{{now, {{now+0h}}");
+        String now = DateUtil.getDateTime(JobAlertUtil.ymdhFormatter, "{{now}}", true).toString(JobAlertUtil.ymdhFormatter);
+        String nowMinus1 = DateUtil.getDateTime(JobAlertUtil.ymdhFormatter, "{{now-5}}", true).toString(JobAlertUtil.ymdhFormatter);
+        assertEquals(String.format("%s/%s,%s,123442/{{now, %s",now,nowMinus1,now,now), expanded);
+    }
+
 }
