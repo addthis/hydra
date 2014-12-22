@@ -31,29 +31,10 @@ import com.addthis.hydra.data.tree.TreeNodeList;
  */
 public final class PathCall extends PathOp {
 
-    @FieldConfig(codable = true)
-    private TreeMapperPathReference target;
+    /** Name of the path element that is called. */
+    @FieldConfig private String path;
 
-    /**
-     * Name of the path element that is called.
-     */
-    @FieldConfig(codable = true)
-    private String path;
-
-    /**
-     * work around the non-serialization of rule name in editor
-     */
-    @FieldConfig(codable = true, writeonly = true)
-    private String printableRule;
-
-    private PathElement[] ppath;
-
-    public PathCall() {
-    }
-
-    public PathCall(String path) {
-        this.path = path;
-    }
+    private transient PathElement[] ppath;
 
     @Override
     public void resolve(TreeMapper mapper) {
@@ -61,17 +42,9 @@ public final class PathCall extends PathOp {
         if (path != null) {
             ppath = mapper.getPath(path);
         }
-        if (target != null) {
-            target.resolve(mapper);
-            printableRule = target.ruleName();
-        }
     }
 
-    @Override
-    public TreeNodeList getNextNodeList(TreeMapState state) {
-        if (target != null) {
-            state.dispatchRule(target);
-        }
+    @Override public TreeNodeList getNextNodeList(TreeMapState state) {
         if (ppath != null) {
             return state.processPath(ppath);
         }

@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.task.output.tree;
 
-import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
@@ -45,67 +45,45 @@ import com.addthis.hydra.data.tree.TreeNodeList;
  */
 public class PathValue extends PathElement {
 
-    public PathValue() {
-    }
+    /** Value to be stored in the constructed node. */
+    @FieldConfig protected ValueString value;
 
-    public PathValue(String value) {
-        this.value = value;
-    }
+    @FieldConfig protected ValueFilter vfilter;
 
-    public PathValue(String value, boolean count) {
-        this.value = value;
-        this.count = count;
-    }
+    @FieldConfig protected boolean sync;
 
-    /**
-     * Value to be stored in the constructed node.
-     */
-    @FieldConfig(codable = true)
-    protected String value;
+    @FieldConfig protected boolean create = true;
 
-    @FieldConfig(codable = true)
-    protected String set;
+    @FieldConfig protected boolean once;
 
-    @FieldConfig(codable = true)
-    protected ValueFilter vfilter;
+    @FieldConfig protected AutoField set;
 
-    @FieldConfig(codable = true)
-    protected boolean sync;
-
-    @FieldConfig(codable = true)
-    protected boolean create = true;
-
-    @FieldConfig(codable = true)
-    protected boolean once;
-
-    @FieldConfig(codable = true)
-    protected String mapTo;
+    @FieldConfig protected AutoField mapTo;
 
     /** Deletes a node before attempting to (re)create or update it. Pure deletion requires {@code create: false}. */
     @FieldConfig protected boolean delete;
 
-    @FieldConfig(codable = true)
-    protected boolean push;
+    @FieldConfig protected boolean push;
 
-    @FieldConfig(codable = true)
-    protected PathElement each;
+    @FieldConfig protected PathElement each;
 
-    private ValueString valueString;
-    private BundleField setField;
-    private BundleField mapField;
+    public PathValue() {
+    }
 
-    public final ValueObject value() {
-        if (valueString == null) {
-            valueString = ValueFactory.create(value);
-        }
-        return valueString;
+    public PathValue(String value) {
+        this.value = ValueFactory.create(value);
+    }
+
+    public PathValue(String value, boolean count) {
+        this(value);
+        this.count = count;
     }
 
     /**
      * override in subclasses
      */
     public ValueObject getPathValue(final TreeMapState state) {
-        return value();
+        return value;
     }
 
     public final ValueObject getFilteredValue(final TreeMapState state) {
@@ -119,12 +97,6 @@ public class PathValue extends PathElement {
     @Override
     public void resolve(final TreeMapper mapper) {
         super.resolve(mapper);
-        if (set != null) {
-            setField = mapper.bindField(set);
-        }
-        if (mapTo != null) {
-            mapField = mapper.bindField(mapTo);
-        }
         if (each != null) {
             each.resolve(mapper);
         }
@@ -141,8 +113,8 @@ public class PathValue extends PathElement {
     @Override
     public final TreeNodeList getNextNodeList(final TreeMapState state) {
         ValueObject value = getFilteredValue(state);
-        if (setField != null) {
-            state.getBundle().setValue(setField, value);
+        if (set != null) {
+            set.setValue(state.getBundle(), value);
         }
         if (ValueUtil.isEmpty(value)) {
             return op ? TreeMapState.empty() : null;
@@ -187,7 +159,7 @@ public class PathValue extends PathElement {
             for (ValueMapEntry e : nameAsMap) {
                 String key = e.getKey();
                 if (mapTo != null) {
-                    state.getBundle().setValue(mapField, e.getValue());
+                    mapTo.setValue(state.getBundle(), e.getValue());
                     pushed += processNodeByValue(list, state, ValueFactory.create(key));
                 } else {
                     PathValue mapValue = new PathValue(key, count);

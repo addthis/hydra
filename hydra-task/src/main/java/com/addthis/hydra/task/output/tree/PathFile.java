@@ -15,12 +15,10 @@ package com.addthis.hydra.task.output.tree;
 
 import java.util.List;
 
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.data.tree.TreeNodeList;
 import com.addthis.hydra.data.util.Tokenizer;
 
@@ -55,20 +53,6 @@ public final class PathFile extends PathKeyValue {
     private boolean expand;
 
     /**
-     * If 'expand' is true then do something here. Default is null.
-     */
-    @FieldConfig(codable = true)
-    private PathKeyValue each;
-
-    /**
-     * If 'expand' is true then optionally apply a
-     * filter to each token produced by the path tokenizer.
-     * Default is null.
-     */
-    @FieldConfig(codable = true)
-    private ValueFilter tokenFilter;
-
-    /**
      * If 'expand' is true then use the following string
      * as a path separator. This parameter is ignored if the
      * 'tokens' parameter is non-null. Default is "/".
@@ -94,13 +78,6 @@ public final class PathFile extends PathKeyValue {
     private int depth;
 
     /**
-     * Default is "TEMP".
-     */
-    @FieldConfig(codable = true)
-    private String tempKey = "TEMP";
-    // treat file token same as dir token
-
-    /**
      * If 'expand' is true then treat file
      * tokens and directory tokens in the same manner.
      * Default is false.
@@ -109,28 +86,14 @@ public final class PathFile extends PathKeyValue {
     private boolean same;
 
     /**
-     * If 'expand' is true then cause filter returns
-     * of null to terminate descent.
-     * Default is false.
-     */
-    @FieldConfig(codable = true)
-    private boolean termFilter;
-
-    /**
      * Default is false.
      */
     @FieldConfig(codable = true)
     private boolean inheritData;
 
-    private BundleField tempAccess;
-
     /** */
     @Override public void resolve(TreeMapper mapper) {
         super.resolve(mapper);
-        tempAccess = mapper.bindField(tempKey);
-        if (each != null) {
-            each.setKeyAccessor(tempAccess);
-        }
         if (tokens != null) {
             separator = tokens.getSeparator();
         } else {
@@ -180,26 +143,10 @@ public final class PathFile extends PathKeyValue {
                 }
                 for (String dirString : seg) {
                     ValueObject dir = ValueFactory.create(dirString);
-                    if (tokenFilter != null) {
-                        dir = tokenFilter.filter(dir);
-                        if (dir == null) {
-                            if (termFilter) {
-                                term = true;
-                                break;
-                            }
-                            continue;
-                        }
-                    }
                     if (ValueUtil.isEmpty(dir)) {
                         continue;
                     }
-                    PathValue value;
-                    if (each != null) {
-                        value = each;
-                        state.getBundle().setValue(tempAccess, dir);
-                    } else {
-                        value = new PathValue(ValueUtil.asNativeString(dir));
-                    }
+                    PathValue value = new PathValue(ValueUtil.asNativeString(dir));
                     if (inheritData) {
                         value.data = data;
                     }

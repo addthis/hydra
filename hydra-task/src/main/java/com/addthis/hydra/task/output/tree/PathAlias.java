@@ -108,13 +108,6 @@ public class PathAlias extends PathKeyValue {
     private int match;
     private int miss;
 
-    public PathAlias() {
-    }
-
-    public PathAlias(PathValue[] path) {
-        this.path = path;
-    }
-
     @Override
     public void resolve(TreeMapper mapper) {
         super.resolve(mapper);

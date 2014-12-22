@@ -15,7 +15,6 @@ package com.addthis.hydra.task.output.tree;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
@@ -46,150 +45,89 @@ import org.slf4j.LoggerFactory;
 public abstract class PathElement implements Codable, TreeDataParent {
 
     protected static final Logger log = LoggerFactory.getLogger(PathElement.class);
-    protected static final boolean debug = System.getProperty("hydra.path.debug", "0").equals("1");
-    protected static final boolean defCountHit = System.getProperty("hydra.default.counthit", "1").equals("1");
-
-
-    public static final HashSet<String> featureSet = new HashSet<>();
 
     /**
-     * If non-null then a parent node is inserted
-     * into the path. The parent node is a "{@link PathValue const}" node
-     * with a value that is equal to the value of this parameter.
+     * If non-null then a parent node is inserted into the path. The parent node is a "{@link PathValue const}"
+     * node with a value that is equal to the value of this parameter.
      */
-    @FieldConfig(codable = true)
-    protected String name;
+    @FieldConfig protected String name;
 
     /**
-     * If true then record the number of bundles
-     * that are processed by this path element.
-     * Default is "hydra.default.counthit" configuration value
-     * (as either "1" or "0") or true.
+     * If true then record the number of bundles that are processed by this path element.
+     * Default is "hydra.default.counthit" configuration value (as either "1" or "0") or true.
      */
-    @FieldConfig(codable = true)
-    protected boolean count = defCountHit;
+    @FieldConfig protected boolean count;
 
     /**
-     * If true then continue processing child path elements
-     * even when the current path element does not have
+     * If true then continue processing child path elements even when the current path element does not have
      * any more data to process. Default is false.
      */
-    @FieldConfig(codable = true)
-    protected boolean op;
+    @FieldConfig protected boolean op;
 
     /**
-     * If true then do not process any subsequent path
-     * elements in the enclosing sequence of path elements.
+     * If true then do not process any subsequent path elements in the enclosing sequence of path elements.
      * Default is false.
      */
-    @FieldConfig(codable = true)
-    protected boolean term;
+    @FieldConfig protected boolean term;
 
     /**
-     * The set of features for this path element.
-     * If this set contains one or more elements that
-     * are not included in the {@link TreeMapper#features features}
-     * of the tree then disable this path element.
+     * The set of features for this path element. If this set contains one or more elements that are not
+     * included in the {@link TreeMapper#features features} of the tree then disable this path element.
      */
-    @FieldConfig(codable = true)
-    protected HashSet<String> feature;
+    @FieldConfig protected HashSet<String> feature;
 
     /**
-     * The set of features to disable this path element.
-     * If this set contains one or more elements that
-     * are included in the {@link TreeMapper#features features}
-     * of the tree then disable this path element.
+     * The set of features to disable this path element. If this set contains one or more elements that
+     * are included in the {@link TreeMapper#features features} of the tree then disable this path element.
      */
-    @FieldConfig(codable = true)
-    protected HashSet<String> featureOff;
+    @FieldConfig protected HashSet<String> featureOff;
 
     /**
-     * Definition of the data attachments.
-     * Consists of a mapping from the name of a data attachment
+     * Definition of the data attachments. Consists of a mapping from the name of a data attachment
      * to the structure of the data attachment.
      */
     @SuppressWarnings("unchecked")
-    @FieldConfig(codable = true)
-    protected HashMap<String, TreeDataParameters> data;
+    @FieldConfig protected HashMap<String, TreeDataParameters> data;
 
     /**
      * Optional {@linkplain BundleFilter bundle filter} to apply on incoming bundles.
-     * Only bundles that pass the filter will be processed.
-     * Default is null.
+     * Only bundles that pass the filter will be processed. Default is null.
      */
-    @FieldConfig(codable = true)
-    protected BundleFilter filter;
+    @FieldConfig protected BundleFilter filter;
 
-    private PathValue label;
-    @FieldConfig(codable = true, writeonly = true)
-    private AtomicLong profileCalls;
-    @FieldConfig(codable = true, writeonly = true)
-    private AtomicLong profileTime;
-    @FieldConfig(codable = true, writeonly = true)
-    private boolean disabled;
+    @FieldConfig(writeonly = true) private boolean disabled;
+
+    private transient PathValue label;
 
     public PathElement() {
     }
 
-    public String toString() {
+    @Override public String toString() {
         return this.getClass().getSimpleName();
     }
 
-    public static String intern(String s) {
-        return s != null ? s.intern() : null;
-    }
-
-    private final void initProfile() {
-        if (profileCalls == null || profileTime == null) {
-            clearProfile();
-        }
-    }
-
-    public void clearProfile() {
-        profileCalls = new AtomicLong(0);
-        profileTime = new AtomicLong(0);
-    }
-
-    public long getProfileCalls() {
-        initProfile();
-        return profileCalls.get();
-    }
-
-    public long getProfileTime() {
-        initProfile();
-        return profileTime.get();
-    }
-
-    public void updateProfile(long time) {
-        initProfile();
-        profileCalls.incrementAndGet();
-        profileTime.addAndGet(time);
-    }
-
-    /**
-     * resolve one-bind bindings (done post-parsing from Config)
-     */
+    /** resolve one-bind bindings (done post-parsing from Config) */
     public void resolve(final TreeMapper mapper) {
         if (feature != null) {
             for (String f : feature) {
-                if (!featureSet.contains(f)) {
+                if (!mapper.isFeatureEnabled(f)) {
                     disabled = true;
-                    log.warn("feature disabled " + this + ", missing '" + f + "'");
+                    log.warn("feature disabled {}, missing '{}'", this, f);
                     break;
                 }
             }
         }
         if (featureOff != null) {
             for (String f : featureOff) {
-                if (featureSet.contains(f)) {
+                if (mapper.isFeatureEnabled(f)) {
                     disabled = true;
-                    log.warn("feature disabled " + this + ", enabled '" + f + "'");
+                    log.warn("feature disabled {}, enabled '{}'", this, f);
                     break;
                 }
             }
         }
         if (name != null) {
-            label = new PathValue(intern(name));
+            label = new PathValue(name.intern());
             label.count = count;
         }
     }
@@ -198,15 +136,10 @@ public abstract class PathElement implements Codable, TreeDataParent {
         return op;
     }
 
-    /**
-     * wrapper that calls getPathValue to prevent multiple calls
-     */
+    /** wrapper that calls getPathValue to prevent multiple calls */
     public final TreeNodeList processNode(final TreeMapState state) {
-        if (debug) {
-            log.warn("processNode<" + this + ">");
-        }
         TreeNodeList list = null;
-        if (filter == null || filter.filter(state.getBundle())) {
+        if ((filter == null) || filter.filter(state.getBundle())) {
             if (label != null) {
                 state.push(label.processNode(state));
                 list = getNextNodeList(state);
@@ -215,7 +148,13 @@ public abstract class PathElement implements Codable, TreeDataParent {
                 list = getNextNodeList(state);
             }
         }
-        return term ? null : op ? TreeMapState.empty() : list;
+        if (term) {
+            return null;
+        } else if (op) {
+            return TreeMapState.empty();
+        } else {
+            return list;
+        }
     }
 
     /**

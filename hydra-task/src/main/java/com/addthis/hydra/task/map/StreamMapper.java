@@ -187,18 +187,10 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
                 }
                 metricGate.set(false);
             }
-        } catch (DataChannelError ex) {
+        } catch (Throwable ex) {
+            log.warn("error while processing bundle: {}", bundle, ex);
             output.sourceError(ex);
             throw ex;
-        } catch (RuntimeException ex) {
-            log.warn("runtime error :: {}", BundleFilterDebugPrint.formatBundle(bundle));
-            output.sourceError(DataChannelError.promote(ex));
-            throw ex;
-        } catch (Exception ex) {
-            log.warn("handling error :: {}", BundleFilterDebugPrint.formatBundle(bundle));
-            DataChannelError err = DataChannelError.promote(ex);
-            output.sourceError(err);
-            throw err;
         }
     }
 

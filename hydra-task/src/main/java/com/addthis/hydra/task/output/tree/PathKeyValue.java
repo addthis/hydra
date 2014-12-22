@@ -14,10 +14,9 @@
 package com.addthis.hydra.task.output.tree;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 /**
@@ -43,38 +42,19 @@ import com.addthis.hydra.data.filter.value.ValueFilter;
  */
 public class PathKeyValue extends PathValue {
 
-    public PathKeyValue() {
-    }
+    /** Name of the bundle field that is used to populate the constructed nodes. */
+    @FieldConfig protected AutoField key;
 
-    public PathKeyValue(String key) {
-        this.key = key;
-    }
+    /** If non-null then apply this filter onto the values before construction of the nodes. Default is null. */
+    @FieldConfig protected ValueFilter prefilter;
 
-    /**
-     * Name of the bundle field that is used
-     * to populate the constructed nodes.
-     */
-    @FieldConfig(codable = true)
-    protected String key;
-
-    /**
-     * If non-null then apply this filter
-     * onto the values before construction
-     * of the nodes. Default is null.
-     */
-    @FieldConfig(codable = true)
-    protected ValueFilter prefilter;
-
-    private BundleField keyAccess;
-
-    public String toString() {
+    @Override public String toString() {
         return this.getClass().getSimpleName() + "[" + key + "]";
     }
 
     @Override
     public void resolve(TreeMapper mapper) {
         super.resolve(mapper);
-        keyAccess = mapper.bindField(key);
     }
 
     @Override
@@ -86,34 +66,14 @@ public class PathKeyValue extends PathValue {
         return v;
     }
 
-    /** */
-    public final ValueObject getKeyValue(Bundle p) {
-        try {
-            ValueObject pv = null;
-            if (keyAccess != null) {
-                pv = p.getValue(keyAccess);
-            }
-            if (pv == null) {
-                pv = value();
-            }
-            return pv;
-        } catch (NullPointerException ex) {
-            try {
-                log.warn("NPE: keyAccess=" + keyAccess + " p=" + p + " in " + CodecJSON.encodeString(
-                        this));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            throw ex;
+    public final ValueObject getKeyValue(Bundle bundle) {
+        ValueObject pv = null;
+        if (key != null) {
+            pv = key.getValue(bundle);
         }
+        if (pv == null) {
+            pv = value;
+        }
+        return pv;
     }
-
-    public final void setKeyValue(Bundle p, ValueObject value) {
-        p.setValue(keyAccess, value);
-    }
-
-    public final void setKeyAccessor(BundleField nka) {
-        keyAccess = nka;
-    }
-
 }
