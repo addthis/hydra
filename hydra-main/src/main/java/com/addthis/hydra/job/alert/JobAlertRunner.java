@@ -13,14 +13,21 @@
  */
 package com.addthis.hydra.job.alert;
 
+import java.io.Closeable;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -39,6 +46,7 @@ import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 
@@ -52,7 +60,7 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_
 /**
  * This class runs over the set of job alerts, sending trigger/clear emails as appropriate
  */
-public class JobAlertRunner {
+public class JobAlertRunner implements Closeable {
 
     private static final Logger log = LoggerFactory.getLogger(JobAlertRunner.class);
     private static final String clusterHead = ConfigFactory.load().getString("com.addthis.hydra.job.spawn.Spawn.httpHost");
@@ -66,10 +74,25 @@ public class JobAlertRunner {
     private final Spawn spawn;
     private final SpawnDataStore spawnDataStore;
     private final ConcurrentHashMap<String, JobAlert> alertMap;
+    private final ScheduledThreadPoolExecutor delayedAlertScheduler;
 
     private MeshyClient meshyClient;
     private boolean alertsEnabled;
     private volatile boolean lastAlertScanFailed;
+
+    private static enum AlertState {
+        CLEAR("[CLEAR]"),
+        TRIGGER("[TRIGGER]"),
+        ERROR_CHANGED("[ERROR CHANGED]");
+
+        private final String message;
+
+        AlertState(String message) {
+            this.message = message;
+        }
+
+        public String getMessage() { return message; }
+    }
 
     public JobAlertRunner(Spawn spawn, boolean alertEnabled) {
         this.spawn = spawn;
@@ -82,6 +105,8 @@ public class JobAlertRunner {
         }
         this.alertsEnabled = alertEnabled;
         this.alertMap = new ConcurrentHashMap<>();
+        this.delayedAlertScheduler = new ScheduledThreadPoolExecutor(1);
+        delayedAlertScheduler.setRemoveOnCancelPolicy(true);
         loadAlertMap();
     }
 
@@ -125,13 +150,13 @@ public class JobAlertRunner {
                     // make a best effort attempt to send clears when convenient (should probably move clear emails to
                     // the removal method at some point)
                     if (alert == null) {
-                        emailAlert(oldAlert, "[CLEAR] ", currentErrors);
+                        emailAlert(oldAlert, AlertState.CLEAR, currentErrors);
                     } else {
                         Map<String, String> newErrors = alert.getActiveJobs();
                         MapDifference<String, String> difference = Maps.difference(currentErrors, newErrors);
-                        emailAlert(oldAlert, "[CLEAR] ", difference.entriesOnlyOnLeft());
-                        emailAlert(alert, "[TRIGGER] ", difference.entriesOnlyOnRight());
-                        emailAlert(alert, "[ERROR CHANGED] ",
+                        emailAlert(oldAlert, AlertState.CLEAR, difference.entriesOnlyOnLeft());
+                        emailAlert(alert, AlertState.TRIGGER, difference.entriesOnlyOnRight());
+                        emailAlert(alert, AlertState.ERROR_CHANGED,
                                    Maps.transformValues(difference.entriesDiffering(),
                                                         MapDifference.ValueDifference::rightValue));
                     }
@@ -234,17 +259,16 @@ public class JobAlertRunner {
         }
     }
 
-    /**
-     * Send an email when an alert fires or clears.
-     * @param jobAlert The alert to modify
-     */
-    private void emailAlert(JobAlert jobAlert, String reason, Map<String, String> errors) {
-        if (errors.isEmpty()) {
-            return;
-        }
-        String subject = String.format("%s %s - %s - %s", reason, jobAlert.getTypeString(),
-                                       JobAlertRunner.getClusterHead(), errors.keySet());
-        log.info("Alerting {} :: jobs : {} : {}", jobAlert.email, errors.keySet(), reason);
+    private String generateEmailSubject(JobAlert jobAlert,
+                                        AlertState reason,
+                                        Map<String, String> errors) {
+        return String.format("%s %s - %s - %s", reason.getMessage(), jobAlert.getTypeString(),
+                             JobAlertRunner.getClusterHead(), errors.keySet());
+    }
+
+    private String generateEmailBody(JobAlert jobAlert, AlertState reason, Map<String, String> errors) {
+        String subject = generateEmailSubject(jobAlert, reason, errors);
+        log.info("Alerting {} :: jobs : {} : {}", jobAlert.email, errors.keySet(), reason.getMessage());
         StringBuilder sb = new StringBuilder(subject + "\n");
         sb.append("Alert link : http://" + clusterHead + ":5052/spawn2/index.html#alerts/" + jobAlert.alertId + "\n");
         String description = jobAlert.description;
@@ -257,7 +281,79 @@ public class JobAlertRunner {
             sb.append(entry.getValue());
             sb.append("\n------------------------------\n");
         }
-        EmailUtil.email(jobAlert.email, subject, sb.toString());
+        return sb.toString();
+    }
+
+    /**
+     * Delayed alerts are scheduled for delivery on the basis of one email for each
+     * job id. If the delayed alert could not be scheduled then send the emails immediately.
+     * If the alert is not delayed then send a single email with the status update
+     * of all the jobs in this batch.
+     *
+     * @param jobAlert  job alert to be emailed
+     * @param reason    status change of the alert
+     * @param errors    map of jobids to error descriptions
+     */
+    private void emailAlert(JobAlert jobAlert, AlertState reason, Map<String, String> errors) {
+        if (errors.isEmpty()) {
+            return;
+        }
+        if (jobAlert.delay > 0) {
+            for (Map.Entry<String, String> entry : errors.entrySet()) {
+                boolean success = false;
+                String jobid = entry.getKey();
+                Map<String, String> singleton = new ImmutableMap.Builder().put(jobid, entry.getValue()).build();
+                String subject = generateEmailSubject(jobAlert, reason, singleton);
+                String message = generateEmailBody(jobAlert, reason, singleton);
+                try {
+                    /**
+                     * If alert has been triggered then attempt to schedule the message.
+                     * If alert has been cancelled then attempt to cancel the scheduled message.
+                     * If alert has error changed then attempt to cancel the original message
+                     * and schedule the new message.
+                     */
+                    if (reason == AlertState.TRIGGER) {
+                        success = submitDelayedTask(jobAlert, jobid, subject, message, jobAlert.delay);
+                    } else if (reason == AlertState.CLEAR) {
+                        Future task = jobAlert.delayedAlertRemove(jobid);
+                        if (task != null && task.cancel(false)) {
+                            success = true;
+                        }
+                    } else if (reason == AlertState.ERROR_CHANGED) {
+                        ScheduledFuture task = jobAlert.delayedAlertRemove(jobid);
+                        if (task != null && task.cancel(false)) {
+                            int remaining = (int) task.getDelay(TimeUnit.MINUTES);
+                            if (remaining > 0) {
+                                success = submitDelayedTask(jobAlert, jobid, subject, message, remaining);
+                            }
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.error("Could not delay alert: ", ex);
+                }
+                if (!success) {
+                    EmailUtil.email(jobAlert.email, subject, message);
+                }
+            }
+        } else {
+            String subject = generateEmailSubject(jobAlert, reason, errors);
+            String message = generateEmailBody(jobAlert, reason, errors);
+            EmailUtil.email(jobAlert.email, subject, message);
+        }
+    }
+
+    private boolean submitDelayedTask(JobAlert jobAlert, String jobid, String subject, String message, int delay) {
+        ScheduledFuture task = delayedAlertScheduler.schedule(
+                () -> EmailUtil.email(jobAlert.email, subject, message),
+                delay, TimeUnit.MINUTES);
+        boolean success = jobAlert.delayedAlertSubmit(jobid, task);
+        if (success) {
+           return true;
+        } else {
+            log.info("Alert {} for job {} fired twice without clearing",
+                     jobAlert.alertId, jobid);
+            return !task.cancel(false);
+        }
     }
 
     private void loadAlertMap() {
@@ -353,4 +449,30 @@ public class JobAlertRunner {
         return clusterHead;
     }
 
+    /**
+     * Shutdown the scheduler that submits delayed alerts
+     * and attempt to email immediately any outstanding
+     * messages in the alert queue. It is possible that
+     * we will send emails that have already been cancelled.
+     *
+     * We have set delayedAlertScheduler.setRemoveOnCancelPolicy(true)
+     * to reduce the probability of sending emails that have
+     * been cancelled.
+     *
+     * @throws IOException
+     */
+    @Override
+    public void close() throws IOException {
+        List<Runnable> remaining = new ArrayList<>();
+        delayedAlertScheduler.shutdown();
+        BlockingQueue<Runnable> queue = delayedAlertScheduler.getQueue();
+        queue.drainTo(remaining);
+        for (Runnable task : remaining) {
+            try {
+                task.run();
+            } catch (Exception ex) {
+                log.warn("", ex);
+            }
+        }
+    }
 }

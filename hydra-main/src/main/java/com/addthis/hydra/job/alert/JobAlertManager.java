@@ -13,10 +13,12 @@
  */
 package com.addthis.hydra.job.alert;
 
+import java.io.Closeable;
+
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
-public interface JobAlertManager {
+public interface JobAlertManager extends Closeable {
     
     /** Enables periodic alert checking */
     void enableAlerts() throws Exception;

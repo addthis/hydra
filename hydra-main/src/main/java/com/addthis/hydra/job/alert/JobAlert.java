@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -84,6 +86,7 @@ public class JobAlert implements Codable {
     @JsonProperty public final String description;
     @JsonProperty public final int type;
     @JsonProperty public final int timeout;
+    @JsonProperty public final int delay;
     @JsonProperty public final String email;
     @JsonProperty public final ImmutableList<String> jobIds;
     @JsonProperty public final String canaryPath;
@@ -100,11 +103,15 @@ public class JobAlert implements Codable {
     /** Running count of consecutive canary query exceptions. Reset on success. */
     private final transient AtomicInteger consecutiveCanaryExceptionCount = new AtomicInteger(0);
 
+    /* Map storing {job id : task future} for all delayed alert jobs the last time this alert was checked */
+    private final transient ConcurrentHashMap<String, ScheduledFuture> delayedAlerts = new ConcurrentHashMap<>();
+
     @JsonCreator
     public JobAlert(@Nullable @JsonProperty("alertId") String alertId,
                     @JsonProperty("description") String description,
                     @JsonProperty(value = "type", required = true) int type,
                     @Time(TimeUnit.MINUTES) @JsonProperty("timeout") int timeout,
+                    @Time(TimeUnit.MINUTES) @JsonProperty("delay") int delay,
                     @JsonProperty("email") String email,
                     @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
                     @JsonProperty("canaryPath") String canaryPath,
@@ -124,6 +131,7 @@ public class JobAlert implements Codable {
         this.description = description;
         this.type = type;
         this.timeout = timeout;
+        this.delay = delay;
         this.email = email;
         this.jobIds = ImmutableList.copyOf(jobIds);
         this.canaryPath = canaryPath;
@@ -324,5 +332,13 @@ public class JobAlert implements Codable {
         } catch (Exception e) {
             return super.toString();
         }
+    }
+
+    public boolean delayedAlertSubmit(String jobid, ScheduledFuture task) {
+        return delayedAlerts.putIfAbsent(jobid, task) == null;
+    }
+
+    public ScheduledFuture delayedAlertRemove(String jobid) {
+        return delayedAlerts.remove(jobid);
     }
 }

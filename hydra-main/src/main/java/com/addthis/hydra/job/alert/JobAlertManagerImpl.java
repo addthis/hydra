@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.alert;
 
+import java.io.IOException;
+
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -101,4 +103,8 @@ public class JobAlertManagerImpl implements JobAlertManager {
         return jobAlertRunner.getAlert(alertId);
     }
 
+    @Override
+    public void close() throws IOException {
+        jobAlertRunner.close();
+    }
 }
