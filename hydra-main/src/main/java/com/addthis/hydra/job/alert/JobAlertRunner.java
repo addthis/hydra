@@ -302,7 +302,7 @@ public class JobAlertRunner implements Closeable {
             for (Map.Entry<String, String> entry : errors.entrySet()) {
                 boolean success = false;
                 String jobid = entry.getKey();
-                Map<String, String> singleton = new ImmutableMap.Builder().put(jobid, entry.getValue()).build();
+                Map<String, String> singleton = ImmutableMap.of(jobid, entry.getValue());
                 String subject = generateEmailSubject(jobAlert, reason, singleton);
                 String message = generateEmailBody(jobAlert, reason, singleton);
                 try {
