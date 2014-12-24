@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Preconditions.checkState;
 import info.ganglia.gmetric4j.gmetric.GMetric;
-import static info.ganglia.gmetric4j.gmetric.GMetric.UDPAddressingMode.MULTICAST;
+import static info.ganglia.gmetric4j.gmetric.GMetric.UDPAddressingMode.UNICAST;
 import info.ganglia.gmetric4j.gmetric.GMetricSlope;
 import info.ganglia.gmetric4j.gmetric.GMetricType;
 import info.ganglia.gmetric4j.gmetric.GangliaException;
@@ -82,7 +82,7 @@ public final class GangliaOutput extends AbstractFilteredOutput {
         log.info("opening ganglia output with hosts: {}", hostsToString());
         gmetrics = hosts.stream().map(hostPort -> {
             try {
-                return new GMetric(hostPort.getHost(), hostPort.getPort(), MULTICAST, 1);
+                return new GMetric(hostPort.getHost(), hostPort.getPort(), UNICAST, 1);
             } catch (IOException ex) {
                 throw new UncheckedIOException(ex);
             }
