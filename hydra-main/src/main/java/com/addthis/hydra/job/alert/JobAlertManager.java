@@ -38,4 +38,5 @@ public interface JobAlertManager extends Closeable {
 
     String getAlert(String alertId);
 
+    @Override public void close();
 }

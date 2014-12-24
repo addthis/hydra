@@ -462,7 +462,7 @@ public class JobAlertRunner implements Closeable {
      * @throws IOException
      */
     @Override
-    public void close() throws IOException {
+    public void close() {
         List<Runnable> remaining = new ArrayList<>();
         delayedAlertScheduler.shutdown();
         BlockingQueue<Runnable> queue = delayedAlertScheduler.getQueue();
