@@ -200,15 +200,16 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
         @Override
         public DataCounting newInstance() {
             DataCounting dc = new DataCounting();
-            dc.ver = ver.equalsIgnoreCase("ll") ? VER_LOG
-                                                : ver.equalsIgnoreCase("lc") ? VER_LINEAR
-                                                                             : ver.equalsIgnoreCase("ce") ? VER_COUNTEST
-                                                                                                          : ver.equalsIgnoreCase("ac") ? VER_ADAPTIVE
-                                                                                                                                       : ver.equalsIgnoreCase("hll") ? VER_HYPER_LOG_LOG
-                                                                                                                                                                     : ver.equalsIgnoreCase("ceh") ? VER_COUNTEST_HLL
-                                                                                                                                                                                                   : ver.equalsIgnoreCase("hllp") ? VER_HLL_PLUS
-                                                                                                                                                                                                                                  : ver.equalsIgnoreCase("cehp") ? VER_COUNTEST_HLLP
-                                                                                                                                                                                                                                                                 : -1;
+            // TODO: refactor this if-else/enum/switch layering
+            dc.ver = ver.equalsIgnoreCase("ll") ? VER_LOG :
+                     ver.equalsIgnoreCase("lc") ? VER_LINEAR :
+                     ver.equalsIgnoreCase("ce") ? VER_COUNTEST :
+                     ver.equalsIgnoreCase("ac") ? VER_ADAPTIVE :
+                     ver.equalsIgnoreCase("hll") ? VER_HYPER_LOG_LOG :
+                     ver.equalsIgnoreCase("ceh") ? VER_COUNTEST_HLL :
+                     ver.equalsIgnoreCase("hllp") ? VER_HLL_PLUS :
+                     ver.equalsIgnoreCase("cehp") ? VER_COUNTEST_HLLP :
+                     -1;
             switch (dc.ver) {
                 case VER_ADAPTIVE:
                     dc.ic = max >= 0 ? AdaptiveCounting.Builder.obyCount(max).build() : new AdaptiveCounting(size);
