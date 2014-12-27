@@ -203,14 +203,9 @@ public class JobAlert implements Codable {
                     }
                 case TRIGGER_SENDING_EMAIL:
                 case TRIGGER_SENDING_CHANGED:
-                    if (previous.error.equals(message)) {
-                        return new JobAlertUpdate(message, previous.timestamp, JobAlertState.TRIGGER_SENT_EMAIL);
-                    } else {
-                        return new JobAlertUpdate(message, previous.timestamp, JobAlertState.TRIGGER_SENDING_CHANGED);
-                    }
                 case TRIGGER_SENT_EMAIL:
                     if (previous.error.equals(message)) {
-                        return previous;
+                        return new JobAlertUpdate(message, previous.timestamp, JobAlertState.TRIGGER_SENT_EMAIL);
                     } else {
                         return new JobAlertUpdate(message, previous.timestamp, JobAlertState.TRIGGER_SENDING_CHANGED);
                     }
