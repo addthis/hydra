@@ -18,7 +18,7 @@ public final class JobAlertUpdate {
     @JsonCreator
     public JobAlertUpdate(@Nonnull @JsonProperty("error") String error,
                           @JsonProperty("timestamp") long timestamp,
-                          @JsonProperty("state") JobAlertState state) {
+                          @Nonnull @JsonProperty("state") JobAlertState state) {
         this.error = error;
         this.timestamp = timestamp;
         this.state = state;
