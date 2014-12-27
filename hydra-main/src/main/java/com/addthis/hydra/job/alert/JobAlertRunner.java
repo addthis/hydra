@@ -13,21 +13,15 @@
  */
 package com.addthis.hydra.job.alert;
 
-import java.io.Closeable;
 import java.io.IOException;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -46,8 +40,7 @@ import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.MapDifference;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Maps;
 
 import com.typesafe.config.ConfigFactory;
@@ -60,7 +53,7 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_
 /**
  * This class runs over the set of job alerts, sending trigger/clear emails as appropriate
  */
-public class JobAlertRunner implements Closeable {
+public class JobAlertRunner {
 
     private static final Logger log = LoggerFactory.getLogger(JobAlertRunner.class);
     private static final String clusterHead = ConfigFactory.load().getString("com.addthis.hydra.job.spawn.Spawn.httpHost");
@@ -128,6 +121,10 @@ public class JobAlertRunner implements Closeable {
         return lastAlertScanFailed;
     }
 
+    private static Predicate<Map.Entry<String,JobAlertUpdate>> generateFilter(JobAlertState state) {
+        return (entry -> (entry.getValue().state == state));
+    }
+
     /**
      * Iterate over alert map, checking the status of each alert and sending emails as needed.
      */
@@ -137,28 +134,28 @@ public class JobAlertRunner implements Closeable {
             try {
                 for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
                     JobAlert oldAlert = entry.getValue();
-                    Map<String, String> currentErrors = oldAlert.getActiveJobs();
+                    Map<String, JobAlertUpdate> previousActiveAlerts = oldAlert.getActiveAlerts();
                     // entry may be concurrently deleted, so only recompute if still present, and while locked
-                    JobAlert alert = alertMap.computeIfPresent(entry.getKey(), (id, currentAlert) -> {
-                        currentAlert.checkAlertForJobs(getAlertJobs(currentAlert), meshyClient);
-                        if (!currentAlert.getActiveJobs().equals(currentErrors)) {
-                            storeAlert(currentAlert.alertId, currentAlert);
+                    JobAlert newAlert = alertMap.computeIfPresent(entry.getKey(), (id, previousAlert) -> {
+                        previousAlert.checkAlertForJobs(getAlertJobs(previousAlert), meshyClient);
+                        if (!previousAlert.getActiveAlerts().equals(previousActiveAlerts)) {
+                            storeAlert(previousAlert.alertId, previousAlert);
                         }
-                        return currentAlert;
+                        return previousAlert;
                     });
                     // null if it was concurrently removed from the map. Does not catch all removals, but might as well
                     // make a best effort attempt to send clears when convenient (should probably move clear emails to
                     // the removal method at some point)
-                    if (alert == null) {
-                        emailAlert(oldAlert, AlertState.CLEAR, currentErrors);
+                    if (newAlert == null) {
+                        emailAlert(oldAlert, AlertState.CLEAR, previousActiveAlerts);
                     } else {
-                        Map<String, String> newErrors = alert.getActiveJobs();
-                        MapDifference<String, String> difference = Maps.difference(currentErrors, newErrors);
-                        emailAlert(oldAlert, AlertState.CLEAR, difference.entriesOnlyOnLeft());
-                        emailAlert(alert, AlertState.TRIGGER, difference.entriesOnlyOnRight());
-                        emailAlert(alert, AlertState.ERROR_CHANGED,
-                                   Maps.transformValues(difference.entriesDiffering(),
-                                                        MapDifference.ValueDifference::rightValue));
+                        Map<String, JobAlertUpdate> newActiveAlerts = newAlert.getActiveAlerts();
+                        emailAlert(oldAlert, AlertState.CLEAR, Maps.filterEntries(newActiveAlerts,
+                                                      generateFilter(JobAlertState.CLEAR_SENDING_EMAIL)));
+                        emailAlert(oldAlert, AlertState.TRIGGER, Maps.filterEntries(newActiveAlerts,
+                                                      generateFilter(JobAlertState.TRIGGER_SENDING_EMAIL)));
+                        emailAlert(oldAlert, AlertState.ERROR_CHANGED, Maps.filterEntries(newActiveAlerts,
+                                                      generateFilter(JobAlertState.TRIGGER_SENDING_CHANGED)));
                     }
                 }
                 lastAlertScanFailed = false;
@@ -261,12 +258,12 @@ public class JobAlertRunner implements Closeable {
 
     private String generateEmailSubject(JobAlert jobAlert,
                                         AlertState reason,
-                                        Map<String, String> errors) {
+                                        Map<String, JobAlertUpdate> errors) {
         return String.format("%s %s - %s - %s", reason.getMessage(), jobAlert.getTypeString(),
                              JobAlertRunner.getClusterHead(), errors.keySet());
     }
 
-    private String generateEmailBody(JobAlert jobAlert, AlertState reason, Map<String, String> errors) {
+    private String generateEmailBody(JobAlert jobAlert, AlertState reason, Map<String, JobAlertUpdate> errors) {
         String subject = generateEmailSubject(jobAlert, reason, errors);
         log.info("Alerting {} :: jobs : {} : {}", jobAlert.email, errors.keySet(), reason.getMessage());
         StringBuilder sb = new StringBuilder(subject + "\n");
@@ -275,10 +272,10 @@ public class JobAlertRunner implements Closeable {
         if (Strings.isNotEmpty(description)) {
             sb.append("Alert Description : " + description + "\n");
         }
-        for (Map.Entry<String, String> entry : errors.entrySet()) {
+        for (Map.Entry<String, JobAlertUpdate> entry : errors.entrySet()) {
             sb.append(summary(spawn.getJob(entry.getKey())) + "\n");
             sb.append("Error Message\n");
-            sb.append(entry.getValue());
+            sb.append(entry.getValue().error);
             sb.append("\n------------------------------\n");
         }
         return sb.toString();
@@ -294,66 +291,13 @@ public class JobAlertRunner implements Closeable {
      * @param reason    status change of the alert
      * @param errors    map of jobids to error descriptions
      */
-    private void emailAlert(JobAlert jobAlert, AlertState reason, Map<String, String> errors) {
+    private void emailAlert(JobAlert jobAlert, AlertState reason, Map<String, JobAlertUpdate> errors) {
         if (errors.isEmpty()) {
             return;
         }
-        if (jobAlert.delay > 0) {
-            for (Map.Entry<String, String> entry : errors.entrySet()) {
-                boolean success = false;
-                String jobid = entry.getKey();
-                Map<String, String> singleton = ImmutableMap.of(jobid, entry.getValue());
-                String subject = generateEmailSubject(jobAlert, reason, singleton);
-                String message = generateEmailBody(jobAlert, reason, singleton);
-                try {
-                    /**
-                     * If alert has been triggered then attempt to schedule the message.
-                     * If alert has been cancelled then attempt to cancel the scheduled message.
-                     * If alert has error changed then attempt to cancel the original message
-                     * and schedule the new message.
-                     */
-                    if (reason == AlertState.TRIGGER) {
-                        success = submitDelayedTask(jobAlert, jobid, subject, message, jobAlert.delay);
-                    } else if (reason == AlertState.CLEAR) {
-                        Future task = jobAlert.delayedAlertRemove(jobid);
-                        if (task != null && task.cancel(false)) {
-                            success = true;
-                        }
-                    } else if (reason == AlertState.ERROR_CHANGED) {
-                        ScheduledFuture task = jobAlert.delayedAlertRemove(jobid);
-                        if (task != null && task.cancel(false)) {
-                            int remaining = (int) task.getDelay(TimeUnit.MINUTES);
-                            if (remaining > 0) {
-                                success = submitDelayedTask(jobAlert, jobid, subject, message, remaining);
-                            }
-                        }
-                    }
-                } catch (Exception ex) {
-                    log.error("Could not delay alert: ", ex);
-                }
-                if (!success) {
-                    EmailUtil.email(jobAlert.email, subject, message);
-                }
-            }
-        } else {
-            String subject = generateEmailSubject(jobAlert, reason, errors);
-            String message = generateEmailBody(jobAlert, reason, errors);
-            EmailUtil.email(jobAlert.email, subject, message);
-        }
-    }
-
-    private boolean submitDelayedTask(JobAlert jobAlert, String jobid, String subject, String message, int delay) {
-        ScheduledFuture task = delayedAlertScheduler.schedule(
-                () -> EmailUtil.email(jobAlert.email, subject, message),
-                delay, TimeUnit.MINUTES);
-        boolean success = jobAlert.delayedAlertSubmit(jobid, task);
-        if (success) {
-           return true;
-        } else {
-            log.info("Alert {} for job {} fired twice without clearing",
-                     jobAlert.alertId, jobid);
-            return !task.cancel(false);
-        }
+        String subject = generateEmailSubject(jobAlert, reason, errors);
+        String message = generateEmailBody(jobAlert, reason, errors);
+        EmailUtil.email(jobAlert.email, subject, message);
     }
 
     private void loadAlertMap() {
@@ -379,7 +323,7 @@ public class JobAlertRunner implements Closeable {
     public void putAlert(String id, JobAlert alert) {
         alertMap.compute(id, (key, old) -> {
             if (old != null) {
-                alert.setActiveJobs(old.getActiveJobs());
+                alert.setActiveAlerts(old.getActiveAlerts());
             }
             storeAlert(id, alert);
             return alert;
@@ -447,32 +391,5 @@ public class JobAlertRunner implements Closeable {
 
     public static String getClusterHead() {
         return clusterHead;
-    }
-
-    /**
-     * Shutdown the scheduler that submits delayed alerts
-     * and attempt to email immediately any outstanding
-     * messages in the alert queue. It is possible that
-     * we will send emails that have already been cancelled.
-     *
-     * We have set delayedAlertScheduler.setRemoveOnCancelPolicy(true)
-     * to reduce the probability of sending emails that have
-     * been cancelled.
-     *
-     * @throws IOException
-     */
-    @Override
-    public void close() {
-        List<Runnable> remaining = new ArrayList<>();
-        delayedAlertScheduler.shutdown();
-        BlockingQueue<Runnable> queue = delayedAlertScheduler.getQueue();
-        queue.drainTo(remaining);
-        for (Runnable task : remaining) {
-            try {
-                task.run();
-            } catch (Exception ex) {
-                log.warn("", ex);
-            }
-        }
     }
 }

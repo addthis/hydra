@@ -2576,8 +2576,6 @@ public class Spawn implements Codable, AutoCloseable {
             log.warn("", ex);
         }
 
-        jobAlertManager.close();
-
         try {
             spawnFormattedLogger.close();
         } catch (Exception ex) {

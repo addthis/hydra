@@ -101,8 +101,4 @@ public class JobAlertManagerImpl implements JobAlertManager {
         return jobAlertRunner.getAlert(alertId);
     }
 
-    @Override
-    public void close() {
-        jobAlertRunner.close();
-    }
 }
