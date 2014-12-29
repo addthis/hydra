@@ -44,6 +44,8 @@ import org.joda.time.format.DateTimeFormatterBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.google.common.base.Objects.firstNonNull;
+
 public class JobAlertUtil {
     private static final Logger log = LoggerFactory.getLogger(JobAlertUtil.class);
     private static final String queryURLBase = "http://" + Parameter.value("spawn.queryhost") + ":2222/query/call";
@@ -155,8 +157,8 @@ public class JobAlertUtil {
 
     public static String evaluateQueryWithFilter(JobAlert alert, String jobId) {
         String query = alert.canaryPath;
-        String ops = alert.canaryOps;
-        String rops = alert.canaryRops;
+        String ops = firstNonNull(alert.canaryOps, "");
+        String rops = firstNonNull(alert.canaryRops, "");
         String filter = alert.canaryFilter;
         String url = getQueryURL(jobId, query, ops, rops);
         log.trace("Emitting query with url {}", url);
