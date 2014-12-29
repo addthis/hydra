@@ -40,7 +40,7 @@ public class RepeatBuilder extends StreamBuilder {
         ValueObject repeatCount = repeatField.getValue(row);
         if (repeatCount != null) {
             try {
-                emitTimes = (int) repeatCount.asLong().getLong();
+                emitTimes = repeatCount.asLong().getLong();
             } catch (ValueTranslationException vte) {
                 if (failOnParseException) {
                     throw vte;
