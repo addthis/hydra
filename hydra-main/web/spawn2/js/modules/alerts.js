@@ -46,6 +46,7 @@ function(
         			lastAlertTime:this.get("lastAlertTime"),
         			type:$("#alertType").val(),
         			timeout:this.get("timeout"),
+        			delay:this.get("delay"),
         			email:this.get("email"),
         			description:((this.get("description") instanceof Array) ? this.get("description")[0] : this.get("description")),
         			jobIds:this.get("jobIds").split(","),
