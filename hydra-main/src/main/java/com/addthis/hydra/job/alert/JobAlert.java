@@ -252,19 +252,19 @@ public class JobAlert implements Codable {
 
     @VisibleForTesting
     @Nullable String handleCanaryException(Exception ex, @Nullable String previousErrorMessage) {
-        log.warn("Exception during canary check for alert " + alertId + " : ", ex);
+        log.warn("Exception during canary check for alert {} : ", alertId, ex);
         // special handling for SocketTimeoutException which is mostly trasient
         if (Throwables.getRootCause(ex) instanceof SocketTimeoutException) {
             int c = consecutiveCanaryExceptionCount.incrementAndGet();
             if (c >= MAX_CONSECUTIVE_CANARY_EXCEPTION) {
                 consecutiveCanaryExceptionCount.set(0);
                 return "Canary check threw exception at least " + MAX_CONSECUTIVE_CANARY_EXCEPTION + " times in a row. " +
-                       "The most recent error is: " + ex.getMessage();
+                       "The most recent error is: " + ex;
             } else {
                 return previousErrorMessage;
             }
         }
-        return ex.getMessage();
+        return ex.toString();
     }
 
     @Nullable private String checkSplitCanary(MeshyClient meshClient, Job job) {
