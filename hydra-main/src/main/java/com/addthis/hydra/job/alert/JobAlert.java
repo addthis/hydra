@@ -83,7 +83,8 @@ public class JobAlert implements Codable {
     @Nonnull @JsonProperty public final String alertId;
     @JsonProperty public final String description;
     @JsonProperty public final int type;
-    @JsonProperty public final int timeout;
+    @JsonProperty public final long timeout;
+    @JsonProperty public final long delay;
     @JsonProperty public final String email;
     @JsonProperty public final ImmutableList<String> jobIds;
     @JsonProperty public final String canaryPath;
@@ -94,6 +95,8 @@ public class JobAlert implements Codable {
 
     /* Map storing {job id : error description} for all alerted jobs the last time this alert was checked */
     @JsonProperty private volatile ImmutableMap<String, String> activeJobs;
+    /* Map storing {job id : trigger time} for all triggering jobs the last time this alert was checked */
+    @JsonProperty private volatile ImmutableMap<String, Long> activeTriggerTimes;
     // does not distinguish between multiple jobs, and racey wrt activeJobs, but only used for web-ui code for humans
     @JsonProperty private volatile long lastAlertTime;
 
@@ -104,7 +107,8 @@ public class JobAlert implements Codable {
     public JobAlert(@Nullable @JsonProperty("alertId") String alertId,
                     @JsonProperty("description") String description,
                     @JsonProperty(value = "type", required = true) int type,
-                    @Time(TimeUnit.MINUTES) @JsonProperty("timeout") int timeout,
+                    @Time(TimeUnit.MINUTES) @JsonProperty("timeout") long timeout,
+                    @Time(TimeUnit.MINUTES) @JsonProperty("delay") long delay,
                     @JsonProperty("email") String email,
                     @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
                     @JsonProperty("canaryPath") String canaryPath,
@@ -113,7 +117,8 @@ public class JobAlert implements Codable {
                     @JsonProperty("canaryFilter") String canaryFilter,
                     @JsonProperty("canaryConfigThreshold") int canaryConfigThreshold,
                     @JsonProperty("lastAlertTime") long lastAlertTime,
-                    @JsonProperty("activeJobs") Map<String, String> activeJobs) {
+                    @JsonProperty("activeJobs") Map<String, String> activeJobs,
+                    @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes) {
         if (alertId == null) {
             String newAlertId = UUID.randomUUID().toString();
             log.debug("creating new alert with uuid: {}", newAlertId);
@@ -124,6 +129,7 @@ public class JobAlert implements Codable {
         this.description = description;
         this.type = type;
         this.timeout = timeout;
+        this.delay = delay;
         this.email = email;
         this.jobIds = ImmutableList.copyOf(jobIds);
         this.canaryPath = canaryPath;
@@ -132,6 +138,7 @@ public class JobAlert implements Codable {
         this.canaryFilter = canaryFilter;
         this.canaryConfigThreshold = canaryConfigThreshold;
         this.activeJobs = ImmutableMap.copyOf(activeJobs);
+        this.activeTriggerTimes = ImmutableMap.copyOf(activeTriggerTimes);
         this.lastAlertTime = lastAlertTime;
     }
 
@@ -141,8 +148,11 @@ public class JobAlert implements Codable {
         return activeJobs;
     }
 
-    public void setActiveJobs(Map<String, String> activeJobsNew) {
-        this.activeJobs = ImmutableMap.copyOf(activeJobsNew);
+    /** Load state from an existing alert. The provided source alert should not be concurrently modified. */
+    public void setStateFrom(JobAlert sourceAlert) {
+        this.lastAlertTime = sourceAlert.lastAlertTime;
+        this.activeJobs = sourceAlert.activeJobs;
+        this.activeTriggerTimes = sourceAlert.activeTriggerTimes;
     }
 
     // used by the ui/ web code
@@ -151,16 +161,24 @@ public class JobAlert implements Codable {
     }
 
     public ImmutableMap<String, String> checkAlertForJobs(Set<Job> jobs, MeshyClient meshyClient) {
+        long now = System.currentTimeMillis();
+        long delayMillis = TimeUnit.MINUTES.toMillis(delay);
         ImmutableMap.Builder<String, String> newActiveJobsBuilder = new ImmutableMap.Builder<>();
+        ImmutableMap.Builder<String, Long> newActiveTriggerTimesBuilder = new ImmutableMap.Builder<>();
         for (Job job : jobs) {
+            long triggerTime = activeTriggerTimes.getOrDefault(job.getId(), now);
             String previousErrorMessage = activeJobs.get(job.getId()); // only interesting for certain edge cases
             String errorMessage = alertActiveForJob(meshyClient, job, previousErrorMessage);
             if (errorMessage != null) {
-                newActiveJobsBuilder.put(job.getId(), errorMessage);
+                newActiveTriggerTimesBuilder.put(job.getId(), triggerTime);
+                if ((now - triggerTime) >= delayMillis) {
+                    newActiveJobsBuilder.put(job.getId(), errorMessage);
+                }
             }
         }
+        this.activeTriggerTimes = newActiveTriggerTimesBuilder.build();
         this.activeJobs = newActiveJobsBuilder.build();
-        if (activeJobs.isEmpty()) {
+        if (activeTriggerTimes.isEmpty()) {
             lastAlertTime = 0;
         } else if (lastAlertTime <= 0) {
             lastAlertTime = System.currentTimeMillis();
