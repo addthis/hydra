@@ -119,7 +119,7 @@ public class JobAlertTest {
         Exception definitelyBadException = new RuntimeException("error");
         Exception normallyOkException = new RuntimeException(new SocketTimeoutException("socket timeout"));
 
-        assertEquals("bad exception", "error", alert.handleCanaryException(definitelyBadException, null));
+        assertEquals("bad exception", definitelyBadException.toString(), alert.handleCanaryException(definitelyBadException, null));
         assertNull("benign exception #1", alert.handleCanaryException(normallyOkException, null));
         assertNull("benign exception #2", alert.handleCanaryException(normallyOkException, null));
         assertNotNull("benign exception #3", alert.handleCanaryException(normallyOkException, null));
@@ -132,7 +132,7 @@ public class JobAlertTest {
         Exception definitelyBadException = new RuntimeException("error");
         Exception normallyOkException = new RuntimeException(new SocketTimeoutException("socket timeout"));
 
-        assertEquals("bad exception", "error", alert.handleCanaryException(definitelyBadException, null));
+        assertEquals("bad exception", definitelyBadException.toString(), alert.handleCanaryException(definitelyBadException, null));
         assertEquals("benign exception #1", "some previous error",
                      alert.handleCanaryException(normallyOkException, "some previous error"));
         assertNull("benign exception #2", alert.handleCanaryException(normallyOkException, null));
