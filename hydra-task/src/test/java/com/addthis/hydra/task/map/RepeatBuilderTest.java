@@ -18,15 +18,10 @@ import java.io.IOException;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.Bundles;
 import com.addthis.bundle.core.list.ListBundle;
-import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueTranslationException;
-import com.addthis.codec.config.Configs;
-
-import com.google.common.collect.ImmutableMap;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 
 import static com.addthis.codec.config.Configs.decodeObject;
 import static org.mockito.Mockito.mock;
