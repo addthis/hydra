@@ -137,4 +137,74 @@ public class JobAlertTest {
                      alert.handleCanaryException(normallyOkException, "some previous error"));
         assertNull("benign exception #2", alert.handleCanaryException(normallyOkException, null));
     }
+
+    @Test
+    public void alertTransitionNoAlertAtCurrentIteration() {
+        JobAlertUpdate previous, next;
+        long now = 100l;
+        // no alert at previous iteration
+        previous = null;
+        assertNull(JobAlert.generateNext(previous, null, now, 0));
+        assertNull(JobAlert.generateNext(previous, null, now, 10));
+        // alert clear sent at previous iteration
+        previous = new JobAlertUpdate("foobar", now - 10, JobAlertState.CLEAR_SENDING_EMAIL);
+        assertNull(JobAlert.generateNext(previous, null, now, 0));
+        assertNull(JobAlert.generateNext(previous, null, now, 10));
+        // delayed alert was never emailed
+        previous = new JobAlertUpdate("foobar", now - 10, JobAlertState.TRIGGER_DELAY_EMAIL);
+        assertNull(JobAlert.generateNext(previous, null, now, 0));
+        assertNull(JobAlert.generateNext(previous, null, now, 10));
+        // otherwise send an email clear event
+        previous = new JobAlertUpdate("foobar", now - 10, JobAlertState.TRIGGER_SENT_EMAIL);
+        next = JobAlert.generateNext(previous, null, now, 0);
+        assertEquals(JobAlertState.CLEAR_SENDING_EMAIL, next.state);
+        previous = new JobAlertUpdate("foobar", now - 10, JobAlertState.TRIGGER_SENDING_CHANGED);
+        next = JobAlert.generateNext(previous, null, now, 0);
+        assertEquals(JobAlertState.CLEAR_SENDING_EMAIL, next.state);
+        previous = new JobAlertUpdate("foobar", now - 10, JobAlertState.TRIGGER_SENDING_EMAIL);
+        next = JobAlert.generateNext(previous, null, now, 0);
+        assertEquals(JobAlertState.CLEAR_SENDING_EMAIL, next.state);
+    }
+
+    @Test
+    public void alertTransitionNoAlertAtPreviousIteration() {
+        JobAlertUpdate next;
+        long now = 100l;
+        // no alert at previous iteration
+        next = JobAlert.generateNext(null, "foobar", now, 0);
+        assertEquals(JobAlertState.TRIGGER_SENDING_EMAIL, next.state);
+        next = JobAlert.generateNext(null, "foobar", now, 10);
+        assertEquals(JobAlertState.TRIGGER_DELAY_EMAIL, next.state);
+    }
+
+    @Test
+    public void alertTransition() {
+        JobAlertUpdate previous, next;
+        long now = 100l;
+        previous = new JobAlertUpdate("foobar", now - 10, JobAlertState.CLEAR_SENDING_EMAIL);
+        next = JobAlert.generateNext(previous, "foobar", now, 0);
+        assertEquals(JobAlertState.TRIGGER_SENDING_EMAIL, next.state);
+        next = JobAlert.generateNext(previous, "foobar", now, 10);
+        assertEquals(JobAlertState.TRIGGER_DELAY_EMAIL, next.state);
+        previous = new JobAlertUpdate("foobar", now - 5, JobAlertState.TRIGGER_DELAY_EMAIL);
+        next = JobAlert.generateNext(previous, "foobar", now, 0);
+        assertEquals(JobAlertState.TRIGGER_SENDING_EMAIL, next.state);
+        next = JobAlert.generateNext(previous, "foobar", now, 10);
+        assertEquals(JobAlertState.TRIGGER_DELAY_EMAIL, next.state);
+        previous = new JobAlertUpdate("foobar", now - 5, JobAlertState.TRIGGER_SENDING_EMAIL);
+        next = JobAlert.generateNext(previous, "foobar", now, 0);
+        assertEquals(JobAlertState.TRIGGER_SENT_EMAIL, next.state);
+        next = JobAlert.generateNext(previous, "baz", now, 10);
+        assertEquals(JobAlertState.TRIGGER_SENDING_CHANGED, next.state);
+        previous = new JobAlertUpdate("foobar", now - 5, JobAlertState.TRIGGER_SENDING_CHANGED);
+        next = JobAlert.generateNext(previous, "foobar", now, 0);
+        assertEquals(JobAlertState.TRIGGER_SENT_EMAIL, next.state);
+        next = JobAlert.generateNext(previous, "baz", now, 10);
+        assertEquals(JobAlertState.TRIGGER_SENDING_CHANGED, next.state);
+        previous = new JobAlertUpdate("foobar", now - 5, JobAlertState.TRIGGER_SENT_EMAIL);
+        next = JobAlert.generateNext(previous, "foobar", now, 0);
+        assertEquals(JobAlertState.TRIGGER_SENT_EMAIL, next.state);
+        next = JobAlert.generateNext(previous, "baz", now, 10);
+        assertEquals(JobAlertState.TRIGGER_SENDING_CHANGED, next.state);
+    }
 }

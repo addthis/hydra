@@ -58,6 +58,8 @@ import org.slf4j.LoggerFactory;
 public class JobAlert implements Codable {
     private static final Logger log = LoggerFactory.getLogger(JobAlert.class);
 
+    private static final long MILLIS_PER_MINUTE = 1000l * 60l;
+
     /** Trigger alert if number of consecutive canary check exception is >= this limit */
     private static final int MAX_CONSECUTIVE_CANARY_EXCEPTION = 3;
 
@@ -84,6 +86,7 @@ public class JobAlert implements Codable {
     @JsonProperty public final String description;
     @JsonProperty public final int type;
     @JsonProperty public final int timeout;
+    @JsonProperty public final int delay;
     @JsonProperty public final String email;
     @JsonProperty public final ImmutableList<String> jobIds;
     @JsonProperty public final String canaryPath;
@@ -92,8 +95,9 @@ public class JobAlert implements Codable {
     @JsonProperty public final String canaryFilter;
     @JsonProperty public final int canaryConfigThreshold;
 
-    /* Map storing {job id : error description} for all alerted jobs the last time this alert was checked */
-    @JsonProperty private volatile ImmutableMap<String, String> activeJobs;
+    /* Map storing {job id : error description} for all alerts that require state change */
+    @JsonProperty private volatile ImmutableMap<String, JobAlertUpdate> activeAlerts;
+
     // does not distinguish between multiple jobs, and racey wrt activeJobs, but only used for web-ui code for humans
     @JsonProperty private volatile long lastAlertTime;
 
@@ -105,6 +109,7 @@ public class JobAlert implements Codable {
                     @JsonProperty("description") String description,
                     @JsonProperty(value = "type", required = true) int type,
                     @Time(TimeUnit.MINUTES) @JsonProperty("timeout") int timeout,
+                    @Time(TimeUnit.MINUTES) @JsonProperty("delay") int delay,
                     @JsonProperty("email") String email,
                     @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
                     @JsonProperty("canaryPath") String canaryPath,
@@ -113,7 +118,8 @@ public class JobAlert implements Codable {
                     @JsonProperty("canaryFilter") String canaryFilter,
                     @JsonProperty("canaryConfigThreshold") int canaryConfigThreshold,
                     @JsonProperty("lastAlertTime") long lastAlertTime,
-                    @JsonProperty("activeJobs") Map<String, String> activeJobs) {
+                    @JsonProperty("activeJobs") Map<String, String> activeJobs,
+                    @JsonProperty("activeAlerts") Map<String, JobAlertUpdate> activeAlerts) {
         if (alertId == null) {
             String newAlertId = UUID.randomUUID().toString();
             log.debug("creating new alert with uuid: {}", newAlertId);
@@ -124,6 +130,7 @@ public class JobAlert implements Codable {
         this.description = description;
         this.type = type;
         this.timeout = timeout;
+        this.delay = delay;
         this.email = email;
         this.jobIds = ImmutableList.copyOf(jobIds);
         this.canaryPath = canaryPath;
@@ -131,18 +138,30 @@ public class JobAlert implements Codable {
         this.canaryRops = canaryRops;
         this.canaryFilter = canaryFilter;
         this.canaryConfigThreshold = canaryConfigThreshold;
-        this.activeJobs = ImmutableMap.copyOf(activeJobs);
+        if (activeJobs != null) {
+            this.activeAlerts = generateActiveAlerts(activeJobs);
+        } else {
+            this.activeAlerts = ImmutableMap.copyOf(activeAlerts);
+        }
         this.lastAlertTime = lastAlertTime;
+    }
+
+    private static ImmutableMap<String, JobAlertUpdate> generateActiveAlerts(Map<String,String> activeJobs) {
+        ImmutableMap.Builder<String, JobAlertUpdate> builder = new ImmutableMap.Builder<>();
+        for(Map.Entry<String,String> entry : activeJobs.entrySet()) {
+            builder.put(entry.getKey(), new JobAlertUpdate(entry.getValue(), 0l, JobAlertState.TRIGGER_SENT_EMAIL));
+        }
+        return builder.build();
     }
 
     // getters/setters that trigger ser/deser and are not vanilla (also have in-code usages)
 
-    public Map<String, String> getActiveJobs() {
-        return activeJobs;
+    public Map<String, JobAlertUpdate> getActiveAlerts() {
+        return activeAlerts;
     }
 
-    public void setActiveJobs(Map<String, String> activeJobsNew) {
-        this.activeJobs = ImmutableMap.copyOf(activeJobsNew);
+    public void setActiveAlerts(Map<String, JobAlertUpdate> activeAlerts) {
+        this.activeAlerts = ImmutableMap.copyOf(activeAlerts);
     }
 
     // used by the ui/ web code
@@ -150,22 +169,70 @@ public class JobAlert implements Codable {
         return CodecJSON.encodeJSON(this);
     }
 
-    public ImmutableMap<String, String> checkAlertForJobs(Set<Job> jobs, MeshyClient meshyClient) {
-        ImmutableMap.Builder<String, String> newActiveJobsBuilder = new ImmutableMap.Builder<>();
-        for (Job job : jobs) {
-            String previousErrorMessage = activeJobs.get(job.getId()); // only interesting for certain edge cases
-            String errorMessage = alertActiveForJob(meshyClient, job, previousErrorMessage);
-            if (errorMessage != null) {
-                newActiveJobsBuilder.put(job.getId(), errorMessage);
+    @VisibleForTesting
+    public static JobAlertUpdate generateNext(JobAlertUpdate previous, String message, long now, int delay) {
+        boolean sendNow = (delay <= 0);
+        // case 1: no alert at current iteration
+        if (message == null) {
+            if (previous == null ||
+                previous.state == JobAlertState.CLEAR_SENDING_EMAIL ||
+                previous.state == JobAlertState.TRIGGER_DELAY_EMAIL) {
+                return null;
+            } else {
+                return new JobAlertUpdate(previous.error, 0, JobAlertState.CLEAR_SENDING_EMAIL);
+            }
+        // case 2: no alert at previous iteration
+        } else if (previous == null) {
+            return new JobAlertUpdate(message, now, sendNow ?
+                JobAlertState.TRIGGER_SENDING_EMAIL :
+                JobAlertState.TRIGGER_DELAY_EMAIL);
+        // case 3: alerts at current and previous iteration
+        } else {
+            switch (previous.state) {
+                case CLEAR_SENDING_EMAIL:
+                    if (sendNow) {
+                        return new JobAlertUpdate(message, now, JobAlertState.TRIGGER_SENDING_EMAIL);
+                    } else {
+                        return new JobAlertUpdate(message, now, JobAlertState.TRIGGER_DELAY_EMAIL);
+                    }
+                case TRIGGER_DELAY_EMAIL:
+                    if (previous.timestamp + delay * MILLIS_PER_MINUTE < now) {
+                        return new JobAlertUpdate(message, previous.timestamp, JobAlertState.TRIGGER_SENDING_EMAIL);
+                    } else {
+                        return new JobAlertUpdate(message, previous.timestamp, JobAlertState.TRIGGER_DELAY_EMAIL);
+                    }
+                case TRIGGER_SENDING_EMAIL:
+                case TRIGGER_SENDING_CHANGED:
+                case TRIGGER_SENT_EMAIL:
+                    if (previous.error.equals(message)) {
+                        return new JobAlertUpdate(message, previous.timestamp, JobAlertState.TRIGGER_SENT_EMAIL);
+                    } else {
+                        return new JobAlertUpdate(message, previous.timestamp, JobAlertState.TRIGGER_SENDING_CHANGED);
+                    }
+                default:
+                    throw new IllegalStateException("Unknown state: " + previous.state);
             }
         }
-        this.activeJobs = newActiveJobsBuilder.build();
-        if (activeJobs.isEmpty()) {
+    }
+
+    public void checkAlertForJobs(Set<Job> jobs, MeshyClient meshyClient) {
+        long now = System.currentTimeMillis();
+        ImmutableMap.Builder<String, JobAlertUpdate> builder = new ImmutableMap.Builder<>();
+        for (Job job : jobs) {
+            JobAlertUpdate previous = activeAlerts.get(job.getId());
+            String previousError = (previous == null) ? null : previous.error;
+            String errorMessage = alertActiveForJob(meshyClient, job, previousError);
+            JobAlertUpdate next = generateNext(previous, errorMessage, now, delay);
+            if (next != null) {
+                builder.put(job.getId(), next);
+            }
+        }
+        activeAlerts = builder.build();
+        if (activeAlerts.isEmpty()) {
             lastAlertTime = 0;
         } else if (lastAlertTime <= 0) {
-            lastAlertTime = System.currentTimeMillis();
+            lastAlertTime = now;
         }
-        return activeJobs;
     }
 
     @JsonIgnore
@@ -325,4 +392,5 @@ public class JobAlert implements Codable {
             return super.toString();
         }
     }
+
 }
