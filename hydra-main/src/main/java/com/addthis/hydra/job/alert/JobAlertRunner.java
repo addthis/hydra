@@ -283,7 +283,7 @@ public class JobAlertRunner {
     public void putAlert(String id, JobAlert alert) {
         alertMap.compute(id, (key, old) -> {
             if (old != null) {
-                alert.setActiveJobs(old.getActiveJobs());
+                alert.setStateFrom(old);
             }
             storeAlert(id, alert);
             return alert;

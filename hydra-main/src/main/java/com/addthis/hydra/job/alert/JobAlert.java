@@ -95,7 +95,7 @@ public class JobAlert implements Codable {
 
     /* Map storing {job id : error description} for all alerted jobs the last time this alert was checked */
     @JsonProperty private volatile ImmutableMap<String, String> activeJobs;
-    /* Map storing {job id : trigger time} for all alerted jobs the last time this alert was checked */
+    /* Map storing {job id : trigger time} for all triggering jobs the last time this alert was checked */
     @JsonProperty private volatile ImmutableMap<String, Long> activeTriggerTimes;
     // does not distinguish between multiple jobs, and racey wrt activeJobs, but only used for web-ui code for humans
     @JsonProperty private volatile long lastAlertTime;
@@ -148,8 +148,11 @@ public class JobAlert implements Codable {
         return activeJobs;
     }
 
-    public void setActiveJobs(Map<String, String> activeJobsNew) {
-        this.activeJobs = ImmutableMap.copyOf(activeJobsNew);
+    /** Load state from an existing alert. The provided source alert should not be concurrently modified. */
+    public void setStateFrom(JobAlert sourceAlert) {
+        this.lastAlertTime = sourceAlert.lastAlertTime;
+        this.activeJobs = sourceAlert.activeJobs;
+        this.activeTriggerTimes = sourceAlert.activeTriggerTimes;
     }
 
     // used by the ui/ web code
