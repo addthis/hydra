@@ -252,7 +252,7 @@ public class JobAlert implements Codable {
 
     @VisibleForTesting
     @Nullable String handleCanaryException(Exception ex, @Nullable String previousErrorMessage) {
-        log.warn("Exception during canary check: ", ex);
+        log.warn("Exception during canary check for alert " + alertId + " : ", ex);
         // special handling for SocketTimeoutException which is mostly trasient
         if (Throwables.getRootCause(ex) instanceof SocketTimeoutException) {
             int c = consecutiveCanaryExceptionCount.incrementAndGet();
