@@ -16,6 +16,7 @@ package com.addthis.hydra.task.map;
 import java.io.IOException;
 
 import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.Bundles;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueTranslationException;
@@ -27,6 +28,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
+import static com.addthis.codec.config.Configs.decodeObject;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -34,45 +36,35 @@ import static org.mockito.Mockito.verify;
 public class RepeatBuilderTest {
 
     StreamEmitter emitter;
-    Bundle bundle;
-    RepeatBuilder builder;
-
-    private static final String repeatField = "reps";
 
     @Before
     public void setup() {
         emitter = mock(StreamEmitter.class);
-        bundle = new ListBundle();
     }
 
     @Test
     public void basicFunctionality() throws IOException {
-        builder = Configs.decodeObject(RepeatBuilder.class, String.format("{repeatField:\"%s\"}", repeatField));
         int reps = 5;
-        Bundle bundle = makeBundle(reps);
+        RepeatBuilder builder = decodeObject(RepeatBuilder.class, "repeatField: reps");
+        Bundle bundle = Bundles.decode("reps: " + reps);
         builder.process(bundle, emitter);
-        ArgumentCaptor<Bundle> bundleCapture = ArgumentCaptor.forClass(Bundle.class);
-        verify(emitter, times(reps)).emit(bundleCapture.capture());
+        verify(emitter, times(reps)).emit(bundle);
     }
 
     @Test
     public void defaultRepeatCount() throws IOException {
         int defaultRepeatCount = 2;
-        builder = Configs.decodeObject(RepeatBuilder.class, String.format("{repeatField:\"%s\", defaultRepeats:%d}", repeatField, defaultRepeatCount));
+        RepeatBuilder builder = decodeObject(RepeatBuilder.class,
+                                             "repeatField: reps, defaultRepeats: " + defaultRepeatCount);
         Bundle bundle = new ListBundle();
         builder.process(bundle, emitter);
-        ArgumentCaptor<Bundle> bundleCapture = ArgumentCaptor.forClass(Bundle.class);
-        verify(emitter, times(defaultRepeatCount)).emit(bundleCapture.capture());
+        verify(emitter, times(defaultRepeatCount)).emit(bundle);
     }
 
     @Test(expected = ValueTranslationException.class)
     public void escalateOnParseFailure() throws IOException {
-        builder = Configs.decodeObject(RepeatBuilder.class, String.format("{repeatField:\"%s\", failOnParseException: true}", repeatField));
-        Bundle bundle = new ListBundle(ImmutableMap.of(repeatField, ValueFactory.create("zzzzz")));
+        RepeatBuilder builder = decodeObject(RepeatBuilder.class, "repeatField: reps, failOnParseException: true");
+        Bundle bundle = Bundles.decode("reps: zzzzzz");
         builder.process(bundle, emitter);
-    }
-
-    private static Bundle makeBundle(int reps) {
-        return new ListBundle(ImmutableMap.of(repeatField, ValueFactory.create(reps)));
     }
 }
