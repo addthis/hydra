@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.query;
 
+import javax.annotation.Syntax;
+
 import com.addthis.hydra.data.query.op.OpChangePoints;
 import com.addthis.hydra.data.query.op.OpCompare;
 import com.addthis.hydra.data.query.op.OpContains;
@@ -22,6 +24,7 @@ import com.addthis.hydra.data.query.op.OpDiff;
 import com.addthis.hydra.data.query.op.OpDiskSort;
 import com.addthis.hydra.data.query.op.OpDisorder;
 import com.addthis.hydra.data.query.op.OpFill;
+import com.addthis.hydra.data.query.op.OpFilter;
 import com.addthis.hydra.data.query.op.OpFold;
 import com.addthis.hydra.data.query.op.OpFrequencyTable;
 import com.addthis.hydra.data.query.op.OpGather;
@@ -143,6 +146,14 @@ enum Op {
                       String args,
                       ChannelProgressivePromise opPromise) {
             return new OpFill(args, opPromise);
+        }
+    },
+    FILTER {
+        @Override
+        QueryOp build(QueryOpProcessor processor,
+                      @Syntax("HOCON") String args,
+                      ChannelProgressivePromise opPromise) {
+            return new OpFilter(args, opPromise);
         }
     },
     FOLD {
