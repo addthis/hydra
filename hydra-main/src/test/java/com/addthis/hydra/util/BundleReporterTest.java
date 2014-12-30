@@ -16,7 +16,6 @@ package com.addthis.hydra.util;
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.bundle.util.AutoField;
-import com.addthis.bundle.util.CachingField;
 import com.addthis.bundle.util.map.MapBundle;
 import com.addthis.hydra.task.output.TaskDataOutput;
 
@@ -50,10 +49,10 @@ public class BundleReporterTest {
     @Before
     public void stubBundleCreation() {
         output = mock(TaskDataOutput.class);
-        name = CachingField.newAutoField("name");
-        value = CachingField.newAutoField("value");
-        group = CachingField.newAutoField("group");
-        units = CachingField.newAutoField("units");
+        name = AutoField.newAutoField("name");
+        value = AutoField.newAutoField("value");
+        group = AutoField.newAutoField("group");
+        units = AutoField.newAutoField("units");
         period = TimeUnit.SECONDS.toNanos(60);
         reporter = new BundleReporter(output, name, value, group, units, period);
         when(output.createBundle()).thenAnswer(new Answer<Object>() {

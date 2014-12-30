@@ -68,7 +68,7 @@ public final class FieldFilter {
     // more wasteful than the caching we perform for unchanging formats. This is a decent stop-gap solution.
     private static AutoField cloneFrom(AutoField from) {
         if (from instanceof FullAutoField) {
-            return new FullAutoField(((FullAutoField) from).name, ((FullAutoField) from).subNames);
+            return new FullAutoField(((FullAutoField) from).baseAutoField, ((FullAutoField) from).subNames);
         } else if (from instanceof CachingField) {
             return new CachingField(((CachingField) from).name);
         } else {
@@ -78,8 +78,8 @@ public final class FieldFilter {
     }
 
     public FieldFilter(String copyFieldName) {
-        this.from = CachingField.newAutoField(copyFieldName);
-        this.to   = CachingField.newAutoField(copyFieldName);
+        this.from = AutoField.newAutoField(copyFieldName);
+        this.to   = AutoField.newAutoField(copyFieldName);
     }
 
     public void mapField(Bundle in, Bundle out) {

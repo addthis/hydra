@@ -21,7 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static com.addthis.bundle.core.Bundles.decode;
-import static com.addthis.bundle.util.CachingField.newAutoField;
+import static com.addthis.bundle.util.AutoField.newAutoField;
 import static com.addthis.bundle.value.ValueFactory.decodeValue;
 import static com.addthis.codec.config.Configs.decodeObject;
 import static org.junit.Assert.assertEquals;
