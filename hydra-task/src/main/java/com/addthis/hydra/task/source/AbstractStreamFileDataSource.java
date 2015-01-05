@@ -687,6 +687,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 if (!IGNORE_MARKS_ERRORS) {
                     errored.set(true);
                 }
+            } catch (Throwable t) {
+                log.error("unrecoverable error in stream file data source fill method. immediately halting jvm", t);
+                Runtime.getRuntime().halt(1);
             } finally {
                 log.debug("worker {} exiting done={}", workerId, done);
                 runningThreadCountDownLatch.countDown();
