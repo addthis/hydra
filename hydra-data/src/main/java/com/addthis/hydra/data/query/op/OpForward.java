@@ -14,6 +14,8 @@
 
 package com.addthis.hydra.data.query.op;
 
+import com.addthis.basis.util.MemoryCounter;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.data.query.AbstractQueryOp;
 import com.addthis.hydra.data.query.QueryMemTracker;
@@ -23,6 +25,7 @@ import io.netty.channel.ChannelProgressivePromise;
 
 public class OpForward extends AbstractQueryOp {
 
+    @MemoryCounter.Mem(estimate = false)
     private QueryOp forwardingTarget;
 
     protected OpForward(ChannelProgressivePromise opPromise, QueryOp forwardingTarget) {

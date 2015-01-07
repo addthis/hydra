@@ -69,6 +69,7 @@ public class OpGroupBy extends AbstractQueryOp {
     private final String queryDeclaration;
 
     private final MergeConfig mergeConfig;
+    @MemoryCounter.Mem(estimate = false)
     private final QueryOpProcessor processor;
     private final OpForward forwardingOp;
     private final ChannelFutureListener errorForwarder;
@@ -147,11 +148,11 @@ public class OpGroupBy extends AbstractQueryOp {
         memTotal += MemoryCounter.estimateSize(queryOp);
 
         // If we're not tipping to disk, and the tips are set, then we will issue errors if we pass them
-        if (memTip > 0 && memTotal > memTip) {
+        if ((memTip > 0) && (memTotal > memTip)) {
             throw new DataChannelError("Memory usage of gathered objects exceeds allowed " + memTip);
         }
 
-        if (rowTip > 0 && resultTable.size() > rowTip) {
+        if ((rowTip > 0) && (resultTable.size() > rowTip)) {
             throw new DataChannelError("Number of gathered rows exceeds allowed " + rowTip);
         }
     }

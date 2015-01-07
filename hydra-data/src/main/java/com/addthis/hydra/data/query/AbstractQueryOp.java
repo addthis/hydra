@@ -17,6 +17,7 @@ import java.io.IOException;
 
 import java.util.List;
 
+import com.addthis.basis.util.MemoryCounter;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.Bundle;
@@ -37,10 +38,13 @@ public abstract class AbstractQueryOp implements QueryOp {
     public static final ValueLong   ZERO         = ValueFactory.create(0);
     public static final ValueString EMPTY_STRING = ValueFactory.create("");
 
+    @MemoryCounter.Mem(estimate = false)
     private QueryOp            next;
+    @MemoryCounter.Mem(estimate = false)
     private QueryMemTracker    memTracker;
     private BundleColumnBinder sourceBinder;
 
+    @MemoryCounter.Mem(estimate = false)
     protected final ChannelProgressivePromise opPromise;
 
     protected AbstractQueryOp(ChannelProgressivePromise opPromise) {
