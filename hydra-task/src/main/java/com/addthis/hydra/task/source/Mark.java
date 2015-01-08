@@ -26,7 +26,7 @@ import io.netty.buffer.Unpooled;
 /**
  * file mark record
  */
-public final class Mark extends SimpleMark {
+public class Mark extends SimpleMark {
 
     @FieldConfig(codable = true)
     private int error;
