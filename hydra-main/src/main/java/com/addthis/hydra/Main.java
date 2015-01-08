@@ -72,8 +72,9 @@ public class Main {
                         String name = args[0];
                         Class clazz = executables.asBiMap().get(name);
                         if (clazz != null) {
+                            boolean showBanner = executables.config().getBoolean("_show-banner");
                             ConfigObject banners = executables.config().getObject("_banners");
-                            if (banners.containsKey(name)) {
+                            if (showBanner && banners.containsKey(name)) {
                                 String banner = banners.get(name).unwrapped().toString();
                                 log.info(String.format("Starting {}%n{}"), name, banner);
                             }
