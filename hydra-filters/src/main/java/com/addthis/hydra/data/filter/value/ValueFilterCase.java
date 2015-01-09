@@ -46,6 +46,9 @@ public class ValueFilterCase extends StringFilter {
     private boolean upper;
 
     @Override
+    public void open() {}
+
+    @Override
     public String filter(String value) {
         if (value != null) {
             if (lower) {

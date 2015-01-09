@@ -15,8 +15,12 @@ package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -48,60 +52,59 @@ public class BundleFilterTimeRange extends BundleFilter {
     private static final DateTimeFormatter ymdhm = DateTimeFormat.forPattern("yyMMddHHmm");
 
     /**
-     * The date/time input as expressed in UNIX milliseconds.
+     * The field containing date/time input as expressed in UNIX milliseconds. This field is required.
      */
-    @FieldConfig(codable = true, required = true)
-    private String time;
+    final private AutoField time;
 
     /**
      * If non-null then filter out all date/time values that occur later than this value.
      */
-    @FieldConfig(codable = true)
-    private String before;
+    final private String before;
 
     /**
      * If non-null then filter out all date/time values that occur earlier than this value.
      */
-    @FieldConfig(codable = true)
-    private String after;
+    final private String after;
 
     /**
      * The value to return when a date/time value is within the filter(s). Default is true.
      */
-    @FieldConfig(codable = true)
-    private boolean defaultExit = true;
+    final private boolean defaultExit;
 
     /**
      * If non-null then parse the 'before' and 'after' fields using this
      * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat
      * .html">DateTimeFormat</a>.
      */
-    @FieldConfig(codable = true)
-    private String timeFormat;
+    final private String timeFormat;
 
-    private long              tbefore;
-    private long              tafter;
-    private DateTimeFormatter format;
-    private String[]            fields;
+    final private long              tbefore;
+    final private long              tafter;
+    final private DateTimeFormatter format;
 
-    @Override
-    public void initialize() {
-        fields = new String[]{time};
-        if (timeFormat != null) {
-            format = DateTimeFormat.forPattern(timeFormat);
-        }
-        if (before != null) {
-            tbefore = convertDate(before);
-        }
-        if (after != null) {
-            tafter = convertDate(after);
-        }
+    @JsonCreator
+    public BundleFilterTimeRange(@JsonProperty(value = "time", required = true) AutoField time,
+                                 @JsonProperty("before") String before,
+                                 @JsonProperty("after") String after,
+                                 @JsonProperty("defaultExit") boolean defaultExit,
+                                 @JsonProperty("timeFormat") String timeFormat) {
+        this.time = time;
+        this.before = before;
+        this.after = after;
+        this.defaultExit = defaultExit;
+        this.timeFormat = timeFormat;
+
+        format = (timeFormat != null) ? DateTimeFormat.forPattern(timeFormat) : null;
+        tbefore = (before != null) ? convertDate(before) : null;
+        tafter = (after != null) ? convertDate(after) : null;
     }
 
     @Override
-    public boolean filterExec(Bundle bundle) {
-        BundleField[] bound = getBindings(bundle, fields);
-        ValueLong timeValue = bundle.getValue(bound[0]).asLong();
+    public void open() { }
+
+    @Override
+    public boolean filter(Bundle bundle) {
+        ValueLong timeValue = time.getValue(bundle).asLong();
         if (timeValue == null) {
             return defaultExit;
         }

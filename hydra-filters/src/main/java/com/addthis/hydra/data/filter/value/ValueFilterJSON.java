@@ -58,6 +58,8 @@ public class ValueFilterJSON extends ValueFilter implements SuperCodable {
     private HotMap<String, Object> cache = new HotMap<>(new ConcurrentHashMap());
     private ArrayList<QueryToken> tokens;
 
+    @Override public void open() { }
+
     @Override
     public ValueObject filterValue(ValueObject value) {
         if ((value == null) || ((value.getObjectType() == ValueObject.TYPE.STRING) &&

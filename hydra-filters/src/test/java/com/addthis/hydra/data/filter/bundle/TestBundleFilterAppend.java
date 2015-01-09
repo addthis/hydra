@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.map.MapBundle;
 
 import com.google.common.collect.Sets;
@@ -28,7 +29,8 @@ public class TestBundleFilterAppend {
 
     @Test
     public void fieldTest() {
-        BundleFilterAppend bfa = new BundleFilterAppend().setValues(Sets.newHashSet("foo")).setToField("bar");
+        BundleFilterAppend bfa = new BundleFilterAppend().setValues(Sets.newHashSet("foo")).setToField(
+                AutoField.newAutoField("bar"));
         MapBundle bundle = MapBundle.createBundle(new String[]{"dog", "food"});
         bfa.filter(bundle);
         assertEquals("food", bundle.get("dog"));
@@ -37,7 +39,8 @@ public class TestBundleFilterAppend {
 
     @Test
     public void fieldTest_withExistingValue() {
-        BundleFilterAppend bfa = new BundleFilterAppend().setValues(Sets.newHashSet("foo")).setToField("bar");
+        BundleFilterAppend bfa = new BundleFilterAppend().setValues(Sets.newHashSet("foo")).setToField(
+                AutoField.newAutoField("bar"));
         MapBundle bundle = MapBundle.createBundle(new String[]{"dog", "food", "bar", "car"});
         bfa.filter(bundle);
         assertEquals("food", bundle.get("dog"));
@@ -46,7 +49,8 @@ public class TestBundleFilterAppend {
 
     @Test
     public void fieldTest_multipleValues() {
-        BundleFilterAppend bfa = new BundleFilterAppend().setValues(Sets.newHashSet("car", "foo", "star")).setToField("bar").setSize(2);
+        BundleFilterAppend bfa = new BundleFilterAppend().setValues(Sets.newHashSet("car", "foo", "star"))
+                                                         .setToField(AutoField.newAutoField("bar")).setSize(2);
         MapBundle bundle = MapBundle.createBundle(new String[]{"dog", "food"});
         bfa.filter(bundle);
         assertEquals("food", bundle.get("dog"));

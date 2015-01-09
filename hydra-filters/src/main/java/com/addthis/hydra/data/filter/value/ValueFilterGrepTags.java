@@ -52,6 +52,8 @@ public class ValueFilterGrepTags extends ValueFilter {
 
     private int parserErrors = 0;
 
+    @Override public void open() { }
+
     @Override
     @Nullable
     public ValueObject filterValue(ValueObject value) {

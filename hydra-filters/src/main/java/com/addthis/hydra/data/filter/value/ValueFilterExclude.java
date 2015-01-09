@@ -20,6 +20,9 @@ import java.util.regex.Pattern;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.util.JSONFetcher;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">excludes matching values</span>.
@@ -41,89 +44,96 @@ public class ValueFilterExclude extends StringFilter {
     /**
      * A set of strings. The input must be an exact match to a member of this set to be accepted.
      */
-    @FieldConfig(codable = true)
     private HashSet<String> value;
 
     /**
      * A url that points to a set of strings that are used in place of the {@link #value value}
      * field.
      */
-    @FieldConfig(codable = true)
-    private String valueURL;
+    final private String valueURL;
 
     /**
      * A set of regular expression strings. The entire input must match against a regular
      * expression to be accepted.
      */
-    @FieldConfig(codable = true)
     private HashSet<String> match;
 
     /**
      * A url that points to a set of strings that are used in place of the {@link #match match}
      * field.
      */
-    @FieldConfig(codable = true)
-    private String matchURL;
+    final private String matchURL;
 
     /**
      * A set of regular expression strings. The substring of the input must be found in a regular
      * expression to be accepted.
      */
-    @FieldConfig(codable = true)
     private HashSet<String> find;
 
     /**
      * A url that points to a set of strings that are used in place of the {@link #find find} field.
      */
-    @FieldConfig(codable = true)
-    private String findURL;
+    final private String findURL;
 
     /**
      * A set of strings. The input must a substring of a member of the set to be accepted.
      */
-    @FieldConfig(codable = true)
     private String[] contains;
 
     /**
      * A url that points to a set of strings that are used in place of the {@link #contains
      * contains} field.
      */
-    @FieldConfig(codable = true)
-    private String containsURL;
+    final private String containsURL;
 
     /**
      * A timeout if any of the url fields are used.
      */
-    @FieldConfig(codable = true)
-    private int urlTimeout = 60000;
+    final private int urlTimeout;
 
     /**
      * The number of connection retries if any of the url fields are used.
      */
-    @FieldConfig(codable = true)
-    private int urlRetries = 5;
+    final private int urlRetries;
 
     private ArrayList<Pattern> pattern;
     private ArrayList<Pattern> findPattern;
 
-    public ValueFilterExclude setValue(HashSet<String> value) {
+    @JsonCreator
+    public ValueFilterExclude(@JsonProperty("value") HashSet<String> value,
+                              @JsonProperty("valueURL") String valueURL,
+                              @JsonProperty("match") HashSet<String> match,
+                              @JsonProperty("matchURL") String matchURL,
+                              @JsonProperty("find") HashSet<String> find,
+                              @JsonProperty("findURL") String findURL,
+                              @JsonProperty("contains") String[] contains,
+                              @JsonProperty("containsURL") String containsURL,
+                              @JsonProperty("urlTimeout") int urlTimeout,
+                              @JsonProperty("urlRetries") int urlRetries) {
         this.value = value;
-        return this;
-    }
-
-    public ValueFilterExclude setMatch(HashSet<String> match) {
+        this.valueURL = valueURL;
         this.match = match;
-        return this;
-    }
-
-    public ValueFilterExclude setFind(HashSet<String> find) {
+        this.matchURL = matchURL;
         this.find = find;
-        return this;
-    }
-
-    public ValueFilterExclude setContains(String[] contains) {
+        this.findURL = findURL;
         this.contains = contains;
-        return this;
+        this.containsURL = containsURL;
+        this.urlTimeout = urlTimeout;
+        this.urlRetries = urlRetries;
+        if (match != null) {
+            ArrayList<Pattern> newpat = new ArrayList<>();
+            for (String s : match) {
+                newpat.add(Pattern.compile(s));
+            }
+            pattern = newpat;
+        }
+        if (find != null) {
+            ArrayList<Pattern> newpat = new ArrayList<>();
+            for (String s : find) {
+                newpat.add(Pattern.compile(s));
+            }
+            findPattern = newpat;
+        }
     }
 
     public boolean passedMatch(String sv) {
@@ -171,39 +181,38 @@ public class ValueFilterExclude extends StringFilter {
     }
 
     @Override
-    public void setup() {
+    public void open() {
         if (valueURL != null) {
             value = JSONFetcher.staticLoadSet(valueURL, urlTimeout, urlRetries, value);
         }
         if (matchURL != null) {
             match = JSONFetcher.staticLoadSet(matchURL, urlTimeout, urlRetries, match);
+            if (match != null) {
+                ArrayList<Pattern> newpat = new ArrayList<>();
+                for (String s : match) {
+                    newpat.add(Pattern.compile(s));
+                }
+                pattern = newpat;
+            }
         }
         if (findURL != null) {
             find = JSONFetcher.staticLoadSet(findURL, urlTimeout, urlRetries, find);
+            if (find != null) {
+                ArrayList<Pattern> newpat = new ArrayList<>();
+                for (String s : find) {
+                    newpat.add(Pattern.compile(s));
+                }
+                findPattern = newpat;
+            }
         }
         if (containsURL != null) {
             HashSet<String> tmp = JSONFetcher.staticLoadSet(containsURL);
             contains = tmp.toArray(new String[tmp.size()]);
         }
-        if (match != null) {
-            ArrayList<Pattern> newpat = new ArrayList<>();
-            for (String s : match) {
-                newpat.add(Pattern.compile(s));
-            }
-            pattern = newpat;
-        }
-        if (find != null) {
-            ArrayList<Pattern> newpat = new ArrayList<>();
-            for (String s : find) {
-                newpat.add(Pattern.compile(s));
-            }
-            findPattern = newpat;
-        }
     }
 
     @Override
     public String filter(String v) {
-        requireSetup();
         if (v != null) {
             String sv = v.toString();
             if (passedMatch(sv) || passedContains(sv) || passedValue(sv) || passedFind(sv)) {

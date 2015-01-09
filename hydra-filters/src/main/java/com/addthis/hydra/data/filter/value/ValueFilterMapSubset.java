@@ -75,6 +75,8 @@ public class ValueFilterMapSubset extends ValueFilter {
     @JsonProperty private String valueSep = ",";
 
 
+    @Override public void open() { }
+
     @Override
     public ValueObject filterValue(ValueObject value) {
         if (value == null) {

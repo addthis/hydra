@@ -39,10 +39,10 @@ public class BundleFilterNot extends BundleFilter {
     }
 
     @Override
-    public void initialize() { }
+    public void open() { }
 
     @Override
-    public boolean filterExec(Bundle bundle) {
+    public boolean filter(Bundle bundle) {
         return field.getValue(bundle) == null;
     }
 }

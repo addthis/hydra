@@ -44,6 +44,8 @@ public class ValueFilterMod extends ValueFilter {
     @FieldConfig(codable = true)
     private boolean abs = true;
 
+    @Override public void open() { }
+
     @Override
     public ValueObject filterValue(ValueObject value) {
         try {

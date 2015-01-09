@@ -51,6 +51,9 @@ public class ValueFilterBase64 extends StringFilter {
     private boolean decode;
 
     @Override
+    public void open() {}
+
+    @Override
     public String filter(String value) {
         if (!Strings.isEmpty(value)) {
             if (encode) {

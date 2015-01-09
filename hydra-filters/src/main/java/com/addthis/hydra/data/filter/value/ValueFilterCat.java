@@ -43,6 +43,9 @@ public class ValueFilterCat extends ValueFilter {
     private String post;
 
     @Override
+    public void open() {}
+
+    @Override
     public ValueObject filterValue(ValueObject value) {
         if (value != null) {
             if (pre != null) {

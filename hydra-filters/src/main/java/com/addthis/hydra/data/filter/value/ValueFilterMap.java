@@ -109,7 +109,7 @@ public class ValueFilterMap extends StringFilter {
     }
 
     @Override
-    public void setup() {
+    public void open() {
         if (map == null && mapURL != null) {
             map = new JSONFetcher(httpTimeout, httpTrace).loadMap(mapURL);
         }
@@ -117,7 +117,6 @@ public class ValueFilterMap extends StringFilter {
 
     @Override
     public String filter(String value) {
-        requireSetup();
         if (value != null) {
             if (map == null) {
                 value = defaultValue != null ? defaultValue : toNull ? null : value;

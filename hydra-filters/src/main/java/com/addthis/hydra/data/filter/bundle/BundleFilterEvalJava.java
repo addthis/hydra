@@ -148,9 +148,9 @@ public class BundleFilterEvalJava extends BundleFilter {
     }
 
     @Override
-    public boolean filterExec(Bundle row) {
+    public boolean filter(Bundle row) {
         if (constructedFilter != null) {
-            return constructedFilter.filterExec(row);
+            return constructedFilter.filter(row);
         } else {
             return false;
         }
@@ -214,6 +214,7 @@ public class BundleFilterEvalJava extends BundleFilter {
                 log.warn("\n" + classDeclString);
                 throw new IllegalStateException(msg);
             }
+            filter.open();
             return filter;
         } finally {
             compiler.cleanupFiles(className);
@@ -363,7 +364,7 @@ public class BundleFilterEvalJava extends BundleFilter {
 
 
     @Override
-    public void initialize() {
+    public void open() {
         typeBundle = false;
         for (int i = 0; i < types.length; i++) {
             if (types[i].equals(InputType.BUNDLE_RAW)) {

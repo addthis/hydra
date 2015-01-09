@@ -59,6 +59,8 @@ public class ValueFilterIndex extends ValueFilter {
         return this;
     }
 
+    @Override public void open() { }
+
     @Override
     public ValueObject filter(ValueObject value) {
         ValueObject nullReturn = toNull ? null : value;

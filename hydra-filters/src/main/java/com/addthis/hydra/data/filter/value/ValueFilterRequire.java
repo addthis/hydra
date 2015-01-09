@@ -20,6 +20,9 @@ import java.util.regex.Pattern;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.util.JSONFetcher;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">filters the input based on one or more string-matching criteria</span>.
  * <p/>
@@ -52,102 +55,110 @@ public class ValueFilterRequire extends StringFilter {
     /**
      * The input must match exactly to an element in this set.
      */
-    @FieldConfig(codable = true)
     private HashSet<String> value;
 
     /**
      * A URL to retrieve the 'value' field.
      */
-    @FieldConfig(codable = true)
-    private String valueURL;
+    final private String valueURL;
 
     /**
      * The input must match to one of the regular expressions in this set.
      */
-    @FieldConfig(codable = true)
     private HashSet<String> match;
 
     /**
      * A URL to retrieve the 'match' field.
      */
-    @FieldConfig(codable = true)
-    private String matchURL;
+    final private String matchURL;
 
     /**
      * A substring of the input must match to one of the regular expressions in this set.
      */
-    @FieldConfig(codable = true)
     private HashSet<String> find;
 
     /**
      * A URL to retrieve the 'find' field.
      */
-    @FieldConfig(codable = true)
-    private String findURL;
+    final private String findURL;
 
     /**
      * A substring of the input must match exactly to an element of this set.
      */
-    @FieldConfig(codable = true)
     private String[] contains;
 
     /**
      * A URL to retrieve the 'contains' field.
      */
-    @FieldConfig(codable = true)
-    private String containsURL;
+    final private String containsURL;
 
     /**
      * If true, then interpret the payload from the URLs as CSV files. Default is false.
      */
     @FieldConfig(codable = true)
-    private boolean urlReturnsCSV;
+    final private boolean urlReturnsCSV;
 
     /**
      * If true, then convert the input to lowercase. The filter output will be in lowercase.
      * Default is false.
      */
     @FieldConfig(codable = true)
-    private boolean toLower;
+    final private boolean toLower;
 
     /**
      * A timeout value if any of the URL fields are used. Default is 60000.
      */
     @FieldConfig(codable = true)
-    private int urlTimeout = 60000;
+    final private int urlTimeout;
 
     /**
      * The number of retries if any of the URL fields are used. Default is 5.
      */
     @FieldConfig(codable = true)
-    private int urlRetries = 5;
+    final private int urlRetries;
 
     private ArrayList<Pattern> pattern;
     private ArrayList<Pattern> findPattern;
 
-    public ValueFilterRequire setValue(HashSet<String> value) {
+    @JsonCreator
+    public ValueFilterRequire(@JsonProperty("value") HashSet<String> value,
+                              @JsonProperty("valueURL") String valueURL,
+                              @JsonProperty("match") HashSet<String> match,
+                              @JsonProperty("matchURL") String matchURL,
+                              @JsonProperty("find") HashSet<String> find,
+                              @JsonProperty("findURL") String findURL,
+                              @JsonProperty("contains") String[] contains,
+                              @JsonProperty("containsURL") String containsURL,
+                              @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
+                              @JsonProperty("toLower") boolean toLower,
+                              @JsonProperty("urlTimeout") int urlTimeout,
+                              @JsonProperty("urlRetries") int urlRetries) {
         this.value = value;
-        return this;
-    }
-
-    public ValueFilterRequire setMatch(HashSet<String> match) {
+        this.valueURL = valueURL;
         this.match = match;
-        return this;
-    }
-
-    public ValueFilterRequire setContains(String[] contains) {
-        this.contains = contains;
-        return this;
-    }
-
-    public ValueFilterRequire setFind(HashSet<String> find) {
+        this.matchURL = matchURL;
         this.find = find;
-        return this;
-    }
-
-    public ValueFilterRequire setToLower(boolean toLower) {
+        this.findURL = findURL;
+        this.contains = contains;
+        this.containsURL = containsURL;
+        this.urlReturnsCSV = urlReturnsCSV;
         this.toLower = toLower;
-        return this;
+        this.urlTimeout = urlTimeout;
+        this.urlRetries = urlRetries;
+        if (match != null) {
+            ArrayList<Pattern> np = new ArrayList<>();
+            for (String s : match) {
+                np.add(Pattern.compile(s));
+            }
+            this.pattern = np;
+        }
+        if (find != null) {
+            ArrayList<Pattern> np = new ArrayList<>();
+            for (String s : find) {
+                np.add(Pattern.compile(s));
+            }
+            this.findPattern = np;
+        }
     }
 
     public boolean passedMatch(String sv) {
@@ -195,7 +206,7 @@ public class ValueFilterRequire extends StringFilter {
     }
 
     @Override
-    public void setup() {
+    public void open() {
         if (valueURL != null) {
             if (urlReturnsCSV) {
                 value = JSONFetcher.staticLoadCSVSet(valueURL, urlTimeout, urlRetries, value);
@@ -209,12 +220,26 @@ public class ValueFilterRequire extends StringFilter {
             } else {
                 match = JSONFetcher.staticLoadSet(matchURL, urlTimeout, urlRetries, match);
             }
+            if (match != null) {
+                ArrayList<Pattern> np = new ArrayList<>();
+                for (String s : match) {
+                    np.add(Pattern.compile(s));
+                }
+                this.pattern = np;
+            }
         }
         if (findURL != null) {
             if (urlReturnsCSV) {
                 find = JSONFetcher.staticLoadCSVSet(findURL, urlTimeout, urlRetries, find);
             } else {
                 find = JSONFetcher.staticLoadSet(findURL, urlTimeout, urlRetries, find);
+            }
+            if (find != null) {
+                ArrayList<Pattern> np = new ArrayList<>();
+                for (String s : find) {
+                    np.add(Pattern.compile(s));
+                }
+                this.findPattern = np;
             }
         }
         if (containsURL != null) {
@@ -228,25 +253,10 @@ public class ValueFilterRequire extends StringFilter {
 
             contains = tmp.toArray(new String[tmp.size()]);
         }
-        if (match != null) {
-            ArrayList<Pattern> np = new ArrayList<>();
-            for (String s : match) {
-                np.add(Pattern.compile(s));
-            }
-            this.pattern = np;
-        }
-        if (find != null) {
-            ArrayList<Pattern> np = new ArrayList<>();
-            for (String s : find) {
-                np.add(Pattern.compile(s));
-            }
-            this.findPattern = np;
-        }
     }
 
     @Override
     public String filter(String sv) {
-        requireSetup();
         if (sv != null && !sv.equals("")) {
             if (toLower) {
                 sv = sv.toLowerCase();

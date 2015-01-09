@@ -24,18 +24,13 @@ import com.addthis.codec.codables.SuperCodable;
  * Value filter based on the JSR 223 scripting interface, and the default
  * implementation based on Rhino, shipped with the 1.6 JDK.
  */
-public class ValueFilterJavascript extends StringFilter implements SuperCodable {
+public class ValueFilterJavascript extends StringFilter {
 
     @FieldConfig(codable = true)
     private String source;
     private Filter filter;
 
-    @Override
-    public void preEncode() {
-    }
-
-    @Override
-    public void postDecode() {
+    @Override public void open() {
         if (source == null) {
             throw new IllegalArgumentException("no source specified!");
         }

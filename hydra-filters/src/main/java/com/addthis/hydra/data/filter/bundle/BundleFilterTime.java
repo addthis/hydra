@@ -76,25 +76,14 @@ public class BundleFilterTime extends BundleFilter {
     }
 
     @Override
-    public void initialize() {
-        if (src != null && dst != null) {
-            fields = new String[]{src.getField(), dst.getField()};
-        } else if (dst != null) {
-            fields = new String[]{"", dst.getField()};
-        } else if (src != null) {
-            fields = new String[]{src.getField()};
-        }
-    }
-
-    private String[] fields;
+    public void open() { }
 
     @Override
-    public boolean filterExec(Bundle row) {
+    public boolean filter(Bundle row) {
         if (dst != null) {
-            BundleField[] bound = getBindings(row, fields);
             long unixTime;
             if (src != null) {
-                ValueObject in = row.getValue(bound[0]);
+                ValueObject in = src.getField().getValue(row);
                 if (in == null) {
                     return false;
                 }
@@ -107,7 +96,7 @@ public class BundleFilterTime extends BundleFilter {
             } else {
                 unixTime = JitterClock.globalTime();
             }
-            row.setValue(bound[1], dst.toValue(unixTime));
+            dst.getField().setValue(row, dst.toValue(unixTime));
         }
         return true;
     }

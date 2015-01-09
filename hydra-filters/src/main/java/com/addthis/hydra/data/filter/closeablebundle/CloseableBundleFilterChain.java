@@ -39,16 +39,16 @@ public class CloseableBundleFilterChain extends CloseableBundleFilter {
     private boolean debug;
 
     @Override
-    public void initialize() {
+    public void open() {
         for (CloseableBundleFilter f : filter) {
-            f.initOnceOnly();
+            f.open();
         }
     }
 
     @Override
-    public boolean filterExec(Bundle row) {
+    public boolean filter(Bundle row) {
         for (BundleFilter f : filter) {
-            if (!f.filterExec(row) && failStop) {
+            if (!f.filter(row) && failStop) {
                 if (debug) {
                     log.warn("fail @ " + CodecJSON.tryEncodeString(f, "UNKNOWN"));
                 }

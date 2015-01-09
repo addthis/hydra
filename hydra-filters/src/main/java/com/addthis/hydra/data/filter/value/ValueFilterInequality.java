@@ -65,6 +65,8 @@ public class ValueFilterInequality extends ValueFilter {
         this.rh = rh;
     }
 
+    @Override public void open() { }
+
     // pass through if true, else null
     @Override
     public ValueObject filterValue(ValueObject value) {

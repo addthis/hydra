@@ -19,6 +19,17 @@ import com.addthis.bundle.value.ValueObject;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
+
+/**
+ * This {@link ValueFilter ValueFilter} <span class="hydra-summary">negates another value filter</span>.
+ * <p/>
+ * <p>Example:</p>
+ * <pre>
+ * </pre>
+ *
+ * @user-reference
+ * @hydra-name not
+ */
 public class ValueFilterNot extends ValueFilter {
 
     private final ValueFilter filter;
@@ -27,6 +38,10 @@ public class ValueFilterNot extends ValueFilter {
         this.filter = filter;
         this.once = filter.once;
         this.nullAccept = filter.nullAccept;
+    }
+
+    @Override public void open() {
+        filter.open();
     }
 
     @Override

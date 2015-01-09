@@ -15,6 +15,8 @@ package com.addthis.hydra.data.filter.value;
 
 import java.util.HashSet;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -23,7 +25,17 @@ public class TestValueFilterExclude {
 
     // TODO: Reduce ridiculous duplication with ValueFilterRequire
     private String excludeFilter(String val, HashSet<String> exactValues, HashSet<String> match, HashSet<String> find, String[] contains) {
-        return new ValueFilterExclude().setValue(exactValues).setMatch(match).setContains(contains).setFind(find).filter(val);
+        return new ValueFilterExclude(
+                exactValues,
+                null,
+                match,
+                null,
+                find,
+                null,
+                contains,
+                null,
+                0,
+                0).filter(val);
     }
 
     @Test

@@ -47,10 +47,10 @@ public class BundleFilterConcat extends BundleFilter {
     @FieldConfig private String join;
 
     @Override
-    public void initialize() { }
+    public void open() { }
 
     @Override
-    public boolean filterExec(Bundle bundle) {
+    public boolean filter(Bundle bundle) {
         StringBuilder sb = new StringBuilder();
         boolean appendJoin = false;
         for (AutoField field : in) {

@@ -61,7 +61,7 @@ public class ValueFilterRegex extends ValueFilter {
      * Regular expression to match against. This field is required.
      */
     @FieldConfig(codable = true, required = true)
-    private String pattern;
+    private Pattern pattern;
 
     /**
      * If non-null, then replace all matches with this string. Default is null.
@@ -69,9 +69,7 @@ public class ValueFilterRegex extends ValueFilter {
     @FieldConfig(codable = true)
     private String replace;
 
-    private volatile Pattern compiled;
-
-    public ValueFilterRegex setPattern(String p) {
+    public ValueFilterRegex setPattern(Pattern p) {
         pattern = p;
         return this;
     }
@@ -82,15 +80,15 @@ public class ValueFilterRegex extends ValueFilter {
     }
 
     @Override
+    public void open() {}
+
+    @Override
     public ValueObject filterValue(ValueObject value) {
-        if (compiled == null) {
-            compiled = Pattern.compile(pattern);
-        }
         String sv = ValueUtil.asNativeString(value);
         if (sv == null) {
             return null;
         }
-        Matcher matcher = compiled.matcher(sv);
+        Matcher matcher = pattern.matcher(sv);
         if (replace != null) {
             return ValueFactory.create(matcher.replaceAll(replace));
         }

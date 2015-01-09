@@ -40,11 +40,11 @@ public class BundleFilterLimit extends BundleFilter {
     private int limit;
 
     @Override
-    public void initialize() {
+    public void open() {
     }
 
     @Override
-    public boolean filterExec(Bundle row) {
+    public boolean filter(Bundle row) {
         return limit-- > 0;
     }
 

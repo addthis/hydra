@@ -95,7 +95,7 @@ public class ValueFilterContains extends ValueFilter {
     }
 
     @Override
-    public void setup() {
+    public void open() {
         if (value != null) {
             dictionary = new AhoCorasick();
             for (String pattern : value) {
@@ -107,8 +107,6 @@ public class ValueFilterContains extends ValueFilter {
 
     @Override
     public ValueObject filterValue(ValueObject input) {
-
-        requireSetup();
 
         if (input == null) {
             return null;

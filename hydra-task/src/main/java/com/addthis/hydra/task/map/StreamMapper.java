@@ -135,6 +135,7 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
     @Override
     public void start() {
         source.init();
+        map.init();
         output.init();
         if (builder != null) {
             builder.init();

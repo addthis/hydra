@@ -83,8 +83,7 @@ public class BundleFilterDebugPrint extends BundleFilter {
     private boolean enableCacheOutput = false;
 
     @Override
-    public void initialize() {
-    }
+    public void open() { }
 
     BundleFilterDebugPrint enableCacheOutput() {
         this.enableCacheOutput = true;
@@ -117,7 +116,7 @@ public class BundleFilterDebugPrint extends BundleFilter {
     }
 
     @Override
-    public boolean filterExec(Bundle bundle) {
+    public boolean filter(Bundle bundle) {
         boolean print = (bundleCounter.getAndIncrement() < maxBundles) || testBundleTimer();
         if (print) {
             String bundleString = formatBundle(bundle);

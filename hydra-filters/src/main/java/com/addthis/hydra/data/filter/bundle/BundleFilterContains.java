@@ -15,6 +15,7 @@ package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
@@ -45,52 +46,47 @@ public class BundleFilterContains extends BundleFilter {
     /**
      * The input field to test. This field is required.
      */
-    @FieldConfig(codable = true, required = true)
-    private String field;
+    @FieldConfig(required = true)
+    private AutoField field;
 
     /**
      * An array of strings to test against the input field.
      */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private String[] value;
 
     /**
      * The target field to test against the input field.
      */
-    @FieldConfig(codable = true)
-    private String from;
+    @FieldConfig
+    private AutoField from;
 
     /**
      * If true then return the negation of the contains operation. Default is false.
      */
-    @FieldConfig(codable = true)
+    @FieldConfig
     private boolean not;
 
     // Cache the value filter if-and-only-if the 'from' field is null.
     private ValueFilterContains filter;
 
-    private String[] fields;
-
     @Override
-    public void initialize() {
-        fields = new String[]{field, from};
-
+    public void open() {
         if (from == null && value != null) {
             filter = new ValueFilterContains().setValues(value);
-            filter.requireSetup();
+            filter.open();
         }
     }
 
     @Override
-    public boolean filterExec(Bundle row) {
+    public boolean filter(Bundle row) {
         if (row == null) {
             return not;
         }
-        BundleField[] bound = getBindings(row, fields);
-        ValueObject target = row.getValue(bound[0]);
+        ValueObject target = field.getValue(row);
         if (from != null) {
             String fieldString = target.asString().asNative();
-            String fromString = ValueUtil.asNativeString(row.getValue(bound[1]));
+            String fromString = ValueUtil.asNativeString(from.getValue(row));
             boolean match = fieldString.contains(fromString);
             return not ? !match : match;
         } else if (filter != null) {
@@ -101,12 +97,12 @@ public class BundleFilterContains extends BundleFilter {
         }
     }
 
-    BundleFilterContains setField(String field) {
+    BundleFilterContains setField(AutoField field) {
         this.field = field;
         return this;
     }
 
-    BundleFilterContains setFrom(String from) {
+    BundleFilterContains setFrom(AutoField from) {
         this.from = from;
         return this;
     }

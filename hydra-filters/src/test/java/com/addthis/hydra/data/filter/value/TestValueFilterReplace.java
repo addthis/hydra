@@ -20,7 +20,7 @@ import static org.junit.Assert.assertEquals;
 public class TestValueFilterReplace {
 
     private String replaceFilter(String val, String find, String replace, boolean regex) {
-        return new ValueFilterReplace().setFind(find).setReplace(replace).setRegex(regex).filter(val);
+        return new ValueFilterReplace(find, replace, regex).filter(val);
     }
 
     @Test

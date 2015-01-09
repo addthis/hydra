@@ -21,6 +21,7 @@ import com.addthis.basis.collect.HotMap;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueLong;
 import com.addthis.bundle.value.ValueObject;
@@ -43,9 +44,9 @@ import com.addthis.codec.annotations.FieldConfig;
 public final class BundleFilterRecent2 extends BundleFilter {
 
     @FieldConfig(codable = true, required = true)
-    private String          time;
+    private AutoField       time;
     @FieldConfig(codable = true, required = true)
-    private String          field;
+    private AutoField       field;
     @FieldConfig(codable = true, required = true)
     private int             keys; // number of unique entries to track
     @FieldConfig(codable = true, required = true)
@@ -63,18 +64,14 @@ public final class BundleFilterRecent2 extends BundleFilter {
 
     @SuppressWarnings("unchecked")
     private HotMap<String, Mark> cache = new HotMap<>(new HashMap());
-    private String[] fields;
 
     @Override
-    public void initialize() {
-        fields = new String[]{time, field};
-    }
+    public void open() { }
 
     @Override
-    public boolean filterExec(Bundle bundle) {
-        BundleField[] bound = getBindings(bundle, fields);
-        ValueLong time = bundle.getValue(bound[0]).asLong();
-        return time != null ? accept(time.getLong(), bundle.getValue(bound[1])) : false;
+    public boolean filter(Bundle bundle) {
+        ValueLong timeValue = time.getValue(bundle).asLong();
+        return timeValue != null ? accept(timeValue.getLong(), field.getValue(bundle)) : false;
     }
 
     /**

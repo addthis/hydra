@@ -16,6 +16,7 @@ package com.addthis.hydra.data.filter.bundle;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueTranslationException;
@@ -63,7 +64,7 @@ public class BundleFilterMapExtract extends BundleFilter {
      * The name of the field that contains the ValueMap object. This field is required.
      */
     @FieldConfig(codable = true, required = true)
-    private String field;
+    private AutoField field;
 
     /**
      * The mapping from the ValueMap to the bundle format. This field is required.
@@ -71,17 +72,12 @@ public class BundleFilterMapExtract extends BundleFilter {
     @FieldConfig(codable = true, required = true)
     private XMap[] map;
 
-    private String[] fields;
+    @Override
+    public void open() { }
 
     @Override
-    public void initialize() {
-        fields = new String[]{field};
-    }
-
-    @Override
-    public boolean filterExec(Bundle bundle) {
-        BundleField[] bound = getBindings(bundle, fields);
-        ValueObject value = bundle.getValue(bound[0]);
+    public boolean filter(Bundle bundle) {
+        ValueObject value = field.getValue(bundle);
         if (value == null) {
             return true;
         }
@@ -180,7 +176,7 @@ public class BundleFilterMapExtract extends BundleFilter {
         }
     }
 
-    BundleFilterMapExtract setField(String field) {
+    BundleFilterMapExtract setField(AutoField field) {
         this.field = field;
         return this;
     }

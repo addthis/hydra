@@ -42,7 +42,7 @@ public class BundleFilterCondition extends BundleFilter {
 
     /**
      * The bundle filter to execute when {@link #ifCondition ifCondition} returns true. This
-     * field is required.
+     * field is optional.
      */
     @FieldConfig(codable = true)
     BundleFilter ifDo;
@@ -73,28 +73,28 @@ public class BundleFilterCondition extends BundleFilter {
     }
 
     @Override
-    public void initialize() {
-        ifCondition.initOnceOnly();
+    public void open() {
+        ifCondition.open();
         if (ifDo != null) {
-            ifDo.initOnceOnly();
+            ifDo.open();
         }
         if (elseDo != null) {
-            elseDo.initOnceOnly();
+            elseDo.open();
         }
     }
 
     @Override
-    public boolean filterExec(Bundle row) {
+    public boolean filter(Bundle row) {
         boolean returnValue = true;
         if (row != null) {
-            if (ifCondition != null && ifCondition.filterExec(row)) {
+            if (ifCondition != null && ifCondition.filter(row)) {
                 if (ifDo != null) {
-                    boolean result = ifDo.filterExec(row);
+                    boolean result = ifDo.filter(row);
                     returnValue = returnFilter ? result : returnValue;
                 }
             } else {
                 if (elseDo != null) {
-                    boolean result = elseDo.filterExec(row);
+                    boolean result = elseDo.filter(row);
                     returnValue = returnFilter ? result : returnValue;
                 }
             }
