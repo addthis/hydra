@@ -377,7 +377,8 @@ function(
     var ConfigModel = Backbone.Model.extend({
         idAttribute:"jobUuid",
         defaults:{
-            config:""
+            config:"",
+            savedConfig:""
         },
         initialize:function(options){
         },
@@ -397,6 +398,7 @@ function(
                     dataType:"text"
                 }).done(function(data){
                     self.set("config",data);
+                    self.set("savedConfig",data);
                 }).fail(function(xhr){
                     Alertify.log.error("Error loading config: "+xhr.responseText);
                 });
@@ -1582,13 +1584,35 @@ function(
         },
         handleKickButtonClick:function(event){
             event.preventDefault();
-            var self=this;
+            var self = this;
+            var tempConfig = this.configModel.get("config");
+            var config = this.configModel.get("savedConfig");
+            if (tempConfig !== config) {
+                    Alertify.log.create("warn", "Warning: kicking job that may have unsaved changes!", 12000);
+            }
+            var params = this.parameterCollection.toJSON();
+            var confirmIfInvalid = function(){
+                var validatePromise = self.model.validate(config,params);
+                validatePromise.done(function(data){
+                    if (data.result=="preExpansionError" || data.result=="postExpansionError") {
+                        Alertify.dialog.confirm("Job failed validation, are you sure you want to kick?", function (e) {
+                            self.model.kick();
+                        });
+                    } else {
+                        self.model.kick();
+                    }
+                }).fail(function(data){
+                    Alertify.dialog.confirm("Something went wrong with checking validation, do you still want to kick?", function (e) {
+                        self.model.kick();
+                    });
+                });
+            };
             if(app.isQuiesced){
                 Alertify.dialog.confirm("Cluster is quiesced, are you sure you want to kick job '"+this.model.get("description")+"'?", function (e) {
-                    self.model.kick();
+                    confirmIfInvalid();
                 });
             }else{
-                self.model.kick();
+                confirmIfInvalid();
             }
         },
         handleRebalanceButtonClick:function(event){
@@ -1638,14 +1662,26 @@ function(
         },
         handleSaveJobButtonClick:function(event){
             this.$el.find("#saveJobButton").addClass("disabled");
-            var formData = {},self=this;
-            _.each(this.parameterCollection.toJSON(),function(param){
+            var self = this;
+            var formData = {};
+            var config = this.configModel.get("config");
+            var params = this.parameterCollection.toJSON();
+            _.each(params, function(param){
                 var name = "sp_"+param.name;
                 formData[name]=param.value;
             });
-            formData.config = this.configModel.get("config");
+            formData.config = config;
+            var validatePromise = this.model.validate(config,params);
+            validatePromise.done(function(data){
+                if(data.result=="preExpansionError" || data.result=="postExpansionError"){
+                    Alertify.log.create("warn", "Warning: saving job that failed validation!<br>" + data.message, 12000);
+                }
+            }).fail(function(data){
+                Alertify.log.error("Error requesting job validation.");
+            });
             this.model.save(formData).done(function(resp){
                 Alertify.log.info(resp.id+"col. saved successfully.",2000)
+                self.configModel.set("savedConfig", config);
                 self.model.trigger("save.done");
                 self.model.commit="";
                 if(self.model.isNew()){
