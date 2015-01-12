@@ -21,6 +21,9 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilterContains;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 
 /**
  * This {@link com.addthis.hydra.data.filter.bundle.BundleFilter BundleFilter} <span class="hydra-summary">tests if the input contains the target value</span>.
@@ -46,34 +49,45 @@ public class BundleFilterContains extends BundleFilter {
     /**
      * The input field to test. This field is required.
      */
-    @FieldConfig(required = true)
-    private AutoField field;
+    final private AutoField field;
 
     /**
      * An array of strings to test against the input field.
      */
-    @FieldConfig
-    private String[] value;
+    final private String[] value;
 
     /**
      * The target field to test against the input field.
      */
-    @FieldConfig
-    private AutoField from;
+    final private AutoField from;
 
     /**
      * If true then return the negation of the contains operation. Default is false.
      */
-    @FieldConfig
-    private boolean not;
+    final private boolean not;
 
     // Cache the value filter if-and-only-if the 'from' field is null.
-    private ValueFilterContains filter;
+    final private ValueFilterContains filter;
+
+    @JsonCreator
+    public BundleFilterContains(@JsonProperty("field") AutoField field,
+                                @JsonProperty("value") String[] value,
+                                @JsonProperty("from") AutoField from,
+                                @JsonProperty("not") boolean not) {
+        this.field = field;
+        this.value = value;
+        this.from = from;
+        this.not = not;
+        if (from == null && value != null) {
+            filter = new ValueFilterContains(value, null, false, false);
+        } else {
+            filter = null;
+        }
+    }
 
     @Override
     public void open() {
-        if (from == null && value != null) {
-            filter = new ValueFilterContains().setValues(value);
+        if (filter != null) {
             filter.open();
         }
     }
@@ -95,21 +109,6 @@ public class BundleFilterContains extends BundleFilter {
         } else {
             return not;
         }
-    }
-
-    BundleFilterContains setField(AutoField field) {
-        this.field = field;
-        return this;
-    }
-
-    BundleFilterContains setFrom(AutoField from) {
-        this.from = from;
-        return this;
-    }
-
-    BundleFilterContains setValue(String[] value) {
-        this.value = value;
-        return this;
     }
 
 }
