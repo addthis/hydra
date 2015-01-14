@@ -58,7 +58,7 @@
     <hydra.dep.basis.version>2.3.0</hydra.dep.basis.version>
     <hydra.dep.bundle.version>2.5.0</hydra.dep.bundle.version>
     <hydra.dep.codec.version>3.3.0</hydra.dep.codec.version>
-    <hydra.dep.meshy.version>3.1.1-SNAPSHOT</hydra.dep.meshy.version>
+    <hydra.dep.meshy.version>3.1.2-SNAPSHOT</hydra.dep.meshy.version>
     <hydra.dep.muxy.version>2.1.2</hydra.dep.muxy.version>
     <hydra.dep.maljson.version>0.2.0</hydra.dep.maljson.version>
 
