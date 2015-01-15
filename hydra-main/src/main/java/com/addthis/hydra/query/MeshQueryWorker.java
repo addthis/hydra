@@ -14,9 +14,10 @@
 package com.addthis.hydra.query;
 
 import com.addthis.codec.config.Configs;
-import com.addthis.hydra.data.query.source.MeshQuerySource;
-import com.addthis.hydra.query.web.QueryServer;
 import com.addthis.hydra.common.util.CloseTask;
+import com.addthis.hydra.data.query.source.MeshQuerySource;
+import com.addthis.hydra.data.query.source.SearchRunner;
+import com.addthis.hydra.query.web.QueryServer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -70,6 +71,7 @@ public class MeshQueryWorker implements AutoCloseable {
 
     @Override public void close() throws Exception {
         htmlQueryServer.stop();
+        SearchRunner.shutdownSearchPool();
     }
 
     /**

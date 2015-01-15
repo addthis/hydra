@@ -16,15 +16,10 @@ package com.addthis.hydra.data.query.source;
 
 import java.io.IOException;
 
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.addthis.basis.util.Parameter;
 
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.VirtualFileSystem;
-
-import com.google.common.base.Throwables;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +27,6 @@ import org.slf4j.LoggerFactory;
 public class LiveMeshyServer extends MeshyServer {
 
     private static final Logger log = LoggerFactory.getLogger(LiveMeshyServer.class);
-    private static final int LIVE_QUERY_WAIT = Parameter.intValue("mapper.live.wait", 60);
 
     private final AtomicBoolean liveClosed = new AtomicBoolean(false);
     private final LiveQueryFileSystem liveQueryFileSystem;
@@ -53,23 +47,8 @@ public class LiveMeshyServer extends MeshyServer {
     @Override
     public void close() {
         liveClosed.set(true);
-        try {
-            liveQueryFileSystem.getFileRoot().engine().closeWhenIdle();
-        } catch (Exception ex) {
-            throw Throwables.propagate(ex);
-        }
         log.info("Shutting down live query server. Disabled finding this job from mqm.");
-        try {
-            log.info("Going to wait up to {} seconds for any queries still running.", LIVE_QUERY_WAIT);
-            SearchRunner.querySearchPool.shutdown();
-            if (SearchRunner.querySearchPool.awaitTermination(LIVE_QUERY_WAIT, TimeUnit.SECONDS)) {
-                log.info("Running queries all finished okay.");
-            } else {
-                log.warn("Queries did not finish, so they will be interrupted.");
-                SearchRunner.querySearchPool.shutdownNow();
-            }
-        } catch (InterruptedException ignored) {
-        }
+        SearchRunner.shutdownSearchPool();
         super.close();
     }
 }

@@ -16,6 +16,8 @@ package com.addthis.hydra.task.output.tree;
 import java.io.File;
 import java.io.IOException;
 
+import java.net.InetSocketAddress;
+
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -43,8 +45,8 @@ import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.source.LiveMeshyServer;
 import com.addthis.hydra.data.query.source.LiveQueryReference;
-import com.addthis.hydra.data.tree.concurrent.ConcurrentTree;
 import com.addthis.hydra.data.tree.DataTree;
+import com.addthis.hydra.data.tree.concurrent.ConcurrentTree;
 import com.addthis.hydra.data.tree.concurrent.TreeCommonParameters;
 import com.addthis.hydra.data.util.TimeField;
 import com.addthis.hydra.store.db.CloseOperation;
@@ -277,9 +279,9 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
             tree = new ConcurrentTree(Files.initDirectory(treePath.toFile()));
             bench = new Bench(EnumSet.allOf(BENCH.class), 1000);
 
-            if (this.config.jobId != null && live && livePort > -1) {
+            if ((this.config.jobId != null) && live && (livePort > -1)) {
                 QueryEngine liveQueryEngine = new QueryEngine(tree);
-                connectToMesh(treePath.toFile(), config.jobId, liveQueryEngine);
+                connectToMesh(treePath.toFile(), config.jobId, config.node, liveQueryEngine);
             }
 
             startTime = System.currentTimeMillis();
@@ -293,9 +295,10 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         }
     }
 
-    private void connectToMesh(File root, String jobId, QueryEngine engine) throws IOException {
-        LiveQueryReference queryReference = new LiveQueryReference(root, jobId, engine);
-        liveQueryServer = new LiveMeshyServer(livePort, queryReference);
+    private void connectToMesh(File root, String jobId, int taskId, QueryEngine engine) throws IOException {
+        LiveQueryReference queryReference = new LiveQueryReference(root, jobId, taskId, engine);
+        liveQueryServer = new LiveMeshyServer(0, queryReference);
+        liveQueryServer.connectPeer(new InetSocketAddress(liveHost, livePort));
     }
 
     public BundleField bindField(String key) {
