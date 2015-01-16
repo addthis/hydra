@@ -37,6 +37,10 @@ public class ValueFilterListApply extends ValueFilter {
     @FieldConfig(codable = true, required = true)
     private ValueFilter elementFilter;
 
+    @Override public void open() {
+        elementFilter.open();
+    }
+
     @Override
     // This is a essentially a copy of the default ValueFilter.filter (which applies filterValue to list elements).
     // Reason: some filters override filter rather than filterValue, which prevents them from being applied

@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.map.MapBundle;
 
 import org.junit.Test;
@@ -25,7 +26,9 @@ public class TestBundleFilterURL {
 
     @Test
     public void testSetHost() {
-        BundleFilterURL filterURL = new BundleFilterURL().setField("input").setHost("host");
+        BundleFilterURL filterURL = new BundleFilterURL()
+                .setField(AutoField.newAutoField("input"))
+                .setHost(AutoField.newAutoField("host"));
         MapBundle bundle = MapBundle.createBundle(new String[]{"input", "http://www.neuron.com", "host", ""});
         assertTrue(filterURL.filter(bundle));
         assertEquals("www.neuron.com", bundle.get("host"));
@@ -33,7 +36,10 @@ public class TestBundleFilterURL {
 
     @Test
     public void testTopPrivateDomain() {
-        BundleFilterURL filterURL = new BundleFilterURL().setField("input").setHost("host").setTopPrivateDomain(true);
+        BundleFilterURL filterURL = new BundleFilterURL()
+                .setField(AutoField.newAutoField("input"))
+                .setHost(AutoField.newAutoField("host"))
+                .setTopPrivateDomain(true);
         MapBundle bundle = MapBundle.createBundle(new String[]{"input", "http://a.b.c.d.addthis.com", "host", ""});
         assertTrue(filterURL.filter(bundle));
         assertEquals("addthis.com", bundle.get("host"));
@@ -56,7 +62,10 @@ public class TestBundleFilterURL {
 
     @Test
     public void testBaseDomain() {
-        BundleFilterURL filterURL = new BundleFilterURL().setField("input").setHost("host").setBaseDomain(true);
+        BundleFilterURL filterURL = new BundleFilterURL()
+                .setField(AutoField.newAutoField("input"))
+                .setHost(AutoField.newAutoField("host"))
+                .setBaseDomain(true);
         MapBundle bundle = MapBundle.createBundle(new String[]{"input", "http://www.neuron.com", "host", ""});
         assertTrue(filterURL.filter(bundle));
         assertEquals("neuron.com", bundle.get("host"));
@@ -64,7 +73,9 @@ public class TestBundleFilterURL {
 
     @Test
     public void testFixProto() {
-        BundleFilterURL filterURL = new BundleFilterURL().setField("input").setHost("host");
+        BundleFilterURL filterURL = new BundleFilterURL()
+                .setField(AutoField.newAutoField("input"))
+                .setHost(AutoField.newAutoField("host"));;
         MapBundle bundle = MapBundle.createBundle(new String[]{"input", "www.neuron.com", "host", ""});
         assertFalse(filterURL.filter(bundle));
         filterURL.setFixProto(true);
@@ -95,7 +106,9 @@ public class TestBundleFilterURL {
 
         assertEquals(testInput.length, expectedOutput.length);
         for (int i = 0; i < testInput.length; i++) {
-            BundleFilterURL filterURL = new BundleFilterURL().setField("input").setHostNormal("host");
+            BundleFilterURL filterURL = new BundleFilterURL()
+                    .setField(AutoField.newAutoField("input"))
+                    .setHostNormal(AutoField.newAutoField("host"));;
             String[] input = new String[]{"input", null, "host", ""};
             input[1] = "http://" + testInput[i];
             MapBundle bundle = MapBundle.createBundle(input);

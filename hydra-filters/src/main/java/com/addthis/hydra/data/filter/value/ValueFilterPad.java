@@ -48,6 +48,8 @@ public class ValueFilterPad extends StringFilter {
     @FieldConfig(codable = true)
     private String right;
 
+    @Override public void open() { }
+
     @Override
     public String filter(String v) {
         if (v == null) {

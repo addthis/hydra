@@ -73,6 +73,9 @@ public class ValueFilterBitsToArray extends ValueFilter {
     }
 
     @Override
+    public void open() {}
+
+    @Override
     public ValueObject filterValue(ValueObject value) {
         long bits = getBitValue(value);
         ValueArray arr = ValueFactory.createArray(64);

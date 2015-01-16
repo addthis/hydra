@@ -18,6 +18,9 @@ import java.util.regex.Pattern;
 
 import com.addthis.codec.annotations.FieldConfig;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">performs string replacement with optional regular expression matching</span>.
  * <p/>
@@ -37,49 +40,41 @@ public class ValueFilterReplace extends StringFilter {
     /**
      * The matching string, interpreted either as a literal string or a regular expression.
      */
-    @FieldConfig(codable = true)
-    private String find;
+    private final String find;
 
     /**
      * The replacement string.
      */
-    @FieldConfig(codable = true)
-    private String replace;
+    private final String replace;
 
     /**
      * If true, then interpret 'find' as a regular expression. Default is false.
      */
-    @FieldConfig(codable = true)
-    private boolean regex;
+    private final boolean regex;
 
-    private Pattern pattern;
+    private final Pattern pattern;
 
-    public ValueFilterReplace setFind(String find) {
+    @JsonCreator
+    public ValueFilterReplace(@JsonProperty("find") String find,
+                              @JsonProperty("replace") String replace,
+                              @JsonProperty("regex") boolean regex) {
         this.find = find;
-        return this;
-    }
-
-    public ValueFilterReplace setReplace(String replace) {
-        this.replace = replace;
-        return this;
-    }
-
-    public ValueFilterReplace setRegex(boolean regex) {
         this.regex = regex;
-        return this;
+        if (regex) {
+            this.pattern = (find != null) ? Pattern.compile(find) : null;
+            this.replace = replace;
+        } else {
+            this.pattern = (find != null) ? Pattern.compile(find, Pattern.LITERAL) : null;
+            this.replace = (replace != null) ? Matcher.quoteReplacement(replace) : null;
+        }
     }
+
+    @Override
+    public void open() { }
 
     @Override
     public String filter(String value) {
         if (value != null) {
-            if (pattern == null) {
-                if (regex) {
-                    pattern = Pattern.compile(find);
-                } else {
-                    pattern = Pattern.compile(find, Pattern.LITERAL);
-                    replace = Matcher.quoteReplacement(replace);
-                }
-            }
             value = pattern.matcher(value).replaceAll(replace);
         }
         return value;

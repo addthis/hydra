@@ -45,6 +45,9 @@ public class ValueFilterEmpty extends ValueFilter {
     private boolean not;
 
     @Override
+    public void open() {}
+
+    @Override
     public ValueObject filterValue(ValueObject value) {
         if (value == null) {
             return null;

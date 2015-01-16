@@ -56,10 +56,14 @@ public class BundleFilterClear extends BundleFilter {
     @FieldConfig private boolean removes = false;
 
     @Override
-    public void initialize() { }
+    public void open() {
+        if (filter != null) {
+            filter.open();
+        }
+    }
 
     @Override
-    public boolean filterExec(Bundle bundle) {
+    public boolean filter(Bundle bundle) {
         ValueObject val = field.getValue(bundle);
         if (filter != null) {
             val = filter.filter(val);

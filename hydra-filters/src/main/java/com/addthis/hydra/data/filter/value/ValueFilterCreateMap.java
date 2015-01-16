@@ -64,6 +64,8 @@ public class ValueFilterCreateMap extends ValueFilter {
     @FieldConfig(codable = true)
     private boolean includeNullValues = false;
 
+    @Override
+    public void open() {}
 
     @Override
     public ValueObject filterValue(ValueObject value) {

@@ -20,29 +20,34 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.codec.annotations.FieldConfig;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+/**
+ * @user-reference
+ */
 public class BundleFilterTemplate extends BundleFilter {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilterTemplate.class);
 
     public static BundleFilterTemplate create(String[] tokens, String set) {
-        BundleFilterTemplate bft = new BundleFilterTemplate();
-        bft.tokens = tokens;
-        bft.set = set;
-        return bft;
+        return new BundleFilterTemplate(tokens, set);
     }
 
-    @FieldConfig(codable = true, required = true)
     private String[] tokens;
-    @FieldConfig(codable = true, required = true)
     private String set;
 
     private String[] fieldSet;
     private Token[]  tokenSet;
 
-    @Override
-    public void initialize() {
+    @JsonCreator
+    public BundleFilterTemplate(@JsonProperty("tokens") String[] tokens,
+                                @JsonProperty("set") String set) {
+        this.tokens = tokens;
+        this.set = set;
         ArrayList<Token> newtokens = new ArrayList<>();
         ArrayList<String> newfields = new ArrayList<>();
         int pos = 0;
@@ -60,7 +65,10 @@ public class BundleFilterTemplate extends BundleFilter {
     }
 
     @Override
-    public boolean filterExec(Bundle bundle) {
+    public void open() { }
+
+    @Override
+    public boolean filter(Bundle bundle) {
         try {
             BundleField[] bound = getBindings(bundle, fieldSet);
             StringBuilder sb = new StringBuilder();

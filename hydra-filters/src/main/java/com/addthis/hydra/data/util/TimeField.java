@@ -16,12 +16,16 @@ package com.addthis.hydra.data.util;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Strings;
 
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.SuperCodable;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -32,42 +36,14 @@ import org.slf4j.LoggerFactory;
 /**
  * @user-reference
  */
-public final class TimeField implements SuperCodable {
+public final class TimeField {
     private static final Logger log = LoggerFactory.getLogger(TimeField.class);
-
-    public TimeField setField(String field) {
-        this.field = field;
-        return this;
-    }
-
-    public TimeField setFormat(String format) {
-        this.format = format;
-        return this;
-    }
-
-    public TimeField setTimeZone(String zone) {
-        this.timeZone = zone;
-        return this;
-    }
-
-    public String getField() {
-        return field;
-    }
-
-    public String getFormat() {
-        return format;
-    }
-
-    public String getTimeZone() {
-        return timeZone;
-    }
 
     /**
      * Field within the bundle to interpret as a time value.
      * This field is required.
      */
-    @FieldConfig(required = true)
-    private String field;
+    private final AutoField field;
 
     /**
      * Format for a time value. Specify "native"
@@ -79,17 +55,45 @@ public final class TimeField implements SuperCodable {
      * .html">DateTimeFormat</a>.
      * This field is required.
      */
-    @FieldConfig(required = true)
-    private String format;
+    private final String format;
 
     /**
      * Optionally specify the timezone. Default is null.
      */
     @FieldConfig
-    private String timeZone;
+    private final String timeZone;
 
-    private int               radix;
-    private DateTimeFormatter formatter;
+    private final int               radix;
+    private final DateTimeFormatter formatter;
+
+    @JsonCreator
+    public TimeField(@JsonProperty(value = "field", required = true) AutoField field,
+                     @JsonProperty(value = "format", required = true) String format,
+                     @JsonProperty("timeZone") String timeZone) {
+
+        if (format.equals("native")) {
+            format = "unixmillis:10";
+        }
+        if (format.startsWith("unixmillis")) {
+            if (format.indexOf(":") > 0) {
+                this.radix = Integer.parseInt(format.substring(format.indexOf(":") + 1));
+            } else {
+                this.radix = 10;
+            }
+            this.formatter = null;
+        } else {
+            if (timeZone != null) {
+                this.formatter = DateTimeFormat.forPattern(format).withZone(DateTimeZone.forID(timeZone));
+            } else {
+                this.formatter = DateTimeFormat.forPattern(format);
+            }
+            this.radix = 0;
+        }
+        this.field = field;
+        this.format = format;
+        this.timeZone = timeZone;
+    }
+
 
     public long toUnix(ValueObject val) {
         if (radix > 0) {
@@ -117,26 +121,17 @@ public final class TimeField implements SuperCodable {
         }
     }
 
-    @Override
-    public void postDecode() {
-        if (format.equals("native")) {
-            format = "unixmillis:10";
-        }
-        if (format.startsWith("unixmillis")) {
-            if (format.indexOf(":") > 0) {
-                radix = Integer.parseInt(format.substring(format.indexOf(":") + 1));
-            } else {
-                radix = 10;
-            }
-        } else {
-            formatter = DateTimeFormat.forPattern(format);
-            if (timeZone != null) {
-                formatter = formatter.withZone(DateTimeZone.forID(timeZone));
-            }
-        }
+
+    public AutoField getField() {
+        return field;
     }
 
-    @Override
-    public void preEncode() {
+    public String getFormat() {
+        return format;
     }
+
+    public String getTimeZone() {
+        return timeZone;
+    }
+
 }

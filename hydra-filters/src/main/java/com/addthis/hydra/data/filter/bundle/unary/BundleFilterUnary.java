@@ -35,14 +35,14 @@ public class BundleFilterUnary extends BundleFilter {
         this.filter = filter;
     }
 
-    @Override public void initialize() {
+    @Override public void open() {
         if (filter != null) {
-            filter.initOnceOnly();
+            filter.open();
         }
     }
 
-    @Override public boolean filterExec(Bundle row) {
-        boolean filterResult = (filter == null) || filter.filterExec(row);
+    @Override public boolean filter(Bundle row) {
+        boolean filterResult = (filter == null) || filter.filter(row);
         return operation.compute(filterResult);
     }
 }

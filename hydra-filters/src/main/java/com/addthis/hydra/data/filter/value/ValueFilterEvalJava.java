@@ -163,9 +163,12 @@ public class ValueFilterEvalJava extends ValueFilter {
         requiredImports.add("import java.util.Map;");
     }
 
+    @Override public void open() {
+        constructedFilter = createConstructedFilter();
+    }
+
     @Override
     public ValueObject filterValue(ValueObject value) {
-        requireSetup();
         if (constructedFilter != null) {
             return constructedFilter.filter(value);
         } else {
@@ -228,6 +231,7 @@ public class ValueFilterEvalJava extends ValueFilter {
                 log.warn("\n" + classDeclString);
                 throw new IllegalStateException(msg);
             }
+            filter.open();
             return filter;
         } finally {
             compiler.cleanupFiles(className);
@@ -321,11 +325,6 @@ public class ValueFilterEvalJava extends ValueFilter {
         classDecl.append(getOnce());
         classDecl.append(");\n");
         classDecl.append("}\n\n");
-    }
-
-
-    @Override public void setup() {
-        constructedFilter = createConstructedFilter();
     }
 
     public void setInputType(InputType type) {

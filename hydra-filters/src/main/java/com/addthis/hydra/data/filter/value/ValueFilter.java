@@ -24,6 +24,8 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -51,10 +53,6 @@ public abstract class ValueFilter implements Codable {
      */
     @JsonProperty protected boolean nullAccept;
 
-    // used for setup and requireSetup to do one-time-only initialization logic
-    private final Lock setupLock = new ReentrantLock();
-    private boolean setup = false;
-
     public boolean getNullAccept() {
         return nullAccept;
     }
@@ -63,8 +61,8 @@ public abstract class ValueFilter implements Codable {
         return once;
     }
 
-    @Deprecated
-    public ValueFilter setOnce(boolean o) {
+    @VisibleForTesting
+    ValueFilter setOnce(boolean o) {
         once = o;
         return this;
     }
@@ -101,27 +99,8 @@ public abstract class ValueFilter implements Codable {
         return filterValue(value);
     }
 
+    public abstract void open();
+
     @Nullable public abstract ValueObject filterValue(@Nullable ValueObject value);
 
-    /**
-     * ensures setup() is called exactly once and that all other
-     * threads block on filter until this is done.  attempts to
-     * be efficient over time by avoiding sync calls on each filter call.
-     */
-    public final void requireSetup() {
-        if (!setup) {
-            setupLock.lock();
-            try {
-                if (!setup) {
-                    setup();
-                    setup = true;
-                }
-            } finally {
-                setupLock.unlock();
-            }
-        }
-    }
-
-    // override in subclasses that need atomic setup
-    public void setup() {}
 }

@@ -21,6 +21,9 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">counts the number of values it has observed</span>.
  * <p/>
@@ -55,33 +58,39 @@ public class ValueFilterCounter extends ValueFilter {
     /**
      * The {@link DecimalFormat DecimalFormat} input string.
      */
-    @FieldConfig(codable = true)
-    private String format;
+    private final String format;
 
-    /**
+    /**-
      * The starting value of the counter. Default is 0.
      */
-    @FieldConfig(codable = true)
-    private int start;
+    private final int start;
 
     /**
      * The counter increment for each input item. Default is 1.
      */
-    @FieldConfig(codable = true)
-    private int increment = 1;
+    private final int increment;
 
     /**
      * If non-zero, then emit an output for each <i>N</i><sup>th</sup> item. Default is 0.
      */
-    @FieldConfig(codable = true)
-    private int sample;
+    private final int sample;
 
-    private AtomicInteger counter = new AtomicInteger();
+    private final AtomicInteger counter = new AtomicInteger();
 
-    @Override
-    public void setup() {
+    @JsonCreator
+    public ValueFilterCounter(@JsonProperty("format") String format,
+                              @JsonProperty("start") int start,
+                              @JsonProperty("increment") int increment,
+                              @JsonProperty("sample") int sample) {
+        this.format = format;
+        this.start = start;
+        this.increment = increment;
+        this.sample = sample;
         counter.set(start);
     }
+
+    @Override
+    public void open() { }
 
     @Override
     public ValueObject filterValue(ValueObject value) {

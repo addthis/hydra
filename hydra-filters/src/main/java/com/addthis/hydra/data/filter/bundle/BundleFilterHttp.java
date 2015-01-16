@@ -26,6 +26,7 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 
 import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.codec.Codec;
 import com.addthis.codec.annotations.FieldConfig;
@@ -52,7 +53,7 @@ public class BundleFilterHttp extends BundleFilter {
     public static BundleFilterHttp create(BundleFilterTemplate url, String set) {
         BundleFilterHttp bfh = new BundleFilterHttp();
         bfh.url = url;
-        bfh.set = set;
+        bfh.set = AutoField.newAutoField(set);
         return bfh;
     }
 
@@ -70,10 +71,10 @@ public class BundleFilterHttp extends BundleFilter {
     @FieldConfig(codable = true)
     private BundleFilterTemplate url;
     @FieldConfig(codable = true)
-    private String               set;
+    private AutoField            set;
 
     private File                        persistTo;
-    private String[]                      fields;
+
     private HotMap<String, CacheObject> ocache;
 
     public static class CacheConfig {
@@ -114,8 +115,7 @@ public class BundleFilterHttp extends BundleFilter {
     }
 
     @Override
-    public void initialize() {
-        fields = new String[]{set};
+    public void open() {
         if (cache == null) {
             cache = new CacheConfig();
         }
@@ -150,6 +150,9 @@ public class BundleFilterHttp extends BundleFilter {
                 }
                 ocache.put(cached.key, cached);
             }
+        }
+        if (url != null) {
+            url.open();
         }
     }
 
@@ -194,7 +197,7 @@ public class BundleFilterHttp extends BundleFilter {
     }
 
     @Override
-    public boolean filterExec(Bundle bundle) {
+    public boolean filter(Bundle bundle) {
         String urlValue = url.template(bundle);
         CacheObject cached = cacheGet(urlValue);
         if (cached == null || (cache.age > 0 && System.currentTimeMillis() - cached.time > cache.age)) {
@@ -228,7 +231,7 @@ public class BundleFilterHttp extends BundleFilter {
             }
         }
         if (cached != null) {
-            bundle.setValue(getBindings(bundle, fields)[0], ValueFactory.create(cached.data));
+            set.setValue(bundle, ValueFactory.create(cached.data));
         }
         return true;
     }

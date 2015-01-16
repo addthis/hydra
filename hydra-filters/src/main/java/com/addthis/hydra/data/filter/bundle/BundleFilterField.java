@@ -62,10 +62,14 @@ public class BundleFilterField extends BundleFilter {
     /** The value to return when nullFail is true and the value filter output is null. Default is false. */
     @FieldConfig private boolean not;
 
-    @Override public void initialize() { }
+    @Override public void open() {
+        if (filter != null) {
+            filter.open();
+        }
+    }
 
     @Override
-    public boolean filterExec(Bundle row) {
+    public boolean filter(Bundle row) {
         ValueObject val = from.getValue(row);
         if (filter != null) {
             val = filter.filter(val);

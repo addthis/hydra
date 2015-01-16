@@ -22,6 +22,7 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
@@ -43,8 +44,8 @@ public class BundleFilterJSON extends BundleFilter {
 
     public static BundleFilterJSON create(String json, String set, BundleFilterTemplate query) {
         BundleFilterJSON bfj = new BundleFilterJSON();
-        bfj.json = json;
-        bfj.set = set;
+        bfj.json = AutoField.newAutoField(json);
+        bfj.set = AutoField.newAutoField(set);
         bfj.query = query;
         return bfj;
     }
@@ -54,27 +55,23 @@ public class BundleFilterJSON extends BundleFilter {
     @FieldConfig(codable = true)
     private boolean trim;
     @FieldConfig(codable = true, required = true)
-    private String json;
+    private AutoField json;
     @FieldConfig(codable = true, required = true)
-    private String set;
+    private AutoField set;
     @FieldConfig(codable = true, required = true)
     private BundleFilterTemplate query;
 
-    private HotMap<String, Object> objCache;
-    private HotMap<String, ArrayList<QueryToken>> tokCache;
-    private String[] fields;
+    private HotMap<String, Object> objCache = new HotMap<>(new ConcurrentHashMap());
+    private HotMap<String, ArrayList<QueryToken>> tokCache = new HotMap<>(new ConcurrentHashMap());
 
     @Override
-    public void initialize() {
-        fields = new String[]{json, set};
-        objCache = new HotMap<>(new ConcurrentHashMap());
-        tokCache = new HotMap<>(new ConcurrentHashMap());
+    public void open() {
+        query.open();
     }
 
     @Override
-    public boolean filterExec(Bundle bundle) {
-        BundleField[] bound = getBindings(bundle, fields);
-        ValueObject bundleValue = bundle.getValue(bound[0]);
+    public boolean filter(Bundle bundle) {
+        ValueObject bundleValue = json.getValue(bundle);
         switch (bundleValue.getObjectType()) {
             case STRING:
             case INT:
@@ -123,7 +120,7 @@ public class BundleFilterJSON extends BundleFilter {
             }
             String qval = query(tokens, o, 0);
             if (qval != null) {
-                bundle.setValue(bound[1], ValueFactory.create(qval));
+                set.setValue(bundle, ValueFactory.create(qval));
             }
         } catch (Exception ex) {
             ex.printStackTrace();

@@ -41,6 +41,9 @@ public class ValueFilterBaseConv extends ValueFilter {
     }
 
     @Override
+    public void open() {}
+
+    @Override
     public ValueObject filterValue(ValueObject value) {
         if (decode) {
             return decode(value);

@@ -27,7 +27,7 @@ public class TestBundleFilterNum {
 
     @Test
     public void testAdd() {
-        BundleFilterNum bfn = new BundleFilterNum().setDefine("c0,n3,add,v1,set");
+        BundleFilterNum bfn = new BundleFilterNum("c0,n3,add,v1,set", null);
         Bundle bundle = new ListBundle();
         bundle.setValue(bundle.getFormat().getField("c0"), ValueFactory.create(3));
         bundle.setValue(bundle.getFormat().getField("c1"), ValueFactory.create(4));
@@ -37,7 +37,7 @@ public class TestBundleFilterNum {
 
     @Test
     public void testMult() {
-        BundleFilterNum bfn = new BundleFilterNum().setDefine("c0,n3,*,v1,set");
+        BundleFilterNum bfn = new BundleFilterNum("c0,n3,*,v1,set", null);
         Bundle bundle = new ListBundle();
         bundle.setValue(bundle.getFormat().getField("c0"), ValueFactory.create(3));
         bundle.setValue(bundle.getFormat().getField("c1"), ValueFactory.create(4));
@@ -47,25 +47,25 @@ public class TestBundleFilterNum {
 
     @Test
     public void testVectorOps() {
-        BundleFilterNum bfn = new BundleFilterNum().setDefine("n1,n2,n3,n4,vector,*,v0,set");
+        BundleFilterNum bfn = new BundleFilterNum("n1,n2,n3,n4,vector,*,v0,set", null);
         Bundle bundle = new ListBundle();
         bundle.setValue(bundle.getFormat().getField("c0"), ValueFactory.create(0));
         bfn.filter(bundle);
         assertEquals("24", bundle.getValue(bundle.getFormat().getField("c0")).toString());
 
-        bfn = new BundleFilterNum().setDefine("n1,n2,n3,n4,vector,+,v0,set");
+        bfn = new BundleFilterNum("n1,n2,n3,n4,vector,+,v0,set", null);
         bundle = new ListBundle();
         bundle.setValue(bundle.getFormat().getField("c0"), ValueFactory.create(0));
         bfn.filter(bundle);
         assertEquals("10", bundle.getValue(bundle.getFormat().getField("c0")).toString());
 
-        bfn = new BundleFilterNum().setDefine("n1,n2,n3,n4,vector,min,v0,set");
+        bfn = new BundleFilterNum("n1,n2,n3,n4,vector,min,v0,set", null);
         bundle = new ListBundle();
         bundle.setValue(bundle.getFormat().getField("c0"), ValueFactory.create(0));
         bfn.filter(bundle);
         assertEquals("1", bundle.getValue(bundle.getFormat().getField("c0")).toString());
 
-        bfn = new BundleFilterNum().setDefine("n1,n2,n3,n4,vector,max,v0,set");
+        bfn = new BundleFilterNum("n1,n2,n3,n4,vector,max,v0,set", null);
         bundle = new ListBundle();
         bundle.setValue(bundle.getFormat().getField("c0"), ValueFactory.create(0));
         bfn.filter(bundle);
@@ -76,7 +76,7 @@ public class TestBundleFilterNum {
 
     @Test
     public void testInsertArrayString() {
-        BundleFilterNum bfn = new BundleFilterNum().setDefine("c0,mean,v1,set");
+        BundleFilterNum bfn = new BundleFilterNum("c0,mean,v1,set", null);
         Bundle bundle = new ListBundle();
         bundle.setValue(bundle.getFormat().getField("c0"), ValueFactory.create("1,2,3,4,5"));
         bundle.setValue(bundle.getFormat().getField("c1"), ValueFactory.create(0.0));
@@ -86,7 +86,7 @@ public class TestBundleFilterNum {
 
     @Test
     public void testInsertArrayValue() {
-        BundleFilterNum bfn = new BundleFilterNum().setDefine("a0,mean,v1,set");
+        BundleFilterNum bfn = new BundleFilterNum("a0,mean,v1,set", null);
         Bundle bundle = new ListBundle();
         ValueArray array = ValueFactory.createArray(5);
         array.add(ValueFactory.create(1));
@@ -102,7 +102,7 @@ public class TestBundleFilterNum {
 
     @Test
     public void testMean() {
-        BundleFilterNum bfn = new BundleFilterNum().setDefine("n2:3:5:7:11:13:17:19,mean,v0,set");
+        BundleFilterNum bfn = new BundleFilterNum("n2:3:5:7:11:13:17:19,mean,v0,set", null);
         Bundle bundle = new ListBundle();
         bundle.setValue(bundle.getFormat().getField("c1"), ValueFactory.create(-1));
         bfn.filter(bundle);
@@ -111,7 +111,7 @@ public class TestBundleFilterNum {
 
     @Test
     public void testVariance() {
-        BundleFilterNum bfn = new BundleFilterNum().setDefine("n2:3:5:7:11:13:17:19,variance,v0,set");
+        BundleFilterNum bfn = new BundleFilterNum("n2:3:5:7:11:13:17:19,variance,v0,set", null);
         Bundle bundle = new ListBundle();
         bundle.setValue(bundle.getFormat().getField("c1"), ValueFactory.create(-1));
         bfn.filter(bundle);
@@ -120,7 +120,7 @@ public class TestBundleFilterNum {
 
     @Test
     public void testPop() {
-        BundleFilterNum bfn = new BundleFilterNum().setDefine("n1:2:3,pop,v0,set");
+        BundleFilterNum bfn = new BundleFilterNum("n1:2:3,pop,v0,set", null);
         Bundle bundle = new ListBundle();
         bundle.setValue(bundle.getFormat().getField("c1"), ValueFactory.create(-1));
         bfn.filter(bundle);

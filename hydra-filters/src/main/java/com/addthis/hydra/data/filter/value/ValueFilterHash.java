@@ -62,6 +62,8 @@ public class ValueFilterHash extends ValueFilter {
     @FieldConfig(codable = true)
     private boolean abs;
 
+    @Override public void open() { }
+
     @Override
     public ValueObject filterValue(ValueObject value) {
         if (value == null) {

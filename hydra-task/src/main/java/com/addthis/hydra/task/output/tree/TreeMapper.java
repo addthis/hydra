@@ -373,7 +373,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
     private long getBundleTime(Bundle bundle) {
         long bundleTime = JitterClock.globalTime();
         if (timeField != null) {
-            ValueObject vo = bundle.getValue(bundle.getFormat().getField(timeField.getField()));
+            ValueObject vo = timeField.getField().getValue(bundle);
             if (vo == null) {
                 log.debug("missing time {} in [{}] --> {}", timeField.getField(), bundle.getCount(), bundle);
             } else {

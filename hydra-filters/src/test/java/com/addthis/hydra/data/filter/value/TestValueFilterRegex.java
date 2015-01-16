@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.filter.value;
 
+import java.util.regex.Pattern;
+
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 
@@ -25,7 +27,7 @@ public class TestValueFilterRegex {
 
     @Test
     public void akamaiGroup() {
-        ValueFilterRegex vf = new ValueFilterRegex().setPattern("Log_([0-9]+)\\.");
+        ValueFilterRegex vf = new ValueFilterRegex().setPattern(Pattern.compile("Log_([0-9]+)\\."));
         ValueObject res = vf.filter(ValueFactory.create("stream://san1.local:8614/split/logs/12345/2011/05/20/aLog_12345.esw3c_U.201105200000-0100-1.gz"));
         assertTrue(res != null);
         assertTrue(res.asArray().size() > 0);

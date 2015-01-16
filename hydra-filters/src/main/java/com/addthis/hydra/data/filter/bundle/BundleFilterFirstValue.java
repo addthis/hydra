@@ -17,6 +17,8 @@ import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
+import com.addthis.bundle.util.CachingField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
@@ -45,57 +47,28 @@ public class BundleFilterFirstValue extends BundleFilter {
      * An array of bundle field names to search. This field is required.
      */
     @FieldConfig(codable = true, required = true)
-    private String[] in;
+    private CachingField[] in;
 
     /**
      * Output destination field. This field is required.
      */
     @FieldConfig(codable = true, required = true)
-    private String out;
+    private AutoField out;
 
     /**
      * Target field that will be populated by the name of the selected field. This field is
      * optional.
      */
     @FieldConfig(codable = true)
-    private String which;
-
-    private String[] fields;
-
-    public void setIn(String[] in) {
-        this.in = in;
-    }
-
-    public void setOut(String out) {
-        this.out = out;
-    }
-
-    public void setWhich(String which) {
-        this.which = which;
-    }
-
-    public String[] getFields() {
-        return fields;
-    }
+    private AutoField which;
 
     @Override
-    public void initialize() {
-        if (which == null) {
-            fields = new String[in.length + 1];
-        } else {
-            fields = new String[in.length + 2];
-            fields[in.length + 1] = which;
-        }
-        System.arraycopy(in, 0, fields, 0, in.length);
-        fields[in.length] = out;
-    }
+    public void open() {}
 
     @Override
-    public boolean filterExec(Bundle bundle) {
-        BundleField[] bound = getBindings(bundle, fields);
-        int end = (which == null) ? (bound.length - 1) : (bound.length - 2);
-        for (int i = 0; i < end; i++) {
-            ValueObject v = bundle.getValue(bound[i]);
+    public boolean filter(Bundle bundle) {
+        for (int i = 0; i < in.length; i++) {
+            ValueObject v = in[i].getValue(bundle);
             if (v == null) {
                 continue;
             }
@@ -104,10 +77,10 @@ public class BundleFilterFirstValue extends BundleFilter {
                     ValueArray arr = v.asArray();
                     if (arr.size() > 0) {
                         if (which != null) {
-                            ValueObject fieldName = ValueFactory.create(bound[i].getName());
-                            bundle.setValue(bound[end + 1], fieldName);
+                            ValueObject fieldName = ValueFactory.create(in[i].name);
+                            which.setValue(bundle, fieldName);
                         }
-                        bundle.setValue(bound[end], arr);
+                        out.setValue(bundle, arr);
                         return true;
                     }
                     break;
@@ -115,10 +88,10 @@ public class BundleFilterFirstValue extends BundleFilter {
                     String str = ValueUtil.asNativeString(v);
                     if (!Strings.isEmpty(str)) {
                         if (which != null) {
-                            ValueObject fieldName = ValueFactory.create(bound[i].getName());
-                            bundle.setValue(bound[end + 1], fieldName);
+                            ValueObject fieldName = ValueFactory.create(in[i].name);
+                            which.setValue(bundle, fieldName);
                         }
-                        bundle.setValue(bound[end], v);
+                        out.setValue(bundle, v);
                         return true;
                     }
                     break;

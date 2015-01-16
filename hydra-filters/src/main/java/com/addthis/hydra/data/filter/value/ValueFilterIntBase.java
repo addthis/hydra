@@ -60,6 +60,8 @@ public class ValueFilterIntBase extends ValueFilter {
     @FieldConfig(codable = true)
     private boolean inDouble = false;
 
+    @Override public void open() { }
+
     @Override
     public ValueObject filterValue(ValueObject value) {
         if (value == null) {

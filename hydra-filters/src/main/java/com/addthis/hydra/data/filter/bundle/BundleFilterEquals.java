@@ -15,6 +15,7 @@ package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
@@ -44,13 +45,13 @@ public class BundleFilterEquals extends BundleFilter {
      * the left hand field value
      */
     @FieldConfig(codable = true, required = true)
-    private String left;
+    private AutoField left;
 
     /**
      * The right hand field
      */
     @FieldConfig(codable = true, required = true)
-    private String right;
+    private AutoField right;
 
     /**
      * inverts behavior of filter
@@ -58,20 +59,13 @@ public class BundleFilterEquals extends BundleFilter {
     @FieldConfig(codable = true)
     private boolean not;
 
-    String[] fields;
+    @Override
+    public void open() { }
 
     @Override
-    public void initialize() {
-        fields = new String[2];
-        fields[0] = left;
-        fields[1] = right;
-    }
-
-    @Override
-    public boolean filterExec(Bundle bundle) {
-        BundleField[] bound = getBindings(bundle, fields);
-        ValueObject lv = bundle.getValue(bound[0]);
-        ValueObject rv = bundle.getValue(bound[1]);
+    public boolean filter(Bundle bundle) {
+        ValueObject lv = left.getValue(bundle);
+        ValueObject rv = right.getValue(bundle);
         if (lv == null && rv == null) {
             return !not;
         } else if (lv == null || rv == null) {

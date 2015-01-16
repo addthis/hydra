@@ -26,7 +26,7 @@ import com.addthis.basis.net.NetUtil;
 import com.addthis.basis.util.Bytes;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.codec.annotations.FieldConfig;
@@ -81,8 +81,8 @@ public final class BundleFilterURL extends BundleFilter {
     /**
      * Field containing the URL used as input to this filter.
      */
-    @FieldConfig(codable = true)
-    private String field;
+    @FieldConfig(codable = true, required = true)
+    private AutoField field;
 
     /**
      * If <code>true</code> the URL will be properly url-decoded and a
@@ -147,7 +147,7 @@ public final class BundleFilterURL extends BundleFilter {
      * set the {@link #fixProto} parameter to <code>true</code>.
      */
     @FieldConfig(codable = true)
-    private String setHost;
+    private AutoField setHost;
 
     /**
      * Name of the field to populate with the
@@ -158,7 +158,7 @@ public final class BundleFilterURL extends BundleFilter {
      * set the {@link #fixProto} parameter to <code>true</code>.
      */
     @FieldConfig(codable = true)
-    private String setHostNormal;
+    private AutoField setHostNormal;
 
     /**
      * Name of the field to populate with the top
@@ -171,28 +171,28 @@ public final class BundleFilterURL extends BundleFilter {
      * {@link #fixProto fixProto} set to true.
      */
     @FieldConfig(codable = true)
-    private String setTopPrivateDomain;
+    private AutoField setTopPrivateDomain;
 
     /**
      * Name of the field to populate with the path
      * defined by this URL. If null the path will not be set.
      */
     @FieldConfig(codable = true)
-    private String setPath;
+    private AutoField setPath;
 
     /**
      * Name of the field to populate with the parameters
      * defined by this URL. If null the parameters will not be set.
      */
     @FieldConfig(codable = true)
-    private String setParams;
+    private AutoField setParams;
 
     /**
      * Name of the field to populate with the anchor
      * defined by this URL.  If null the anchor will not be set.
      */
     @FieldConfig(codable = true)
-    private String setAnchor;
+    private AutoField setAnchor;
 
     /**
      * Value to return when input is invalid. Default is false.
@@ -200,21 +200,19 @@ public final class BundleFilterURL extends BundleFilter {
     @FieldConfig(codable = true)
     private boolean invalidExit;
 
-    private String[] fields;
+    private static final Pattern hostNormalPattern = Pattern.compile("^www*\\d*\\.(.*)");
 
-    private Pattern hostNormalPattern;
-
-    public BundleFilterURL setHost(String value) {
+    public BundleFilterURL setHost(AutoField value) {
         this.setHost = value;
         return this;
     }
 
-    public BundleFilterURL setHostNormal(String value) {
+    public BundleFilterURL setHostNormal(AutoField value) {
         this.setHostNormal = value;
         return this;
     }
 
-    public BundleFilterURL setField(String value) {
+    public BundleFilterURL setField(AutoField value) {
         this.field = value;
         return this;
     }
@@ -237,20 +235,11 @@ public final class BundleFilterURL extends BundleFilter {
     private static final Joiner DOT_JOINER = Joiner.on('.');
 
     @Override
-    public void initialize() {
-        if (setHostNormal != null) {
-            hostNormalPattern = Pattern.compile("^www*\\d*\\.(.*)");
-        }
-
-        fields = new String[]{field, setHost, setPath,
-                              setParams, setAnchor, setHostNormal,
-                              setTopPrivateDomain};
-    }
+    public void open() { }
 
     @Override
-    public boolean filterExec(Bundle bundle) {
-        BundleField[] bound = getBindings(bundle, fields);
-        String pv = ValueUtil.asNativeString(bundle.getValue(bound[0]));
+    public boolean filter(Bundle bundle) {
+        String pv = ValueUtil.asNativeString(field.getValue(bundle));
         if (!asFile) {
             if (pv == null || pv.length() < 7) {
                 return invalidExit;
@@ -299,7 +288,7 @@ public final class BundleFilterURL extends BundleFilter {
                         // if the path element is null, append the slash
                         pv = pv.concat("/");
                     }
-                    bundle.setValue(bound[0], ValueFactory.create(pv));
+                    field.setValue(bundle, ValueFactory.create(pv));
                 }
                 if (setHost != null) {
                     if (toBaseDomain) {
@@ -313,23 +302,23 @@ public final class BundleFilterURL extends BundleFilter {
                             }
                         }
                     }
-                    bundle.setValue(bound[1], ValueFactory.create(returnhost));
+                    setHost.setValue(bundle, ValueFactory.create(returnhost));
                 }
                 if (setPath != null) {
-                    bundle.setValue(bound[2], ValueFactory.create(urec.getPath()));
+                    setPath.setValue(bundle, ValueFactory.create(urec.getPath()));
                 }
                 if (setParams != null) {
-                    bundle.setValue(bound[3], ValueFactory.create(urec.getQuery()));
+                    setParams.setValue(bundle, ValueFactory.create(urec.getQuery()));
                 }
                 if (setAnchor != null) {
-                    bundle.setValue(bound[4], ValueFactory.create(urec.getRef()));
+                    setAnchor.setValue(bundle, ValueFactory.create(urec.getRef()));
                 }
                 if (setHostNormal != null) {
                     Matcher m = hostNormalPattern.matcher(returnhost);
                     if (m.find()) {
                         returnhost = m.group(1);
                     }
-                    bundle.setValue(bound[5], ValueFactory.create(returnhost));
+                    setHostNormal.setValue(bundle, ValueFactory.create(returnhost));
                 }
                 if (setTopPrivateDomain != null) {
                     String topDomain = returnhost;
@@ -339,7 +328,7 @@ public final class BundleFilterURL extends BundleFilter {
                             topDomain = DOT_JOINER.join(domainName.topPrivateDomain().parts());
                         }
                     }
-                    bundle.setValue(bound[6], ValueFactory.create(topDomain));
+                    setTopPrivateDomain.setValue(bundle, ValueFactory.create(topDomain));
                 }
             } catch (MalformedURLException e) {
                 if (pv.indexOf("%3") > 0 && pv.indexOf("%2") > 0) {

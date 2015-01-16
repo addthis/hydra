@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * is usually to set catchDo to a no-op filter that always returns true. Reasonable
  * alternatives include logging (via filter debug or setting a specific field),
  * conditionally rethrowing with a filter that may fail, and imagination.
+ *
+ * @user-reference
+ * @hydra-name try
  */
 public class BundleFilterTry extends BundleFilter {
 
@@ -36,15 +39,15 @@ public class BundleFilterTry extends BundleFilter {
     BundleFilter catchDo;
 
     @Override
-    public void initialize() {
-        tryDo.initOnceOnly();
+    public void open() {
+        tryDo.open();
         if (catchDo != null) {
-            catchDo.initOnceOnly();
+            catchDo.open();
         }
     }
 
     @Override
-    public boolean filterExec(Bundle row) {
+    public boolean filter(Bundle row) {
         boolean tryResult = tryDo.filter(row);
         return tryResult || (catchDo == null) || catchDo.filter(row);
     }

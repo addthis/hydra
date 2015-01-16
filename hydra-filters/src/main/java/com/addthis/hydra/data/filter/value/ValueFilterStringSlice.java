@@ -81,6 +81,9 @@ public class ValueFilterStringSlice extends StringFilter {
     }
 
     @Override
+    public void open() { }
+
+    @Override
     public String filter(String value) {
         if (Strings.isEmpty(value)) {
             return null;

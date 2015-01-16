@@ -61,4 +61,13 @@ public final class MapDef {
 
     /** The mapping of fields from the input source into the bundle. */
     @JsonProperty FieldFilter[] fields;
+
+    public void init() {
+        if (filterIn != null) {
+            filterIn.open();
+        }
+        if (filterOut != null) {
+            filterOut.open();
+        }
+    }
 }

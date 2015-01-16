@@ -74,6 +74,9 @@ public class ValueFilterBandPass extends StringFilter {
     };
 
     @Override
+    public void open() {}
+
+    @Override
     public String filter(String value) {
         if (value == null) {
             return value;

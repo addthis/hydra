@@ -34,11 +34,6 @@ import org.slf4j.LoggerFactory;
 @Pluggable("bundle-filter")
 public abstract class BundleFilter implements Codable {
 
-    private static final Logger log = LoggerFactory.getLogger(BundleFilter.class);
-
-    private AtomicBoolean init    = new AtomicBoolean(false);
-    private AtomicBoolean initing = new AtomicBoolean(false);
-
     /**
      * @param bundle      row/line/packet bundle
      * @param bindTargets use the same object or re-binding will occur
@@ -59,32 +54,9 @@ public abstract class BundleFilter implements Codable {
         return boundFields;
     }
 
-    public final void initOnceOnly() {
-        if (!init.get()) {
-            if (initing.compareAndSet(false, true)) {
-                try {
-                    initialize();
-                } finally {
-                    init.set(true);
-                    initing.set(false);
-                }
-            } else {
-                while (initing.get()) {
-                    Thread.yield();
-                }
-            }
-        }
-    }
-
-    /* most won't use it, but all must implement */
-    public abstract void initialize();
+    public abstract void open();
 
     /* returns true of chain should continue, false to break */
-    public abstract boolean filterExec(Bundle row);
+    public abstract boolean filter(Bundle row);
 
-    /* wrapper that calls init once only */
-    public final boolean filter(final Bundle row) {
-        initOnceOnly();
-        return filterExec(row);
-    }
 }

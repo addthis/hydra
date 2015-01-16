@@ -59,6 +59,9 @@ public class ValueFilterDefault extends StringFilter {
     }
 
     @Override
+    public void open() {}
+
+    @Override
     public String filter(String v) {
         if (Strings.isEmpty(v)) {
             return time ? Long.toString(JitterClock.globalTime()) : value;

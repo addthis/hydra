@@ -46,6 +46,8 @@ public class ValueFilterRange extends StringFilter {
         return this;
     }
 
+    @Override public void open() { }
+
     @Override
     public String filter(String sv) {
         if (sv == null) {

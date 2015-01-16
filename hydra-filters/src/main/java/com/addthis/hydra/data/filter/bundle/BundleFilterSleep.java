@@ -38,11 +38,11 @@ public class BundleFilterSleep extends BundleFilter {
     private int duration;
 
     @Override
-    public void initialize() {
+    public void open() {
     }
 
     @Override
-    public boolean filterExec(Bundle row) {
+    public boolean filter(Bundle row) {
         try {
             if (duration > 0) {
                 Thread.sleep(duration);
