@@ -47,7 +47,7 @@ public class BundleFilterFirstValue extends BundleFilter {
      * An array of bundle field names to search. This field is required.
      */
     @FieldConfig(codable = true, required = true)
-    private AutoField[] in;
+    private CachingField[] in;
 
     /**
      * Output destination field. This field is required.
@@ -77,7 +77,7 @@ public class BundleFilterFirstValue extends BundleFilter {
                     ValueArray arr = v.asArray();
                     if (arr.size() > 0) {
                         if (which != null) {
-                            ValueObject fieldName = ValueFactory.create(((CachingField) in[i]).name);
+                            ValueObject fieldName = ValueFactory.create(in[i].name);
                             which.setValue(bundle, fieldName);
                         }
                         out.setValue(bundle, arr);
@@ -88,7 +88,7 @@ public class BundleFilterFirstValue extends BundleFilter {
                     String str = ValueUtil.asNativeString(v);
                     if (!Strings.isEmpty(str)) {
                         if (which != null) {
-                            ValueObject fieldName = ValueFactory.create(((CachingField) in[i]).name);
+                            ValueObject fieldName = ValueFactory.create(in[i].name);
                             which.setValue(bundle, fieldName);
                         }
                         out.setValue(bundle, v);
