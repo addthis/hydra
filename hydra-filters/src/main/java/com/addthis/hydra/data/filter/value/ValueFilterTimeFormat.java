@@ -58,7 +58,6 @@ public class ValueFilterTimeFormat extends ValueFilter {
     /**
      * The output time zone.
      */
-    @FieldConfig(codable = true)
     private final String timeZoneOut;
 
     private final TimeField in;
