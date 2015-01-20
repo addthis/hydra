@@ -23,8 +23,7 @@ import static org.junit.Assert.assertEquals;
 
 public class TestValueFilterRequire {
 
-    private String requireFilter(String val, HashSet<String> exactValues, HashSet<String> match,
-                                 HashSet<String> find, String[] contains, boolean not) {
+    private String requireFilter(String val, HashSet<String> exactValues, HashSet<String> match, HashSet<String> find, String[] contains) {
         return new ValueFilterRequire(
                 exactValues,
                 null,
@@ -37,14 +36,13 @@ public class TestValueFilterRequire {
                 false,
                 false,
                 0,
-                0,
-                not).filter(val);
+                0).filter(val);
     }
 
     @Test
     public void nullPassThrough() {
-        assertEquals(null, requireFilter(null, null, null, null, null, false));
-        assertEquals("", requireFilter("", null, null, null, null, false));
+        assertEquals(null, requireFilter(null, null, null, null, null));
+        assertEquals("", requireFilter("", null, null, null, null));
     }
 
     @Test
@@ -52,26 +50,16 @@ public class TestValueFilterRequire {
         HashSet<String> exactValues = new HashSet<>();
         exactValues.add("bar");
         exactValues.add("bax");
-        assertEquals(null, requireFilter("foo", exactValues, null, null, null, false));
-        assertEquals(null, requireFilter("foobarfoo", exactValues, null, null, null, false));
-        assertEquals("bar", requireFilter("bar", exactValues, null, null, null, false));
-    }
-
-    @Test
-    public void negateMatch() {
-        HashSet<String> exactValues = new HashSet<>();
-        exactValues.add("bar");
-        exactValues.add("bax");
-        assertEquals("foo", requireFilter("foo", exactValues, null, null, null, true));
-        assertEquals("foobarfoo", requireFilter("foobarfoo", exactValues, null, null, null, true));
-        assertEquals(null, requireFilter("bar", exactValues, null, null, null, true));
+        assertEquals(null, requireFilter("foo", exactValues, null, null, null));
+        assertEquals(null, requireFilter("foobarfoo", exactValues, null, null, null));
+        assertEquals("bar", requireFilter("bar", exactValues, null, null, null));
     }
 
     @Test
     public void contains() {
         String[] contains = new String[]{"bar", "bax"};
-        assertEquals(null, requireFilter("foo", null, null, null, contains, false));
-        assertEquals("bar", requireFilter("bar", null, null, null, contains, false));
+        assertEquals(null, requireFilter("foo", null, null, null, contains));
+        assertEquals("bar", requireFilter("bar", null, null, null, contains));
     }
 
     @Test
@@ -79,17 +67,17 @@ public class TestValueFilterRequire {
         HashSet<String> matches = new HashSet<>();
         matches.add("\\d\\d");
         matches.add(".*addthis.com.*");
-        assertEquals(null, requireFilter("foo", null, matches, null, null, false));
-        assertEquals("s7.addthis.com/live", requireFilter("s7.addthis.com/live", null, matches, null, null, false));
-        assertEquals("42", requireFilter("42", null, matches, null, null, false));
+        assertEquals(null, requireFilter("foo", null, matches, null, null));
+        assertEquals("s7.addthis.com/live", requireFilter("s7.addthis.com/live", null, matches, null, null));
+        assertEquals("42", requireFilter("42", null, matches, null, null));
     }
 
     @Test
     public void find() {
         HashSet<String> find = new HashSet<>();
         find.add("^[a-z0-9]*$");
-        assertEquals(null, requireFilter("-123", null, null, find, null, false));
-        assertEquals("abcd", requireFilter("abcd", null, null, find, null, false));
+        assertEquals(null, requireFilter("-123", null, null, find, null));
+        assertEquals("abcd", requireFilter("abcd", null, null, find, null));
     }
 
     @Test
@@ -101,10 +89,10 @@ public class TestValueFilterRequire {
         HashSet<String> matches = new HashSet<>();
         matches.add("\\d\\d");
         matches.add(".*addthis.com.*");
-        assertEquals("s7.addthis.com/live", requireFilter("s7.addthis.com/live", exactValues, matches, null, null, false));
-        assertEquals("bar", requireFilter("bar", exactValues, null, null, contains, false));
-        assertEquals("fuz", requireFilter("fuz", null, matches, null, contains, false));
-        assertEquals(null, requireFilter("moo", exactValues, matches, null, contains, false));
+        assertEquals("s7.addthis.com/live", requireFilter("s7.addthis.com/live", exactValues, matches, null, null));
+        assertEquals("bar", requireFilter("bar", exactValues, null, null, contains));
+        assertEquals("fuz", requireFilter("fuz", null, matches, null, contains));
+        assertEquals(null, requireFilter("moo", exactValues, matches, null, contains));
     }
 
 }

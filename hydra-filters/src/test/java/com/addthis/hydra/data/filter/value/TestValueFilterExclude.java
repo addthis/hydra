@@ -34,6 +34,8 @@ public class TestValueFilterExclude {
                 null,
                 contains,
                 null,
+                false,
+                false,
                 0,
                 0).filter(val);
     }
