@@ -54,6 +54,14 @@ public class TestValueFilterExclude {
         assertEquals("foo", excludeFilter("foo", exactValues, null, null, null));
         assertEquals("foobarfoo", excludeFilter("foobarfoo", exactValues, null, null, null));
         assertEquals(null, excludeFilter("bar", exactValues, null, null, null));
+        assertEquals("", excludeFilter("", exactValues, null, null, null));
+    }
+
+    @Test
+    public void matchEmptyString() {
+        HashSet<String> exactValues = new HashSet<>();
+        exactValues.add("");
+        assertEquals(null, excludeFilter("", exactValues, null, null, null));
     }
 
     @Test

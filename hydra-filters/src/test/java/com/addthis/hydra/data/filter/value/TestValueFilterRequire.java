@@ -53,6 +53,14 @@ public class TestValueFilterRequire {
         assertEquals(null, requireFilter("foo", exactValues, null, null, null));
         assertEquals(null, requireFilter("foobarfoo", exactValues, null, null, null));
         assertEquals("bar", requireFilter("bar", exactValues, null, null, null));
+        assertEquals("", requireFilter("", exactValues, null, null, null));
+    }
+
+    @Test
+    public void matchEmptyString() {
+        HashSet<String> exactValues = new HashSet<>();
+        exactValues.add("");
+        assertEquals("", requireFilter("", exactValues, null, null, null));
     }
 
     @Test

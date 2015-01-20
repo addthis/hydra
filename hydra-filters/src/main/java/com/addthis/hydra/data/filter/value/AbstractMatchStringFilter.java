@@ -212,7 +212,7 @@ abstract class AbstractMatchStringFilter extends StringFilter {
 
     @Override
     public String filter(String sv) {
-        if (sv != null && !sv.equals("")) {
+        if (sv != null && (not || !sv.equals(""))) {
             if (toLower) {
                 sv = sv.toLowerCase();
             }
