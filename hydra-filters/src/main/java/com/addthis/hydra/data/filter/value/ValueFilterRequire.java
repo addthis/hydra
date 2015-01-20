@@ -95,27 +95,28 @@ public class ValueFilterRequire extends StringFilter {
     /**
      * If true, then interpret the payload from the URLs as CSV files. Default is false.
      */
-    @FieldConfig(codable = true)
     final private boolean urlReturnsCSV;
 
     /**
      * If true, then convert the input to lowercase. The filter output will be in lowercase.
      * Default is false.
      */
-    @FieldConfig(codable = true)
     final private boolean toLower;
 
     /**
      * A timeout value if any of the URL fields are used. Default is 60000.
      */
-    @FieldConfig(codable = true)
     final private int urlTimeout;
 
     /**
      * The number of retries if any of the URL fields are used. Default is 5.
      */
-    @FieldConfig(codable = true)
     final private int urlRetries;
+
+    /**
+     * If true then return those values that do not match. Default is false.
+     */
+    final private boolean not;
 
     private ArrayList<Pattern> pattern;
     private ArrayList<Pattern> findPattern;
@@ -132,7 +133,8 @@ public class ValueFilterRequire extends StringFilter {
                               @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
                               @JsonProperty("toLower") boolean toLower,
                               @JsonProperty("urlTimeout") int urlTimeout,
-                              @JsonProperty("urlRetries") int urlRetries) {
+                              @JsonProperty("urlRetries") int urlRetries,
+                              @JsonProperty("not") boolean not) {
         this.value = value;
         this.valueURL = valueURL;
         this.match = match;
@@ -145,6 +147,7 @@ public class ValueFilterRequire extends StringFilter {
         this.toLower = toLower;
         this.urlTimeout = urlTimeout;
         this.urlRetries = urlRetries;
+        this.not = not;
         if (match != null) {
             ArrayList<Pattern> np = new ArrayList<>();
             for (String s : match) {
@@ -261,10 +264,11 @@ public class ValueFilterRequire extends StringFilter {
             if (toLower) {
                 sv = sv.toLowerCase();
             }
-            if (passedMatch(sv) || passedContains(sv) || passedValue(sv) || passedFind(sv)) {
-                return sv;
+            boolean success = passedMatch(sv) || passedContains(sv) || passedValue(sv) || passedFind(sv);
+            if (not) {
+                return success ? null : sv;
             } else {
-                return null;
+                return success ? sv : null;
             }
         }
         return sv;
