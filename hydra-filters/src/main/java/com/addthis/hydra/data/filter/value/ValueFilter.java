@@ -22,8 +22,6 @@ import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.codables.SuperCodable;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -60,8 +58,7 @@ public abstract class ValueFilter implements Codable {
         return once;
     }
 
-    @VisibleForTesting
-    ValueFilter setOnce(boolean o) {
+    public ValueFilter setOnce(boolean o) {
         once = o;
         return this;
     }

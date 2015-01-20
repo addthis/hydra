@@ -180,7 +180,7 @@ public class BundleFilterEvalJava extends BundleFilter {
         createConstructor(classDecl, className);
         createFieldsVariable(classDecl);
         createInitializer(classDecl);
-        createFilterExecMethod(classDecl);
+        createFilterMethod(classDecl);
         classDecl.append("}\n");
         classDeclString = classDecl.toString();
         JavaSimpleCompiler compiler = new JavaSimpleCompiler();
@@ -237,7 +237,7 @@ public class BundleFilterEvalJava extends BundleFilter {
     }
 
     private void createInitializer(StringBuffer classDecl) {
-        classDecl.append("public void initialize() {}\n");
+        classDecl.append("public void open() {}\n");
     }
 
     private IllegalStateException handleCompilationError(String classDeclString, JavaSimpleCompiler compiler) {
@@ -259,8 +259,8 @@ public class BundleFilterEvalJava extends BundleFilter {
         return new IllegalStateException(builder.toString());
     }
 
-    private void createFilterExecMethod(StringBuffer classDecl) {
-        classDecl.append("public boolean filterExec(Bundle __bundle)\n");
+    private void createFilterMethod(StringBuffer classDecl) {
+        classDecl.append("public boolean filter(Bundle __bundle)\n");
         classDecl.append("{\n");
         if (typeBundle) {
             classDecl.append("Bundle " + variables[0] + " = __bundle;\n");

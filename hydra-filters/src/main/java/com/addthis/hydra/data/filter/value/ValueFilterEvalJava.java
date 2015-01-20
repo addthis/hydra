@@ -198,6 +198,7 @@ public class ValueFilterEvalJava extends ValueFilter {
         classDecl.append(" extends ValueFilter\n");
         classDecl.append("{\n");
         createConstructor(classDecl, className);
+        createInitializer(classDecl);
         createFilterValueMethod(classDecl);
         createFilterValueInternalMethod(classDecl);
         classDecl.append("}\n");
@@ -273,13 +274,8 @@ public class ValueFilterEvalJava extends ValueFilter {
         classDecl.append("}\n\n");
     }
 
-    private void nullInput(StringBuffer classDecl) {
-        if (inputType == InputType.DOUBLE || inputType == InputType.LONG) {
-            classDecl.append("if (value == null) {\n");
-            classDecl.append("return null;\n");
-            classDecl.append("} else {\n");
-            classDecl.append(inputType.getTypeName());
-        }
+    private void createInitializer(StringBuffer classDecl) {
+        classDecl.append("public void open() {}\n");
     }
 
     private void createFilterValueMethod(StringBuffer classDecl) {
@@ -311,7 +307,7 @@ public class ValueFilterEvalJava extends ValueFilter {
         classDecl.append(";\n");
         classDecl.append(outputType.getTypeName());
         classDecl.append(" output = filterValueInternal(input);\n");
-        classDecl.append("return ");
+        classDecl.append("return (output == null) ? null : ");
         classDecl.append(outputType.toHydra("output"));
         classDecl.append(";\n");
         classDecl.append("}\n\n");
