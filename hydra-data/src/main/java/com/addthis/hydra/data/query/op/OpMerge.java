@@ -73,11 +73,9 @@ public class OpMerge extends AbstractQueryOp {
     private final int countdown;
     private final MergedValue[] conf;
     private final ListBundleFormat format = new ListBundleFormat();
-    private final ChannelProgressivePromise queryPromise;
 
     public OpMerge(String args, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
-        this.queryPromise = queryPromise;
 
         mergeConfig = new MergeConfig(args);
         countdown = mergeConfig.numericArg;
@@ -90,7 +88,7 @@ public class OpMerge extends AbstractQueryOp {
 
     @Override
     public void send(Bundle bundle) {
-        if (queryPromise.isDone()) {
+        if (opPromise.isDone()) {
             return;
         }
         String key = mergeConfig.handleBindAndGetKey(bundle, format);
@@ -122,7 +120,7 @@ public class OpMerge extends AbstractQueryOp {
     @Override
     public void sendComplete() {
         QueryOp next = getNext();
-        if (!queryPromise.isDone()) {
+        if (!opPromise.isDone()) {
             maybeSendLastRow();
         }
         next.sendComplete();

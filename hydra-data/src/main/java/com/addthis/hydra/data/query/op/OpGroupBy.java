@@ -72,6 +72,7 @@ public class OpGroupBy extends AbstractQueryOp {
     @MemoryCounter.Mem(estimate = false)
     private final QueryOpProcessor processor;
     private final OpForward forwardingOp;
+    @MemoryCounter.Mem(estimate = false)
     private final ChannelFutureListener errorForwarder;
 
     public OpGroupBy(QueryOpProcessor processor, String args, ChannelProgressivePromise opPromise) {
