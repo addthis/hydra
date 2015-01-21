@@ -14,10 +14,8 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueLong;
-import com.addthis.codec.annotations.FieldConfig;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -54,33 +52,33 @@ public class BundleFilterTimeRange extends BundleFilter {
     /**
      * The field containing date/time input as expressed in UNIX milliseconds. This field is required.
      */
-    final private AutoField time;
+    private final AutoField time;
 
     /**
      * If non-null then filter out all date/time values that occur later than this value.
      */
-    final private String before;
+    private final String before;
 
     /**
      * If non-null then filter out all date/time values that occur earlier than this value.
      */
-    final private String after;
+    private final String after;
 
     /**
      * The value to return when a date/time value is within the filter(s). Default is true.
      */
-    final private boolean defaultExit;
+    private final boolean defaultExit;
 
     /**
      * If non-null then parse the 'before' and 'after' fields using this
      * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat
      * .html">DateTimeFormat</a>.
      */
-    final private String timeFormat;
+    private final String timeFormat;
 
-    final private long              tbefore;
-    final private long              tafter;
-    final private DateTimeFormatter format;
+    private final long              tbefore;
+    private final long              tafter;
+    private final DateTimeFormatter format;
 
     @JsonCreator
     public BundleFilterTimeRange(@JsonProperty(value = "time", required = true) AutoField time,
@@ -95,8 +93,16 @@ public class BundleFilterTimeRange extends BundleFilter {
         this.timeFormat = timeFormat;
 
         format = (timeFormat != null) ? DateTimeFormat.forPattern(timeFormat) : null;
-        tbefore = (before != null) ? convertDate(before) : null;
-        tafter = (after != null) ? convertDate(after) : null;
+        if (before != null) {
+            tbefore = convertDate(before);
+        } else {
+            tbefore = 0;
+        }
+        if (after != null) {
+            tafter = convertDate(after);
+        } else {
+            tafter = 0;
+        }
     }
 
     @Override
