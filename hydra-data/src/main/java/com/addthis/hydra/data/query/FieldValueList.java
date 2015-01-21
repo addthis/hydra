@@ -22,6 +22,7 @@ import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.BundleFormatted;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
 
 
@@ -80,7 +81,7 @@ public class FieldValueList implements BundleFormatted {
         return list.size() > 0;
     }
 
-    public boolean updateBundleWithAppend(Bundle bundle) {
+    public boolean updateBundleWithListAppend(Bundle bundle) {
         for (FieldValue fv : list) {
             ValueObject oldValue = bundle.getValue(fv.field);
             ValueArray newValue;
@@ -93,6 +94,24 @@ public class FieldValueList implements BundleFormatted {
                 newValue.add(oldValue);
             }
             newValue.add(fv.value);
+            bundle.setValue(fv.field, newValue);
+        }
+        return !list.isEmpty();
+    }
+
+    public boolean updateBundleWithMapAppend(Bundle bundle) {
+        for (FieldValue fv : list) {
+            ValueObject oldValue = bundle.getValue(fv.field);
+            ValueMap newValue;
+            if (oldValue == null) {
+                newValue = ValueFactory.createMap();
+            } else if (oldValue instanceof ValueMap) {
+                newValue = (ValueMap) oldValue;
+            } else {
+                newValue = ValueFactory.createMap();
+                newValue.put(oldValue.asString().asNative(), oldValue);
+            }
+            newValue.put(fv.value.asString().asNative(), fv.value);
             bundle.setValue(fv.field, newValue);
         }
         return !list.isEmpty();

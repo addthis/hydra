@@ -83,17 +83,22 @@ public final class PathQuery extends PathOp {
     private String debugKey;
 
     /**
-     * If true then process all the children of the node
+     * Optionally process all the children of the node
      * that we have matched against. Append all the matching results
-     * into value arrays. Default is false.
+     * into either an array or a map. Possible values are
+     * "AS_LIST" and "AS_MAP". Default is null.
      */
     @FieldConfig(codable = true)
-    private boolean childMatch;
+    private ChildMatch childMatch;
 
     private int match;
     private int miss;
 
     public PathQuery() {
+    }
+
+    public static enum ChildMatch {
+        AS_LIST, AS_MAP
     }
 
     @Override
@@ -137,7 +142,7 @@ public final class PathQuery extends PathOp {
             return null;
         }
         boolean updated = false;
-        if (childMatch) {
+        if (childMatch != null) {
             ClosableIterator<DataTreeNode> children = null;
             try {
                 children = reference.getIterator();
@@ -167,8 +172,10 @@ public final class PathQuery extends PathOp {
             if (values.update(valueList, reference, state) == 0) {
                 return false;
             }
-            if (childMatch) {
-                updated = valueList.updateBundleWithAppend(state.getBundle());
+            if (childMatch == ChildMatch.AS_LIST) {
+                updated = valueList.updateBundleWithListAppend(state.getBundle());
+            } else if (childMatch == ChildMatch.AS_MAP) {
+                updated = valueList.updateBundleWithMapAppend(state.getBundle());
             } else {
                 updated = valueList.updateBundle(state.getBundle());
             }
