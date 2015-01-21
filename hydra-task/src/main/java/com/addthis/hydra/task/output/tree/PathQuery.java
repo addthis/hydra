@@ -19,6 +19,7 @@ import javax.annotation.Nullable;
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Strings;
 
+import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.query.FieldValueList;
@@ -100,7 +101,29 @@ public final class PathQuery extends PathOp {
     }
 
     public static enum ChildMatch {
-        AS_LIST, AS_MAP, NONE
+
+        AS_LIST {
+            @Override
+            boolean updateBundle(FieldValueList valueList, Bundle bundle) {
+                return valueList.updateBundleWithListAppend(bundle);
+            }
+        },
+
+        AS_MAP {
+            @Override
+            boolean updateBundle(FieldValueList valueList, Bundle bundle) {
+                return valueList.updateBundleWithMapAppend(bundle);
+            }
+        },
+
+        NONE {
+            @Override
+            boolean updateBundle(FieldValueList valueList, Bundle bundle) {
+                return valueList.updateBundle(bundle);
+            }
+        };
+
+        abstract boolean updateBundle(FieldValueList valueList, Bundle bundle);
     }
 
     @Override
@@ -174,19 +197,7 @@ public final class PathQuery extends PathOp {
             if (values.update(valueList, reference, state) == 0) {
                 return false;
             }
-            switch (childMatch) {
-                case AS_LIST:
-                    updated = valueList.updateBundleWithListAppend(state.getBundle());
-                    break;
-                case AS_MAP:
-                    updated = valueList.updateBundleWithMapAppend(state.getBundle());
-                    break;
-                case NONE:
-                    updated = valueList.updateBundle(state.getBundle());
-                    break;
-                default:
-                    throw new IllegalStateException("Unknown childMatch value " + childMatch);
-            }
+            updated = childMatch.updateBundle(valueList, state.getBundle());
             if (updated) {
                 if (debug > 0) {
                     debug(true);
