@@ -185,7 +185,7 @@ public final class PathQuery extends PathOp {
                     updated = valueList.updateBundle(state.getBundle());
                     break;
                 default:
-                    throw new IllegalStateException("Known childMatch value " + childMatch);
+                    throw new IllegalStateException("Unknown childMatch value " + childMatch);
             }
             if (updated) {
                 if (debug > 0) {
