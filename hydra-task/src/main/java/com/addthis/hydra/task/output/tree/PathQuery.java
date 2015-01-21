@@ -13,11 +13,13 @@
  */
 package com.addthis.hydra.task.output.tree;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Strings;
 
+import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.query.FieldValueList;
@@ -83,17 +85,45 @@ public final class PathQuery extends PathOp {
     private String debugKey;
 
     /**
-     * If true then process all the children of the node
+     * Optionally process all the children of the node
      * that we have matched against. Append all the matching results
-     * into value arrays. Default is false.
+     * into either an array or a map. Possible values are
+     * "AS_LIST" and "AS_MAP" or "NONE". Default is "NONE".
      */
     @FieldConfig(codable = true)
-    private boolean childMatch;
+    @Nonnull
+    private ChildMatch childMatch = ChildMatch.NONE;
 
     private int match;
     private int miss;
 
     public PathQuery() {
+    }
+
+    public static enum ChildMatch {
+
+        AS_LIST {
+            @Override
+            boolean updateBundle(FieldValueList valueList, Bundle bundle) {
+                return valueList.updateBundleWithListAppend(bundle);
+            }
+        },
+
+        AS_MAP {
+            @Override
+            boolean updateBundle(FieldValueList valueList, Bundle bundle) {
+                return valueList.updateBundleWithMapAppend(bundle);
+            }
+        },
+
+        NONE {
+            @Override
+            boolean updateBundle(FieldValueList valueList, Bundle bundle) {
+                return valueList.updateBundle(bundle);
+            }
+        };
+
+        abstract boolean updateBundle(FieldValueList valueList, Bundle bundle);
     }
 
     @Override
@@ -137,7 +167,7 @@ public final class PathQuery extends PathOp {
             return null;
         }
         boolean updated = false;
-        if (childMatch) {
+        if (childMatch != ChildMatch.NONE) {
             ClosableIterator<DataTreeNode> children = null;
             try {
                 children = reference.getIterator();
@@ -167,11 +197,7 @@ public final class PathQuery extends PathOp {
             if (values.update(valueList, reference, state) == 0) {
                 return false;
             }
-            if (childMatch) {
-                updated = valueList.updateBundleWithAppend(state.getBundle());
-            } else {
-                updated = valueList.updateBundle(state.getBundle());
-            }
+            updated = childMatch.updateBundle(valueList, state.getBundle());
             if (updated) {
                 if (debug > 0) {
                     debug(true);
