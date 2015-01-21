@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.task.output.tree;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.addthis.basis.util.ClosableIterator;
@@ -86,10 +87,11 @@ public final class PathQuery extends PathOp {
      * Optionally process all the children of the node
      * that we have matched against. Append all the matching results
      * into either an array or a map. Possible values are
-     * "AS_LIST" and "AS_MAP". Default is null.
+     * "AS_LIST" and "AS_MAP" or "NONE". Default is "NONE".
      */
     @FieldConfig(codable = true)
-    private ChildMatch childMatch;
+    @Nonnull
+    private ChildMatch childMatch = ChildMatch.NONE;
 
     private int match;
     private int miss;
@@ -98,7 +100,7 @@ public final class PathQuery extends PathOp {
     }
 
     public static enum ChildMatch {
-        AS_LIST, AS_MAP
+        AS_LIST, AS_MAP, NONE
     }
 
     @Override
@@ -142,7 +144,7 @@ public final class PathQuery extends PathOp {
             return null;
         }
         boolean updated = false;
-        if (childMatch != null) {
+        if (childMatch != ChildMatch.NONE) {
             ClosableIterator<DataTreeNode> children = null;
             try {
                 children = reference.getIterator();
@@ -172,12 +174,18 @@ public final class PathQuery extends PathOp {
             if (values.update(valueList, reference, state) == 0) {
                 return false;
             }
-            if (childMatch == ChildMatch.AS_LIST) {
-                updated = valueList.updateBundleWithListAppend(state.getBundle());
-            } else if (childMatch == ChildMatch.AS_MAP) {
-                updated = valueList.updateBundleWithMapAppend(state.getBundle());
-            } else {
-                updated = valueList.updateBundle(state.getBundle());
+            switch (childMatch) {
+                case AS_LIST:
+                    updated = valueList.updateBundleWithListAppend(state.getBundle());
+                    break;
+                case AS_MAP:
+                    updated = valueList.updateBundleWithMapAppend(state.getBundle());
+                    break;
+                case NONE:
+                    updated = valueList.updateBundle(state.getBundle());
+                    break;
+                default:
+                    throw new IllegalStateException("Known childMatch value " + childMatch);
             }
             if (updated) {
                 if (debug > 0) {
