@@ -139,6 +139,9 @@ public final class PathFile extends PathKeyValue {
             }
             tokens = new Tokenizer().setSeparator(separator).setPacking(true);
         }
+        if (tokenFilter != null) {
+            tokenFilter.open();
+        }
     }
 
     @Override

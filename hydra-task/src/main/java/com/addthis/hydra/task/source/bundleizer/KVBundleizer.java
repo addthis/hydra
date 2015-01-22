@@ -43,4 +43,7 @@ public class KVBundleizer extends NewlineBundleizer {
         next.setValue(format.getField(kv.getKey()), ValueFactory.create(kv.getValue()));
         return next;
     }
+
+    @Override
+    public void open() { }
 }

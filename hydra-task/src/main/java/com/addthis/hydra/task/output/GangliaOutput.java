@@ -78,6 +78,7 @@ public final class GangliaOutput extends AbstractFilteredOutput {
     }
 
     @Override protected void open() {
+        super.open();
         checkState(gmetrics == null, "open was already called");
         log.info("opening ganglia output with hosts: {}", hostsToString());
         gmetrics = hosts.stream().map(hostPort -> {

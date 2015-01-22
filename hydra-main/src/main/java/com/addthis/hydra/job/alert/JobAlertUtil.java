@@ -190,6 +190,7 @@ public class JobAlertUtil {
         BundleFilter bFilter = null;
         try {
             bFilter = CodecJSON.decodeString(BundleFilter.class, filter);
+            bFilter.open();
         } catch (Exception ex) {
             errorBuilder.append("Error attempting to create bundle filter: " + ex + "\n");
             log.error("Error attempting to create bundle filter", ex);

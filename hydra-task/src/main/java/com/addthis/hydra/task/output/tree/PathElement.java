@@ -192,6 +192,9 @@ public abstract class PathElement implements Codable, TreeDataParent {
             label = new PathValue(intern(name));
             label.count = count;
         }
+        if (filter != null) {
+            filter.open();
+        }
     }
 
     public final boolean isOp() {

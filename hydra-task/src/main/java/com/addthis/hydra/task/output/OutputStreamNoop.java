@@ -25,6 +25,9 @@ import com.addthis.bundle.core.Bundle;
 public class OutputStreamNoop extends OutputStreamFormatter {
 
     @Override
+    public void open() { }
+
+    @Override
     public OutputStreamEmitter createEmitter() {
         return new NoopOut();
     }

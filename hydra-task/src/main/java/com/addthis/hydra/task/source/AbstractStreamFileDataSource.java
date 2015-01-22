@@ -311,6 +311,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         if (shards == null) {
             shards = config.calcShardList(shardTotal);
         }
+        if (format != null) {
+            format.open();
+        }
         PersistentStreamFileSource persistentStreamFileSource = getSource();
         source = persistentStreamFileSource;
         if (!processAllData &&
@@ -324,6 +327,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 persistentStreamFileSource.init(getMarkDirFile(), shards);
             }
             if (filter != null) {
+                filter.open();
                 setSource(new StreamSourceFiltered(source, filter));
             }
             if (hash) {

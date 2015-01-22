@@ -53,6 +53,13 @@ public class OutputStreamColumnized extends OutputStreamFormatter implements Sup
     private byte[] eolB;
 
     @Override
+    public void open() {
+        if (filter != null) {
+            filter.open();
+        }
+    }
+
+    @Override
     public OutputStreamEmitter createEmitter() {
         return new TokenOut();
     }

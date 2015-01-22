@@ -34,6 +34,7 @@ public class OpFilter extends AbstractRowOp {
         super(queryPromise);
         try {
             filter = decodeObject(BundleFilter.class, args);
+            filter.open();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
