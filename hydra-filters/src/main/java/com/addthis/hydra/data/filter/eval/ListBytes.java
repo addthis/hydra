@@ -37,6 +37,9 @@ public class ListBytes extends AbstractList<byte[]> implements List<byte[]> {
     }
 
     public static ValueArray create(List<byte[]> input) {
+        if (input == null) {
+            return null;
+        }
         if (input instanceof ListBytes) {
             return ((ListBytes) input).getData();
         } else {

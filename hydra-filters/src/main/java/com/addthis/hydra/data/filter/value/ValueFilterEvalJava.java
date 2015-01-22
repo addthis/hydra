@@ -307,7 +307,7 @@ public class ValueFilterEvalJava extends ValueFilter {
         classDecl.append(";\n");
         classDecl.append(outputType.getTypeName());
         classDecl.append(" output = filterValueInternal(input);\n");
-        classDecl.append("return (output == null) ? null : ");
+        classDecl.append("return ");
         classDecl.append(outputType.toHydra("output"));
         classDecl.append(";\n");
         classDecl.append("}\n\n");

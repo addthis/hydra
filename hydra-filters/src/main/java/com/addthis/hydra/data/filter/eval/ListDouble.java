@@ -37,6 +37,9 @@ public class ListDouble extends AbstractList<Double> implements List<Double> {
     }
 
     public static ValueArray create(List<Double> input) {
+        if (input == null) {
+            return null;
+        }
         if (input instanceof ListDouble) {
             return ((ListDouble) input).getData();
         } else {

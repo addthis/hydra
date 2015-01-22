@@ -37,6 +37,9 @@ public class ListString extends AbstractList<String> implements List<String> {
     }
 
     public static ValueArray create(List<String> input) {
+        if (input == null) {
+            return null;
+        }
         if (input instanceof ListString) {
             return ((ListString) input).getData();
         } else {

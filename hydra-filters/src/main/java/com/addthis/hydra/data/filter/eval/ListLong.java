@@ -37,6 +37,9 @@ public class ListLong extends AbstractList<Long> implements List<Long> {
     }
 
     public static ValueArray create(List<Long> input) {
+        if (input == null) {
+            return null;
+        }
         if (input instanceof ListLong) {
             return ((ListLong) input).getData();
         } else {
