@@ -73,7 +73,15 @@ public class BundleFilterMapExtract extends BundleFilter {
     private XMap[] map;
 
     @Override
-    public void open() { }
+    public void open() {
+        if (map != null) {
+            for (XMap mapping : map) {
+                if (mapping.filter != null) {
+                    mapping.filter.open();
+                }
+            }
+        }
+    }
 
     @Override
     public boolean filter(Bundle bundle) {

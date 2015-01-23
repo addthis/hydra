@@ -45,5 +45,5 @@ public class KVBundleizer extends NewlineBundleizer {
     }
 
     @Override
-    public void open() { }
+    public void open() { super.open(); }
 }

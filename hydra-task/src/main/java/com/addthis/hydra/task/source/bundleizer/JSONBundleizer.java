@@ -27,7 +27,7 @@ import com.addthis.maljson.JSONObject;
 public class JSONBundleizer extends NewlineBundleizer {
 
     @Override
-    public void open() { }
+    public void open() { super.open(); }
 
     @Override
     public Bundle bundleize(Bundle next, String line) {
