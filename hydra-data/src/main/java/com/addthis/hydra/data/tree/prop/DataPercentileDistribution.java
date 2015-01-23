@@ -73,7 +73,7 @@ public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistr
          * Name of the field to monitor. This field is required.
          */
         @FieldConfig(codable = true, required = true)
-        private AutoField key;
+        private String key;
 
         /**
          * Sample size. Default is 1024.
@@ -100,7 +100,7 @@ public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistr
 
 
     @FieldConfig(codable = true)
-    private AutoField key;
+    private String key;
     @FieldConfig(codable = true)
     private ValueFilter filter;
     @FieldConfig(codable = true)
@@ -111,7 +111,7 @@ public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistr
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, Config conf) {
         if (keyAccess == null) {
-            keyAccess = conf.key;
+            keyAccess = AutoField.newAutoField(conf.key);
             filter = conf.filter;
             if (filter != null) {
                 filter.open();
