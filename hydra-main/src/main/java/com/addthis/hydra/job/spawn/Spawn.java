@@ -1186,7 +1186,9 @@ public class Spawn implements Codable, AutoCloseable {
                 List<JobTask> tasks = node < 0 ? job.getCopyOfTasks() : Arrays.asList(job.getTask(node));
                 for (JobTask task : tasks) {
                     boolean shouldModifyTask = !spawnJobFixer.haveRecentlyFixedTask(task.getJobKey()) &&
-                                               (ignoreTaskState || (task.getState() == JobTaskState.IDLE || (!orphansOnly && task.getState() == JobTaskState.ERROR)));
+                                               (ignoreTaskState
+                                                || (task.getState() == JobTaskState.IDLE)
+                                                || (!orphansOnly && (task.getState() == JobTaskState.ERROR)));
                     if (log.isDebugEnabled()) {
                         log.debug("[fixTaskDir] considering modifying task " + task.getJobKey() + " shouldModifyTask=" + shouldModifyTask);
                     }
@@ -2978,7 +2980,10 @@ public class Spawn implements Codable, AutoCloseable {
 
     protected boolean isNewTask(JobTask task) {
         HostState liveHost = hostManager.getHostState(task.getHostUUID());
-        return liveHost != null && !liveHost.hasLive(task.getJobKey()) && task.getFileCount() == 0 && task.getByteCount() == 0;
+        return (liveHost != null)
+               && !liveHost.hasLive(task.getJobKey())
+               && (task.getFileCount() == 0)
+               && (task.getByteCount() == 0);
     }
 
     /**
