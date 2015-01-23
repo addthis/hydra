@@ -165,14 +165,13 @@ public class JobAlertUtil {
         JSONArray array = JSONFetcher.staticLoadJSONArray(url, alertQueryTimeout, alertQueryRetries);
         StringBuilder errorBuilder = new StringBuilder();
         errorBuilder.append(array.toString() + "\n");
-        boolean valid = true;
         /**
          * Test the following conditions:
          * - the array contains two or more values
          * - each value of the array is itself an array
          * - the lengths of all subarrays are identical
          */
-        valid = valid && array.length() > 1;
+        boolean valid = array.length() > 1;
         log.trace("Array contains two or more values: {}", array.length() > 1);
         JSONArray header = valid ? array.optJSONArray(0) : null;
         valid = valid && (header != null);
@@ -181,7 +180,7 @@ public class JobAlertUtil {
             JSONArray element = array.optJSONArray(i);
             log.trace("Element {} is an array: {}", i, element != null);
             if (element != null) {
-                valid = valid && (element.length() == header.length());
+                valid = (element.length() == header.length());
                 log.trace("Element {} has correct length: {}", i, element.length() == header.length());
             } else {
                 valid = false;
