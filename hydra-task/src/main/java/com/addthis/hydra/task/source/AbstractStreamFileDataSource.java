@@ -78,13 +78,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.SnappyInputStream;
 
+import lzma.sdk.lzma.Decoder;
+import lzma.streams.LzmaInputStream;
+
 import static com.google.common.base.Throwables.propagate;
 import static com.google.common.util.concurrent.Uninterruptibles.awaitUninterruptibly;
 import static com.google.common.util.concurrent.Uninterruptibles.getUninterruptibly;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.runAsync;
-import lzma.sdk.lzma.Decoder;
-import lzma.streams.LzmaInputStream;
 
 /**
  * Abstract implementation of TaskDataSource
@@ -346,7 +347,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             }}));
         }
         aggregateWorkerFuture = allOf(workerFutures.toArray(new CompletableFuture[workerFutures.size()]));
-        aggregateWorkerFuture.thenRun(this::close);
+        aggregateWorkerFuture.thenRunAsync(this::close);
     }
 
     @Nullable @Override public Bundle next() throws DataChannelError {
