@@ -616,12 +616,17 @@ function(
                 clearTimeout(this.rollTimeout);
                 this.rollTimeout=null;
             }
-            this.$el.find("pre#logContainer").html("");
+            this.$el.find("pre#logContainer").html("loading...");
         },
         handleLogChange:function(log){
             var text = log.get("out");
             text = this.linkFiles(text);
             if(_.isEqual(this.type,0)){//roll
+                var oldOffset = log.offset;
+                var newOffset = log.get("offset");
+                if (!oldOffset || newOffset < oldOffset) {
+                    this.$el.find("pre#logContainer").html("");
+                }
                 var isAtBottom = this.isLogAtBottom();//before changing text
                 this.$el.find("pre#logContainer").append(text);
                 if(isAtBottom){
@@ -629,10 +634,12 @@ function(
                 }
             }
             else if(_.isEqual(this.type,2)){//head
+                this.$el.find("pre#logContainer").html("");
                 this.$el.find("pre#logContainer").html(text);
                 this.scrollLogToTop();
             }
             else{
+                this.$el.find("pre#logContainer").html("");
                 this.$el.find("pre#logContainer").html(text);
                 this.scrollLogToBottom();
             }
@@ -666,7 +673,7 @@ function(
             this.fetchLog();
         },
         handleLogError:function(){
-            this.$el.find("pre#logContainer").html("Log is empty");
+            this.$el.find("pre#logContainer").html("Error talking to minion");
         },
         handleTaskStateChange:function(model){
             var label = this.$el.find("span#taskLabel");
@@ -691,7 +698,7 @@ function(
                     this.runsAgo=runsAgo;
                     this.log.runsAgo=runsAgo;
                     runsAgoInput.val(this.runsAgo);
-                    this.$el.find("pre#logContainer").html("");
+                    this.$el.find("pre#logContainer").html("loading...");
                     this.fetchLog();
                 }
                 this.saveState();
@@ -714,7 +721,7 @@ function(
                     this.lines=lines;
                     this.log.lines=lines;
                     lineInput.val(this.lines);
-                    this.$el.find("pre#logContainer").html("");
+                    this.$el.find("pre#logContainer").html("loading...");
                     this.fetchLog();
                 }
                 this.saveState();

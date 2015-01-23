@@ -40,6 +40,14 @@ function(
             options.dataType = "json";
             return Backbone.sync(method, model, options);
         },
+        parse:function(data){
+            if(_.isUndefined(data.out)){
+                data.out="Log file not found.";
+            } else if (data.offset === 0) {
+                data.out="Log file is empty.";
+            }
+            return data;
+        },
         clear:function(){
             this.set({
                 lastModified:undefined,
