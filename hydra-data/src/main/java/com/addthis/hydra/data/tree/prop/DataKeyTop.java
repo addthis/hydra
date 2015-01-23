@@ -21,7 +21,7 @@ import java.util.Map.Entry;
 import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.Varint;
 
-import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
@@ -114,7 +114,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
          * This field is required.
          */
         @FieldConfig(codable = true, required = true)
-        private String key;
+        private AutoField key;
 
         /**
          * Maximum capacity of the key topper.
@@ -153,18 +153,18 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
     private int size;
 
     private ValueFilter filter;
-    private BundleField keyAccess;
+    private AutoField keyAccess;
 
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, DataKeyTop.Config conf) {
         if (keyAccess == null) {
-            keyAccess = state.getBundle().getFormat().getField(conf.key);
+            keyAccess = conf.key;
             filter = conf.filter;
             if (filter != null) {
                 filter.open();
             }
         }
-        ValueObject val = state.getBundle().getValue(keyAccess);
+        ValueObject val = keyAccess.getValue(state.getBundle());
         if (val != null) {
             if (filter != null) {
                 val = filter.filter(val);
