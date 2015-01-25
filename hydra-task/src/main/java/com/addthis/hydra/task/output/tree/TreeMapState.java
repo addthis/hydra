@@ -135,6 +135,10 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         return stack.pop();
     }
 
+    public int getNodeCount() {
+        return current().getNodeCount();
+    }
+
     public void push(TreeNodeList tnl) {
         if (tnl.size() == 1) {
             push(tnl.get(0));
@@ -254,7 +258,7 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
      */
     public TreeNodeList processPathElement(PathElement pe) {
         if (profiling) {
-            long mark = profiling ? System.nanoTime() : 0;
+            long mark = System.nanoTime();
             TreeNodeList list = processPathElementProfiled(pe);
             processor.updateProfile(pe, System.nanoTime() - mark);
             return list;

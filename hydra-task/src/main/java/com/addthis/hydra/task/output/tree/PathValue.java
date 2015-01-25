@@ -90,6 +90,15 @@ public class PathValue extends PathElement {
     @FieldConfig(codable = true)
     protected PathElement each;
 
+    /**
+     * If positive then limit the number of nodes that can be created.
+     * Multiple threads may be writing to the tree concurrently.
+     * Therefore this limit is a best-effort limit it is not a strict
+     * guarantee. Default is zero.
+     **/
+    @FieldConfig(codable = true)
+    protected int maxNodes = 0;
+
     private ValueString valueString;
     private BundleField setField;
     private BundleField mapField;
@@ -150,19 +159,30 @@ public class PathValue extends PathElement {
         if (op) {
             return TreeMapState.empty();
         }
-        TreeNodeList list = null;
+        TreeNodeList list;
         if (sync) {
             synchronized (this) {
                 list = processNodeUpdates(state, value);
             }
-        } else if (value != null) {
+        } else {
             list = processNodeUpdates(state, value);
         }
         return term ? null : list;
     }
 
+    /**
+     * Either get an existing node or optionally create a new node
+     * if one does not exist. The {@link #create} field determines
+     * whether or not to create a new node. If {@link #maxNodes}
+     * is a positive integer then test the current node count
+     * to determine whether to create a new node.
+     *
+     * @param state   current state
+     * @param name    name of target node
+     * @return existing node or newly created node
+     */
     public DataTreeNode getOrCreateNode(TreeMapState state, String name) {
-        if (create) {
+        if (create && ((maxNodes == 0) || (state.getNodeCount() < maxNodes))) {
             return state.getOrCreateNode(name, state);
         } else {
             return state.getLeasedNode(name);
