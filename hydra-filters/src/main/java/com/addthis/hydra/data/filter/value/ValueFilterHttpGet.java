@@ -155,7 +155,7 @@ public class ValueFilterHttpGet extends StringFilter {
     @Override
     public String filter(String sv) {
         if (sv == null) {
-            return sv;
+            return null;
         }
         CacheObject cached = cacheGet(sv);
         if (cached == null || (cacheAge > 0 && System.currentTimeMillis() - cached.time > cacheAge)) {
@@ -165,12 +165,13 @@ public class ValueFilterHttpGet extends StringFilter {
             int retries = retry;
             while (retries-- > 0) {
                 try {
-                    byte[] val = httpGet(template.replace("{{}}", sv), null, null, timeout, trace);
+                    String replacement = template.replace("{{}}", sv);
+                    byte[] val = httpGet(replacement, null, null, timeout, trace);
                     if (val != null && (emptyOk || val.length > 0)) {
                         cached = cachePut(sv, Bytes.toString(val));
                         break;
                     } else if (trace) {
-                        System.err.println(template.replace("{{}}", sv) + " returned " + (val != null ? val.length : -1) + " retries left = " + retries);
+                        log.error("{} returned {} retries left = {}", replacement, (val != null ? val.length : -1), retries);
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -208,7 +209,7 @@ public class ValueFilterHttpGet extends StringFilter {
             return response.getBody();
         } else {
             if (traceError) {
-                System.err.println(url + " returned " + response.getStatus() + ", " + response.getReason());
+                log.error("{} returned {}, {}", url, response.getStatus(), response.getReason());
             }
             return null;
         }

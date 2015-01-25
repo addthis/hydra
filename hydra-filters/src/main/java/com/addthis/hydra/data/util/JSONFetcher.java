@@ -98,6 +98,9 @@ public class JSONFetcher {
         while (true) {
             try {
                 byte[] raw = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
+                if (raw == null) {
+                    throw new IllegalArgumentException("No data found at url " + mapURL);
+                }
                 String kv = Bytes.toString(raw).trim();
                 if (!(kv.startsWith("{") && kv.endsWith("}"))) {
                     kv = Strings.cat("{", kv, "}");
