@@ -30,6 +30,8 @@ import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
+import com.google.common.base.Optional;
+
 import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
@@ -83,12 +85,23 @@ public class MacroResource {
     @GET
     @Path("/get")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getMacros(@QueryParam("label") String label) throws Exception {
+    public Response getMacros(@QueryParam("label") String label, @QueryParam("field") Optional<String> field) throws Exception {
         JobMacro macro = jobMacroManager.getEntity(label);
         JSONObject macroJson = macro.toJSON();
         macroJson.put("modified", macro.getModified());
         macroJson.put("owner", macro.getOwner());
         macroJson.put("name", label);
+        if (field.isPresent()) {
+            if (macroJson.has(field.get())) {
+                Object fieldObject = macroJson.get(field.get());
+                if (fieldObject != null) {
+                    return Response.ok(fieldObject.toString()).build();
+                } else {
+                    return Response.ok().build();
+                }
+            }
+            return Response.noContent().build();
+        }
         return Response.ok(macroJson.toString()).build();
     }
 
