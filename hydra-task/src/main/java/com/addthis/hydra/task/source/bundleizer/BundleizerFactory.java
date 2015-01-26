@@ -33,5 +33,7 @@ import com.addthis.codec.codables.Codable;
 @Pluggable("stream-bundleizer")
 public abstract class BundleizerFactory implements Codable {
 
+    public abstract void open();
+
     public abstract Bundleizer createBundleizer(InputStream input, BundleFactory factory);
 }

@@ -137,6 +137,9 @@ public class PathValue extends PathElement {
         if (each != null) {
             each.resolve(mapper);
         }
+        if (vfilter != null) {
+            vfilter.open();
+        }
     }
 
     @Override

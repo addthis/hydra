@@ -16,7 +16,7 @@ package com.addthis.hydra.data.tree.prop;
 import java.util.Arrays;
 import java.util.List;
 
-import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
@@ -106,15 +106,18 @@ public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistr
     @FieldConfig(codable = true)
     private KeyPercentileDistribution histogram;
 
-    private BundleField keyAccess;
+    private AutoField keyAccess;
 
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, Config conf) {
         if (keyAccess == null) {
-            keyAccess = state.getBundle().getFormat().getField(conf.key);
+            keyAccess = AutoField.newAutoField(conf.key);
             filter = conf.filter;
+            if (filter != null) {
+                filter.open();
+            }
         }
-        ValueObject val = state.getBundle().getValue(keyAccess);
+        ValueObject val = keyAccess.getValue(state.getBundle());
         if (val != null) {
             if (filter != null) {
                 val = filter.filter(val);

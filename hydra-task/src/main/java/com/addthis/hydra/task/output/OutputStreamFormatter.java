@@ -28,4 +28,5 @@ public abstract class OutputStreamFormatter {
 
     public abstract OutputStreamEmitter createEmitter();
 
+    public abstract void open();
 }

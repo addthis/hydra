@@ -79,6 +79,9 @@ public class OutputStreamAvro extends OutputStreamFormatter {
     }
 
     @Override
+    public void open() { }
+
+    @Override
     public OutputStreamEmitter createEmitter() {
         return new OutputStreamEmitter() {
             private BinaryEncoder encoder;

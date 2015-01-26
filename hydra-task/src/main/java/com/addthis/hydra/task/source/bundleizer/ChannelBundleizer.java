@@ -30,6 +30,9 @@ import com.addthis.bundle.io.DataChannelReader;
 public class ChannelBundleizer extends BundleizerFactory {
 
     @Override
+    public void open() { }
+
+    @Override
     public Bundleizer createBundleizer(final InputStream input, final BundleFactory factory) {
         return new Bundleizer() {
             private final DataChannelReader reader = new DataChannelReader(factory, input);

@@ -29,6 +29,9 @@ import com.addthis.maljson.JSONObject;
  */
 public class OutputStreamJson extends OutputStreamFormatter implements Codable {
 
+    @Override
+    public void open() { }
+
     private static final byte[] newlineBytes = "\n".getBytes(StandardCharsets.UTF_8);
 
     @Override

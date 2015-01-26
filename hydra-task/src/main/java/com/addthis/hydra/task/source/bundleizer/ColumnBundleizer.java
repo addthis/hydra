@@ -38,6 +38,14 @@ public class ColumnBundleizer extends NewlineBundleizer {
     private ValueFilter tokenFilter;
 
     @Override
+    public void open() {
+        super.open();
+        if (tokenFilter != null) {
+            tokenFilter.open();
+        }
+    }
+
+    @Override
     public Bundle bundleize(Bundle next, String line) {
         List<String> row = tokens.tokenize(line);
         if (row == null) {

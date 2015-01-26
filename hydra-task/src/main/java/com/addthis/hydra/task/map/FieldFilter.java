@@ -63,6 +63,12 @@ public final class FieldFilter {
         }
     }
 
+    public void open() {
+        if (filter != null) {
+            filter.open();
+        }
+    }
+
     // can't find a good way to copy the json value for "from", copy constructors fail for abstract types,
     // and clone has its own host of problems. We could just re-use the same object, but that would be even
     // more wasteful than the caching we perform for unchanging formats. This is a decent stop-gap solution.

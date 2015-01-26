@@ -69,5 +69,10 @@ public final class MapDef {
         if (filterOut != null) {
             filterOut.open();
         }
+        if (fields != null) {
+            for(FieldFilter field : fields) {
+                field.open();
+            }
+        }
     }
 }

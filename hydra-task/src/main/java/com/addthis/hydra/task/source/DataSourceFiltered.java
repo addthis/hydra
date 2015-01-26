@@ -78,6 +78,9 @@ public class DataSourceFiltered extends TaskDataSource {
 
     @Override
     public void init() {
+        if (filter != null) {
+            filter.open();
+        }
         stream.init();
     }
 

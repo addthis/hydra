@@ -43,6 +43,15 @@ public class StreamTokenizer extends Tokenizer {
         return this;
     }
 
+    @Override
+    public Tokenizer initialize() {
+        super.initialize();
+        if (filter != null) {
+            filter.open();
+        }
+        return this;
+    }
+
     /**
      * updated after each call to nextLine.
      *
