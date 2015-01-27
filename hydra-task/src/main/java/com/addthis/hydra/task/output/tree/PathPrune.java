@@ -66,6 +66,15 @@ public class PathPrune extends PathElement {
      */
     @FieldConfig private int relativeDown = 0;
 
+    /**
+     * If true then terminate the pruning process when the job is shutting down.
+     * Default is false. Note that specifying a prune in the "post" section
+     * setting preempt to true can prevent job pruning from happening if the
+     * job always terminates when its maximum runtime is reached.
+     * Consider specifying a prune in the "pre" section and setting preempt to true.
+     */
+    @FieldConfig private boolean preempt = false;
+
     @Nullable private final DateTimeFormatter nameFormat;
 
     public PathPrune(@Nullable @JsonProperty("nameFormat") String nameFormatString) {
@@ -82,44 +91,50 @@ public class PathPrune extends PathElement {
     public TreeNodeList getNextNodeList(final TreeMapState state) {
         long now = JitterClock.globalTime();
         DataTreeNode root = state.current();
-
-        findAndPruneChildren(root, now, relativeDown);
+        findAndPruneChildren(state, root, now, relativeDown);
         return TreeMapState.empty();
     }
 
-    public void findAndPruneChildren(final DataTreeNode root, long now, int depth) {
+    public void findAndPruneChildren(final TreeMapState state, final DataTreeNode root, long now, int depth) {
         if (depth == 0) {
-            pruneChildren(root, now);
+            pruneChildren(state, root, now);
         } else {
             ClosableIterator<DataTreeNode> keyNodeItr = root.getIterator();
-            while (keyNodeItr.hasNext()) {
-                findAndPruneChildren(keyNodeItr.next(), now, depth - 1);
+            try {
+                while (keyNodeItr.hasNext()) {
+                    findAndPruneChildren(state, keyNodeItr.next(), now, depth - 1);
+                }
+            } finally {
+                keyNodeItr.close();
             }
-            keyNodeItr.close();
         }
     }
 
-    public void pruneChildren(final DataTreeNode root, long now) {
+    public void pruneChildren(final TreeMapState state, final DataTreeNode root, long now) {
         ClosableIterator<DataTreeNode> keyNodeItr = root.getIterator();
         int deleted = 0;
         int kept = 0;
         int total = 0;
-        while (keyNodeItr.hasNext()) {
-            DataTreeNode treeNode = keyNodeItr.next();
-            long nodeTime = getNodeTime(treeNode);
-            if ((nodeTime > 0) && ((now - nodeTime) > ttl)) {
-                root.deleteNode(treeNode.getName());
-                deleted++;
-            } else {
-                kept++;
+        try {
+            while (keyNodeItr.hasNext() && !(preempt && state.processorClosing())) {
+                DataTreeNode treeNode = keyNodeItr.next();
+                long nodeTime = getNodeTime(treeNode);
+                if ((nodeTime > 0) && ((now - nodeTime) > ttl)) {
+                    root.deleteNode(treeNode.getName());
+                    deleted++;
+                } else {
+                    kept++;
+                }
+                total++;
+                if ((total % 100000) == 0) {
+                    logger.info("Iterating through children of {}, deleted: {} kept: {}", root.getName(), deleted,
+                                kept);
+                }
             }
-            total++;
-            if ((total % 100000) == 0) {
-                logger.info("Iterating through children of {}, deleted: {} kept: {}", root.getName(), deleted, kept);
-            }
+        } finally {
+            logger.info("Iterated through children of {}, deleted: {} kept: {}", root.getName(), deleted, kept);
+            keyNodeItr.close();
         }
-        logger.info("Iterated through children of {}, deleted: {} kept: {}", root.getName(), deleted, kept);
-        keyNodeItr.close();
     }
 
     @VisibleForTesting long getNodeTime(DataTreeNode treeNode) {

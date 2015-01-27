@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.task.output.tree;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import java.nio.file.Path;
@@ -42,6 +44,7 @@ import com.addthis.bundle.core.kvp.KVBundle;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
+import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.source.LiveMeshyServer;
 import com.addthis.hydra.data.query.source.LiveQueryReference;
@@ -94,7 +97,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name tree
  */
-public final class TreeMapper extends DataOutputTypeList implements Codable {
+public final class TreeMapper extends DataOutputTypeList implements Codable, Closeable {
 
     private static final Logger log = LoggerFactory.getLogger(TreeMapper.class);
     private static final SimpleDateFormat date = new SimpleDateFormat("yyMMdd-HHmmss");
@@ -197,6 +200,11 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
     private final ConcurrentMap<String, BundleField> fields    = new ConcurrentHashMap<>();
     private final IndexHash<PathElement[]>           pathIndex = new IndexHash();
 
+    /**
+     * If true then process shutdown has begun.
+     */
+    private final AtomicBoolean closing = new AtomicBoolean(false);
+
     private DataTree tree;
     private Bench    bench;
     private long     startTime;
@@ -262,9 +270,15 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         return pathIndex.getIndex(path);
     }
 
+    /**
+     * @throws IllegalStateException If the virtual machine is already in the process
+     *          of shutting down
+     */
     @Override
     public void open() {
         try {
+            Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(this), "TreeMapper shutdown hook"));
+
             mapstats = new TreeMapperStats();
             resolve();
 
@@ -290,9 +304,15 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
                 log.warn("pre-chain: {}", pre);
                 processBundle(new KVBundle(), pre);
             }
+
         } catch (Exception ex) {
             Throwables.propagate(ex);
         }
+    }
+
+    @Override
+    public void close() throws IOException {
+        closing.set(true);
     }
 
     private void connectToMesh(File root, String jobId, int taskId, QueryEngine engine) throws IOException {
@@ -390,6 +410,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
     private void processPath(Bundle bundle, PathElement[] path) {
         try {
             TreeMapState ps = new TreeMapState(this, tree, path, bundle);
+            ps.process();
             processNodes.addAndGet(ps.touched());
         } catch (RuntimeException ex) {
             throw ex;
@@ -535,6 +556,10 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    public boolean isClosing() {
+        return closing.get();
     }
 
     @Override

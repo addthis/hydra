@@ -21,6 +21,7 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFactory;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.BundleFormatted;
+import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeInitializer;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
@@ -68,7 +69,6 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         this.thread = Thread.currentThread();
         this.profiling = processor != null ? processor.isProfiling() : false;
         push(rootNode);
-        process();
     }
 
     private final LinkedList<DataTreeNode> leases = debuglist ? new DebugList() : new LinkedList<DataTreeNode>();
@@ -196,9 +196,6 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         }
     }
 
-    /**
-     * called exclusively from Hydra.processRule()
-     */
     public void process() {
         try {
             TreeNodeList list = processPath(path, 0);
@@ -309,4 +306,6 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
     public BundleFormat getFormat() {
         return processor.getFormat();
     }
+
+    public boolean processorClosing() { return processor.isClosing(); }
 }
