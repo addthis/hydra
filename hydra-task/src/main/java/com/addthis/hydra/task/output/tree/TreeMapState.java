@@ -21,7 +21,6 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFactory;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.BundleFormatted;
-import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeInitializer;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
