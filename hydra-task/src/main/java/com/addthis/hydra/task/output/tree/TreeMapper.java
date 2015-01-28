@@ -510,7 +510,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable, Clo
             }
             if (outputs != null) {
                 for (PathOutput output : outputs) {
-                    log.warn("output: {}", output);
+                    log.info("output: {}", output);
                     output.exec(tree);
                 }
             }
@@ -562,10 +562,10 @@ public final class TreeMapper extends DataOutputTypeList implements Codable, Clo
             perform = true;
         }
         if (perform) {
-            log.warn("{}-chain: {}", message, op);
+            log.info("{}-chain: {}", message, op);
             processBundle(new KVBundle(), op);
         } else {
-            log.warn("skipping {}-chain: {}. Sample rate is {} out of {}", message, op, sample, rate);
+            log.info("skipping {}-chain: {}. Sample rate is {} out of {}", message, op, sample, rate);
         }
         return perform;
     }
