@@ -306,6 +306,8 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
 
             startTime = System.currentTimeMillis();
 
+            tree.foregroundNodeDeletion(closing::get);
+
             if (pre != null) {
                 sampleOperation(pre, preRate, "pre.sample", "pre");
             }

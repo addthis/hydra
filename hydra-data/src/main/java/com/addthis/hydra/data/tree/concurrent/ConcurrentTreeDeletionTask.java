@@ -14,15 +14,26 @@
 package com.addthis.hydra.data.tree.concurrent;
 
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 
 import com.addthis.hydra.store.db.DBKey;
 
-class BackgroundDeletionTask implements Runnable {
+/**
+ * Delete from the backing storage all nodes that have been moved to be
+ * children of the trash node where they are waiting deletion. Also delete
+ * all subtrees of these nodes. After deleting each subtree then test
+ * the provided {@link ConcurrentTreeDeletionTask#terminationCondition}.
+ * If it returns true then stop deletion.
+ */
+class ConcurrentTreeDeletionTask implements Runnable {
 
-    private ConcurrentTree dataTreeNodes;
+    private final ConcurrentTree dataTreeNodes;
 
-    public BackgroundDeletionTask(ConcurrentTree dataTreeNodes) {
+    private final BooleanSupplier terminationCondition;
+
+    public ConcurrentTreeDeletionTask(ConcurrentTree dataTreeNodes, BooleanSupplier terminationCondition) {
         this.dataTreeNodes = dataTreeNodes;
+        this.terminationCondition = terminationCondition;
     }
 
     @Override
@@ -40,7 +51,7 @@ class BackgroundDeletionTask implements Runnable {
                     }
                 }
             }
-            while (entry != null && !dataTreeNodes.closed.get());
+            while (entry != null && !terminationCondition.getAsBoolean());
         } catch (Exception ex) {
             ConcurrentTree.log.warn("{}", "Uncaught exception in concurrent tree background deletion thread", ex);
         }
