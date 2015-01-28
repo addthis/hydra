@@ -43,7 +43,6 @@ import com.addthis.bundle.core.kvp.KVBundle;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
-import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.source.LiveMeshyServer;
 import com.addthis.hydra.data.query.source.LiveQueryReference;
