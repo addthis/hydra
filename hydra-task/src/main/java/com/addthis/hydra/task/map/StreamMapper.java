@@ -20,7 +20,6 @@ import java.io.IOException;
 
 import java.net.ServerSocket;
 
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
@@ -120,16 +119,6 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
     private final LongAdder filterTime = new LongAdder();
     private final LongAdder outputTime = new LongAdder();
 
-    /**
-     * If true then we are currently initializing or have initialized this object.
-     */
-    private final AtomicBoolean startBegin = new AtomicBoolean(false);
-
-    /**
-     * Semaphore is incremented when initialization has completed.
-     */
-    private final Semaphore startComplete = new Semaphore(0);
-
     // metrics
     private final Meter inputMeter = Metrics.newMeter(getClass(), "input", "input", TimeUnit.SECONDS);
     private final Meter outputMeter = Metrics.newMeter(getClass(), "output", "output", TimeUnit.SECONDS);
@@ -145,24 +134,17 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
 
     @Override
     public void start() {
-        if (startBegin.getAndSet(true)) {
-            throw new IllegalStateException("start method has been invoked more than once");
+        source.init();
+        map.init();
+        output.init();
+        if (builder != null) {
+            builder.init();
         }
-        try {
-            source.init();
-            map.init();
-            output.init();
-            if (builder != null) {
-                builder.init();
-            }
-            maybeInitJmx();
-            log.info("[init]");
-            feeder = new Thread(new MapFeeder(this, source, threads), "MapFeeder");
-            lastTick = System.nanoTime();
-            feeder.start();
-        } finally {
-            startComplete.release();
-        }
+        maybeInitJmx();
+        log.info("[init]");
+        feeder = new Thread(new MapFeeder(this, source, threads),"MapFeeder");
+        lastTick = System.nanoTime();
+        feeder.start();
     }
 
     public void process(Bundle inputBundle) {
@@ -315,7 +297,6 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
 
     @Override
     public void close() throws InterruptedException {
-        startComplete.acquireUninterruptibly();
         feeder.interrupt();
         feeder.join();
     }
