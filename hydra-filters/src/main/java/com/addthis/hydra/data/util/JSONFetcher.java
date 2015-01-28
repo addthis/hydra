@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.util;
 
+import java.io.IOException;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
@@ -97,10 +99,7 @@ public class JSONFetcher {
         int retry = retries;
         while (true) {
             try {
-                byte[] raw = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
-                if (raw == null) {
-                    throw new IllegalArgumentException("No data found at url " + mapURL);
-                }
+                byte[] raw = retrieveBytes(mapURL);
                 String kv = Bytes.toString(raw).trim();
                 if (!(kv.startsWith("{") && kv.endsWith("}"))) {
                     kv = Strings.cat("{", kv, "}");
@@ -138,7 +137,7 @@ public class JSONFetcher {
         int retry = retries;
         while (true) {
             try {
-                byte[] raw = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
+                byte[] raw = retrieveBytes(mapURL);
                 String list = Bytes.toString(raw);
 
                 if (set == null) {
@@ -166,7 +165,7 @@ public class JSONFetcher {
         int retry = retries;
         while (true) {
             try {
-                byte[] raw = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
+                byte[] raw = retrieveBytes(mapURL);
                 String list = Bytes.toString(raw);
                 if (!(list.startsWith("[") && list.endsWith("]"))) {
                     list = Strings.cat("[", list, "]");
@@ -183,6 +182,14 @@ public class JSONFetcher {
         }
     }
 
+    private byte[] retrieveBytes(String mapURL) throws IOException {
+        byte[] raw = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
+        if (raw == null) {
+            throw new IllegalArgumentException("No data found at url " + mapURL);
+        }
+        return raw;
+    }
+
     /**
      * loads a json-formatted array from an url and adds enclosing
      * square brackets if missing
@@ -194,7 +201,7 @@ public class JSONFetcher {
         int retry = retries;
         while (true) {
             try {
-                byte[] raw = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
+                byte[] raw = retrieveBytes(mapURL);
                 String list = Bytes.toString(raw);
                 if (!(list.startsWith("[") && list.endsWith("]"))) {
                     list = Strings.cat("[", list, "]");
