@@ -13,7 +13,6 @@
  */
 package com.addthis.hydra.task.output.tree;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
@@ -97,7 +96,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name tree
  */
-public final class TreeMapper extends DataOutputTypeList implements Codable, Closeable {
+public final class TreeMapper extends DataOutputTypeList implements Codable {
 
     private static final Logger log = LoggerFactory.getLogger(TreeMapper.class);
     private static final SimpleDateFormat date = new SimpleDateFormat("yyMMdd-HHmmss");
@@ -209,7 +208,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable, Clo
     private final IndexHash<PathElement[]>           pathIndex = new IndexHash();
 
     /**
-     * If true then process shutdown has begun.
+     * If true then jvm shutdown process has begun.
      */
     private final AtomicBoolean closing = new AtomicBoolean(false);
 
@@ -285,7 +284,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable, Clo
     @Override
     public void open() {
         try {
-            Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(this), "TreeMapper shutdown hook"));
+            Runtime.getRuntime().addShutdownHook(new Thread(this::jvmShutDown, "TreeMapper shutdown hook"));
 
             mapstats = new TreeMapperStats();
             resolve();
@@ -317,8 +316,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable, Clo
         }
     }
 
-    @Override
-    public void close() throws IOException {
+    private void jvmShutDown() {
         closing.set(true);
     }
 
