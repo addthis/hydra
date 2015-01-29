@@ -542,6 +542,19 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         }
     }
 
+    /**
+     * Conditionally perform the array of path element operations. If {@code rate} is
+     * greater than 1 then test the contents of {@code filename} to determine whether
+     * to run the path element operations. Supply an empty bundle as input to the path
+     * operations.
+     *
+     * @param op         array of path operations that may be run
+     * @param rate       if greater than 1 then test the sample file
+     * @param filename   name of the sample file
+     * @param message    output prefix for logging
+     * @return           true iff path elements were executed
+     * @throws IOException
+     */
     private boolean sampleOperation(PathElement[] op, int rate, String filename, String message) throws IOException {
         boolean perform;
         int sample = 0;
