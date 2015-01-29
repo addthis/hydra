@@ -239,7 +239,7 @@ function stopAll() {
 
 function checkDependencies() {
     ssh localhost echo test >/dev/null 2>&1 || echo >&2 "Warning: your machine does not have ssh access to itself. Job replicas will not work."
-    [[ `java -version 2>&1` == 'java version "1.7'* ]] || echo >&2 "Warning: you are using an unsupported java version. Only version 7 is supported."
+    [[ `java -version 2>&1` == 'java version "1.8'* ]] || echo >&2 "Warning: you are using an unsupported java version. Only version 8 is supported."
     if [[ $JAVA_CMD != *-Dqueue.mesh=true* && $SPAWN_OPT != *-Dqueue.mesh=true* ]] 
     then
         type rabbitmq-server >/dev/null 2>&1 || { echo >&2 "Error: Rabbitmq messaging chosen, but the rabbitmq-server utility was not found on your machine. Try installing rabbitmq and making sure it is in your path."; exit 1; }
