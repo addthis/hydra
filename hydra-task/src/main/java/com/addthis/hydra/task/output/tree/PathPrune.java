@@ -66,6 +66,11 @@ public class PathPrune extends PathElement {
      */
     @FieldConfig private int relativeDown = 0;
 
+    /**
+     * If non-null then parse the name of each node using the provided
+     * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat
+     * .html">DateTimeFormat</a>. Default is null.
+     */
     @Nullable private final DateTimeFormatter nameFormat;
 
     public PathPrune(@Nullable @JsonProperty("nameFormat") String nameFormatString) {
