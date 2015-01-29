@@ -68,7 +68,7 @@ public class PathPrune extends PathElement {
 
     /**
      * If true then terminate the pruning process when the job is shutting down.
-     * Default is false. Note that specifying a prune in the "post" section
+     * Default is false. Note that specifying a prune in the "post" section and
      * setting preempt to true can prevent job pruning from happening if the
      * job always terminates when its maximum runtime is reached.
      * Consider specifying a prune in the "pre" section and setting preempt to true.
