@@ -56,6 +56,10 @@ public class BundleFilterError extends BundleFilter {
     @FieldConfig(codable = true)
     private String type = "java.lang.RuntimeException";
 
+    /**
+     * Optionally suppress logging messages. Default is false.
+     */
+    @FieldConfig(codable = true)
     private boolean suppressLogging = false;
 
     @Override public void open() {
@@ -79,23 +83,5 @@ public class BundleFilterError extends BundleFilter {
          * Compiler doesn't know this.
          */
         return false;
-    }
-
-    @VisibleForTesting
-    BundleFilterError setMessage(String message) {
-        this.message = message;
-        return this;
-    }
-
-    @VisibleForTesting
-    BundleFilterError setType(String type) {
-        this.type = type;
-        return this;
-    }
-
-    @VisibleForTesting
-    BundleFilterError setSuppressLogging(boolean value) {
-        this.suppressLogging = value;
-        return this;
     }
 }

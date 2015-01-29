@@ -13,6 +13,10 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import java.io.IOException;
+
+import com.addthis.codec.config.Configs;
+
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -21,9 +25,9 @@ import static org.junit.Assert.assertTrue;
 public class TestBundleFilterError {
 
     @Test
-    public void testMessage() {
+    public void testMessage() throws IOException {
         boolean success = false;
-        BundleFilterError filter = new BundleFilterError().setMessage("hello world");
+        BundleFilterError filter = Configs.decodeObject(BundleFilterError.class, "error {message:\"hello world\"}");
         filter.open();
         try {
             filter.filter(null);
@@ -35,10 +39,11 @@ public class TestBundleFilterError {
     }
 
     @Test
-    public void testType() {
+    public void testType() throws IOException {
         boolean success = false;
-        BundleFilterError filter = new BundleFilterError()
-                .setMessage("hello world").setType("java.lang.NullPointerException");
+        BundleFilterError filter = Configs.decodeObject(BundleFilterError.class,
+                                                       "error {message:\"hello world\"," +
+                                                       "type:\"java.lang.NullPointerException\"}");
         filter.open();
         try {
             filter.filter(null);
@@ -51,10 +56,11 @@ public class TestBundleFilterError {
     }
 
     @Test
-    public void testBogusType() {
+    public void testBogusType() throws IOException {
         boolean success = false;
-        BundleFilterError filter = new BundleFilterError()
-                .setMessage("hello world").setType("blahblah").setSuppressLogging(true);
+        BundleFilterError filter = Configs.decodeObject(BundleFilterError.class,
+                                                       "error {message:\"hello world\"," +
+                                                       "type:\"blahblah\", suppressLogging:true}");
         filter.open();
         try {
             filter.filter(null);
@@ -65,5 +71,6 @@ public class TestBundleFilterError {
         }
         assertTrue(success);
     }
+
 
 }

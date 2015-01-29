@@ -57,6 +57,10 @@ public class ValueFilterError extends ValueFilter {
     @FieldConfig(codable = true)
     private String type = "java.lang.RuntimeException";
 
+    /**
+     * Optionally suppress logging messages. Default is false.
+     */
+    @FieldConfig(codable = true)
     private boolean suppressLogging = false;
 
     @Override public void open() {
@@ -80,23 +84,5 @@ public class ValueFilterError extends ValueFilter {
          * Compiler doesn't know this.
          */
         return value;
-    }
-
-    @VisibleForTesting
-    ValueFilterError setMessage(String message) {
-        this.message = message;
-        return this;
-    }
-
-    @VisibleForTesting
-    ValueFilterError setType(String type) {
-        this.type = type;
-        return this;
-    }
-
-    @VisibleForTesting
-    ValueFilterError setSuppressLogging(boolean value) {
-        this.suppressLogging = value;
-        return this;
     }
 }
