@@ -15,62 +15,41 @@ package com.addthis.hydra.data.filter.bundle;
 
 import java.io.IOException;
 
-import com.addthis.codec.config.Configs;
+import com.addthis.bundle.core.list.ListBundle;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
+
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static com.addthis.codec.config.Configs.decodeObject;
+import static org.hamcrest.CoreMatchers.anyOf;
+import static org.hamcrest.CoreMatchers.isA;
 
 public class TestBundleFilterError {
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
 
     @Test
-    public void testMessage() throws IOException {
-        boolean success = false;
-        BundleFilterError filter = Configs.decodeObject(BundleFilterError.class, "error {message:\"hello world\"}");
-        filter.open();
-        try {
-            filter.filter(null);
-        } catch (Exception ex) {
-            success = true;
-            assertEquals("hello world", ex.getMessage());
-        }
-        assertTrue(success);
+    public void type() throws IOException {
+        BundleFilterError filter = decodeObject(BundleFilterError.class,
+                                                "type: java.io.IOException, message: hello world");
+        thrown.expectCause(isA(IOException.class));
+        filter.filter(new ListBundle());
     }
 
     @Test
-    public void testType() throws IOException {
-        boolean success = false;
-        BundleFilterError filter = Configs.decodeObject(BundleFilterError.class,
-                                                       "error {message:\"hello world\"," +
-                                                       "type:\"java.lang.NullPointerException\"}");
-        filter.open();
-        try {
-            filter.filter(null);
-        } catch (Exception ex) {
-            success = true;
-            assertEquals("hello world", ex.getMessage());
-            assertEquals("java.lang.NullPointerException", ex.getClass().getCanonicalName());
-        }
-        assertTrue(success);
+    public void message() throws IOException {
+        BundleFilterError filter = decodeObject(BundleFilterError.class, "message:hello world");
+        thrown.expectMessage("hello world");
+        filter.filter(new ListBundle());
     }
 
-    @Test
-    public void testBogusType() throws IOException {
-        boolean success = false;
-        BundleFilterError filter = Configs.decodeObject(BundleFilterError.class,
-                                                       "error {message:\"hello world\"," +
-                                                       "type:\"blahblah\", suppressLogging:true}");
-        filter.open();
-        try {
-            filter.filter(null);
-        } catch (Exception ex) {
-            success = true;
-            assertEquals("hello world", ex.getMessage());
-            assertEquals("java.lang.RuntimeException", ex.getClass().getCanonicalName());
-        }
-        assertTrue(success);
+    @SuppressWarnings("unchecked") @Test
+    public void throwableTypeValidation() throws IOException {
+        thrown.expect(anyOf(isA((Class) IllegalArgumentException.class),
+                            isA((Class) JsonMappingException.class)));
+        decodeObject(BundleFilterError.class, "message:hello world, type:blahblah");
     }
-
-
 }

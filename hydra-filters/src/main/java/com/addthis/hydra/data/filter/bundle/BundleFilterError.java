@@ -13,17 +13,16 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
-import java.lang.reflect.Constructor;
-
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+import static com.fasterxml.jackson.annotation.JsonTypeInfo.As.EXTERNAL_PROPERTY;
+import static com.fasterxml.jackson.annotation.JsonTypeInfo.Id.MINIMAL_CLASS;
 
 /**
  * This {@link ValueFilter BundleFilter} <span class="hydra-summary">throws an exception</span>.
@@ -41,47 +40,14 @@ import org.slf4j.LoggerFactory;
  */
 public class BundleFilterError extends BundleFilter {
 
-    static final Logger log = LoggerFactory.getLogger(BundleFilterError.class);
-
-    /**
-     * A message to provide to the user. This field is required.
-     */
-    @FieldConfig(codable = true, required = true)
-    private String message;
-
-    /**
-     * Optionally specify the fully qualified type of the exception.
-     * Default is "java.lang.RuntimeException"
-     */
-    @FieldConfig(codable = true)
-    private String type = "java.lang.RuntimeException";
-
-    /**
-     * Optionally suppress logging messages. Default is false.
-     */
-    @FieldConfig(codable = true)
-    private boolean suppressLogging = false;
-
-    @Override public void open() {
-
-    }
+    @JsonTypeInfo(use = MINIMAL_CLASS, include = EXTERNAL_PROPERTY, property = "type",
+            defaultImpl = RuntimeException.class)
+    @JsonProperty private Throwable message;
 
     @Override public boolean filter(Bundle row) {
-        Exception exception = new RuntimeException(message);
-        try {
-            Class<?> clazz = Class.forName(type);
-            Constructor<?> constructor = clazz.getConstructor(String.class);
-            exception = (Exception) constructor.newInstance(message);
-        } catch (Exception ex) {
-            if (!suppressLogging) {
-                log.warn("Error while trying to instantiate {}", type, ex);
-            }
-        }
-        Throwables.propagate(exception);
-        /**
-         * Return statement is never reached.
-         * Compiler doesn't know this.
-         */
-        return false;
+        message.fillInStackTrace();
+        throw Throwables.propagate(message);
     }
+
+    @Override public void open() {}
 }
