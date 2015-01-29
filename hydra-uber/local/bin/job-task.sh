@@ -57,7 +57,6 @@ eval exec ${JAVA_CMD:-java} \
 	-Dtrak.event.debug=1 \
 	-Dzk.servers=${zkservers:-localhost:2181} \
 	-Djava.net.preferIPv4Stack=true \
-	-Dmapper.tree.type=0 \
 	${extargs} \
 	-javaagent:${jarpath} \
 	-jar ${jarpath} \
