@@ -971,6 +971,7 @@ public class Spawn implements Codable, AutoCloseable {
      * @return True if at least one host was removed
      */
     private boolean replaceDownHosts(JobTask task) {
+        checkArgument(isNewTask(task), "%s is not a new task, and so this method is not safe to call", task);
         Job job = getJob(task.getJobKey());
         if (job == null) {
             return false;
@@ -1143,9 +1144,6 @@ public class Spawn implements Codable, AutoCloseable {
             List<JobTaskDirectoryMatch> allMismatches = new ArrayList<>();
             // Check each task to see if any live/replica directories are missing or incorrectly placed
             for (JobTask task : job.getCopyOfTasks()) {
-                if (replaceDownHosts(task)) {
-                    continue;
-                }
                 List<JobTaskDirectoryMatch> directoryMismatches = matchTaskToDirectories(task, false);
                 if (!directoryMismatches.isEmpty()) {
                     // If there are issues with a task's directories, resolve them.
@@ -1219,7 +1217,6 @@ public class Spawn implements Codable, AutoCloseable {
         Set<String> expectedHostsWithTask = new HashSet<>();
         Set<String> expectedHostsMissingTask = new HashSet<>();
         Set<String> unexpectedHostsWithTask = new HashSet<>();
-        replaceDownHosts(task);
         for (HostState host : hostManager.listHostStatus(null)) {
             if (hostSuitableForReplica(host)) {
                 String hostId = host.getHostUuid();
