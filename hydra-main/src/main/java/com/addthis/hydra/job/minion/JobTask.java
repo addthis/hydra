@@ -850,8 +850,13 @@ public class JobTask implements Codable {
             bash.append("pid=$!\n");
             bash.append("echo ${pid} > " + jobPid.getCanonicalPath() + "\n");
             bash.append("exit=0\n");
+            String taskStartHeader = String.format(
+                    "Starting job/task %s/%s on host/uuid %s/%s - previous runs %s - pid ${pid} - max time %s - cmd %s",
+                    jobId, jobNode, minion.myHost, minion.getUUID(), runCount, kickMessage.getRunTime(), jobCommand);
+            bash.append(Minion.echoWithDate_cmd + taskStartHeader + "\n");
             bash.append("wait ${pid} || exit=$?\n");
             bash.append("echo ${exit} > " + jobDone.getCanonicalPath() + "\n");
+            bash.append(Minion.echoWithDate_cmd + "Exiting task with return value: ${exit}" + "\n");
             bash.append("exit ${exit}\n");
             bash.append(") >" + logOutTmp + " 2>" + logErrTmp + " &\n");
             Files.write(jobRun, Bytes.toBytes(bash.toString()), false);
@@ -897,7 +902,7 @@ public class JobTask implements Codable {
         minion.sendStatusMessage(new StatusTaskReplicate(minion.uuid, id, node, replicateAllBackups));
         try {
             jobDir = Files.initDirectory(new File(minion.rootDir, id + File.separator + node + File.separator + "live"));
-            log.warn("[task.execReplicate] replicating {}", jobDir.getPath());
+            log.info("[task.execReplicate] replicating {}", jobDir.getPath());
             File configDir = getConfigDir();
             Files.initDirectory(configDir);
             // create shell wrapper
@@ -933,7 +938,7 @@ public class JobTask implements Codable {
         require(testTaskIdle(), "task is not idle");
         minion.sendStatusMessage(new StatusTaskBackup(minion.uuid, id, node));
         try {
-            log.warn("[task.execBackup] backing up {}", jobDir.getPath());
+            log.info("[task.execBackup] backing up {}", jobDir.getPath());
             File configDir = getConfigDir();
             Files.initDirectory(configDir);
             backupSH = new File(configDir, "backup.sh");
