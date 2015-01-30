@@ -27,6 +27,7 @@ import com.addthis.hydra.data.tree.TreeNodeList;
 import com.addthis.hydra.data.tree.prop.DataTime;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.Runnables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -121,6 +122,9 @@ public class PathPrune extends PathElement {
         int kept = 0;
         int total = 0;
         try {
+            if (preempt && expensiveShutdownTest()) {
+                return;
+            }
             while (keyNodeItr.hasNext() && !(preempt && state.processorClosing())) {
                 DataTreeNode treeNode = keyNodeItr.next();
                 long nodeTime = getNodeTime(treeNode);
@@ -140,6 +144,24 @@ public class PathPrune extends PathElement {
             logger.info("Iterated through children of {}, deleted: {} kept: {}", root.getName(), deleted, kept);
             keyNodeItr.close();
         }
+    }
+
+    /**
+     * It is bad practice use the shutdown hook mechanism as a way
+     * to test whether the JVM is shutting down. However if we use
+     * this method exactly once then it is useful when writing tests
+     * to ensure that zero prune operations occur during shutdown.
+     *
+     * @return true iff the jvm is shutting down
+     */
+    private boolean expensiveShutdownTest() {
+        boolean shuttingDown = false;
+        try {
+            Runtime.getRuntime().addShutdownHook(new Thread(Runnables.doNothing(), "Path prune shutdown hook"));
+        } catch (IllegalStateException ex) {
+            shuttingDown = true;
+        }
+        return shuttingDown;
     }
 
     @VisibleForTesting long getNodeTime(DataTreeNode treeNode) {
