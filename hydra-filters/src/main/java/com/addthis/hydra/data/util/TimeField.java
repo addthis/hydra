@@ -51,8 +51,7 @@ public final class TimeField {
      * Specify "unixmillis:NN" for unix milliseconds
      * in base NN format. Otherwise interpret the
      * value as a
-     * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat
-     * .html">DateTimeFormat</a>.
+     * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html">DateTimeFormat</a>.
      * This field is required.
      */
     private final String format;
