@@ -1585,10 +1585,12 @@ function(
         handleKickButtonClick:function(event){
             event.preventDefault();
             var self = this;
-            var tempConfig = this.configModel.get("config");
-            var config = this.configModel.get("savedConfig");
-            if (tempConfig !== config) {
-                    Alertify.log.create("warn", "Warning: kicking job that may have unsaved changes!", 12000);
+            if (this.configModel) {
+                var tempConfig = this.configModel.get("config");
+                var config = this.configModel.get("savedConfig");
+                if (tempConfig !== config) {
+                        Alertify.log.create("warn", "Warning: kicking job that may have unsaved changes!", 12000);
+                }
             }
             var params = this.parameterCollection.toJSON();
             var confirmIfInvalid = function(){
@@ -2251,7 +2253,7 @@ function(
     var TaskDetailView = DetailView.extend({
         template: _.template(jobTaskDetailTemplate),
         initialize:function(options){
-            DetailView.prototype.initialize.apply(this,[]);
+            DetailView.prototype.initialize.apply(this,[options]);
             this.taskModel = options.taskModel;
             this.logModel = options.logModel;
             this.taskCollection = options.taskCollection;
