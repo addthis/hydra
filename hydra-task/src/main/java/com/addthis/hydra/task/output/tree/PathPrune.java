@@ -73,9 +73,9 @@ public class PathPrune extends PathElement {
      */
     @Nullable private final DateTimeFormatter nameFormat;
 
-    public PathPrune(@Nullable @JsonProperty("nameFormat") String nameFormatString) {
-        if (nameFormatString != null) {
-            this.nameFormat = DateTimeFormat.forPattern(nameFormatString);
+    public PathPrune(@Nullable @JsonProperty("nameFormat") String nameFormat) {
+        if (nameFormat != null) {
+            this.nameFormat = DateTimeFormat.forPattern(nameFormat);
         } else {
             this.nameFormat = null;
         }
