@@ -2672,6 +2672,9 @@ public class Spawn implements Codable, AutoCloseable {
         if (!schedulePrep(job)) {
             return false;
         }
+        if (job.getCountActiveTasks() == job.getTaskCount()) {
+            return false;
+        }
         job.setSubmitTime(JitterClock.globalTime());
         job.setStartTime(null);
         job.setEndTime(null);
@@ -2713,7 +2716,8 @@ public class Spawn implements Codable, AutoCloseable {
                 job.getWeeklyBackups(),
                 job.getMonthlyBackups(),
                 getTaskReplicaTargets(task, task.getAllReplicas()),
-                job.getAutoRetry()
+                job.getAutoRetry(),
+                task.getStarts()
                 );
         return kick;
     }
@@ -2738,6 +2742,7 @@ public class Spawn implements Codable, AutoCloseable {
             return false;
         }
         if (oldState == JobState.IDLE && job.getRunCount() <= task.getRunCount()) {
+            log.warn("Somehow a task ({}) was ALLOCATED from an IDLE, not queued or running, job ({})", task, job);
             job.incrementRunCount();
             job.setEndTime(null);
         }
@@ -2770,7 +2775,8 @@ public class Spawn implements Codable, AutoCloseable {
                 job.getWeeklyBackups(),
                 job.getMonthlyBackups(),
                 getTaskReplicaTargets(task, task.getAllReplicas()),
-                job.getAutoRetry()
+                job.getAutoRetry(),
+                task.getStarts()
         );
 
         // Creating a runnable to expand the job and send kick message outside of the main queue-iteration thread.

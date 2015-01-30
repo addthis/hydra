@@ -850,10 +850,12 @@ public class JobTask implements Codable {
             bash.append("pid=$!\n");
             bash.append("echo ${pid} > " + jobPid.getCanonicalPath() + "\n");
             bash.append("exit=0\n");
-            String taskStartHeader = String.format(
-                    "Starting job/task %s/%s on host/uuid %s/%s - previous runs %s - pid ${pid} - max time %s - cmd %s",
-                    jobId, jobNode, minion.myHost, minion.getUUID(), runCount, kickMessage.getRunTime(), jobCommand);
-            bash.append(Minion.echoWithDate_cmd + taskStartHeader + "\n");
+            String taskStartHeader = String.format("Starting job/task %s/%s on host/uuid %s/%s",
+                                                   jobId, jobNode, minion.myHost, minion.getUUID());
+            String taskStartHeaderExtended = String.format(
+                    " - job kicks %s - task runs (here/total) %s/%s - pid ${pid} - max time %s - cmd %s",
+                    kick.getRunCount(), runCount, kick.getStarts(), kickMessage.getRunTime(), jobCommand);
+            bash.append(Minion.echoWithDate_cmd + "\"" + taskStartHeader + taskStartHeaderExtended + "\"\n");
             bash.append("wait ${pid} || exit=$?\n");
             bash.append("echo ${exit} > " + jobDone.getCanonicalPath() + "\n");
             bash.append(Minion.echoWithDate_cmd + "Exiting task with return value: ${exit}" + "\n");

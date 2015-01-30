@@ -30,6 +30,7 @@ public class CommandTaskKick implements JobMessage {
     @FieldConfig private long runTime;
     @FieldConfig private Long submitTime;
     @FieldConfig private int runCount;
+    @FieldConfig private int starts;
     @FieldConfig private String config;
     @FieldConfig private String command;
     @FieldConfig private int hourlyBackups;
@@ -53,7 +54,7 @@ public class CommandTaskKick implements JobMessage {
     public CommandTaskKick(String host, JobKey jobKey, int priority, int jobNodes, long runTime,
                            int runCount, String config, String command, int hourlyBackups,
                            int dailyBackups, int weeklyBackups, int monthlyBackups, ReplicaTarget[] replicas,
-                           boolean autoRetry) {
+                           boolean autoRetry, int starts) {
         this.hostUuid = host;
         this.jobKey = jobKey;
         this.priority = priority;
@@ -61,6 +62,7 @@ public class CommandTaskKick implements JobMessage {
         this.runTime = runTime;
         this.submitTime = System.currentTimeMillis();
         this.runCount = runCount;
+        this.starts = starts;
         this.config = config;
         this.command = command;
         this.hourlyBackups = hourlyBackups;
@@ -160,5 +162,9 @@ public class CommandTaskKick implements JobMessage {
 
     public void setAutoRetry(boolean autoRetry) {
         this.autoRetry = autoRetry;
+    }
+
+    public int getStarts() {
+        return starts;
     }
 }
