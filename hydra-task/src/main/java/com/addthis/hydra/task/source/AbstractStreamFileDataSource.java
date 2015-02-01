@@ -328,7 +328,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 persistentStreamFileSource.init(getMarkDirFile(), shards);
             }
             if (filter != null) {
-                filter.open();
                 setSource(new StreamSourceFiltered(source, filter));
             }
             if (hash) {

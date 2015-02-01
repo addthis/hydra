@@ -20,7 +20,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">excludes matching values</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">excludes matching values</span>.
  * <p/>
  * <p>This filter contains a number of fields. Each field performs a different type of matching.
  * If more that one field is used, then the input must match for all of the specified fields in

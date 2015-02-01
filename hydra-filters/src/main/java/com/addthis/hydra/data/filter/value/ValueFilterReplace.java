@@ -16,13 +16,11 @@ package com.addthis.hydra.data.filter.value;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.addthis.codec.annotations.FieldConfig;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">performs string replacement with optional regular expression matching</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">performs string replacement with optional regular expression matching</span>.
  * <p/>
  * <p>The default behavior is to perform literal string replacement. If the {@link #regex regex} field
  * is enabled, then the find pattern is interpreted as a regular expression.
@@ -68,9 +66,6 @@ public class ValueFilterReplace extends StringFilter {
             this.replace = (replace != null) ? Matcher.quoteReplacement(replace) : null;
         }
     }
-
-    @Override
-    public void open() { }
 
     @Override
     public String filter(String value) {

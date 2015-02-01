@@ -160,9 +160,6 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
         if (keyAccess == null) {
             keyAccess = conf.key;
             filter = conf.filter;
-            if (filter != null) {
-                filter.open();
-            }
         }
         ValueObject val = keyAccess.getValue(state.getBundle());
         if (val != null) {

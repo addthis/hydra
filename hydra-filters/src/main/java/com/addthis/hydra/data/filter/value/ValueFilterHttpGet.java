@@ -29,9 +29,11 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Multidict;
 
+import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.Codec;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.common.hash.MD5HashFunction;
 
@@ -41,7 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class ValueFilterHttpGet extends StringFilter {
+public class ValueFilterHttpGet extends StringFilter implements SuperCodable {
 
     private static final Logger log   = LoggerFactory.getLogger(ValueFilterHttpGet.class);
     private static final Codec  codec = CodecJSON.INSTANCE;
@@ -92,7 +94,7 @@ public class ValueFilterHttpGet extends StringFilter {
     }
 
     @Override
-    public void open() {
+    public void postDecode() {
         if (persist) {
             persistTo = Files.initDirectory(persistDir);
             LinkedList<CacheObject> list = new LinkedList<>();
@@ -120,6 +122,18 @@ public class ValueFilterHttpGet extends StringFilter {
                 }
                 cache.put(cached.key, cached);
             }
+        }
+    }
+
+    @Override public void preEncode() {}
+
+    private static final class ValidationOnly extends ValueFilterHttpGet {
+        @Override public void postDecode() {
+            // intentionally do nothing
+        }
+
+        @Override public ValueObject filter(ValueObject value) {
+            throw new UnsupportedOperationException("This class is only intended for use in construction validation.");
         }
     }
 

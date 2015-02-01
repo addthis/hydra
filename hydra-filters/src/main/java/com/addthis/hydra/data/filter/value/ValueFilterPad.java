@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.value;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">applies left or right string padding</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">applies left or right string padding</span>.
  * <p/>
  * <p>If the input string is shorter than the padding string, then the input
  * string is lengthened by filling in the characters from the padding. For example,
@@ -47,8 +47,6 @@ public class ValueFilterPad extends StringFilter {
      */
     @FieldConfig(codable = true)
     private String right;
-
-    @Override public void open() { }
 
     @Override
     public String filter(String v) {

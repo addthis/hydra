@@ -22,7 +22,7 @@ import java.nio.file.Paths;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">performs glob expression matching on the input string</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">performs glob expression matching on the input string</span>.
  * <p/>
  * <p>Example:</p>
  * <pre>
@@ -40,8 +40,6 @@ public class ValueFilterGlob extends StringFilter {
     public ValueFilterGlob(@JsonProperty(value = "pattern", required = true) String pattern) {
         compiled = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
     }
-
-    @Override public void open() { }
 
     @Override
     @Nullable

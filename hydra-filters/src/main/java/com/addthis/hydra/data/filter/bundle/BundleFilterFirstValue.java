@@ -41,7 +41,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name first
  */
-public class BundleFilterFirstValue extends BundleFilter {
+public class BundleFilterFirstValue implements BundleFilter {
 
     /**
      * An array of bundle field names to search. This field is required.
@@ -61,9 +61,6 @@ public class BundleFilterFirstValue extends BundleFilter {
      */
     @FieldConfig(codable = true)
     private AutoField which;
-
-    @Override
-    public void open() {}
 
     @Override
     public boolean filter(Bundle bundle) {

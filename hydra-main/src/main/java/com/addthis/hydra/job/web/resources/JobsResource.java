@@ -40,6 +40,8 @@ import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.codec.config.Configs;
+import com.addthis.codec.jackson.CodecJackson;
+import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.codec.plugins.PluginRegistry;
 import com.addthis.hydra.job.IJob;
@@ -96,10 +98,21 @@ public class JobsResource {
 
     private final Spawn spawn;
     private final JobRequestHandler requestHandler;
+    private final CodecJackson validationCodec;
 
     public JobsResource(Spawn spawn, JobRequestHandler requestHandler) {
         this.spawn = spawn;
         this.requestHandler = requestHandler;
+        CodecJackson defaultCodec = Jackson.defaultCodec();
+        Config defaultConfig = defaultCodec.getGlobalDefaults();
+        if (defaultConfig.hasPath("hydra.validation")) {
+            Config validationConfig = defaultConfig.getConfig("hydra.validation")
+                                                   .withFallback(defaultConfig)
+                                                   .resolve();
+            validationCodec = defaultCodec.withConfig(validationConfig);
+        } else {
+            validationCodec = defaultCodec;
+        }
     }
 
     @GET
@@ -808,7 +821,7 @@ public class JobsResource {
         String message = null;
         int lineNumber = 1;
         try {
-            TaskRunner.makeTask(expandedConfig);
+            TaskRunner.makeTask(expandedConfig, validationCodec);
             return Response.ok(new JSONObject().put("result", "valid").toString()).build();
         } catch (ConfigException ex) {
             ConfigOrigin exceptionOrigin = ex.origin();

@@ -18,6 +18,7 @@ import java.io.IOException;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 
 import org.apache.commons.io.FileUtils;
 
@@ -25,21 +26,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class CloseableBundleFilterDelete extends CloseableBundleFilter {
+public class CloseableBundleFilterDelete implements SuperCodable, CloseableBundleFilter {
+    private static final Logger log = LoggerFactory.getLogger(CloseableBundleFilterDelete.class);
 
     @FieldConfig(codable = true, required = true)
     private String fileName;
     @FieldConfig(codable = true)
     private boolean pre = false;
 
-    private Logger log = LoggerFactory.getLogger(CloseableBundleFilterDelete.class);
-
-    @Override
-    public void open() {
+    @Override public void postDecode() {
         if (pre) {
             delete(fileName);
         }
     }
+
+    @Override public void preEncode() {}
 
     @Override
     public void close() {
@@ -67,4 +68,5 @@ public class CloseableBundleFilterDelete extends CloseableBundleFilter {
     public boolean filter(Bundle row) {
         return true;
     }
+
 }

@@ -23,8 +23,9 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.query.AbstractRowOp;
 
-import static com.addthis.codec.config.Configs.decodeObject;
 import io.netty.channel.ChannelProgressivePromise;
+
+import static com.addthis.codec.config.Configs.decodeObject;
 
 public class OpFilter extends AbstractRowOp {
 
@@ -34,7 +35,6 @@ public class OpFilter extends AbstractRowOp {
         super(queryPromise);
         try {
             filter = decodeObject(BundleFilter.class, args);
-            filter.open();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

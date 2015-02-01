@@ -171,10 +171,6 @@ public abstract class AbstractOutputWriter {
             format.open();
         }
 
-        if (filter != null) {
-            filter.open();
-        }
-
         /**
          * The next several lines of logic are to handle
          * ridiculous input values for maxBundles and bufferSizeRatio.

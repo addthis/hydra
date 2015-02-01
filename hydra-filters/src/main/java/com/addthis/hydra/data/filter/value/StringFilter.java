@@ -18,7 +18,7 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 
 
-public abstract class StringFilter extends ValueFilter {
+public abstract class StringFilter extends AbstractValueFilter {
 
     public abstract String filter(String value);
 

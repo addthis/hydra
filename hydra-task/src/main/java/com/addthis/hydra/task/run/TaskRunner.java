@@ -73,6 +73,10 @@ public class TaskRunner {
         }
     }
 
+    public static TaskRunnable makeTask(String configString) throws JsonProcessingException, IOException {
+        return makeTask(configString, Jackson.defaultCodec());
+    }
+
     /**
      * Creates a TaskRunnable using CodecConfig and a little custom handling. At the root
      * level object, if there is a field named "global", then that sub tree is hoisted
@@ -81,7 +85,8 @@ public class TaskRunner {
      * properties for the purposes of variable substitution. This will not merge them entirely
      * though and so the job config will be otherwise unaffected.
      */
-    public static TaskRunnable makeTask(String configString) throws JsonProcessingException, IOException {
+    public static TaskRunnable makeTask(String configString, CodecJackson defaultCodec)
+            throws JsonProcessingException, IOException {
         String subbedConfigString = subAt(configString);
         Config config = ConfigFactory.parseString(subbedConfigString,
                                                   ConfigParseOptions.defaults().setOriginDescription("job.conf"));
@@ -94,11 +99,11 @@ public class TaskRunner {
                                           .withFallback(ConfigFactory.load())
                                           .resolve();
             jobConfig = jobConfig.resolveWith(globalDefaults);
-            codec = Jackson.defaultCodec().withConfig(globalDefaults);
+            codec = defaultCodec.withConfig(globalDefaults);
         } else {
             jobConfig = jobConfig.resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true))
                                  .resolveWith(ConfigFactory.load());
-            codec = Jackson.defaultCodec();
+            codec = defaultCodec;
         }
         return codec.decodeObject(TaskRunnable.class, jobConfig);
     }

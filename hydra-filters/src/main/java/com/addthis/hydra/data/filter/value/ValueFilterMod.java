@@ -20,7 +20,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns the modulo of the input</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns the modulo of the input</span>.
  * <p/>
  * <p>Example:</p>
  * <pre>
@@ -30,7 +30,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name mod
  */
-public class ValueFilterMod extends ValueFilter {
+public class ValueFilterMod extends AbstractValueFilter {
 
     /**
      * The modulus of the operation.
@@ -43,8 +43,6 @@ public class ValueFilterMod extends ValueFilter {
      */
     @FieldConfig(codable = true)
     private boolean abs = true;
-
-    @Override public void open() { }
 
     @Override
     public ValueObject filterValue(ValueObject value) {

@@ -23,7 +23,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">performs regular expression matching on the input string</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">performs regular expression matching on the input string</span>.
  * <p/>
  * <p>The default behavior is to perform regular expression matching on the input string,
  * and return an array with all the substrings that match to the regular expression.
@@ -55,7 +55,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name regex
  */
-public class ValueFilterRegex extends ValueFilter {
+public class ValueFilterRegex extends AbstractValueFilter {
 
     /**
      * Regular expression to match against. This field is required.
@@ -78,9 +78,6 @@ public class ValueFilterRegex extends ValueFilter {
         replace = r;
         return this;
     }
-
-    @Override
-    public void open() {}
 
     @Override
     public ValueObject filterValue(ValueObject value) {

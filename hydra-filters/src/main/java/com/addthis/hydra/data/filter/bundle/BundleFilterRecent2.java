@@ -41,7 +41,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name recent2
  */
-public final class BundleFilterRecent2 extends BundleFilter {
+public final class BundleFilterRecent2 implements BundleFilter {
 
     @FieldConfig(codable = true, required = true)
     private AutoField       time;
@@ -64,9 +64,6 @@ public final class BundleFilterRecent2 extends BundleFilter {
 
     @SuppressWarnings("unchecked")
     private HotMap<String, Mark> cache = new HotMap<>(new HashMap());
-
-    @Override
-    public void open() { }
 
     @Override
     public boolean filter(Bundle bundle) {

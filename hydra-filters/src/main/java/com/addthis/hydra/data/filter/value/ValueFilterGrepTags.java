@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Matches values to extracted tags from raw html.
  */
-public class ValueFilterGrepTags extends ValueFilter {
+public class ValueFilterGrepTags extends AbstractValueFilter {
     private static final Logger log = LoggerFactory.getLogger(ValueFilterGrepTags.class);
 
     /** Set of values to match against. */
@@ -51,8 +51,6 @@ public class ValueFilterGrepTags extends ValueFilter {
     @JsonProperty private int logEveryN = 100;
 
     private int parserErrors = 0;
-
-    @Override public void open() { }
 
     @Override
     @Nullable

@@ -23,7 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">converts a number from one base to another</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">converts a number from one base to another</span>.
  * <p/>
  * <p>Example:</p>
  * <pre>
@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name intbase
  */
-public class ValueFilterIntBase extends ValueFilter {
+public class ValueFilterIntBase extends AbstractValueFilter {
 
     private static final Logger log = LoggerFactory.getLogger(ValueFilterIntBase.class);
 
@@ -59,8 +59,6 @@ public class ValueFilterIntBase extends ValueFilter {
      */
     @FieldConfig(codable = true)
     private boolean inDouble = false;
-
-    @Override public void open() { }
 
     @Override
     public ValueObject filterValue(ValueObject value) {

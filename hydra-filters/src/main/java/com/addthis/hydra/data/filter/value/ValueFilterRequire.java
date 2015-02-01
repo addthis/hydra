@@ -19,7 +19,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">filters the input based on one or more string-matching criteria</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">filters the input based on one or more string-matching criteria</span>.
  * <p/>
  * <p>One or more of the following filtering fields can be used:</p>
  * <p>
@@ -74,4 +74,5 @@ public class ValueFilterRequire extends AbstractMatchStringFilter {
               urlRetries,
               false);
     }
+
 }

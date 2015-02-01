@@ -35,7 +35,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name concat
  */
-public class BundleFilterConcat extends BundleFilter {
+public class BundleFilterConcat implements BundleFilter {
 
     /** An array of fields to concatenate. This field is required. */
     @FieldConfig(required = true) private AutoField[] in;
@@ -45,9 +45,6 @@ public class BundleFilterConcat extends BundleFilter {
 
     /** An optional separator to place in between elements of the output string. */
     @FieldConfig private String join;
-
-    @Override
-    public void open() { }
 
     @Override
     public boolean filter(Bundle bundle) {

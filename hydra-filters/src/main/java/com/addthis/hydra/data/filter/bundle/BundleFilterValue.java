@@ -31,7 +31,7 @@ import com.addthis.hydra.data.filter.value.ValueFilter;
  * @user-reference
  * @hydra-name value
  */
-public class BundleFilterValue extends BundleFilter {
+public class BundleFilterValue implements BundleFilter {
 
     /**
      * The value to assign into a bundle field. This field is required.
@@ -56,13 +56,6 @@ public class BundleFilterValue extends BundleFilter {
      */
     @FieldConfig(codable = true)
     private boolean nullFail = true;
-
-    @Override
-    public void open() {
-        if (filter != null) {
-            filter.open();
-        }
-    }
 
     @Override
     public boolean filter(Bundle bundle) {

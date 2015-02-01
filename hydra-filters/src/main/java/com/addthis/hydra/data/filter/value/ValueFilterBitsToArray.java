@@ -20,7 +20,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">converts the input into an array of
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">converts the input into an array of
  * integers</span>.
  * <p/>
  * <p>If the <i>n</i><sup>th</sup> bit is set in the bitwise representation of
@@ -35,7 +35,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name bit-split
  */
-public class ValueFilterBitsToArray extends ValueFilter {
+public class ValueFilterBitsToArray extends AbstractValueFilter {
 
     /**
      * If non-zero, then only return the bits from the mask.
@@ -71,9 +71,6 @@ public class ValueFilterBitsToArray extends ValueFilter {
         }
         return ret;
     }
-
-    @Override
-    public void open() {}
 
     @Override
     public ValueObject filterValue(ValueObject value) {

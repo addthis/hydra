@@ -24,7 +24,7 @@ public class TestValueFilterMap {
 
     private String mapFilter(String val, HashMap<String, String> map, String mapURL, boolean tonull) {
         ValueFilterMap filter = new ValueFilterMap().setMap(map).setMapURL(mapURL).setToNull(tonull);
-        filter.open();
+        filter.postDecode();
         return filter.filter(val);
     }
 

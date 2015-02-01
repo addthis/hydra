@@ -14,7 +14,6 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.hydra.data.filter.value.ValueFilter;
 
 import com.google.common.base.Throwables;
 
@@ -25,7 +24,7 @@ import static com.fasterxml.jackson.annotation.JsonTypeInfo.As.EXTERNAL_PROPERTY
 import static com.fasterxml.jackson.annotation.JsonTypeInfo.Id.MINIMAL_CLASS;
 
 /**
- * This {@link ValueFilter BundleFilter} <span class="hydra-summary">throws an exception</span>.
+ * This {@link BundleFilter} <span class="hydra-summary">throws an exception</span>.
  * <p>This filter can be used either by developers when testing out the error handling
  * of the system or it can be used by users when they want to explicitly trigger the
  * error of a job.
@@ -38,7 +37,7 @@ import static com.fasterxml.jackson.annotation.JsonTypeInfo.Id.MINIMAL_CLASS;
  * @user-reference
  * @hydra-name error
  */
-public class BundleFilterError extends BundleFilter {
+public class BundleFilterError implements BundleFilter {
 
     @JsonTypeInfo(use = MINIMAL_CLASS, include = EXTERNAL_PROPERTY, property = "type",
             defaultImpl = RuntimeException.class)
@@ -49,5 +48,4 @@ public class BundleFilterError extends BundleFilter {
         throw Throwables.propagate(message);
     }
 
-    @Override public void open() {}
 }

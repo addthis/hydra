@@ -52,7 +52,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  * @user-reference
  * @hydra-name append
  */
-public class BundleFilterAppend extends BundleFilter {
+public class BundleFilterAppend implements BundleFilter {
 
     @JsonIgnore
     public BundleFilterAppend setValues(ArrayList<String> values) {
@@ -131,13 +131,6 @@ public class BundleFilterAppend extends BundleFilter {
      */
     @FieldConfig(codable = true)
     private int size = 5;
-
-    @Override
-    public void open() {
-        if (filter != null) {
-            filter.open();
-        }
-    }
 
     private boolean contains(ValueArray arr, ValueObject obj) {
         for (int i = 0; i < arr.size(); i++) {

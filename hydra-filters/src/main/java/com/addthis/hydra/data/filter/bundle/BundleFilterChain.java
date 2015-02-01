@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name chain
  */
-public class BundleFilterChain extends BundleFilter {
+public class BundleFilterChain implements BundleFilter {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilterChain.class);
 
@@ -66,13 +66,6 @@ public class BundleFilterChain extends BundleFilter {
     private long debugMaxBundles = 100;
 
     private final AtomicLong bundleCounter = new AtomicLong();
-
-    @Override
-    public void open() {
-        for (BundleFilter f : filter) {
-            f.open();
-        }
-    }
 
     @Override
     public boolean filter(Bundle row) {

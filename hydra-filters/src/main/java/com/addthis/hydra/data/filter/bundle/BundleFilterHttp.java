@@ -31,6 +31,7 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.codec.Codec;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.common.hash.MD5HashFunction;
 import com.addthis.hydra.data.filter.value.ValueFilterHttpGet;
@@ -48,7 +49,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name http
  */
-public class BundleFilterHttp extends BundleFilter {
+public class BundleFilterHttp extends AbstractBundleFilterHttp implements SuperCodable {
 
     public static BundleFilterHttp create(BundleFilterTemplate url, String set) {
         BundleFilterHttp bfh = new BundleFilterHttp();
@@ -60,62 +61,11 @@ public class BundleFilterHttp extends BundleFilter {
     private static final Logger log   = LoggerFactory.getLogger(BundleFilterHttp.class);
     private static final Codec  codec = CodecJSON.INSTANCE;
 
-    @FieldConfig(codable = true)
-    private CacheConfig          cache;
-    @FieldConfig(codable = true)
-    private HttpConfig           http;
-    @FieldConfig(codable = true)
-    private String               defaultValue;
-    @FieldConfig(codable = true)
-    private boolean              trace;
-    @FieldConfig(codable = true)
-    private BundleFilterTemplate url;
-    @FieldConfig(codable = true)
-    private AutoField            set;
-
-    private File                        persistTo;
-
+    private File persistTo;
     private HotMap<String, CacheObject> ocache;
 
-    public static class CacheConfig {
 
-        @FieldConfig(codable = true)
-        private int size = 1000;
-        @FieldConfig(codable = true)
-        private long   age;
-        @FieldConfig(codable = true)
-        private String dir;
-    }
-
-    public static class HttpConfig {
-
-        @FieldConfig(codable = true)
-        private int  timeout      = 60000;
-        @FieldConfig(codable = true)
-        private int  retries      = 1;
-        @FieldConfig(codable = true)
-        private long retryTimeout = 1000;
-    }
-
-    public static class CacheObject implements Codable, Comparable<CacheObject> {
-
-        @FieldConfig(codable = true)
-        private long   time;
-        @FieldConfig(codable = true)
-        private String key;
-        @FieldConfig(codable = true)
-        private String data;
-
-        private String hash;
-
-        @Override
-        public int compareTo(CacheObject o) {
-            return (int) (time - o.time);
-        }
-    }
-
-    @Override
-    public void open() {
+    @Override public void postDecode() {
         if (cache == null) {
             cache = new CacheConfig();
         }
@@ -151,8 +101,24 @@ public class BundleFilterHttp extends BundleFilter {
                 ocache.put(cached.key, cached);
             }
         }
-        if (url != null) {
-            url.open();
+    }
+
+    @Override public void preEncode() {}
+
+    public static class CacheObject implements Codable, Comparable<CacheObject> {
+
+        @FieldConfig(codable = true)
+        private long   time;
+        @FieldConfig(codable = true)
+        private String key;
+        @FieldConfig(codable = true)
+        private String data;
+
+        private String hash;
+
+        @Override
+        public int compareTo(CacheObject o) {
+            return (int) (time - o.time);
         }
     }
 
