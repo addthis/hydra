@@ -95,10 +95,15 @@ public class PathPrune extends PathElement {
     // whatever is getting the TreeNodeList back?
     @Override
     public TreeNodeList getNextNodeList(final TreeMapState state) {
+        TreeNodeList result = TreeMapState.empty();
         long now = JitterClock.globalTime();
         DataTreeNode root = state.current();
+        if (preempt && (state.processorClosing() || expensiveShutdownTest())) {
+            log.info("Path pruning is not executing due to JVM shutdown.");
+            return result;
+        }
         findAndPruneChildren(state, root, now, relativeDown);
-        return TreeMapState.empty();
+        return result;
     }
 
     public void findAndPruneChildren(final TreeMapState state, final DataTreeNode root, long now, int depth) {
@@ -122,9 +127,6 @@ public class PathPrune extends PathElement {
         int kept = 0;
         int total = 0;
         try {
-            if (preempt && (state.processorClosing() || expensiveShutdownTest())) {
-                return;
-            }
             while (keyNodeItr.hasNext() && !(preempt && state.processorClosing())) {
                 DataTreeNode treeNode = keyNodeItr.next();
                 long nodeTime = getNodeTime(treeNode);
