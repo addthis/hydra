@@ -44,9 +44,9 @@ class ConcurrentTreeDeletionTask implements Runnable {
                 entry = dataTreeNodes.nextTrashNode();
                 if (entry != null) {
                     ConcurrentTreeNode node = entry.getValue();
-                    dataTreeNodes.deleteSubTree(node, -1);
                     ConcurrentTreeNode prev = dataTreeNodes.source.remove(entry.getKey());
                     if (prev != null) {
+                        dataTreeNodes.deleteSubTree(node, -1, terminationCondition);
                         dataTreeNodes.treeTrashNode.incrementCounter();
                     }
                 }

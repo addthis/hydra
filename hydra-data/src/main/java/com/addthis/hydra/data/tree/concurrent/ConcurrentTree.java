@@ -363,13 +363,13 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
          * otherwise already been purged from backing store by release() in the
          * TreeCache.
          */
-        assert (node.hasNodes());
-        assert (!node.isAlias());
+        assert node.hasNodes();
+        assert !node.isAlias();
         int nodeDB = treeTrashNode.nodeDB();
         int next = treeTrashNode.incrementNodeCount();
         DBKey key = new DBKey(nodeDB, Raw.get(Bytes.toBytes(next)));
         source.put(key, node);
-        if (log.isTraceEnabled()) log.trace("[trash.mark] " + next + " --> " + treeTrashNode);
+        log.trace("[trash.mark] {} --> {}", next, treeTrashNode);
     }
 
     @SuppressWarnings("unchecked") IPageDB.Range<DBKey, ConcurrentTreeNode> fetchNodeRange(int db) {
@@ -686,20 +686,22 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
      * @param rootNode root of the subtree to delete
      * @param counter if non-negative then tally the nodes that have been deleted
      */
-    long deleteSubTree(ConcurrentTreeNode rootNode, long counter) {
+    long deleteSubTree(ConcurrentTreeNode rootNode, long counter, BooleanSupplier terminationCondition) {
         int nodeDB = rootNode.nodeDB();
         IPageDB.Range<DBKey, ConcurrentTreeNode> range = fetchNodeRange(nodeDB);
+        DBKey endRange;
+        boolean reschedule;
         try {
-            while (range.hasNext()) {
+            while (range.hasNext() && !terminationCondition.getAsBoolean()) {
                 // do not emit logging when counter is negative
-                if ((counter >= 0) && (++counter % deletionLogInterval == 0)) {
-                    log.info("Deleted " + counter + " nodes from the tree.");
+                if ((counter >= 0) && ((++counter % deletionLogInterval) == 0)) {
+                    log.info("Deleted {} nodes from the tree.", counter);
                 }
                 Map.Entry<DBKey, ConcurrentTreeNode> entry = range.next();
                 ConcurrentTreeNode next = entry.getValue();
 
                 if (next.hasNodes() && !next.isAlias()) {
-                    counter = deleteSubTree(next, counter);
+                    counter = deleteSubTree(next, counter, terminationCondition);
                 }
                 String name = entry.getKey().rawKey().toString();
                 CacheKey key = new CacheKey(nodeDB, name);
@@ -711,10 +713,20 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                     cacheNode.markDeleted();
                 }
             }
+            if (range.hasNext()) {
+                endRange = range.next().getKey();
+                reschedule = true;
+            } else {
+                endRange = new DBKey(nodeDB + 1);
+                reschedule = false;
+            }
         } finally {
             range.close();
         }
-        source.remove(new DBKey(nodeDB), new DBKey(nodeDB + 1), false);
+        source.remove(new DBKey(nodeDB), endRange, false);
+        if (reschedule) {
+            markForChildDeletion(rootNode);
+        }
         return counter;
     }
 
