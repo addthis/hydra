@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import java.nio.file.Path;
@@ -153,6 +154,14 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
 
     /**
      * Optional sample rate for applying
+     * the {@link #pre pre} paths. If greater
+     * than one than apply once every N runs.
+     * Default is one.
+     */
+    @FieldConfig private int preRate = 1;
+
+    /**
+     * Optional sample rate for applying
      * the {@link #post post} paths. If greater
      * than one than apply once every N runs.
      * Default is one.
@@ -196,6 +205,11 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
 
     private final ConcurrentMap<String, BundleField> fields    = new ConcurrentHashMap<>();
     private final IndexHash<PathElement[]>           pathIndex = new IndexHash();
+
+    /**
+     * If true then jvm shutdown process has begun.
+     */
+    private final AtomicBoolean closing = new AtomicBoolean(false);
 
     private DataTree tree;
     private Bench    bench;
@@ -262,9 +276,15 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         return pathIndex.getIndex(path);
     }
 
+    /**
+     * @throws IllegalStateException If the virtual machine is already in the process
+     *          of shutting down
+     */
     @Override
     public void open() {
         try {
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> closing.set(true), "TreeMapper shutdown hook"));
+
             mapstats = new TreeMapperStats();
             resolve();
 
@@ -286,10 +306,12 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
 
             startTime = System.currentTimeMillis();
 
+            tree.foregroundNodeDeletion(closing::get);
+
             if (pre != null) {
-                log.warn("pre-chain: {}", pre);
-                processBundle(new KVBundle(), pre);
+                sampleOperation(pre, preRate, "pre.sample", "pre");
             }
+
         } catch (Exception ex) {
             Throwables.propagate(ex);
         }
@@ -347,7 +369,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
                 bundleTime = getBundleTime(bundle);
             } catch (NumberFormatException nfe) {
                 log.warn("error reading TimeField, : {}\nbundle: {}", timeField.getField(), bundle);
-                // in case of junk data, if the source is flexable we'll continue processing bundles
+                // in case of junk data, if the source is flexible we'll continue processing bundles
                 // until maxErrors is reached
                 if (bundleErrors++ < maxErrors) {
                     log.warn("bundleErrors:{} is less than max errors: {}, skipping this bundle", bundleErrors,
@@ -390,6 +412,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
     private void processPath(Bundle bundle, PathElement[] path) {
         try {
             TreeMapState ps = new TreeMapState(this, tree, path, bundle);
+            ps.process();
             processNodes.addAndGet(ps.touched());
         } catch (RuntimeException ex) {
             throw ex;
@@ -478,33 +501,11 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         try {
             boolean doPost = false;
             if (post != null) {
-                int sample = 0;
-                if (postRate > 1) {
-                    File sampleFile = new File("post.sample");
-                    if (Files.isFileReadable("post.sample")) {
-                        try {
-                            sample = Integer.parseInt(Bytes.toString(Files.read(sampleFile)));
-                            sample = (sample + 1) % postRate;
-                        } catch (NumberFormatException ignored) {
-
-                        }
-                    }
-                    doPost = (sample == 0);
-                    Files.write(sampleFile, Bytes.toBytes(Integer.toString(sample)), false);
-                } else {
-                    doPost = true;
-                }
-                if (doPost) {
-                    log.warn("post-chain: {}", post);
-                    processBundle(new KVBundle(), post);
-                    processed.incrementAndGet();
-                } else {
-                    log.warn("skipping post-chain: {}. Sample rate is {} out of {}", post, sample, postRate);
-                }
+                doPost = sampleOperation(post, postRate, "post.sample", "post");
             }
             if (outputs != null) {
                 for (PathOutput output : outputs) {
-                    log.warn("output: {}", output);
+                    log.info("output: {}", output);
                     output.exec(tree);
                 }
             }
@@ -535,6 +536,50 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    /**
+     * Conditionally perform the array of path element operations. If {@code rate} is
+     * greater than 1 then test the contents of {@code filename} to determine whether
+     * to run the path element operations. Supply an empty bundle as input to the path
+     * operations.
+     *
+     * @param op         array of path operations that may be run
+     * @param rate       if greater than 1 then test the sample file
+     * @param filename   name of the sample file
+     * @param message    output prefix for logging
+     * @return           true iff path elements were executed
+     * @throws IOException
+     */
+    private boolean sampleOperation(PathElement[] op, int rate, String filename, String message) throws IOException {
+        boolean perform;
+        int sample = 0;
+        if (rate > 1) {
+            File sampleFile = new File(filename);
+            if (sampleFile.exists() && sampleFile.isFile() && sampleFile.length() > 0) {
+                try {
+                    sample = Integer.parseInt(Bytes.toString(Files.read(sampleFile)));
+                    sample = (sample + 1) % rate;
+                } catch (NumberFormatException ignored) {
+
+                }
+            }
+            perform = (sample == 0);
+            Files.write(sampleFile, Bytes.toBytes(Integer.toString(sample)), false);
+        } else {
+            perform = true;
+        }
+        if (perform) {
+            log.info("{}-chain: {}", message, op);
+            processBundle(new KVBundle(), op);
+        } else {
+            log.info("skipping {}-chain: {}. Sample rate is {} out of {}", message, op, sample, rate);
+        }
+        return perform;
+    }
+
+    public boolean isClosing() {
+        return closing.get();
     }
 
     @Override

@@ -15,6 +15,8 @@ package com.addthis.hydra.data.tree;
 
 import java.io.IOException;
 
+import java.util.function.BooleanSupplier;
+
 import com.addthis.hydra.store.db.CloseOperation;
 
 public interface DataTree extends DataTreeNode {
@@ -36,4 +38,16 @@ public interface DataTree extends DataTreeNode {
     public int getCacheSize();
 
     public double getCacheHitRate();
+
+    /**
+     * Delete from the backing storage all nodes that have been moved to be
+     * children of the trash node where they are waiting deletion. Also delete
+     * all subtrees of these nodes. After deleting each subtree then test
+     * the provided {@param terminationCondition}. If it returns true then
+     * stop deletion.
+     *
+     * @param terminationCondition invoked between subtree deletions to
+     *                             determine whether to return from method.
+     */
+    public void foregroundNodeDeletion(BooleanSupplier terminationCondition);
 }

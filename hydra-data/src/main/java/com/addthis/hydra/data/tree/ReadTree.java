@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
 
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Parameter;
@@ -500,6 +501,11 @@ public final class ReadTree implements DataTree {
     void testIntegrity() {
         ReadExternalPagedStore store = source.getReadEps();
         store.testIntegrity();
+    }
+
+    @Override
+    public void foregroundNodeDeletion(BooleanSupplier terminationCondition) {
+        throw new UnsupportedOperationException();
     }
 
 }

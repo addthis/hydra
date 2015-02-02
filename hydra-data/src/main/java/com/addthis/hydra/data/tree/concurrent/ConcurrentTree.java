@@ -28,6 +28,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 
 import com.addthis.basis.concurrentlinkedhashmap.MediatedEvictionConcurrentHashMap;
 import com.addthis.basis.util.Bytes;
@@ -57,6 +58,7 @@ import com.addthis.hydra.store.util.MeterFileLogger.MeterDataSource;
 import com.addthis.hydra.store.util.NamedThreadFactory;
 import com.addthis.hydra.store.util.Raw;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.AtomicDouble;
 
 import com.yammer.metrics.Metrics;
@@ -182,7 +184,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 new NamedThreadFactory(scope + "-deletion-", true));
 
         for (int i = 0; i < numDeletionThreads; i++) {
-            deletionThreadPool.scheduleAtFixedRate(new BackgroundDeletionTask(this),
+            deletionThreadPool.scheduleAtFixedRate(new ConcurrentTreeDeletionTask(this, closed::get),
                     i,
                     deletionThreadSleepMillis,
                     TimeUnit.MILLISECONDS);
@@ -391,14 +393,21 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     /**
      * Package-level visibility is for testing purposes only.
      */
+    @VisibleForTesting
     void waitOnDeletions() {
         shutdownDeletionThreadPool();
-        processTrash();
+        synchronized (treeTrashNode) {
+            if (trashIterator != null) {
+                trashIterator.close();
+                trashIterator = null;
+            }
+        }
     }
 
     /**
      * Package-level visibility is for testing purposes only.
      */
+    @VisibleForTesting
     ConcurrentMap<CacheKey, ConcurrentTreeNode> getCache() {
         return cache;
     }
@@ -416,6 +425,23 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             }
         } catch (InterruptedException ignored) {
         }
+    }
+
+
+    /**
+     * Delete from the backing storage all nodes that have been moved to be
+     * children of the trash node where they are waiting deletion. Also delete
+     * all subtrees of these nodes. After deleting each subtree then test
+     * the provided {@param terminationCondition}. If it returns true then
+     * stop deletion.
+     *
+     * @param terminationCondition invoked between subtree deletions to
+     *                             determine whether to return from method.
+     */
+    @Override
+    public void foregroundNodeDeletion(BooleanSupplier terminationCondition) {
+        ConcurrentTreeDeletionTask deletionTask = new ConcurrentTreeDeletionTask(this, terminationCondition);
+        deletionTask.run();
     }
 
     @Override
@@ -720,37 +746,9 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     }
 
     /**
-     * Close the trash iterator that was used by the background deletion threads.
-     * Open a new iterator to walk through any remaining trash nodes and delete their
-     * children. Then perform a range deletion on the trash nodes.
-     */
-    private void processTrash() {
-        synchronized (treeTrashNode) {
-            if (trashIterator != null) {
-                trashIterator.close();
-                trashIterator = null;
-            }
-        }
-
-        int nodeDB = treeTrashNode.nodeDB();
-
-        IPageDB.Range<DBKey, ConcurrentTreeNode> range = fetchNodeRange(nodeDB);
-
-        while (range.hasNext()) {
-            Map.Entry<DBKey, ConcurrentTreeNode> entry = range.next();
-            ConcurrentTreeNode node = entry.getValue();
-            deleteSubTree(node, 0);
-            treeTrashNode.incrementCounter();
-        }
-
-        range.close();
-
-        source.remove(new DBKey(nodeDB), new DBKey(nodeDB + 1), false);
-    }
-
-    /**
      * For testing purposes only.
      */
+    @VisibleForTesting
     ConcurrentTreeNode getTreeTrashNode() {
         return treeTrashNode;
     }
