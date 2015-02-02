@@ -560,7 +560,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         int sample = 0;
         if (rate > 1) {
             File sampleFile = new File(filename);
-            if (Files.isFileReadable(filename)) {
+            if (sampleFile.exists() && sampleFile.isFile() && sampleFile.length() > 0) {
                 try {
                     sample = Integer.parseInt(Bytes.toString(Files.read(sampleFile)));
                     sample = (sample + 1) % rate;
