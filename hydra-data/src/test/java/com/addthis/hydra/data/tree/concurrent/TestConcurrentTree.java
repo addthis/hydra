@@ -215,8 +215,8 @@ public class TestConcurrentTree {
             tree = waitForDeletion(tree, dir);
             assertEquals(2, tree.getCache().size());
             assertEquals(0, root.getNodeCount());
-            assertEquals(1, tree.getTreeTrashNode().getNodeCount());
-            assertEquals(1, tree.getTreeTrashNode().getCounter());
+            assertTrue(tree.getTreeTrashNode().getCounter() >= 1);
+            assertEquals(tree.getTreeTrashNode().getCounter(), tree.getTreeTrashNode().getNodeCount());
             tree.close(false, close);
         } finally {
             if (dir != null) {
@@ -361,8 +361,8 @@ public class TestConcurrentTree {
                 assertNull(node);
             }
             tree = waitForDeletion(tree, dir);
-            assertEquals(1000, tree.getTreeTrashNode().getCounter());
-            assertEquals(1000, tree.getTreeTrashNode().getNodeCount());
+            assertTrue(tree.getTreeTrashNode().getCounter() >= 1000);
+            assertEquals(tree.getTreeTrashNode().getCounter(), tree.getTreeTrashNode().getNodeCount());
             tree.close(false, close);
         } finally {
             if (dir != null) {
