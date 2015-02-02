@@ -184,7 +184,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 new NamedThreadFactory(scope + "-deletion-", true));
 
         for (int i = 0; i < numDeletionThreads; i++) {
-            deletionThreadPool.scheduleAtFixedRate(new ConcurrentTreeDeletionTask(this, closed::get),
+            deletionThreadPool.scheduleAtFixedRate(new ConcurrentTreeDeletionTask(this, closed::get, false),
                     i,
                     deletionThreadSleepMillis,
                     TimeUnit.MILLISECONDS);
@@ -440,7 +440,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
      */
     @Override
     public void foregroundNodeDeletion(BooleanSupplier terminationCondition) {
-        ConcurrentTreeDeletionTask deletionTask = new ConcurrentTreeDeletionTask(this, terminationCondition);
+        ConcurrentTreeDeletionTask deletionTask = new ConcurrentTreeDeletionTask(this, terminationCondition, true);
         deletionTask.run();
     }
 

@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestConcurrentTree {
@@ -513,8 +514,8 @@ public class TestConcurrentTree {
                 assertNull(node);
             }
             tree = waitForDeletion(tree, dir);
-            assertEquals(numElements, tree.getTreeTrashNode().getCounter());
-            assertEquals(numElements, tree.getTreeTrashNode().getNodeCount());
+            assertTrue(tree.getTreeTrashNode().getCounter() >= numElements);
+            assertEquals(tree.getTreeTrashNode().getCounter(), tree.getTreeTrashNode().getNodeCount());
             tree.close(false, close);
         } finally {
             if (dir != null) {

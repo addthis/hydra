@@ -31,9 +31,12 @@ class ConcurrentTreeDeletionTask implements Runnable {
 
     private final BooleanSupplier terminationCondition;
 
-    public ConcurrentTreeDeletionTask(ConcurrentTree dataTreeNodes, BooleanSupplier terminationCondition) {
+    private final boolean logging;
+
+    public ConcurrentTreeDeletionTask(ConcurrentTree dataTreeNodes, BooleanSupplier terminationCondition, boolean logging) {
         this.dataTreeNodes = dataTreeNodes;
         this.terminationCondition = terminationCondition;
+        this.logging = logging;
     }
 
     @Override
@@ -46,7 +49,7 @@ class ConcurrentTreeDeletionTask implements Runnable {
                     ConcurrentTreeNode node = entry.getValue();
                     ConcurrentTreeNode prev = dataTreeNodes.source.remove(entry.getKey());
                     if (prev != null) {
-                        dataTreeNodes.deleteSubTree(node, -1, terminationCondition);
+                        dataTreeNodes.deleteSubTree(node, logging ? 0 : -1, terminationCondition);
                         dataTreeNodes.treeTrashNode.incrementCounter();
                     }
                 }
