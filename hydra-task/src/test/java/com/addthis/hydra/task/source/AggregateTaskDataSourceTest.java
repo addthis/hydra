@@ -13,8 +13,8 @@
  */
 package com.addthis.hydra.task.source;
 
-import org.easymock.EasyMock;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 
 public class AggregateTaskDataSourceTest {
@@ -23,43 +23,39 @@ public class AggregateTaskDataSourceTest {
     @Test
     public void testOpen() throws Exception {
         AggregateTaskDataSource aggregateTaskDataSource = new AggregateTaskDataSource();
-        TaskDataSource mockDS1 = EasyMock.createMock(TaskDataSource.class);
-        TaskDataSource mockDS2 = EasyMock.createMock(TaskDataSource.class);
+        TaskDataSource mockDS1 = Mockito.mock(TaskDataSource.class);
+        TaskDataSource mockDS2 = Mockito.mock(TaskDataSource.class);
         aggregateTaskDataSource.setSources(new TaskDataSource[]{mockDS1, mockDS2});
 
         mockDS1.init();
         mockDS2.init();
 
-        EasyMock.expect(mockDS1.isEnabled()).andReturn(true);
-        EasyMock.expect(mockDS2.isEnabled()).andReturn(true);
+        Mockito.when(mockDS1.isEnabled()).thenReturn(true);
+        Mockito.when(mockDS2.isEnabled()).thenReturn(true);
 
-        EasyMock.expect(mockDS1.peek()).andReturn(null);
-        EasyMock.expect(mockDS2.peek()).andReturn(null);
+        Mockito.when(mockDS1.peek()).thenReturn(null);
+        Mockito.when(mockDS2.peek()).thenReturn(null);
 
-        EasyMock.replay(mockDS1, mockDS2);
         aggregateTaskDataSource.init();
-        EasyMock.verify(mockDS1, mockDS2);
     }
 
     @Test
     public void testPeek() throws Exception {
         AggregateTaskDataSource aggregateTaskDataSource = new AggregateTaskDataSource();
-        TaskDataSource mockDS1 = EasyMock.createMock(TaskDataSource.class);
-        TaskDataSource mockDS2 = EasyMock.createMock(TaskDataSource.class);
+        TaskDataSource mockDS1 = Mockito.mock(TaskDataSource.class);
+        TaskDataSource mockDS2 = Mockito.mock(TaskDataSource.class);
         aggregateTaskDataSource.setSources(new TaskDataSource[]{mockDS1, mockDS2});
 
         mockDS1.init();
         mockDS2.init();
 
-        EasyMock.expect(mockDS1.isEnabled()).andReturn(true);
-        EasyMock.expect(mockDS2.isEnabled()).andReturn(true);
+        Mockito.when(mockDS1.isEnabled()).thenReturn(true);
+        Mockito.when(mockDS2.isEnabled()).thenReturn(true);
 
-        EasyMock.expect(mockDS1.peek()).andReturn(null);
-        EasyMock.expect(mockDS2.peek()).andReturn(null);
+        Mockito.when(mockDS1.peek()).thenReturn(null);
+        Mockito.when(mockDS2.peek()).thenReturn(null);
 
-        EasyMock.replay(mockDS1, mockDS2);
         aggregateTaskDataSource.init();
         aggregateTaskDataSource.peek();
-        EasyMock.verify(mockDS1, mockDS2);
     }
 }
