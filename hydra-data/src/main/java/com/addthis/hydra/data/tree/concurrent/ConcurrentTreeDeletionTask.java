@@ -18,6 +18,8 @@ import java.util.function.BooleanSupplier;
 
 import com.addthis.hydra.store.db.DBKey;
 
+import org.slf4j.Logger;
+
 /**
  * Delete from the backing storage all nodes that have been moved to be
  * children of the trash node where they are waiting deletion. Also delete
@@ -26,17 +28,16 @@ import com.addthis.hydra.store.db.DBKey;
  * If it returns true then stop deletion.
  */
 class ConcurrentTreeDeletionTask implements Runnable {
-
     private final ConcurrentTree dataTreeNodes;
-
     private final BooleanSupplier terminationCondition;
+    private final Logger deletionLogger;
 
-    private final boolean logging;
-
-    public ConcurrentTreeDeletionTask(ConcurrentTree dataTreeNodes, BooleanSupplier terminationCondition, boolean logging) {
+    public ConcurrentTreeDeletionTask(ConcurrentTree dataTreeNodes,
+                                      BooleanSupplier terminationCondition,
+                                      Logger deletionLogger) {
         this.dataTreeNodes = dataTreeNodes;
         this.terminationCondition = terminationCondition;
-        this.logging = logging;
+        this.deletionLogger = deletionLogger;
     }
 
     @Override
@@ -49,12 +50,12 @@ class ConcurrentTreeDeletionTask implements Runnable {
                     ConcurrentTreeNode node = entry.getValue();
                     ConcurrentTreeNode prev = dataTreeNodes.source.remove(entry.getKey());
                     if (prev != null) {
-                        dataTreeNodes.deleteSubTree(node, logging ? 0 : -1, terminationCondition);
+                        dataTreeNodes.deleteSubTree(node, 0, terminationCondition, deletionLogger);
                         dataTreeNodes.treeTrashNode.incrementCounter();
                     }
                 }
             }
-            while (entry != null && !terminationCondition.getAsBoolean());
+            while ((entry != null) && !terminationCondition.getAsBoolean());
         } catch (Exception ex) {
             ConcurrentTree.log.warn("{}", "Uncaught exception in concurrent tree background deletion thread", ex);
         }

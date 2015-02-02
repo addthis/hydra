@@ -184,10 +184,10 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 new NamedThreadFactory(scope + "-deletion-", true));
 
         for (int i = 0; i < numDeletionThreads; i++) {
-            deletionThreadPool.scheduleAtFixedRate(new ConcurrentTreeDeletionTask(this, closed::get, false),
-                    i,
-                    deletionThreadSleepMillis,
-                    TimeUnit.MILLISECONDS);
+            deletionThreadPool.scheduleAtFixedRate(
+                    new ConcurrentTreeDeletionTask(this, closed::get, LoggerFactory.getLogger(
+                            ConcurrentTreeDeletionTask.class.getName() + ".Background")),
+                    i, deletionThreadSleepMillis, TimeUnit.MILLISECONDS);
         }
 
         long openTime = System.currentTimeMillis() - start;
@@ -440,7 +440,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
      */
     @Override
     public void foregroundNodeDeletion(BooleanSupplier terminationCondition) {
-        ConcurrentTreeDeletionTask deletionTask = new ConcurrentTreeDeletionTask(this, terminationCondition, true);
+        ConcurrentTreeDeletionTask deletionTask = new ConcurrentTreeDeletionTask(this, terminationCondition, log);
         deletionTask.run();
     }
 
@@ -686,22 +686,24 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
      * @param rootNode root of the subtree to delete
      * @param counter if non-negative then tally the nodes that have been deleted
      */
-    long deleteSubTree(ConcurrentTreeNode rootNode, long counter, BooleanSupplier terminationCondition) {
+    long deleteSubTree(ConcurrentTreeNode rootNode,
+                       long counter,
+                       BooleanSupplier terminationCondition,
+                       Logger deletionLogger) {
         int nodeDB = rootNode.nodeDB();
         IPageDB.Range<DBKey, ConcurrentTreeNode> range = fetchNodeRange(nodeDB);
         DBKey endRange;
         boolean reschedule;
         try {
             while (range.hasNext() && !terminationCondition.getAsBoolean()) {
-                // do not emit logging when counter is negative
-                if ((counter >= 0) && ((++counter % deletionLogInterval) == 0)) {
-                    log.info("Deleted {} nodes from the tree.", counter);
+                if ((++counter % deletionLogInterval) == 0) {
+                    deletionLogger.info("Deleted {} nodes from the tree.", counter);
                 }
                 Map.Entry<DBKey, ConcurrentTreeNode> entry = range.next();
                 ConcurrentTreeNode next = entry.getValue();
 
                 if (next.hasNodes() && !next.isAlias()) {
-                    counter = deleteSubTree(next, counter, terminationCondition);
+                    counter = deleteSubTree(next, counter, terminationCondition, deletionLogger);
                 }
                 String name = entry.getKey().rawKey().toString();
                 CacheKey key = new CacheKey(nodeDB, name);
