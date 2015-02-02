@@ -19,7 +19,6 @@ import org.mockito.Mockito;
 
 public class AggregateTaskDataSourceTest {
 
-
     @Test
     public void testOpen() throws Exception {
         AggregateTaskDataSource aggregateTaskDataSource = new AggregateTaskDataSource();
@@ -37,6 +36,8 @@ public class AggregateTaskDataSourceTest {
         Mockito.when(mockDS2.peek()).thenReturn(null);
 
         aggregateTaskDataSource.init();
+        Mockito.verify(mockDS1).peek();
+        Mockito.verify(mockDS2).peek();
     }
 
     @Test
@@ -57,5 +58,7 @@ public class AggregateTaskDataSourceTest {
 
         aggregateTaskDataSource.init();
         aggregateTaskDataSource.peek();
+        Mockito.verify(mockDS1).peek();
+        Mockito.verify(mockDS2).peek();
     }
 }
