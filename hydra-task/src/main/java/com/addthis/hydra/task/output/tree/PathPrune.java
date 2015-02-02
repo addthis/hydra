@@ -107,7 +107,7 @@ public class PathPrune extends PathElement {
         } else {
             ClosableIterator<DataTreeNode> keyNodeItr = root.getIterator();
             try {
-                while (keyNodeItr.hasNext()) {
+                while (keyNodeItr.hasNext() && !(preempt && state.processorClosing())) {
                     findAndPruneChildren(state, keyNodeItr.next(), now, depth - 1);
                 }
             } finally {
@@ -122,7 +122,7 @@ public class PathPrune extends PathElement {
         int kept = 0;
         int total = 0;
         try {
-            if (preempt && expensiveShutdownTest()) {
+            if (preempt && (state.processorClosing() || expensiveShutdownTest())) {
                 return;
             }
             while (keyNodeItr.hasNext() && !(preempt && state.processorClosing())) {
@@ -154,14 +154,15 @@ public class PathPrune extends PathElement {
      *
      * @return true iff the jvm is shutting down
      */
-    private boolean expensiveShutdownTest() {
-        boolean shuttingDown = false;
+    private static boolean expensiveShutdownTest() {
         try {
-            Runtime.getRuntime().addShutdownHook(new Thread(Runnables.doNothing(), "Path prune shutdown hook"));
-        } catch (IllegalStateException ex) {
-            shuttingDown = true;
+            Thread shutdownHook = new Thread(Runnables.doNothing(), "Path prune shutdown hook");
+            Runtime.getRuntime().addShutdownHook(shutdownHook);
+            Runtime.getRuntime().removeShutdownHook(shutdownHook);
+        } catch (IllegalStateException ignored) {
+            return true;
         }
-        return shuttingDown;
+        return false;
     }
 
     @VisibleForTesting long getNodeTime(DataTreeNode treeNode) {

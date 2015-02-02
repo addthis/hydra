@@ -283,7 +283,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
     @Override
     public void open() {
         try {
-            Runtime.getRuntime().addShutdownHook(new Thread(this::jvmShutDown, "TreeMapper shutdown hook"));
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> closing.set(true), "TreeMapper shutdown hook"));
 
             mapstats = new TreeMapperStats();
             resolve();
@@ -315,10 +315,6 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         } catch (Exception ex) {
             Throwables.propagate(ex);
         }
-    }
-
-    private void jvmShutDown() {
-        closing.set(true);
     }
 
     private void connectToMesh(File root, String jobId, int taskId, QueryEngine engine) throws IOException {
