@@ -32,10 +32,10 @@ import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import org.apache.zookeeper.CreateMode;
 
-import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -142,7 +142,7 @@ public class SpawnTest extends ZkCodecStartUtil {
     @Test
     public void fixDirsTest() throws Exception {
         try (Spawn spawn = Configs.newDefault(Spawn.class)) {
-            spawn.setSpawnMQ(EasyMock.createNiceMock(SpawnMQImpl.class));
+            spawn.setSpawnMQ(Mockito.mock(SpawnMQImpl.class));
             HostState host0 = createHostState("host0");
             spawn.hostManager.updateHostState(host0);
             HostState host1 = createHostState("host1");

@@ -42,12 +42,12 @@ import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import org.apache.zookeeper.CreateMode;
 
-import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -80,7 +80,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
             spawn = Configs.newDefault(Spawn.class);
             hostManager = spawn.hostManager;
             bal = spawn.getSpawnBalancer();
-            spawn.setSpawnMQ(EasyMock.createMock(SpawnMQ.class));
+            spawn.setSpawnMQ(Mockito.mock(SpawnMQ.class));
         } catch (Exception ex) {
         }
     }
@@ -408,7 +408,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
     public void rebalanceOntoNewHostsTest() throws Exception {
         // Suppose we start out with eight hosts, and have a job with 10 live tasks.
         // Then if we add two hosts and rebalance the job, we should move tasks onto each.
-        spawn.setSpawnMQ(EasyMock.createMock(SpawnMQ.class));
+        spawn.setSpawnMQ(Mockito.mock(SpawnMQ.class));
         bal.getConfig().setAllowSameHostReplica(true);
         ArrayList<String> hosts = new ArrayList<>();
         for (int i = 0; i < 8; i++) {
