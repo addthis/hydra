@@ -39,7 +39,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name equals
  */
-public class BundleFilterEquals extends BundleFilter {
+public class BundleFilterEquals implements BundleFilter {
 
     /**
      * the left hand field value
@@ -58,9 +58,6 @@ public class BundleFilterEquals extends BundleFilter {
      */
     @FieldConfig(codable = true)
     private boolean not;
-
-    @Override
-    public void open() { }
 
     @Override
     public boolean filter(Bundle bundle) {

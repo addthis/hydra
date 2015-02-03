@@ -33,7 +33,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @user-reference
  * @hydra-name condition
  */
-public class BundleFilterCondition extends BundleFilter {
+public class BundleFilterCondition implements BundleFilter {
 
     /** The conditional bundle filter. This field is required. */
     @NotNull
@@ -70,17 +70,6 @@ public class BundleFilterCondition extends BundleFilter {
         this.ifCondition = ifCondition;
         this.ifDo = ifDo;
         this.elseDo = elseDo;
-    }
-
-    @Override
-    public void open() {
-        ifCondition.open();
-        if (ifDo != null) {
-            ifDo.open();
-        }
-        if (elseDo != null) {
-            elseDo.open();
-        }
     }
 
     @Override

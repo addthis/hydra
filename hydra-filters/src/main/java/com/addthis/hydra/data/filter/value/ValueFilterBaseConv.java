@@ -23,7 +23,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * Convert between bases with custom alphabet choices. Here "decode" means
  * return a 10-base String representation.
  */
-public class ValueFilterBaseConv extends ValueFilter {
+public class ValueFilterBaseConv extends AbstractValueFilter {
 
     @FieldConfig(codable = true)
     private boolean decode;
@@ -39,9 +39,6 @@ public class ValueFilterBaseConv extends ValueFilter {
         this.decode = decode;
         this.baseType = baseType;
     }
-
-    @Override
-    public void open() {}
 
     @Override
     public ValueObject filterValue(ValueObject value) {

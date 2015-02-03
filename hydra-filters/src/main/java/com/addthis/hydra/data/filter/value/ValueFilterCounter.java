@@ -19,13 +19,12 @@ import java.text.DecimalFormat;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">counts the number of values it has observed</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">counts the number of values it has observed</span>.
  * <p/>
  * <p>The default behavior of this filter is to emit the count of the
  * number of values it has observed. If the {@link #sample sample} field is set
@@ -51,7 +50,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @user-reference
  * @hydra-name count
  */
-public class ValueFilterCounter extends ValueFilter {
+public class ValueFilterCounter extends AbstractValueFilter {
 
     private DecimalFormat dc;
 
@@ -88,9 +87,6 @@ public class ValueFilterCounter extends ValueFilter {
         this.sample = sample;
         counter.set(start);
     }
-
-    @Override
-    public void open() { }
 
     @Override
     public ValueObject filterValue(ValueObject value) {

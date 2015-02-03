@@ -20,7 +20,7 @@ import java.util.Map;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">filters values that occur fewer than {@link #minHits minHits} times
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">filters values that occur fewer than {@link #minHits minHits} times
  * or more than {@link #maxHits maxHits} times</span>.
  * <p/>
  * <p>A value is emitted only after it has been observed for {@link #minHits minHits} instances.
@@ -72,9 +72,6 @@ public class ValueFilterBandPass extends StringFilter {
             return maxKeys > 0 && size() > maxKeys;
         }
     };
-
-    @Override
-    public void open() {}
 
     @Override
     public String filter(String value) {

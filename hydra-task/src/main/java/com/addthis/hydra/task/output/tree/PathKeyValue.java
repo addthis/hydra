@@ -75,9 +75,6 @@ public class PathKeyValue extends PathValue {
     public void resolve(TreeMapper mapper) {
         super.resolve(mapper);
         keyAccess = mapper.bindField(key);
-        if (prefilter != null) {
-            prefilter.open();
-        }
     }
 
     @Override

@@ -19,7 +19,7 @@ import com.addthis.basis.util.Strings;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">encodes or decodes a value to
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">encodes or decodes a value to
  * <a href="http://en.wikipedia.org/wiki/Base64">base64</a> format</span>.
  * <p/>
  * <p>Enabling <a href="#encode">encode</a> will encode the value to base64 format.
@@ -49,9 +49,6 @@ public class ValueFilterBase64 extends StringFilter {
      */
     @FieldConfig(codable = true)
     private boolean decode;
-
-    @Override
-    public void open() {}
 
     @Override
     public String filter(String value) {

@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
  * execute a bundle filter chain.
  * optionally exit on a filter failure
  */
-public class CloseableBundleFilterChain extends CloseableBundleFilter {
+public class CloseableBundleFilterChain implements CloseableBundleFilter {
 
     private static final Logger log = LoggerFactory.getLogger(CloseableBundleFilterChain.class);
 
@@ -37,13 +37,6 @@ public class CloseableBundleFilterChain extends CloseableBundleFilter {
     private boolean failReturn = false;
     @FieldConfig(codable = true)
     private boolean debug;
-
-    @Override
-    public void open() {
-        for (CloseableBundleFilter f : filter) {
-            f.open();
-        }
-    }
 
     @Override
     public boolean filter(Bundle row) {

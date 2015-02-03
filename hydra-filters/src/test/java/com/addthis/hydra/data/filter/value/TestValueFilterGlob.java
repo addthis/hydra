@@ -26,7 +26,7 @@ public class TestValueFilterGlob {
 
     @Test
     public void deser() throws IOException {
-        ValueFilterGlob filter = (ValueFilterGlob) Configs.decodeObject(ValueFilter.class, "glob = \"tr?an{g,z}l*\"");
+        ValueFilterGlob filter = (ValueFilterGlob) Configs.decodeObject(AbstractValueFilter.class, "glob = \"tr?an{g,z}l*\"");
     }
 
     @Test

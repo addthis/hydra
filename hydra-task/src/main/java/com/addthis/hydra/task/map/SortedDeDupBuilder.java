@@ -53,9 +53,6 @@ public class SortedDeDupBuilder extends StreamBuilder {
 
     @Override
     public void init() {
-        if (filter != null) {
-            filter.open();
-        }
     }
 
     @Override

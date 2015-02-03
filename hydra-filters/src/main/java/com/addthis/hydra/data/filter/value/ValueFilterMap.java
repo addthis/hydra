@@ -15,12 +15,16 @@ package com.addthis.hydra.data.filter.value;
 
 import java.util.HashMap;
 
+import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.util.JSONFetcher;
+
+import com.google.common.annotations.VisibleForTesting;
 
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">uses the input as a key and returns the value
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">uses the input as a key and returns the value
  * associated with the input in a specified map</span>.
  * <p/>
  * <p>The map is specified with the {@link #map map} field. Alternatively a JSON map
@@ -38,7 +42,7 @@ import com.addthis.hydra.data.util.JSONFetcher;
  * @user-reference
  * @hydra-name map
  */
-public class ValueFilterMap extends StringFilter {
+public class ValueFilterMap extends StringFilter implements SuperCodable {
 
     /**
      * The map used to search for the input key.
@@ -78,6 +82,9 @@ public class ValueFilterMap extends StringFilter {
     @FieldConfig(codable = true)
     private boolean httpTrace;
 
+    @VisibleForTesting
+    ValueFilterMap() {}
+
     public ValueFilterMap setMap(HashMap<String, String> map) {
         this.map = map;
         return this;
@@ -109,9 +116,21 @@ public class ValueFilterMap extends StringFilter {
     }
 
     @Override
-    public void open() {
+    public void postDecode() {
         if (map == null && mapURL != null) {
             map = new JSONFetcher(httpTimeout, httpTrace).loadMap(mapURL);
+        }
+    }
+
+    @Override public void preEncode() {}
+
+    private static final class ValidationOnly extends ValueFilterMap {
+        @Override public void postDecode() {
+            // intentionally do nothing
+        }
+
+        @Override public ValueObject filter(ValueObject value) {
+            throw new UnsupportedOperationException("This class is only intended for use in construction validation.");
         }
     }
 

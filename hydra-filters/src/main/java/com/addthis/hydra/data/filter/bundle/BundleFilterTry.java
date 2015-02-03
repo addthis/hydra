@@ -28,7 +28,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @user-reference
  * @hydra-name try
  */
-public class BundleFilterTry extends BundleFilter {
+public class BundleFilterTry implements BundleFilter {
 
     @JsonProperty("try")
     @FieldConfig(required = true)
@@ -37,14 +37,6 @@ public class BundleFilterTry extends BundleFilter {
     @JsonProperty("catch")
     @FieldConfig(required = true)
     BundleFilter catchDo;
-
-    @Override
-    public void open() {
-        tryDo.open();
-        if (catchDo != null) {
-            catchDo.open();
-        }
-    }
 
     @Override
     public boolean filter(Bundle row) {

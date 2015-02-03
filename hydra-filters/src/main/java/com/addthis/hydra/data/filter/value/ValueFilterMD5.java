@@ -18,7 +18,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.common.hash.MD5HashFunction;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns the MD5 sum of the input</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns the MD5 sum of the input</span>.
  * <p/>
  * <p>Example:</p>
  * <pre>
@@ -28,9 +28,7 @@ import com.addthis.hydra.common.hash.MD5HashFunction;
  * @user-reference
  * @hydra-name md5
  */
-public class ValueFilterMD5 extends ValueFilter {
-
-    @Override public void open() { }
+public class ValueFilterMD5 extends AbstractValueFilter {
 
     @Override
     public ValueObject filterValue(ValueObject value) {

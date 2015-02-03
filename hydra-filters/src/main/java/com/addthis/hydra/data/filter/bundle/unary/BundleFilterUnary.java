@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class BundleFilterUnary extends BundleFilter {
+public class BundleFilterUnary implements BundleFilter {
 
     @Nonnull  private final UnaryOperation operation;
     @Nullable private final BundleFilter   filter;
@@ -33,12 +33,6 @@ public class BundleFilterUnary extends BundleFilter {
                                 @Nullable @JsonProperty("filter")   BundleFilter filter) {
         this.operation = checkNotNull(operation);
         this.filter = filter;
-    }
-
-    @Override public void open() {
-        if (filter != null) {
-            filter.open();
-        }
     }
 
     @Override public boolean filter(Bundle row) {

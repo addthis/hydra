@@ -25,7 +25,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Iterators;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">splits the input string into an output string</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">splits the input string into an output string</span>.
  * <p/>
  * <p>The input string is interpreted as a sequence of items that are separated by
  * {@link #sep sep}. A subsequence of the input is extracted and the output string
@@ -79,9 +79,6 @@ public class ValueFilterStringSlice extends StringFilter {
         this.fromIndex = fromIndex;
         this.toIndex = toIndex;
     }
-
-    @Override
-    public void open() { }
 
     @Override
     public String filter(String value) {

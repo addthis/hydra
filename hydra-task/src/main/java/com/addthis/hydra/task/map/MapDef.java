@@ -63,16 +63,5 @@ public final class MapDef {
     @JsonProperty FieldFilter[] fields;
 
     public void init() {
-        if (filterIn != null) {
-            filterIn.open();
-        }
-        if (filterOut != null) {
-            filterOut.open();
-        }
-        if (fields != null) {
-            for(FieldFilter field : fields) {
-                field.open();
-            }
-        }
     }
 }

@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.value;
 import com.addthis.bundle.value.ValueObject;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns the input value</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns the input value</span>.
  * <p/>
  * <p>No transformations are performed in the input value. It is passed along as the output value.</p>
  * <p/>
@@ -29,9 +29,7 @@ import com.addthis.bundle.value.ValueObject;
  * @hydra-name pass
  * @exclude-fields once
  */
-public class ValueFilterPass extends ValueFilter {
-
-    @Override public void open() { }
+public class ValueFilterPass extends AbstractValueFilter {
 
     @Override
     public ValueObject filter(ValueObject v) {

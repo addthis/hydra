@@ -22,17 +22,15 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import org.arabidopsis.ahocorasick.AhoCorasick;
 import org.arabidopsis.ahocorasick.SearchResult;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">checks for strings, arrays or maps
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">checks for strings, arrays or maps
  * that contain the target keys or values</span>.
  * <p/>
  * <p>If the input is a string then return the input if it is a substring of an element in {@link #value value},
@@ -55,7 +53,7 @@ import org.arabidopsis.ahocorasick.SearchResult;
  * @user-reference
  * @hydra-name contains
  */
-public class ValueFilterContains extends ValueFilter {
+public class ValueFilterContains extends AbstractValueFilter {
 
     /**
      * The set of values to match against.
@@ -89,10 +87,6 @@ public class ValueFilterContains extends ValueFilter {
         this.not = not;
         this.returnMatch = returnMatch;
         this.dictionary = (value != null) ? new AhoCorasick() : null;
-    }
-
-    @Override
-    public void open() {
         if (dictionary != null) {
             for (String pattern : value) {
                 dictionary.add(pattern);

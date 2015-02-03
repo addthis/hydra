@@ -54,9 +54,6 @@ public class OutputStreamColumnized extends OutputStreamFormatter implements Sup
 
     @Override
     public void open() {
-        if (filter != null) {
-            filter.open();
-        }
     }
 
     @Override

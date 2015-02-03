@@ -14,11 +14,9 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilterContains;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -44,7 +42,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @user-reference
  * @hydra-name contains
  */
-public class BundleFilterContains extends BundleFilter {
+public class BundleFilterContains implements BundleFilter {
 
     /**
      * The input field to test. This field is required.
@@ -82,13 +80,6 @@ public class BundleFilterContains extends BundleFilter {
             filter = new ValueFilterContains(value, null, false, false);
         } else {
             filter = null;
-        }
-    }
-
-    @Override
-    public void open() {
-        if (filter != null) {
-            filter.open();
         }
     }
 

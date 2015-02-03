@@ -27,7 +27,7 @@ import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">parses JSON text into an object</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">parses JSON text into an object</span>.
  * <p/>
  * <p>
  * <p>Example:</p>
@@ -38,7 +38,7 @@ import com.addthis.maljson.JSONObject;
  * @user-reference
  * @hydra-name json
  */
-public class ValueFilterJSON extends ValueFilter implements SuperCodable {
+public class ValueFilterJSON extends AbstractValueFilter implements SuperCodable {
 
     @FieldConfig(codable = true)
     private int cacheSize = 1000;
@@ -58,7 +58,7 @@ public class ValueFilterJSON extends ValueFilter implements SuperCodable {
     private HotMap<String, Object> cache = new HotMap<>(new ConcurrentHashMap());
     private ArrayList<QueryToken> tokens;
 
-    @Override public void open() { }
+    private ValueFilterJSON() {}
 
     @Override
     public ValueObject filterValue(ValueObject value) {
@@ -137,9 +137,7 @@ public class ValueFilterJSON extends ValueFilter implements SuperCodable {
         tokens.add(current);
     }
 
-    @Override
-    public void preEncode() {
-    }
+    @Override public void preEncode() {}
 
     private static class QueryToken {
 

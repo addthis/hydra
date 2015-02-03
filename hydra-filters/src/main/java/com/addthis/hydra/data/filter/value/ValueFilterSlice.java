@@ -20,7 +20,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns a subset of the string or array input</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns a subset of the string or array input</span>.
  * <p/>
  * <p>Example:</p>
  * <pre>
@@ -31,7 +31,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @hydra-name slice
  * @exlude-fields once
  */
-public class ValueFilterSlice extends ValueFilter {
+public class ValueFilterSlice extends AbstractValueFilter {
 
     /**
      * The start position of the subset in a 0-based offset (inclusive). Default is 0.
@@ -59,9 +59,6 @@ public class ValueFilterSlice extends ValueFilter {
         this.to = to;
         this.inc = inc;
     }
-
-    @Override
-    public void open() { }
 
     @Override
     public ValueObject filter(ValueObject value) {

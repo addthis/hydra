@@ -46,9 +46,6 @@ public class StreamTokenizer extends Tokenizer {
     @Override
     public Tokenizer initialize() {
         super.initialize();
-        if (filter != null) {
-            filter.open();
-        }
         return this;
     }
 

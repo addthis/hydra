@@ -26,8 +26,8 @@ public class ValueFilterNotTest {
     @Test
     public void inversion() throws Exception {
         ValueFilter filter = Configs.decodeObject(ValueFilter.class, "not.glob = \"foo*\"");
-        assertNull(filter.filterValue(create("foobar")));
-        assertNotNull(filter.filterValue(create("notfoo")));
-        assertNotNull(filter.filterValue(create("goodbar")));
+        assertNull(filter.filter(create("foobar")));
+        assertNotNull(filter.filter(create("notfoo")));
+        assertNotNull(filter.filter(create("goodbar")));
     }
 }

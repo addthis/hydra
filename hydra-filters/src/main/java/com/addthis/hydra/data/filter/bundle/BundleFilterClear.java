@@ -38,7 +38,7 @@ import com.addthis.hydra.data.filter.value.ValueFilter;
  * @user-reference
  * @hydra-name clear
  */
-public class BundleFilterClear extends BundleFilter {
+public class BundleFilterClear implements BundleFilter {
 
     /** The target field for clearing the value. This field is required. */
     @FieldConfig(required = true) private AutoField field;
@@ -54,13 +54,6 @@ public class BundleFilterClear extends BundleFilter {
 
     /** If true then remove the field rather than set it to null. Default is false. */
     @FieldConfig private boolean removes = false;
-
-    @Override
-    public void open() {
-        if (filter != null) {
-            filter.open();
-        }
-    }
 
     @Override
     public boolean filter(Bundle bundle) {

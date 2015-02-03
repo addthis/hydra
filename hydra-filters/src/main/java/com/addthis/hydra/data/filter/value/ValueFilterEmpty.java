@@ -18,7 +18,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns the passed value if it is empty or null otherwise</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns the passed value if it is empty or null otherwise</span>.
  * <p/>
  * <p>By default this filter returns only empty values or null otherwise.
  * Specifying the parameter {@link #not not} as {@code true} inverts the
@@ -36,16 +36,13 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name empty
  */
-public class ValueFilterEmpty extends ValueFilter {
+public class ValueFilterEmpty extends AbstractValueFilter {
 
     /**
      * If true then return all non-empty elements. Default is false.
      */
     @FieldConfig(codable = true)
     private boolean not;
-
-    @Override
-    public void open() {}
 
     @Override
     public ValueObject filterValue(ValueObject value) {

@@ -15,12 +15,8 @@ package com.addthis.hydra.data.filter.value;
 
 import javax.annotation.Nullable;
 
-import java.lang.reflect.Constructor;
-
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -33,7 +29,7 @@ import static com.fasterxml.jackson.annotation.JsonTypeInfo.As.EXTERNAL_PROPERTY
 import static com.fasterxml.jackson.annotation.JsonTypeInfo.Id.MINIMAL_CLASS;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">throws an exception</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">throws an exception</span>.
  * <p>This filter can be used either by developers when testing out the error handling
  * of the system or it can be used by users when they want to explicitly trigger the
  * error of a job.
@@ -46,7 +42,7 @@ import static com.fasterxml.jackson.annotation.JsonTypeInfo.Id.MINIMAL_CLASS;
  * @user-reference
  * @hydra-name error
  */
-public class ValueFilterError extends ValueFilter {
+public class ValueFilterError extends AbstractValueFilter {
 
     static final Logger log = LoggerFactory.getLogger(ValueFilterError.class);
 
@@ -59,7 +55,4 @@ public class ValueFilterError extends ValueFilter {
         throw Throwables.propagate(message);
     }
 
-    @Override public void open() {
-
-    }
 }

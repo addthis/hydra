@@ -36,9 +36,6 @@ public abstract class NewlineBundleizer extends BundleizerFactory {
 
     @Override
     public void open() {
-        if (lineFilter != null) {
-            lineFilter.open();
-        }
     }
 
     @Override

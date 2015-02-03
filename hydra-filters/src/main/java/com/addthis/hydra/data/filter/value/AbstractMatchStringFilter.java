@@ -4,9 +4,13 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.regex.Pattern;
 
+import com.addthis.bundle.value.ValueObject;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.util.JSONFetcher;
 
-abstract class AbstractMatchStringFilter extends StringFilter {
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+abstract class AbstractMatchStringFilter extends StringFilter implements SuperCodable {
 
     /**
      * The input must match exactly to an element in this set.
@@ -74,19 +78,19 @@ abstract class AbstractMatchStringFilter extends StringFilter {
     private ArrayList<Pattern> pattern;
     private ArrayList<Pattern> findPattern;
 
-    public AbstractMatchStringFilter(HashSet<String> value,
-                                     String valueURL,
-                                     HashSet<String> match,
-                                     String matchURL,
-                                     HashSet<String> find,
-                                     String findURL,
-                                     String[] contains,
-                                     String containsURL,
-                                     boolean urlReturnsCSV,
-                                     boolean toLower,
-                                     int urlTimeout,
-                                     int urlRetries,
-                                     boolean not) {
+    AbstractMatchStringFilter(HashSet<String> value,
+                              String valueURL,
+                              HashSet<String> match,
+                              String matchURL,
+                              HashSet<String> find,
+                              String findURL,
+                              String[] contains,
+                              String containsURL,
+                              boolean urlReturnsCSV,
+                              boolean toLower,
+                              int urlTimeout,
+                              int urlRetries,
+                              boolean not) {
         this.value = value;
         this.valueURL = valueURL;
         this.match = match;
@@ -160,8 +164,7 @@ abstract class AbstractMatchStringFilter extends StringFilter {
         return false;
     }
 
-    @Override
-    public void open() {
+    @Override public void postDecode() {
         if (valueURL != null) {
             if (urlReturnsCSV) {
                 value = JSONFetcher.staticLoadCSVSet(valueURL, urlTimeout, urlRetries, value);
@@ -207,6 +210,45 @@ abstract class AbstractMatchStringFilter extends StringFilter {
             }
 
             contains = tmp.toArray(new String[tmp.size()]);
+        }
+    }
+
+    @Override public void preEncode() {}
+
+    private static final class ValidationOnly extends AbstractMatchStringFilter {
+        public ValidationOnly(@JsonProperty("value") HashSet<String> value,
+                              @JsonProperty("valueURL") String valueURL,
+                              @JsonProperty("match") HashSet<String> match,
+                              @JsonProperty("matchURL") String matchURL,
+                              @JsonProperty("find") HashSet<String> find,
+                              @JsonProperty("findURL") String findURL,
+                              @JsonProperty("contains") String[] contains,
+                              @JsonProperty("containsURL") String containsURL,
+                              @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
+                              @JsonProperty("toLower") boolean toLower,
+                              @JsonProperty("urlTimeout") int urlTimeout,
+                              @JsonProperty("urlRetries") int urlRetries) {
+            super(value,
+                  valueURL,
+                  match,
+                  matchURL,
+                  find,
+                  findURL,
+                  contains,
+                  containsURL,
+                  urlReturnsCSV,
+                  toLower,
+                  urlTimeout,
+                  urlRetries,
+                  false);
+        }
+
+        @Override public void postDecode() {
+            // intentionally do nothing
+        }
+
+        @Override public ValueObject filter(ValueObject value) {
+            throw new UnsupportedOperationException("This class is only intended for use in construction validation.");
         }
     }
 

@@ -15,12 +15,14 @@ package com.addthis.hydra.data.filter.value;
 
 import java.util.HashSet;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">excludes matching values</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">excludes matching values</span>.
  * <p/>
  * <p>This filter contains a number of fields. Each field performs a different type of matching.
  * If more that one field is used, then the input must match for all of the specified fields in
@@ -36,19 +38,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class ValueFilterExclude extends AbstractMatchStringFilter {
 
-    @JsonCreator
-    public ValueFilterExclude(@JsonProperty("value") HashSet<String> value,
-                              @JsonProperty("valueURL") String valueURL,
-                              @JsonProperty("match") HashSet<String> match,
-                              @JsonProperty("matchURL") String matchURL,
-                              @JsonProperty("find") HashSet<String> find,
-                              @JsonProperty("findURL") String findURL,
-                              @JsonProperty("contains") String[] contains,
-                              @JsonProperty("containsURL") String containsURL,
-                              @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
-                              @JsonProperty("toLower") boolean toLower,
-                              @JsonProperty("urlTimeout") int urlTimeout,
-                              @JsonProperty("urlRetries") int urlRetries) {
+    @JsonCreator @VisibleForTesting
+    ValueFilterExclude(@JsonProperty("value") HashSet<String> value,
+                       @JsonProperty("valueURL") String valueURL,
+                       @JsonProperty("match") HashSet<String> match,
+                       @JsonProperty("matchURL") String matchURL,
+                       @JsonProperty("find") HashSet<String> find,
+                       @JsonProperty("findURL") String findURL,
+                       @JsonProperty("contains") String[] contains,
+                       @JsonProperty("containsURL") String containsURL,
+                       @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
+                       @JsonProperty("toLower") boolean toLower,
+                       @JsonProperty("urlTimeout") int urlTimeout,
+                       @JsonProperty("urlRetries") int urlRetries) {
         super(value,
               valueURL,
               match,

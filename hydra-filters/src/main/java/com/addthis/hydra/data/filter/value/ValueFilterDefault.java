@@ -20,7 +20,7 @@ import com.addthis.codec.annotations.FieldConfig;
 
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">provides a default value for a null input or an empty string</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">provides a default value for a null input or an empty string</span>.
  * <p/>
  * <p>If {@link #time time} is set to true, then the default value is set to the current wall clock
  * in unix milliseconds using the GMT timezone.
@@ -57,9 +57,6 @@ public class ValueFilterDefault extends StringFilter {
         value = dv;
         return this;
     }
-
-    @Override
-    public void open() {}
 
     @Override
     public String filter(String v) {

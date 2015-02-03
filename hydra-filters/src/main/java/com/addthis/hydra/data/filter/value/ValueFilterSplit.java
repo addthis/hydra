@@ -33,7 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">splits the input into an array or a map</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">splits the input into an array or a map</span>.
  * <p/>
  * <p>The input must be a string. The {@link #split split} field or the
  * {@link #fixedLength fixedLength} field is used to divide the input into a sequence
@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory;
  * @hydra-name split
  * @exclude-fields once
  */
-public class ValueFilterSplit extends ValueFilter {
+public class ValueFilterSplit extends AbstractValueFilter {
 
     private static final Logger log = LoggerFactory.getLogger(ValueFilterSplit.class);
     private static final boolean ERROR_ON_ARRAY = Parameter.boolValue("hydra.filter.split.error", false);
@@ -117,17 +117,6 @@ public class ValueFilterSplit extends ValueFilter {
         this.fixedLength = fixedLength;
         return this;
     }
-
-    @Override
-    public void open() {
-        if (filter != null) {
-            filter.open();
-        }
-        if (keyFilter != null) {
-            keyFilter.open();
-        }
-    }
-
 
     @Override
     public ValueObject filterValue(ValueObject value) {

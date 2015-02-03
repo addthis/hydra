@@ -14,10 +14,11 @@
 package com.addthis.hydra.data.filter.value;
 
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">executes a series of filters</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">executes a series of filters</span>.
  * <p/>
  * <p>By default the first filter to return null terminates the chain.
  * This can be overridden for the entire chain by setting {@link #nullStop nullStop}
@@ -35,36 +36,19 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name chain
  */
-public class ValueFilterChain extends ValueFilter {
+public class ValueFilterChain extends AbstractValueFilter {
 
     /**
      * The value filters to be performed in a chain.
      */
-    @FieldConfig(codable = true, required = true)
+    @JsonProperty(required = true)
     private ValueFilter[] filter;
-
-    /**
-     * If true, then terminate chain on first null output. Default is true.
-     */
-    @FieldConfig(codable = true)
-    private boolean nullStop = true;
-
-    @Override
-    public void open() {
-        for (ValueFilter f : filter) {
-            f.open();
-        }
-    }
 
     @Override
     public ValueObject filterValue(ValueObject value) {
         for (ValueFilter f : filter) {
-            if (value != null || !nullStop || f.getNullAccept()) {
-                value = f.filter(value);
-            } else {
-                return null;
-            }
+            value = f.filter(value);
         }
-        return value != null || !nullStop ? value : null;
+        return value;
     }
 }

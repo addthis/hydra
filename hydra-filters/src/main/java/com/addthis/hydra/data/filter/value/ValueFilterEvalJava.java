@@ -27,6 +27,7 @@ import java.util.UUID;
 
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.compiler.JavaSimpleCompiler;
 import com.addthis.hydra.data.filter.eval.InputType;
 
@@ -34,7 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">evaluates
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">evaluates
  * a user-defined java function.</span>.
  * <p/>
  * <p>The user-defined java function is expected to operate on either
@@ -92,7 +93,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name eval-java
  */
-public class ValueFilterEvalJava extends ValueFilter {
+public class ValueFilterEvalJava extends AbstractValueFilter implements SuperCodable {
 
     private static final Logger log = LoggerFactory.getLogger(ValueFilterEvalJava.class);
 
@@ -150,11 +151,14 @@ public class ValueFilterEvalJava extends ValueFilter {
 
     private ValueFilter constructedFilter;
 
+    private ValueFilterEvalJava() {}
+
     private static final Set<String> requiredImports = new HashSet<>();
 
     static {
         requiredImports.add("import com.addthis.hydra.data.filter.eval.*;");
         requiredImports.add("import com.addthis.hydra.data.filter.value.ValueFilter;");
+        requiredImports.add("import com.addthis.hydra.data.filter.value.AbstractValueFilter;");
         requiredImports.add("import com.addthis.bundle.value.DefaultArray;");
         requiredImports.add("import com.addthis.bundle.value.ValueArray;");
         requiredImports.add("import com.addthis.bundle.value.ValueObject;");
@@ -163,9 +167,11 @@ public class ValueFilterEvalJava extends ValueFilter {
         requiredImports.add("import java.util.Map;");
     }
 
-    @Override public void open() {
+    @Override public void postDecode() {
         constructedFilter = createConstructedFilter();
     }
+
+    @Override public void preEncode() {}
 
     @Override
     public ValueObject filterValue(ValueObject value) {
@@ -195,10 +201,9 @@ public class ValueFilterEvalJava extends ValueFilter {
         }
         classDecl.append("public class ");
         classDecl.append(className);
-        classDecl.append(" extends ValueFilter\n");
+        classDecl.append(" extends AbstractValueFilter\n");
         classDecl.append("{\n");
         createConstructor(classDecl, className);
-        createInitializer(classDecl);
         createFilterValueMethod(classDecl);
         createFilterValueInternalMethod(classDecl);
         classDecl.append("}\n");
@@ -223,7 +228,7 @@ public class ValueFilterEvalJava extends ValueFilter {
 
             ValueFilter filter;
             try {
-                filter = (ValueFilter) compiler.getDefaultInstance(className, ValueFilter.class);
+                filter = (ValueFilter) compiler.getDefaultInstance(className, AbstractValueFilter.class);
             } catch (ClassNotFoundException | MalformedURLException |
                     InstantiationException | IllegalAccessException ex) {
                 String msg = "Exception occurred while attempting to classload 'eval-java' generated class.";
@@ -232,7 +237,6 @@ public class ValueFilterEvalJava extends ValueFilter {
                 log.warn("\n" + classDeclString);
                 throw new IllegalStateException(msg);
             }
-            filter.open();
             return filter;
         } finally {
             compiler.cleanupFiles(className);
@@ -272,10 +276,6 @@ public class ValueFilterEvalJava extends ValueFilter {
             classDecl.append("\n");
         }
         classDecl.append("}\n\n");
-    }
-
-    private void createInitializer(StringBuffer classDecl) {
-        classDecl.append("public void open() {}\n");
     }
 
     private void createFilterValueMethod(StringBuffer classDecl) {

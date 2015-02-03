@@ -14,7 +14,6 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueMap;
@@ -22,6 +21,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueTranslationException;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
+import com.addthis.hydra.data.filter.value.AbstractValueFilter;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
 import org.slf4j.Logger;
@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name map-extract
  */
-public class BundleFilterMapExtract extends BundleFilter {
+public class BundleFilterMapExtract implements BundleFilter {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilterMapExtract.class);
 
@@ -71,17 +71,6 @@ public class BundleFilterMapExtract extends BundleFilter {
      */
     @FieldConfig(codable = true, required = true)
     private XMap[] map;
-
-    @Override
-    public void open() {
-        if (map != null) {
-            for (XMap mapping : map) {
-                if (mapping.filter != null) {
-                    mapping.filter.open();
-                }
-            }
-        }
-    }
 
     @Override
     public boolean filter(Bundle bundle) {

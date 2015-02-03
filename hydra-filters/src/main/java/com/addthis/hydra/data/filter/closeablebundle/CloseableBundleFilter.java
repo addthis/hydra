@@ -18,8 +18,8 @@ import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 
 @Pluggable("closeable bundle filter")
-public abstract class CloseableBundleFilter extends BundleFilter implements Codable {
+public interface CloseableBundleFilter extends BundleFilter {
 
     /* Filters can implement this if they want to save their data somehow after a job finishes */
-    public abstract void close();
+    abstract void close();
 }

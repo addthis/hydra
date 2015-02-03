@@ -18,7 +18,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns those values that satisfies the specified inequalities</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns those values that satisfies the specified inequalities</span>.
  * <p/>
  * <p>The input value is placed on the left-hand side of the inequality.
  * The {@link #iop iop} field must be one of "lt" (&lt;), "lteq" (&lt;=), "eq" (==), "gteq" (&gt;=), or "gt" (&gt;).
@@ -35,7 +35,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @hydra-name inequality
  */
 
-public class ValueFilterInequality extends ValueFilter {
+public class ValueFilterInequality extends AbstractValueFilter {
 
     /**
      * The inequality to perform.
@@ -64,8 +64,6 @@ public class ValueFilterInequality extends ValueFilter {
         this.iop = iop;
         this.rh = rh;
     }
-
-    @Override public void open() { }
 
     // pass through if true, else null
     @Override

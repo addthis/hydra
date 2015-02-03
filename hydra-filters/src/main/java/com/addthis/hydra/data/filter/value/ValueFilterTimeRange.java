@@ -21,7 +21,6 @@ import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -33,7 +32,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns one or more formatted time values</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns one or more formatted time values</span>.
  * <p/>
  * <p>The input to this filter is assumed to be a date in Unix milliseconds.
  * This behavior can be changed using the {@link #now now} or {@link #defaultNow defaultNow} fields.
@@ -62,7 +61,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  * @user-reference
  * @hydra-name time-range
  */
-public class ValueFilterTimeRange extends ValueFilter {
+public class ValueFilterTimeRange extends AbstractValueFilter {
 
     /**
      * The output format using the
@@ -122,9 +121,6 @@ public class ValueFilterTimeRange extends ValueFilter {
         this.now = now;
         this.date = DateTimeFormat.forPattern(format);
     }
-
-    @Override
-    public void open() { }
 
     private ValueArray getTimeRange(long time, int range, TimeUnit timeUnit) {
         ValueArray arr = ValueFactory.createArray(range);

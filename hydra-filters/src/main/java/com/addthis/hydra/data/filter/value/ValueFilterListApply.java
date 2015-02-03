@@ -19,7 +19,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">applies the filter argument to each element of the input list</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">applies the filter argument to each element of the input list</span>.
  * <p/>
  * <p>Example:</p>
  * <pre>
@@ -29,17 +29,13 @@ import com.addthis.codec.annotations.FieldConfig;
  * @hydra-name list-apply
  * @exclude-fields once
  */
-public class ValueFilterListApply extends ValueFilter {
+public class ValueFilterListApply extends AbstractValueFilter {
 
     /**
      * The filter to be applied to each element of the input list.
      */
     @FieldConfig(codable = true, required = true)
     private ValueFilter elementFilter;
-
-    @Override public void open() {
-        elementFilter.open();
-    }
 
     @Override
     // This is a essentially a copy of the default ValueFilter.filter (which applies filterValue to list elements).

@@ -15,15 +15,13 @@ package com.addthis.hydra.data.filter.value;
 
 
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.util.TimeField;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">accepts a time string and converts the time into another format</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">accepts a time string and converts the time into another format</span>.
  * <p/>
  * <p>Example:</p>
  * <pre>
@@ -33,7 +31,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @user-reference
  * @hydra-name time-format
  */
-public class ValueFilterTimeFormat extends ValueFilter {
+public class ValueFilterTimeFormat extends AbstractValueFilter {
 
     /**
      * The input format using the
@@ -76,9 +74,6 @@ public class ValueFilterTimeFormat extends ValueFilter {
         this.in = new TimeField(null, formatIn, timeZoneIn);
         this.out = new TimeField(null, formatOut, timeZoneOut);
     }
-
-    @Override
-    public void open() { }
 
     @Override
     public ValueObject filterValue(ValueObject value) {

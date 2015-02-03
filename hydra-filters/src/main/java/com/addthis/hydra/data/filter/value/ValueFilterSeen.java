@@ -24,7 +24,7 @@ import com.addthis.hydra.store.util.Raw;
 import com.addthis.hydra.store.util.SeenFilterBasic;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">filters to elements seen or not seen by a basic bloom filter</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">filters to elements seen or not seen by a basic bloom filter</span>.
  * <p/>
  * <p>{@link ValueFilterBloom ValueFilterBloom} is similar and uses a better bloom implementation,
  * but requires a lot work to make jobs 360 wrt gen/use of blooms.
@@ -36,7 +36,7 @@ import com.addthis.hydra.store.util.SeenFilterBasic;
  * @user-reference
  * @hydra-name seen
  */
-public class ValueFilterSeen extends ValueFilter {
+public class ValueFilterSeen extends AbstractValueFilter {
 
     /**
      * If true, then return elements detected in the Bloom filter. Otherwise return elements
@@ -77,13 +77,6 @@ public class ValueFilterSeen extends ValueFilter {
         }
         {
             return match ? null : value;
-        }
-    }
-
-    @Override
-    public void open() {
-        if (filter != null) {
-            filter.open();
         }
     }
 

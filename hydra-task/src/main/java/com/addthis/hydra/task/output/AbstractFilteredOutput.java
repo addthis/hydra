@@ -25,9 +25,6 @@ public abstract class AbstractFilteredOutput extends TaskDataOutput {
 
     @Override
     protected void open() {
-        if (filter != null) {
-            filter.open();
-        }
     }
 
     public boolean filter(Bundle bundle) {

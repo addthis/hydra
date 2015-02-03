@@ -14,13 +14,12 @@
 package com.addthis.hydra.data.filter.closeablebundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.codec.annotations.FieldConfig;
 
 
-public class CloseableBundleFilterSet extends CloseableBundleFilter {
+public class CloseableBundleFilterSet implements CloseableBundleFilter {
 
     @FieldConfig(codable = true, required = true)
     private String value;
@@ -30,13 +29,6 @@ public class CloseableBundleFilterSet extends CloseableBundleFilter {
     private CloseableBundleFilter filter;
     @FieldConfig(codable = true)
     private boolean not;
-
-    @Override
-    public void open() {
-        if (filter != null) {
-            filter.open();
-        }
-    }
 
     @Override
     public void close() {

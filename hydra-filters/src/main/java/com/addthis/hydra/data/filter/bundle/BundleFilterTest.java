@@ -32,7 +32,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name test
  */
-public class BundleFilterTest extends BundleFilter {
+public class BundleFilterTest implements BundleFilter {
 
     /**
      * The bundle filter that is queried for a true or false return value. This field is required.
@@ -58,13 +58,6 @@ public class BundleFilterTest extends BundleFilter {
      */
     @FieldConfig(codable = true)
     private int loop = 1;
-
-    @Override
-    public void open() {
-        test.open();
-        onTrue.open();
-        onFalse.open();
-    }
 
     @Override
     public boolean filter(Bundle row) {
