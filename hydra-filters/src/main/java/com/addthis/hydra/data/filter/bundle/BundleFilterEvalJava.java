@@ -182,7 +182,6 @@ public class BundleFilterEvalJava implements BundleFilter, SuperCodable {
         classDecl.append("{\n");
         createConstructor(classDecl, className);
         createFieldsVariable(classDecl);
-        createInitializer(classDecl);
         createFilterMethod(classDecl);
         classDecl.append("}\n");
         classDeclString = classDecl.toString();
@@ -236,10 +235,6 @@ public class BundleFilterEvalJava implements BundleFilter, SuperCodable {
             }
             classDecl.append("};\n");
         }
-    }
-
-    private void createInitializer(StringBuffer classDecl) {
-        classDecl.append("public void open() {}\n");
     }
 
     private IllegalStateException handleCompilationError(String classDeclString, JavaSimpleCompiler compiler) {

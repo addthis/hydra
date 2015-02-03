@@ -204,7 +204,6 @@ public class ValueFilterEvalJava extends AbstractValueFilter implements SuperCod
         classDecl.append(" extends AbstractValueFilter\n");
         classDecl.append("{\n");
         createConstructor(classDecl, className);
-        createInitializer(classDecl);
         createFilterValueMethod(classDecl);
         createFilterValueInternalMethod(classDecl);
         classDecl.append("}\n");
@@ -277,10 +276,6 @@ public class ValueFilterEvalJava extends AbstractValueFilter implements SuperCod
             classDecl.append("\n");
         }
         classDecl.append("}\n\n");
-    }
-
-    private void createInitializer(StringBuffer classDecl) {
-        classDecl.append("public void open() {}\n");
     }
 
     private void createFilterValueMethod(StringBuffer classDecl) {
