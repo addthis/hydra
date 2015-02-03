@@ -238,10 +238,7 @@ public abstract class JdbcDataStore implements SpawnDataStore {
      */
     private void insert(String path, String childId, String value) throws SQLException {
         try (Connection connection = cpds.getConnection()) {
-            PreparedStatement preparedStatement = connection.prepareStatement(getInsertTemplate());
-            preparedStatement.setString(1, path);
-            preparedStatement.setBlob(2, valueToBlob(value));
-            preparedStatement.setString(3, childId);
+            PreparedStatement preparedStatement = getInsertTemplate(connection, path, childId, value);
             executeAndTimeInsert(preparedStatement);
         }
     }
@@ -267,7 +264,8 @@ public abstract class JdbcDataStore implements SpawnDataStore {
             if (!hasData) {
                 return null;
             } else {
-                firstValue = blobToValue(resultSet.getBlob(1));
+//                firstValue = blobToValue(resultSet.getBlob(1));
+                                firstValue = resultSet.getString(1);
             }
             boolean moreResults = resultSet.next();
             // Given the UNIQUE constraint, it would be extremely unexpected to find multiple values for a single path/childId
@@ -410,7 +408,8 @@ public abstract class JdbcDataStore implements SpawnDataStore {
 
     protected abstract String getQueryTemplate();
 
-    protected abstract String getInsertTemplate();
+    protected abstract PreparedStatement getInsertTemplate(
+            Connection connection, String path, String childId, String value) throws SQLException;
 
     protected abstract String getDeleteTemplate();
 

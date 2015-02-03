@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Properties;
 
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 
 /**
  * A class for storing spawn configuration data into a mysql database. Reads and writes values from a single table.
@@ -84,16 +85,20 @@ public class MysqlDataStore extends JdbcDataStore {
         //TODO - cache this
         return String.format("SELECT %s FROM %s WHERE %s=? AND %s=?", getValueKey(), tableName, getPathKey(), getChildKey());
     }
-
+    
     /**
      * {@inheritDoc}
      */
     @Override
-    protected String getInsertTemplate() {
-        //TODO - cache this
-        return String.format("REPLACE INTO %s (%s,%s,%s) VALUES(?,?,?)", tableName, getPathKey(), getValueKey(), getChildKey());
+    protected PreparedStatement getInsertTemplate(Connection connection, String path, String childId, String value) throws SQLException {
+        final PreparedStatement preparedStatement = connection.prepareStatement(
+                String.format("REPLACE INTO %s (%s,%s,%s) VALUES(?,?,?)", tableName, getPathKey(), getValueKey(), getChildKey()));
+        preparedStatement.setString(1, path);
+        preparedStatement.setBlob(2, valueToBlob(value));
+        preparedStatement.setString(3, childId);
+        return preparedStatement;
     }
-
+    
     /**
      * {@inheritDoc}
      */

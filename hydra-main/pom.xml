@@ -196,6 +196,12 @@
         <version>9.3-1102-jdbc41</version>
         <scope>test</scope>
     </dependency>
+    <dependency>
+        <!-- This is for the performance tests.  Run them with -Djub.consumers=CONSOLE,H2 -Djub.db.file=.benchmarks -->
+        <groupId>com.h2database</groupId>
+	<artifactId>h2</artifactId>
+	<version>1.4.182</version>
+    </dependency>
 <!--    <dependency>
 	<groupId>com.carrotsearch</groupId>
 	<artifactId>junit-benchmarks</artifactId>
