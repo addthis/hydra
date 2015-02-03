@@ -770,15 +770,15 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     }
 
     void sendControlMessage(HostMessage msg) {
-        synchronized (jmsxmitlock) {
-            try {
+        try {
+            synchronized (jmsxmitlock) {
                 if (batchControlProducer != null) {
                     batchControlProducer.sendMessage(msg, msg.getHostUuid());
                 }
-            } catch (Exception ex) {
-                log.warn("[mq.ctrl.send] fail", ex);
-                shutdown();
             }
+        } catch (Exception ex) {
+            log.error("[mq.ctrl.send] fail <INITIATING JVM SHUTDOWN>", ex);
+            shutdown();
         }
     }
 
