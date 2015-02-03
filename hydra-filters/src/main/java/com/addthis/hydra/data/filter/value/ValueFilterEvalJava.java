@@ -31,6 +31,8 @@ import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.compiler.JavaSimpleCompiler;
 import com.addthis.hydra.data.filter.eval.InputType;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -151,7 +153,8 @@ public class ValueFilterEvalJava extends AbstractValueFilter implements SuperCod
 
     private ValueFilter constructedFilter;
 
-    private ValueFilterEvalJava() {}
+    @VisibleForTesting
+    ValueFilterEvalJava() {}
 
     private static final Set<String> requiredImports = new HashSet<>();
 
