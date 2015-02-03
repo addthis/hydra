@@ -17,6 +17,7 @@ import java.io.IOException;
 
 import com.addthis.basis.util.ClosableIterator;
 
+import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.codec.config.Configs;
 import com.addthis.hydra.data.tree.DataTreeNode;
 
@@ -48,19 +49,21 @@ public class PathPruneTest {
 
     @Test
     public void deleteFromName() throws IOException {
+        TreeMapState state = new TreeMapState(new ListBundle());
         DataTreeNode parent = mockParent();
         PathPrune pathPrune = Configs.decodeObject(PathPrune.class, "ttl = 2 days, nameFormat = YYMMDD");
         long now = DateTimeFormat.forPattern("YYMMDD").parseMillis("140105");
-        pathPrune.pruneChildren(parent, now);
+        pathPrune.pruneChildren(state, parent, now);
         verify(parent).deleteNode("140101");
     }
 
     @Test
     public void keepFromName() throws IOException {
+        TreeMapState state = new TreeMapState(new ListBundle());
         DataTreeNode parent = mockParent();
         PathPrune pathPrune = Configs.decodeObject(PathPrune.class, "ttl = 20 days, nameFormat = YYMMDD");
         long now = DateTimeFormat.forPattern("YYMMDD").parseMillis("140105");
-        pathPrune.pruneChildren(parent, now);
+        pathPrune.pruneChildren(state, parent, now);
         verify(parent, never()).deleteNode("140101");
     }
 

@@ -41,6 +41,8 @@ public class ValueFilterGlob extends StringFilter {
         compiled = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
     }
 
+    @Override public void open() { }
+
     @Override
     @Nullable
     public String filter(String sv) {

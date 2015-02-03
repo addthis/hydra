@@ -30,7 +30,6 @@ import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.util.BundleUtils;
 
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.slf4j.Logger;
@@ -40,20 +39,29 @@ import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.DefaultChannelProgressivePromise;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
+import static com.google.common.util.concurrent.MoreExecutors.shutdownAndAwaitTermination;
+
 /**
  * The class that performs the querying and feeds bundles into the bridge. The second class in the three step query process.
  * <p/>
  * Flow is : constructor -> run
  */
-class SearchRunner implements Runnable {
+public class SearchRunner implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(SearchRunner.class);
 
     static final int querySearchThreads = Parameter.intValue("meshQuerySource.searchThreads", 3);
-    static final ExecutorService querySearchPool = MoreExecutors
-            .getExitingExecutorService(new ThreadPoolExecutor(querySearchThreads, querySearchThreads, 0L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(),
-                    new ThreadFactoryBuilder().setNameFormat("querySearch-%d").build()), 5, TimeUnit.SECONDS);
+    static final int SHUTDOWN_WAIT = Parameter.intValue("meshQuerySource.searchShutdownWait", 60);
+    static final ExecutorService querySearchPool =
+            new ThreadPoolExecutor(querySearchThreads, querySearchThreads, 0L, TimeUnit.MILLISECONDS,
+                                   new LinkedBlockingQueue<>(),
+                                   new ThreadFactoryBuilder().setNameFormat("querySearch-%d").setDaemon(true).build());
+
+    public static void shutdownSearchPool() {
+        log.info("Going to wait up to {} seconds for any queries still running.", SHUTDOWN_WAIT);
+        boolean shutdownFinished = shutdownAndAwaitTermination(querySearchPool, SHUTDOWN_WAIT, TimeUnit.SECONDS);
+        log.info("Shutdown was successful: {}", shutdownFinished);
+    }
 
 
     private final Map<String, String> options;

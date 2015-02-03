@@ -119,6 +119,17 @@ public class ValueFilterSplit extends ValueFilter {
     }
 
     @Override
+    public void open() {
+        if (filter != null) {
+            filter.open();
+        }
+        if (keyFilter != null) {
+            keyFilter.open();
+        }
+    }
+
+
+    @Override
     public ValueObject filterValue(ValueObject value) {
         return filter != null ? filter.filter(value) : value;
     }

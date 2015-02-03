@@ -50,6 +50,13 @@ public class ValueFilterChain extends ValueFilter {
     private boolean nullStop = true;
 
     @Override
+    public void open() {
+        for (ValueFilter f : filter) {
+            f.open();
+        }
+    }
+
+    @Override
     public ValueObject filterValue(ValueObject value) {
         for (ValueFilter f : filter) {
             if (value != null || !nullStop || f.getNullAccept()) {

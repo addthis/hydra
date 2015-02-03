@@ -113,6 +113,7 @@ public class JobAlertRunner {
                 for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
                     JobAlert oldAlert = entry.getValue();
                     Map<String, String> currentErrors = oldAlert.getActiveJobs();
+                    // entry may be concurrently deleted, so only recompute if still present, and while locked
                     JobAlert alert = alertMap.computeIfPresent(entry.getKey(), (id, currentAlert) -> {
                         currentAlert.checkAlertForJobs(getAlertJobs(currentAlert), meshyClient);
                         if (!currentAlert.getActiveJobs().equals(currentErrors)) {
@@ -120,6 +121,9 @@ public class JobAlertRunner {
                         }
                         return currentAlert;
                     });
+                    // null if it was concurrently removed from the map. Does not catch all removals, but might as well
+                    // make a best effort attempt to send clears when convenient (should probably move clear emails to
+                    // the removal method at some point)
                     if (alert == null) {
                         emailAlert(oldAlert, "[CLEAR] ", currentErrors);
                     } else {
@@ -279,7 +283,7 @@ public class JobAlertRunner {
     public void putAlert(String id, JobAlert alert) {
         alertMap.compute(id, (key, old) -> {
             if (old != null) {
-                alert.setActiveJobs(old.getActiveJobs());
+                alert.setStateFrom(old);
             }
             storeAlert(id, alert);
             return alert;

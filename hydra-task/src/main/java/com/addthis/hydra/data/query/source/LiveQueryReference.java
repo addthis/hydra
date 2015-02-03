@@ -36,11 +36,13 @@ public class LiveQueryReference extends QueryReference {
     private static final Logger log = LoggerFactory.getLogger(LiveQueryReference.class);
 
     private final String job;
+    private final int taskId;
     private final QueryEngine queryEngine;
 
-    public LiveQueryReference(File dir, String job, QueryEngine queryEngine) {
+    public LiveQueryReference(File dir, String job, int taskId, QueryEngine queryEngine) {
         super(dir);
         this.job = job;
+        this.taskId = taskId;
         this.queryEngine = queryEngine;
     }
 
@@ -50,6 +52,11 @@ public class LiveQueryReference extends QueryReference {
 
     public QueryEngine engine() {
         return queryEngine;
+    }
+
+    @Override
+    public String getName() {
+        return "live/" + job + "/" + taskId + "/live/data/query";
     }
 
     @Override

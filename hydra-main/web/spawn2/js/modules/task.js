@@ -514,6 +514,9 @@ function(
         template: _.template(taskDetailTemplate),
         events:{
             "keyup input#linesInput":"handleLineInputChange",
+            "change input#linesInput":"handleLineInputChange",
+            "keyup input#runsAgoInput":"handleRunsAgoInputChange",
+            "change input#runsAgoInput":"handleRunsAgoInputChange",
             "click div.log-control-button button":"handleLogControlClick",
             "click div.log-types button:not(.active)":"handleLogTypeClick",
             "click #kickTaskButton":"handleKickButtonClick",
@@ -537,11 +540,13 @@ function(
             state.log = state.log || {
                 lines: 10,
                 type: 0,
-                stdout:true
+                stdout:true,
+                runsAgo: 0
             };
             this.lines = state.log.lines;
             this.type = state.log.type; //0: roll, 1:tail, 2:head
             this.stdout = state.log.stdout;
+            this.runsAgo = state.log.runsAgo;
             this.log = options.log;
             this.xhr=null;
             this.rollTimeout=null;
@@ -559,13 +564,18 @@ function(
                 task:this.model.toJSON(),
                 lines:this.lines,
                 type:this.type,
-                stdout:this.stdout
+                stdout:this.stdout,
+                runsAgo:this.runsAgo
             });
             this.$el.html(html);
             //fetch log content after rendering
             this.log.lines=this.lines;
             this.log.type=this.type;
             this.log.stdout=this.stdout;
+            this.log.runsAgo=this.runsAgo;
+            this.$el.css("display", "flex");
+            this.$el.css("height", "100%");
+            this.$el.css("flex-direction", "column");
             return this;
         },
         handleRevertButtonClick:function(event){
@@ -606,12 +616,17 @@ function(
                 clearTimeout(this.rollTimeout);
                 this.rollTimeout=null;
             }
-            this.$el.find("pre#logContainer").html("");
+            this.$el.find("pre#logContainer").html("loading...");
         },
         handleLogChange:function(log){
             var text = log.get("out");
             text = this.linkFiles(text);
             if(_.isEqual(this.type,0)){//roll
+                var oldOffset = log.offset;
+                var newOffset = log.get("offset");
+                if (!oldOffset || newOffset < oldOffset) {
+                    this.$el.find("pre#logContainer").html("");
+                }
                 var isAtBottom = this.isLogAtBottom();//before changing text
                 this.$el.find("pre#logContainer").append(text);
                 if(isAtBottom){
@@ -619,10 +634,12 @@ function(
                 }
             }
             else if(_.isEqual(this.type,2)){//head
+                this.$el.find("pre#logContainer").html("");
                 this.$el.find("pre#logContainer").html(text);
                 this.scrollLogToTop();
             }
             else{
+                this.$el.find("pre#logContainer").html("");
                 this.$el.find("pre#logContainer").html(text);
                 this.scrollLogToBottom();
             }
@@ -656,7 +673,7 @@ function(
             this.fetchLog();
         },
         handleLogError:function(){
-            this.$el.find("pre#logContainer").html("Log is empty");
+            this.$el.find("pre#logContainer").html("Error talking to minion");
         },
         handleTaskStateChange:function(model){
             var label = this.$el.find("span#taskLabel");
@@ -672,6 +689,29 @@ function(
             this.handleHostNameChange(model);
             this.log.port=model.get("hostPort");
         },
+        handleRunsAgoInputChange: function(event){
+            var runsAgoInput = this.$el.find("input#runsAgoInput");
+            var runsAgo = parseInt(runsAgoInput.val(),10);
+            if(!_.isNaN(runsAgo)){
+                if(!_.isEqual(this.runsAgo,runsAgo)){
+                    this.log.clear();
+                    this.runsAgo=runsAgo;
+                    this.log.runsAgo=runsAgo;
+                    runsAgoInput.val(this.runsAgo);
+                    this.$el.find("pre#logContainer").html("loading...");
+                    this.fetchLog();
+                }
+                this.saveState();
+                return true;
+            }
+            else{
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                //TODO:show error message
+                runsAgoInput.val(this.runsAgo);
+                return false;
+            }
+        },
         handleLineInputChange: function(event){
             var lineInput = this.$el.find("input#linesInput");
             var lines = parseInt(lineInput.val(),10);
@@ -681,7 +721,7 @@ function(
                     this.lines=lines;
                     this.log.lines=lines;
                     lineInput.val(this.lines);
-                    this.$el.find("pre#logContainer").html("");
+                    this.$el.find("pre#logContainer").html("loading...");
                     this.fetchLog();
                 }
                 this.saveState();
@@ -736,7 +776,8 @@ function(
             state.log= {
                 lines:this.lines,
                 type:this.type,
-                stdout:this.stdout
+                stdout:this.stdout,
+                runsAgo:this.runsAgo
             };
             app.setCookie("spawn", state);
         },

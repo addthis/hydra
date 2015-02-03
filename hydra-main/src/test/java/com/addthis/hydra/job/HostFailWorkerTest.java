@@ -56,17 +56,17 @@ public class HostFailWorkerTest extends ZkCodecStartUtil {
         String liveHostId = "livehost";
         String replicaHostId = "replicahost";
         String emptyHostId = "emptyhost";
-        spawn.updateHostState(makeHostState("otherhost", true));
+        spawn.hostManager.updateHostState(makeHostState("otherhost", true));
         // If a minion is down, HostFailWorker should complain
-        spawn.updateHostState(makeHostState(emptyHostId, true));
+        spawn.hostManager.updateHostState(makeHostState(emptyHostId, true));
         HostState host1 = makeHostState(liveHostId, true);
         Job job = makeSingleTaskJob(liveHostId, replicaHostId);
         JobKey[] jobKeys = new JobKey[]{new JobKey(job.getId(), 0)};
         host1.setStopped(jobKeys);
-        spawn.updateHostState(host1);
+        spawn.hostManager.updateHostState(host1);
         HostState host2 = makeHostState("downhost", false);
         host2.setReplicas(jobKeys);
-        spawn.updateHostState(host2);
+        spawn.hostManager.updateHostState(host2);
         assertTrue("should not be able to fail host with task that is also on a down host", !hostFailWorker.checkHostStatesForFailure(liveHostId));
         assertTrue("should be able to fail empty host", hostFailWorker.checkHostStatesForFailure(emptyHostId));
     }
@@ -85,7 +85,7 @@ public class HostFailWorkerTest extends ZkCodecStartUtil {
         // Mark some hosts for failure, then spin up a new HostFailWorker and make sure it can load the state
         hostFailWorker.markHostsToFail("a,b", HostFailWorker.FailState.FAILING_FS_DEAD);
         hostFailWorker.markHostsToFail("c", HostFailWorker.FailState.FAILING_FS_OKAY);
-        HostFailWorker hostFailWorker2 = new HostFailWorker(spawn, null);
+        HostFailWorker hostFailWorker2 = new HostFailWorker(spawn, spawn.hostManager, null);
         assertEquals("should persist state", HostFailWorker.FailState.FAILING_FS_DEAD, hostFailWorker2.getFailureState("a"));
         assertEquals("should persist state", HostFailWorker.FailState.FAILING_FS_DEAD, hostFailWorker2.getFailureState("b"));
         assertEquals("should persist state", HostFailWorker.FailState.FAILING_FS_OKAY, hostFailWorker2.getFailureState("c"));
@@ -95,13 +95,13 @@ public class HostFailWorkerTest extends ZkCodecStartUtil {
     @Test
     public void failWarningTest() throws JSONException {
         // Check to make sure the UI warnings about host state are correct
-        spawn.updateHostState(makeHostState("a", true, 1000, 2000));
-        spawn.updateHostState(makeHostState("b", true, 500, 2000));
-        spawn.updateHostState(makeHostState("c", true, 1500, 2000));
+        spawn.hostManager.updateHostState(makeHostState("a", true, 1000, 2000));
+        spawn.hostManager.updateHostState(makeHostState("b", true, 500, 2000));
+        spawn.hostManager.updateHostState(makeHostState("c", true, 1500, 2000));
         JSONObject failBMessage = hostFailWorker.getInfoForHostFailure("b", true);
         assertTrue("should have ~.5 disk usage before fail", failBMessage.get("prefail") != null && areClose(failBMessage.getDouble("prefail"), .5));
         assertTrue("should have ~.75 disk usage after fail", failBMessage.get("postfail") != null && areClose(failBMessage.getDouble("postfail"), .75));
-        spawn.updateHostState(makeHostState("d", true, 10000, 11000)); // This host has more disk used than would fit on the other hosts
+        spawn.hostManager.updateHostState(makeHostState("d", true, 10000, 11000));
         JSONObject failDMessage = hostFailWorker.getInfoForHostFailure("d", true);
         assertTrue("should get fatal warning after failing too-big host", failDMessage.has("fatal"));
     }
@@ -110,8 +110,8 @@ public class HostFailWorkerTest extends ZkCodecStartUtil {
     public void fullDiskTest() throws Exception {
         String fullHostId = "full";
         String emptyHostId = "empty";
-        spawn.updateHostState(makeHostState(fullHostId, true, 999, 1000));
-        spawn.updateHostState(makeHostState(emptyHostId, true, 100, 1000));
+        spawn.hostManager.updateHostState(makeHostState(fullHostId, true, 999, 1000));
+        spawn.hostManager.updateHostState(makeHostState(emptyHostId, true, 100, 1000));
         zkClient.create().creatingParentsIfNeeded().forPath("/minion/up/" + fullHostId, new byte[]{});
         zkClient.create().creatingParentsIfNeeded().forPath("/minion/up/" + emptyHostId, new byte[]{});
         Thread.sleep(2000); // need to let spawn detect the new minions

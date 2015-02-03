@@ -84,6 +84,9 @@ public class ValueFilterDateRangeLength extends StringFilter {
     }
 
     @Override
+    public void open() {}
+
+    @Override
     public String filter(String value) {
         if (value != null) {
             try {

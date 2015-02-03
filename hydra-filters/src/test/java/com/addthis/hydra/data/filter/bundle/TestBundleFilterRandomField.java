@@ -13,7 +13,10 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import java.io.IOException;
+
 import com.addthis.bundle.util.map.MapBundle;
+import com.addthis.codec.config.Configs;
 
 import org.junit.Test;
 
@@ -23,16 +26,22 @@ import static org.junit.Assert.assertTrue;
 public class TestBundleFilterRandomField {
 
     @Test
-    public void fieldTest() {
-        BundleFilterRandomField bfrf = new BundleFilterRandomField(new String[]{"f0", "f1"}, "out0");
+    public void fieldTest() throws IOException {
+        BundleFilterRandomField bfrf = Configs.decodeObject(
+                BundleFilterRandomField.class,
+                "{op:\"random-field\", inFields:[\"f0\", \"f1\"], " +
+                "out:\"out0\"}");
         MapBundle bundle = MapBundle.createBundle(new String[]{"f0", "foo", "f1", "bar"});
         bfrf.filter(bundle);
         assertTrue(bundle.get("out0").equals("foo") || bundle.get("out0").equals("bar"));
     }
 
     @Test
-    public void fieldTestNull() {
-        BundleFilterRandomField bfrf = new BundleFilterRandomField(new String[]{"f0", "f1"}, "out0");
+    public void fieldTestNull() throws IOException {
+        BundleFilterRandomField bfrf = Configs.decodeObject(
+                BundleFilterRandomField.class,
+                "{op:\"random-field\", inFields:[\"f0\", \"f1\"], " +
+                "out:\"out0\"}");
         MapBundle bundle = MapBundle.createBundle(new String[]{"f0", null, "f1", "bar"});
         bfrf.filter(bundle);
         assertEquals("bar", bundle.get("out0"));

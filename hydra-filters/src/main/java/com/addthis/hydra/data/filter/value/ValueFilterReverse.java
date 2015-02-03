@@ -31,6 +31,9 @@ import com.addthis.bundle.value.ValueObject;
 public class ValueFilterReverse extends ValueFilter {
 
     @Override
+    public void open() { }
+
+    @Override
     public ValueObject filterValue(ValueObject value) {
         if (value == null) {
             return null;

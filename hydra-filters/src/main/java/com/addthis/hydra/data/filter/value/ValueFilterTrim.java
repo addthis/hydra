@@ -30,6 +30,9 @@ import com.addthis.basis.util.Strings;
 public class ValueFilterTrim extends StringFilter {
 
     @Override
+    public void open() { }
+
+    @Override
     public String filter(String value) {
         return Strings.isEmpty(value) ? value : value.trim();
     }

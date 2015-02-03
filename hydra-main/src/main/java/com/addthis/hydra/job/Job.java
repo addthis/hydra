@@ -72,7 +72,7 @@ public final class Job implements IJob {
     @FieldConfig private Long startTime;
     /* Unix epoch offset of time last job node completed */
     @FieldConfig private Long endTime;
-    /* hours between re-kicking */
+    /* minutes between re-kicking */
     @FieldConfig private Long rekickTimeout;
     /* minutes max time to allocate to job before it's interrupted */
     @FieldConfig private Long maxRunTime;
@@ -400,15 +400,16 @@ public final class Job implements IJob {
 
     public boolean setState(JobState state, boolean force) {
         JobState curr = getState();
-        if (force || (isEnabled() && curr.canTransition(state)) ||
-            (!isEnabled() && state == JobState.IDLE) ||
-            (!isEnabled() && state == JobState.ERROR)) {
+        if (force
+            || (isEnabled() && curr.canTransition(state))
+            || (!isEnabled() && (state == JobState.IDLE))
+            || (!isEnabled() && (state == JobState.ERROR))) {
             // Note dependence on ordering!
             this.state = state.ordinal();
             return true;
         } else if (state != curr) {
-            log.warn("[job.setstate] " + ((disabled) ? "disabled " : "") + "job " +
-                     getId() + " cannot transition " + curr + " -> " + state);
+            log.warn("[job.setstate] {}job {} cannot transition {} -> {}",
+                     (disabled) ? "disabled " : "", getId(), curr, state);
             for (StackTraceElement elt : Thread.currentThread().getStackTrace()) {
                 log.warn(elt.toString());
             }
@@ -672,7 +673,7 @@ public final class Job implements IJob {
             }
         }
         task.setErrorCode(0);
-        setTaskState(task, JobTaskState.IDLE);
+        setTaskState(task, JobTaskState.IDLE, true);
         if (getState() == JobState.IDLE) {
             setEndTime(JitterClock.globalTime());
         }

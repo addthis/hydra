@@ -16,6 +16,7 @@ package com.addthis.hydra.task.map;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.CachingField;
+import com.addthis.bundle.util.FullAutoField;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 
@@ -39,10 +40,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public final class FieldFilter {
 
     /** The name of the bundle field source. This is required. */
-    @JsonProperty(required = true) AutoField from;
+    final AutoField from;
 
     /** The name of the bundle field destination. */
-    @JsonProperty(required = true) AutoField to;
+    final AutoField to;
 
     /** Optionally apply a filter onto the field. */
     @JsonProperty ValueFilter filter;
@@ -52,12 +53,39 @@ public final class FieldFilter {
     
     // Default constructor required for codec deserialization
     @SuppressWarnings("unused")
-    private FieldFilter() {
+    private FieldFilter(@JsonProperty(value = "from", required = true) AutoField from,
+                        @JsonProperty(value = "to") AutoField to) {
+        this.from = from;
+        if (to == null) {
+            this.to = cloneFrom(from);
+        } else {
+            this.to = to;
+        }
+    }
+
+    public void open() {
+        if (filter != null) {
+            filter.open();
+        }
+    }
+
+    // can't find a good way to copy the json value for "from", copy constructors fail for abstract types,
+    // and clone has its own host of problems. We could just re-use the same object, but that would be even
+    // more wasteful than the caching we perform for unchanging formats. This is a decent stop-gap solution.
+    private static AutoField cloneFrom(AutoField from) {
+        if (from instanceof FullAutoField) {
+            return new FullAutoField(((FullAutoField) from).baseAutoField, ((FullAutoField) from).subNames);
+        } else if (from instanceof CachingField) {
+            return new CachingField(((CachingField) from).name);
+        } else {
+            throw new IllegalArgumentException("can not use implicit relation (from = to) for AutoField type: "
+                                               + from.getClass());
+        }
     }
 
     public FieldFilter(String copyFieldName) {
-        this.from = CachingField.newAutoField(copyFieldName);
-        this.to   = CachingField.newAutoField(copyFieldName);
+        this.from = AutoField.newAutoField(copyFieldName);
+        this.to   = AutoField.newAutoField(copyFieldName);
     }
 
     public void mapField(Bundle in, Bundle out) {

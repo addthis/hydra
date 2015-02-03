@@ -13,23 +13,25 @@
  */
 package com.addthis.hydra.task.output;
 
-import java.io.IOException;
+import javax.annotation.Nullable;
 
-import java.util.Collections;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueObject;
+import com.addthis.codec.annotations.Time;
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.metrics.reporter.config.GmondConfigParser;
 import com.addthis.metrics.reporter.config.HostPort;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -40,12 +42,12 @@ import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Preconditions.checkState;
 import info.ganglia.gmetric4j.gmetric.GMetric;
-import static info.ganglia.gmetric4j.gmetric.GMetric.UDPAddressingMode.MULTICAST;
+import static info.ganglia.gmetric4j.gmetric.GMetric.UDPAddressingMode.UNICAST;
 import info.ganglia.gmetric4j.gmetric.GMetricSlope;
 import info.ganglia.gmetric4j.gmetric.GMetricType;
 import info.ganglia.gmetric4j.gmetric.GangliaException;
 
-public class GangliaOutput extends AbstractFilteredOutput {
+public final class GangliaOutput extends AbstractFilteredOutput {
     private static final Logger log = LoggerFactory.getLogger(GangliaOutput.class);
 
     private final List<HostPort> hosts;
@@ -56,16 +58,16 @@ public class GangliaOutput extends AbstractFilteredOutput {
     private final AutoField group;
     private final AutoField units;
 
-    private transient List<GMetric> gmetrics;
+    @Nullable private transient List<GMetric> gmetrics;
 
     @JsonCreator
-    public GangliaOutput(@JsonProperty("hosts") GangliaHosts hosts,
-                         @JsonProperty("tMax")  int tMax,
-                         @JsonProperty("dMax")  int dMax,
-                         @JsonProperty("name")  AutoField name,
-                         @JsonProperty("value") AutoField value,
-                         @JsonProperty("group") AutoField group,
-                         @JsonProperty("units") AutoField units) {
+    private GangliaOutput(@JsonProperty("hosts") GangliaHosts hosts,
+                          @JsonProperty("tMax")  @Time(TimeUnit.SECONDS) int tMax,
+                          @JsonProperty("dMax")  @Time(TimeUnit.SECONDS) int dMax,
+                          @JsonProperty("name")  AutoField name,
+                          @JsonProperty("value") AutoField value,
+                          @JsonProperty("group") AutoField group,
+                          @JsonProperty("units") AutoField units) {
         this.hosts = hosts.gangliaHosts;
         this.tMax = tMax;
         this.dMax = dMax;
@@ -75,47 +77,20 @@ public class GangliaOutput extends AbstractFilteredOutput {
         this.units = units;
     }
 
-    public GangliaOutput(String host,
-                         int port,
-                         int tMax,
-                         int dMax,
-                         AutoField name,
-                         AutoField value,
-                         AutoField group,
-                         AutoField units) {
-        this(new GangliaHosts(Collections.singletonList(new HostPort(host, port))),
-             tMax, dMax, name, value, group, units);
-    }
-
-    /* Similar to the primary constructor, but allows directly setting the list of gmetrics. Note: do not call open. */
-    @VisibleForTesting
-    GangliaOutput(List<GMetric> gmetrics,
-                  int tMax,
-                  int dMax,
-                  AutoField name,
-                  AutoField value,
-                  AutoField group,
-                  AutoField units) {
-        this(new GangliaHosts(Collections.<HostPort>emptyList()), tMax, dMax, name, value, group, units);
-        this.gmetrics = gmetrics;
-    }
-
     @Override protected void open() {
+        super.open();
         checkState(gmetrics == null, "open was already called");
         log.info("opening ganglia output with hosts: {}", hostsToString());
-        gmetrics = ImmutableList.copyOf(
-                Lists.transform(hosts, new Function<HostPort, GMetric>() {
-                    @Override public GMetric apply(HostPort input) {
-                        try {
-                            return new GMetric(input.getHost(), input.getPort(), MULTICAST, 1);
-                        } catch (IOException e) {
-                            throw Throwables.propagate(e);
-                        }
-                    }
-                })
-        );
+        gmetrics = hosts.stream().map(hostPort -> {
+            try {
+                return new GMetric(hostPort.getHost(), hostPort.getPort(), UNICAST, 1);
+            } catch (IOException ex) {
+                throw new UncheckedIOException(ex);
+            }
+        }).collect(Collectors.toList());
     }
 
+    // only needed because metrics-reporter-config did not write a toString method for HostPort
     private String hostsToString() {
         try {
             return Jackson.defaultMapper().writeValueAsString(hosts);
@@ -187,15 +162,29 @@ public class GangliaOutput extends AbstractFilteredOutput {
         gmetrics = null;
     }
 
-    public static class GangliaHosts {
-        public final List<HostPort> gangliaHosts;
+    @Override public String toString() {
+        return Objects.toStringHelper(this)
+                      .add("hosts", hostsToString())
+                      .add("tMax", tMax)
+                      .add("dMax", dMax)
+                      .add("name", name)
+                      .add("value", value)
+                      .add("group", group)
+                      .add("units", units)
+                      .add("gmetrics", gmetrics)
+                      .toString();
+    }
 
-        public GangliaHosts(String fileName) {
+    /** Exists only to support both file-name and host-port-list deserialization via a single field. */
+    private static final class GangliaHosts {
+        private final List<HostPort> gangliaHosts;
+
+        private GangliaHosts(String fileName) {
             this.gangliaHosts = new GmondConfigParser().getGmondSendChannels(fileName);
         }
 
         @JsonCreator
-        public GangliaHosts(List<HostPort> gangliaHosts) {
+        private GangliaHosts(List<HostPort> gangliaHosts) {
             this.gangliaHosts = gangliaHosts;
         }
     }

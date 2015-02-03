@@ -42,6 +42,9 @@ public class MapStringBytes extends AbstractMap<String, byte[]> implements Map<S
     }
 
     public static ValueMap create(Map<String, byte[]> input) {
+        if (input == null) {
+            return null;
+        }
         if (input instanceof MapStringBytes) {
             return ((MapStringBytes) input).getData();
         } else {

@@ -94,6 +94,11 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
             for (Entry<String, String> s : conf.key.entrySet()) {
                 keyAccess.put(s.getKey(), p.getFormat().getField(s.getValue()));
             }
+            if (conf.op != null) {
+                for (ValueFilter filter : conf.op.values()) {
+                    filter.open();
+                }
+            }
         }
         // copy values from pipeline
         for (Entry<String, BundleField> s : keyAccess.entrySet()) {

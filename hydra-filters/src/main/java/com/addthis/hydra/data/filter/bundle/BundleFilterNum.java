@@ -20,6 +20,9 @@ import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.util.BundleCalculator;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">performs postfix calculator operations</span>.
@@ -319,28 +322,25 @@ public class BundleFilterNum extends BundleFilter {
     /**
      * Sequence of commands to execute (comma-delimited)
      */
-    @FieldConfig(codable = true, required = true)
-    private String define;
+    final private String define;
 
     /**
      * Subset of fields from the bundle filter that are used in calculation.
      */
-    @FieldConfig(codable = true)
-    private String[] columns;
+    final private String[] columns;
 
-    private BundleCalculator calculator;
+    final private BundleCalculator calculator;
 
-
-    public BundleFilterNum setDefine(String define) {
+    @JsonCreator
+    public BundleFilterNum(@JsonProperty(value = "define", required = true) String define,
+                           @JsonProperty("columns") String[] columns) {
         this.define = define;
-        return this;
+        this.columns = columns;
+        this.calculator = new BundleCalculator(define);
     }
 
     @Override
-    public void initialize() {
-        calculator = new BundleCalculator(define);
-
-    }
+    public void open() {}
 
     protected Bundle makeAltBundle(Bundle bundle) {
         ListBundleFormat format = new ListBundleFormat();
@@ -359,7 +359,7 @@ public class BundleFilterNum extends BundleFilter {
     }
 
     @Override
-    public boolean filterExec(Bundle bundle) {
+    public boolean filter(Bundle bundle) {
         if (columns == null) {
             return calculator.calculate(bundle) != null;
         } else {

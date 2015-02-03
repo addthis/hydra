@@ -42,7 +42,7 @@ public class BundleFilterCondition extends BundleFilter {
 
     /**
      * The bundle filter to execute when {@link #ifCondition ifCondition} returns true. This
-     * field is required.
+     * field is optional.
      */
     @FieldConfig(codable = true)
     BundleFilter ifDo;
@@ -55,7 +55,8 @@ public class BundleFilterCondition extends BundleFilter {
     BundleFilter elseDo;
 
     /**
-     * If true, return the conditional filter's return value. This field is optional. Default false.
+     * If true then return the result of the {@link #ifDo ifDo} or the {@link #elseDo elseDo}
+     * whichever branch is executed. This field is optional. Default false.
      */
     @FieldConfig(codable = true)
     boolean returnFilter;
@@ -72,37 +73,29 @@ public class BundleFilterCondition extends BundleFilter {
     }
 
     @Override
-    public void initialize() {
-        ifCondition.initOnceOnly();
+    public void open() {
+        ifCondition.open();
         if (ifDo != null) {
-            ifDo.initOnceOnly();
+            ifDo.open();
         }
         if (elseDo != null) {
-            elseDo.initOnceOnly();
+            elseDo.open();
         }
     }
 
     @Override
-    public boolean filterExec(Bundle row) {
+    public boolean filter(Bundle row) {
         boolean returnValue = true;
         if (row != null) {
-            if (ifCondition != null && ifCondition.filterExec(row)) {
+            if (ifCondition != null && ifCondition.filter(row)) {
                 if (ifDo != null) {
-                    if (returnFilter) {
-                        returnValue = ifDo.filterExec(row);
-                    } else {
-                        // ignore result
-                        ifDo.filterExec(row);
-                    }
+                    boolean result = ifDo.filter(row);
+                    returnValue = returnFilter ? result : returnValue;
                 }
             } else {
                 if (elseDo != null) {
-                    if (returnFilter) {
-                        returnValue = elseDo.filterExec(row);
-                    } else {
-                        // ignore result
-                        elseDo.filterExec(row);
-                    }
+                    boolean result = elseDo.filter(row);
+                    returnValue = returnFilter ? result : returnValue;
                 }
             }
         }

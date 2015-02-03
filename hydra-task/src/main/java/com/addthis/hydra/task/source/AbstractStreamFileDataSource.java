@@ -13,13 +13,19 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -56,7 +62,6 @@ import com.addthis.hydra.task.stream.StreamSourceFiltered;
 import com.addthis.hydra.task.stream.StreamSourceHashed;
 
 import com.google.common.base.Objects;
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -75,6 +80,12 @@ import org.xerial.snappy.SnappyInputStream;
 
 import lzma.sdk.lzma.Decoder;
 import lzma.streams.LzmaInputStream;
+
+import static com.google.common.base.Throwables.propagate;
+import static com.google.common.util.concurrent.Uninterruptibles.awaitUninterruptibly;
+import static com.google.common.util.concurrent.Uninterruptibles.getUninterruptibly;
+import static java.util.concurrent.CompletableFuture.allOf;
+import static java.util.concurrent.CompletableFuture.runAsync;
 
 /**
  * Abstract implementation of TaskDataSource
@@ -207,15 +218,14 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     @JsonProperty private TaskRunConfig config;
 
     private final ListBundleFormat bundleFormat = new ListBundleFormat();
-    private final Bundle termBundle = new ListBundle(bundleFormat);
     private final ExecutorService workerThreadPool = new ThreadPoolExecutor(
-            0, Integer.MAX_VALUE, 5L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),
+            0, Integer.MAX_VALUE, 5L, TimeUnit.SECONDS, new SynchronousQueue<>(),
             new ThreadFactoryBuilder().setNameFormat("streamSourceWorker-%d").build());
 
     /* metrics */
-    private Histogram queueSizeHisto = Metrics.newHistogram(getClass(), "queueSizeHisto");
-    private Histogram fileSizeHisto = Metrics.newHistogram(getClass(), "fileSizeHisto");
-    private Timer readTimer = Metrics.newTimer(getClass(), "readTimer", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
+    private final Histogram queueSizeHisto = Metrics.newHistogram(getClass(), "queueSizeHisto");
+    private final Histogram fileSizeHisto = Metrics.newHistogram(getClass(), "fileSizeHisto");
+    private final Timer readTimer = Metrics.newTimer(getClass(), "readTimer", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
     private final Counter openNew = Metrics.newCounter(getClass(), "openNew");
     private final Counter openIndex = Metrics.newCounter(getClass(), "openIndex");
     private final Counter openSkip = Metrics.newCounter(getClass(), "openSkip");
@@ -224,7 +234,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     private final Counter opening = Metrics.newCounter(getClass(), "opening");
 
     // Concurrency provisions
-    private CountDownLatch runningThreadCountDownLatch = null;
     private final Counter globalBundleSkip = Metrics.newCounter(getClass(), "globalBundleSkip");
     private final AtomicInteger consecutiveFileSkip = new AtomicInteger();
     private final ThreadLocal<Integer> localBundleSkip =
@@ -237,15 +246,15 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
     // State control
     private final LinkedBlockingQueue<Wrap> preOpened = new LinkedBlockingQueue<>();
-    protected final AtomicBoolean done = new AtomicBoolean(false);
-    protected final AtomicBoolean errored = new AtomicBoolean(false);
-    private final AtomicBoolean shutdown = new AtomicBoolean(false);
-    private CountDownLatch initialized = new CountDownLatch(1);
+    protected final AtomicBoolean shuttingDown = new AtomicBoolean(false);
+    protected final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
+    private final CountDownLatch initialized = new CountDownLatch(1);
     private boolean localInitialized = false;
 
     private BlockingQueue<Bundle> queue;
     private PageDB<SimpleMark> markDB;
     private File markDirFile;
+    private CompletableFuture<Void> aggregateWorkerFuture;
     private boolean useSimpleMarks = false;
     private boolean useLegacyStreamPath = false;
 
@@ -263,27 +272,8 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
     protected abstract PersistentStreamFileSource getSource();
 
-    protected void pushTermBundle() {
-        if (queue != null) {
-            boolean setDone = done.compareAndSet(false, true);
-            boolean pushedTerm = queue.offer(termBundle);
-            log.info("initiating shutdown(). setDone={} done={} preOpened={} pushedTerm={} queue={}",
-                     setDone, done.get(), preOpened.size(), pushedTerm, queue.size());
-        }
-    }
-
-    protected void closePreOpenedQueue() throws IOException {
-        for (Wrap wrap : preOpened) {
-            wrap.close();
-        }
-    }
-
-    protected void closeMarkDB() {
-        if (markDB != null) {
-            markDB.close();
-        } else {
-            log.warn("markdb was null, and was not closed");
-        }
+    @Override public Bundle createBundle() {
+        return new ListBundle(bundleFormat);
     }
 
     @Override public void init() {
@@ -311,7 +301,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             if (useSimpleMarks) {
                 markDB = new PageDB<>(markDirFile, SimpleMark.class, MARK_PAGE_SIZE, MARK_PAGES);
             } else {
-                markDB = new PageDB<SimpleMark>(markDirFile, Mark.class, MARK_PAGE_SIZE, MARK_PAGES);
+                markDB = new PageDB<>(markDirFile, Mark.class, MARK_PAGE_SIZE, MARK_PAGES);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -321,6 +311,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         }
         if (shards == null) {
             shards = config.calcShardList(shardTotal);
+        }
+        if (format != null) {
+            format.open();
         }
         PersistentStreamFileSource persistentStreamFileSource = getSource();
         source = persistentStreamFileSource;
@@ -335,6 +328,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 persistentStreamFileSource.init(getMarkDirFile(), shards);
             }
             if (filter != null) {
+                filter.open();
                 setSource(new StreamSourceFiltered(source, filter));
             }
             if (hash) {
@@ -347,62 +341,275 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         }
         queue = new LinkedBlockingQueue<>(buffer);
 
-        runningThreadCountDownLatch = new CountDownLatch(workers);
-
+        List<CompletableFuture<Void>> workerFutures = new ArrayList<>();
         for (int i = 0; i < workers; i++) {
             Runnable sourceWorker = new SourceWorker(i);
-            workerThreadPool.execute(sourceWorker);
+            workerFutures.add(runAsync(sourceWorker, workerThreadPool).whenComplete((ignored, error) -> {
+            if (error != null) {
+                shuttingDown.set(true);
+                closeFuture.completeExceptionally(error);
+            }}));
+        }
+        aggregateWorkerFuture = allOf(workerFutures.toArray(new CompletableFuture[workerFutures.size()]));
+        aggregateWorkerFuture.thenRunAsync(this::close);
+    }
+
+    @Nullable @Override public Bundle next() throws DataChannelError {
+        if ((skipSourceExit > 0) && (consecutiveFileSkip.get() >= skipSourceExit)) {
+            throw new DataChannelError("skipped too many sources: " + skipSourceExit + ".  please check your job config.");
+        }
+        int countdown = pollCountdown;
+        while (((localInitialized || waitForInitialized()) && (pollCountdown == 0)) || (countdown-- > 0)) {
+            long startTime = jmxMetrics ? System.currentTimeMillis() : 0;
+            Bundle next = pollAndCloseOnInterrupt(pollInterval, TimeUnit.MILLISECONDS);
+            if (jmxMetrics) {
+                readTimer.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
+            }
+            if (next != null) {
+                return next;
+            }
+            if (closeFuture.isDone()) {
+                closeFuture.join();
+                return null;
+            }
+            if (pollCountdown > 0) {
+                log.info("next polled null, retrying {} more times. shuttingDown={}", countdown, shuttingDown.get());
+            }
+            log.info(fileStatsToString("null poll "));
+        }
+        if (countdown < 0) {
+            log.info("exit with no data during poll countdown");
+        }
+        return null;
+    }
+
+    private Bundle pollAndCloseOnInterrupt(long pollFor, TimeUnit unit) {
+        boolean interrupted = false;
+        try {
+            long remainingNanos = unit.toNanos(pollFor);
+            long end = System.nanoTime() + remainingNanos;
+            while (true) {
+                try {
+                    return queue.poll(remainingNanos, TimeUnit.NANOSECONDS);
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                    log.info("interrupted while polling for bundles; closing source then resuming poll");
+                    close();
+                    remainingNanos = end - System.nanoTime();
+                }
+            }
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
-    protected void shutdownBody() throws IOException {
-        // shutdown adds termBundle to queue
-        pushTermBundle();
-        if (runningThreadCountDownLatch != null) {
-            boolean success = false;
-            log.info("Waiting up to {} seconds for outstanding threads to complete.", latchTimeout);
+    @Override public String toString() {
+        return populateToString(Objects.toStringHelper(this));
+    }
+
+    private String fileStatsToString(String reason) {
+        return populateToString(Objects.toStringHelper(reason));
+    }
+
+    private String populateToString(Objects.ToStringHelper helper) {
+        return helper.add("reading", reading.count())
+                     .add("opening", opening.count())
+                     .add("unseen", openNew.count())
+                     .add("continued", openIndex.count())
+                     .add("skipping", skipping.count())
+                     .add("skipped", openSkip.count())
+                     .add("bundles-skipped", globalBundleSkip.count())
+                     .add("median-size", fileSizeHisto.getSnapshot().getMedian())
+                     .toString();
+    }
+
+    @Nullable @Override public Bundle peek() throws DataChannelError {
+        if (localInitialized || waitForInitialized()) {
             try {
-                success = runningThreadCountDownLatch.await(latchTimeout, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                log.warn("", e);
+                return queue.peek();
+            } catch (Exception ex) {
+                throw propagate(ex);
+            }
+        }
+        return null;
+    }
+
+    private boolean waitForInitialized() {
+        boolean wasInterrupted = false;
+        try {
+            while (!localInitialized
+                   && !awaitUninterruptibly(initialized, 3, TimeUnit.SECONDS)
+                   && !shuttingDown.get()) {
+                log.info(fileStatsToString("waiting for initialization"));
+                if (Thread.interrupted()) {
+                    wasInterrupted = true;
+                    log.info("interrupted while waiting for initialization; closing source then resuming wait");
+                    close();
+                }
+            }
+            log.info(fileStatsToString("initialized"));
+            localInitialized = true;
+            return true;
+        } finally {
+            if (wasInterrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    @Override
+    public void close() {
+        if (shuttingDown.compareAndSet(false, true)) {
+            log.info("closing stream file data source. preOpened={} queue={}", preOpened.size(), queue.size());
+            try {
+                log.info("Waiting up to {} seconds for outstanding worker tasks to complete.", latchTimeout);
+                getUninterruptibly(aggregateWorkerFuture, latchTimeout, TimeUnit.SECONDS);
+                log.info("All threads have finished.");
+
+                log.debug("closing wrappers");
+                closePreOpenedQueue();
+
+                log.debug("shutting down mesh");
+                //we may overwrite the local source variable and in doing so throw away the Persistance flag
+                PersistentStreamFileSource baseSource = getSource();
+                if (baseSource != null) {
+                    baseSource.shutdown();
+                } else {
+                    log.warn("getSource() returned null and no source was shutdown");
+                }
+
+                closeMarkDB();
+                log.info(fileStatsToString("shutdown complete"));
+            } catch (IOException ex) {
+                UncheckedIOException unchecked = new UncheckedIOException(ex);
+                closeFuture.completeExceptionally(unchecked);
+                throw unchecked;
+            } catch (Throwable t) {
+                closeFuture.completeExceptionally(t);
+                throw propagate(t);
             }
             workerThreadPool.shutdown();
-            if (success) {
-                log.info("All threads have finished.");
-            } else {
-                log.info("All threads did NOT finish.");
+            closeFuture.complete(null);
+        } else {
+            try {
+                closeFuture.join();
+            } catch (CompletionException ex) {
+                throw propagate(ex.getCause());
             }
         }
-        log.debug("closing wrappers");
-        closePreOpenedQueue();
-        log.debug("shutting down mesh");
-        //we may overwrite the local source variable and in doing so throw away the Persistance flag
-        PersistentStreamFileSource baseSource = getSource();
-        if (baseSource != null) {
-            baseSource.shutdown();
-        } else {
-            log.warn("getSource() returned null and no source was shutdown");
-        }
-
-        closeMarkDB();
-        log.info(fileStatsToString("shutdown complete"));
     }
 
-    protected void shutdown() {
-        if (!shutdown.getAndSet(true)) {
-            /**
-             * The body of the shutdown method has been moved into its own
-             * method for testing purposes. Tests which must wait until the
-             * shutdown has completed will override the shutdownBody() method
-             * and place synchronization constructs at the end of the overridden
-             * method.
-             */
+    protected void closePreOpenedQueue() throws IOException {
+        for (Wrap wrap : preOpened) {
+            wrap.close();
+        }
+    }
+
+    protected void closeMarkDB() {
+        if (markDB != null) {
+            markDB.close();
+        } else {
+            log.warn("markdb was null, and was not closed");
+        }
+    }
+
+    private class SourceWorker implements Runnable {
+        private final int workerId;
+
+        public SourceWorker(int workerId) {
+            this.workerId = workerId;
+        }
+
+        @Override
+        public void run() {
+            log.debug("worker {} starting", workerId);
             try {
-                shutdownBody();
-            } catch (Throwable t) {
-                log.error("unrecoverable error in stream file data source shutdown method. immediately halting jvm", t);
-                Runtime.getRuntime().halt(1);
+                // preopen a number of sources
+                int preOpenSize = Math.max(1, preOpen / workers);
+                for (int i = 0; i < preOpenSize; i++) {
+                    Wrap preOpenedWrap = nextWrappedSource();
+                    log.debug("pre-init {}", preOpenedWrap);
+                    if (preOpenedWrap == null) {
+                        break;
+                    }
+                    preOpened.put(preOpenedWrap);
+                }
+
+                //fill already has a while loop that checks shuttingDown
+                fill();
+            } catch (Exception e) {
+                log.warn("Exception while running data source meshy worker thread.", e);
+                if (!IGNORE_MARKS_ERRORS) {
+                    throw propagate(e);
+                }
+            } finally {
+                log.debug("worker {} exiting shuttingDown={}", workerId, shuttingDown);
             }
+        }
+
+        @Nullable private Wrap nextWrappedSource() throws IOException {
+            // this short circuit is not functionally required, but is a bit neater
+            if (shuttingDown.get()) {
+                return null;
+            }
+            StreamFile stream = source.nextSource();
+            if (stream == null) {
+                return null;
+            }
+            return new Wrap(stream);
+        }
+
+        private void fill() throws Exception {
+            @Nullable Wrap wrap = null;
+            try {
+                while (!shuttingDown.get()) {
+                    wrap = preOpened.poll(); //take if immediately available
+                    if (wrap == null) {
+                        return; //exits worker thread
+                    }
+                    if (!multiFill(wrap, multiBundleReads)) {
+                        wrap = nextWrappedSource();
+                    }
+                    if (wrap != null) { //May be null from nextWrappedSource -> decreases size of preOpened
+                        preOpened.put(wrap);
+                    }
+                    wrap = null;
+                }
+                log.debug("[{}] read", workerId);
+            } finally {
+                if (wrap != null) {
+                    wrap.close();
+                }
+            }
+        }
+
+        private boolean multiFill(Wrap wrap, int fillCount) throws IOException, InterruptedException {
+            for (int i = 0; i < fillCount; i++) {
+                Bundle next = wrap.next();
+                // is source exhausted?
+                if (next == null) {
+                    return false;
+                }
+                while (!queue.offer(next, 1, TimeUnit.SECONDS)) {
+                    if (shuttingDown.get()) {
+                        wrap.mark.setEnd(false);
+                        wrap.close();
+                        return false;
+                    }
+                }
+                wrap.mark.setIndex(wrap.mark.getIndex() + 1);
+                if (jmxMetrics) {
+                    queueSizeHisto.update(queue.size());
+                }
+                // may get called multiple times but only first call matters
+                if (!localInitialized) {
+                    initialized.countDown();
+                    localInitialized = true;
+                }
+            }
+            return true;
         }
     }
 
@@ -474,11 +681,11 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                         int totalSkip = localBundleSkip.get() + bundlesSkipped;
                         if ((totalSkip / 100) % 250 == 0) {
                             log.info(Objects.toStringHelper(Thread.currentThread().getName() + " bundle skip log")
-                                    .add("thread-skip", totalSkip)
-                                    .add("file-skip", bundlesSkipped)
-                                    .add("file-to-skip", read)
-                                    .add("global-skip-estimate", bundlesSkipped + globalBundleSkip.count())
-                                    .toString());
+                                            .add("thread-skip", totalSkip)
+                                            .add("file-skip", bundlesSkipped)
+                                            .add("file-to-skip", read)
+                                            .add("global-skip-estimate", bundlesSkipped + globalBundleSkip.count())
+                                            .toString());
                             localBundleSkip.set(totalSkip);
                             globalBundleSkip.inc(bundlesSkipped);
                             bundlesSkipped = 0;
@@ -520,7 +727,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             }
         }
 
-        Bundle next() throws IOException {
+        @Nullable Bundle next() throws IOException {
             if (closed) {
                 log.debug("next {} / {} CLOSED returns null", mark, stream);
                 return null;
@@ -533,7 +740,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                     mark.setEnd(true);
                     close();
                 } else {
-                    mark.setIndex(mark.getIndex() + 1);
                     if (injectSourceName != null) {
                         injectSourceName.setValue(next, sourceName);
                     }
@@ -552,224 +758,4 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         }
     }
 
-    @Override
-    public Bundle next() throws DataChannelError {
-        if (skipSourceExit > 0 && consecutiveFileSkip.get() >= skipSourceExit) {
-            throw new DataChannelError("skipped too many sources: " + skipSourceExit + ".  please check your job config.");
-        }
-        try {
-            int countdown = pollCountdown;
-            while (((localInitialized || waitForInitialized()) && (pollCountdown == 0)) || (countdown-- > 0)) {
-                if (errored.get()) {
-                    throw new RuntimeException("source workers ran into problems");
-                }
-                long startTime = jmxMetrics ? System.currentTimeMillis() : 0;
-                Bundle next = pollUninterruptibly(queue, pollInterval, TimeUnit.MILLISECONDS);
-                if (jmxMetrics) {
-                    readTimer.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
-                }
-                if (next == termBundle) {
-                    // re-add TERM bundle in case there are more consumers
-                    if (!queue.offer(next)) {
-                        log.info("next offer TERM fail. queue={}", queue.size());
-                    }
-                    return null;
-                } else if (next != null) {
-                    return next;
-                }
-                if (done.get()) {
-                    return null;
-                }
-                if (pollCountdown > 0) {
-                    log.info("next polled null, retrying {} more times. done={}", countdown, done.get());
-                }
-                log.info(fileStatsToString("null poll "));
-            }
-            if (countdown < 0) {
-                log.info("exit with no data during poll countdown");
-            }
-            return null;
-        } catch (Exception ex) {
-            throw Throwables.propagate(ex);
-        }
-    }
-
-    @Override
-    public String toString() {
-        return populateToString(Objects.toStringHelper(this));
-    }
-
-    private String fileStatsToString(String reason) {
-        return populateToString(Objects.toStringHelper(reason));
-    }
-
-    private String populateToString(Objects.ToStringHelper helper) {
-        return helper.add("reading", reading.count())
-                     .add("opening", opening.count())
-                     .add("unseen", openNew.count())
-                     .add("continued", openIndex.count())
-                     .add("skipping", skipping.count())
-                     .add("skipped", openSkip.count())
-                     .add("bundles-skipped", globalBundleSkip.count())
-                     .add("median-size", fileSizeHisto.getSnapshot().getMedian())
-                     .toString();
-    }
-
-    @Override
-    public Bundle peek() throws DataChannelError {
-        if (localInitialized || waitForInitialized()) {
-            try {
-                Bundle peek = queue.peek();
-                return peek == termBundle ? null : peek;
-            } catch (Exception ex) {
-                throw Throwables.propagate(ex);
-            }
-        }
-        return null;
-    }
-
-    private boolean waitForInitialized() {
-        try {
-            while (!localInitialized && !initialized.await(3, TimeUnit.SECONDS) && !done.get()) {
-                log.info(fileStatsToString("waiting for initialization"));
-            }
-            log.info(fileStatsToString("initialized"));
-            localInitialized = true;
-            return true;
-        } catch (InterruptedException ignored) {
-            log.info("interrupted while waiting for initialization to be true");
-            return false;
-        }
-    }
-
-    @Override
-    public void close() {
-        if (log.isDebugEnabled() || done.get()) {
-            log.info("close() called. done={} queue={}", done, queue.size());
-        }
-        done.set(true);
-        if (errored.get()) {
-            throw new RuntimeException("source workers ran into problems");
-        }
-    }
-
-    @Override
-    public Bundle createBundle() {
-        return new ListBundle(bundleFormat);
-    }
-
-    private class SourceWorker implements Runnable {
-        private final int workerId;
-
-        public SourceWorker(int workerId) {
-            this.workerId = workerId;
-        }
-
-        @Override
-        public void run() {
-            log.debug("worker {} starting", workerId);
-            try {
-                // preopen a number of sources
-                int preOpenSize = Math.max(1, preOpen / workers);
-                for (int i = 0; i < preOpenSize; i++) {
-                    Wrap preOpenedWrap = nextWrappedSource();
-                    log.debug("pre-init {}", preOpenedWrap);
-                    if (preOpenedWrap == null) {
-                        break;
-                    }
-                    preOpened.put(preOpenedWrap);
-                }
-
-                //fill already has a while loop that checks done
-                fill();
-            } catch (Exception e) {
-                log.warn("Exception while running data source meshy worker thread.", e);
-                if (!IGNORE_MARKS_ERRORS) {
-                    errored.set(true);
-                }
-            } finally {
-                log.debug("worker {} exiting done={}", workerId, done);
-                runningThreadCountDownLatch.countDown();
-
-                // This expression can evaluate to true more than once. It is OK because the shutdown()
-                // method has a guard to ensure it is invoked at most once.
-                if (runningThreadCountDownLatch.getCount() == 0) {
-                    log.info("No more workers are running. One or more threads will attempt to call shutdown.");
-                    shutdown();
-                }
-            }
-        }
-
-        private Wrap nextWrappedSource() throws IOException {
-            StreamFile stream = source.nextSource();
-            if (stream == null) {
-                return null;
-            }
-            return new Wrap(stream);
-        }
-
-        private void fill() throws Exception {
-            Wrap wrap = null;
-            try {
-                while (!done.get()) {
-                    wrap = preOpened.poll(); //take if immediately available
-                    if (wrap == null) {
-                        return; //exits worker thread
-                    }
-                    if (!multiFill(wrap, multiBundleReads)) {
-                        wrap = nextWrappedSource();
-                    }
-                    if (wrap != null) { //May be null from nextWrappedSource -> decreases size of preOpened
-                        preOpened.put(wrap);
-                    }
-                    wrap = null;
-                }
-                log.debug("[{}] read", workerId);
-            } finally {
-                if (wrap != null) {
-                    wrap.close();
-                }
-            }
-        }
-
-        private boolean multiFill(Wrap wrap, int fillCount) throws IOException, InterruptedException {
-            for (int i = 0; i < fillCount; i++) {
-                Bundle next = wrap.next();
-                // is source exhausted?
-                if (next == null) {
-                    return false;
-                }
-                queue.put(next);
-                if (jmxMetrics) {
-                    queueSizeHisto.update(queue.size());
-                }
-                // may get called multiple times but only first call matters
-                if (!localInitialized) {
-                    initialized.countDown();
-                    localInitialized = true;
-                }
-            }
-            return true;
-        }
-    }
-
-    private static <T> T pollUninterruptibly(BlockingQueue<T> queue, long pollFor, TimeUnit unit) {
-        boolean interrupted = false;
-        try {
-            long remainingNanos = unit.toNanos(pollFor);
-            long end = System.nanoTime() + remainingNanos;
-            while (true) {
-                try {
-                    return queue.poll(remainingNanos, TimeUnit.NANOSECONDS);
-                } catch (InterruptedException e) {
-                    interrupted = true;
-                    remainingNanos = end - System.nanoTime();
-                }
-            }
-        } finally {
-            if (interrupted) {
-                Thread.currentThread().interrupt();
-            }
-        }
-    }
 }

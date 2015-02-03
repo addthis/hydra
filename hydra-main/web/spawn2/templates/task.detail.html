@@ -11,8 +11,8 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 -->
-<div style="width:100%;" class="task-actions">
-    <div class="btn-group pull-left" style="width:50%;">
+<div style="flex: 1;width:100%;flex-basis: auto;flex-grow: 1;" class="task-actions">
+    <div class="btn-group pull-left" style="width:43%;">
         <button id="kickTaskButton" class="btn btn-default btn-small btn-green task-action">
             Kick
         </button>
@@ -28,7 +28,7 @@
         <span id="taskHost" style="margin-left:10px;"></span>
         <span id="taskLabel" style="margin-left:10px;"></span>
     </div>
-    <div class="btn-group pull-right" style="width:50%;">
+    <div class="btn-group pull-right" style="width:57%;">
         <div class="btn-group log-types pull-right" style="margin:0 0 0 20px;min-height:0px;" data-toggle="buttons-radio">
             <button id="stdoutButton" class="btn btn-default btn-tiny <%-(stdout?'active':'')%>" data-toggle="button">stdout</button>
             <button id="stderrButton" class="btn btn-default btn-tiny <%-(!stdout?'active':'')%>" data-toggle="button">stderr</button>
@@ -39,8 +39,12 @@
             <button id="headButton" data-value="2" class="btn btn-default btn-tiny log-action <%-(_.isEqual(type,2)?'active':'')%>" data-toggle="button" style="width: 50px;">head</button>
             <input id="linesInput" type="text" style="padding: 0px; margin: 0px 0px 0px 10px; width: 40px;" value="<%-lines%>">
             <span>lines</span>
+            <input id="runsAgoInput" type="number" style="padding: 0px; margin: 0px 0px 0px 10px; width: 40px;" value="<%-runsAgo%>">
+            <span>runs ago</span>
         </div>
     </div>
 </div>
-<pre id="logContainer" style="width:100%;" class="log-container">
-</pre>
+<div style="width: 100%;position: relative;flex: 1;overflow: auto;flex-basis: auto;flex-grow: 100;">
+    <pre id="logContainer" style="width:100%;" class="log-container">
+    </pre>
+</div>

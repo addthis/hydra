@@ -20,7 +20,11 @@ import java.util.List;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">randomly selects an input field and copies it to an output field</span>.
@@ -42,46 +46,30 @@ public class BundleFilterRandomField extends BundleFilter {
     /**
      * The possible input bundle fields from which one will be selected. This field is required.
      */
-    @FieldConfig(codable = true, required = true)
-    private String[] inFields;
+    private AutoField[] inFields;
     /**
      * The name of the output bundle field. This field is required.
      */
-    @FieldConfig(codable = true, required = true)
-    private String out;
+    private AutoField out;
 
-    public BundleFilterRandomField() {
-    }
-
-    public BundleFilterRandomField(String[] inFields, String out) {
+    @JsonCreator
+    public BundleFilterRandomField(@JsonProperty(value = "inFields", required = true) AutoField[] inFields,
+                                   @JsonProperty(value = "out", required = true) AutoField out) {
         this.inFields = inFields;
         this.out = out;
     }
 
-    private String[] fields;
-
-    public String[] getFields() {
-        return fields;
-    }
+    @Override
+    public void open() { }
 
     @Override
-    public void initialize() {
-        fields = new String[inFields.length + 1];
-        System.arraycopy(inFields, 0, fields, 0, inFields.length);
-        fields[inFields.length] = out;
-    }
+    public boolean filter(Bundle bundle) {
+        List<AutoField> inFieldsShuffle = new ArrayList<>(Arrays.asList(inFields));
+        Collections.shuffle(inFieldsShuffle);
 
-    @Override
-    public boolean filterExec(Bundle bundle) {
-        BundleField[] bound = getBindings(bundle, fields);
-        BundleField[] inBound = new BundleField[inFields.length];
-        System.arraycopy(bound, 0, inBound, 0, inBound.length);
-        List<BundleField> inBoundShuffle = new ArrayList<>(Arrays.asList(inBound));
-        Collections.shuffle(inBoundShuffle);
-
-        for (BundleField bf : inBoundShuffle) {
-            if (bf != null && bundle.getValue(bf) != null) {
-                bundle.setValue(bound[bound.length - 1], bundle.getValue(bf));
+        for (AutoField bf : inFieldsShuffle) {
+            if (bf != null && bf.getValue(bundle) != null) {
+                out.setValue(bundle, bf.getValue(bundle));
                 break;
             }
         }

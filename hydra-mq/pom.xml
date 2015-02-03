@@ -16,7 +16,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>4.6.5-SNAPSHOT</version>
+    <version>5.0.2-SNAPSHOT</version>
   </parent>
 
   <artifactId>hydra-mq</artifactId>
@@ -42,7 +42,7 @@
     <dependency>
       <groupId>com.rabbitmq</groupId>
       <artifactId>amqp-client</artifactId>
-      <version>3.2.3</version>
+      <version>3.4.1</version>
     </dependency>
     <dependency>
       <groupId>org.apache.curator</groupId>
@@ -52,14 +52,7 @@
     <dependency>
       <groupId>net.jodah</groupId>
       <artifactId>lyra</artifactId>
-      <version>0.4.0</version>
-      <exclusions>
-        <!-- their readme and pom dependencies are inconsistent -->
-        <exclusion>
-          <groupId>com.rabbitmq</groupId>
-          <artifactId>amqp-client</artifactId>
-        </exclusion>
-      </exclusions>
+      <version>0.4.3</version>
     </dependency>
     <!-- end 3rd party -->
   </dependencies>

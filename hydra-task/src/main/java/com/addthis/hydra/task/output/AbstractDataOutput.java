@@ -82,7 +82,9 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
         if (writer != null) {
             writer.open();
         }
-
+        if (filter != null) {
+            filter.open();
+        }
         if (dataPurgeConfig != null) {
             purgeData();
         }

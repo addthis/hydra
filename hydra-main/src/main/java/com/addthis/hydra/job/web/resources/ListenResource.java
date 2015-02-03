@@ -139,7 +139,7 @@ public class ListenResource {
                 JobCommand command = jobCommandManager.getEntity(key);
                 commandlist.put(key, command.toJSON().put("name", key));
             }
-            for (HostState host : spawn.listHostStatus(null)) {
+            for (HostState host : spawn.hostManager.listHostStatus(null)) {
                 hostlist.put(host.getHostUuid(), spawn.getHostStateUpdateEvent(host));
             }
             for (Map.Entry<String, List<String>> alias : spawn.getAliasManager().getAliases().entrySet()) {

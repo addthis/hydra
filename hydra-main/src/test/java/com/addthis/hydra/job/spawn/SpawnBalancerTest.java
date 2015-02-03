@@ -42,12 +42,12 @@ import com.addthis.hydra.util.ZkCodecStartUtil;
 
 import org.apache.zookeeper.CreateMode;
 
-import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -58,6 +58,7 @@ import static org.junit.Assert.assertTrue;
 public class SpawnBalancerTest extends ZkCodecStartUtil {
 
     private Spawn spawn;
+    private HostManager hostManager;
     private SpawnBalancer bal;
     private long now = JitterClock.globalTime();
     private String tmpRoot;
@@ -77,8 +78,9 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         try {
             Thread.sleep(100);
             spawn = Configs.newDefault(Spawn.class);
+            hostManager = spawn.hostManager;
             bal = spawn.getSpawnBalancer();
-            spawn.setSpawnMQ(EasyMock.createMock(SpawnMQ.class));
+            spawn.setSpawnMQ(Mockito.mock(SpawnMQ.class));
         } catch (Exception ex) {
         }
     }
@@ -259,7 +261,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         HostState lightHost1 = installHostStateWithUUID(lightHost1UUID, spawn, true);
         HostState lightHost2 = installHostStateWithUUID(lightHost2UUID, spawn, true);
         Job weightJob = createJobAndUpdateHosts(spawn, 10, Arrays.asList(heavyHostUUID), now, 1000, 0);
-        bal.updateAggregateStatistics(spawn.listHostStatus(null));
+        bal.updateAggregateStatistics(hostManager.listHostStatus(null));
         Job otherJob = createJobAndUpdateHosts(spawn, 5, Arrays.asList(heavyHostUUID, lightHost1UUID, lightHost2UUID), now, 500, 0);
         assertEquals("should put two tasks on lightHost1", 2, numTasksOnHost(otherJob, lightHost1UUID));
         assertEquals("should put two tasks on lightHost2", 2, numTasksOnHost(otherJob, lightHost2UUID));
@@ -278,7 +280,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         int numTasks = 3;
         Job job1 = createJobAndUpdateHosts(spawn, numTasks, Arrays.asList(heavyHostUUID), now, 1, 0);
         Job job2 = createJobAndUpdateHosts(spawn, numTasks, Arrays.asList(heavyHostUUID), now, 1, 0);
-        bal.updateAggregateStatistics(spawn.listHostStatus(null));
+        bal.updateAggregateStatistics(hostManager.listHostStatus(null));
         List<HostState> hosts = Arrays.asList(heavyHost, lightHost);
         List<JobTaskMoveAssignment> heavyHostTaskAssignments = bal.getAssignmentsToBalanceHost(heavyHost, hosts);
         assertEquals("should move 2 tasks", 2, heavyHostTaskAssignments.size());
@@ -321,11 +323,11 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         lightHost2.setUsed(new HostCapacity(10, 10, 10, 20_000_000l));
         readOnlyHost.setMax(new HostCapacity(10, 10, 10, 10_000_000_000l));
         readOnlyHost.setUsed(new HostCapacity(10, 10, 10, 20_000_000l));
-        spawn.updateHostState(heavyHost);
-        spawn.updateHostState(lightHost);
-        spawn.updateHostState(lightHost2);
-        spawn.updateHostState(readOnlyHost);
-        bal.updateAggregateStatistics(spawn.listHostStatus(null));
+        hostManager.updateHostState(heavyHost);
+        hostManager.updateHostState(lightHost);
+        hostManager.updateHostState(lightHost2);
+        hostManager.updateHostState(readOnlyHost);
+        bal.updateAggregateStatistics(hostManager.listHostStatus(null));
         List<JobTaskMoveAssignment> assignments = bal.getAssignmentsToBalanceHost(heavyHost, hosts);
         long bytesMoved = 0;
         for (JobTaskMoveAssignment assignment : assignments) {
@@ -389,10 +391,10 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         bal.getConfig().setAllowSameHostReplica(true);
         HostState host1m1 = installHostStateWithUUID("m1", spawn, true);
         host1m1.setHost("h1");
-        spawn.updateHostState(host1m1);
+        hostManager.updateHostState(host1m1);
         HostState host1m2 = installHostStateWithUUID("m2", spawn, true);
         host1m2.setHost("h1");
-        spawn.updateHostState(host1m2);
+        hostManager.updateHostState(host1m2);
         Job job = createJobAndUpdateHosts(spawn, 1, Arrays.asList("m1", "m2"), now, 1000, 0);
         job.setReplicas(1);
         spawn.updateJob(job);
@@ -406,7 +408,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
     public void rebalanceOntoNewHostsTest() throws Exception {
         // Suppose we start out with eight hosts, and have a job with 10 live tasks.
         // Then if we add two hosts and rebalance the job, we should move tasks onto each.
-        spawn.setSpawnMQ(EasyMock.createMock(SpawnMQ.class));
+        spawn.setSpawnMQ(Mockito.mock(SpawnMQ.class));
         bal.getConfig().setAllowSameHostReplica(true);
         ArrayList<String> hosts = new ArrayList<>();
         for (int i = 0; i < 8; i++) {
@@ -421,7 +423,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
             // Takes a little while for the new hosts to show up as available
             Thread.sleep(100);
         }
-        List<HostState> hostStates = spawn.listHostStatus(null);
+        List<HostState> hostStates = hostManager.listHostStatus(null);
         bal.updateAggregateStatistics(hostStates);
         List<JobTaskMoveAssignment> assignments = bal.getAssignmentsForJobReallocation(myJob, -1, hostStates);
         int h1count = 0;
@@ -451,7 +453,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
             hostState.setUsed(new HostCapacity(0, 0, 0, usedVal));
             hostState.setMax(new HostCapacity(0, 0, 0, 25000));
         }
-        bal.updateAggregateStatistics(spawn.listHostStatus(null));
+        bal.updateAggregateStatistics(hostManager.listHostStatus(null));
         assertTrue("should correctly identify light host", bal.isExtremeHost("host0", true, false));
         assertTrue("should not identify light host as heavy", !bal.isExtremeHost("host0", true, true));
         assertTrue("should not identify medium host as light", !bal.isExtremeHost("host1", true, false));
@@ -515,15 +517,15 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         spawn.updateJob(job);
         for (JobTask task : job.getCopyOfTasks()) {
             task.setFileCount(1L);
-            HostState host = spawn.getHostState(task.getHostUUID());
+            HostState host = hostManager.getHostState(task.getHostUUID());
             host.setStopped(updateJobKeyArray(host.getStopped(), task.getJobKey()));
             host.setMeanActiveTasks(1);
-            spawn.updateHostState(host);
+            hostManager.updateHostState(host);
             if (task.getReplicas() != null) {
                 for (JobTaskReplica replica : task.getReplicas()) {
-                    HostState rHost = spawn.getHostState(replica.getHostUUID());
+                    HostState rHost = hostManager.getHostState(replica.getHostUUID());
                     rHost.setStopped(updateJobKeyArray(rHost.getStopped(), task.getJobKey()));
-                    spawn.updateHostState(host);
+                    hostManager.updateHostState(host);
                 }
             }
         }
@@ -569,7 +571,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         newHostState.setUp(isUp);
         newHostState.setAvailableTaskSlots(availableSlots);
         newHostState.setMinionTypes(minionType);
-        spawn.updateHostState(newHostState);
+        hostManager.updateHostState(newHostState);
         return newHostState;
     }
 }

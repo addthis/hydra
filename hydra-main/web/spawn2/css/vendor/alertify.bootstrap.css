@@ -110,11 +110,11 @@
   z-index: 9999;
   bottom: 8px;
   right: 8px;
-  width: 300px; }
+  width: 750px; }
 
 .alertify-log {
   margin-top: 8px;
-  right: -300px;
+  right: -750px;
   padding: 8px 16px;
   border-radius: 4px; }
 
@@ -125,6 +125,11 @@
   background: #D9EDF7;
   padding: 8px 14px;
   border-radius: 4px; }
+
+.alertify-log-warn {
+  color: #997A00;
+  background: #FFF5CC;
+  border: 1px solid #FFEB99; }
 
 .alertify-log-error {
   color: #B94A48;

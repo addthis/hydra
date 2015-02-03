@@ -60,14 +60,14 @@ public class BundleFilterTest extends BundleFilter {
     private int loop = 1;
 
     @Override
-    public void initialize() {
-        test.initialize();
-        onTrue.initialize();
-        onFalse.initialize();
+    public void open() {
+        test.open();
+        onTrue.open();
+        onFalse.open();
     }
 
     @Override
-    public boolean filterExec(Bundle row) {
+    public boolean filter(Bundle row) {
         boolean ret = false;
         do {
             if (test.filter(row)) {

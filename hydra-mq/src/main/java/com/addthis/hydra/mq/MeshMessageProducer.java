@@ -221,7 +221,7 @@ public class MeshMessageProducer implements MessageProducer {
 
         void update() {
             long now = System.currentTimeMillis();
-            int peers = mesh.getPeeredCount();
+            int peers = mesh.getChannelCount();
             if (now - lastUpdate < 60000 && peers == lastPeerCount) {
                 return;
             }

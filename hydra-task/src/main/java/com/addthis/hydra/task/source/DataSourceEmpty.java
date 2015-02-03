@@ -13,8 +13,9 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nullable;
+
 import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.kvp.KVBundle;
@@ -35,41 +36,40 @@ public class DataSourceEmpty extends TaskDataSource {
      * Number of bundles that will be created.
      * Default is -1 which creates an infinite number of bundles.
      */
-    @FieldConfig(codable = true)
-    private long maxPackets = -1; // go forever
+    @FieldConfig private long maxPackets = -1; // go forever
 
-    private AtomicLong packetsCreated = new AtomicLong(0);
+    private volatile boolean closed = false;
     private final KVBundle peek = createBundle();
 
-    private KVBundle createBundle() {
-        KVBundle bundle = new KVBundle();
-        return bundle;
+    private long packetsCreated = 0;
+
+    private static KVBundle createBundle() {
+        return new KVBundle();
     }
 
-    @Override
-    public void init() {
-    }
+    @Override public void init() {}
 
+    @Nullable
     @Override
     public Bundle peek() {
-        if (maxPackets < 0 || packetsCreated.get() < maxPackets) {
+        if (!closed
+            && ((maxPackets < 0) || (packetsCreated < maxPackets))) {
             return peek;
         } else {
             return null;
         }
     }
 
-    @Override
-    public Bundle next() {
+    @Override public Bundle next() {
         if (peek() != null) {
-            packetsCreated.getAndIncrement();
+            packetsCreated += 1;
             return createBundle();
         } else {
             throw new NoSuchElementException();
         }
     }
 
-    @Override
-    public void close() {
+    @Override public void close() {
+        closed = true;
     }
 }

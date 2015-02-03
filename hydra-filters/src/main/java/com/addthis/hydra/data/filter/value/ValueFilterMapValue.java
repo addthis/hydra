@@ -37,6 +37,8 @@ public class ValueFilterMapValue extends ValueFilter {
     @FieldConfig(codable = true)
     private String key;
 
+    @Override public void open() { }
+
     @Override
     public ValueObject filterValue(ValueObject value) {
         if (value == null || value.getObjectType() != ValueObject.TYPE.MAP) {

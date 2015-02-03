@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.filter.value;
 
+import java.util.Objects;
+
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
@@ -77,9 +79,12 @@ public class TestValueFilterReverse {
         ValueArray arr = create(new ValueObject[]{ValueFactory.create("a"), ValueFactory.create("b"), ValueFactory.create("c")});
         ValueArray expt = create(new ValueObject[]{ValueFactory.create("c"), ValueFactory.create("b"), ValueFactory.create("a")});
         ValueObject rev = filter(arr);
-        //System.out.println(expt);
-        //System.out.println(rev);
-        assertTrue(ValueUtil.isEqual(expt, rev));
+        assertTrue(Objects.equals(expt, rev));
+        arr = create(new ValueObject[]{ValueFactory.create("a"), ValueFactory.create("b")});
+        expt = create(new ValueObject[]{ValueFactory.create("b"), ValueFactory.create("a")});
+        rev = filter(arr);
+        assertTrue(Objects.equals(expt, rev));
+
     }
 
     @Test
@@ -87,9 +92,7 @@ public class TestValueFilterReverse {
         ValueArray arr = create(new ValueObject[]{ValueFactory.create("foo"), ValueFactory.create("bar"), ValueFactory.create("bax")});
         ValueArray expt = create(new ValueObject[]{ValueFactory.create("oof"), ValueFactory.create("rab"), ValueFactory.create("xab")});
         ValueObject rev = filterEach(arr);
-        System.out.println(expt);
-        System.out.println(rev);
-        assertTrue(ValueUtil.isEqual(expt, rev));
+        assertTrue(Objects.equals(expt, rev));
     }
 
 }

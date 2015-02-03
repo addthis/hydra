@@ -121,7 +121,7 @@ public class HostFailState {
     private String findFirstHost(Set<String> hosts, boolean requireUp) {
         for (String hostUuid : hosts) {
             if (requireUp) {
-                HostState host = spawn.getHostState(hostUuid);
+                HostState host = spawn.hostManager.getHostState(hostUuid);
                 if (host != null && !host.isDead() && host.isUp()) {
                     return hostUuid;
                 }

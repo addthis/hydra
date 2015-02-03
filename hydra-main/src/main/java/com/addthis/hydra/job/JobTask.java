@@ -134,11 +134,8 @@ public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
             this.state = state.ordinal();
             return true;
         } else if (state != curr) {
-            log.warn("[task.setstate] task " + getTaskID() + " cannot transition " +
-                     curr + " -> " + state);
-            for (StackTraceElement elt : Thread.currentThread().getStackTrace()) {
-                log.warn(elt.toString());
-            }
+            log.warn("[task.setstate] task {} cannot transition {} -> {}",
+                     getTaskID(), curr, state, new Exception("Stack Trace"));
             return false;
         }
         return true;

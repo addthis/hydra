@@ -44,6 +44,8 @@ import org.joda.time.format.DateTimeFormatterBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.google.common.base.Objects.firstNonNull;
+
 public class JobAlertUtil {
     private static final Logger log = LoggerFactory.getLogger(JobAlertUtil.class);
     private static final String queryURLBase = "http://" + Parameter.value("spawn.queryhost") + ":2222/query/call";
@@ -51,7 +53,14 @@ public class JobAlertUtil {
     private static final int alertQueryTimeout = Parameter.intValue("alert.query.timeout", 20_000);
     private static final int alertQueryRetries = Parameter.intValue("alert.query.retries", 4);
     @VisibleForTesting
-    static final DateTimeFormatter ymdFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000).appendMonthOfYear(2).appendDayOfMonth(2).toFormatter();
+    static final DateTimeFormatter ymdFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000)
+                                                                                .appendMonthOfYear(2)
+                                                                                .appendDayOfMonth(2).toFormatter();
+    @VisibleForTesting
+    static final DateTimeFormatter ymdhFormatter = new DateTimeFormatterBuilder().appendTwoDigitYear(2000)
+                                                                                 .appendMonthOfYear(2)
+                                                                                 .appendDayOfMonth(2)
+                                                                                 .appendHourOfDay(2).toFormatter();
     private static final int pathTokenOffset = Parameter.intValue("source.mesh.path.token.offset", 2);
     private static final int pathOff = Parameter.intValue("source.mesh.path.offset", 0);
     private static final String sortToken = Parameter.value("source.mesh.path.token", "/");
@@ -148,22 +157,21 @@ public class JobAlertUtil {
 
     public static String evaluateQueryWithFilter(JobAlert alert, String jobId) {
         String query = alert.canaryPath;
-        String ops = alert.canaryOps;
-        String rops = alert.canaryRops;
+        String ops = firstNonNull(alert.canaryOps, "");
+        String rops = firstNonNull(alert.canaryRops, "");
         String filter = alert.canaryFilter;
         String url = getQueryURL(jobId, query, ops, rops);
         log.trace("Emitting query with url {}", url);
         JSONArray array = JSONFetcher.staticLoadJSONArray(url, alertQueryTimeout, alertQueryRetries);
         StringBuilder errorBuilder = new StringBuilder();
         errorBuilder.append(array.toString() + "\n");
-        boolean valid = true;
         /**
          * Test the following conditions:
          * - the array contains two or more values
          * - each value of the array is itself an array
          * - the lengths of all subarrays are identical
          */
-        valid = valid && array.length() > 1;
+        boolean valid = array.length() > 1;
         log.trace("Array contains two or more values: {}", array.length() > 1);
         JSONArray header = valid ? array.optJSONArray(0) : null;
         valid = valid && (header != null);
@@ -172,7 +180,7 @@ public class JobAlertUtil {
             JSONArray element = array.optJSONArray(i);
             log.trace("Element {} is an array: {}", i, element != null);
             if (element != null) {
-                valid = valid && (element.length() == header.length());
+                valid = (element.length() == header.length());
                 log.trace("Element {} has correct length: {}", i, element.length() == header.length());
             } else {
                 valid = false;
@@ -181,6 +189,7 @@ public class JobAlertUtil {
         BundleFilter bFilter = null;
         try {
             bFilter = CodecJSON.decodeString(BundleFilter.class, filter);
+            bFilter.open();
         } catch (Exception ex) {
             errorBuilder.append("Error attempting to create bundle filter: " + ex + "\n");
             log.error("Error attempting to create bundle filter", ex);
@@ -199,7 +208,9 @@ public class JobAlertUtil {
     }
 
     /**
-     * Split a path up and replace any {{now-1}}-style elements with the YYMMDD equivalent
+     * Split a path up and replace any {{now-1}}-style elements with the YYMMDD equivalent.
+     * {{now-1h}} subtracts one hour from the current time and returns a YYMMDDHH formatted string.
+     *
      * @param path The input path to process
      * @return The path with the relevant tokens replaced
      */
@@ -212,7 +223,13 @@ public class JobAlertUtil {
             int end = part.indexOf(DateUtil.NOW_POSTFIX);
             if (end > -1) {
                 String dateEnd = part.substring(0, end + 2);
-                sb.append(DateUtil.getDateTime(ymdFormatter, DateUtil.NOW_PREFIX + dateEnd).toString(ymdFormatter));
+                String dateInput = DateUtil.NOW_PREFIX + dateEnd;
+                if (dateInput.endsWith("h" + DateUtil.NOW_POSTFIX)) {
+                    dateInput = dateInput.replace("h" + DateUtil.NOW_POSTFIX, DateUtil.NOW_POSTFIX);
+                    sb.append(DateUtil.getDateTime(ymdhFormatter, dateInput, true).toString(ymdhFormatter));
+                } else {
+                    sb.append(DateUtil.getDateTime(ymdFormatter, dateInput, false).toString(ymdFormatter));
+                }
                 sb.append(part.substring(end + 2));
             } else {
                 sb.append(DateUtil.NOW_PREFIX);

@@ -18,6 +18,7 @@ import java.io.IOException;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Files;
@@ -32,7 +33,11 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigParseOptions;
 import com.typesafe.config.ConfigResolveOptions;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class TaskRunner {
+    private static final Logger log = LoggerFactory.getLogger(TaskRunner.class);
 
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {
@@ -46,9 +51,26 @@ public class TaskRunner {
 
     static void runTask(String configString) throws Exception {
         final TaskRunnable task = makeTask(configString);
-        task.start();
-
-        Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(task), "Task Shutdown Hook"));
+        // before starting, we need to make sure that the task will be closed
+        CompletableFuture<AutoCloseable> startedTask = new CompletableFuture<>();
+        boolean hookAdded;
+        try {
+            Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(() -> startedTask.join().close()),
+                                                            "Task Shutdown Hook"));
+            hookAdded = true;
+        } catch (IllegalStateException ignored) {
+            log.info("Canceling task because JVM is shutting down.");
+            hookAdded = false;
+        }
+        if (hookAdded) {
+            try {
+                task.start();
+                startedTask.complete(task);
+            } catch (Throwable t) {
+                startedTask.complete(() -> log.debug("skipping task.close because it failed to start normally"));
+                throw t;
+            }
+        }
     }
 
     /**

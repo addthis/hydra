@@ -15,164 +15,75 @@ package com.addthis.hydra.task.source;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 import java.util.Map;
 import java.util.TreeMap;
 
-import com.addthis.basis.util.Varint;
-
-import com.addthis.codec.codables.BytesCodable;
-import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IReadWeighable;
 import com.addthis.hydra.store.db.ReadPageDB;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
-public class MarkDB {
+public final class MarkDB {
+    private static final Logger log = LoggerFactory.getLogger(MarkDB.class);
 
-    public static void main(String[] args) {
+    public static void main(String... args) {
+        log.info("args.length {}, args {}", args.length, args);
         if (args.length == 0) {
-            System.out.println("MarkDB called without directory. Trying using the script in hydra-config/tools.");
-            return;
-        }
-        File markDirFile = new File(args[0]);
-        if (args.length == 2 && args[1].equals("-s")) {
-            try {
-                ReadPageDB<Record> markDB = new ReadPageDB<>(markDirFile, Record.class, 1000, 20);
-                TreeMap<DBKey, Record> tm = markDB.toTreeMap();
-                for (Map.Entry<DBKey, Record> se : tm.entrySet()) {
-                    System.out.println("Path: " + se.getKey().rawKey() + " Index: " + se.getValue().index);
-                }
-                markDB.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-                System.out.println("Failed to open database. Here is a stack trace.");
-            }
+            printMarks(ReadMark.class, new File("."));
+        } else if ((args.length == 1) && ("-h".equals(args[0]) || "--help".equals(args[0]))) {
+            printUsage();
+        } else if ((args.length == 1) && "-s".equals(args[0])) {
+            printMarks(ReadSimpleMark.class, new File("."));
+        } else if (args.length == 1) {
+            printMarks(ReadMark.class, new File(args[0]));
+        } else if ((args.length == 2) && "-s".equals(args[0])) {
+            printMarks(ReadSimpleMark.class, new File(args[1]));
         } else {
-            try {
-                ReadPageDB<Mark> markDB = new ReadPageDB<>(markDirFile, Mark.class, 1000, 20);
-                TreeMap<DBKey, Mark> tm = markDB.toTreeMap();
-                for (Map.Entry<DBKey, Mark> se : tm.entrySet()) {
-                    System.out.println("Path: " + se.getKey().rawKey() + " Index: " + se.getValue().index);
-                }
-                markDB.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-                System.out.println("Failed to open database. Here is a stack trace.");
-            }
+            printUsage();
         }
     }
 
-    public static final class Record implements Codable, IReadWeighable, BytesCodable {
-
-        public String val;
-        public long index;
-        public boolean end;
-
-        private int weight = 0;
-
-        @Override
-        public void setWeight(int weight) {
-            this.weight = weight;
-        }
-
-        @Override
-        public int getWeight() {
-            return weight;
-        }
-
-        @Override
-        public byte[] bytesEncode(long version) {
-            byte[] retBytes = null;
-            ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
-            try {
-                byte[] valBytes = val.getBytes();
-                Varint.writeUnsignedVarInt(valBytes.length, buffer);
-                buffer.writeBytes(valBytes);
-                Varint.writeUnsignedVarLong(index, buffer);
-                buffer.writeByte(end ? 1 : 0);
-                retBytes = new byte[buffer.readableBytes()];
-                buffer.readBytes(retBytes);
-            } finally {
-                buffer.release();
-            }
-            return retBytes;
-        }
-
-        @Override
-        public void bytesDecode(byte[] b, long version) {
-            ByteBuf buffer = Unpooled.wrappedBuffer(b);
-            try {
-                int valLength = Varint.readUnsignedVarInt(buffer);
-                byte[] valBytes = new byte[valLength];
-                buffer.readBytes(valBytes);
-                val = new String(valBytes);
-                index = Varint.readUnsignedVarLong(buffer);
-                end = (buffer.readByte() == 1);
-            } finally {
-                buffer.release();
-            }
-        }
-
+    private static void printUsage() {
+        System.out.println("Usage: [-s] [directory]\nDump file marks to standard output.\n  -s    Use legacy format");
     }
 
-    public static final class Mark implements Codable, BytesCodable, IReadWeighable {
+    private static <T extends SimpleMark & IReadWeighable> void printMarks(Class<T> markClass, File directory) {
+        try (ReadPageDB<T> markDB = new ReadPageDB<>(directory, markClass, 1000, 20)) {
+            TreeMap<DBKey, T> tm = markDB.toTreeMap();
+            for (Map.Entry<DBKey, T> se : tm.entrySet()) {
+                System.out.println("Path: " + se.getKey().rawKey() + " Index: " + se.getValue().getIndex());
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
 
-        public String value;
-        public long index;
-        public int error;
-        public boolean end;
+    public static class ReadSimpleMark extends SimpleMark implements IReadWeighable {
+        private int weight;
 
-        private int weight = 0;
-
-        @Override
-        public void setWeight(int weight) {
+        @Override public void setWeight(int weight) {
             this.weight = weight;
         }
 
-        @Override
-        public int getWeight() {
+        @Override public int getWeight() {
             return weight;
         }
+    }
 
-        @Override
-        public byte[] bytesEncode(long version) {
-            byte[] retBytes = null;
-            ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
-            try {
-                byte[] valBytes = value.getBytes();
-                Varint.writeUnsignedVarInt(valBytes.length, buffer);
-                buffer.writeBytes(valBytes);
-                Varint.writeUnsignedVarLong(index, buffer);
-                buffer.writeByte(end ? 1 : 0);
-                Varint.writeUnsignedVarInt(error, buffer);
-                retBytes = new byte[buffer.readableBytes()];
-                buffer.readBytes(retBytes);
-            } finally {
-                buffer.release();
-            }
-            return retBytes;
+    public static class ReadMark extends Mark implements IReadWeighable {
+        private int weight;
+
+        @Override public void setWeight(int weight) {
+            this.weight = weight;
         }
 
-        @Override
-        public void bytesDecode(byte[] b, long version) {
-            ByteBuf buffer = Unpooled.wrappedBuffer(b);
-            try {
-                int valLength = Varint.readUnsignedVarInt(buffer);
-                byte[] valBytes = new byte[valLength];
-                buffer.readBytes(valBytes);
-                value = new String(valBytes);
-                index = Varint.readUnsignedVarLong(buffer);
-                end = (buffer.readByte() == 1);
-                error = Varint.readUnsignedVarInt(buffer);
-            } finally {
-                buffer.release();
-            }
+        @Override public int getWeight() {
+            return weight;
         }
-
     }
 }

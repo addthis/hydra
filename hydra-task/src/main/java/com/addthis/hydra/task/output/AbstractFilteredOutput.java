@@ -23,6 +23,13 @@ public abstract class AbstractFilteredOutput extends TaskDataOutput {
 
     @JsonProperty protected BundleFilter filter;
 
+    @Override
+    protected void open() {
+        if (filter != null) {
+            filter.open();
+        }
+    }
+
     public boolean filter(Bundle bundle) {
         return (filter == null) || filter.filter(bundle);
     }

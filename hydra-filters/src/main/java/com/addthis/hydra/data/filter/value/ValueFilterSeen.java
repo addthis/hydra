@@ -80,6 +80,13 @@ public class ValueFilterSeen extends ValueFilter {
         }
     }
 
+    @Override
+    public void open() {
+        if (filter != null) {
+            filter.open();
+        }
+    }
+
     private boolean initialize() {
         if (bloom == null && url != null) {
             SeenFilterBasic<Raw> newbloom = new SeenFilterBasic<>();

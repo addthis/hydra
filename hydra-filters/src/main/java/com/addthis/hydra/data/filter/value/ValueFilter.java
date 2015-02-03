@@ -15,15 +15,14 @@ package com.addthis.hydra.data.filter.value;
 
 import javax.annotation.Nullable;
 
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
+import com.addthis.codec.codables.SuperCodable;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -51,10 +50,6 @@ public abstract class ValueFilter implements Codable {
      */
     @JsonProperty protected boolean nullAccept;
 
-    // used for setup and requireSetup to do one-time-only initialization logic
-    private final Lock setupLock = new ReentrantLock();
-    private boolean setup = false;
-
     public boolean getNullAccept() {
         return nullAccept;
     }
@@ -63,7 +58,6 @@ public abstract class ValueFilter implements Codable {
         return once;
     }
 
-    @Deprecated
     public ValueFilter setOnce(boolean o) {
         once = o;
         return this;
@@ -101,27 +95,27 @@ public abstract class ValueFilter implements Codable {
         return filterValue(value);
     }
 
+    /**
+     * The recommended pattern for initialization of ValueFilters is to
+     * use {@link JsonCreator} style constructors. See {@link ValueFilterTimeFormat}
+     * for an example of this pattern. This construction allows one to mark any
+     * appropriate fields as final fields which is a recommended best practice.
+     *
+     * ValueFilters may be instantiated and then never used again. For example
+     * this happens when we validate a job configuration in the user interface
+     * when a job is saved. Any stateful or expensive initialization, such as
+     * contacting a resource on the network or writing to a disk, should happen
+     * in this open method. Do not use {@link SuperCodable} for initialization
+     * of ValueFilters that is deprecated in favor of the approach described here.
+     *
+     * Any application using a ValueFilter must explicitly invoke the open
+     * method exactly once after the object has been initialized and before
+     * it is used. The best practice is to call the open method even if you
+     * know it performs no operation, as a future-proof for any changes to
+     * your application.
+     */
+    public abstract void open();
+
     @Nullable public abstract ValueObject filterValue(@Nullable ValueObject value);
 
-    /**
-     * ensures setup() is called exactly once and that all other
-     * threads block on filter until this is done.  attempts to
-     * be efficient over time by avoiding sync calls on each filter call.
-     */
-    public final void requireSetup() {
-        if (!setup) {
-            setupLock.lock();
-            try {
-                if (!setup) {
-                    setup();
-                    setup = true;
-                }
-            } finally {
-                setupLock.unlock();
-            }
-        }
-    }
-
-    // override in subclasses that need atomic setup
-    public void setup() {}
 }

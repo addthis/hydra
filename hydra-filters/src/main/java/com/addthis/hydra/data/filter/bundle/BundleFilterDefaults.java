@@ -18,10 +18,14 @@ import java.util.Map.Entry;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueString;
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">sets bundle values to defaults if they are null or missing</span>.
@@ -39,32 +43,31 @@ public class BundleFilterDefaults extends BundleFilter {
     /**
      * A mapping of bundle fields to default bundle values. This field is required.
      */
-    @FieldConfig(codable = true, required = true)
-    private HashMap<String, String> values;
+    final private HashMap<String, String> values;
 
-    private HashMap<BundleField, ValueString> defaults;
-    private boolean initialized;
+    final private HashMap<AutoField, ValueString> defaults;
 
-    @Override
-    public void initialize() {
+    @JsonCreator
+    public BundleFilterDefaults(@JsonProperty("values") HashMap<String, String> values) {
+        this.values = values;
+        HashMap<AutoField, ValueString> map = new HashMap<>();
+        for (Entry<String, String> e : values.entrySet()) {
+            AutoField f = AutoField.newAutoField(e.getKey());
+            ValueString v = ValueFactory.create(e.getValue());
+            map.put(f, v);
+        }
+        this.defaults = map;
     }
 
     @Override
-    public boolean filterExec(Bundle row) {
-        if (!initialized) {
-            HashMap<BundleField, ValueString> map = new HashMap<>();
-            for (Entry<String, String> e : values.entrySet()) {
-                BundleField f = row.getFormat().getField(e.getKey());
-                ValueString v = ValueFactory.create(e.getValue());
-                map.put(f, v);
-            }
-            defaults = map;
-            initialized = true;
-        }
-        for (Entry<BundleField, ValueString> e : defaults.entrySet()) {
-            ValueObject o = row.getValue(e.getKey());
+    public void open() { }
+
+    @Override
+    public boolean filter(Bundle row) {
+        for (Entry<AutoField, ValueString> e : defaults.entrySet()) {
+            ValueObject o = e.getKey().getValue(row);
             if (o == null) {
-                row.setValue(e.getKey(), e.getValue());
+                e.getKey().setValue(row, e.getValue());
             }
         }
         return true;

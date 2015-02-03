@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.data.query;
 
+import javax.annotation.Syntax;
+
 import com.addthis.hydra.data.query.op.OpChangePoints;
 import com.addthis.hydra.data.query.op.OpCompare;
 import com.addthis.hydra.data.query.op.OpContains;
@@ -22,9 +24,11 @@ import com.addthis.hydra.data.query.op.OpDiff;
 import com.addthis.hydra.data.query.op.OpDiskSort;
 import com.addthis.hydra.data.query.op.OpDisorder;
 import com.addthis.hydra.data.query.op.OpFill;
+import com.addthis.hydra.data.query.op.OpFilter;
 import com.addthis.hydra.data.query.op.OpFold;
 import com.addthis.hydra.data.query.op.OpFrequencyTable;
 import com.addthis.hydra.data.query.op.OpGather;
+import com.addthis.hydra.data.query.op.OpGroupBy;
 import com.addthis.hydra.data.query.op.OpHistogram;
 import com.addthis.hydra.data.query.op.OpHistogramExplicit;
 import com.addthis.hydra.data.query.op.OpHoltWinters;
@@ -144,6 +148,14 @@ enum Op {
             return new OpFill(args, opPromise);
         }
     },
+    FILTER {
+        @Override
+        QueryOp build(QueryOpProcessor processor,
+                      @Syntax("HOCON") String args,
+                      ChannelProgressivePromise opPromise) {
+            return new OpFilter(args, opPromise);
+        }
+    },
     FOLD {
         @Override
         QueryOp build(QueryOpProcessor processor,
@@ -199,6 +211,14 @@ enum Op {
                       String args,
                       ChannelProgressivePromise opPromise) {
             return new OpPercentileDistribution(processor.tableFactory(), args, opPromise);
+        }
+    },
+    GROUPBY {
+        @Override
+        QueryOp build(QueryOpProcessor processor,
+                      String args,
+                      ChannelProgressivePromise opPromise) {
+            return new OpGroupBy(processor, args, opPromise);
         }
     },
     LIMIT {
@@ -433,10 +453,6 @@ enum Op {
             return TRANS.build(processor, args, opPromise);
         }
     };
-
-    QueryOp build(QueryOpProcessor processor, String args) {
-        return build(processor, args, processor.opPromise());
-    }
 
     abstract QueryOp build(QueryOpProcessor processor,
                            String args,

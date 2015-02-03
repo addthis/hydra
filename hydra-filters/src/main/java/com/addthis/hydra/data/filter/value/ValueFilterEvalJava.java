@@ -163,9 +163,12 @@ public class ValueFilterEvalJava extends ValueFilter {
         requiredImports.add("import java.util.Map;");
     }
 
+    @Override public void open() {
+        constructedFilter = createConstructedFilter();
+    }
+
     @Override
     public ValueObject filterValue(ValueObject value) {
-        requireSetup();
         if (constructedFilter != null) {
             return constructedFilter.filter(value);
         } else {
@@ -195,6 +198,7 @@ public class ValueFilterEvalJava extends ValueFilter {
         classDecl.append(" extends ValueFilter\n");
         classDecl.append("{\n");
         createConstructor(classDecl, className);
+        createInitializer(classDecl);
         createFilterValueMethod(classDecl);
         createFilterValueInternalMethod(classDecl);
         classDecl.append("}\n");
@@ -228,6 +232,7 @@ public class ValueFilterEvalJava extends ValueFilter {
                 log.warn("\n" + classDeclString);
                 throw new IllegalStateException(msg);
             }
+            filter.open();
             return filter;
         } finally {
             compiler.cleanupFiles(className);
@@ -269,13 +274,8 @@ public class ValueFilterEvalJava extends ValueFilter {
         classDecl.append("}\n\n");
     }
 
-    private void nullInput(StringBuffer classDecl) {
-        if (inputType == InputType.DOUBLE || inputType == InputType.LONG) {
-            classDecl.append("if (value == null) {\n");
-            classDecl.append("return null;\n");
-            classDecl.append("} else {\n");
-            classDecl.append(inputType.getTypeName());
-        }
+    private void createInitializer(StringBuffer classDecl) {
+        classDecl.append("public void open() {}\n");
     }
 
     private void createFilterValueMethod(StringBuffer classDecl) {
@@ -321,11 +321,6 @@ public class ValueFilterEvalJava extends ValueFilter {
         classDecl.append(getOnce());
         classDecl.append(");\n");
         classDecl.append("}\n\n");
-    }
-
-
-    @Override public void setup() {
-        constructedFilter = createConstructedFilter();
     }
 
     public void setInputType(InputType type) {

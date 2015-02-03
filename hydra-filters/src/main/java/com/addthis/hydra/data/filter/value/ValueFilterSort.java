@@ -31,24 +31,24 @@ import com.addthis.bundle.value.ValueObject;
  */
 public class ValueFilterSort extends ValueFilter {
 
-    private static final Comparator<ValueObject> valueObjectComparator = new Comparator<ValueObject>() {
-        @Override
-        public int compare(ValueObject o1, ValueObject o2) {
-            if (o1.getObjectType() != o2.getObjectType()) {
-                throw new RuntimeException("Sort error: different object types: " + o1.getObjectType() + "," + o2.getObjectType());
-            }
-            switch (o1.getObjectType()) {
-                case STRING:
-                    return o1.asString().asNative().compareTo(o2.asString().asNative());
-                case INT:
-                    return Long.compare(o1.asLong().getLong(), o2.asLong().getLong()); // DefaultLong.TYPE = INT, go figure
-                case FLOAT:
-                    return Double.compare(o1.asDouble().getDouble(), o2.asDouble().getDouble()); // ... and DefaultDouble.TYPE = FLOAT
-                default:
-                    throw new RuntimeException("Sort error: unsupported object type " + o1.getObjectType());
-            }
+    private static final Comparator<ValueObject> valueObjectComparator = (o1, o2) -> {
+        if (o1.getObjectType() != o2.getObjectType()) {
+            throw new RuntimeException("Sort error: different object types: " + o1.getObjectType() + "," + o2.getObjectType());
+        }
+        switch (o1.getObjectType()) {
+            case STRING:
+                return o1.asString().asNative().compareTo(o2.asString().asNative());
+            case INT:
+                return Long.compare(o1.asLong().getLong(), o2.asLong().getLong()); // DefaultLong.TYPE = INT, go figure
+            case FLOAT:
+                return Double.compare(o1.asDouble().getDouble(), o2.asDouble().getDouble()); // ... and DefaultDouble.TYPE = FLOAT
+            default:
+                throw new RuntimeException("Sort error: unsupported object type " + o1.getObjectType());
         }
     };
+
+    @Override
+    public void open() { }
 
     @Override
     public ValueObject filterValue(ValueObject value) {

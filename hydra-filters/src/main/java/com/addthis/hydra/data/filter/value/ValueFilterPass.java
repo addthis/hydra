@@ -31,6 +31,8 @@ import com.addthis.bundle.value.ValueObject;
  */
 public class ValueFilterPass extends ValueFilter {
 
+    @Override public void open() { }
+
     @Override
     public ValueObject filter(ValueObject v) {
         return v;

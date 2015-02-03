@@ -15,10 +15,14 @@ package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilterContains;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 
 /**
@@ -45,52 +49,58 @@ public class BundleFilterContains extends BundleFilter {
     /**
      * The input field to test. This field is required.
      */
-    @FieldConfig(codable = true, required = true)
-    private String field;
+    final private AutoField field;
 
     /**
      * An array of strings to test against the input field.
      */
-    @FieldConfig(codable = true)
-    private String[] value;
+    final private String[] value;
 
     /**
      * The target field to test against the input field.
      */
-    @FieldConfig(codable = true)
-    private String from;
+    final private AutoField from;
 
     /**
      * If true then return the negation of the contains operation. Default is false.
      */
-    @FieldConfig(codable = true)
-    private boolean not;
+    final private boolean not;
 
     // Cache the value filter if-and-only-if the 'from' field is null.
-    private ValueFilterContains filter;
+    final private ValueFilterContains filter;
 
-    private String[] fields;
-
-    @Override
-    public void initialize() {
-        fields = new String[]{field, from};
-
+    @JsonCreator
+    public BundleFilterContains(@JsonProperty("field") AutoField field,
+                                @JsonProperty("value") String[] value,
+                                @JsonProperty("from") AutoField from,
+                                @JsonProperty("not") boolean not) {
+        this.field = field;
+        this.value = value;
+        this.from = from;
+        this.not = not;
         if (from == null && value != null) {
-            filter = new ValueFilterContains().setValues(value);
-            filter.requireSetup();
+            filter = new ValueFilterContains(value, null, false, false);
+        } else {
+            filter = null;
         }
     }
 
     @Override
-    public boolean filterExec(Bundle row) {
+    public void open() {
+        if (filter != null) {
+            filter.open();
+        }
+    }
+
+    @Override
+    public boolean filter(Bundle row) {
         if (row == null) {
             return not;
         }
-        BundleField[] bound = getBindings(row, fields);
-        ValueObject target = row.getValue(bound[0]);
+        ValueObject target = field.getValue(row);
         if (from != null) {
             String fieldString = target.asString().asNative();
-            String fromString = ValueUtil.asNativeString(row.getValue(bound[1]));
+            String fromString = ValueUtil.asNativeString(from.getValue(row));
             boolean match = fieldString.contains(fromString);
             return not ? !match : match;
         } else if (filter != null) {
@@ -99,21 +109,6 @@ public class BundleFilterContains extends BundleFilter {
         } else {
             return not;
         }
-    }
-
-    BundleFilterContains setField(String field) {
-        this.field = field;
-        return this;
-    }
-
-    BundleFilterContains setFrom(String from) {
-        this.from = from;
-        return this;
-    }
-
-    BundleFilterContains setValue(String[] value) {
-        this.value = value;
-        return this;
     }
 
 }

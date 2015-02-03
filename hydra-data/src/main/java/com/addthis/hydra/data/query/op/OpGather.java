@@ -117,11 +117,8 @@ public class OpGather extends AbstractQueryOp {
 
     private static final Meter diskTips = Metrics.newMeter(OpGather.class, "diskTips", "diskTips", TimeUnit.SECONDS);
 
-    final ChannelProgressivePromise queryPromise;
-
     public OpGather(String args, long tipMem, long tipRow, String tmpDir, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
-        this.queryPromise = queryPromise;
         this.tmpDir = tmpDir;
         this.tipMem = tipMem;
         this.tipRow = tipRow;
@@ -136,7 +133,7 @@ public class OpGather extends AbstractQueryOp {
 
     @Override
     public void send(Bundle row) throws DataChannelError {
-        if (queryPromise.isDone()) {
+        if (opPromise.isDone()) {
             return;
         }
         String key = mergeConfig.handleBindAndGetKey(row, format);
@@ -213,7 +210,7 @@ public class OpGather extends AbstractQueryOp {
     public void sendComplete() {
         QueryOp next = getNext();
         for (MergedRow mergedRow : resultTable.values()) {
-            if (!queryPromise.isDone()) {
+            if (!opPromise.isDone()) {
                 next.send(mergedRow.emit());
             } else {
                 break;

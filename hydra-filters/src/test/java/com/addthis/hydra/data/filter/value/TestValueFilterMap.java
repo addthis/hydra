@@ -18,16 +18,19 @@ import java.util.HashMap;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TestValueFilterMap {
 
-    private String mapFilter(String val, HashMap<String, String> map, boolean tonull) {
-        return new ValueFilterMap().setMap(map).setToNull(tonull).filter(val);
+    private String mapFilter(String val, HashMap<String, String> map, String mapURL, boolean tonull) {
+        ValueFilterMap filter = new ValueFilterMap().setMap(map).setMapURL(mapURL).setToNull(tonull);
+        filter.open();
+        return filter.filter(val);
     }
 
     @Test
     public void nullPassThrough() {
-        assertEquals(null, mapFilter(null, new HashMap<String, String>(), false));
+        assertEquals(null, mapFilter(null, new HashMap<String, String>(), null, false));
     }
 
     @Test
@@ -36,11 +39,26 @@ public class TestValueFilterMap {
         map.put("up", "down");
         map.put("charm", "strange");
         map.put("huh", null);
-        assertEquals("foo", mapFilter("foo", map, false));
-        assertEquals("down", mapFilter("up", map, false));
-        assertEquals("down", mapFilter("up", map, true));
-        assertEquals("huh", mapFilter("huh", map, false));
-        assertEquals(null, mapFilter("huh", map, true));
+        assertEquals("foo", mapFilter("foo", map, null, false));
+        assertEquals("down", mapFilter("up", map, null, false));
+        assertEquals("down", mapFilter("up", map, null, true));
+        assertEquals("huh", mapFilter("huh", map, null, false));
+        assertEquals(null, mapFilter("huh", map, null, true));
+    }
+
+    @Test
+    public void badURL() {
+        testOneBadUrl("http://asdsadsdasdds/");
+    }
+
+    private void testOneBadUrl(String url) {
+        boolean failure = false;
+        try {
+            mapFilter("foo", null, url , false);
+        } catch (Exception ex) {
+            failure = true;
+        }
+        assertTrue(failure);
     }
 
 }

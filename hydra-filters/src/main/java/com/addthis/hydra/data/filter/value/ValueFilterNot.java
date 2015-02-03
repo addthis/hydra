@@ -18,18 +18,30 @@ import javax.annotation.Nullable;
 import com.addthis.bundle.value.ValueObject;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
+
+/**
+ * This {@link ValueFilter ValueFilter} <span class="hydra-summary">negates another value filter</span>.
+ * <p/>
+ * <p>Example:</p>
+ * <pre>
+ * </pre>
+ *
+ * @user-reference
+ * @hydra-name not
+ */
 public class ValueFilterNot extends ValueFilter {
 
     private final ValueFilter filter;
 
-    // this should really be a delegate creator, but jackson has a bug with abstract delegate constructors
-    @JsonCreator
-    public ValueFilterNot(@JsonProperty(value = "filter", required = true) ValueFilter filter) {
+    @JsonCreator public ValueFilterNot(ValueFilter filter) {
         this.filter = filter;
         this.once = filter.once;
         this.nullAccept = filter.nullAccept;
+    }
+
+    @Override public void open() {
+        filter.open();
     }
 
     @Override

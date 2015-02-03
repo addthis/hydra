@@ -77,7 +77,7 @@ public class TestValueFilterCounter {
 
     @Test
     public void singleThreadedCounter() {
-        ValueFilterCounter counter = new ValueFilterCounter();
+        ValueFilterCounter counter = new ValueFilterCounter(null, 0, 1, 0);
         Thread thread = new CounterThread(counter, 1000000);
         thread.start();
         try {
@@ -92,7 +92,7 @@ public class TestValueFilterCounter {
 
     @Test
     public void multiThreadedCounter() {
-        ValueFilterCounter counter = new ValueFilterCounter();
+        ValueFilterCounter counter = new ValueFilterCounter(null, 0, 1, 0);
         Thread thread1 = new CounterThread(counter, 1000000);
         Thread thread2 = new CounterThread(counter, 1000000);
         Thread thread3 = new CounterThread(counter, 1000000);

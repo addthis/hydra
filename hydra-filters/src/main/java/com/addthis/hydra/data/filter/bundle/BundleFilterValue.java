@@ -14,7 +14,7 @@
 package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
@@ -33,12 +33,56 @@ import com.addthis.hydra.data.filter.value.ValueFilter;
  */
 public class BundleFilterValue extends BundleFilter {
 
+    /**
+     * The value to assign into a bundle field. This field is required.
+     */
+    @FieldConfig(codable = true, required = true)
+    private String value;
+
+    /**
+     * The bundle field name for the new value. This field is required.
+     */
+    @FieldConfig(codable = true, required = true)
+    private AutoField to;
+
+    /**
+     * Optional filter to apply on the input value.
+     */
+    @FieldConfig(codable = true)
+    private ValueFilter filter;
+
+    /**
+     * If true then return false when the input value is null. Default is true.
+     */
+    @FieldConfig(codable = true)
+    private boolean nullFail = true;
+
+    @Override
+    public void open() {
+        if (filter != null) {
+            filter.open();
+        }
+    }
+
+    @Override
+    public boolean filter(Bundle bundle) {
+        ValueObject val = ValueFactory.create(value);
+        if (filter != null) {
+            val = filter.filter(val);
+        }
+        if (nullFail && val == null) {
+            return false;
+        }
+        to.setValue(bundle, val);
+        return true;
+    }
+
     public BundleFilterValue setValue(String value) {
         this.value = value;
         return this;
     }
 
-    public BundleFilterValue setToField(String field) {
+    public BundleFilterValue setToField(AutoField field) {
         this.to = field;
         return this;
     }
@@ -53,48 +97,4 @@ public class BundleFilterValue extends BundleFilter {
         return this;
     }
 
-    /**
-     * The value to assign into a bundle field. This field is required.
-     */
-    @FieldConfig(codable = true, required = true)
-    private String value;
-
-    /**
-     * The bundle field name for the new value.
-     */
-    @FieldConfig(codable = true)
-    private String to;
-
-    /**
-     * Optional filter to apply on the input value.
-     */
-    @FieldConfig(codable = true)
-    private ValueFilter filter;
-
-    /**
-     * If true then return false when the input value is null. Default is true.
-     */
-    @FieldConfig(codable = true)
-    private boolean nullFail = true;
-
-    private String[] fields;
-
-    @Override
-    public void initialize() {
-        fields = new String[]{to};
-    }
-
-    @Override
-    public boolean filterExec(Bundle bundle) {
-        BundleField[] bound = getBindings(bundle, fields);
-        ValueObject val = ValueFactory.create(value);
-        if (filter != null) {
-            val = filter.filter(val);
-        }
-        if (nullFail && val == null) {
-            return false;
-        }
-        bundle.setValue(bound[0], val);
-        return true;
-    }
 }

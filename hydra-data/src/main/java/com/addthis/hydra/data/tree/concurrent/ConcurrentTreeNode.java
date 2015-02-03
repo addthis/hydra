@@ -181,8 +181,8 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         changed.set(true);
     }
 
-    protected void markDeleted() {
-        leases.set(-2);
+    protected boolean markDeleted() {
+        return leases.getAndSet(-2) != -2;
     }
 
     protected void evictionComplete() {

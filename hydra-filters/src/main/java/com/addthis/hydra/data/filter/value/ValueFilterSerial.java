@@ -68,6 +68,9 @@ public class ValueFilterSerial extends ValueFilter {
     private int base;
 
     @Override
+    public void open() { }
+
+    @Override
     public synchronized ValueObject filterValue(ValueObject value) {
         if (mod > 0) {
             seed = (seed + 1) % mod;

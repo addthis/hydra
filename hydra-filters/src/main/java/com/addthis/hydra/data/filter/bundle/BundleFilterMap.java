@@ -60,9 +60,9 @@ public class BundleFilterMap extends BundleFilter {
     private Boolean nullFail;
 
     @Override
-    public void initialize() {
+    public void open() {
         for (BundleFilterField f : fields) {
-            f.initOnceOnly();
+            f.open();
             if (nullFail != null) {
                 f.setNullFail(nullFail);
             }
@@ -70,9 +70,9 @@ public class BundleFilterMap extends BundleFilter {
     }
 
     @Override
-    public boolean filterExec(Bundle bundle) {
+    public boolean filter(Bundle bundle) {
         for (int i = 0; i < fields.length; i++) {
-            if (!fields[i].filterExec(bundle) && exitFail) {
+            if (!fields[i].filter(bundle) && exitFail) {
                 return false;
             }
         }

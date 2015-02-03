@@ -28,6 +28,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 
 import com.addthis.basis.concurrentlinkedhashmap.MediatedEvictionConcurrentHashMap;
 import com.addthis.basis.util.Bytes;
@@ -57,6 +58,7 @@ import com.addthis.hydra.store.util.MeterFileLogger.MeterDataSource;
 import com.addthis.hydra.store.util.NamedThreadFactory;
 import com.addthis.hydra.store.util.Raw;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.AtomicDouble;
 
 import com.yammer.metrics.Metrics;
@@ -182,10 +184,10 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 new NamedThreadFactory(scope + "-deletion-", true));
 
         for (int i = 0; i < numDeletionThreads; i++) {
-            deletionThreadPool.scheduleAtFixedRate(new BackgroundDeletionTask(this),
-                    i,
-                    deletionThreadSleepMillis,
-                    TimeUnit.MILLISECONDS);
+            deletionThreadPool.scheduleAtFixedRate(
+                    new ConcurrentTreeDeletionTask(this, closed::get, LoggerFactory.getLogger(
+                            ConcurrentTreeDeletionTask.class.getName() + ".Background")),
+                    i, deletionThreadSleepMillis, TimeUnit.MILLISECONDS);
         }
 
         long openTime = System.currentTimeMillis() - start;
@@ -332,24 +334,27 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             return false;
         }
         CacheKey key = new CacheKey(nodedb, child);
-        while (true) {
-            ConcurrentTreeNode node = getNode(parent, child, false);
-            if (node != null) {
-                if (node.getLeaseCount() == -1) {
-                    continue;
-                }
-                node.markDeleted();
-                source.remove(key.dbkey());
-                cache.remove(key);
+        // lease node to prevent eviction from cache and thereby disrupting our {@code source.remove()}
+        ConcurrentTreeNode node = getNode(parent, child, true);
+        if (node != null) {
+            // first ensure no one can rehydrate into a different instance
+            source.remove(key.dbkey());
+            // "markDeleted" causes other threads to remove the node at will, so it is semantically the same
+            // as removing it from the cache ourselves. Since this is the last and only instance, we can safely
+            // coordinate concurrent deletion attempts with the lease count (-2 is used as a special flag) even
+            // though most other code stops bothering with things like "thread safety" around this stage.
+            if (node.markDeleted()) {
+                // node could have already been dropped from the cache, and then re-created (sharing the same cache
+                // key equality). That is a fresh node that needs its own deletion, so only try to remove our instance.
+                cache.remove(key, node);
                 parent.updateNodeCount(-1);
                 if (node.hasNodes() && !node.isAlias()) {
                     markForChildDeletion(node);
                 }
                 return true;
-            } else {
-                return false;
             }
         }
+        return false;
     }
 
     private void markForChildDeletion(final ConcurrentTreeNode node) {
@@ -358,13 +363,13 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
          * otherwise already been purged from backing store by release() in the
          * TreeCache.
          */
-        assert (node.hasNodes());
-        assert (!node.isAlias());
+        assert node.hasNodes();
+        assert !node.isAlias();
         int nodeDB = treeTrashNode.nodeDB();
         int next = treeTrashNode.incrementNodeCount();
         DBKey key = new DBKey(nodeDB, Raw.get(Bytes.toBytes(next)));
         source.put(key, node);
-        if (log.isTraceEnabled()) log.trace("[trash.mark] " + next + " --> " + treeTrashNode);
+        log.trace("[trash.mark] {} --> {}", next, treeTrashNode);
     }
 
     @SuppressWarnings("unchecked") IPageDB.Range<DBKey, ConcurrentTreeNode> fetchNodeRange(int db) {
@@ -388,14 +393,21 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     /**
      * Package-level visibility is for testing purposes only.
      */
+    @VisibleForTesting
     void waitOnDeletions() {
         shutdownDeletionThreadPool();
-        processTrash();
+        synchronized (treeTrashNode) {
+            if (trashIterator != null) {
+                trashIterator.close();
+                trashIterator = null;
+            }
+        }
     }
 
     /**
      * Package-level visibility is for testing purposes only.
      */
+    @VisibleForTesting
     ConcurrentMap<CacheKey, ConcurrentTreeNode> getCache() {
         return cache;
     }
@@ -413,6 +425,23 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             }
         } catch (InterruptedException ignored) {
         }
+    }
+
+
+    /**
+     * Delete from the backing storage all nodes that have been moved to be
+     * children of the trash node where they are waiting deletion. Also delete
+     * all subtrees of these nodes. After deleting each subtree then test
+     * the provided {@param terminationCondition}. If it returns true then
+     * stop deletion.
+     *
+     * @param terminationCondition invoked between subtree deletions to
+     *                             determine whether to return from method.
+     */
+    @Override
+    public void foregroundNodeDeletion(BooleanSupplier terminationCondition) {
+        ConcurrentTreeDeletionTask deletionTask = new ConcurrentTreeDeletionTask(this, terminationCondition, log);
+        deletionTask.run();
     }
 
     @Override
@@ -657,20 +686,24 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
      * @param rootNode root of the subtree to delete
      * @param counter if non-negative then tally the nodes that have been deleted
      */
-    long deleteSubTree(ConcurrentTreeNode rootNode, long counter) {
+    long deleteSubTree(ConcurrentTreeNode rootNode,
+                       long counter,
+                       BooleanSupplier terminationCondition,
+                       Logger deletionLogger) {
         int nodeDB = rootNode.nodeDB();
         IPageDB.Range<DBKey, ConcurrentTreeNode> range = fetchNodeRange(nodeDB);
+        DBKey endRange;
+        boolean reschedule;
         try {
-            while (range.hasNext()) {
-                // do not emit logging when counter is negative
-                if ((counter >= 0) && (++counter % deletionLogInterval == 0)) {
-                    log.info("Deleted " + counter + " nodes from the tree.");
+            while (range.hasNext() && !terminationCondition.getAsBoolean()) {
+                if ((++counter % deletionLogInterval) == 0) {
+                    deletionLogger.info("Deleted {} nodes from the tree.", counter);
                 }
                 Map.Entry<DBKey, ConcurrentTreeNode> entry = range.next();
                 ConcurrentTreeNode next = entry.getValue();
 
                 if (next.hasNodes() && !next.isAlias()) {
-                    counter = deleteSubTree(next, counter);
+                    counter = deleteSubTree(next, counter, terminationCondition, deletionLogger);
                 }
                 String name = entry.getKey().rawKey().toString();
                 CacheKey key = new CacheKey(nodeDB, name);
@@ -682,10 +715,20 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                     cacheNode.markDeleted();
                 }
             }
+            if (range.hasNext()) {
+                endRange = range.next().getKey();
+                reschedule = true;
+            } else {
+                endRange = new DBKey(nodeDB + 1);
+                reschedule = false;
+            }
         } finally {
             range.close();
         }
-        source.remove(new DBKey(nodeDB), new DBKey(nodeDB + 1), false);
+        source.remove(new DBKey(nodeDB), endRange, false);
+        if (reschedule) {
+            markForChildDeletion(rootNode);
+        }
         return counter;
     }
 
@@ -717,37 +760,9 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     }
 
     /**
-     * Close the trash iterator that was used by the background deletion threads.
-     * Open a new iterator to walk through any remaining trash nodes and delete their
-     * children. Then perform a range deletion on the trash nodes.
-     */
-    private void processTrash() {
-        synchronized (treeTrashNode) {
-            if (trashIterator != null) {
-                trashIterator.close();
-                trashIterator = null;
-            }
-        }
-
-        int nodeDB = treeTrashNode.nodeDB();
-
-        IPageDB.Range<DBKey, ConcurrentTreeNode> range = fetchNodeRange(nodeDB);
-
-        while (range.hasNext()) {
-            Map.Entry<DBKey, ConcurrentTreeNode> entry = range.next();
-            ConcurrentTreeNode node = entry.getValue();
-            deleteSubTree(node, 0);
-            treeTrashNode.incrementCounter();
-        }
-
-        range.close();
-
-        source.remove(new DBKey(nodeDB), new DBKey(nodeDB + 1), false);
-    }
-
-    /**
      * For testing purposes only.
      */
+    @VisibleForTesting
     ConcurrentTreeNode getTreeTrashNode() {
         return treeTrashNode;
     }

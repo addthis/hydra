@@ -18,12 +18,15 @@
             <h4 class="modal-title"><%-title%></h4>
         </div>
         <div class="modal-body">
-            <table class="table table-condensed" style="margin-bottom: 0px;">
+            <div>
+                <span id="backupMessage" style="padding:6px;float:left;"></span>
+            </div>
+            <table class="table table-condensed" style="margin-bottom: 0px; margin-top:10px;">
                 <tbody>
-                    <!-- gold backups -->
-                    <tr>
+                    <!-- revert to gold buackup by revision -->
+                    <tr id="goldRevertByRevision">
                         <td style="width:25%;padding-top:10px;">
-                            by run, to:
+                            Recent run:
                         </td>
                         <td style="width:50%;">
                             <select id="runSelect" class="form-control">
@@ -33,13 +36,39 @@
                             </select>
                         </td>
                         <td style="width:25%;">
-                            <button id="runsButton" class="btn btn-default btn-medium">now</button>
+                            <button id="runButton" class="btn btn-default btn-medium">now</button>
+                        </td>
+                    </tr>
+                    <!-- revert to gold backup by timestamp -->
+                    <tr id="goldRevertByTimestamp" style="display:none;">
+                        <td style="width:25%;padding-top:10px;">
+                            Recent run:
+                        </td>
+                        <td style="width:50%;">
+                            <select id="goldSelect" class="form-control">
+                            </select>
+                        </td>
+                        <td style="width:25%;">
+                            <button id="goldButton" class="btn btn-default btn-medium">now</button>
+                        </td>
+                    </tr>
+                    <!-- hourly backups -->
+                    <tr style="display:none;">
+                        <td style="width:25%;padding-top:10px;">
+                            Hourly backup:
+                        </td>
+                        <td style="width:50%;">
+                            <select id="hourlySelect" class="form-control">
+                            </select>
+                        </td>
+                        <td style="width:25%;">
+                            <button id="hourlyButton" class="btn btn-default btn-medium">now</button>
                         </td>
                     </tr>
                     <!-- daily backups -->
                     <tr style="display:none;">
                         <td style="width:25%;padding-top:10px;">
-                            by day, to:
+                            Daily backup:
                         </td>
                         <td style="width:50%;">
                             <select id="dailySelect" class="form-control">
@@ -50,23 +79,10 @@
                             <button id="dailyButton" class="btn btn-default btn-medium">now</button>
                         </td>
                     </tr>
-                    <!-- hourly backups -->
-                    <tr style="display:none;">
-                        <td style="width:25%;padding-top:10px;">
-                            by hour, to:
-                        </td>
-                        <td style="width:50%;">
-                            <select id="hourlySelect" class="form-control">
-                            </select>
-                        </td>
-                        <td style="width:25%;">
-                            <button id="hourlyButton" class="btn btn-default btn-medium">now</button>
-                        </td>
-                    </tr>
                     <!-- weekly backups -->
                     <tr style="display:none;">
                         <td style="width:25%;padding-top:10px;">
-                            by week, to:
+                            Weekly backup:
                         </td>
                         <td style="width:50%;">
                             <select id="weeklySelect" class="form-control">

@@ -11,27 +11,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.data.filter.bundle;
+package com.addthis.hydra.data.filter.bundle.unary;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.filter.util.UnaryOperation;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 public class BundleFilterUnary extends BundleFilter {
 
-    @FieldConfig(required = true) private UnaryOperation operation;
-    @FieldConfig @Nullable        private BundleFilter   filter;
+    @Nonnull  private final UnaryOperation operation;
+    @Nullable private final BundleFilter   filter;
 
-    @Override public void initialize() {
+    protected BundleFilterUnary(@Nonnull @JsonProperty("operation") UnaryOperation operation,
+                                @Nullable @JsonProperty("filter")   BundleFilter filter) {
+        this.operation = checkNotNull(operation);
+        this.filter = filter;
+    }
+
+    @Override public void open() {
         if (filter != null) {
-            filter.initOnceOnly();
+            filter.open();
         }
     }
 
-    @Override public boolean filterExec(Bundle row) {
-        boolean filterResult = (filter == null) || filter.filterExec(row);
+    @Override public boolean filter(Bundle row) {
+        boolean filterResult = (filter == null) || filter.filter(row);
         return operation.compute(filterResult);
     }
 }

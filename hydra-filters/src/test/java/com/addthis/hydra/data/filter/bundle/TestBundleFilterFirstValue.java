@@ -13,9 +13,14 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import java.io.IOException;
+
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.map.MapBundle;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.codec.config.Configs;
+import com.addthis.hydra.data.filter.bundle.unary.BundleFilterUnary;
 
 import org.junit.Test;
 
@@ -26,11 +31,11 @@ import static org.junit.Assert.assertTrue;
 public class TestBundleFilterFirstValue {
 
     @Test
-    public void testBundleFilterFirst() {
-        BundleFilterFirstValue bff = new BundleFilterFirstValue();
-        bff.setIn(new String[]{"a", "b", "c", "d"});
-        bff.setOut("out");
-
+    public void testBundleFilterFirst() throws IOException {
+        BundleFilterFirstValue bff = Configs.decodeObject(
+                BundleFilterFirstValue.class,
+                "{op:\"first\", in:[\"a\", \"b\", \"c\", \"d\"], " +
+                "out:\"out\"}");
         MapBundle b1 = MapBundle.createBundle(new String[]{
                 "a", "123",
                 "b", "234",
@@ -72,11 +77,11 @@ public class TestBundleFilterFirstValue {
     }
 
     @Test
-    public void testBundleFilterFirstWhich() {
-        BundleFilterFirstValue bff = new BundleFilterFirstValue();
-        bff.setIn(new String[]{"a", "b", "c", "d"});
-        bff.setOut("out");
-        bff.setWhich("whichField");
+    public void testBundleFilterFirstWhich() throws IOException {
+        BundleFilterFirstValue bff = Configs.decodeObject(
+                BundleFilterFirstValue.class,
+                "{op:\"first\", in:[\"a\", \"b\", \"c\", \"d\"], " +
+                "out:\"out\", which:\"whichField\"}");
 
         MapBundle b1 = MapBundle.createBundle(new String[]{
                 "a", "123",

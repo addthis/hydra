@@ -27,22 +27,20 @@ import org.slf4j.LoggerFactory;
 public class RabbitMessageProducer implements MessageProducer {
 
     private static final Logger log = LoggerFactory.getLogger(RabbitMessageProducer.class);
-    private static final int DEFAULT_PORT = 5672;
-    private String brokerHost;
-    private int brokerPort;
-    private Channel channel;
-    private Connection connection;
+
     private String exchangeName;
+    private String brokerAddresses;
+    private String brokerUsername;
+    private String brokerPassword;
+    private Channel channel;
 
-    public RabbitMessageProducer(String exchangeName, String brokerHost) {
-        this(exchangeName, brokerHost, DEFAULT_PORT);
-    }
+    private Connection connection;
 
-
-    public RabbitMessageProducer(String exchangeName, String brokerHost, int brokerPort) {
+    public RabbitMessageProducer(String exchangeName, String brokerAddresses, String brokerUsername, String brokerPassword) {
         this.exchangeName = exchangeName;
-        this.brokerHost = brokerHost;
-        this.brokerPort = brokerPort;
+        this.brokerAddresses = brokerAddresses;
+        this.brokerUsername = brokerUsername;
+        this.brokerPassword = brokerPassword;
         try {
             open();
         } catch (IOException e) {
@@ -52,7 +50,7 @@ public class RabbitMessageProducer implements MessageProducer {
     }
 
     @Override public void open() throws IOException {
-        connection = RabbitMQUtil.createConnection(brokerHost, brokerPort);
+        connection = RabbitMQUtil.createConnection(brokerAddresses, brokerUsername, brokerPassword);
         channel = connection.createChannel();
         channel.exchangeDeclare(exchangeName, "direct");
         log.info("[rabbit.producer] connection established.");

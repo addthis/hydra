@@ -15,6 +15,7 @@ package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.kvp.KVBundle;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
 
@@ -39,7 +40,7 @@ public class TestBundleFilterMapExtract {
         BundleFilterMapExtract.XMap xmap = new BundleFilterMapExtract.XMap().setFrom("foo");
         BundleFilterMapExtract.XMap[] maps = new BundleFilterMapExtract.XMap[1];
         maps[0] = xmap;
-        filter = filter.setField("map").setMap(maps);
+        filter = filter.setField(AutoField.newAutoField("map")).setMap(maps);
         assertFalse(format.hasField("foo"));
         filter.filter(bundle);
         assertTrue(format.hasField("foo"));
@@ -59,7 +60,7 @@ public class TestBundleFilterMapExtract {
         BundleFilterMapExtract.XMap xmap = new BundleFilterMapExtract.XMap().setFrom("quux");
         BundleFilterMapExtract.XMap[] maps = new BundleFilterMapExtract.XMap[1];
         maps[0] = xmap;
-        filter = filter.setField("map").setMap(maps);
+        filter = filter.setField(AutoField.newAutoField("map")).setMap(maps);
         assertFalse(format.hasField("quux"));
         filter.filter(bundle);
         assertFalse(format.hasField("quux"));
@@ -78,7 +79,7 @@ public class TestBundleFilterMapExtract {
         BundleFilterMapExtract.XMap xmap = new BundleFilterMapExtract.XMap().setFrom("quux");
         BundleFilterMapExtract.XMap[] maps = new BundleFilterMapExtract.XMap[1];
         maps[0] = xmap;
-        filter = filter.setField("map").setMap(maps);
+        filter = filter.setField(AutoField.newAutoField("map")).setMap(maps);
         assertFalse(format.hasField("quux"));
         filter.filter(bundle);
         assertFalse(format.hasField("quux"));
@@ -99,7 +100,7 @@ public class TestBundleFilterMapExtract {
         BundleFilterMapExtract.XMap xmap = new BundleFilterMapExtract.XMap().setFrom("field1").setIndirection(1);
         BundleFilterMapExtract.XMap[] maps = new BundleFilterMapExtract.XMap[1];
         maps[0] = xmap;
-        filter = filter.setField("map").setMap(maps);
+        filter = filter.setField(AutoField.newAutoField("map")).setMap(maps);
         filter.filter(bundle);
         assertEquals("a", bundle.getValue(format.getField("field1")).asString().toString());
     }
@@ -119,7 +120,7 @@ public class TestBundleFilterMapExtract {
         BundleFilterMapExtract.XMap xmap = new BundleFilterMapExtract.XMap().setFrom("field1").setIndirection(1);
         BundleFilterMapExtract.XMap[] maps = new BundleFilterMapExtract.XMap[1];
         maps[0] = xmap;
-        filter = filter.setField("map").setMap(maps);
+        filter = filter.setField(AutoField.newAutoField("map")).setMap(maps);
         filter.filter(bundle);
         assertEquals("quux", bundle.getValue(format.getField("field1")).asString().toString());
     }

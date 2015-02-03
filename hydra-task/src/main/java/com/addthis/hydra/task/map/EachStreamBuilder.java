@@ -34,7 +34,9 @@ public class EachStreamBuilder extends StreamBuilder {
 
     @Override
     public void init() {
-        // no init for this builder
+        if (emitFilter != null) {
+            emitFilter.open();
+        }
     }
 
     @Override

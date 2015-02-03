@@ -13,16 +13,14 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
+import com.addthis.codec.codables.SuperCodable;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.fasterxml.jackson.annotation.JsonCreator;
 
 /**
  * A bundle filter applies a transformation on a bundle and returns
@@ -33,11 +31,6 @@ import org.slf4j.LoggerFactory;
  */
 @Pluggable("bundle-filter")
 public abstract class BundleFilter implements Codable {
-
-    private static final Logger log = LoggerFactory.getLogger(BundleFilter.class);
-
-    private AtomicBoolean init    = new AtomicBoolean(false);
-    private AtomicBoolean initing = new AtomicBoolean(false);
 
     /**
      * @param bundle      row/line/packet bundle
@@ -59,32 +52,28 @@ public abstract class BundleFilter implements Codable {
         return boundFields;
     }
 
-    public final void initOnceOnly() {
-        if (!init.get()) {
-            if (initing.compareAndSet(false, true)) {
-                try {
-                    initialize();
-                } finally {
-                    init.set(true);
-                    initing.set(false);
-                }
-            } else {
-                while (initing.get()) {
-                    Thread.yield();
-                }
-            }
-        }
-    }
+    /**
+     * The recommended pattern for initialization of BundleFilters is to
+     * use {@link JsonCreator} style constructors. See {@link BundleFilterNum}
+     * for an example of this pattern. This construction allows one to mark any
+     * appropriate fields as final fields which is a recommended best practice.
+     *
+     * BundleFilters may be instantiated and then never used again. For example
+     * this happens when we validate a job configuration in the user interface
+     * when a job is saved. Any stateful or expensive initialization, such as
+     * contacting a resource on the network or writing to a disk, should happen
+     * in this open method. Do not use {@link SuperCodable} for initialization
+     * of BundleFilters that is deprecated in favor of the approach described here.
+     *
+     * Any application using a BundleFilters must explicitly invoke the open
+     * method exactly once after the object has been initialized and before
+     * it is used. The best practice is to call the open method even if you
+     * know it performs no operation, as a future-proof for any changes to
+     * your application.
+     */
+    public abstract void open();
 
-    /* most won't use it, but all must implement */
-    public abstract void initialize();
+    /* returns true if chain should continue, false to break */
+    public abstract boolean filter(Bundle row);
 
-    /* returns true of chain should continue, false to break */
-    public abstract boolean filterExec(Bundle row);
-
-    /* wrapper that calls init once only */
-    public final boolean filter(final Bundle row) {
-        initOnceOnly();
-        return filterExec(row);
-    }
 }

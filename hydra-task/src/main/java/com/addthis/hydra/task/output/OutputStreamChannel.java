@@ -38,6 +38,9 @@ public class OutputStreamChannel extends OutputStreamFormatter {
     private HashSet<String> exclude;
 
     @Override
+    public void open() { }
+
+    @Override
     public OutputStreamEmitter createEmitter() {
         return new OutputStreamEmitter() {
             private final ClassIndexMap classMap = DataChannelCodec.createClassIndexMap();

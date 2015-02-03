@@ -26,7 +26,7 @@ import com.addthis.hydra.store.kv.PagedKeyValueStore;
 import com.addthis.hydra.store.util.Raw;
 
 
-public interface IPageDB<K extends Key, V extends BytesCodable> {
+public interface IPageDB<K extends Key, V extends BytesCodable> extends AutoCloseable {
 
     public interface Key {
 
@@ -54,8 +54,6 @@ public interface IPageDB<K extends Key, V extends BytesCodable> {
     public void remove(K from, K to, boolean inclusive);
 
     public Range<K, V> range(K from, K to);
-
-    public void close();
 
     public PagedKeyValueStore<DBKey, V> getEps();
 

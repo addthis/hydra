@@ -62,7 +62,7 @@ public class JobStoreGit {
     private final FileRepository repository;
     private final Git git;
     private final boolean remote = Parameter.boolValue("job.store.remote", false);
-    private static final String branchName = Parameter.value("cluster.name", Parameter.value("batch.brokerHost", "localhost"));
+    private static final String branchName = Parameter.value("cluster.name", "localhost");
     private static final String gitUser = Parameter.value("git.user", "anonymous");
     private static final String gitPassword = Parameter.value("git.password", "");
     private static final String gitUrl = Parameter.value("git.url", "");

@@ -15,6 +15,8 @@ package com.addthis.hydra.data.filter.value;
 
 import java.util.HashSet;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -23,7 +25,19 @@ public class TestValueFilterExclude {
 
     // TODO: Reduce ridiculous duplication with ValueFilterRequire
     private String excludeFilter(String val, HashSet<String> exactValues, HashSet<String> match, HashSet<String> find, String[] contains) {
-        return new ValueFilterExclude().setValue(exactValues).setMatch(match).setContains(contains).setFind(find).filter(val);
+        return new ValueFilterExclude(
+                exactValues,
+                null,
+                match,
+                null,
+                find,
+                null,
+                contains,
+                null,
+                false,
+                false,
+                0,
+                0).filter(val);
     }
 
     @Test
@@ -40,6 +54,14 @@ public class TestValueFilterExclude {
         assertEquals("foo", excludeFilter("foo", exactValues, null, null, null));
         assertEquals("foobarfoo", excludeFilter("foobarfoo", exactValues, null, null, null));
         assertEquals(null, excludeFilter("bar", exactValues, null, null, null));
+        assertEquals("", excludeFilter("", exactValues, null, null, null));
+    }
+
+    @Test
+    public void matchEmptyString() {
+        HashSet<String> exactValues = new HashSet<>();
+        exactValues.add("");
+        assertEquals(null, excludeFilter("", exactValues, null, null, null));
     }
 
     @Test

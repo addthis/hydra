@@ -27,6 +27,7 @@ import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
+import com.addthis.hydra.job.spawn.HostManager;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
@@ -43,10 +44,11 @@ import org.slf4j.LoggerFactory;
 public class HostFailWorker {
 
     private static final Logger log = LoggerFactory.getLogger(HostFailWorker.class);
+    private final AtomicBoolean newAdditions = new AtomicBoolean(false); // True if a host has been recently added to the queue
+    private final AtomicBoolean obeyTaskSlots = new AtomicBoolean(true); // Whether spawn should honor the max task slots when moving tasks to fail hosts
     private final HostFailState hostFailState;
-    private AtomicBoolean newAdditions = new AtomicBoolean(false); // True if a host has been recently added to the queue
-    private AtomicBoolean obeyTaskSlots = new AtomicBoolean(true); // Whether spawn should honor the max task slots when moving tasks to fail hosts
     private final Spawn spawn;
+    private final HostManager hostManager;
 
     // Perform host-failure related operations at a given interval
     private static final long hostFailDelayMillis = Parameter.longValue("host.fail.delay", 15_000);
@@ -69,8 +71,9 @@ public class HostFailWorker {
     private static final String infoFatalWarningKey = "fatal";
     private final ScheduledExecutorService executorService;
 
-    public HostFailWorker(Spawn spawn, ScheduledExecutorService executorService) {
+    public HostFailWorker(Spawn spawn, HostManager hostManager, ScheduledExecutorService executorService) {
         this.spawn = spawn;
+        this.hostManager = hostManager;
         this.executorService = executorService;
         hostFailState = new HostFailState(spawn);
         hostFailState.loadState();
@@ -96,7 +99,7 @@ public class HostFailWorker {
         if (hostIds != null) {
             for (String host : hostIds.split(",")) {
                 hostFailState.putHost(host, state);
-                spawn.sendHostUpdateEvent(spawn.getHostState(host));
+                spawn.sendHostUpdateEvent(spawn.hostManager.getHostState(host));
             }
             queueFailNextHost();
         }
@@ -150,7 +153,7 @@ public class HostFailWorker {
         if (hostIds != null) {
             for (String host : hostIds.split(",")) {
                 hostFailState.removeHost(host);
-                spawn.sendHostUpdateEvent(spawn.getHostState(host));
+                spawn.sendHostUpdateEvent(spawn.hostManager.getHostState(host));
             }
         }
     }
@@ -162,7 +165,7 @@ public class HostFailWorker {
      * @return True only if there are no down hosts that would need to be up in order to correctly fail the host
      */
     protected boolean checkHostStatesForFailure(String failedHostUuid) {
-        Collection<HostState> hostStates = spawn.listHostStatus(null);
+        Collection<HostState> hostStates = spawn.hostManager.listHostStatus(null);
         for (HostState hostState : hostStates) {
             if (!failedHostUuid.equals(hostState.getHostUuid()) && shouldBlockHostFailure(ImmutableSet.of(failedHostUuid), hostState)) {
                 log.warn("Unable to fail host: " + failedHostUuid + " because one of the minions (" + hostState.getHostUuid() + ") on " + hostState.getHost() + " is currently down.  Retry when all minions are available");
@@ -227,9 +230,9 @@ public class HostFailWorker {
             if (failState == FailState.FAILING_FS_DEAD) {
                 // File system is dead. Relocate all tasks ASAP.
                 markHostDead(failedHostUuid);
-                spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.listHostStatus(null), failedHostUuid);
+                spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.hostManager.listHostStatus(null), failedHostUuid);
             } else {
-                HostState host = spawn.getHostState(failedHostUuid);
+                HostState host = spawn.hostManager.getHostState(failedHostUuid);
                 if (host == null) {
                     // Host is gone or has no more tasks. Simply mark it as failed.
                     markHostDead(failedHostUuid);
@@ -252,7 +255,8 @@ public class HostFailWorker {
                 if (failState == FailState.FAILING_FS_OKAY && assignments.isEmpty() && host.countTotalLive() == 0) {
                     // Found no tasks on the failed host, so fail it for real.
                     markHostDead(failedHostUuid);
-                    spawn.getSpawnBalancer().fixTasksForFailedHost(spawn.listHostStatus(host.getMinionTypes()), failedHostUuid);
+                    spawn.getSpawnBalancer().fixTasksForFailedHost(
+                            spawn.hostManager.listHostStatus(host.getMinionTypes()), failedHostUuid);
                 }
             }
         }
@@ -275,7 +279,7 @@ public class HostFailWorker {
         HashSet<String> ids = new HashSet<>(Arrays.asList(hostsToFail.split(",")));
         long totalClusterAvail = 0, totalClusterUsed = 0, hostAvail = 0;
         List<String> hostsDown = new ArrayList<>();
-        for (HostState host : spawn.listHostStatus(null)) {
+        for (HostState host : spawn.hostManager.listHostStatus(null)) {
             // Sum up disk availability across the entire cluster and across the specified hosts
             if (host.getMax() != null && host.getUsed() != null) {
                 if (getFailureState(host.getHostUuid()) == FailState.ALIVE) {
@@ -351,7 +355,7 @@ public class HostFailWorker {
     }
 
     public void updateFullMinions() {
-        for (HostState hostState : spawn.listHostStatus(null)) {
+        for (HostState hostState : spawn.hostManager.listHostStatus(null)) {
             if (hostState == null || hostState.isDead() || !hostState.isUp()) {
                 continue;
             }

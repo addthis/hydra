@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestConcurrentTree {
@@ -211,11 +212,11 @@ public class TestConcurrentTree {
             assertEquals(TreeCommonParameters.cleanQMax, tree.getCache().size());
 
             tree.deleteNode(root, "hello");
-            tree.waitOnDeletions();
+            tree = waitForDeletion(tree, dir);
             assertEquals(2, tree.getCache().size());
             assertEquals(0, root.getNodeCount());
-            assertEquals(1, tree.getTreeTrashNode().getNodeCount());
-            assertEquals(1, tree.getTreeTrashNode().getCounter());
+            assertTrue(tree.getTreeTrashNode().getCounter() >= 1);
+            assertEquals(tree.getTreeTrashNode().getCounter(), tree.getTreeTrashNode().getNodeCount());
             tree.close(false, close);
         } finally {
             if (dir != null) {
@@ -252,7 +253,7 @@ public class TestConcurrentTree {
                 tree.deleteNode(root, Integer.toString(i));
             }
 
-            tree.waitOnDeletions();
+            tree = waitForDeletion(tree, dir);
             assertEquals(2, tree.getCache().size());
             assertEquals(0, root.getNodeCount());
 
@@ -359,15 +360,32 @@ public class TestConcurrentTree {
                 ConcurrentTreeNode node = tree.getNode(root, Integer.toString(i), false);
                 assertNull(node);
             }
-            tree.waitOnDeletions();
-            assertEquals(1000, tree.getTreeTrashNode().getCounter());
-            assertEquals(1000, tree.getTreeTrashNode().getNodeCount());
+            tree = waitForDeletion(tree, dir);
+            assertTrue(tree.getTreeTrashNode().getCounter() >= 1000);
+            assertEquals(tree.getTreeTrashNode().getCounter(), tree.getTreeTrashNode().getNodeCount());
             tree.close(false, close);
         } finally {
             if (dir != null) {
                 Files.deleteDir(dir);
             }
         }
+    }
+
+    /**
+     * Test the foreground deletion by closing the existing tree, reopening
+     * the tree with 0 deletion threads, and the performing deletion
+     * in the foreground.
+     *
+     * @param tree input tree
+     * @param dir  directory containing database of the input tree
+     * @return reopened copy of the input tree
+     * @throws Exception
+     */
+    private ConcurrentTree waitForDeletion(ConcurrentTree tree, File dir) throws Exception {
+        tree.close();
+        tree = new Builder(dir).numDeletionThreads(0).build();
+        tree.foregroundNodeDeletion(() -> false);
+        return tree;
     }
 
     @Test
@@ -495,9 +513,9 @@ public class TestConcurrentTree {
                 ConcurrentTreeNode node = tree.getNode(root, Integer.toString(i), true);
                 assertNull(node);
             }
-            tree.waitOnDeletions();
-            assertEquals(numElements, tree.getTreeTrashNode().getCounter());
-            assertEquals(numElements, tree.getTreeTrashNode().getNodeCount());
+            tree = waitForDeletion(tree, dir);
+            assertTrue(tree.getTreeTrashNode().getCounter() >= numElements);
+            assertEquals(tree.getTreeTrashNode().getCounter(), tree.getTreeTrashNode().getNodeCount());
             tree.close(false, close);
         } finally {
             if (dir != null) {

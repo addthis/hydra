@@ -35,6 +35,13 @@ public class CloseableBundleFilterDelete extends CloseableBundleFilter {
     private Logger log = LoggerFactory.getLogger(CloseableBundleFilterDelete.class);
 
     @Override
+    public void open() {
+        if (pre) {
+            delete(fileName);
+        }
+    }
+
+    @Override
     public void close() {
         if (!pre) {
             delete(fileName);
@@ -57,14 +64,7 @@ public class CloseableBundleFilterDelete extends CloseableBundleFilter {
     }
 
     @Override
-    public void initialize() {
-        if (pre) {
-            delete(fileName);
-        }
-    }
-
-    @Override
-    public boolean filterExec(Bundle row) {
+    public boolean filter(Bundle row) {
         return true;
     }
 }

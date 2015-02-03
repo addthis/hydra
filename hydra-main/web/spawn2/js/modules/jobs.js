@@ -166,16 +166,16 @@ function(
                 dataType: "json"
             });
         },
-        enable:function(){
+        enable:function(unsafe){
             var self=this;
             $.ajax({
-                url: "/job/enable?jobs="+self.id+"&enable=1",
+                url: "/job/enable?jobs="+self.id+"&enable=1&unsafe="+unsafe,
                 type: "GET",
-                dataType: "text"
+                dataType: "json"
             }).done(function(data){
-                Alertify.log.info(self.id+" job enabled.",2000)
+                self.showEnableStateChange(data, "enabled", unsafe);
             }).fail(function(e){
-                Alertify.log.error("Error enabling job "+self.id);
+                Alertify.log.error("Error enabling job "+self.id+"<br/>" + e.responseText);
             });
         },
         disable:function(){
@@ -183,12 +183,28 @@ function(
             $.ajax({
                 url: "/job/enable?jobs="+self.id+"&enable=0",
                 type: "GET",
-                dataType: "text"
+                dataType: "json"
             }).done(function(data){
-                Alertify.log.info(self.id+" job disabled",2000);
+                self.showEnableStateChange(data, "disabled");
             }).fail(function(e){
-                Alertify.log.error("Error disabling job "+self.id);
+                Alertify.log.error("Error disabling job "+self.id+"<br/>" + e.responseText);
             });
+        },
+        showEnableStateChange:function(data, state, unsafe){
+            var jobId = this.id;
+            if (data.changed.length > 0) {
+                var v = (unsafe ? "unsafely " : "") + state;
+                Alertify.log.success("Job " + jobId + " has been " + v, 2000);
+            } else if (data.unchanged.length > 0) {
+                Alertify.log.info("Job " + jobId + " is already " + state, 2000);
+            } else if (data.notFound.length > 0) {
+                Alertify.log.error("Job " + jobId + " is not found");
+            } else if (data.notAllowed.length > 0) {
+                Alertify.log.error("Job " + jobId + " must be IDLE to be enabled safely");
+            } else {
+                Alertify.log.error("Unexpected response data. Check console log")
+                console.log("Unexpected response data from /job/enable call: " + data);
+            }
         },
         revert:function(params){
             var self=this;
@@ -361,7 +377,8 @@ function(
     var ConfigModel = Backbone.Model.extend({
         idAttribute:"jobUuid",
         defaults:{
-            config:""
+            config:"",
+            savedConfig:""
         },
         initialize:function(options){
         },
@@ -381,6 +398,7 @@ function(
                     dataType:"text"
                 }).done(function(data){
                     self.set("config",data);
+                    self.set("savedConfig",data);
                 }).fail(function(xhr){
                     Alertify.log.error("Error loading config: "+xhr.responseText);
                 });
@@ -564,29 +582,46 @@ function(
                 Alertify.log.error("Error killing: "+count+" jobs. <br/> "+e.responseText);
             });
         },
-        enableBatch:function(jobIds){
+        enableBatch:function(jobIds, unsafe){
+            var self=this;
             var count = jobIds.length;
             $.ajax({
-                url: "/job/enable?jobs="+jobIds+"&enable=1",
+                url: "/job/enable?jobs="+jobIds+"&enable=1&unsafe="+unsafe,
                 type: "GET",
-                dataType: "text"
+                dataType: "json"
             }).done(function(data){
-                Alertify.log.info(count+" job(s) enabled.",2000)
+                self.showEnableStateChange(data, "enabled", unsafe);
             }).fail(function(e){
                 Alertify.log.error("Error enabling: "+count+" jobs. <br/> "+e.responseText);
             });
         },
         disableBatch:function(jobIds){
+            var self=this;
             var count = jobIds.length;
             $.ajax({
                 url: "/job/enable?jobs="+jobIds+"&enable=0",
                 type: "GET",
-                dataType: "text"
+                dataType: "json"
             }).done(function(data){
-                Alertify.log.info(count+" job(s) disabled",2000);
+                self.showEnableStateChange(data, "disabled");
             }).fail(function(e){
                 Alertify.log.error("Error disabling: "+count+" jobs. <br/> "+e.responseText);
             });
+        },
+        showEnableStateChange:function(data, state, unsafe){
+            if (data.changed.length > 0) {
+                var v = (unsafe ? "unsafely " : "") + state;
+                Alertify.log.success(data.changed.length + " job(s) have been " + v, 5000);
+            }
+            if (data.unchanged.length > 0) {
+                Alertify.log.info(data.unchanged.length + " job(s) are already " + state, 5000);
+            }
+            if (data.notFound.length > 0) {
+                Alertify.log.error(data.notFound.length + " job(s) are not found");
+            }
+            if (data.notAllowed.length > 0) {
+                Alertify.log.error(data.notAllowed.length + " job(s) cannot be enabled safely - they must be IDLE");
+            }
         },
         deleteSelected:function(jobIds){
             var count = jobIds.length;
@@ -819,7 +854,8 @@ function(
         },
         handleEnableButtonClick:function(event){
             var ids = this.getSelectedIds();
-            this.collection.enableBatch(ids);
+            // shift click triggers unsafe enable!
+            this.collection.enableBatch(ids, event.shiftKey);
         },
         handleDisableButtonClick:function(event){
             var ids = this.getSelectedIds();
@@ -1316,84 +1352,118 @@ function(
         className:"modal fade",
         template: _.template(jobRevertModalTemplate),
         events:{
-            "click button#runsButton":"handleRunsButtonClick",
-            "click button#dailyButton":"handleDailyButtonClick",
+            "click button#runButton":"handleRunButtonClick",
+            "click button#goldButton":"handleGoldButtonClick",
             "click button#hourlyButton":"handleHourlyButtonClick",
+            "click button#dailyButton":"handleDailyButtonClick",
             "click button#weeklyButton":"handleWeeklyButtonClick"
         },
         initialize:function(options){
-            _.bindAll(this,'handleButtonClick','handleRunsButtonClick','handleDailyButtonClick','handleHourlyButtonClick','handleWeeklyButtonClick');
+            _.bindAll(this,
+                'handleButtonClickForTimestampRevert',
+                'handleButtonClickForRevisionRevert',
+                'handleRunButtonClick',
+                'handleGoldButtonClick',
+                'handleDailyButtonClick',
+                'handleHourlyButtonClick',
+                'handleWeeklyButtonClick');
             this.backupModel = options.backupModel;
             this.listenTo(this.backupModel,"change",this.handleBackupChange);
         },
         render:function(){
             var node = this.backupModel.get("node");
             var html = this.template({
-                model:this.model.toJSON(),
-                title:(node>-1?"Revert task "+node+"..":"Revert this job..")
+                model: this.model.toJSON(),
+                title: node > -1 ? "Revert task " + node : "Revert job"
             });
             this.$el.html(html);
             this.$el.modal("show");
+            this.showMessage("Searching for available backups...");
             return this;
         },
         handleBackupChange:function(){
-            var data = this.backupModel.toJSON(),self=this;
-            _.each(_.keys(data),function(type){
+            var self=this;
+            var node = this.backupModel.get("node");
+            var data = this.backupModel.toJSON()
+            var count = 0;
+            if (node == -1) {
+                // reverting a job - don't populate/show gold backups by timestamp. see T51329
+                var selects = ["hourly", "daily", "weekly", "monthly"]
+            } else {
+                var selects = ["gold", "hourly", "daily", "weekly", "monthly"]
+            }
+            _.each(selects,function(type){
                 var select = self.$el.find("#"+type+"Select");
                 var options = "";
                 _.each(data[type],function(ts){
                     options+="<option value='"+ts+"'>"+util.convertToDateTimeText(ts)+"</option>"
+                    count++;
                 });
                 select.html(options);
                 if(!_.isEmpty(options)){
                     select.closest("tr").show();
                 }
             });
+            if (count == 0) {
+                this.showMessage("There is no backup!");
+            } else {
+                this.showMessage("");
+            }
+            if (node >= 0) {
+                // reverting a task - hide the revert by revision selection because it will be
+                // replaced by the dropdown for timestamp based backups
+                this.$el.find("#goldRevertByRevision").hide();
+            }
         },
-        handleButtonClick:function(params){
-            var self=this;
+        showMessage:function(msg){
+            this.$el.find("#backupMessage").text(msg);
+        },
+        handleButtonClickForTimestampRevert:function(selectElem, backupType){
+            var node = this.backupModel.get("node");
+            var value = this.$el.find(selectElem).val();
+            var params = {
+                type:backupType, 
+                node:node, 
+                time:value
+            };
+            this.handleButtonClickRaw(node, params);
+        },
+        handleButtonClickForRevisionRevert:function(rev){
+            var node = this.backupModel.get("node");
+            var params = {
+                type:"gold", 
+                node:node, 
+                revision:rev
+            };
+            this.handleButtonClickRaw(node, params);
+        },
+        handleButtonClickRaw:function(node, params){
+            var name = node > -1 ? "Task " + node : "Job";
             this.model.revert(params).done(function(data,result,xhr){
-                var node = self.backupModel.get("node");
-                Alertify.log.success((node>-1?"Task "+node:"Job")+" reverted successfully.");
+                if (params.hasOwnProperty("revision")) {
+                    Alertify.log.info("Attempted to revert to a previous run (which may not exist)");
+                } else {
+                    Alertify.log.success(name + " reverted successfully.");
+                }
             }).fail(function(xhr){
-                    Alertify.log.success("Error reverting job:\n"+xhr.responseText);
+                Alertify.log.error("Error reverting " + name + ":<br/>" + xhr.responseText);
             });
         },
-        handleRunsButtonClick:function(event){
-            var revision = this.$el.find("#runSelect").val(),self=this;
-            var params={
-                type:"gold",
-                revision:revision,
-                node:self.backupModel.get("node")
-            };
-            this.handleButtonClick(params);
+        handleRunButtonClick:function(event){
+            rev = this.$el.find("#runSelect").val();
+            this.handleButtonClickForRevisionRevert(rev);
         },
-        handleDailyButtonClick:function(event){
-            var time = this.$el.find("#dailySelect").val(),self=this;
-            var params={
-                type:"daily",
-                time:time,
-                node:self.backupModel.get("node")
-            };
-            this.handleButtonClick(params);
+        handleGoldButtonClick:function(event){
+            this.handleButtonClickForTimestampRevert("#goldSelect", "gold");
         },
         handleHourlyButtonClick:function(event){
-            var time = this.$el.find("#hourlySelect").val(),self=this;
-            var params={
-                type:"hourly",
-                time:time,
-                node:self.backupModel.get("node")
-            };
-            this.handleButtonClick(params);
+            this.handleButtonClickForTimestampRevert("#hourlySelect", "hourly");
+        },
+        handleDailyButtonClick:function(event){
+            this.handleButtonClickForTimestampRevert("#dailySelect", "daily");
         },
         handleWeeklyButtonClick:function(event){
-            var time = this.$el.find("#weeklySelect").val(),self=this;
-            var params={
-                type:"weekly",
-                time:time,
-                node:self.backupModel.get("node")
-            };
-            this.handleButtonClick(params);
+            this.handleButtonClickForTimestampRevert("#weeklySelect", "weekly");
         }
     });
     var DetailView = Backbone.View.extend({
@@ -1514,13 +1584,37 @@ function(
         },
         handleKickButtonClick:function(event){
             event.preventDefault();
-            var self=this;
+            var self = this;
+            if (this.configModel) {
+                var tempConfig = this.configModel.get("config");
+                var config = this.configModel.get("savedConfig");
+                if (tempConfig !== config) {
+                        Alertify.log.create("warn", "Warning: kicking job that may have unsaved changes!", 12000);
+                }
+            }
+            var params = this.parameterCollection.toJSON();
+            var confirmIfInvalid = function(){
+                var validatePromise = self.model.validate(config,params);
+                validatePromise.done(function(data){
+                    if (data.result=="preExpansionError" || data.result=="postExpansionError") {
+                        Alertify.dialog.confirm("Job failed validation, are you sure you want to kick?", function (e) {
+                            self.model.kick();
+                        });
+                    } else {
+                        self.model.kick();
+                    }
+                }).fail(function(data){
+                    Alertify.dialog.confirm("Something went wrong with checking validation, do you still want to kick?", function (e) {
+                        self.model.kick();
+                    });
+                });
+            };
             if(app.isQuiesced){
                 Alertify.dialog.confirm("Cluster is quiesced, are you sure you want to kick job '"+this.model.get("description")+"'?", function (e) {
-                    self.model.kick();
+                    confirmIfInvalid();
                 });
             }else{
-                self.model.kick();
+                confirmIfInvalid();
             }
         },
         handleRebalanceButtonClick:function(event){
@@ -1529,7 +1623,8 @@ function(
         },
         handleEnableButtonClick:function(event){
             event.preventDefault();
-            this.model.enable();
+            // shift click triggers unsafe enable!
+            this.model.enable(event.shiftKey);
         },
         handleDisableButtonClick:function(event){
             event.preventDefault();
@@ -1569,14 +1664,26 @@ function(
         },
         handleSaveJobButtonClick:function(event){
             this.$el.find("#saveJobButton").addClass("disabled");
-            var formData = {},self=this;
-            _.each(this.parameterCollection.toJSON(),function(param){
+            var self = this;
+            var formData = {};
+            var config = this.configModel.get("config");
+            var params = this.parameterCollection.toJSON();
+            _.each(params, function(param){
                 var name = "sp_"+param.name;
                 formData[name]=param.value;
             });
-            formData.config = this.configModel.get("config");
+            formData.config = config;
+            var validatePromise = this.model.validate(config,params);
+            validatePromise.done(function(data){
+                if(data.result=="preExpansionError" || data.result=="postExpansionError"){
+                    Alertify.log.create("warn", "Warning: saving job that failed validation!<br>" + data.message, 12000);
+                }
+            }).fail(function(data){
+                Alertify.log.error("Error requesting job validation.");
+            });
             this.model.save(formData).done(function(resp){
                 Alertify.log.info(resp.id+"col. saved successfully.",2000)
+                self.configModel.set("savedConfig", config);
                 self.model.trigger("save.done");
                 self.model.commit="";
                 if(self.model.isNew()){
@@ -1612,12 +1719,19 @@ function(
     });
     var ConfDetailView = DetailView.extend({
         template: _.template(jobConfigurationTemplate),
-        events: _.extend(DetailView.prototype.events,{
+        events: _.defaults({
             'click a#hideParamLink':'handleParamChange',
             'change input':'handleInputChange',
             'change select#command':'handleCommandInputChange'
-        }),
+        }, DetailView.prototype.events),
         initialize:function(options){
+            if (options.isClone) {
+                options.model.attributes.dontDeleteMe = false;
+                options.model.attributes.onComplete = "";
+                options.model.attributes.onCompleteTimeout = 0;
+                options.model.attributes.onError = "";
+                options.model.attributes.onErrorTimeout = 0;
+            }
             DetailView.prototype.initialize.apply(this,[options]);
             _.bindAll(this,'render','template');
             this.configModel=options.configModel;
@@ -1700,18 +1814,12 @@ function(
     });
     var SettingDetailView = DetailView.extend({
         template: _.template(jobSettingTemplate),
-        events: _.extend(DetailView.prototype.events,{
+        events: _.defaults({
             "keyup input":"handleInputKeyUp",
+            "change input":"handleInputKeyUp",
             "click input[type='checkbox']":"handleCheckboxClick"
-        }),
+        }, DetailView.prototype.events),
         initialize:function(options){
-            if (options.isClone) {
-                options.model.attributes.dontDeleteMe = false;
-                options.model.attributes.onComplete = "";
-                options.model.attributes.onCompleteTimeout = 0;
-                options.model.attributes.onError = "";
-                options.model.attributes.onErrorTimeout = 0;
-            }
             DetailView.prototype.initialize.apply(this,[options]);
         },
         render:function(){
@@ -2114,6 +2222,7 @@ function(
         template: _.template(jobParameterTemplate),
         events:{
             "click a#hideParamLink":"handleHideParamClick",
+            "change input":"handleInputKeyUp",
             "keyup input":"handleInputKeyUp"
         },
         initialize:function(){
@@ -2144,7 +2253,7 @@ function(
     var TaskDetailView = DetailView.extend({
         template: _.template(jobTaskDetailTemplate),
         initialize:function(options){
-            DetailView.prototype.initialize.apply(this,[]);
+            DetailView.prototype.initialize.apply(this,[options]);
             this.taskModel = options.taskModel;
             this.logModel = options.logModel;
             this.taskCollection = options.taskCollection;

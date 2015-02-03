@@ -123,8 +123,8 @@ class MinionHandler extends AbstractHandler {
             String html = kv.getValue("html");
             JobTask job = minion.tasks.get(jobName);
             if (job != null) {
-                String outB = out ? job.head(job.logOut, lines) : "";
-                String errB = err ? job.head(job.logErr, lines) : "";
+                String outB = out ? LogUtils.head(job.logOut, lines) : "";
+                String errB = err ? LogUtils.head(job.logErr, lines) : "";
                 if (html != null) {
                     html = html.replace("{{out}}", outB);
                     html = html.replace("{{err}}", errB);
@@ -144,8 +144,8 @@ class MinionHandler extends AbstractHandler {
             String html = kv.getValue("html");
             JobTask job = minion.tasks.get(jobName);
             if (job != null) {
-                String outB = out ? job.tail(job.logOut, lines) : "";
-                String errB = err ? job.tail(job.logErr, lines) : "";
+                String outB = out ? LogUtils.tail(job.logOut, lines) : "";
+                String errB = err ? LogUtils.tail(job.logErr, lines) : "";
                 if (html != null) {
                     html = html.replace("{{out}}", outB);
                     html = html.replace("{{err}}", errB);
@@ -161,11 +161,18 @@ class MinionHandler extends AbstractHandler {
             String jobName = kv.getValue("id", "") + "/" + kv.getIntValue("node", 0);
             int offset = kv.getIntValue("offset", -1);
             int lines = kv.getIntValue("lines", 10);
+            int runsAgo = kv.getIntValue("runsAgo", 0);
             boolean out = kv.getValue("out", "1").equals("1");
             JobTask job = minion.tasks.get(jobName);
             if (job != null) {
-                File log = (out ? job.logOut : job.logErr);
-                response.getWriter().write(job.readLogLines(log, offset, lines).toString());
+                String logSuffix = out ? "out" : "err";
+                // treat negative runs as searches for archived task-error logs rather than bothering with extra flag
+                if (runsAgo < 0) {
+                    runsAgo *= -1;
+                    runsAgo -= 1;
+                    logSuffix += ".bad";
+                }
+                response.getWriter().write(LogUtils.readLogLines(job, offset, lines, runsAgo, logSuffix).toString());
             } else {
                 response.sendError(400, "No Job");
             }

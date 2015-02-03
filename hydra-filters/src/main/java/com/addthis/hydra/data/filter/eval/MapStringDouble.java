@@ -42,6 +42,9 @@ public class MapStringDouble extends AbstractMap<String, Double> implements Map<
     }
 
     public static ValueMap create(Map<String, Double> input) {
+        if (input == null) {
+            return null;
+        }
         if (input instanceof MapStringDouble) {
             return ((MapStringDouble) input).getData();
         } else {

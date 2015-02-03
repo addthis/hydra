@@ -83,7 +83,8 @@ public class JobAlert implements Codable {
     @Nonnull @JsonProperty public final String alertId;
     @JsonProperty public final String description;
     @JsonProperty public final int type;
-    @JsonProperty public final int timeout;
+    @JsonProperty public final long timeout;
+    @JsonProperty public final long delay;
     @JsonProperty public final String email;
     @JsonProperty public final ImmutableList<String> jobIds;
     @JsonProperty public final String canaryPath;
@@ -94,6 +95,8 @@ public class JobAlert implements Codable {
 
     /* Map storing {job id : error description} for all alerted jobs the last time this alert was checked */
     @JsonProperty private volatile ImmutableMap<String, String> activeJobs;
+    /* Map storing {job id : trigger time} for all triggering jobs the last time this alert was checked */
+    @JsonProperty private volatile ImmutableMap<String, Long> activeTriggerTimes;
     // does not distinguish between multiple jobs, and racey wrt activeJobs, but only used for web-ui code for humans
     @JsonProperty private volatile long lastAlertTime;
 
@@ -104,7 +107,8 @@ public class JobAlert implements Codable {
     public JobAlert(@Nullable @JsonProperty("alertId") String alertId,
                     @JsonProperty("description") String description,
                     @JsonProperty(value = "type", required = true) int type,
-                    @Time(TimeUnit.MINUTES) @JsonProperty("timeout") int timeout,
+                    @Time(TimeUnit.MINUTES) @JsonProperty("timeout") long timeout,
+                    @Time(TimeUnit.MINUTES) @JsonProperty("delay") long delay,
                     @JsonProperty("email") String email,
                     @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
                     @JsonProperty("canaryPath") String canaryPath,
@@ -113,7 +117,8 @@ public class JobAlert implements Codable {
                     @JsonProperty("canaryFilter") String canaryFilter,
                     @JsonProperty("canaryConfigThreshold") int canaryConfigThreshold,
                     @JsonProperty("lastAlertTime") long lastAlertTime,
-                    @JsonProperty("activeJobs") Map<String, String> activeJobs) {
+                    @JsonProperty("activeJobs") Map<String, String> activeJobs,
+                    @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes) {
         if (alertId == null) {
             String newAlertId = UUID.randomUUID().toString();
             log.debug("creating new alert with uuid: {}", newAlertId);
@@ -124,6 +129,7 @@ public class JobAlert implements Codable {
         this.description = description;
         this.type = type;
         this.timeout = timeout;
+        this.delay = delay;
         this.email = email;
         this.jobIds = ImmutableList.copyOf(jobIds);
         this.canaryPath = canaryPath;
@@ -132,6 +138,7 @@ public class JobAlert implements Codable {
         this.canaryFilter = canaryFilter;
         this.canaryConfigThreshold = canaryConfigThreshold;
         this.activeJobs = ImmutableMap.copyOf(activeJobs);
+        this.activeTriggerTimes = ImmutableMap.copyOf(activeTriggerTimes);
         this.lastAlertTime = lastAlertTime;
     }
 
@@ -141,8 +148,11 @@ public class JobAlert implements Codable {
         return activeJobs;
     }
 
-    public void setActiveJobs(Map<String, String> activeJobsNew) {
-        this.activeJobs = ImmutableMap.copyOf(activeJobsNew);
+    /** Load state from an existing alert. The provided source alert should not be concurrently modified. */
+    public void setStateFrom(JobAlert sourceAlert) {
+        this.lastAlertTime = sourceAlert.lastAlertTime;
+        this.activeJobs = sourceAlert.activeJobs;
+        this.activeTriggerTimes = sourceAlert.activeTriggerTimes;
     }
 
     // used by the ui/ web code
@@ -151,15 +161,24 @@ public class JobAlert implements Codable {
     }
 
     public ImmutableMap<String, String> checkAlertForJobs(Set<Job> jobs, MeshyClient meshyClient) {
+        long now = System.currentTimeMillis();
+        long delayMillis = TimeUnit.MINUTES.toMillis(delay);
         ImmutableMap.Builder<String, String> newActiveJobsBuilder = new ImmutableMap.Builder<>();
+        ImmutableMap.Builder<String, Long> newActiveTriggerTimesBuilder = new ImmutableMap.Builder<>();
         for (Job job : jobs) {
-            String errorMessage = alertActiveForJob(meshyClient, job);
+            long triggerTime = activeTriggerTimes.getOrDefault(job.getId(), now);
+            String previousErrorMessage = activeJobs.get(job.getId()); // only interesting for certain edge cases
+            String errorMessage = alertActiveForJob(meshyClient, job, previousErrorMessage);
             if (errorMessage != null) {
-                newActiveJobsBuilder.put(job.getId(), errorMessage);
+                newActiveTriggerTimesBuilder.put(job.getId(), triggerTime);
+                if ((now - triggerTime) >= delayMillis) {
+                    newActiveJobsBuilder.put(job.getId(), errorMessage);
+                }
             }
         }
+        this.activeTriggerTimes = newActiveTriggerTimesBuilder.build();
         this.activeJobs = newActiveJobsBuilder.build();
-        if (activeJobs.isEmpty()) {
+        if (activeTriggerTimes.isEmpty()) {
             lastAlertTime = 0;
         } else if (lastAlertTime <= 0) {
             lastAlertTime = System.currentTimeMillis();
@@ -178,7 +197,7 @@ public class JobAlert implements Codable {
 
     @VisibleForTesting
     @Nullable
-    String alertActiveForJob(@Nullable MeshyClient meshClient, Job job) {
+    String alertActiveForJob(@Nullable MeshyClient meshClient, Job job, String previousErrorMessage) {
         String validationError = isValid();
         if (validationError != null) {
             return validationError;
@@ -216,9 +235,9 @@ public class JobAlert implements Codable {
             case SPLIT_CANARY:
                 return checkSplitCanary(meshClient, job);
             case MAP_CANARY:
-                return checkMapCanary(job);
+                return checkMapCanary(job, previousErrorMessage);
             case MAP_FILTER_CANARY:
-                return checkMapFilterCanary(job);
+                return checkMapFilterCanary(job, previousErrorMessage);
             default:
                 log.warn("Warning: alert {} has unexpected type {}", alertId, type);
                 return "unexpected alert type: " + type;
@@ -226,7 +245,7 @@ public class JobAlert implements Codable {
         return null;
     }
 
-    @Nullable private String checkMapCanary(Job job) {
+    @Nullable private String checkMapCanary(Job job, String previousErrorMessage) {
         try {
             long queryVal = JobAlertUtil.getQueryCount(job.getId(), canaryPath);
             consecutiveCanaryExceptionCount.set(0);
@@ -234,36 +253,36 @@ public class JobAlert implements Codable {
                 return "query value: " + queryVal + " < " + canaryConfigThreshold;
             }
         } catch (Exception ex) {
-            return handleCanaryException(ex);
+            return handleCanaryException(ex, previousErrorMessage);
         }
         return null;
     }
 
-    @Nullable private String checkMapFilterCanary(Job job) {
+    @Nullable private String checkMapFilterCanary(Job job, String previousErrorMessage) {
         try {
             String s = JobAlertUtil.evaluateQueryWithFilter(this, job.getId());
             consecutiveCanaryExceptionCount.set(0);
             return s;
         } catch (Exception ex) {
-            return handleCanaryException(ex);
+            return handleCanaryException(ex, previousErrorMessage);
         }
     }
 
     @VisibleForTesting
-    @Nullable String handleCanaryException(Exception ex) {
-        log.warn("Exception during canary check: ", ex);
+    @Nullable String handleCanaryException(Exception ex, @Nullable String previousErrorMessage) {
+        log.warn("Exception during canary check for alert {} : ", alertId, ex);
         // special handling for SocketTimeoutException which is mostly trasient
         if (Throwables.getRootCause(ex) instanceof SocketTimeoutException) {
             int c = consecutiveCanaryExceptionCount.incrementAndGet();
             if (c >= MAX_CONSECUTIVE_CANARY_EXCEPTION) {
                 consecutiveCanaryExceptionCount.set(0);
                 return "Canary check threw exception at least " + MAX_CONSECUTIVE_CANARY_EXCEPTION + " times in a row. " +
-                       "The most recent error is: " + ex.getMessage();
+                       "The most recent error is: " + ex;
             } else {
-                return null;
+                return previousErrorMessage;
             }
         }
-        return ex.getMessage();
+        return ex.toString();
     }
 
     @Nullable private String checkSplitCanary(MeshyClient meshClient, Job job) {

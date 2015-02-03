@@ -13,15 +13,11 @@
  */
 package com.addthis.hydra.job.web.resources;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyZeroInteractions;
-import static org.mockito.Mockito.when;
-
 import javax.ws.rs.core.Response;
 
 import com.addthis.basis.kv.KVPairs;
 
+import com.addthis.codec.config.Configs;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.web.JobRequestHandler;
@@ -29,6 +25,13 @@ import com.addthis.hydra.job.web.jersey.User;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.when;
 
 public class JobsResourceTest {
 
@@ -72,5 +75,31 @@ public class JobsResourceTest {
         Response response = resource.saveJob(kv, user);
         assertEquals(500, response.getStatus());
         verifyZeroInteractions(spawn);
+    }
+
+    @Test
+    public void enableJob_safely() throws Exception {
+        Job job1 = Configs.decodeObject(Job.class, "{id:job1, state:0, disabled:true}"); // idle
+        Job job2 = Configs.decodeObject(Job.class, "{id:job2, state:5, disabled:true}"); // error
+        when(spawn.getJob("job1")).thenReturn(job1);
+        when(spawn.getJob("job2")).thenReturn(job2);
+
+        Response response = resource.enableJob("job1,job2", "1", false, user);
+        assertTrue("job1 should be enabled", job1.isEnabled());
+        assertFalse("job2 should be disabled", job2.isEnabled());
+        assertEquals("response status", 200, response.getStatus());
+    }
+
+    @Test
+    public void enableJob_unsafely() throws Exception {
+        Job job1 = Configs.decodeObject(Job.class, "{id:job1, state:0, disabled:true}"); // idle
+        Job job2 = Configs.decodeObject(Job.class, "{id:job2, state:5, disabled:true}"); // error
+        when(spawn.getJob("job1")).thenReturn(job1);
+        when(spawn.getJob("job2")).thenReturn(job2);
+
+        Response response = resource.enableJob("job1,job2", "1", true, user);
+        assertTrue("job1 should be enabled", job1.isEnabled());
+        assertTrue("job2 should be enabled", job2.isEnabled());
+        assertEquals("response status", 200, response.getStatus());
     }
 }

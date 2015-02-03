@@ -41,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.SnappyOutputStream;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import lzma.streams.LzmaOutputStream;
 
 /**
@@ -124,11 +125,15 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
                               PartitionData partitionData,
                               OutputStreamFlags outputFlags,
                               int fileVersion) {
-        // by convention the partition can never be greater than 1000
+        // by convention the partition can never be greater than 999
         String result = target;
-        if (outputFlags.isNoAppend() || outputFlags.getMaxFileSize() > 0) {
+        if (outputFlags.isNoAppend() || (outputFlags.getMaxFileSize() > 0)) {
 
-            String part = Strings.padleft(Integer.toString(fileVersion), partitionData.getPadTo(), Strings.pad0);
+            String versionString = Integer.toString(fileVersion);
+            checkArgument(versionString.length() <= partitionData.getPadTo(),
+                          "fileVersion (%s) cannot be longer than %s digits or else padding will loop; try {{PART:%s}}",
+                          fileVersion, partitionData.getPadTo(), versionString.length());
+            String part = Strings.padleft(versionString, partitionData.getPadTo(), Strings.pad0);
             if (partitionData.getReplacementString() != null) {
                 result = target.replace(partitionData.getReplacementString(), part);
             } else {
@@ -232,7 +237,9 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
             modifiedFileName = getFileName(target, partitionData, outputFlags, i++);
             File test = new File(dir, modifiedFileName);
             File testTmp = getTempFileName(modifiedFileName);
-            if (outputFlags.getMaxFileSize() > 0 && (test.length() >= outputFlags.getMaxFileSize() || testTmp.length() >= outputFlags.getMaxFileSize())) {
+            if ((outputFlags.getMaxFileSize() > 0)
+                && ((test.length() >= outputFlags.getMaxFileSize())
+                    || (testTmp.length() >= outputFlags.getMaxFileSize()))) {
                 // to big already
                 continue;
             }

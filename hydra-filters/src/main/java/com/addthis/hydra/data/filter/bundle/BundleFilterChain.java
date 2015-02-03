@@ -68,16 +68,16 @@ public class BundleFilterChain extends BundleFilter {
     private final AtomicLong bundleCounter = new AtomicLong();
 
     @Override
-    public void initialize() {
+    public void open() {
         for (BundleFilter f : filter) {
-            f.initOnceOnly();
+            f.open();
         }
     }
 
     @Override
-    public boolean filterExec(Bundle row) {
+    public boolean filter(Bundle row) {
         for (BundleFilter f : filter) {
-            if (!f.filterExec(row) && failStop) {
+            if (!f.filter(row) && failStop) {
                 if (debug && bundleCounter.getAndIncrement() < debugMaxBundles) {
                     log.warn("fail @ " + CodecJSON.tryEncodeString(f, "UNKNOWN") + " with " +
                              BundlePrinter.printBundle(row));

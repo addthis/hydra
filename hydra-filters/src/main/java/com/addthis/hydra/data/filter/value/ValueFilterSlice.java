@@ -61,6 +61,9 @@ public class ValueFilterSlice extends ValueFilter {
     }
 
     @Override
+    public void open() { }
+
+    @Override
     public ValueObject filter(ValueObject value) {
         if (value == null) {
             return value;

@@ -30,6 +30,8 @@ import com.addthis.hydra.common.hash.MD5HashFunction;
  */
 public class ValueFilterMD5 extends ValueFilter {
 
+    @Override public void open() { }
+
     @Override
     public ValueObject filterValue(ValueObject value) {
         if (value != null) {

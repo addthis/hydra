@@ -41,11 +41,11 @@ public class SpawnMQImpl implements SpawnMQ {
 
     private static final Logger log = LoggerFactory.getLogger(SpawnMQImpl.class);
 
+    private static final String batchBrokeAddresses = Parameter.value("batch.brokerAddresses", "localhost:5672");
+    private static final String batchBrokerUsername = Parameter.value("batch.brokerUsername", "guest");
+    private static final String batchBrokerPassword = Parameter.value("batch.brokerPassword", "guest");
+
     private MessageProducer batchJobProducer;
-
-    private static final String batchBrokerHost = Parameter.value("batch.brokerHost", "localhost");
-    private static final String batchBrokerPort = Parameter.value("batch.brokerPort", "5672");
-
     private MessageProducer batchControlProducer;
     private MessageConsumer hostStatusConsumer;
     private MessageConsumer batchControlConsumer;
@@ -63,14 +63,19 @@ public class SpawnMQImpl implements SpawnMQ {
     @Override
     public void connectToMQ(String hostUUID) {
         hostStatusConsumer = new ZkMessageConsumer<>(zkClient, "/minion", this, HostState.class);
-        batchJobProducer = new RabbitMessageProducer("CSBatchJob", batchBrokerHost, Integer.valueOf(batchBrokerPort));
-        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerHost, Integer.valueOf(batchBrokerPort));
+        batchJobProducer = new RabbitMessageProducer("CSBatchJob", batchBrokeAddresses, batchBrokerUsername,
+                                                     batchBrokerPassword);
+        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokeAddresses, batchBrokerUsername,
+                                                         batchBrokerPassword);
         try {
-            Connection connection = RabbitMQUtil.createConnection(batchBrokerHost, Integer.valueOf(batchBrokerPort));
+            Connection connection = RabbitMQUtil.createConnection(batchBrokeAddresses, batchBrokerUsername,
+                                                                  batchBrokerPassword);
             channel = connection.createChannel();
-            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", hostUUID + ".batchControl", this, "SPAWN");
+            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", hostUUID + ".batchControl",
+                                                             this, "SPAWN");
         } catch (IOException e) {
-            log.error("Exception connection to broker: " + batchBrokerHost + ":" + batchBrokerPort, e);
+            log.error("Exception connecting to RabbitMQ at {} as {}/{}", batchBrokeAddresses, batchBrokerUsername,
+                      batchBrokerPassword, e);
         }
     }
 

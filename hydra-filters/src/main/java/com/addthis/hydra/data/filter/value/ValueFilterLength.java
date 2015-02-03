@@ -34,6 +34,8 @@ import com.addthis.bundle.value.ValueObject;
  */
 public class ValueFilterLength extends ValueFilter {
 
+    @Override public void open() { }
+
     @Override
     public ValueObject filterValue(ValueObject value) {
         if (value != null) {

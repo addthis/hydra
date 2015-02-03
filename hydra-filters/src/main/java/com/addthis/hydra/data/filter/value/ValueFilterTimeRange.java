@@ -23,8 +23,13 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 
 /**
@@ -65,55 +70,61 @@ public class ValueFilterTimeRange extends ValueFilter {
      * .html">DateTimeFormat</a>.
      * This field is required.
      */
-    @FieldConfig(codable = true, required = true)
-    private String format;
+    private final String format;
 
     /**
      * Offset the input time by this number of days. Default is 0.
      */
-    @FieldConfig(codable = true)
-    private int offsetDays;
+    private final int offsetDays;
 
     /**
      * Offset the input time by this number of hours. Default is 0.
      */
-    @FieldConfig(codable = true)
-    private int offsetHours;
+    private final int offsetHours;
 
     /**
      * The number of days to return. Cannot be used together in conjunction with rangeHours.
      */
-    @FieldConfig(codable = true)
-    private int rangeDays;
+    private final int rangeDays;
 
     /**
      * The number of hours to return. Cannot be used together in conjunction with rangeDays.
      */
-    @FieldConfig(codable = true)
-    private int rangeHours;
+    private final int rangeHours;
 
     /**
      * If true, use the current time when the input is 0. Default is false.
      */
-    @FieldConfig(codable = true)
-    private boolean defaultNow;
+    private final boolean defaultNow;
 
     /**
      * If true, then ignore the input value and use the current time. Default is false.
      */
-    @FieldConfig(codable = true)
-    private boolean now;
+    private final boolean now;
 
-    private DateTimeFormatter date;
+    private final DateTimeFormatter date;
 
-    private final void init() {
-        if (date == null) {
-            date = DateTimeFormat.forPattern(format);
-            if (rangeHours > 0 && rangeDays > 0) {
-                throw new RuntimeException("rangeHours and rangeDays cannot both be > 0");
-            }
-        }
+    @JsonCreator
+    public ValueFilterTimeRange(@JsonProperty(value = "format", required = true) String format,
+                                @JsonProperty("offsetDays") int offsetDays,
+                                @JsonProperty("offsetHours") int offsetHours,
+                                @JsonProperty("rangeDays") int rangeDays,
+                                @JsonProperty("rangeHours") int rangeHours,
+                                @JsonProperty("defaultNow") boolean defaultNow,
+                                @JsonProperty("now") boolean now) {
+        checkArgument(!(rangeHours > 0 && rangeDays > 0), "rangeHours and rangeDays cannot both be > 0");
+        this.format = format;
+        this.offsetDays = offsetDays;
+        this.offsetHours = offsetHours;
+        this.rangeDays = rangeDays;
+        this.rangeHours = rangeHours;
+        this.defaultNow = defaultNow;
+        this.now = now;
+        this.date = DateTimeFormat.forPattern(format);
     }
+
+    @Override
+    public void open() { }
 
     private ValueArray getTimeRange(long time, int range, TimeUnit timeUnit) {
         ValueArray arr = ValueFactory.createArray(range);
@@ -125,7 +136,6 @@ public class ValueFilterTimeRange extends ValueFilter {
 
     @Override
     public ValueObject filterValue(ValueObject value) {
-        init();
         try {
             long time = now ?
                         JitterClock.globalTime() :

@@ -19,6 +19,9 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.util.TimeField;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * This {@link ValueFilter ValueFilter} <span class="hydra-summary">accepts a time string and converts the time into another format</span>.
  * <p/>
@@ -30,7 +33,7 @@ import com.addthis.hydra.data.util.TimeField;
  * @user-reference
  * @hydra-name time-format
  */
-public class ValueFilterTimeFormat extends ValueFilter implements SuperCodable {
+public class ValueFilterTimeFormat extends ValueFilter {
 
     /**
      * The input format using the
@@ -38,31 +41,44 @@ public class ValueFilterTimeFormat extends ValueFilter implements SuperCodable {
      * .html">DateTimeFormat</a>.
      * Default is "native".
      */
-    @FieldConfig(codable = true)
-    private String formatIn = "native";
+    private final String formatIn;
 
     /**
      * The input time zone. This field must be specified.
      */
-    @FieldConfig(codable = true)
-    private String timeZoneIn;
+    private final String timeZoneIn;
 
     /**
      * The output format using the
      * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat
      * .html">DateTimeFormat</a>.
      */
-    @FieldConfig(codable = true, required = true)
-    private String formatOut;
+    private final String formatOut;
 
     /**
      * The output time zone.
      */
-    @FieldConfig(codable = true)
-    private String timeZoneOut;
+    private final String timeZoneOut;
 
-    private TimeField in;
-    private TimeField out;
+    private final TimeField in;
+    private final TimeField out;
+
+
+    @JsonCreator
+    public ValueFilterTimeFormat(@JsonProperty("formatIn") String formatIn,
+                                 @JsonProperty("timeZoneIn") String timeZoneIn,
+                                 @JsonProperty(value = "formatOut", required = true) String formatOut,
+                                 @JsonProperty("timeZoneOut") String timeZoneOut) {
+        this.formatIn = formatIn;
+        this.timeZoneIn = timeZoneIn;
+        this.formatOut = formatOut;
+        this.timeZoneOut = timeZoneOut;
+        this.in = new TimeField(null, formatIn, timeZoneIn);
+        this.out = new TimeField(null, formatOut, timeZoneOut);
+    }
+
+    @Override
+    public void open() { }
 
     @Override
     public ValueObject filterValue(ValueObject value) {
@@ -74,15 +90,4 @@ public class ValueFilterTimeFormat extends ValueFilter implements SuperCodable {
         }
     }
 
-    @Override
-    public void postDecode() {
-        in = new TimeField().setFormat(formatIn).setTimeZone(timeZoneIn);
-        out = new TimeField().setFormat(formatOut).setTimeZone(timeZoneOut);
-        in.postDecode();
-        out.postDecode();
-    }
-
-    @Override
-    public void preEncode() {
-    }
 }

@@ -13,12 +13,10 @@
  */
 package com.addthis.hydra.data.filter.value;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.regex.Pattern;
 
-import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.data.util.JSONFetcher;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 
 /**
@@ -36,183 +34,34 @@ import com.addthis.hydra.data.util.JSONFetcher;
  * @user-reference
  * @hydra-name exclude
  */
-public class ValueFilterExclude extends StringFilter {
+public class ValueFilterExclude extends AbstractMatchStringFilter {
 
-    /**
-     * A set of strings. The input must be an exact match to a member of this set to be accepted.
-     */
-    @FieldConfig(codable = true)
-    private HashSet<String> value;
-
-    /**
-     * A url that points to a set of strings that are used in place of the {@link #value value}
-     * field.
-     */
-    @FieldConfig(codable = true)
-    private String valueURL;
-
-    /**
-     * A set of regular expression strings. The entire input must match against a regular
-     * expression to be accepted.
-     */
-    @FieldConfig(codable = true)
-    private HashSet<String> match;
-
-    /**
-     * A url that points to a set of strings that are used in place of the {@link #match match}
-     * field.
-     */
-    @FieldConfig(codable = true)
-    private String matchURL;
-
-    /**
-     * A set of regular expression strings. The substring of the input must be found in a regular
-     * expression to be accepted.
-     */
-    @FieldConfig(codable = true)
-    private HashSet<String> find;
-
-    /**
-     * A url that points to a set of strings that are used in place of the {@link #find find} field.
-     */
-    @FieldConfig(codable = true)
-    private String findURL;
-
-    /**
-     * A set of strings. The input must a substring of a member of the set to be accepted.
-     */
-    @FieldConfig(codable = true)
-    private String[] contains;
-
-    /**
-     * A url that points to a set of strings that are used in place of the {@link #contains
-     * contains} field.
-     */
-    @FieldConfig(codable = true)
-    private String containsURL;
-
-    /**
-     * A timeout if any of the url fields are used.
-     */
-    @FieldConfig(codable = true)
-    private int urlTimeout = 60000;
-
-    /**
-     * The number of connection retries if any of the url fields are used.
-     */
-    @FieldConfig(codable = true)
-    private int urlRetries = 5;
-
-    private ArrayList<Pattern> pattern;
-    private ArrayList<Pattern> findPattern;
-
-    public ValueFilterExclude setValue(HashSet<String> value) {
-        this.value = value;
-        return this;
-    }
-
-    public ValueFilterExclude setMatch(HashSet<String> match) {
-        this.match = match;
-        return this;
-    }
-
-    public ValueFilterExclude setFind(HashSet<String> find) {
-        this.find = find;
-        return this;
-    }
-
-    public ValueFilterExclude setContains(String[] contains) {
-        this.contains = contains;
-        return this;
-    }
-
-    public boolean passedMatch(String sv) {
-        // match regex
-        if (pattern != null) {
-            for (Pattern pat : pattern) {
-                if (pat.matcher(sv).matches()) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    public boolean passedFind(String sv) {
-        // match regex
-        if (findPattern != null) {
-            for (Pattern pat : findPattern) {
-                if (pat.matcher(sv).find()) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    public boolean passedContains(String sv) {
-        // match contains
-        if (contains != null) {
-            for (String search : contains) {
-                if (sv.indexOf(search) >= 0) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    public boolean passedValue(String sv) {
-        // match exact values
-        if (value != null && value.contains(sv)) {
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public void setup() {
-        if (valueURL != null) {
-            value = JSONFetcher.staticLoadSet(valueURL, urlTimeout, urlRetries, value);
-        }
-        if (matchURL != null) {
-            match = JSONFetcher.staticLoadSet(matchURL, urlTimeout, urlRetries, match);
-        }
-        if (findURL != null) {
-            find = JSONFetcher.staticLoadSet(findURL, urlTimeout, urlRetries, find);
-        }
-        if (containsURL != null) {
-            HashSet<String> tmp = JSONFetcher.staticLoadSet(containsURL);
-            contains = tmp.toArray(new String[tmp.size()]);
-        }
-        if (match != null) {
-            ArrayList<Pattern> newpat = new ArrayList<>();
-            for (String s : match) {
-                newpat.add(Pattern.compile(s));
-            }
-            pattern = newpat;
-        }
-        if (find != null) {
-            ArrayList<Pattern> newpat = new ArrayList<>();
-            for (String s : find) {
-                newpat.add(Pattern.compile(s));
-            }
-            findPattern = newpat;
-        }
-    }
-
-    @Override
-    public String filter(String v) {
-        requireSetup();
-        if (v != null) {
-            String sv = v.toString();
-            if (passedMatch(sv) || passedContains(sv) || passedValue(sv) || passedFind(sv)) {
-                return null;
-            } else {
-                return sv;
-            }
-        }
-        return v;
+    @JsonCreator
+    public ValueFilterExclude(@JsonProperty("value") HashSet<String> value,
+                              @JsonProperty("valueURL") String valueURL,
+                              @JsonProperty("match") HashSet<String> match,
+                              @JsonProperty("matchURL") String matchURL,
+                              @JsonProperty("find") HashSet<String> find,
+                              @JsonProperty("findURL") String findURL,
+                              @JsonProperty("contains") String[] contains,
+                              @JsonProperty("containsURL") String containsURL,
+                              @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
+                              @JsonProperty("toLower") boolean toLower,
+                              @JsonProperty("urlTimeout") int urlTimeout,
+                              @JsonProperty("urlRetries") int urlRetries) {
+        super(value,
+              valueURL,
+              match,
+              matchURL,
+              find,
+              findURL,
+              contains,
+              containsURL,
+              urlReturnsCSV,
+              toLower,
+              urlTimeout,
+              urlRetries,
+              true);
     }
 
 }

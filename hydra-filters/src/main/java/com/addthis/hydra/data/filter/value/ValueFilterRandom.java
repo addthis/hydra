@@ -89,6 +89,8 @@ public class ValueFilterRandom extends ValueFilter {
 
     private DecimalFormat format;
 
+    @Override public void open() { }
+
     @Override
     public ValueObject filterValue(ValueObject value) {
         if (gaussian) {

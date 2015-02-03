@@ -89,6 +89,10 @@ public class MergeConfig {
                 case 's':
                     op = new SumValue();
                     break;
+                // cardinality
+                case 'c':
+                    op = new CardinalityValue();
+                    break;
                 // add merged row count
                 case 'u':
                     mergeCount = true;

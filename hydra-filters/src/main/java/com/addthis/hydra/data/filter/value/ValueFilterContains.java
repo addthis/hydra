@@ -24,6 +24,10 @@ import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
 import org.arabidopsis.ahocorasick.AhoCorasick;
 import org.arabidopsis.ahocorasick.SearchResult;
 
@@ -56,48 +60,40 @@ public class ValueFilterContains extends ValueFilter {
     /**
      * The set of values to match against.
      */
-    @FieldConfig(codable = true)
-    private String[] value;
+    final private String[] value;
 
     /**
      * The set of keys to match against. Only applicable for map inputs.
      */
-    @FieldConfig(codable = true)
-    private String[] key;
+    final private String[] key;
 
     /**
      * If true then return values that do not match. Default is false.
      */
-    @FieldConfig(codable = true)
-    private boolean not;
+    final private boolean not;
 
     /**
      * If true then matched value is returned v/s the input
      */
-    @FieldConfig(codable = true)
-    private boolean returnMatch;
+    final private boolean returnMatch;
 
-    private AhoCorasick dictionary;
+    final private AhoCorasick dictionary;
 
-    public ValueFilterContains setValues(String[] value) {
+    @JsonCreator
+    public ValueFilterContains(@JsonProperty("value") String[] value,
+                               @JsonProperty("key") String[] key,
+                               @JsonProperty("not") boolean not,
+                               @JsonProperty("returnMatch") boolean returnMatch) {
         this.value = value;
-        return this;
-    }
-
-    public ValueFilterContains setNot(boolean not) {
+        this.key = key;
         this.not = not;
-        return this;
-    }
-
-    public ValueFilterContains setReturnMatch(boolean returnMatch) {
         this.returnMatch = returnMatch;
-        return this;
+        this.dictionary = (value != null) ? new AhoCorasick() : null;
     }
 
     @Override
-    public void setup() {
-        if (value != null) {
-            dictionary = new AhoCorasick();
+    public void open() {
+        if (dictionary != null) {
             for (String pattern : value) {
                 dictionary.add(pattern);
             }
@@ -108,13 +104,11 @@ public class ValueFilterContains extends ValueFilter {
     @Override
     public ValueObject filterValue(ValueObject input) {
 
-        requireSetup();
-
         if (input == null) {
             return null;
         }
 
-        String match = null;
+        String match;
         ValueObject.TYPE type = input.getObjectType();
         if (type == ValueObject.TYPE.MAP) {
             ValueMap inputAsMap = input.asMap();

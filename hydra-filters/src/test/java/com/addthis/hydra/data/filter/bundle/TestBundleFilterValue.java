@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.map.MapBundle;
 
 import org.junit.Test;
@@ -24,7 +25,7 @@ public class TestBundleFilterValue {
 
     @Test
     public void fieldTest() {
-        BundleFilterValue bfv = new BundleFilterValue().setValue("foo").setToField("car");
+        BundleFilterValue bfv = new BundleFilterValue().setValue("foo").setToField(AutoField.newAutoField("car"));
         MapBundle bundle = MapBundle.createBundle(new String[]{"dog", "food"});
         bfv.filter(bundle);
         assertEquals(bundle.get("dog"), "food");

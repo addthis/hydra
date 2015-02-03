@@ -27,6 +27,8 @@ import javax.ws.rs.core.Response;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
@@ -38,6 +40,7 @@ import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.codec.config.Configs;
+import com.addthis.codec.json.CodecJSON;
 import com.addthis.codec.plugins.PluginRegistry;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
@@ -62,6 +65,8 @@ import com.addthis.maljson.JSONException;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableMap;
 
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -102,24 +107,54 @@ public class JobsResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response enableJob(@QueryParam("jobs") String jobarg,
                               @QueryParam("enable") @DefaultValue("1") String enableParam,
+                              @QueryParam("unsafe") @DefaultValue("false") boolean unsafe,
                               @Auth User user) {
         boolean enable = enableParam.equals("1");
         if (jobarg != null) {
-            String[] joblist = Strings.splitArray(jobarg, ",");
-            emitLogLineForAction(user.getUsername(), (enable ? "enable" : "disable") + " jobs " + jobarg);
-            for (String jobid : joblist) {
-                IJob job = spawn.getJob(jobid);
-                if (job != null && job.setEnabled(enable)) {
-                    try {
-                        spawn.updateJob(job);
-                    } catch (Exception ex) {
-                        return buildServerError(ex);
+            List<String> jobIds = Splitter.on(',').omitEmptyStrings().trimResults().splitToList(jobarg);
+            String action = enable ? (unsafe ? "unsafely enable" : "enable") : "disable";
+            emitLogLineForAction(user.getUsername(), action + " jobs " + jobarg);
+
+            List<String> changed = new ArrayList<>();
+            List<String> unchanged = new ArrayList<>();
+            List<String> notFound = new ArrayList<>();
+            List<String> notAllowed = new ArrayList<>();
+
+            try {
+                for (String jobId : jobIds) {
+                    Job job = spawn.getJob(jobId);
+                    if (job != null) {
+                        if (enable && !unsafe && job.getState() != JobState.IDLE) {
+                            // request to enable safely, so do not allow if job is not IDLE
+                            notAllowed.add(jobId);
+                        } else if (job.setEnabled(enable)) {
+                            spawn.updateJob(job);
+                            changed.add(jobId);
+                        } else {
+                            unchanged.add(jobId);
+                        }
+                    } else {
+                        notFound.add(jobId);
                     }
                 }
+                log.info("{} jobs: changed={}, unchanged={}, not found={}, cannot safely enable={}",
+                         action, changed, unchanged, notFound, notAllowed);
+            } catch (Exception e) {
+                return buildServerError(e);
             }
-            return Response.ok().build();
+
+            try {
+                String json = CodecJSON.encodeString(ImmutableMap.of(
+                        "changed", changed,
+                        "unchanged", unchanged,
+                        "notFound", notFound,
+                        "notAllowed", notAllowed));
+                return Response.ok(json).build();
+            } catch (JsonProcessingException e) {
+                return buildServerError(e);
+            }
         } else {
-            return Response.serverError().entity("Missing job ids").build();
+            return Response.status(Response.Status.BAD_REQUEST).entity("Missing 'jobs' parameter").build();
         }
     }
 
@@ -272,8 +307,8 @@ public class JobsResource {
                               @QueryParam("user") Optional<String> user) {
         Job job = spawn.getJob(id);
 
-        if ((job != null) && (job.getState() != JobState.IDLE)) {
-            return Response.serverError().entity("A non IDLE job cannot be deleted").build();
+        if ((job != null) && (job.getCountActiveTasks() != 0)) {
+            return Response.serverError().entity("A job with active tasks cannot be deleted").build();
         } else {
             emitLogLineForAction(user.or(DEFAULT_USER), "job delete on " + id);
             try {
@@ -611,7 +646,7 @@ public class JobsResource {
             if (job != null) {
                 JSONArray tasksJson = new JSONArray();
                 for (JobTask task : job.getCopyOfTasks()) {
-                    HostState host = spawn.getHostState(task.getHostUUID());
+                    HostState host = spawn.hostManager.getHostState(task.getHostUUID());
                     JSONObject json = task.toJSON();
                     json.put("host", host.getHost());
                     json.put("hostPort", host.getPort());
@@ -619,7 +654,7 @@ public class JobsResource {
                     JSONArray taskReplicas = new JSONArray();
                     for (JobTaskReplica replica : task.getAllReplicas()) {
                         JSONObject replicaJson = new JSONObject();
-                        HostState replicaHost = spawn.getHostState(replica.getHostUUID());
+                        HostState replicaHost = spawn.hostManager.getHostState(replica.getHostUUID());
                         replicaJson.put("hostUrl", replicaHost.getHost());
                         replicaJson.put("hostPort", replicaHost.getPort());
                         replicaJson.put("lastUpdate", replica.getLastUpdate());

@@ -18,6 +18,7 @@ import java.util.HashSet;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
@@ -68,7 +69,7 @@ public class BundleFilterAppend extends BundleFilter {
         return this;
     }
 
-    public BundleFilterAppend setToField(String field) {
+    public BundleFilterAppend setToField(AutoField field) {
         this.to = field;
         return this;
     }
@@ -91,14 +92,14 @@ public class BundleFilterAppend extends BundleFilter {
     /**
      * Both the start of the array and the destination field. Required field.
      */
-    @FieldConfig(codable = true, required = true)
-    private String to;
+    @FieldConfig(required = true)
+    private AutoField to;
 
     /**
      * A field to append at the end of the array.
      */
     @FieldConfig(codable = true)
-    private String from;
+    private AutoField from;
 
     /**
      * A list of values to append in between the 'to' and 'from' fields.
@@ -131,11 +132,11 @@ public class BundleFilterAppend extends BundleFilter {
     @FieldConfig(codable = true)
     private int size = 5;
 
-    private String[] fields;
-
     @Override
-    public void initialize() {
-        fields = new String[]{to, from};
+    public void open() {
+        if (filter != null) {
+            filter.open();
+        }
     }
 
     private boolean contains(ValueArray arr, ValueObject obj) {
@@ -149,9 +150,8 @@ public class BundleFilterAppend extends BundleFilter {
     }
 
     @Override
-    public boolean filterExec(Bundle bundle) {
-        BundleField[] bound = getBindings(bundle, fields);
-        ValueObject toVal = bundle.getValue(bound[0]);
+    public boolean filter(Bundle bundle) {
+        ValueObject toVal = to.getValue(bundle);
         ValueArray arr = null;
         if (toVal == null) {
             if (nullFail) {
@@ -176,7 +176,7 @@ public class BundleFilterAppend extends BundleFilter {
         }
         // append from if set
         if (from != null) {
-            ValueObject fromVal = bundle.getValue(bound[1]);
+            ValueObject fromVal = from.getValue(bundle);
             if (filter != null) {
                 fromVal = filter.filter(fromVal);
             }
@@ -192,7 +192,7 @@ public class BundleFilterAppend extends BundleFilter {
                 }
             }
         }
-        bundle.setValue(bound[0], arr);
+        to.setValue(bundle, arr);
         return true;
     }
 }

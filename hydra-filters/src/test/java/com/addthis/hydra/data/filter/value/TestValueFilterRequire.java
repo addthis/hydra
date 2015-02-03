@@ -15,6 +15,8 @@ package com.addthis.hydra.data.filter.value;
 
 import java.util.HashSet;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -22,7 +24,19 @@ import static org.junit.Assert.assertEquals;
 public class TestValueFilterRequire {
 
     private String requireFilter(String val, HashSet<String> exactValues, HashSet<String> match, HashSet<String> find, String[] contains) {
-        return new ValueFilterRequire().setValue(exactValues).setMatch(match).setContains(contains).setFind(find).filter(val);
+        return new ValueFilterRequire(
+                exactValues,
+                null,
+                match,
+                null,
+                find,
+                null,
+                contains,
+                null,
+                false,
+                false,
+                0,
+                0).filter(val);
     }
 
     @Test
@@ -39,6 +53,14 @@ public class TestValueFilterRequire {
         assertEquals(null, requireFilter("foo", exactValues, null, null, null));
         assertEquals(null, requireFilter("foobarfoo", exactValues, null, null, null));
         assertEquals("bar", requireFilter("bar", exactValues, null, null, null));
+        assertEquals("", requireFilter("", exactValues, null, null, null));
+    }
+
+    @Test
+    public void matchEmptyString() {
+        HashSet<String> exactValues = new HashSet<>();
+        exactValues.add("");
+        assertEquals("", requireFilter("", exactValues, null, null, null));
     }
 
     @Test

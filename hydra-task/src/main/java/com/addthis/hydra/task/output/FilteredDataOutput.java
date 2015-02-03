@@ -49,6 +49,9 @@ public class FilteredDataOutput extends TaskDataOutput {
 
     @Override
     protected void open() {
+        if (filter != null) {
+            filter.open();
+        }
         output.open();
     }
 
