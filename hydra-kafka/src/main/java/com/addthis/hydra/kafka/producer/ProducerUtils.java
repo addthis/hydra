@@ -30,7 +30,7 @@ public class ProducerUtils {
         return stringBuilder.toString();
     }
 
-    public static ProducerConfig newConfig(String zookeeper, Properties overrides) {
+    public static ProducerConfig defaultConfig(String zookeeper, Properties overrides) {
         Properties properties = new Properties();
         ZkClient zkClient = new ZkClient(zookeeper);
         Seq<Broker> brokers = ZkUtils.getAllBrokersInCluster(zkClient);
@@ -47,14 +47,20 @@ public class ProducerUtils {
     }
 
     public static ProducerConfig newConfig(String zookeeper) {
-        return newConfig(zookeeper, new Properties());
+        return defaultConfig(zookeeper, new Properties());
     }
 
     public static <Key,Message> Producer<Key,Message> newProducer(String zookeeper, Properties overrides) {
-        return new Producer<Key,Message>(newConfig(zookeeper, overrides));
+        return new Producer<Key,Message>(defaultConfig(zookeeper, overrides));
     }
 
-    public static Producer newProducer(String zookeeper) {
-        return new Producer(newConfig(zookeeper));
+    public static <Key,Message> Producer<Key,Message> newProducer(String zookeeper) {
+        return new Producer<Key,Message>(defaultConfig(zookeeper, new Properties()));
+    }
+
+    public static Producer newBundleProducer(String zookeeper) {
+        Properties encoder = new Properties();
+        encoder.setProperty("serializer.class", "com.addthis.hydra.kafka.producer.BundleEncoder");
+        return new Producer(defaultConfig(zookeeper, encoder));
     }
 }
