@@ -783,15 +783,15 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     }
 
     void sendStatusMessage(HostMessage msg) {
-        synchronized (jmsxmitlock) {
-            try {
+        try {
+            synchronized (jmsxmitlock) {
                 if (batchControlProducer != null) {
                     batchControlProducer.sendMessage(msg, "SPAWN");
                 }
-            } catch (Exception ex) {
-                log.warn("[mq.ctrl.send] fail", ex);
-                shutdown();
             }
+        } catch (Exception ex) {
+            log.error("[mq.ctrl.send] fail <INITIATING JVM SHUTDOWN>", ex);
+            shutdown();
         }
     }
 
@@ -826,7 +826,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         }
         if (!sent) {
             sendStatusFailAfterRetriesCount.inc();
-            log.warn("[mq.ctrl.send] fail after retrying");
+            log.error("[mq.ctrl.send] fail after retrying <INITIATING JVM SHUTDOWN>");
             shutdown();
         }
     }
