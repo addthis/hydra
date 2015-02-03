@@ -4,8 +4,7 @@ spawn:
     spawnbalance.min.disk.percent.avail.newtasks: .01
     spawnbalance.min.disk.percent.avail.runtasks: .01
     cluster.name: "${CLUSTER_NAME}"
-    batch.brokerHost: ${RABBIT_MQ_HOST}
-    batch.brokerPort: ${RABBIT_MQ_PORT}
+    batch.brokerAddresses: ${RABBIT_MQ_ADDRESS}
     com.addthis.hydra.query.web.QueryServer.webPort: ${QUERY_WEB_PORT}
     com.addthis.hydra.job.spawn.Spawn.queryMasterAppName: ${QUERY_MASTER_APP_NAME}
     com.addthis.hydra.job.spawn.Spawn.queryMasterAppPortIndex: ${QUERY_MASTER_APP_PORT_INDEX}
@@ -91,8 +90,7 @@ mesh:
     XXUseCompressedOops: True
 mqmaster:
     cluster.name: "${CLUSTER_NAME}"
-    batch.brokerHost: ${RABBIT_MQ_HOST}
-    batch.brokerPort: ${RABBIT_MQ_PORT}
+    batch.brokerAddresses: ${RABBIT_MQ_ADDRESS}
     com.sun.management.jmxremote.authenticate: False
     com.sun.management.jmxremote.port: 8500
     com.sun.management.jmxremote.ssl: False
@@ -161,8 +159,7 @@ mqmaster:
     qmaster.mesh.peer.interval: 15
 minion:
     cluster.name: "${CLUSTER_NAME}"
-    batch.brokerHost: ${RABBIT_MQ_HOST}
-    batch.brokerPort: ${RABBIT_MQ_PORT}
+    batch.brokerAddresses: ${RABBIT_MQ_ADDRESS}
     com.sun.management.jmxremote.authenticate: False
     com.sun.management.jmxremote.port: 7501
     com.sun.management.jmxremote.ssl: False

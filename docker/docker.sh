@@ -24,7 +24,7 @@ SCRIPTNAME="${0##*/}"
 : ${QUERY_HOST:=$HOST}
 : ${CLUSTER_NAME:=hydra}
 : ${SPAWN_WEB_PORT:=5052}
-: ${RABBIT_MQ_HOST:=$HOST}
+: ${RABBIT_MQ_ADDRESS:=$HOST:5672}
 : ${RABBIT_MQ_PORT:=5672}
 : ${RABBIT_MQ_ADMIN_PORT:=15672}
 : ${HOST:=localhost}
@@ -42,7 +42,7 @@ container_build() {
         VERSION=$2
     fi
     mkdir -p $HOME/.m2
-    sed "s/\${USER}/${USER}/g;s/\${MINION_HOST}/${MINION_HOST}/g;s/\${HYDRA_ROOT}/${HYDRA_ROOT}/g;s/\${RABBIT_MQ_HOST}/${RABBIT_MQ_HOST}/g;s/\${RABBIT_MQ_PORT}/${RABBIT_MQ_PORT}/g;s/\${HOST}/${HOST}/g;s/\${CLUSTER_NAME}/${CLUSTER_NAME}/g;s/\${QUERY_HOST}/${QUERY_HOST}/g;s/\${MESH_PORT}/${MESH_PORT}/g;s/\${QUERY_MESH_PORT}/${QUERY_MESH_PORT}/g;s/\${QUERY_MESH_PEER_PORT}/${QUERY_MESH_PEER_PORT}/g;s/\${QUERY_WEB_PORT}/${QUERY_WEB_PORT}/g;s/\${QUERY_API_PORT}/${QUERY_API_PORT}/g;s/\${ZK_SERVERS}/${ZK_SERVERS}/g;s/\${ZK_CHROOT}/${ZK_CHROOT}/g" \
+    sed "s/\${USER}/${USER}/g;s/\${MINION_HOST}/${MINION_HOST}/g;s/\${HYDRA_ROOT}/${HYDRA_ROOT}/g;s/\${RABBIT_MQ_ADDRESS}/${RABBIT_MQ_ADDRESS}/g;s/\${HOST}/${HOST}/g;s/\${CLUSTER_NAME}/${CLUSTER_NAME}/g;s/\${QUERY_HOST}/${QUERY_HOST}/g;s/\${MESH_PORT}/${MESH_PORT}/g;s/\${QUERY_MESH_PORT}/${QUERY_MESH_PORT}/g;s/\${QUERY_MESH_PEER_PORT}/${QUERY_MESH_PEER_PORT}/g;s/\${QUERY_WEB_PORT}/${QUERY_WEB_PORT}/g;s/\${QUERY_API_PORT}/${QUERY_API_PORT}/g;s/\${ZK_SERVERS}/${ZK_SERVERS}/g;s/\${ZK_CHROOT}/${ZK_CHROOT}/g" \
         < ./$1/Dockerfile.template > ./$1/Dockerfile
     echo "Building docker image"
     docker build -t $USER/$1:$VERSION ./$1
