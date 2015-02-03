@@ -37,6 +37,8 @@ import com.addthis.codec.codables.SuperCodable;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.common.hash.MD5HashFunction;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.http.client.methods.HttpGet;
 
 import org.slf4j.Logger;
@@ -76,7 +78,8 @@ public class ValueFilterHttpGet extends StringFilter implements SuperCodable {
     private AtomicBoolean               init  = new AtomicBoolean(false);
     private File persistTo;
 
-    private ValueFilterHttpGet() {}
+    @VisibleForTesting
+    ValueFilterHttpGet() {}
 
     public static class CacheObject implements Codable, Comparable<CacheObject> {
 
