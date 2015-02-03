@@ -7,7 +7,7 @@ import java.util.Properties;
 import org.I0Itec.zkclient.ZkClient;
 
 import kafka.cluster.Broker;
-import kafka.producer.Producer;
+import kafka.javaapi.producer.Producer;
 import kafka.producer.ProducerConfig;
 import kafka.utils.ZkUtils;
 import scala.collection.Iterator;

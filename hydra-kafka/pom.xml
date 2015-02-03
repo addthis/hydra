@@ -19,7 +19,7 @@
     <version>5.0.2-SNAPSHOT</version>
   </parent>
 
-  <artifactId>hydra-data</artifactId>
+  <artifactId>hydra-kafka</artifactId>
   <name>Hydra Kafka Module</name>
   <description>reading and writing for kafka 8 clusters</description>
 
