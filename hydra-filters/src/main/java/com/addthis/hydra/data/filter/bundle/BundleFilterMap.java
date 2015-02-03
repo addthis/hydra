@@ -60,6 +60,8 @@ public class BundleFilterMap implements BundleFilter, SuperCodable {
     @FieldConfig(codable = true)
     private Boolean nullFail;
 
+    private BundleFilterMap() {}
+
     @Override public void postDecode() {
         for (BundleFilterField f : fields) {
             if (nullFail != null) {

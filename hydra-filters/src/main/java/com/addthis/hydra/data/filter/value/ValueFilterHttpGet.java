@@ -76,6 +76,8 @@ public class ValueFilterHttpGet extends StringFilter implements SuperCodable {
     private AtomicBoolean               init  = new AtomicBoolean(false);
     private File persistTo;
 
+    private ValueFilterHttpGet() {}
+
     public static class CacheObject implements Codable, Comparable<CacheObject> {
 
         @FieldConfig(codable = true)

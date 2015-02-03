@@ -55,6 +55,7 @@ public class BundleFilterHttp extends AbstractBundleFilterHttp implements SuperC
         BundleFilterHttp bfh = new BundleFilterHttp();
         bfh.url = url;
         bfh.set = AutoField.newAutoField(set);
+        bfh.postDecode();
         return bfh;
     }
 
@@ -64,6 +65,7 @@ public class BundleFilterHttp extends AbstractBundleFilterHttp implements SuperC
     private File persistTo;
     private HotMap<String, CacheObject> ocache;
 
+    private BundleFilterHttp() {}
 
     @Override public void postDecode() {
         if (cache == null) {

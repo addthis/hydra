@@ -78,19 +78,19 @@ abstract class AbstractMatchStringFilter extends StringFilter implements SuperCo
     private ArrayList<Pattern> pattern;
     private ArrayList<Pattern> findPattern;
 
-    public AbstractMatchStringFilter(HashSet<String> value,
-                                     String valueURL,
-                                     HashSet<String> match,
-                                     String matchURL,
-                                     HashSet<String> find,
-                                     String findURL,
-                                     String[] contains,
-                                     String containsURL,
-                                     boolean urlReturnsCSV,
-                                     boolean toLower,
-                                     int urlTimeout,
-                                     int urlRetries,
-                                     boolean not) {
+    AbstractMatchStringFilter(HashSet<String> value,
+                              String valueURL,
+                              HashSet<String> match,
+                              String matchURL,
+                              HashSet<String> find,
+                              String findURL,
+                              String[] contains,
+                              String containsURL,
+                              boolean urlReturnsCSV,
+                              boolean toLower,
+                              int urlTimeout,
+                              int urlRetries,
+                              boolean not) {
         this.value = value;
         this.valueURL = valueURL;
         this.match = match;

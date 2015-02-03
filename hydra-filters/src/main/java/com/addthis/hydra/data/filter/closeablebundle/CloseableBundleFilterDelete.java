@@ -34,6 +34,8 @@ public class CloseableBundleFilterDelete implements SuperCodable, CloseableBundl
     @FieldConfig(codable = true)
     private boolean pre = false;
 
+    private CloseableBundleFilterDelete() {}
+
     @Override public void postDecode() {
         if (pre) {
             delete(fileName);

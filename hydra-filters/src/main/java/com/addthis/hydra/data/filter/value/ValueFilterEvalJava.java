@@ -151,6 +151,8 @@ public class ValueFilterEvalJava extends AbstractValueFilter implements SuperCod
 
     private ValueFilter constructedFilter;
 
+    private ValueFilterEvalJava() {}
+
     private static final Set<String> requiredImports = new HashSet<>();
 
     static {

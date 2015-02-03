@@ -31,6 +31,8 @@ public class ValueFilterJavascript extends StringFilter implements SuperCodable 
     private String source;
     private Filter filter;
 
+    private ValueFilterJavascript() {}
+
     @Override public void postDecode() {
         if (source == null) {
             throw new IllegalArgumentException("no source specified!");

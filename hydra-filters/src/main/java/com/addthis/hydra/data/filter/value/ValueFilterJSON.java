@@ -58,6 +58,8 @@ public class ValueFilterJSON extends AbstractValueFilter implements SuperCodable
     private HotMap<String, Object> cache = new HotMap<>(new ConcurrentHashMap());
     private ArrayList<QueryToken> tokens;
 
+    private ValueFilterJSON() {}
+
     @Override
     public ValueObject filterValue(ValueObject value) {
         if ((value == null) || ((value.getObjectType() == ValueObject.TYPE.STRING) &&

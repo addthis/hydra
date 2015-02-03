@@ -72,6 +72,8 @@ public class BundleFilterEvalJava implements BundleFilter, SuperCodable {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilterEvalJava.class);
 
+    private BundleFilterEvalJava() {}
+
     /**
      * Names of the bundle fields. These
      * fields will be available in the filter

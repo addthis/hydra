@@ -20,6 +20,8 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.util.JSONFetcher;
 
+import com.google.common.annotations.VisibleForTesting;
+
 
 /**
  * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">uses the input as a key and returns the value
@@ -79,6 +81,9 @@ public class ValueFilterMap extends StringFilter implements SuperCodable {
      */
     @FieldConfig(codable = true)
     private boolean httpTrace;
+
+    @VisibleForTesting
+    ValueFilterMap() {}
 
     public ValueFilterMap setMap(HashMap<String, String> map) {
         this.map = map;
