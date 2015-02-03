@@ -31,6 +31,8 @@ import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.compiler.JavaSimpleCompiler;
 import com.addthis.hydra.data.filter.eval.InputType;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +74,8 @@ public class BundleFilterEvalJava implements BundleFilter, SuperCodable {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilterEvalJava.class);
 
-    private BundleFilterEvalJava() {}
+    @VisibleForTesting
+    BundleFilterEvalJava() {}
 
     /**
      * Names of the bundle fields. These
