@@ -8,7 +8,6 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.util.JSONFetcher;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 abstract class AbstractMatchStringFilter extends StringFilter implements SuperCodable {
@@ -79,19 +78,18 @@ abstract class AbstractMatchStringFilter extends StringFilter implements SuperCo
     private ArrayList<Pattern> pattern;
     private ArrayList<Pattern> findPattern;
 
-    @JsonCreator
-    AbstractMatchStringFilter(@JsonProperty("value") HashSet<String> value,
-                              @JsonProperty("valueURL") String valueURL,
-                              @JsonProperty("match") HashSet<String> match,
-                              @JsonProperty("matchURL") String matchURL,
-                              @JsonProperty("find") HashSet<String> find,
-                              @JsonProperty("findURL") String findURL,
-                              @JsonProperty("contains") String[] contains,
-                              @JsonProperty("containsURL") String containsURL,
-                              @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
-                              @JsonProperty("toLower") boolean toLower,
-                              @JsonProperty("urlTimeout") int urlTimeout,
-                              @JsonProperty("urlRetries") int urlRetries,
+    AbstractMatchStringFilter(HashSet<String> value,
+                              String valueURL,
+                              HashSet<String> match,
+                              String matchURL,
+                              HashSet<String> find,
+                              String findURL,
+                              String[] contains,
+                              String containsURL,
+                              boolean urlReturnsCSV,
+                              boolean toLower,
+                              int urlTimeout,
+                              int urlRetries,
                               boolean not) {
         this.value = value;
         this.valueURL = valueURL;
