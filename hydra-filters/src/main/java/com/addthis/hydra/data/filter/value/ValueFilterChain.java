@@ -14,7 +14,6 @@
 package com.addthis.hydra.data.filter.value;
 
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -37,12 +36,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class ValueFilterChain extends AbstractValueFilter {
 
     /** The value filters to be performed in a chain. */
-    @JsonProperty(required = true)
-    private ValueFilter[] filter;
+    @JsonProperty(required = true) private ValueFilter[] filter;
 
     /** If true, then terminate chain on first null output. Default is true. */
-    @FieldConfig(codable = true)
-    private boolean nullStop = true;
+    @JsonProperty private boolean nullStop = true;
 
     @Override
     public ValueObject filterValue(ValueObject value) {
