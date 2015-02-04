@@ -1078,7 +1078,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
             prev = page.values.set(offset, value);
             page.rawValues.set(offset, null);
 
-            updateMemoryCounters(page, key, value, page.firstKey, prev);
+            updateMemoryCounters(page, key, value, prev);
         } else { // An existing (key, value) pair is not found.
             int position = ~offset;
 
@@ -1089,7 +1089,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
             prev = null;
 
             // updateMemoryCounters must be invoked before incrementing size.
-            updateMemoryCounters(page, key, value, page.firstKey, null);
+            updateMemoryCounters(page, key, value, null);
             page.size++;
         }
         return prev;
@@ -1920,13 +1920,13 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
         assert (est >= 0);
     }
 
-    private void updateMemoryCounters(Page<K, V> page, K key, V value, K firstKey, V prev) {
+    private void updateMemoryCounters(Page<K, V> page, K key, V value, V prev) {
         /** for memory estimation, the replacement gets 2x weighting */
 
         if (prev == null) {
-            page.updateAverage(key, value, firstKey, 1);
+            page.updateAverage(key, value, 1);
         } else {
-            page.updateAverage(key, value, firstKey, 2);
+            page.updateAverage(key, value, 2);
         }
 
     }

@@ -378,7 +378,7 @@ public class Page<K, V extends BytesCodable> {
         return (weightedAvg * size);
     }
 
-    void updateAverage(K key, V val, K firstKey, int count) {
+    void updateAverage(K key, V val, int count) {
         long next = parent.estimateCounter.incrementAndGet();
         if (avgEntrySize == 0 ||
             (parent.estimateInterval <= 0 && estimates > 0 && next % estimates == 0) ||
@@ -386,7 +386,7 @@ public class Page<K, V extends BytesCodable> {
             switch (memEstimationStrategy) {
                 case 0:
                     /** use encoded byte size as crude proxy for mem size */
-                    updateAverage((keyCoder.keyEncode(key, firstKey, encodeType).length +
+                    updateAverage((keyCoder.keyEncode(key, encodeType.getTreeType()).length +
                                    keyCoder.valueEncode(val, encodeType).length), count);
                     break;
                 case 1:

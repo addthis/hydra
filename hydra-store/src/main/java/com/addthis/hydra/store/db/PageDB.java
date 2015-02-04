@@ -35,7 +35,6 @@ import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.ByteStore;
 import com.addthis.hydra.store.kv.ConcurrentByteStoreBDB;
 import com.addthis.hydra.store.kv.MapDbByteStore;
-import com.addthis.hydra.store.kv.PageEncodeType;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
 import com.addthis.hydra.store.kv.TreeEncodeType;
 import com.addthis.hydra.store.skiplist.Page;
@@ -116,7 +115,7 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
          */
         if (isDirEmpty(dir)) {
             encodeType = TreeEncodeType.defaultType();
-            File pageTypeFile = new File(dir, PageDB.TREE_TYPE_FILENAME);
+            File pageTypeFile = new File(dir, TREE_TYPE_FILENAME);
             Files.write(pageTypeFile, Bytes.toBytes(encodeType.toString()), false);
         } else {
             encodeType = getEncodeType(dir, true);
@@ -155,7 +154,7 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
         }
         TreeEncodeType type = TreeEncodeType.implicitType();
         if (write) {
-            File pageTypeFile = new File(dir, PageDB.TREE_TYPE_FILENAME);
+            File pageTypeFile = new File(dir, TREE_TYPE_FILENAME);
             Files.write(pageTypeFile, Bytes.toBytes(type.toString()), false);
         }
         return type;

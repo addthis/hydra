@@ -23,7 +23,6 @@ import java.util.Arrays;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Varint;
 
-import com.addthis.hydra.store.kv.PageEncodeType;
 import com.addthis.hydra.store.kv.TreeEncodeType;
 import com.addthis.hydra.store.util.Raw;
 
