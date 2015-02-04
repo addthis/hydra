@@ -25,6 +25,7 @@ import com.addthis.codec.codables.BytesCodable;
 import com.addthis.codec.codables.ConcurrentCodable;
 import com.addthis.codec.codables.SuperCodable;
 import com.addthis.codec.reflection.Fields;
+import com.addthis.hydra.store.kv.PageEncodeType;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -38,7 +39,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, Co
     @FieldConfig(codable = true)
     protected int nodes;
     @FieldConfig(codable = true)
-    protected volatile Integer nodedb;
+    protected volatile Long nodedb;
     @FieldConfig(codable = true)
     protected int bits;
     @SuppressWarnings("unchecked")
@@ -54,7 +55,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, Co
         encodeLock();
         try {
             Varint.writeUnsignedVarLong(hits, b);
-            Varint.writeSignedVarInt(nodedb == null ? -1 : nodedb, b);
+            PageEncodeType.writeNodeId(b, version, nodedb);
             if (data != null && data.size() > 0) {
                 int numAttachments = data.size();
                 Varint.writeSignedVarInt(numAttachments, b);
@@ -94,7 +95,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, Co
         ByteBuf buf = Unpooled.wrappedBuffer(b);
         try {
             hits = Varint.readUnsignedVarLong(buf);
-            nodedb = Varint.readSignedVarInt(buf);
+            nodedb = PageEncodeType.readNodeId(buf, version);
             int numAttachments = Varint.readSignedVarInt(buf);
             if (numAttachments > 0) {
                 HashMap<String, TreeNodeData> dataMap = new HashMap<>();

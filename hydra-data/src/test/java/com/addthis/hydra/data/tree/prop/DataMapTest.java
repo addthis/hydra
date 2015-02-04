@@ -16,7 +16,7 @@ package com.addthis.hydra.data.tree.prop;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.binary.CodecBin2;
-import com.addthis.hydra.store.kv.KeyCoder;
+import com.addthis.hydra.store.kv.PageEncodeType;
 
 import org.junit.Test;
 
@@ -30,9 +30,9 @@ public class DataMapTest extends TestCase {
         DataMap dataMap = new DataMap(size);
         long val = 1232432425l;
         dataMap.put("foo", ValueFactory.create(val));
-        byte[] bytes = dataMap.bytesEncode(KeyCoder.EncodeType.SPARSE.ordinal());
+        byte[] bytes = dataMap.bytesEncode(PageEncodeType.SPARSE.ordinal());
         DataMap decoded = new DataMap();
-        decoded.bytesDecode(bytes, KeyCoder.EncodeType.SPARSE.ordinal());
+        decoded.bytesDecode(bytes, PageEncodeType.SPARSE.ordinal());
         ValueObject result = dataMap.getValue("foo");
         assertEquals(val, result.asLong().getLong());
         assertEquals(size, dataMap.getSize());
@@ -49,12 +49,12 @@ public class DataMapTest extends TestCase {
         }
         CodecBin2 codec = CodecBin2.INSTANCE;
         byte[] codecBytes = codec.encode(dataMap);
-        byte[] customBytes = dataMap.bytesEncode(KeyCoder.EncodeType.SPARSE.ordinal());
+        byte[] customBytes = dataMap.bytesEncode(PageEncodeType.SPARSE.ordinal());
         assertTrue(customBytes.length < codecBytes.length);
         DataMap dataMap1 = new DataMap(size);
         codec.decode(dataMap1, codecBytes);
         DataMap dataMap2 = new DataMap();
-        dataMap2.bytesDecode(customBytes, KeyCoder.EncodeType.SPARSE.ordinal());
+        dataMap2.bytesDecode(customBytes, PageEncodeType.SPARSE.ordinal());
         assertEquals(dataMap1.getValue("key:9997").asLong().getLong(), dataMap2.getValue("key:9997").asLong().getLong());
         assertEquals(size, dataMap1.getSize());
         assertEquals(size, dataMap2.getSize());

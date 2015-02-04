@@ -28,9 +28,11 @@ import com.addthis.codec.binary.CodecBin2;
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.ByteStore;
 import com.addthis.hydra.store.kv.ByteStoreBDB;
+import com.addthis.hydra.store.kv.PageEncodeType;
 import com.addthis.hydra.store.kv.MapDbByteStore;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
 import com.addthis.hydra.store.kv.ReadExternalPagedStore;
+import com.addthis.hydra.store.kv.TreeEncodeType;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +55,7 @@ public class ReadPageDB<V extends IReadWeighable & BytesCodable> implements IPag
     private static final Codec codec = CodecBin2.INSTANCE;
     private final Class<? extends V>               clazz;
     private final ReadExternalPagedStore<DBKey, V> eps;
+    private final TreeEncodeType encodeType;
 
     public ReadPageDB(File dir, Class<? extends V> clazz, int maxSize, int maxWeight)
             throws IOException {
@@ -64,6 +67,7 @@ public class ReadPageDB<V extends IReadWeighable & BytesCodable> implements IPag
         this.clazz = clazz;
         String dbType = PageDB.getByteStoreNameForFile(dir);
         ByteStore store;
+        encodeType = PageDB.getEncodeType(dir, false);
         switch (dbType) {
             case PageDB.PAGED_MAP_DB:
                 store = new MapDbByteStore(dir, defaultDbName, true);
@@ -76,7 +80,7 @@ public class ReadPageDB<V extends IReadWeighable & BytesCodable> implements IPag
                 break;
         }
         this.eps = new ReadExternalPagedStore<>(new ReadDBKeyCoder<>(codec, clazz), store, maxSize,
-                                                maxWeight, metrics);
+                                                maxWeight, metrics, encodeType);
     }
 
     public String toString() {
@@ -132,6 +136,9 @@ public class ReadPageDB<V extends IReadWeighable & BytesCodable> implements IPag
     public void close() {
         eps.close();
     }
+
+    @Override
+    public TreeEncodeType getEncodeType() { return encodeType; }
 
     /**
      * Wraps eps range and adds RIGHT-side bounding (on top of the LEFT-side bounding

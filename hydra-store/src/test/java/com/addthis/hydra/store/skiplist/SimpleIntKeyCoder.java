@@ -13,10 +13,15 @@
  */
 package com.addthis.hydra.store.skiplist;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import com.addthis.basis.util.Bytes;
 
 import com.addthis.hydra.store.DBIntValue;
+import com.addthis.hydra.store.kv.PageEncodeType;
 import com.addthis.hydra.store.kv.KeyCoder;
+import com.addthis.hydra.store.kv.TreeEncodeType;
 
 
 public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
@@ -27,22 +32,39 @@ public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
     }
 
     @Override
-    public byte[] keyEncode(Integer key) {
+    public byte[] keyEncode(Integer key, TreeEncodeType encodeType) {
         return key != null ? Bytes.toBytes(key.intValue() ^ Integer.MIN_VALUE) : new byte[0];
     }
 
     @Override
-    public byte[] valueEncode(DBIntValue value, EncodeType encodeType) {
+    public byte[] keyEncode(@Nullable Integer key, @Nonnull Integer baseKey, @Nonnull PageEncodeType encodeType) {
+        if (key == null) {
+            return new byte[0];
+        }
+        return keyEncode(key - baseKey, encodeType.getTreeType());
+    }
+
+    @Override
+    public byte[] valueEncode(DBIntValue value, PageEncodeType encodeType) {
         return value.bytesEncode(encodeType.ordinal());
     }
 
     @Override
-    public Integer keyDecode(byte[] key) {
+    public Integer keyDecode(byte[] key, TreeEncodeType encodeType) {
         return (key != null && key.length > 0) ? (Bytes.toInt(key) ^ Integer.MIN_VALUE) : null;
     }
 
     @Override
-    public DBIntValue valueDecode(byte[] value, EncodeType encodeType) {
+    public Integer keyDecode(@Nullable byte[] key, @Nonnull Integer baseKey, @Nonnull PageEncodeType encodeType) {
+        Integer offset = keyDecode(key, encodeType.getTreeType());
+        if (offset == null) {
+            return null;
+        }
+        return offset + baseKey;
+    }
+
+    @Override
+    public DBIntValue valueDecode(byte[] value, PageEncodeType encodeType) {
         DBIntValue dbIntValue = new DBIntValue();
         dbIntValue.bytesDecode(value, encodeType.ordinal());
         return dbIntValue;

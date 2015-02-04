@@ -70,7 +70,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         };
         node.tree = tree;
         node.leases.incrementAndGet();
-        node.nodedb = 1;
+        node.nodedb = 1L;
         return node;
     }
 
@@ -299,7 +299,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         }
     }
 
-    protected Integer nodeDB() {
+    protected Long nodeDB() {
         return nodedb;
     }
 

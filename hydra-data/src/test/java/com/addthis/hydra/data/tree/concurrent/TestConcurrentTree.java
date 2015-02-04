@@ -265,7 +265,6 @@ public class TestConcurrentTree {
         }
     }
 
-
     @Test
     public void testGetOrCreateFast() throws Exception {
         testGetOrCreateMultiThread(fastNumElements, fastNumThreads);

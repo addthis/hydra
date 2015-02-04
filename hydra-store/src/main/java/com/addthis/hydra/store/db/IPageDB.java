@@ -13,8 +13,7 @@
  */
 package com.addthis.hydra.store.db;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import javax.annotation.Nonnull;
 
 import java.util.Map.Entry;
 
@@ -23,6 +22,7 @@ import com.addthis.basis.util.ClosableIterator;
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.db.IPageDB.Key;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
+import com.addthis.hydra.store.kv.TreeEncodeType;
 import com.addthis.hydra.store.util.Raw;
 
 
@@ -30,20 +30,23 @@ public interface IPageDB<K extends Key, V extends BytesCodable> extends AutoClos
 
     public interface Key {
 
-        public int id();
+        public long id();
 
         public byte[] key();
 
-        public byte[] toBytes();
+        public byte[] toBytes(@Nonnull TreeEncodeType encodeType);
+
+        public byte[] deltaEncode(@Nonnull Key baseKey);
 
         public Raw rawKey();
 
-        public void writeOut(OutputStream out) throws IOException;
     }
 
     public interface Range<K, V> extends ClosableIterator<Entry<K, V>>, Iterable<Entry<K, V>> {
 
     }
+
+    public TreeEncodeType getEncodeType();
 
     public V get(K key);
 

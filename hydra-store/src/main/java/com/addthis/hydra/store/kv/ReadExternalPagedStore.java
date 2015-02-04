@@ -77,6 +77,8 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
 
     private final ExternalPagedStoreMetrics metrics;
 
+    private final TreeEncodeType encodeType;
+
     private final boolean collectMetrics;
 
     private static final int FLAGS_IS_SPARSE = 1 << 5;
@@ -92,12 +94,15 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
 
     final KeyCoder<K, V> keyCoder;
 
-    public ReadExternalPagedStore(KeyCoder<K, V> keyCoder, final ByteStore pages, int maxSize, int maxWeight) {
-        this(keyCoder, pages, maxSize, maxWeight, false);
+    public ReadExternalPagedStore(KeyCoder<K, V> keyCoder, final ByteStore pages,
+                                  int maxSize, int maxWeight, TreeEncodeType encodeType) {
+        this(keyCoder, pages, maxSize, maxWeight, false, encodeType);
     }
 
-    public ReadExternalPagedStore(final KeyCoder<K, V> keyCoder, final ByteStore pages, int maxSize, int maxWeight, boolean collect) {
+    public ReadExternalPagedStore(final KeyCoder<K, V> keyCoder, final ByteStore pages,
+                                  int maxSize, int maxWeight, boolean collect, TreeEncodeType encodeType) {
         this.keyCoder = keyCoder;
+        this.encodeType = encodeType;
         this.pages = pages;
         log.info("[init] maxSize=" + maxSize + " maxWeight=" + maxWeight);
 
@@ -118,7 +123,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                     .build(
                             new CacheLoader<K, TreePage>() {
                                 public TreePage load(K key) throws Exception {
-                                    byte[] page = pages.get(keyCoder.keyEncode(key));
+                                    byte[] page = pages.get(keyCoder.keyEncode(key, encodeType));
                                     if (page != null) {
                                         return pageDecode(page);
                                     } else {
@@ -132,7 +137,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                     .build(
                             new CacheLoader<K, TreePage>() {
                                 public TreePage load(K key) throws Exception {
-                                    byte[] page = pages.get(keyCoder.keyEncode(key));
+                                    byte[] page = pages.get(keyCoder.keyEncode(key, encodeType));
                                     if (page != null) {
                                         return pageDecode(page);
                                     } else {
@@ -148,16 +153,16 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
     }
 
     public K getFirstKey() {
-        return keyCoder.keyDecode(pages.firstKey());
+        return keyCoder.keyDecode(pages.firstKey(), encodeType);
     }
 
     public byte[] getPageKeyForKey(K key) {
-        byte[] byteKey = keyCoder.keyEncode(key);
+        byte[] byteKey = keyCoder.keyEncode(key, encodeType);
         return pages.floorKey(byteKey);
     }
 
     public KeyValuePage<K, V> getOrLoadPageForKey(K key) {
-        K pageKey = keyCoder.keyDecode(getPageKeyForKey(key));
+        K pageKey = keyCoder.keyDecode(getPageKeyForKey(key), encodeType);
         if (pageKey != null) {
             try {
                 return loadingPageCache.get(pageKey);
@@ -213,18 +218,18 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                 }
                 int count = entries;
 
-                K firstKey = keyCoder.keyDecode(Bytes.readBytes(in, Varint.readUnsignedVarInt(dis)));
+                K firstKey = keyCoder.keyDecode(Bytes.readBytes(in, Varint.readUnsignedVarInt(dis)), encodeType);
                 int nextFirstKeyLength = Varint.readUnsignedVarInt(dis);
                 K nextFirstKey = null;
                 if (nextFirstKeyLength > 0) {
-                    nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in, nextFirstKeyLength));
+                    nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in, nextFirstKeyLength), encodeType);
                 }
                 decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
                 while (count-- > 0) {
                     byte[] kb = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
                     byte[] vb = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
-                    K key = keyCoder.keyDecode(kb);
-                    decode.map.put(key, new PageValue(vb, KeyCoder.EncodeType.SPARSE));
+                    K key = keyCoder.keyDecode(kb, encodeType);
+                    decode.map.put(key, new PageValue(vb, PageEncodeType.SPARSE));
                 }
 
             } else {
@@ -232,14 +237,14 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                 if (collectMetrics) {
                     metrics.updatePageSize(entries);
                 }
-                K firstKey = keyCoder.keyDecode(Bytes.readBytes(in));
-                K nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in));
+                K firstKey = keyCoder.keyDecode(Bytes.readBytes(in), encodeType);
+                K nextFirstKey = keyCoder.keyDecode(Bytes.readBytes(in), encodeType);
                 decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
                 while (entries-- > 0) {
                     byte[] kb = Bytes.readBytes(in);
                     byte[] vb = Bytes.readBytes(in);
-                    K key = keyCoder.keyDecode(kb);
-                    decode.map.put(key, new PageValue(vb, KeyCoder.EncodeType.LEGACY));
+                    K key = keyCoder.keyDecode(kb, encodeType);
+                    decode.map.put(key, new PageValue(vb, PageEncodeType.LEGACY));
                 }
                 //ignoring memory data
                 in.close();
@@ -268,9 +273,9 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         private V value;
         private byte[] raw;
         private volatile V realValue;
-        private KeyCoder.EncodeType encodeType;
+        private PageEncodeType encodeType;
 
-        PageValue(byte[] raw, KeyCoder.EncodeType encodeType) {
+        PageValue(byte[] raw, PageEncodeType encodeType) {
             this.raw = raw;
             this.encodeType = encodeType;
         }
@@ -526,7 +531,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
             if (start == null) {
                 start = getFirstKey();
             }
-            keyIterator = pages.keyIterator(keyCoder.keyEncode(start));
+            keyIterator = pages.keyIterator(keyCoder.keyEncode(start, encodeType));
 
             nextPage = getOrLoadPageForKey(start);
         }
@@ -551,7 +556,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
                     encodedKey = keyIterator.next();
                 }
                 if (encodedKey != null) {
-                    nextPage = getOrLoadPageForKey(keyCoder.keyDecode(encodedKey));
+                    nextPage = getOrLoadPageForKey(keyCoder.keyDecode(encodedKey, encodeType));
                 }
             }
         }
@@ -732,12 +737,12 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         int failedPages = 0;
         try {
             byte[] encodedKey = pages.firstKey();
-            K key = keyCoder.keyDecode(encodedKey);
+            K key = keyCoder.keyDecode(encodedKey, encodeType);
             do {
                 KeyValuePage<K, V> newPage = loadingPageCache.get(key);
                 byte[] encodedNextKey = pages.higherKey(encodedKey);
                 if (encodedNextKey != null) {
-                    K nextKey = keyCoder.keyDecode(encodedNextKey);
+                    K nextKey = keyCoder.keyDecode(encodedNextKey, encodeType);
                     K nextFirstKey = newPage.getNextFirstKey();
                     K firstKey = newPage.getFirstKey();
                     K lastKey = newPage.getLastKey();

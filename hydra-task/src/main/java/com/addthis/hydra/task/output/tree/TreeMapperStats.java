@@ -52,7 +52,7 @@ public class TreeMapperStats extends WrappingDynamicMBean {
         public long totalPackets;
         public int treeCacheSize;
         public double treeCacheHitRate;
-        public int treeDbCount;
+        public long treeDbCount;
         public long freeMemory;
         public String averageTimestamp;
         public long runningTime;

@@ -16,40 +16,37 @@
  */
 package com.addthis.hydra.store.db;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import javax.annotation.Nonnull;
+
+import java.util.Arrays;
 
 import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.Varint;
 
+import com.addthis.hydra.store.kv.PageEncodeType;
+import com.addthis.hydra.store.kv.TreeEncodeType;
 import com.addthis.hydra.store.util.Raw;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 
 public final class DBKey implements IPageDB.Key, Comparable<DBKey> {
 
     private static final Raw EMPTY = Raw.get(new byte[0]);
 
-    private final int id;
+    private final long id;
     private final Raw key;
 
-    public DBKey(byte[] raw) {
-        id = Bytes.toInt(raw, 0, 4);
-        key = Raw.get(Bytes.cut(raw, 4, raw.length - 4));
-    }
-
-    public DBKey(InputStream in) throws IOException {
-        this(Bytes.readInt(in), Raw.get(Bytes.readBytes(in)));
-    }
-
-    public DBKey(int id) {
+    public DBKey(long id) {
         this(id, (Raw) null);
     }
 
-    public DBKey(int id, String key) {
+    public DBKey(long id, String key) {
         this(id, Raw.get(key));
     }
 
-    public DBKey(int id, Raw key) {
+    public DBKey(long id, Raw key) {
         if (key == null) {
             key = EMPTY;
         }
@@ -57,7 +54,35 @@ public final class DBKey implements IPageDB.Key, Comparable<DBKey> {
         this.key = key;
     }
 
-    @Override public int id() {
+    public static DBKey fromBytes(byte[] raw, TreeEncodeType encodeType) {
+        int numBytes = encodeType.getBytes();
+        if (raw == null) {
+            throw new NullPointerException("input array to DBKey must be non-null");
+        } else if (raw.length < numBytes) {
+            throw new IllegalStateException("input array to DBKey has length "
+                                            + raw.length + " and must have at least length " + encodeType.getBytes());
+        }
+        long id = encodeType.getId(raw, 0, -1);
+        Raw key = Raw.get(Bytes.cut(raw, numBytes, raw.length - numBytes));
+        return new DBKey(id, key);
+    }
+
+    public static DBKey deltaDecode(byte[] encoding, @Nonnull IPageDB.Key baseKey) {
+        ByteBuf buffer = Unpooled.copiedBuffer(encoding);
+        long offset = Varint.readSignedVarLong(buffer);
+        long id = offset + baseKey.id();
+        Raw key;
+        if (buffer.readableBytes() == 0) {
+            key = null;
+        } else {
+            byte[] data = new byte[buffer.readableBytes()];
+            buffer.readBytes(data);
+            key = Raw.get(data);
+        }
+        return new DBKey(id, key);
+    }
+
+    @Override public long id() {
         return id;
     }
 
@@ -69,25 +94,13 @@ public final class DBKey implements IPageDB.Key, Comparable<DBKey> {
         return key;
     }
 
-    @Override public byte[] toBytes() {
-        if (key == null) {
-            return Bytes.toBytes(id);
-        }
-        return Raw.get(Bytes.toBytes(id)).cat(key).toBytes();
-    }
-
-    @Override public void writeOut(OutputStream out) throws IOException {
-        Bytes.writeInt(id, out);
-        Bytes.writeBytes(key.toBytes(), out);
-    }
-
     public String toString() {
         return id + ":" + key;
     }
 
     @Override
     public int hashCode() {
-        return key.hashCode() + id;
+        return key.hashCode() + Long.hashCode(id);
     }
 
     @Override
@@ -105,10 +118,29 @@ public final class DBKey implements IPageDB.Key, Comparable<DBKey> {
 
     @Override
     public int compareTo(DBKey dk) {
-        int dkId = dk.id();
+        long dkId = dk.id();
         if (dkId == id) {
             return key.compareTo(dk.key);
         }
         return id > dkId ? 1 : -1;
     }
+
+    @Override public byte[] toBytes(@Nonnull TreeEncodeType encodeType) {
+        byte[] idBytes  = encodeType.idToBytes(id);
+        if (key == null) {
+            return idBytes;
+        }
+        return Raw.get(idBytes).cat(key).toBytes();
+    }
+
+    @Override public byte[] deltaEncode(@Nonnull IPageDB.Key baseKey) {
+        long offset = id - baseKey.id();
+        ByteBuf buffer = Unpooled.buffer();
+        Varint.writeSignedVarLong(offset, buffer);
+        if (key != null) {
+            buffer.writeBytes(key.toBytes());
+        }
+        return Arrays.copyOf(buffer.array(), buffer.readableBytes());
+    }
+
 }

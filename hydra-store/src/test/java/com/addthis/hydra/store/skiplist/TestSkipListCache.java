@@ -30,6 +30,7 @@ import com.addthis.basis.util.Files;
 import com.addthis.hydra.store.DBIntValue;
 import com.addthis.hydra.store.kv.ByteStore;
 import com.addthis.hydra.store.kv.ConcurrentByteStoreBDB;
+import com.addthis.hydra.store.kv.TreeEncodeType;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -119,7 +120,8 @@ public class TestSkipListCache {
             directory = makeTemporaryDirectory();
             ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
             SkipListCache<Integer, DBIntValue> cache =
-                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 25, 0).build();
+                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 25,
+                                                TreeEncodeType.defaultType()).build();
             assertEquals(null, cache.get(Integer.MIN_VALUE));
             assertEquals(null, cache.get(0));
             assertEquals(null, cache.get(1));
@@ -145,7 +147,7 @@ public class TestSkipListCache {
             directory = makeTemporaryDirectory();
             ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
             SkipListCache<Integer, DBIntValue> cache =
-                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 25, 0).build();
+                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 25, TreeEncodeType.defaultType()).build();
 
             for (int i = 0; i < 10000; i++) {
                 assertEquals(null, cache.put(i, new DBIntValue(10000 - i)));
@@ -214,7 +216,7 @@ public class TestSkipListCache {
             directory = makeTemporaryDirectory();
             ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
             SkipListCache<Integer, DBIntValue> cache =
-                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 25, 0).build();
+                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 25, TreeEncodeType.defaultType()).build();
 
             for (int i = 0; i < elements; i++) {
                 assertEquals(null, cache.put(i, new DBIntValue(elements - i)));
@@ -262,7 +264,8 @@ public class TestSkipListCache {
             int[] threadId = new int[numElements];
             InsertionThread[] threads = new InsertionThread[numThreads];
             SkipListCache<Integer, DBIntValue> cache =
-                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, pageSize, maxPages).build();
+                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore,
+                                                pageSize, TreeEncodeType.defaultType()).maxPages(maxPages).build();
 
             if (maxPages == 0) {
                 cache.setOverrideDefaultMaxPages();
@@ -330,7 +333,8 @@ public class TestSkipListCache {
             int[] threadId = new int[numElements];
             InsertionThread[] threads = new InsertionThread[numThreads];
             SkipListCache<Integer, DBIntValue> cache =
-                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, pageSize, maxPages).build();
+                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore,
+                                                pageSize, TreeEncodeType.defaultType()).maxPages(maxPages).build();
 
             if (maxPages == 0) {
                 cache.setOverrideDefaultMaxPages();
@@ -398,7 +402,8 @@ public class TestSkipListCache {
             int[] threadId = new int[numElements];
             InsertionThread[] threads = new InsertionThread[numThreads];
             SkipListCache<Integer, DBIntValue> cache =
-                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, pageSize, maxPages).build();
+                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore,
+                                                pageSize, TreeEncodeType.defaultType()).maxPages(maxPages).build();
 
             if (maxPages == 0) {
                 cache.setOverrideDefaultMaxPages();
@@ -486,7 +491,8 @@ public class TestSkipListCache {
             int[] threadId = new int[numElements];
             InsertionThread[] threads = new InsertionThread[numThreads];
             SkipListCache<Integer, DBIntValue> cache =
-                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, pageSize, maxPages).build();
+                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore,
+                                                pageSize, TreeEncodeType.defaultType()).maxPages(maxPages).build();
 
             if (maxPages == 0) {
                 cache.setOverrideDefaultMaxPages();
@@ -555,7 +561,8 @@ public class TestSkipListCache {
             int[] threadId = new int[numElements];
             InsertionThread[] threads = new InsertionThread[numThreads];
             SkipListCache<Integer, DBIntValue> cache =
-                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, pageSize, Integer.MAX_VALUE).build();
+                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore,
+                                                pageSize, TreeEncodeType.defaultType()).maxPages(Integer.MAX_VALUE).build();
 
             for (int i = 0; i < numElements; i++) {
                 values.add(i);
@@ -620,7 +627,8 @@ public class TestSkipListCache {
             ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
 
             SkipListCache<Integer, DBIntValue> cache =
-                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 8, 50).build();
+                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore,
+                                                8, TreeEncodeType.defaultType()).maxPages(50).build();
 
             for (int i = 0; i < numElements; i++) {
                 values.add(i);
@@ -687,7 +695,8 @@ public class TestSkipListCache {
             ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
 
             SkipListCache<Integer, DBIntValue> cache =
-                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 8, 0).build();
+                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(),
+                                                externalStore, 8, TreeEncodeType.defaultType()).maxPages(0).build();
 
             cache.setOverrideDefaultMaxPages();
 
@@ -746,7 +755,8 @@ public class TestSkipListCache {
             ByteStore externalStore = new ConcurrentByteStoreBDB(directory, "db");
 
             SkipListCache<Integer, DBIntValue> cache =
-                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 8, Integer.MAX_VALUE).build();
+                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore,
+                                                8, TreeEncodeType.defaultType()).maxPages(Integer.MAX_VALUE).build();
 
 
             for (int i = 0; i < numElements; i++) {
@@ -764,7 +774,8 @@ public class TestSkipListCache {
 
             externalStore = new ConcurrentByteStoreBDB(directory, "db");
 
-            cache = new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, 8, Integer.MAX_VALUE).build();
+            cache = new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore,
+                                                8, TreeEncodeType.defaultType()).maxPages(Integer.MAX_VALUE).build();
 
             for (int i = 0; i < numElements; i++) {
                 assertEquals(new Integer(numElements - i), cache.get(i).getVal());

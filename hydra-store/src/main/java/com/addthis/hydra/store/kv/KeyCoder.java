@@ -14,19 +14,59 @@
 package com.addthis.hydra.store.kv;
 
 
-public interface KeyCoder<K, V> {
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-    enum EncodeType {LEGACY, SPARSE}
+public interface KeyCoder<K, V> {
 
     K negInfinity();
 
-    byte[] keyEncode(K key);
+    /**
+     * Unoptimized key encoding. Uses only the state of the key
+     * to generate byte array. The sorted order of two keys should
+     * be equal to the natural ordering of their corresponding byte arrays.
+     *
+     * @param key
+     * @return
+     */
+    byte[] keyEncode(@Nullable K key, @Nonnull TreeEncodeType encodeType);
 
-    byte[] valueEncode(V value, EncodeType encodeType);
+    /**
+     * Optimized key encoding. Can use the base key to generate
+     * a smaller byte array.
+     *
+     * @param key
+     * @param baseKey
+     * @param encodeType
+     * @return
+     */
+    byte[] keyEncode(@Nullable K key, @Nonnull K baseKey, @Nonnull PageEncodeType encodeType);
 
-    K keyDecode(byte[] key);
+    byte[] valueEncode(V value, PageEncodeType encodeType);
 
-    V valueDecode(byte[] value, EncodeType encodeType);
+    /**
+     * Unoptimized key encoding. Uses only the state of the
+     * byte array to generate the key. The sorted order of
+     * two keys should be equal to the natural ordering of
+     * their corresponding byte arrays.
+     *
+     * @param key
+     * @return
+     */
+    K keyDecode(byte[] key, @Nonnull TreeEncodeType encodeType);
+
+    /**
+     * Optimized key decoding. Can use the byte array
+     * and the base key to generate the key.
+     *
+     * @param key
+     * @param baseKey
+     * @param encodeType
+     * @return
+     */
+    K keyDecode(@Nullable byte[] key, @Nonnull K baseKey, @Nonnull PageEncodeType encodeType);
+
+    V valueDecode(byte[] value, @Nonnull PageEncodeType encodeType);
 
     /**
      * throws a NullPointerException if the input is null.

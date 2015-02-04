@@ -16,27 +16,27 @@ package com.addthis.hydra.store.skiplist;
 import java.util.ArrayList;
 
 import com.addthis.codec.codables.BytesCodable;
-import com.addthis.hydra.store.kv.KeyCoder.EncodeType;
+import com.addthis.hydra.store.kv.PageEncodeType;
 
 public abstract class PageFactory<K,V extends BytesCodable> {
 
-    abstract Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, EncodeType encodeType);
+    abstract Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType);
 
     abstract Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, int size,
             ArrayList<K> keys, ArrayList<V> values, ArrayList<byte[]> rawValues,
-            EncodeType encodeType);
+            PageEncodeType encodeType);
 
     public final Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
-            K firstKey, K nextFirstKey, EncodeType encodeType) {
+            K firstKey, K nextFirstKey, PageEncodeType encodeType) {
         return newPage(cache, firstKey, nextFirstKey, encodeType);
     }
 
     public final Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
-            K firstKey, EncodeType encodeType) {
+            K firstKey, PageEncodeType encodeType) {
         return newPage(cache, firstKey, null, encodeType);
     }
 
-    public final Page<K, V> measureMemoryEmptyPage(EncodeType encodeType) {
+    public final Page<K, V> measureMemoryEmptyPage(PageEncodeType encodeType) {
         return newPage(null, null, null, encodeType);
     }
 
@@ -44,7 +44,7 @@ public abstract class PageFactory<K,V extends BytesCodable> {
             K firstKey, K nextFirstKey,
             int size, ArrayList<K> keys,
             ArrayList<V> values,
-            ArrayList<byte[]> rawValues, EncodeType encodeType) {
+            ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
         return newPage(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
     }
 
