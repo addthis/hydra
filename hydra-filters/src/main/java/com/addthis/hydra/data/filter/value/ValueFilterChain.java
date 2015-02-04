@@ -14,6 +14,7 @@
 package com.addthis.hydra.data.filter.value;
 
 import com.addthis.bundle.value.ValueObject;
+import com.addthis.codec.annotations.FieldConfig;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -22,10 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p/>
  * <p>By default the first filter to return null terminates the chain.
  * This can be overridden for the entire chain by setting {@link #nullStop nullStop}
- * to <code>false</code>. It can also be overridden by individual filters by setting
- * {@link #nullAccept nullAccept} to <code>true</code>.
- * Setting 'nullAccept' to <code>true</code> will cause a filter to be executed
- * regardless of the chain 'nullStop' setting.
+ * to {@code false}.
  * <p/>
  * <p>Example:</p>
  * <pre>
@@ -38,16 +36,21 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class ValueFilterChain extends AbstractValueFilter {
 
-    /**
-     * The value filters to be performed in a chain.
-     */
+    /** The value filters to be performed in a chain. */
     @JsonProperty(required = true)
     private ValueFilter[] filter;
+
+    /** If true, then terminate chain on first null output. Default is true. */
+    @FieldConfig(codable = true)
+    private boolean nullStop = true;
 
     @Override
     public ValueObject filterValue(ValueObject value) {
         for (ValueFilter f : filter) {
             value = f.filter(value);
+            if ((value == null) && nullStop) {
+                return null;
+            }
         }
         return value;
     }
