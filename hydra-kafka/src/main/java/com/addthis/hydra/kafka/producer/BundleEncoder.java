@@ -12,6 +12,10 @@ import kafka.serializer.Encoder;
  */
 public class BundleEncoder implements Encoder<Bundle> {
 
+    public BundleEncoder() {
+        // needed by kafka
+    }
+
     @Override
     public byte[] toBytes(Bundle bundle) {
         try {
