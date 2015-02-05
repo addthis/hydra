@@ -206,6 +206,23 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         meter.inc(meterval);
     }
 
+    /**
+     * This method is only for testing purposes.
+     * It has a built in safeguard but nonetheless
+     * it should not be invoked for other purposes.
+     */
+    @VisibleForTesting
+    boolean setNextNodeDB(long id) {
+        while (true) {
+            long current = nextDBID.get();
+            if (current > id) {
+                return false;
+            } else if (nextDBID.compareAndSet(current, id)) {
+                return true;
+            }
+        }
+    }
+
     long getNextNodeDB() {
         long nextValue = nextDBID.incrementAndGet();
         if (nextValue > encodeType.getMax()) {
@@ -777,6 +794,10 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         if (store instanceof SkipListCache) {
             ((SkipListCache) store).testIntegrity(true);
         }
+    }
+
+    public TreeEncodeType getEncodeType() {
+        return encodeType;
     }
 
 }

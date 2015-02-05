@@ -112,7 +112,7 @@ public class Page<K, V extends BytesCodable> {
     private int memoryEstimate;
 
     @GuardedBy("lock")
-    private PageEncodeType encodeType;
+    protected PageEncodeType encodeType;
 
     protected static final int ESTIMATES_BIT_OFFSET = 4;
     protected static final int TYPE_BIT_OFFSET = 5;
@@ -562,6 +562,11 @@ public class Page<K, V extends BytesCodable> {
                 ArrayList<V> values, ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
             return new Page(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
         }
+
+        public TreeEncodeType defaultEncodeType() {
+            return TreeEncodeType.defaultType();
+        }
+
     }
 }
 

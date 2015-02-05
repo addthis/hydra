@@ -17,6 +17,7 @@ import java.util.ArrayList;
 
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.PageEncodeType;
+import com.addthis.hydra.store.kv.TreeEncodeType;
 
 public abstract class PageFactory<K,V extends BytesCodable> {
 
@@ -48,4 +49,5 @@ public abstract class PageFactory<K,V extends BytesCodable> {
         return newPage(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
     }
 
+    public abstract TreeEncodeType defaultEncodeType();
 }

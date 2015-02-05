@@ -10,7 +10,7 @@ import com.addthis.basis.util.Bytes;
 
 public enum TreeEncodeType {
     BIT32(32, Integer.MAX_VALUE, "SPARSE"),
-    BIT64(64, Integer.MAX_VALUE, "LONGIDS");
+    BIT64(64, Long.MAX_VALUE, "LONGIDS");
 
     private final int bits;
 

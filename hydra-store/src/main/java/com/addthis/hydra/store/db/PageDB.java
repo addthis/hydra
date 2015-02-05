@@ -114,7 +114,7 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
          * If we are using the legacy format then create the encoding file.
          */
         if (isDirEmpty(dir)) {
-            encodeType = TreeEncodeType.defaultType();
+            encodeType = factory.defaultEncodeType();
             File pageTypeFile = new File(dir, TREE_TYPE_FILENAME);
             Files.write(pageTypeFile, Bytes.toBytes(encodeType.toString()), false);
         } else {
