@@ -9,11 +9,16 @@ import org.I0Itec.zkclient.ZkClient;
 import kafka.cluster.Broker;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.ProducerConfig;
+import kafka.utils.ZKStringSerializer$;
 import kafka.utils.ZkUtils;
 import scala.collection.Iterator;
 import scala.collection.Seq;
 
 public class ProducerUtils {
+
+    public static ZkClient newZkClient(String zookeeper) {
+        return new ZkClient(zookeeper, 30*1000, 30*1000, ZKStringSerializer$.MODULE$);
+    }
 
     public static String brokerListString(Seq<Broker> brokers) {
         Iterator<Broker> butwhowasforeach = brokers.iterator();
@@ -32,7 +37,7 @@ public class ProducerUtils {
 
     public static ProducerConfig defaultConfig(String zookeeper, Properties overrides) {
         Properties properties = new Properties();
-        ZkClient zkClient = new ZkClient(zookeeper);
+        ZkClient zkClient = newZkClient(zookeeper);
         Seq<Broker> brokers = ZkUtils.getAllBrokersInCluster(zkClient);
         zkClient.close();
         properties.put("metadata.broker.list", brokerListString(brokers));
