@@ -70,9 +70,4 @@ public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
         return dbIntValue;
     }
 
-    @Override
-    public boolean nullRawValueInternal(byte[] value) {
-        return value.length == 0;
-    }
-
 }

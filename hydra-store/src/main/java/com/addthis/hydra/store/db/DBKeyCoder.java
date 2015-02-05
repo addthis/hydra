@@ -46,18 +46,16 @@ class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
         this.clazz = clazz;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public DBKey negInfinity() {
         return new DBKey(0, (Raw) null);
     }
 
     /**
-     * Unoptimized key encoding. Uses only the state of the key
-     * to generate byte array. The sorted order of two keys should
-     * be equal to the natural ordering of their corresponding byte arrays.
-     *
-     * @param key
-     * @return
+     * {@inheritDoc}
      */
     @Override
     public byte[] keyEncode(DBKey key, @Nonnull TreeEncodeType encodeType) {
@@ -69,13 +67,7 @@ class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
     }
 
     /**
-     * Optimized key encoding. Can use the base key to generate
-     * a smaller byte array.
-     *
-     * @param key
-     * @param baseKey
-     * @param encodeType
-     * @return
+     * {@inheritDoc}
      */
     @Override
     public byte[] keyEncode(@Nullable DBKey key, @Nonnull DBKey baseKey, @Nonnull PageEncodeType encodeType) {
@@ -93,6 +85,9 @@ class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public byte[] valueEncode(V value, @Nonnull PageEncodeType encodeType) {
         try {
@@ -115,13 +110,7 @@ class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
     }
 
     /**
-     * Unoptimized key encoding. Uses only the state of the
-     * byte array to generate the key. The sorted order of
-     * two keys should be equal to the natural ordering of
-     * their corresponding byte arrays.
-     *
-     * @param key
-     * @return
+     * {@inheritDoc}
      */
     @Override
     public DBKey keyDecode(byte[] key, @Nonnull TreeEncodeType encodeType) {
@@ -133,13 +122,7 @@ class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
     }
 
     /**
-     * Optimized key decoding. Can use the byte array
-     * and the base key to generate the key.
-     *
-     * @param key
-     * @param baseKey
-     * @param encodeType
-     * @return
+     * {@inheritDoc}
      */
     @Override
     public DBKey keyDecode(@Nullable byte[] key, @Nonnull DBKey baseKey, @Nonnull PageEncodeType encodeType) {
@@ -158,6 +141,9 @@ class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public V valueDecode(byte[] value, @Nonnull PageEncodeType encodeType) {
 
@@ -180,11 +166,6 @@ class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    @Override
-    public boolean nullRawValueInternal(byte[] value) {
-        return codec.storesNull(value);
     }
 
     @Override

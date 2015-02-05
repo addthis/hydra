@@ -55,9 +55,4 @@ class SimpleStringKeyCoder implements KeyCoder<String, DBValue> {
         return new DBValue(new String(value));
     }
 
-    @Override
-    public boolean nullRawValueInternal(byte[] value) {
-        throw new UnsupportedOperationException();
-    }
-
 }

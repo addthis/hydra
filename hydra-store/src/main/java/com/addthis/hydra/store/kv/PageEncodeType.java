@@ -1,3 +1,16 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.addthis.hydra.store.kv;
 
 import javax.annotation.Nonnull;
@@ -18,6 +31,9 @@ public enum PageEncodeType {
     SPARSE("BIT32", "SPARSE"),
     LONGIDS("BIT64", "LONGIDS");
 
+    /**
+     * Tree encoding type that is associated with this page encoding type.
+     */
     private TreeEncodeType treeType;
 
     /**
@@ -39,9 +55,9 @@ public enum PageEncodeType {
     /**
      * Reads the next integer from the input stream.
      *
-     * @param in
-     * @param dis
-     * @return
+     * @param in   input stream
+     * @param dis  possible data input stream wrapping the input stream
+     * @return integer value
      * @throws IOException
      */
     public int readInt(@Nullable InputStream in, @Nullable DataInputStream dis) throws IOException {
@@ -60,9 +76,9 @@ public enum PageEncodeType {
 
     /**
      * Reads the next byte array from input stream.
-     * @param in
-     * @param dis
-     * @return
+     * @param in  input stream
+     * @param dis possible data input stream wrapping the input stream
+     * @return byte array
      * @throws IOException
      */
     public byte[] readBytes(@Nonnull InputStream in, @Nullable DataInputStream dis) throws IOException {
@@ -78,6 +94,13 @@ public enum PageEncodeType {
         }
     }
 
+    /**
+     * Retrieves the next first key from a page.
+     * @param in  input stream
+     * @param dis possible data input stream wrapping the input stream
+     * @return encoded next first key
+     * @throws IOException
+     */
     public byte[] nextFirstKey(@Nonnull InputStream in, @Nullable DataInputStream dis) throws IOException {
         switch (this) {
             case LEGACY:
@@ -97,6 +120,13 @@ public enum PageEncodeType {
         }
     }
 
+    /**
+     * Read a node identifier that is encoded in the values of a page.
+     *
+     * @param buf
+     * @param version
+     * @return
+     */
     public static long readNodeId(ByteBuf buf, long version) {
         if (version <= SPARSE.ordinal()) {
             return (long) Varint.readSignedVarInt(buf);
@@ -105,6 +135,13 @@ public enum PageEncodeType {
         }
     }
 
+    /**
+     * Write a node identifer that is encoded in the values of a page.
+     *
+     * @param buf
+     * @param version
+     * @param nodedb
+     */
     public static void writeNodeId(ByteBuf buf, long version, Long nodedb) {
         if (version <= PageEncodeType.SPARSE.ordinal()) {
             Varint.writeSignedVarInt(nodedb == null ? -1 : nodedb.intValue(), buf);

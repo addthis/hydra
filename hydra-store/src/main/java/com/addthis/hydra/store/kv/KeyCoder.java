@@ -19,6 +19,11 @@ import javax.annotation.Nullable;
 
 public interface KeyCoder<K, V> {
 
+    /**
+     * Returns the smallest possible key value.
+     *
+     * @return
+     */
     K negInfinity();
 
     /**
@@ -26,8 +31,9 @@ public interface KeyCoder<K, V> {
      * to generate byte array. The sorted order of two keys should
      * be equal to the natural ordering of their corresponding byte arrays.
      *
-     * @param key
-     * @return
+     * @param key           input to encode
+     * @param encodeType    type of tree encoding to apply to keys
+     * @return key serialization to byte array
      */
     byte[] keyEncode(@Nullable K key, @Nonnull TreeEncodeType encodeType);
 
@@ -35,13 +41,21 @@ public interface KeyCoder<K, V> {
      * Optimized key encoding. Can use the base key to generate
      * a smaller byte array.
      *
-     * @param key
-     * @param baseKey
-     * @param encodeType
-     * @return
+     * @param key           input to encode
+     * @param baseKey       another key value that can be used for delta encoding
+     * @param encodeType    type of page encoding to apply to key
+     *
+     * @return key serialization to byte array
      */
     byte[] keyEncode(@Nullable K key, @Nonnull K baseKey, @Nonnull PageEncodeType encodeType);
 
+    /**
+     * Value encoding.
+     *
+     * @param value         input to encode
+     * @param encodeType    type of page encoding to apply to value
+     * @return value serialization to byte array
+     */
     byte[] valueEncode(V value, PageEncodeType encodeType);
 
     /**
@@ -50,8 +64,9 @@ public interface KeyCoder<K, V> {
      * two keys should be equal to the natural ordering of
      * their corresponding byte arrays.
      *
-     * @param key
-     * @return
+     * @param key           serialization of byte array
+     * @param encodeType    type of tree decoding to apply to key
+     * @return deserialized key
      */
     K keyDecode(byte[] key, @Nonnull TreeEncodeType encodeType);
 
@@ -59,20 +74,20 @@ public interface KeyCoder<K, V> {
      * Optimized key decoding. Can use the byte array
      * and the base key to generate the key.
      *
-     * @param key
-     * @param baseKey
-     * @param encodeType
-     * @return
+     * @param key           serialization of byte array
+     * @param baseKey       another key value that can be used for delta decoding
+     * @param encodeType    type of page encoding to apply to key
+     * @return deserialized key
      */
     K keyDecode(@Nullable byte[] key, @Nonnull K baseKey, @Nonnull PageEncodeType encodeType);
 
+    /**
+     * Value decoding.
+     *
+     * @param value         input to decode
+     * @param encodeType    type of page decoding to apply to value
+     * @return deserialized value
+     */
     V valueDecode(byte[] value, @Nonnull PageEncodeType encodeType);
 
-    /**
-     * throws a NullPointerException if the input is null.
-     *
-     * @param value a non-null value
-     * @return true if-and-only-if the input encodes the null value.
-     */
-    boolean nullRawValueInternal(byte[] value);
 }
