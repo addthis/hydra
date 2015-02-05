@@ -44,7 +44,7 @@ public class ProducerUtils {
         properties.put("request.required.acks", "1");
         properties.put("producer.type", "async");
         properties.put("compression.codec", "gzip");
-        properties.put("queue.buffering.max.messages", "0");
+        properties.put("queue.enqueue.timeout.ms", "0");
         for(Object name : Collections.list(overrides.propertyNames())) {
             properties.put(name, overrides.get(name));
         }
