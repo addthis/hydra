@@ -6,13 +6,14 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.io.DataChannelCodec;
 
 import kafka.serializer.Encoder;
+import kafka.utils.VerifiableProperties;
 
 /**
  * Created by steve on 2/3/15.
  */
 public class BundleEncoder implements Encoder<Bundle> {
 
-    public BundleEncoder() {
+    public BundleEncoder(VerifiableProperties soUseful) {
         // needed by kafka
     }
 
