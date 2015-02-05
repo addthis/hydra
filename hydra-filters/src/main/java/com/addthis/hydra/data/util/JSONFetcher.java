@@ -13,8 +13,6 @@
  */
 package com.addthis.hydra.data.util;
 
-import java.io.IOException;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
@@ -25,6 +23,8 @@ import com.addthis.basis.util.Strings;
 import com.addthis.hydra.data.filter.value.ValueFilterHttpGet;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
+
+import com.google.common.base.Throwables;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,7 +85,7 @@ public class JSONFetcher {
     }
 
     public HashMap<String, String> loadMap(String mapURL) {
-        return loadMap(mapURL, new HashMap<String, String>());
+        return loadMap(mapURL, new HashMap<>());
     }
 
     /**
@@ -96,34 +96,27 @@ public class JSONFetcher {
      * @return string/string map
      */
     public HashMap<String, String> loadMap(String mapURL, HashMap<String, String> map) {
-        int retry = retries;
-        while (true) {
-            try {
-                byte[] raw = retrieveBytes(mapURL);
-                String kv = Bytes.toString(raw).trim();
-                if (!(kv.startsWith("{") && kv.endsWith("}"))) {
-                    kv = Strings.cat("{", kv, "}");
-                }
-                JSONObject o = new JSONObject(kv);
-                if (map == null) {
-                    map = new HashMap<>();
-                }
-                for (String key : o.keySet()) {
-                    map.put(key, o.optString(key));
-                }
-                return map;
-            } catch (Exception e) {
-                if (retry-- > 0) {
-                    log.warn("fetch err on " + mapURL + ". retries=" + retry + ". err=" + e);
-                    continue;
-                }
-                throw new RuntimeException(e);
+        try {
+            byte[] raw = retrieveBytes(mapURL);
+            String kv = Bytes.toString(raw).trim();
+            if (!(kv.startsWith("{") && kv.endsWith("}"))) {
+                kv = Strings.cat("{", kv, "}");
             }
+            JSONObject o = new JSONObject(kv);
+            if (map == null) {
+                map = new HashMap<>();
+            }
+            for (String key : o.keySet()) {
+                map.put(key, o.optString(key));
+            }
+            return map;
+        } catch (Exception e) {
+            throw Throwables.propagate(e);
         }
     }
 
     public HashSet<String> loadSet(String mapURL) {
-        return loadSet(mapURL, new HashSet<String>());
+        return loadSet(mapURL, new HashSet<>());
     }
 
     /**
@@ -134,60 +127,58 @@ public class JSONFetcher {
      * @return string set
      */
     public HashSet<String> loadCSVSet(String mapURL, HashSet<String> set) {
-        int retry = retries;
-        while (true) {
-            try {
-                byte[] raw = retrieveBytes(mapURL);
-                String list = Bytes.toString(raw);
+        try {
+            byte[] raw = retrieveBytes(mapURL);
+            String list = Bytes.toString(raw);
 
-                if (set == null) {
-                    set = new HashSet<>();
-                }
-
-                Scanner in = new Scanner(list);
-
-                while (in.hasNext()) {
-                    set.add(in.nextLine().replaceAll("^\"|\"$", ""));
-                }
-
-                return set;
-            } catch (Exception e) {
-                if (retry-- > 0) {
-                    log.warn("fetch err on " + mapURL + ". retries=" + retry + ". err=" + e);
-                    continue;
-                }
-                throw new RuntimeException(e);
+            if (set == null) {
+                set = new HashSet<>();
             }
+
+            Scanner in = new Scanner(list);
+
+            while (in.hasNext()) {
+                set.add(in.nextLine().replaceAll("^\"|\"$", ""));
+            }
+
+            return set;
+        } catch (Exception e) {
+            throw Throwables.propagate(e);
         }
     }
 
     public JSONArray loadJSONArray(String mapURL) {
-        int retry = retries;
-        while (true) {
-            try {
-                byte[] raw = retrieveBytes(mapURL);
-                String list = Bytes.toString(raw);
-                if (!(list.startsWith("[") && list.endsWith("]"))) {
-                    list = Strings.cat("[", list, "]");
-                }
-                JSONArray array = new JSONArray(list);
-                return array;
-            } catch (Exception e) {
-                if (retry-- > 0) {
-                    log.warn("fetch err on " + mapURL + ". retries=" + retry + ". err=" + e);
-                    continue;
-                }
-                throw new RuntimeException(e);
+        try {
+            byte[] raw = retrieveBytes(mapURL);
+            String list = Bytes.toString(raw);
+            if (!(list.startsWith("[") && list.endsWith("]"))) {
+                list = Strings.cat("[", list, "]");
             }
+            JSONArray array = new JSONArray(list);
+            return array;
+        } catch (Exception e) {
+            throw Throwables.propagate(e);
         }
     }
 
-    private byte[] retrieveBytes(String mapURL) throws IOException {
-        byte[] raw = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
-        if (raw == null) {
-            throw new IllegalArgumentException("No data found at url " + mapURL);
+    private byte[] retrieveBytes(String mapURL) {
+        int retry = retries;
+        while (true) {
+            try {
+                byte[] raw = ValueFilterHttpGet.httpGet(mapURL, null, null, timeout, trace);
+                if (raw == null) {
+                    throw new IllegalArgumentException("No data found at url " + mapURL);
+                }
+                return raw;
+            } catch (Exception e) {
+                log.warn("fetch err on {} for retry {} max retries is {} err is: ",
+                         mapURL, (retries - retry), retries, e);
+                if (retry-- > 0) {
+                    continue;
+                }
+                throw Throwables.propagate(e);
+            }
         }
-        return raw;
     }
 
     /**
@@ -198,29 +189,22 @@ public class JSONFetcher {
      * @return string set
      */
     public HashSet<String> loadSet(String mapURL, HashSet<String> set) {
-        int retry = retries;
-        while (true) {
-            try {
-                byte[] raw = retrieveBytes(mapURL);
-                String list = Bytes.toString(raw);
-                if (!(list.startsWith("[") && list.endsWith("]"))) {
-                    list = Strings.cat("[", list, "]");
-                }
-                JSONArray o = new JSONArray(list);
-                if (set == null) {
-                    set = new HashSet<>();
-                }
-                for (int i = 0; i < o.length(); i++) {
-                    set.add(o.getString(i));
-                }
-                return set;
-            } catch (Exception e) {
-                if (retry-- > 0) {
-                    log.warn("fetch err on " + mapURL + ". retries=" + retry + ". err=" + e);
-                    continue;
-                }
-                throw new RuntimeException(e);
+        try {
+            byte[] raw = retrieveBytes(mapURL);
+            String list = Bytes.toString(raw);
+            if (!(list.startsWith("[") && list.endsWith("]"))) {
+                list = Strings.cat("[", list, "]");
             }
+            JSONArray o = new JSONArray(list);
+            if (set == null) {
+                set = new HashSet<>();
+            }
+            for (int i = 0; i < o.length(); i++) {
+                set.add(o.getString(i));
+            }
+            return set;
+        } catch (Exception e) {
+            throw Throwables.propagate(e);
         }
     }
 }
