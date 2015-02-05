@@ -225,9 +225,9 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     long getNextNodeDB() {
         long nextValue = nextDBID.incrementAndGet();
-        if (nextValue > encodeType.getMax()) {
+        if (nextValue >= encodeType.getMax()) {
             throw new IllegalStateException("The next node identifier " + nextValue +
-                                            " is greater than the allowed max value of " + encodeType.getMax());
+                                            " is greater than or equal to the allowed max value of " + encodeType.getMax());
         }
         return nextValue;
     }
