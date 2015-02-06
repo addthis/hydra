@@ -24,7 +24,8 @@ import com.google.common.collect.ImmutableSet;
 
 public enum JobTaskState {
     IDLE(0), BUSY(1), ERROR(2), ALLOCATED(3), BACKUP(4), REPLICATE(5),
-    UNKNOWN(6), REBALANCE(7), REVERT(8), QUEUED_HOST_UNAVAIL(9), SWAPPING(10), QUEUED(11), MIGRATING(12), FULL_REPLICATE(13);
+    UNKNOWN(6), REBALANCE(7), REVERT(8), QUEUED_HOST_UNAVAIL(9), SWAPPING(10),
+    QUEUED(11), MIGRATING(12), FULL_REPLICATE(13), QUEUED_NO_SLOT(14);
 
     private final int value;
 
@@ -36,12 +37,13 @@ public enum JobTaskState {
         }
     }
 
-    private static final Set<JobTaskState> inactiveStates = ImmutableSet.of(IDLE, ERROR, UNKNOWN, QUEUED_HOST_UNAVAIL, QUEUED);
+    private static final Set<JobTaskState> inactiveStates = ImmutableSet.of(IDLE, ERROR, UNKNOWN, QUEUED_HOST_UNAVAIL, QUEUED, QUEUED_NO_SLOT);
+    private static final Set<JobTaskState> queuedStates   = ImmutableSet.of(QUEUED_HOST_UNAVAIL, QUEUED, QUEUED_NO_SLOT);
     private static final Map<JobTaskState, Set<JobTaskState>> transitions;
 
     static {
         transitions = new HashMap<>();
-        transitions.put(IDLE, EnumSet.of(ALLOCATED, BACKUP, REPLICATE, REBALANCE, REVERT, BUSY, QUEUED_HOST_UNAVAIL, SWAPPING, QUEUED, FULL_REPLICATE));
+        transitions.put(IDLE, EnumSet.of(ALLOCATED, BACKUP, REPLICATE, REBALANCE, REVERT, BUSY, QUEUED_HOST_UNAVAIL, SWAPPING, QUEUED, FULL_REPLICATE, QUEUED_NO_SLOT));
         transitions.put(ALLOCATED, EnumSet.of(IDLE, BUSY, ERROR, FULL_REPLICATE, REPLICATE, BACKUP, REBALANCE));
         transitions.put(BUSY, EnumSet.of(IDLE, REPLICATE, BACKUP, ERROR));
         transitions.put(REPLICATE, EnumSet.of(IDLE, BACKUP, ERROR, REBALANCE));
@@ -51,8 +53,9 @@ public enum JobTaskState {
         transitions.put(REBALANCE, EnumSet.of(IDLE, FULL_REPLICATE, REPLICATE, QUEUED, ERROR));
         transitions.put(REVERT, EnumSet.of(IDLE, FULL_REPLICATE, REPLICATE));
         transitions.put(QUEUED_HOST_UNAVAIL, EnumSet.of(IDLE, QUEUED));
+        transitions.put(QUEUED_NO_SLOT, EnumSet.of(IDLE, QUEUED, QUEUED_HOST_UNAVAIL));
         transitions.put(SWAPPING, EnumSet.of(IDLE, ERROR));
-        transitions.put(QUEUED, EnumSet.of(IDLE, QUEUED_HOST_UNAVAIL, ALLOCATED, SWAPPING, ERROR, FULL_REPLICATE));
+        transitions.put(QUEUED, EnumSet.of(IDLE, QUEUED_HOST_UNAVAIL, ALLOCATED, SWAPPING, ERROR, FULL_REPLICATE, QUEUED_NO_SLOT));
         transitions.put(MIGRATING, EnumSet.of(IDLE, FULL_REPLICATE, REPLICATE, QUEUED, ERROR));
         transitions.put(FULL_REPLICATE, EnumSet.of(IDLE, BACKUP, ERROR, REBALANCE));
     }
@@ -63,6 +66,10 @@ public enum JobTaskState {
 
     public boolean isActiveState() {
         return !inactiveStates.contains(this);
+    }
+
+    public boolean isQueuedState() {
+        return queuedStates.contains(this);
     }
 
     public boolean canTransition(JobTaskState state) {

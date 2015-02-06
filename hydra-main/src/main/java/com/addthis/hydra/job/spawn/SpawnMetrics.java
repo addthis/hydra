@@ -26,6 +26,7 @@ import static com.addthis.hydra.util.SettableGauge.newSettableGauge;
 public final class SpawnMetrics {
     static final SettableGauge<Integer> runningTaskCount = newSettableGauge(Spawn.class, "runningTasks", 0);
     static final SettableGauge<Integer> queuedTaskCount = newSettableGauge(Spawn.class, "queuedTasks", 0);
+    static final SettableGauge<Integer> queuedTaskNoSlotCount = newSettableGauge(Spawn.class, "queuedTasksNoSlot", 0);
     static final SettableGauge<Integer> failTaskCount = newSettableGauge(Spawn.class, "failedTasks", 0);
     static final SettableGauge<Integer> runningJobCount = newSettableGauge(Spawn.class, "runningJobs", 0);
     static final SettableGauge<Integer> queuedJobCount = newSettableGauge(Spawn.class, "queuedJobs", 0);

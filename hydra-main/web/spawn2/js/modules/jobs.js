@@ -671,6 +671,7 @@ function(
         defaults:{
             tasksCount:0,
             queuedCount:0,
+            queuedCountNoSlot:0,
             erroredCount:0,
             queuedErrorCount:0,
             runningCount:0,
@@ -774,7 +775,8 @@ function(
             this.set("jobCount",this.get("jobCount")-1);
         },
         handleTaskQueueChange:function(data){
-            this.set("queuedCount",data.size-data.sizeErr);
+            this.set("queuedCount",data.size - data.sizeErr);
+            this.set("queuedCountNoSlot",data.sizeSlot);
             this.set("queuedErrorCount",data.sizeErr);
         },
         handleJobReset:function(){

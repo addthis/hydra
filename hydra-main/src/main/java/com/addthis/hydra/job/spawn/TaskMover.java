@@ -96,7 +96,7 @@ class TaskMover {
             return false;
         }
         // If the task was rebalanced out of queued state, kick it again when the rebalance completes.
-        kickOnComplete = task.getState() == JobTaskState.QUEUED || task.getState() == JobTaskState.QUEUED_HOST_UNAVAIL;
+        kickOnComplete = task.getState().isQueuedState();
         if (!spawn.prepareTaskStatesForRebalance(job, task, isMigration)) {
             log.warn("[task.mover] couldn't set task states; terminating for: " + taskKey);
             return false;
