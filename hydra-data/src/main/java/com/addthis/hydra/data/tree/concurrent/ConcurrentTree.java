@@ -137,9 +137,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     ConcurrentTree(File root, int numDeletionThreads, int cleanQSize, int maxCacheSize,
                    int maxPageSize, PageFactory factory) throws Exception {
-        if (!root.isDirectory() && !root.mkdirs()) {
-            throw new IOException("Unable to open or create root directory '" + root + "'");
-        }
+        Files.initDirectory(root);
         this.root = root;
         long start = System.currentTimeMillis();
 
