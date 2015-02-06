@@ -181,7 +181,7 @@ public class BundleFilterEvalJava implements BundleFilter, SuperCodable {
         }
         classDecl.append("public class ");
         classDecl.append(className);
-        classDecl.append(" extends BundleFilter\n");
+        classDecl.append(" implements BundleFilter\n");
         classDecl.append("{\n");
         createConstructor(classDecl, className);
         createFieldsVariable(classDecl);
@@ -265,7 +265,7 @@ public class BundleFilterEvalJava implements BundleFilter, SuperCodable {
         if (typeBundle) {
             classDecl.append("Bundle " + variables[0] + " = __bundle;\n");
         } else {
-            classDecl.append("BundleField[] __bound = getBindings(__bundle, __fields);\n");
+            classDecl.append("BundleField[] __bound = BundleFilter.getBindings(__bundle, __fields);\n");
 
             for (int i = 0; i < variables.length; i++) {
                 InputType type = types[i];
