@@ -38,7 +38,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, Co
     protected long hits;
     @FieldConfig(codable = true)
     protected int nodes;
-    @FieldConfig(codable = true)
+    @FieldConfig(codable = true, narrow = true)
     protected volatile Long nodedb;
     @FieldConfig(codable = true)
     protected int bits;
