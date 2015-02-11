@@ -132,16 +132,6 @@ public class BundleFilterAppend implements BundleFilter {
     @FieldConfig(codable = true)
     private int size = 5;
 
-    private boolean contains(ValueArray arr, ValueObject obj) {
-        for (int i = 0; i < arr.size(); i++) {
-            ValueObject ao = arr.get(i);
-            if (ao != null && obj != null) {
-                return ao == obj || ao.equals(obj);
-            }
-        }
-        return false;
-    }
-
     @Override
     public boolean filter(Bundle bundle) {
         ValueObject toVal = to.getValue(bundle);
@@ -162,7 +152,7 @@ public class BundleFilterAppend implements BundleFilter {
         if (values != null) {
             for (String value : values) {
                 ValueString str = ValueFactory.create(value);
-                if (!unique || !contains(arr, str)) {
+                if (!unique || !arr.contains(str)) {
                     arr.add(str);
                 }
             }
@@ -176,11 +166,11 @@ public class BundleFilterAppend implements BundleFilter {
             if (fromVal != null) {
                 if (fromVal.getObjectType() == ValueObject.TYPE.ARRAY) {
                     for (ValueObject element : fromVal.asArray()) {
-                        if (!unique || !contains(arr, element)) {
+                        if (!unique || !arr.contains(element)) {
                             arr.add(element);
                         }
                     }
-                } else if (!unique || !contains(arr, fromVal)) {
+                } else if (!unique || !arr.contains(fromVal)) {
                     arr.add(fromVal);
                 }
             }

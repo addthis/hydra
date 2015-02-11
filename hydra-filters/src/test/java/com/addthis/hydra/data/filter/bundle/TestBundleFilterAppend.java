@@ -13,19 +13,34 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
+import java.io.IOException;
+
+import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.Bundles;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.map.MapBundle;
+import com.addthis.codec.config.Configs;
 
 import com.google.common.collect.Sets;
 
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * FIXME: These depends depend on hash order
  */
 public class TestBundleFilterAppend {
+
+    @Test
+    public void unique() throws IOException {
+        BundleFilterAppend bfa = Configs.decodeObject(BundleFilterAppend.class, "from: F, to: T, unique: true");
+        Bundle bundle = Bundles.decode("T: C, F: [A, B, C]");
+        bfa.filter(bundle);
+        Bundle targetBundle = Bundles.decode("T: [C, A, B], F: [A, B, C]");
+        assertTrue(Bundles.equals(bundle, targetBundle));
+    }
 
     @Test
     public void fieldTest() {
