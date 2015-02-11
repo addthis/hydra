@@ -23,7 +23,6 @@ import com.addthis.basis.util.Files;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.prop.DataTime;
 import com.addthis.hydra.store.db.CloseOperation;
-import com.addthis.hydra.store.kv.TreeEncodeType;
 import com.addthis.hydra.store.skiplist.LegacyPage;
 import com.addthis.hydra.store.skiplist.Page;
 
@@ -61,7 +60,6 @@ public class TestTreeSerializationVersions {
             ConcurrentTree tree = new Builder(dir).
                     pageFactory(LegacyPage.LegacyPageFactory.singleton).build();
             ConcurrentTreeNode root = tree.getRootNode();
-            assertEquals(TreeEncodeType.BIT32, tree.getEncodeType());
             /**
              * write count nodes that have a time data attachment. Use the legacy page encoding.
              */
@@ -79,7 +77,6 @@ public class TestTreeSerializationVersions {
             tree.close(false, close);
             tree = new Builder(dir).
                     pageFactory(Page.DefaultPageFactory.singleton).build();
-            assertEquals(TreeEncodeType.BIT32, tree.getEncodeType());
             /**
              * Sanity check. Read the count notes and look for the data attachment.
              */
@@ -99,7 +96,6 @@ public class TestTreeSerializationVersions {
             tree.close(false, close);
             tree = new Builder(dir).
                     pageFactory(Page.DefaultPageFactory.singleton).build();
-            assertEquals(TreeEncodeType.BIT32, tree.getEncodeType());
             /**
              * Only on even nodes update the data attachment.
              * Use the new page encoding.
@@ -119,7 +115,6 @@ public class TestTreeSerializationVersions {
             tree.close(false, close);
             tree = new Builder(dir).
                     pageFactory(Page.DefaultPageFactory.singleton).build();
-            assertEquals(TreeEncodeType.BIT32, tree.getEncodeType());
             /**
              * Read all the nodes and verify that the data attachments are correct.
              */

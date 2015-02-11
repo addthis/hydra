@@ -32,10 +32,9 @@ public interface KeyCoder<K, V> {
      * be equal to the natural ordering of their corresponding byte arrays.
      *
      * @param key           input to encode
-     * @param encodeType    type of tree encoding to apply to keys
      * @return key serialization to byte array
      */
-    byte[] keyEncode(@Nullable K key, @Nonnull TreeEncodeType encodeType);
+    byte[] keyEncode(@Nullable K key);
 
     /**
      * Optimized key encoding. Can use the base key to generate
@@ -65,10 +64,9 @@ public interface KeyCoder<K, V> {
      * their corresponding byte arrays.
      *
      * @param key           serialization of byte array
-     * @param encodeType    type of tree decoding to apply to key
      * @return deserialized key
      */
-    K keyDecode(byte[] key, @Nonnull TreeEncodeType encodeType);
+    K keyDecode(byte[] key);
 
     /**
      * Optimized key decoding. Can use the byte array

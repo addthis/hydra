@@ -27,30 +27,9 @@ import com.addthis.basis.util.Varint;
 import io.netty.buffer.ByteBuf;
 
 public enum PageEncodeType {
-    LEGACY("BIT32", "SPARSE"),
-    SPARSE("BIT32", "SPARSE"),
-    LONGIDS("BIT64", "LONGIDS");
-
-    /**
-     * Tree encoding type that is associated with this page encoding type.
-     */
-    private TreeEncodeType treeType;
-
-    /**
-     * Each encoding type can optionally be upgraded
-     * to a newer encoding code when rewriting a page.
-     * If this type cannot be upgraded then set this == upgradeType.
-     */
-    private PageEncodeType upgradeType;
-
-    private final String treeTypeString;
-
-    private final String upgradeTypeString;
-
-    private PageEncodeType(String treeType, String upgradeType) {
-        this.treeTypeString = treeType;
-        this.upgradeTypeString = upgradeType;
-    }
+    LEGACY,
+    SPARSE,
+    LONGIDS;
 
     /**
      * Reads the next integer from the input stream.
@@ -150,17 +129,8 @@ public enum PageEncodeType {
         }
     }
 
-    public PageEncodeType getUpgradeType() {
-        if (upgradeType == null) {
-            upgradeType = PageEncodeType.valueOf(upgradeTypeString);
-        }
-        return upgradeType;
+    public static PageEncodeType defaultType() {
+        return LONGIDS;
     }
 
-    public TreeEncodeType getTreeType() {
-        if (treeType == null) {
-            treeType = TreeEncodeType.valueOf(treeTypeString);
-        }
-        return treeType;
-    }
 }

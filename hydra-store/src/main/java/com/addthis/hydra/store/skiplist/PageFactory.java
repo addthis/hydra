@@ -17,23 +17,22 @@ import java.util.ArrayList;
 
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.PageEncodeType;
-import com.addthis.hydra.store.kv.TreeEncodeType;
 
 public abstract class PageFactory<K,V extends BytesCodable> {
 
     abstract Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType);
 
     abstract Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, int size,
-            ArrayList<K> keys, ArrayList<V> values, ArrayList<byte[]> rawValues,
-            PageEncodeType encodeType);
+                          ArrayList<K> keys, ArrayList<V> values, ArrayList<byte[]> rawValues,
+                          PageEncodeType encodeType);
 
     public final Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
-            K firstKey, K nextFirstKey, PageEncodeType encodeType) {
+                                              K firstKey, K nextFirstKey, PageEncodeType encodeType) {
         return newPage(cache, firstKey, nextFirstKey, encodeType);
     }
 
     public final Page<K, V> generateEmptyPage(SkipListCache<K, V> cache,
-            K firstKey, PageEncodeType encodeType) {
+                                              K firstKey, PageEncodeType encodeType) {
         return newPage(cache, firstKey, null, encodeType);
     }
 
@@ -41,13 +40,12 @@ public abstract class PageFactory<K,V extends BytesCodable> {
         return newPage(null, null, null, encodeType);
     }
 
-    public final Page<K,V> generateSiblingPage(SkipListCache<K, V> cache,
-            K firstKey, K nextFirstKey,
-            int size, ArrayList<K> keys,
-            ArrayList<V> values,
-            ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
+    public final Page<K, V> generateSiblingPage(SkipListCache<K, V> cache,
+                                                K firstKey, K nextFirstKey,
+                                                int size, ArrayList<K> keys,
+                                                ArrayList<V> values,
+                                                ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
         return newPage(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
     }
 
-    public abstract TreeEncodeType defaultEncodeType();
 }

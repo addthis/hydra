@@ -21,8 +21,6 @@ import com.addthis.basis.util.Bytes;
 import com.addthis.hydra.store.DBIntValue;
 import com.addthis.hydra.store.kv.PageEncodeType;
 import com.addthis.hydra.store.kv.KeyCoder;
-import com.addthis.hydra.store.kv.TreeEncodeType;
-
 
 public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
 
@@ -32,7 +30,7 @@ public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
     }
 
     @Override
-    public byte[] keyEncode(Integer key, TreeEncodeType encodeType) {
+    public byte[] keyEncode(Integer key) {
         return key != null ? Bytes.toBytes(key.intValue() ^ Integer.MIN_VALUE) : new byte[0];
     }
 
@@ -41,7 +39,7 @@ public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
         if (key == null) {
             return new byte[0];
         }
-        return keyEncode(key - baseKey, encodeType.getTreeType());
+        return keyEncode(key - baseKey);
     }
 
     @Override
@@ -50,13 +48,13 @@ public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
     }
 
     @Override
-    public Integer keyDecode(byte[] key, TreeEncodeType encodeType) {
+    public Integer keyDecode(byte[] key) {
         return (key != null && key.length > 0) ? (Bytes.toInt(key) ^ Integer.MIN_VALUE) : null;
     }
 
     @Override
     public Integer keyDecode(@Nullable byte[] key, @Nonnull Integer baseKey, @Nonnull PageEncodeType encodeType) {
-        Integer offset = keyDecode(key, encodeType.getTreeType());
+        Integer offset = keyDecode(key);
         if (offset == null) {
             return null;
         }

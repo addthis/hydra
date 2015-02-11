@@ -22,7 +22,6 @@ import com.addthis.basis.util.ClosableIterator;
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.db.IPageDB.Key;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
-import com.addthis.hydra.store.kv.TreeEncodeType;
 import com.addthis.hydra.store.util.Raw;
 
 
@@ -34,7 +33,7 @@ public interface IPageDB<K extends Key, V extends BytesCodable> extends AutoClos
 
         public byte[] key();
 
-        public byte[] toBytes(@Nonnull TreeEncodeType encodeType);
+        public byte[] toBytes();
 
         public byte[] deltaEncode(@Nonnull Key baseKey);
 
@@ -45,8 +44,6 @@ public interface IPageDB<K extends Key, V extends BytesCodable> extends AutoClos
     public interface Range<K, V> extends ClosableIterator<Entry<K, V>>, Iterable<Entry<K, V>> {
 
     }
-
-    public TreeEncodeType getEncodeType();
 
     public V get(K key);
 

@@ -41,8 +41,8 @@ import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.store.kv.ByteStore;
 import com.addthis.hydra.store.kv.KeyCoder;
+import com.addthis.hydra.store.kv.PageEncodeType;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
-import com.addthis.hydra.store.kv.TreeEncodeType;
 import com.addthis.hydra.store.util.MetricsUtil;
 import com.addthis.hydra.store.util.NamedThreadFactory;
 
@@ -106,8 +106,6 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
     final ConcurrentSkipListMap<K, Page<K, V>> cache;
 
     final ByteStore externalStore;
-
-    final TreeEncodeType encodeType;
 
     private final AtomicBoolean shutdownGuard, shutdownEvictionThreads;
 
@@ -179,18 +177,16 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
         protected final int maxPageSize;
         protected final ByteStore externalStore;
         protected final KeyCoder<K, V> keyCoder;
-        protected final TreeEncodeType encodeType;
 
         // Optional parameters - initialized to default values;
         protected int numEvictionThreads = defaultEvictionThreads;
         protected int maxPages = defaultMaxPages;
         protected PageFactory pageFactory = Page.DefaultPageFactory.singleton;
 
-        public Builder(KeyCoder<K, V> keyCoder, ByteStore store, int maxPageSize, TreeEncodeType encodeType) {
+        public Builder(KeyCoder<K, V> keyCoder, ByteStore store, int maxPageSize) {
             this.externalStore = store;
             this.maxPageSize = maxPageSize;
             this.keyCoder = keyCoder;
-            this.encodeType = encodeType;
         }
 
         @SuppressWarnings("unused")
@@ -212,13 +208,13 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
 
         public SkipListCache<K, V> build() {
             return new SkipListCache<>(keyCoder, externalStore, maxPageSize,
-                    maxPages, numEvictionThreads, pageFactory, encodeType);
+                    maxPages, numEvictionThreads, pageFactory);
         }
 
     }
 
     public SkipListCache(KeyCoder<K, V> keyCoder, ByteStore externalStore, int maxPageSize,
-            int maxPages, int numEvictionThreads, PageFactory pageFactory, TreeEncodeType encodeType) {
+            int maxPages, int numEvictionThreads, PageFactory pageFactory) {
         if (externalStore == null) {
             throw new NullPointerException("externalStore must be non-null");
         }
@@ -229,10 +225,9 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
 
         this.pageFactory = pageFactory;
         this.keyCoder = keyCoder;
-        this.encodeType = encodeType;
         this.negInf = keyCoder.negInfinity();
         this.cache = new ConcurrentSkipListMap<>();
-        this.mem_page = (int) MemoryCounter.estimateSize(pageFactory.measureMemoryEmptyPage(encodeType.getDefaultPageType()));
+        this.mem_page = (int) MemoryCounter.estimateSize(pageFactory.measureMemoryEmptyPage(PageEncodeType.defaultType()));
         this.externalStore = externalStore;
         this.maxPageSize = maxPageSize;
         this.maxPages = maxPages;
@@ -661,7 +656,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
         assert (prevPage.isWriteLockedByCurrentThread());
 
         Map.Entry<byte[], byte[]> entry = externalStore.floorEntry(encodedTargetKey);
-        K floorKey = keyCoder.keyDecode(entry.getKey(), encodeType);
+        K floorKey = keyCoder.keyDecode(entry.getKey());
         if (floorKey.equals(prevPage.firstKey)) {
             if (prevPage.keys == null) {
                 pullPageHelper(prevPage, entry.getValue());
@@ -689,7 +684,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
     private void deletePage(final K targetKey) {
         assert (!targetKey.equals(negInf));
 
-        final byte[] encodedTargetKey = keyCoder.keyEncode(targetKey, encodeType);
+        final byte[] encodedTargetKey = keyCoder.keyEncode(targetKey);
 
         while (true) {
 
@@ -703,7 +698,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
                     return;
                 }
 
-                K prevKey = keyCoder.keyDecode(prevKeyEncoded, encodeType);
+                K prevKey = keyCoder.keyDecode(prevKeyEncoded);
                 prevPage = locatePage(prevKey, LockMode.WRITEMODE);
 
                 if (!prevPage.firstKey.equals(prevKey)) {
@@ -729,7 +724,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
                     // Test whether the lower key moved while we
                     // were acquiring locks on prevPage and currentPage.
                     if (verifyPrevKeyEncoded == null ||
-                        !prevKey.equals(keyCoder.keyDecode(verifyPrevKeyEncoded, encodeType))) {
+                        !prevKey.equals(keyCoder.keyDecode(verifyPrevKeyEncoded))) {
                         continue;
                     }
                     externalStore.delete(encodedTargetKey);
@@ -832,7 +827,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
         int updatedMem = target.getMemoryEstimate() + sibling.getMemoryEstimate();
         updateMemoryEstimate(updatedMem - prevMem);
 
-        encodeKey = keyCoder.keyEncode(sibMinKey, encodeType);
+        encodeKey = keyCoder.keyEncode(sibMinKey);
 
         ByteBufOutputStream byteBufOutputStream = new ByteBufOutputStream(ByteBufAllocator.DEFAULT.buffer());
         try {
@@ -935,17 +930,17 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
      */
     private void loadFromExternalStore() {
         byte[] encodedFirstKey = externalStore.firstKey();
-        Page<K, V> leftSentinel = pageFactory.generateEmptyPage(this, negInf, encodeType.getDefaultPageType());
+        Page<K, V> leftSentinel = pageFactory.generateEmptyPage(this, negInf, PageEncodeType.defaultType());
         ByteBufOutputStream byteBufOutputStream = null;
         try {
             if (encodedFirstKey == null) { // effectively externalStore.isEmpty() but more efficient than using count()
                 byteBufOutputStream = new ByteBufOutputStream(PooledByteBufAllocator.DEFAULT.buffer());
                 leftSentinel.initialize();
-                byte[] encodeKey = keyCoder.keyEncode(negInf, encodeType);
+                byte[] encodeKey = keyCoder.keyEncode(negInf);
                 byte[] encodePage = leftSentinel.encode(byteBufOutputStream);
                 externalStore.put(encodeKey, encodePage);
             } else {
-                K firstKey = keyCoder.keyDecode(encodedFirstKey, encodeType);
+                K firstKey = keyCoder.keyDecode(encodedFirstKey);
                 byte[] page = externalStore.get(encodedFirstKey);
 
                 if (firstKey.equals(negInf)) {
@@ -956,7 +951,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
                     leftSentinel.initialize();
                     leftSentinel.nextFirstKey = firstKey;
 
-                    byte[] encodeKey = keyCoder.keyEncode(negInf, encodeType);
+                    byte[] encodeKey = keyCoder.keyEncode(negInf);
                     byte[] encodePage = leftSentinel.encode(byteBufOutputStream);
                     externalStore.put(encodeKey, encodePage);
 
@@ -1180,9 +1175,9 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
                     deletePage(targetKey);
                     continue;
                 } else if (endOffset == pageSize) {
-                    byte[] higherKeyEncoded = externalStore.higherKey(keyCoder.keyEncode(page.firstKey, encodeType));
+                    byte[] higherKeyEncoded = externalStore.higherKey(keyCoder.keyEncode(page.firstKey));
                     if (higherKeyEncoded != null) {
-                        start = keyCoder.keyDecode(higherKeyEncoded, encodeType);
+                        start = keyCoder.keyDecode(higherKeyEncoded);
                         continue;
                     }
                 }
@@ -1344,13 +1339,13 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
         Page<K, V> next = null, cachePage;
 
         try {
-            byte[] encodedKey = keyCoder.keyEncode(key, encodeType);
+            byte[] encodedKey = keyCoder.keyEncode(key);
 
             while (true) {
                 byte[] externalKeyEncoded = externalStore.floorKey(encodedKey);
 
                 /** Key of the page that will be loaded from disk. */
-                K externalKey = keyCoder.keyDecode(externalKeyEncoded, encodeType);
+                K externalKey = keyCoder.keyDecode(externalKeyEncoded);
 
                 if ((current != null) && (compareKeys(current.firstKey, externalKey) >= 0)) {
                     String errorMessage =
@@ -1554,7 +1549,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
 
         Page<K, V> currentPage = cache.firstEntry().getValue();
         K currentKey = currentPage.firstKey;
-        byte[] currentKeyEncoded = keyCoder.keyEncode(currentKey, encodeType);
+        byte[] currentKeyEncoded = keyCoder.keyEncode(currentKey);
 
 
         currentPage.writeLock();
@@ -1578,10 +1573,10 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
                     return null;
                 }
 
-                K nextKey = keyCoder.keyDecode(nextKeyEncoded, encodeType);
+                K nextKey = keyCoder.keyDecode(nextKeyEncoded);
                 currentPage = loadPage(nextKey, currentPage);
                 currentKey = currentPage.firstKey;
-                currentKeyEncoded = keyCoder.keyEncode(currentKey, encodeType);
+                currentKeyEncoded = keyCoder.keyEncode(currentKey);
             }
         } finally {
             currentPage.writeUnlock();
@@ -1624,7 +1619,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
             // Load the high page into memory
             while (true) {
                 currentKeyEncoded = externalStore.lastKey();
-                currentKey = keyCoder.keyDecode(currentKeyEncoded, encodeType);
+                currentKey = keyCoder.keyDecode(currentKeyEncoded);
 
                 currentPage = loadPage(currentKey, null);
                 if (!currentPage.inTransientState() && currentPage.nextFirstKey == null) {
@@ -1658,7 +1653,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
                         return null;
                     }
 
-                    prevKey = keyCoder.keyDecode(prevKeyEncoded, encodeType);
+                    prevKey = keyCoder.keyDecode(prevKeyEncoded);
 
                     currentPage = writeUnlockAndNull(currentPage);
 
@@ -1671,7 +1666,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
                         break;
                     }
 
-                    verifyKey = keyCoder.keyDecode(verifyKeyEncoded, encodeType);
+                    verifyKey = keyCoder.keyDecode(verifyKeyEncoded);
                 }
                 while (!currentKey.equals(verifyKey));
 
@@ -1827,7 +1822,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
          */
         private boolean moveForward(K targetKey, boolean inclusive) {
             while (true) {
-                byte[] higherKeyEncoded = externalStore.higherKey(keyCoder.keyEncode(page.firstKey, encodeType));
+                byte[] higherKeyEncoded = externalStore.higherKey(keyCoder.keyEncode(page.firstKey));
 
                 if (higherKeyEncoded == null) {
                     nextKey = null;
@@ -1835,7 +1830,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
                     return false;
                 }
 
-                K higherKey = keyCoder.keyDecode(higherKeyEncoded, encodeType);
+                K higherKey = keyCoder.keyDecode(higherKeyEncoded);
 
                 page.readUnlock();
 
@@ -1941,7 +1936,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
         if (current.state == ExternalMode.DISK_MEMORY_DIRTY) {
 
             // flush to external storage
-            byte[] encodeKey = keyCoder.keyEncode(current.firstKey, encodeType);
+            byte[] encodeKey = keyCoder.keyEncode(current.firstKey);
             byte[] encodePage = current.encode(byteStream);
 
             externalStore.put(encodeKey, encodePage);
@@ -1985,7 +1980,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
 
             if (current.keys == null) {
 
-                byte[] encodeKey = keyCoder.keyEncode(current.firstKey, encodeType);
+                byte[] encodeKey = keyCoder.keyEncode(current.firstKey);
                 byte[] page = externalStore.get(encodeKey);
 
                 pullPageHelper(current, page);
@@ -2102,7 +2097,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
 
     private boolean pushAllPagesToDiskAssertion() {
         byte[] firstKeyEncoded = externalStore.firstKey();
-        K firstKey = keyCoder.keyDecode(firstKeyEncoded, encodeType);
+        K firstKey = keyCoder.keyDecode(firstKeyEncoded);
         return firstKey.equals(negInf);
     }
 
@@ -2238,7 +2233,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
             ByteBufOutputStream byteBufOutputStream = new ByteBufOutputStream(PooledByteBufAllocator.DEFAULT.buffer());
             try {
                 byte[] pageEncoded = page.encode(byteBufOutputStream);
-                externalStore.put(keyCoder.keyEncode(key, encodeType), pageEncoded);
+                externalStore.put(keyCoder.keyEncode(key), pageEncoded);
             } finally {
                 byteBufOutputStream.buffer().release();
             }
@@ -2248,7 +2243,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
     private void repairInvalidKeys(final int counter, Page<K, V> page, final K key, final K nextKey) {
         boolean pageTransfer = false;
         Page<K,V> nextPage = pageFactory.generateEmptyPage(this, nextKey, page.getEncodeType());
-        byte[] encodedNextPage = externalStore.get(keyCoder.keyEncode(nextKey, encodeType));
+        byte[] encodedNextPage = externalStore.get(keyCoder.keyEncode(nextKey));
         nextPage.decode(encodedNextPage);
         for(int i = 0, pos = 0; i < page.size; i++, pos++) {
             K testKey = page.keys.get(i);
@@ -2275,10 +2270,10 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
         ByteBufOutputStream byteBufOutputStream = new ByteBufOutputStream(PooledByteBufAllocator.DEFAULT.buffer());
         try {
             byte[] pageEncoded = page.encode(byteBufOutputStream);
-            externalStore.put(keyCoder.keyEncode(key, encodeType), pageEncoded);
+            externalStore.put(keyCoder.keyEncode(key), pageEncoded);
             if (pageTransfer) {
                 encodedNextPage = nextPage.encode(byteBufOutputStream);
-                externalStore.put(keyCoder.keyEncode(nextKey, encodeType), encodedNextPage);
+                externalStore.put(keyCoder.keyEncode(nextKey), encodedNextPage);
             }
         } finally {
             byteBufOutputStream.buffer().release();
@@ -2317,14 +2312,14 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
         int failedPages = 0;
         byte[] encodedKey = externalStore.firstKey();
         byte[] encodedPage = externalStore.get(encodedKey);
-        K key = keyCoder.keyDecode(encodedKey, encodeType);
+        K key = keyCoder.keyDecode(encodedKey);
         while(encodedKey != null) {
             counter++;
             Page<K, V> page = pageFactory.generateEmptyPage(this, key, null);
             byte[] encodedNextKey = externalStore.higherKey(encodedKey);
             if (encodedNextKey != null) {
                 page.decode(encodedPage);
-                K nextKey = keyCoder.keyDecode(encodedNextKey, encodeType);
+                K nextKey = keyCoder.keyDecode(encodedNextKey);
                 int numKeys = page.keys.size();
                 if (page.nextFirstKey == null) {
                     missingNextFirstKey(repair, counter, page, key, nextKey);

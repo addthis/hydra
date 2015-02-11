@@ -27,7 +27,6 @@ import com.addthis.basis.util.Files;
 import com.addthis.hydra.store.DBIntValue;
 import com.addthis.hydra.store.kv.ByteStore;
 import com.addthis.hydra.store.kv.ConcurrentByteStoreBDB;
-import com.addthis.hydra.store.kv.TreeEncodeType;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -166,7 +165,7 @@ public class TestSkipListCacheDeletion {
             DeletionThread[] deletionThreads = new DeletionThread[numThreads];
             SkipListCache<Integer, DBIntValue> cache =
                     new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore,
-                                                pageSize, TreeEncodeType.defaultType()).maxPages(1000).build();
+                                                pageSize).maxPages(1000).build();
 
             for (int i = 0; i < numElements; i++) {
                 values.add(i);

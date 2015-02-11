@@ -51,7 +51,6 @@ import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.IPageDB;
 import com.addthis.hydra.store.db.PageDB;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
-import com.addthis.hydra.store.kv.TreeEncodeType;
 import com.addthis.hydra.store.skiplist.Page;
 import com.addthis.hydra.store.skiplist.PageFactory;
 import com.addthis.hydra.store.skiplist.SkipListCache;
@@ -100,7 +99,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     private final File root;
     private final File idFile;
-    private final TreeEncodeType encodeType;
     final IPageDB<DBKey, ConcurrentTreeNode> source;
     private final ConcurrentTreeNode treeRootNode;
     final ConcurrentTreeNode treeTrashNode;
@@ -159,7 +157,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         source.setCacheMem(TreeCommonParameters.maxCacheMem);
         source.setPageMem(TreeCommonParameters.maxPageMem);
         source.setMemSampleInterval(TreeCommonParameters.memSample);
-        encodeType = source.getEncodeType();
         // create cache
         cache = new MediatedEvictionConcurrentHashMap.
                 Builder<CacheKey, ConcurrentTreeNode>().
@@ -223,10 +220,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     long getNextNodeDB() {
         long nextValue = nextDBID.incrementAndGet();
-        if (nextValue >= encodeType.getMax()) {
-            throw new IllegalStateException("The next node identifier " + nextValue +
-                                            " is greater than or equal to the allowed max value of " + encodeType.getMax());
-        }
         return nextValue;
     }
 
@@ -792,10 +785,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         if (store instanceof SkipListCache) {
             ((SkipListCache) store).testIntegrity(true);
         }
-    }
-
-    public TreeEncodeType getEncodeType() {
-        return encodeType;
     }
 
 }

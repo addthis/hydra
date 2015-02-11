@@ -19,12 +19,10 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 
 import com.addthis.basis.io.GZOut;
-import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Varint;
 
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.PageEncodeType;
-import com.addthis.hydra.store.kv.TreeEncodeType;
 
 import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.DeflaterOutputStream;
@@ -79,8 +77,8 @@ public class SparsePage<K, V extends BytesCodable> extends Page<K, V> {
             }
 
             DataOutputStream dos = new DataOutputStream(os);
-            byte[] firstKeyEncoded = keyCoder.keyEncode(firstKey, TreeEncodeType.BIT32);
-            byte[] nextFirstKeyEncoded = keyCoder.keyEncode(nextFirstKey, TreeEncodeType.BIT32);
+            byte[] firstKeyEncoded = keyCoder.keyEncode(firstKey);
+            byte[] nextFirstKeyEncoded = keyCoder.keyEncode(nextFirstKey);
 
             updateHistogram(metrics.encodeNextFirstKeySize, nextFirstKeyEncoded.length, record);
 
@@ -92,7 +90,7 @@ public class SparsePage<K, V extends BytesCodable> extends Page<K, V> {
                 dos.write(nextFirstKeyEncoded);
             }
             for (int i = 0; i < size; i++) {
-                byte[] keyEncoded = keyCoder.keyEncode(keys.get(i), TreeEncodeType.BIT32);
+                byte[] keyEncoded = keyCoder.keyEncode(keys.get(i));
                 byte[] rawVal = rawValues.get(i);
 
                 if (rawVal == null || encodeType != PageEncodeType.SPARSE) {
@@ -153,10 +151,6 @@ public class SparsePage<K, V extends BytesCodable> extends Page<K, V> {
             return new SparsePage(cache, firstKey, nextFirstKey, size, keys, values, rawValues, PageEncodeType.SPARSE);
         }
 
-        @Override
-        public TreeEncodeType defaultEncodeType() {
-            return PageEncodeType.SPARSE.getTreeType();
-        }
     }
 
 }

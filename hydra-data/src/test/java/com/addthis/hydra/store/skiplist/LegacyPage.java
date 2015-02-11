@@ -22,7 +22,6 @@ import com.addthis.basis.util.Bytes;
 
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.PageEncodeType;
-import com.addthis.hydra.store.kv.TreeEncodeType;
 
 import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.DeflaterOutputStream;
@@ -75,8 +74,8 @@ public class LegacyPage<K, V extends BytesCodable> extends Page<K, V> {
                     throw new RuntimeException("invalid gztype: " + gztype);
             }
 
-            byte[] firstKeyEncoded = keyCoder.keyEncode(firstKey, PageEncodeType.LEGACY.getTreeType());
-            byte[] nextFirstKeyEncoded = keyCoder.keyEncode(nextFirstKey, PageEncodeType.LEGACY.getTreeType());
+            byte[] firstKeyEncoded = keyCoder.keyEncode(firstKey);
+            byte[] nextFirstKeyEncoded = keyCoder.keyEncode(nextFirstKey);
 
             updateHistogram(metrics.encodeFirstKeySize, firstKeyEncoded.length, record);
             updateHistogram(metrics.encodeNextFirstKeySize, nextFirstKeyEncoded.length, record);
@@ -85,7 +84,7 @@ public class LegacyPage<K, V extends BytesCodable> extends Page<K, V> {
             Bytes.writeBytes(firstKeyEncoded, os);
             Bytes.writeBytes(nextFirstKeyEncoded, os);
             for (int i = 0; i < size; i++) {
-                byte[] keyEncoded = keyCoder.keyEncode(keys.get(i), PageEncodeType.LEGACY.getTreeType());
+                byte[] keyEncoded = keyCoder.keyEncode(keys.get(i));
                 byte[] rawVal = rawValues.get(i);
 
                 if (rawVal == null) {
@@ -148,10 +147,6 @@ public class LegacyPage<K, V extends BytesCodable> extends Page<K, V> {
             return new LegacyPage(cache, firstKey, nextFirstKey, size, keys, values, rawValues, PageEncodeType.LEGACY);
         }
 
-        @Override
-        public TreeEncodeType defaultEncodeType() {
-            return PageEncodeType.LEGACY.getTreeType();
-        }
     }
 
 }

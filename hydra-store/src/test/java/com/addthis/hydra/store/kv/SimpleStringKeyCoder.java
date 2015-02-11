@@ -28,12 +28,12 @@ class SimpleStringKeyCoder implements KeyCoder<String, DBValue> {
     }
 
     @Override
-    public byte[] keyEncode(String key, TreeEncodeType encodeType) {
+    public byte[] keyEncode(String key) {
         return key != null ? Bytes.toBytes(key) : new byte[0];
     }
 
     @Override public byte[] keyEncode(@Nullable String key, @Nonnull String baseKey, @Nonnull PageEncodeType encodeType) {
-        return keyEncode(key, encodeType.getTreeType());
+        return keyEncode(key);
     }
 
     @Override
@@ -42,12 +42,12 @@ class SimpleStringKeyCoder implements KeyCoder<String, DBValue> {
     }
 
     @Override
-    public String keyDecode(byte[] key, TreeEncodeType encodeType) {
+    public String keyDecode(byte[] key) {
         return key.length > 0 ? Bytes.toString(key) : null;
     }
 
     @Override public String keyDecode(@Nullable byte[] key, @Nonnull String baseKey, @Nonnull PageEncodeType encodeType) {
-        return keyDecode(key, encodeType.getTreeType());
+        return keyDecode(key);
     }
 
     @Override

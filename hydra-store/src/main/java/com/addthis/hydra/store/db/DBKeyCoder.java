@@ -21,7 +21,6 @@ import com.addthis.codec.binary.CodecBin2;
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.PageEncodeType;
 import com.addthis.hydra.store.kv.KeyCoder;
-import com.addthis.hydra.store.kv.TreeEncodeType;
 import com.addthis.hydra.store.util.Raw;
 
 import com.google.common.base.Objects;
@@ -58,11 +57,11 @@ class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
      * {@inheritDoc}
      */
     @Override
-    public byte[] keyEncode(DBKey key, @Nonnull TreeEncodeType encodeType) {
+    public byte[] keyEncode(DBKey key) {
         if (key == null) {
             return zero;
         } else {
-            return key.toBytes(encodeType);
+            return key.toBytes();
         }
     }
 
@@ -77,7 +76,7 @@ class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
         switch (encodeType) {
             case LEGACY:
             case SPARSE:
-                return key.toBytes(encodeType.getTreeType());
+                return key.toBytes();
             case LONGIDS:
                 return key.deltaEncode(baseKey);
             default:
@@ -113,11 +112,11 @@ class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
      * {@inheritDoc}
      */
     @Override
-    public DBKey keyDecode(byte[] key, @Nonnull TreeEncodeType encodeType) {
+    public DBKey keyDecode(byte[] key) {
         if (key == null || key.length == 0) {
             return null;
         } else {
-            return DBKey.fromBytes(key, encodeType);
+            return DBKey.fromBytes(key);
         }
     }
 
@@ -132,7 +131,7 @@ class DBKeyCoder<V extends BytesCodable> implements KeyCoder<DBKey, V> {
             switch (encodeType) {
                 case LEGACY:
                 case SPARSE:
-                    return DBKey.fromBytes(key, encodeType.getTreeType());
+                    return DBKey.fromBytes(key);
                 case LONGIDS:
                     return DBKey.deltaDecode(key, baseKey);
                 default:

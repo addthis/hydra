@@ -35,7 +35,6 @@ import com.addthis.basis.util.Varint;
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.PageEncodeType;
 import com.addthis.hydra.store.kv.KeyCoder;
-import com.addthis.hydra.store.kv.TreeEncodeType;
 
 import com.google.common.base.Throwables;
 
@@ -184,8 +183,7 @@ public class Page<K, V extends BytesCodable> {
     public byte[] encode(ByteBufOutputStream out, boolean record) {
         SkipListCacheMetrics metrics = parent.metrics;
         parent.numPagesEncoded.getAndIncrement();
-        PageEncodeType upgradeType = encodeType.getUpgradeType();
-        TreeEncodeType treeType = encodeType.getTreeType();
+        PageEncodeType upgradeType = PageEncodeType.defaultType();
         try {
             OutputStream os = out;
             out.write(gztype | FLAGS_HAS_ESTIMATES | (upgradeType.ordinal() << TYPE_BIT_OFFSET));
@@ -209,8 +207,8 @@ public class Page<K, V extends BytesCodable> {
             }
 
             DataOutputStream dos = new DataOutputStream(os);
-            byte[] firstKeyEncoded = keyCoder.keyEncode(firstKey, treeType);
-            byte[] nextFirstKeyEncoded = keyCoder.keyEncode(nextFirstKey, treeType);
+            byte[] firstKeyEncoded = keyCoder.keyEncode(firstKey);
+            byte[] nextFirstKeyEncoded = keyCoder.keyEncode(nextFirstKey);
 
             updateHistogram(metrics.encodeNextFirstKeySize, nextFirstKeyEncoded.length, record);
 
@@ -328,11 +326,10 @@ public class Page<K, V extends BytesCodable> {
         int readEstimateTotal;
         int readEstimates;
         int entries = encodeType.readInt(in, dis);
-        TreeEncodeType treeType = encodeType.getTreeType();
 
-        firstKey = keyCoder.keyDecode(encodeType.readBytes(in, dis), treeType);
+        firstKey = keyCoder.keyDecode(encodeType.readBytes(in, dis));
         nextFirstKeyBytes = encodeType.nextFirstKey(in, dis);
-        nextFirstKey = keyCoder.keyDecode(nextFirstKeyBytes, treeType);
+        nextFirstKey = keyCoder.keyDecode(nextFirstKeyBytes);
         assert(this.firstKey.equals(firstKey));
 
         int bytes = 0;
@@ -386,7 +383,7 @@ public class Page<K, V extends BytesCodable> {
             switch (memEstimationStrategy) {
                 case 0:
                     /** use encoded byte size as crude proxy for mem size */
-                    updateAverage((keyCoder.keyEncode(key, encodeType.getTreeType()).length +
+                    updateAverage((keyCoder.keyEncode(key).length +
                                    keyCoder.valueEncode(val, encodeType).length), count);
                     break;
                 case 1:
@@ -561,10 +558,6 @@ public class Page<K, V extends BytesCodable> {
         public Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, int size, ArrayList<K> keys,
                 ArrayList<V> values, ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
             return new Page(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
-        }
-
-        public TreeEncodeType defaultEncodeType() {
-            return TreeEncodeType.defaultType();
         }
 
     }

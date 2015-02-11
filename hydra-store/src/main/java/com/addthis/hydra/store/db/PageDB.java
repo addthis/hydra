@@ -23,9 +23,6 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
 
-import java.nio.file.DirectoryStream;
-import java.nio.file.Path;
-
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Files;
@@ -36,7 +33,6 @@ import com.addthis.hydra.store.kv.ByteStore;
 import com.addthis.hydra.store.kv.ConcurrentByteStoreBDB;
 import com.addthis.hydra.store.kv.MapDbByteStore;
 import com.addthis.hydra.store.kv.PagedKeyValueStore;
-import com.addthis.hydra.store.kv.TreeEncodeType;
 import com.addthis.hydra.store.skiplist.Page;
 import com.addthis.hydra.store.skiplist.PageFactory;
 import com.addthis.hydra.store.skiplist.SkipListCache;
@@ -55,7 +51,6 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
     static final String PAGED_BERK_DB = "paged.bdb";
 
     public static final String DB_TYPE_FILENAME = "db.type";
-    public static final String TREE_TYPE_FILENAME = "tree.type";
 
     static final String defaultDbName = Parameter.value("pagedb.dbname", "db.key");
     static final String DEFAULT_BYTESTORE = Parameter.value("pagedb.bytestore", PAGED_BERK_DB);
@@ -63,7 +58,6 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
     private final PagedKeyValueStore<DBKey, V> eps;
     private final DBKeyCoder<V> keyCoder;
     private final HashSet<DR> openRanges = new HashSet<>();
-    private final TreeEncodeType encodeType;
 
     public static class Builder<V extends BytesCodable> {
 
@@ -107,20 +101,7 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
                   int maxPages, PageFactory factory) throws IOException {
         String dbType = getByteStoreNameForFile(dir);
         this.keyCoder = new DBKeyCoder<>(clazz);
-        /**
-         * If no data has been written to the directory then use the latest encoding.
-         * Otherwise is the encoding file exists then use the file. If the directory
-         * contains data but no encoding file exists then use the legacy format.
-         * If we are using the legacy format then create the encoding file.
-         */
         Files.initDirectory(dir);
-        if (isDirEmpty(dir)) {
-            encodeType = factory.defaultEncodeType();
-            File pageTypeFile = new File(dir, TREE_TYPE_FILENAME);
-            Files.write(pageTypeFile, Bytes.toBytes(encodeType.toString()), false);
-        } else {
-            encodeType = getEncodeType(dir, true);
-        }
         ByteStore store;
         switch (dbType) {
             case PAGED_MAP_DB:
@@ -132,33 +113,9 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
                 store = new ConcurrentByteStoreBDB(dir, dbname);
                 break;
         }
-        this.eps =  new SkipListCache.Builder<>(keyCoder, store, maxPageSize, encodeType).
+        this.eps =  new SkipListCache.Builder<>(keyCoder, store, maxPageSize).
         maxPages(maxPages).pageFactory(factory).build();
         Files.write(new File(dir, DB_TYPE_FILENAME), Bytes.toBytes(dbType), false);
-    }
-
-    /**
-     * Check if the tree type file exists. If it exists then return the tree
-     * type specified in the file. Otherwise return the implicit tree type.
-     * If {@code write} is true then create the tree type file when using
-     * the implicit type.
-     *
-     * @param dir    root directory for the tree type file
-     * @param write  if true then create tree type file
-     * @return tree type
-     * @throws IOException
-     */
-    public static TreeEncodeType getEncodeType(File dir, boolean write) throws IOException {
-        File typeFile = new File(dir, TREE_TYPE_FILENAME);
-        if (typeFile.exists()) {
-            return TreeEncodeType.fromString(new String(Files.read(typeFile)));
-        }
-        TreeEncodeType type = TreeEncodeType.implicitType();
-        if (write) {
-            File pageTypeFile = new File(dir, TREE_TYPE_FILENAME);
-            Files.write(pageTypeFile, Bytes.toBytes(type.toString()), false);
-        }
-        return type;
     }
 
     public static String getByteStoreNameForFile(File dir) throws IOException {
@@ -197,7 +154,7 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
 
     public TreeMap<DBKey, V> toTreeMap() {
         try {
-            Range<DBKey, V> range = this.range(this.eps.getFirstKey(), new DBKey(Integer.MAX_VALUE, ""));
+            Range<DBKey, V> range = this.range(this.eps.getFirstKey(), new DBKey(Long.MAX_VALUE, ""));
             Iterator<Entry<DBKey, V>> iterator = range.iterator();
             TreeMap<DBKey, V> map = new TreeMap<>();
             while (iterator.hasNext()) {
@@ -274,10 +231,6 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
     @Override
     public void setMemSampleInterval(int sample) {
         eps.setMemEstimateInterval(sample);
-    }
-
-    @Override public TreeEncodeType getEncodeType() {
-        return encodeType;
     }
 
     private class DR implements IPageDB.Range<DBKey, V>, Iterator<Entry<DBKey, V>> {
@@ -362,10 +315,4 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
         }
     }
 
-
-    private static boolean isDirEmpty(final File directory) throws IOException {
-        try(DirectoryStream<Path> dirStream = java.nio.file.Files.newDirectoryStream(directory.toPath())) {
-            return !dirStream.iterator().hasNext();
-        }
-    }
 }

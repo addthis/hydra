@@ -28,11 +28,6 @@ import com.addthis.basis.util.Files;
 
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.store.db.CloseOperation;
-import com.addthis.hydra.store.kv.TreeEncodeType;
-import com.addthis.hydra.store.skiplist.LegacyPage;
-import com.addthis.hydra.store.skiplist.Page;
-import com.addthis.hydra.store.skiplist.PageFactory;
-import com.addthis.hydra.store.skiplist.SparsePage;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -530,17 +525,9 @@ public class TestConcurrentTree {
 
     @Test
     public void maximumNodeIdentifier() throws Exception {
-        maximumNodeIdentifier(LegacyPage.LegacyPageFactory.singleton, TreeEncodeType.BIT32, true);
-        maximumNodeIdentifier(SparsePage.SparsePageFactory.singleton, TreeEncodeType.BIT32, true);
-        maximumNodeIdentifier(Page.DefaultPageFactory.singleton, TreeEncodeType.BIT64, false);
-    }
-
-    private void maximumNodeIdentifier(PageFactory pageFactory, TreeEncodeType encodeType, boolean error) throws Exception {
         File dir = makeTemporaryDirectory();
-        boolean failure = false;
         try {
-            ConcurrentTree tree = new Builder(dir).pageFactory(pageFactory).build();
-            assertEquals(encodeType, tree.getEncodeType());
+            ConcurrentTree tree = new Builder(dir).build();
             ConcurrentTreeNode root = tree.getRootNode();
             for (int i = 0; i < 1000; i++) {
                 ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
@@ -552,20 +539,15 @@ public class TestConcurrentTree {
                 node.release();
             }
             assertTrue(tree.setNextNodeDB(Integer.MAX_VALUE));
-            try {
-                for (int i = 1000; i < 2000; i++) {
-                    ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
-                    assertNotNull(node);
-                    assertEquals(1, node.getLeaseCount());
-                    assertEquals(Integer.toString(i), node.getName());
-                    ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
-                    child.release();
-                    node.release();
-                }
-            } catch (IllegalStateException ex) {
-                failure = true;
+            for (int i = 1000; i < 2000; i++) {
+                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+                assertNotNull(node);
+                assertEquals(1, node.getLeaseCount());
+                assertEquals(Integer.toString(i), node.getName());
+                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+                child.release();
+                node.release();
             }
-            assertEquals(error, failure);
             tree.close(false, close);
         } finally {
             if (dir != null) {

@@ -23,9 +23,9 @@ import java.util.Arrays;
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Varint;
 
-import com.addthis.hydra.store.kv.TreeEncodeType;
 import com.addthis.hydra.store.util.Raw;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
@@ -46,6 +46,7 @@ public final class DBKey implements IPageDB.Key, Comparable<DBKey> {
     }
 
     public DBKey(long id, Raw key) {
+        checkArgument(id >= 0);
         if (key == null) {
             key = EMPTY;
         }
@@ -53,15 +54,26 @@ public final class DBKey implements IPageDB.Key, Comparable<DBKey> {
         this.key = key;
     }
 
-    public static DBKey fromBytes(byte[] raw, TreeEncodeType encodeType) {
-        int numBytes = encodeType.getBytes();
-        if (raw == null) {
-            throw new NullPointerException("input array to DBKey must be non-null");
-        } else if (raw.length < numBytes) {
-            throw new IllegalStateException("input array to DBKey has length "
-                                            + raw.length + " and must have at least length " + encodeType.getBytes());
+    /**
+     * Create a DBKey from its serialization byte array representation.
+     * If the most significant bit of the first byte is set then
+     * interpret the id as a 63-bit unsigned long. Otherwise interpret the
+     * id as a 31-bit unsigned int.
+     *
+     * @param raw
+     * @return
+     */
+    public static DBKey fromBytes(byte[] raw) {
+        byte head = raw[0];
+        int numBytes;
+        long id;
+        if ((head >> 7) == 0) {
+            id = (long) Bytes.toInt(raw);
+            numBytes = 4;
+        } else {
+            id = Bytes.toLong(raw) & ~(Long.MIN_VALUE);
+            numBytes = 8;
         }
-        long id = encodeType.getId(raw, 0, -1);
         Raw key = Raw.get(Bytes.cut(raw, numBytes, raw.length - numBytes));
         return new DBKey(id, key);
     }
@@ -124,8 +136,22 @@ public final class DBKey implements IPageDB.Key, Comparable<DBKey> {
         return id > dkId ? 1 : -1;
     }
 
-    @Override public byte[] toBytes(@Nonnull TreeEncodeType encodeType) {
-        byte[] idBytes  = encodeType.idToBytes(id);
+    /**
+     * Generate the serialized byte array representation.
+     * If the id can be represented as a 31-bit unsigned integer
+     * then use a 4-byte representation. If is cannot be represented
+     * in 4 bytes then use an 8-byte representation and set the
+     * most significant bit of the first byte as a flag.
+     *
+     * @return serialized representation
+     */
+    @Override public byte[] toBytes() {
+        byte[] idBytes;
+        if (id <= Integer.MAX_VALUE) {
+            idBytes = Bytes.toBytes((int) id);
+        } else {
+            idBytes = Bytes.toBytes(id | Long.MIN_VALUE);
+        }
         if (key == null) {
             return idBytes;
         }
