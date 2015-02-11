@@ -85,6 +85,7 @@ public final class JobTask implements Codable, Cloneable, Comparable<JobTask> {
                                                                               JobTaskState.ALLOCATED,
                                                                               JobTaskState.REBALANCE,
                                                                               JobTaskState.QUEUED_HOST_UNAVAIL,
+                                                                              JobTaskState.QUEUED_NO_SLOT,
                                                                               JobTaskState.QUEUED);
 
     public boolean isRunning() {

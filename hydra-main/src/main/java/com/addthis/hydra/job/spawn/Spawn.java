@@ -924,7 +924,7 @@ public class Spawn implements Codable, AutoCloseable {
             return false;
         }
         if (!checkHostStatesForSwap(task.getJobKey(), task.getHostUUID(), replicaHostID, true)) {
-            log.warn("[swap.task.stopped] failed for " + task.getJobKey() + "; exiting");
+            log.warn("[swap.task.stopped] failed for {}; exiting", task.getJobKey());
             return false;
         }
         Job job;
@@ -941,7 +941,7 @@ public class Spawn implements Codable, AutoCloseable {
             try {
                 scheduleTask(job, task, expandJob(job));
             } catch (Exception e) {
-                log.warn("Warning: failed to kick task " + task.getJobKey() + " with: " + e, e);
+                log.warn("Warning: failed to kick task {} with: {}", task.getJobKey(), e, e);
                 job.errorTask(task, JobTaskErrorCode.KICK_ERROR);
             }
         }
@@ -1844,7 +1844,7 @@ public class Spawn implements Codable, AutoCloseable {
                 task.setRebalanceSource(null);
                 task.setRebalanceTarget(null);
             }
-            if (task.getState() == JobTaskState.QUEUED || task.getState() == JobTaskState.QUEUED_HOST_UNAVAIL) {
+            if (task.getState().isQueuedState()) {
                 removeFromQueue(task);
                 log.warn("[task.stop] stopping queued " + task.getJobKey());
             } else if (task.getState() == JobTaskState.REBALANCE) {
@@ -1927,7 +1927,7 @@ public class Spawn implements Codable, AutoCloseable {
         if (task != null) {
             task.setPreFailErrorCode(0);
             HostState host = hostManager.getHostState(task.getHostUUID());
-            if (task.getState() == JobTaskState.ALLOCATED || task.getState() == JobTaskState.QUEUED || task.getState() == JobTaskState.QUEUED_HOST_UNAVAIL) {
+            if (task.getState() == JobTaskState.ALLOCATED || task.getState().isQueuedState()) {
                 log.warn("[task.revert] node in allocated state " + jobUUID + "/" + task.getTaskID() + " host = " + host.getHost());
             }
             log.warn("[task.revert] sending revert message to host: " + host.getHost() + "/" + host.getHostUuid());
@@ -2406,6 +2406,7 @@ public class Spawn implements Codable, AutoCloseable {
     public void sendTaskQueueUpdateEvent() {
         try {
             int numQueued = 0;
+            int numQueuedWaitingOnSlot = 0;
             int numQueuedWaitingOnError = 0;
             LinkedList<JobKey>[] queues = null;
             taskQueuesByPriority.lock();
@@ -2419,6 +2420,11 @@ public class Spawn implements Codable, AutoCloseable {
                         Job job = getJob(key);
                         if (job != null && !job.isEnabled()) {
                             numQueuedWaitingOnError += 1;
+                        } else {
+                            JobTask task = job.getTask(key.getNodeNumber());
+                            if (task.getState() == JobTaskState.QUEUED_NO_SLOT) {
+                                numQueuedWaitingOnSlot += 1;
+                            }
                         }
                     }
                 }
@@ -2426,7 +2432,9 @@ public class Spawn implements Codable, AutoCloseable {
             } finally {
                 taskQueuesByPriority.unlock();
             }
-            JSONObject json = new JSONObject("{'size':" + Integer.toString(numQueued) + ",'sizeErr':" + Integer.toString(numQueuedWaitingOnError) + "}");
+            JSONObject json = new JSONObject("{'size':" + Integer.toString(numQueued) +
+                                             ",'sizeErr':" + Integer.toString(numQueuedWaitingOnError) +
+                                             ",'sizeSlot':" + Integer.toString(numQueuedWaitingOnSlot) + "}");
             sendEventToClientListeners("task.queue.size", json);
         } catch (Exception e) {
             log.warn("[task.queue.update] received exception while sending task queue update event (this is ok unless it happens repeatedly) " + e);
@@ -2456,7 +2464,7 @@ public class Spawn implements Codable, AutoCloseable {
             for (JobTask task : jobNodes) {
                 files += task.getFileCount();
                 bytes += task.getByteCount();
-                if (task.getState() != JobTaskState.ALLOCATED && task.getState() != JobTaskState.QUEUED && task.getState() != JobTaskState.QUEUED_HOST_UNAVAIL) {
+                if (task.getState() != JobTaskState.ALLOCATED && !task.getState().isQueuedState()) {
                     running++;
                 }
                 switch (task.getState()) {
@@ -2836,6 +2844,10 @@ public class Spawn implements Codable, AutoCloseable {
      */
     public boolean kickOnExistingHosts(Job job, JobTask task, String config, long timeOnQueue, boolean allowSwap) {
         if (!jobTaskCanKick(job, task)) {
+            if (task.getState() == JobTaskState.QUEUED_NO_SLOT) {
+                job.setTaskState(task, JobTaskState.QUEUED);
+                queueJobTaskUpdateEvent(job);
+            }
             return false;
         }
         List<HostState> possibleHosts = new ArrayList<>();
@@ -2852,25 +2864,37 @@ public class Spawn implements Codable, AutoCloseable {
         }
         HostState bestHost = findHostWithAvailableSlot(task, timeOnQueue, possibleHosts, false);
         if (bestHost != null) {
+            if (task.getState() == JobTaskState.QUEUED_NO_SLOT) {
+                job.setTaskState(task, JobTaskState.QUEUED);
+                queueJobTaskUpdateEvent(job);
+            }
             String bestHostUuid = bestHost.getHostUuid();
             if (task.getHostUUID().equals(bestHostUuid)) {
                 taskQueuesByPriority.markHostTaskActive(bestHostUuid);
                 scheduleTask(job, task, config);
-                log.info("[taskQueuesByPriority] sending " + task.getJobKey() + " to " + bestHostUuid);
+                log.info("[taskQueuesByPriority] sending {} to {}", task.getJobKey(), bestHostUuid);
                 return true;
             } else if (swapTask(task, bestHostUuid, true)) {
                 taskQueuesByPriority.markHostTaskActive(bestHostUuid);
-                log.info("[taskQueuesByPriority] swapping " + task.getJobKey() + " onto " + bestHostUuid);
+                log.info("[taskQueuesByPriority] swapping {} onto {}", task.getJobKey(), bestHostUuid);
                 return true;
             }
-        } else if (taskQueuesByPriority.isMigrationEnabled() && !job.getQueryConfig().getCanQuery() && !job.getDontAutoBalanceMe()) {
-            return attemptMigrateTask(job, task, timeOnQueue);
+        }
+        if (taskQueuesByPriority.isMigrationEnabled()
+            && !job.getQueryConfig().getCanQuery()
+            && !job.getDontAutoBalanceMe()
+            && attemptMigrateTask(job, task, timeOnQueue)) {
+            return true;
+        }
+        if (task.getState() != JobTaskState.QUEUED_NO_SLOT) {
+            job.setTaskState(task, JobTaskState.QUEUED_NO_SLOT);
+            queueJobTaskUpdateEvent(job);
         }
         return false;
     }
 
     private boolean jobTaskCanKick(Job job, JobTask task) {
-        if (job == null || !job.isEnabled()) {
+        if ((job == null) || !job.isEnabled()) {
             return false;
         }
         boolean isNewTask = isNewTask(task);
@@ -2883,7 +2907,8 @@ public class Spawn implements Codable, AutoCloseable {
             }
         }
         if (!unavailableHosts.isEmpty()) {
-            log.warn("[taskQueuesByPriority] cannot kick " + task.getJobKey() + " because one or more of its hosts is down or scheduled to be failed: " + unavailableHosts.toString());
+            log.warn("[taskQueuesByPriority] cannot kick {} because one or more of its hosts is down or scheduled to " +
+                     "be failed: {}", task.getJobKey(), unavailableHosts);
             if (task.getState() != JobTaskState.QUEUED_HOST_UNAVAIL) {
                 job.setTaskState(task, JobTaskState.QUEUED_HOST_UNAVAIL);
                 queueJobTaskUpdateEvent(job);
@@ -2895,7 +2920,7 @@ public class Spawn implements Codable, AutoCloseable {
             queueJobTaskUpdateEvent(job);
         }
         // Obey the maximum simultaneous task running limit for this job, if it is set.
-        return !(job.getMaxSimulRunning() > 0 && job.getCountActiveTasks() >= job.getMaxSimulRunning());
+        return !((job.getMaxSimulRunning() > 0) && (job.getCountActiveTasks() >= job.getMaxSimulRunning()));
     }
 
     List<HostState> getHealthyHostStatesHousingTask(JobTask task, boolean allowReplicas) {
@@ -3056,14 +3081,13 @@ public class Spawn implements Codable, AutoCloseable {
         ListIterator<SpawnQueueItem> iter = queue.listIterator(0);
         int skippedQuiesceCount = 0;
         long now = System.currentTimeMillis();
-        while (iter.hasNext() && !taskQueuesByPriority.getStoppedJob()) // Terminate if out of tasks or we stopped a job, requiring a queue modification
-        {
+        // Terminate if out of tasks or we stopped a job, requiring a queue modification
+        while (iter.hasNext() && !taskQueuesByPriority.getStoppedJob()) {
             SpawnQueueItem key = iter.next();
             Job job = getJob(key.getJobUuid());
             JobTask task = getTask(key.getJobUuid(), key.getNodeNumber());
             try {
-                boolean kicked;
-                if (job == null || task == null || (task.getState() != JobTaskState.QUEUED && task.getState() != JobTaskState.QUEUED_HOST_UNAVAIL)) {
+                if ((job == null) || (task == null) || !task.getState().isQueuedState()) {
                     log.warn("[task.queue] removing invalid task {}", key);
                     iter.remove();
                     continue;
@@ -3071,17 +3095,21 @@ public class Spawn implements Codable, AutoCloseable {
                 if (systemManager.isQuiesced() && !key.getIgnoreQuiesce()) {
                     skippedQuiesceCount++;
                     log.debug("[task.queue] skipping {} because spawn is quiesced and the kick wasn't manual", key);
-                    continue;
+                    if (task.getState() == JobTaskState.QUEUED_NO_SLOT) {
+                        job.setTaskState(task, JobTaskState.QUEUED);
+                        queueJobTaskUpdateEvent(job);
+                    }
                 } else {
-                    kicked = kickOnExistingHosts(job, task, null, now - key.getCreationTime(), !job.getDontAutoBalanceMe());
-                }
-                if (kicked) {
-                    log.info("[task.queue] removing kicked task " + task.getJobKey());
-                    iter.remove();
+                    boolean kicked = kickOnExistingHosts(job, task, null, now - key.getCreationTime(),
+                                                         !job.getDontAutoBalanceMe());
+                    if (kicked) {
+                        log.info("[task.queue] removing kicked task {}", task.getJobKey());
+                        iter.remove();
+                    }
                 }
             } catch (Exception ex) {
                 log.warn("[task.queue] received exception during task kick: ", ex);
-                if (task != null && job != null) {
+                if ((task != null) && (job != null)) {
                     job.errorTask(task, JobTaskErrorCode.KICK_ERROR);
                     iter.remove();
                     queueJobTaskUpdateEvent(job);
@@ -3089,7 +3117,8 @@ public class Spawn implements Codable, AutoCloseable {
             }
         }
         if (skippedQuiesceCount > 0) {
-            log.warn("[task.queue] skipped " + skippedQuiesceCount + " queued tasks because spawn is quiesced and the kick wasn't manual");
+            log.warn("[task.queue] skipped {} queued tasks because spawn is quiesced and the kick wasn't manual",
+                     skippedQuiesceCount);
         }
     }
 

@@ -626,7 +626,8 @@ function(
         deleteSelected:function(jobIds){
             var count = jobIds.length;
             var self=this;
-            Alertify.dialog.confirm("Are you sure you would like to DELETE "+count+" job?", function (resp) {
+            Alertify.dialog.confirm("Are you sure you would like to DELETE " + (count > 1 ? " jobs" : " job") + "?", function (resp) {
+
                 _.each(jobIds,function(jobId){
                     var job = self.get(jobId);
                     if(!_.isUndefined(job)){
@@ -671,6 +672,7 @@ function(
         defaults:{
             tasksCount:0,
             queuedCount:0,
+            queuedCountNoSlot:0,
             erroredCount:0,
             queuedErrorCount:0,
             runningCount:0,
@@ -774,7 +776,8 @@ function(
             this.set("jobCount",this.get("jobCount")-1);
         },
         handleTaskQueueChange:function(data){
-            this.set("queuedCount",data.size-data.sizeErr);
+            this.set("queuedCount",data.size - data.sizeErr);
+            this.set("queuedCountNoSlot",data.sizeSlot);
             this.set("queuedErrorCount",data.sizeErr);
         },
         handleJobReset:function(){

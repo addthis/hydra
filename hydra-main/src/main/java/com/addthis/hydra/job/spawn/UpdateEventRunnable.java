@@ -41,6 +41,7 @@ class UpdateEventRunnable implements Runnable {
         int taskbusy = 0;
         int taskerrored = 0;
         int taskqueued = 0;
+        int taskQueuedNoSlot = 0;
         long files = 0;
         long bytes = 0;
         spawn.jobLock.lock();
@@ -64,6 +65,10 @@ class UpdateEventRunnable implements Runnable {
                             break;
                         case QUEUED_HOST_UNAVAIL:
                             taskqueued++;
+                            break;
+                        case QUEUED_NO_SLOT:
+                            taskqueued++;
+                            taskQueuedNoSlot++;
                             break;
                     }
                     files += jn.getFileCount();
@@ -103,12 +108,14 @@ class UpdateEventRunnable implements Runnable {
         events.put("tasks_busy", (long) taskbusy);
         events.put("tasks_allocated", (long) taskallocated);
         events.put("tasks_queued", (long) taskqueued);
+        events.put("tasks_queued_no_slot", (long) taskQueuedNoSlot);
         events.put("tasks_errored", (long) taskerrored);
         events.put("files", files);
         events.put("bytes", bytes);
         spawn.spawnFormattedLogger.periodicState(events);
         SpawnMetrics.runningTaskCount.set(taskbusy);
         SpawnMetrics.queuedTaskCount.set(taskqueued);
+        SpawnMetrics.queuedTaskNoSlotCount.set(taskQueuedNoSlot);
         SpawnMetrics.failTaskCount.set(taskerrored);
         SpawnMetrics.runningJobCount.set(jobrunning);
         SpawnMetrics.queuedJobCount.set(jobscheduled);

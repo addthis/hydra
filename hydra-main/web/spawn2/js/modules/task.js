@@ -43,7 +43,8 @@ function(
         "SWAPPING",
         "QUEUED",
         "MIGRATING",
-        "FULL REPLICATE"
+        "FULL REPLICATE",
+        "QUEUED, WAITING ON TASK SLOT"
     ];
     var StateLabels=[
         "label-default",//idle
@@ -60,6 +61,7 @@ function(
         "label-info",//queued
         "label-success",//migrating
         "label-success",//full replicate
+        "label-info",//queued-no-slot
     ];
     var errorCodes={
 
