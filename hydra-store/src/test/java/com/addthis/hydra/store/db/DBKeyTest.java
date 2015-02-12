@@ -36,6 +36,13 @@ public class DBKeyTest {
     private void keySerialization(long id, String key) {
         DBKey input = new DBKey(id, key);
         byte[] serialization = input.toBytes();
+        int bytes = key.length();
+        if (id <= Integer.MAX_VALUE) {
+            bytes += 4;
+        } else {
+            bytes += 8;
+        }
+        assertEquals(bytes, serialization.length);
         DBKey output = DBKey.fromBytes(serialization);
         assertEquals(input, output);
     }
