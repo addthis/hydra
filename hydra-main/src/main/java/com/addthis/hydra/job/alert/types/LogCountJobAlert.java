@@ -57,10 +57,6 @@ public class LogCountJobAlert extends AbstractJobAlert {
         this.sigma = sigma;
     }
 
-    @JsonProperty
-    @Override
-    public int getType() { return 7; }
-
     @JsonIgnore
     @Override protected String getTypeStringInternal() {
         return "Discrepancy in counts of log files across tasks";

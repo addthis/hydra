@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.annotations.Time;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
@@ -53,6 +54,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Bean to hold a job specific alert
  */
+@Pluggable("job alerts")
 @JsonIgnoreProperties({"alertStatus", "canaryOutputMessage"})
 public abstract class AbstractJobAlert implements Codable {
     private static final Logger log = LoggerFactory.getLogger(AbstractJobAlert.class);
@@ -124,9 +126,6 @@ public abstract class AbstractJobAlert implements Codable {
         this.activeTriggerTimes = immutableOrEmpty(activeTriggerTimes);
         this.lastAlertTime = lastAlertTime;
     }
-
-    @JsonProperty
-    public abstract int getType();
 
     // getters/setters that trigger ser/deser and are not vanilla (also have in-code usages)
 

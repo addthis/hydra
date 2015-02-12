@@ -53,10 +53,6 @@ public class SplitCanaryJobAlert extends AbstractJobAlert {
         this.canaryConfigThreshold  = canaryConfigThreshold;
     }
 
-    @JsonProperty
-    @Override
-    public int getType() { return 4; }
-
     @JsonIgnore
     @Override protected String getTypeStringInternal() {
         return "Split canary";

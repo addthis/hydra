@@ -45,10 +45,6 @@ public class OnErrorJobAlert extends AbstractJobAlert {
         super(alertId, description, timeout, delay, email, jobIds, lastAlertTime, activeJobs, activeTriggerTimes);
     }
 
-    @JsonProperty
-    @Override
-    public int getType() { return 0; }
-
     @JsonIgnore
     @Override protected String getTypeStringInternal() {
         return "Task is in Error";

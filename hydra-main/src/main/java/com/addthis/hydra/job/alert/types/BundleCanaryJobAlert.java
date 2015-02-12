@@ -61,10 +61,6 @@ public class BundleCanaryJobAlert extends AbstractJobAlert {
         this.canaryFilter = canaryFilter;
     }
 
-    @JsonProperty
-    @Override
-    public int getType() { return 6; }
-
     @JsonIgnore
     @Override protected String getTypeStringInternal() {
         return  "Bundle canary";

@@ -53,10 +53,6 @@ public class MapCanaryJobAlert extends AbstractJobAlert {
         this.canaryConfigThreshold = canaryConfigThreshold;
     }
 
-    @JsonProperty
-    @Override
-    public int getType() { return 5; }
-
     @JsonIgnore
     @Override protected String getTypeStringInternal() {
         return "Map canary";

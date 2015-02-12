@@ -76,11 +76,11 @@ public class JobAlertTest {
     @Test
     public void jsonTest() throws Exception {
         AbstractJobAlert initialAlert = decodeObject(AbstractJobAlert.class,
-                                             "alertId = sampleid, type = 0, email = \"someone@domain.com\", " +
+                                             "alertId = sampleid, type = 5, email = \"someone@domain.com\", " +
                                              "description = this is a new alert, jobIds = [j1, j2]");
         JSONObject json = initialAlert.toJSON();
         assertEquals(initialAlert.alertId, json.getString("alertId"));
-        assertEquals(initialAlert.getType(), json.getInt("type"));
+        assertEquals(0, json.getInt("type"));
         assertEquals(initialAlert.email, json.getString("email"));
         assertEquals(initialAlert.description, json.getString("description"));
         assertEquals(new JSONArray(initialAlert.jobIds), json.getJSONArray("jobIds"));
