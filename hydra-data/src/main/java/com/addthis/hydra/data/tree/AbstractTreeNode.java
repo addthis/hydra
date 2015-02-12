@@ -48,7 +48,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, Co
     @FieldConfig(codable = true)
     protected HashMap<String, TreeNodeData> data;
 
-    protected long nodedb;
+    protected volatile long nodedb;
 
     @Override
     public byte[] bytesEncode(long version) {
