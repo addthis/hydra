@@ -100,10 +100,8 @@ public class JobAlertUtil {
         return 0;
     }
 
-    private static final String PATH_DELIMITER = "/live/log";
-
-    public static Map<String, Integer> getLogFileCountPerTask(MeshyClient meshyClient, String jobId) {
-        String meshLookupString = "/job*/" + jobId + "/*/live/log/*";
+    public static Map<String, Integer> getFileCountPerTask(MeshyClient meshyClient, String jobId, String dirPath) {
+        String meshLookupString = "/job*/" + jobId + "/*/gold/" + dirPath;
         Map<String, Integer> result = new HashMap<>();
         if (meshyClient != null) {
             try {
@@ -111,8 +109,8 @@ public class JobAlertUtil {
                 for (FileReference fileRef : fileRefs) {
                     String uuid = fileRef.getHostUUID();
                     String path = fileRef.name;
-                    int offset = path.indexOf(PATH_DELIMITER);
-                    String key = uuid + ":" + path.substring(0, offset + PATH_DELIMITER.length());
+                    int offset = path.indexOf("/gold/");
+                    String key = uuid + ":" + path.substring(0, offset);
                     Integer count = result.get(key);
                     if (count == null) {
                         count = 1;
@@ -125,7 +123,7 @@ public class JobAlertUtil {
                 log.warn("Job alert mesh look up failed", e);
             }
         } else {
-            log.warn("Received mesh lookup request job={} dirPath={} while meshy client was not instantiated; returning zero", jobId);
+            log.warn("Received mesh lookup request job={} dirPath={} while meshy client was not instantiated; returning zero", jobId, meshLookupString);
         }
         return result;
     }

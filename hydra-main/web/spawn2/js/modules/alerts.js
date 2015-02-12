@@ -36,7 +36,6 @@ function(
         		jobIds:"",
         		type:-1,
         		timeout:-1,
-        		canaryPath: "",
         		canaryCheckDates: "",
         		canaryConfigThreshold: "",
         		email:"",
@@ -292,13 +291,13 @@ function(
         		var type = parseInt($("#alertType").val());
         		// Timeouts are only used for rekick/runtime alerts
         		$("#alertTimeout").toggle(type == 2 || type == 3);
-        		// Only show canary config for canary alerts (4 and 5)
-        		$("#alertCanaryConfig").toggle(type == 4 || type == 5);
+        		// Only show canary path config for certain alerts (4, 5, 6, and 8)
+        		$("#alertCanaryPathConfig").toggle(type == 4 || type == 5 || type == 8 || type == 6);
         		$("#alertCanaryConfig").toggle(type == 4 || type == 5);
         		// Show query path, ops, rops, and bundle filter fields for canary map filter (6)
         		$("#alertCanaryFilterConfig").toggle(type == 6);
-        		$("#alertSigmaConfig").toggle(type == 7);
-        		if (type == 4) {
+        		$("#alertSigmaConfig").toggle(type == 7 || type == 8);
+        		if (type == 4 || type == 8) {
         			$("#canaryPathHint").text("For example, 'split/importantfiles/{{now-1}}/*.gz'. Mesh lookups are performed relative to the gold directories, so do not include jobid/taskid/gold in your path.")
         		} else if (type == 5) {
         			$("#canaryPathHint").text("For example, 'root/ymd/{{now-1}}:+count'. The query should have exactly one '+' (generally, +count) and return a single numeric quantity per task.");
@@ -316,16 +315,22 @@ function(
         			Alertify.log.error("Alert email field appears invalid -- please include an '@' character.");
         			return false;
         		}
-        		if (type == 4 || type == 5) {        		
+        		if (type == 4 || type == 5 || type == 8) {
         			var canaryPath = this.model.get("canaryPath");
-        			var canaryConfigThreshold = this.model.get("canaryConfigThreshold");
-        			if (!canaryPath || !canaryConfigThreshold) {
-        				Alertify.log.error("Please fill out all canary configuration fields.");
+        			if (!canaryPath) {
+        				Alertify.log.error("Please fill out canary path field.");
         				return false;
         			}
         			if (type == 5 && (canaryPath.match(/\+/g)||[]).length != 1) {
  						Alertify.log.error("Please include exactly one '+' corresponding to a numeric field (generally, +count) in your canary path field.");
  						return false;
+        			}
+        		}
+        		if (type == 4 || type == 5) {
+        			var canaryConfigThreshold = this.model.get("canaryConfigThreshold");
+        			if (!canaryConfigThreshold) {
+        				Alertify.log.error("Please fill out all canary configuration fields.");
+        				return false;
         			}
         		}
         		return true;

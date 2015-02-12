@@ -132,7 +132,7 @@ define([],function(){
         },
         alertTypes: {0: "On Job Error", 1: "On Job Completion", 2: "Runtime Exceeded",
                      3: "Rekick Timeout", 4: "Split Canary", 5: "Map Canary", 6: "Bundle Canary",
-                     7: "Log Count Deviation"},
+                     7: "Log Count Deviation", 8: "File Count Deviation"},
         generateTaskDirStatusText:function(type){
             switch (type) {
                 case "MISMATCH_MISSING_LIVE":

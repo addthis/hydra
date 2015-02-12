@@ -33,28 +33,31 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class LogCountJobAlert extends AbstractJobAlert {
+public class FileCountJobAlert extends AbstractJobAlert {
 
-    private static final Logger log = LoggerFactory.getLogger(LogCountJobAlert.class);
+    private static final Logger log = LoggerFactory.getLogger(FileCountJobAlert.class);
 
     /**
      * Number of standard deviations away from the mean for an alert
      * to trigger. Default is 1.0.
      */
     @JsonProperty public final double sigma;
+    @JsonProperty public final String canaryPath;
 
-    public LogCountJobAlert(@Nullable @JsonProperty("alertId") String alertId,
-                            @JsonProperty("description") String description,
-                            @Time(TimeUnit.MINUTES) @JsonProperty("timeout") long timeout,
-                            @Time(TimeUnit.MINUTES) @JsonProperty("delay") long delay,
-                            @JsonProperty("email") String email,
-                            @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
-                            @JsonProperty("lastAlertTime") long lastAlertTime,
-                            @JsonProperty("activeJobs") Map<String, String> activeJobs,
-                            @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes,
-                            @JsonProperty("sigma") double sigma) {
+    public FileCountJobAlert(@Nullable @JsonProperty("alertId") String alertId,
+                             @JsonProperty("description") String description,
+                             @Time(TimeUnit.MINUTES) @JsonProperty("timeout") long timeout,
+                             @Time(TimeUnit.MINUTES) @JsonProperty("delay") long delay,
+                             @JsonProperty("email") String email,
+                             @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
+                             @JsonProperty("lastAlertTime") long lastAlertTime,
+                             @JsonProperty("activeJobs") Map<String, String> activeJobs,
+                             @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes,
+                             @JsonProperty("sigma") double sigma,
+                             @JsonProperty("canaryPath") String canaryPath) {
         super(alertId, description, timeout, delay, email, jobIds, lastAlertTime, activeJobs, activeTriggerTimes);
         this.sigma = sigma;
+        this.canaryPath = canaryPath;
     }
 
     @JsonIgnore
@@ -62,12 +65,13 @@ public class LogCountJobAlert extends AbstractJobAlert {
         return "Discrepancy in counts of log files across tasks";
     }
 
-    private static String ERROR_MESSAGE = "Host %s has %d log files which is %s than threshold %f  " +
-                                          "derived as mean value %f %s (%f multiplied by the standard deviation %f).\n";
+    private static final String ERROR_MESSAGE =
+            "Host %s has %d log files which is %s than threshold %f derived as mean value %f %s (%f multiplied by the" +
+            " standard deviation %f).\n";
 
     @Nullable @Override
     protected String testAlertActiveForJob(@Nullable MeshyClient meshClient, Job job, String previousErrorMessage) {
-        Map<String, Integer> logCounts = JobAlertUtil.getLogFileCountPerTask(meshClient, job.getId());
+        Map<String, Integer> logCounts = JobAlertUtil.getFileCountPerTask(meshClient, job.getId(), canaryPath);
         log.debug("Log count map is {}", logCounts);
         if (logCounts.size() < 2) {
             return null;
@@ -101,14 +105,14 @@ public class LogCountJobAlert extends AbstractJobAlert {
             }
         }
         String errorString = errors.toString();
-        if (errorString.length() > 0) {
+        if (!errorString.isEmpty()) {
             return errorString;
         } else {
             return null;
         }
     }
 
-    @Override public String isValid() {
+    @Nullable @Override public String isValid() {
         if (sigma <= 0.0) {
             return "sigma parameter must be a positive value";
         }
