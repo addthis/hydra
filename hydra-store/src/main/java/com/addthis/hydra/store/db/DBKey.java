@@ -46,7 +46,7 @@ public final class DBKey implements IPageDB.Key, Comparable<DBKey> {
     }
 
     public DBKey(long id, Raw key) {
-        checkArgument(id >= 0);
+        checkArgument(id >= 0, "Argument was %s but expected non-negative integer", id);
         if (key == null) {
             key = EMPTY;
         }
