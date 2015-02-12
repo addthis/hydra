@@ -26,7 +26,7 @@ public interface JobAlertManager {
 
     boolean isAlertEnabledAndWorking();
 
-    void putAlert(String alertId, JobAlert alert);
+    void putAlert(String alertId, AbstractJobAlert alert);
 
     void removeAlert(String alertId);
 

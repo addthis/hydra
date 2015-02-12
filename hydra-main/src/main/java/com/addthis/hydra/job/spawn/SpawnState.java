@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.job.spawn;
 
+import java.util.Iterator;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -52,5 +53,9 @@ public class SpawnState implements Codable {
         }
         this.quiesce = quiesce;
         this.disabledHosts = disabledHosts;
+    }
+
+    public Iterator<Job> jobsIterator() {
+        return jobs.values().iterator();
     }
 }
