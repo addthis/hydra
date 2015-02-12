@@ -157,15 +157,15 @@ public class TestConcurrentTree {
 
     @Test
     @Category(SlowTest.class)
-    public void testGetOrCreateOneThreadIterations() throws Exception {
+    public void getOrCreateOneThreadIterations() throws Exception {
         for(int i = 0; i < 100; i++) {
-            testGetOrCreateOneThread();
+            getOrCreateOneThread();
         }
     }
 
     @Test
-    public void testGetOrCreateOneThread() throws Exception {
-        log.info("testGetOrCreateOneThread");
+    public void getOrCreateOneThread() throws Exception {
+        log.info("getOrCreateOneThread");
         File dir = makeTemporaryDirectory();
         try {
             ConcurrentTree tree = new Builder(dir).build();
@@ -192,8 +192,8 @@ public class TestConcurrentTree {
     }
 
     @Test
-    public void testRecursiveDeleteOneThread() throws Exception {
-        log.info("testRecursiveDeleteOneThread");
+    public void recursiveDeleteOneThread() throws Exception {
+        log.info("recursiveDeleteOneThread");
         File dir = makeTemporaryDirectory();
         try {
             ConcurrentTree tree = new Builder(dir).build();
@@ -226,8 +226,8 @@ public class TestConcurrentTree {
     }
 
     @Test
-    public void testRecursiveDeleteMultiThreads() throws Exception {
-        log.info("testRecursiveDeleteMultiThreads");
+    public void recursiveDeleteMultiThreads() throws Exception {
+        log.info("recursiveDeleteMultiThreads");
         File dir = makeTemporaryDirectory();
         try {
             ConcurrentTree tree = new Builder(dir).
@@ -265,20 +265,19 @@ public class TestConcurrentTree {
         }
     }
 
-
     @Test
-    public void testGetOrCreateFast() throws Exception {
-        testGetOrCreateMultiThread(fastNumElements, fastNumThreads);
+    public void getOrCreateFast() throws Exception {
+        getOrCreateMultiThread(fastNumElements, fastNumThreads);
     }
 
     @Test
     @Category(SlowTest.class)
-    public void testGetOrCreateSlow() throws Exception {
-        testGetOrCreateMultiThread(slowNumElements, slowNumThreads);
+    public void getOrCreateSlow() throws Exception {
+        getOrCreateMultiThread(slowNumElements, slowNumThreads);
     }
 
-    private void testGetOrCreateMultiThread(int numElements, int numThreads) throws Exception {
-        log.info("testGetOrCreateMultiThread");
+    private void getOrCreateMultiThread(int numElements, int numThreads) throws Exception {
+        log.info("getOrCreateMultiThread");
         File dir = makeTemporaryDirectory();
         try {
             ArrayList<Integer> values = new ArrayList<>(numElements);
@@ -327,18 +326,18 @@ public class TestConcurrentTree {
     }
 
     @Test
-    public void testDeleteOneThreadForeground() throws Exception {
-        log.info("testDeleteOneThreadForeground");
-        testDeleteOneThread(0);
+    public void deleteOneThreadForeground() throws Exception {
+        log.info("deleteOneThreadForeground");
+        deleteOneThread(0);
     }
 
     @Test
-    public void testDeleteOneThreadBackground() throws Exception {
-        log.info("testDeleteOneThreadBackground");
-        testDeleteOneThread(fastNumThreads);
+    public void deleteOneThreadBackground() throws Exception {
+        log.info("deleteOneThreadBackground");
+        deleteOneThread(fastNumThreads);
     }
 
-    private void testDeleteOneThread(int numDeletionThreads) throws Exception {
+    private void deleteOneThread(int numDeletionThreads) throws Exception {
         File dir = makeTemporaryDirectory();
         try {
             ConcurrentTree tree = new Builder(dir)
@@ -389,42 +388,42 @@ public class TestConcurrentTree {
     }
 
     @Test
-    public void testDeleteFast() throws Exception {
-        testDeleteMultiThread(fastNumElements, fastNumThreads, fastNumThreads);
-        testDeleteMultiThread(fastNumElements, fastNumThreads, 0);
+    public void deleteFast() throws Exception {
+        deleteMultiThread(fastNumElements, fastNumThreads, fastNumThreads);
+        deleteMultiThread(fastNumElements, fastNumThreads, 0);
     }
 
     @Test
     @Category(SlowTest.class)
-    public void testDeleteSlow1() throws Exception {
-        testDeleteMultiThread(slowNumElements, slowNumThreads, slowNumThreads);
-        testDeleteMultiThread(slowNumElements, slowNumThreads, 0);
+    public void deleteSlow1() throws Exception {
+        deleteMultiThread(slowNumElements, slowNumThreads, slowNumThreads);
+        deleteMultiThread(slowNumElements, slowNumThreads, 0);
     }
 
     @Test
     @Category(SlowTest.class)
-    public void testDeleteSlow2() throws Exception {
+    public void deleteSlow2() throws Exception {
         for(int i = 0 ; i < 100; i++) {
-            testDeleteMultiThread(fastNumElements, fastNumThreads, fastNumThreads);
-            testDeleteMultiThread(fastNumElements, fastNumThreads, 0);
+            deleteMultiThread(fastNumElements, fastNumThreads, fastNumThreads);
+            deleteMultiThread(fastNumElements, fastNumThreads, 0);
         }
     }
 
     @Test
     @Category(SlowTest.class)
-    public void testIterateAndDeleteSlow() throws Exception {
+    public void iterateAndDeleteSlow() throws Exception {
         for(int i = 0; i < 100; i++) {
-            testIterateAndDelete(fastNumThreads, 1000);
+            iterateAndDelete(fastNumThreads, 1000);
         }
     }
 
     @Test
-    public void testIterateAndDeleteFast() throws Exception {
-        testIterateAndDelete(fastNumThreads, 1000);
+    public void iterateAndDeleteFast() throws Exception {
+        iterateAndDelete(fastNumThreads, 1000);
     }
 
-    private void testIterateAndDelete(int numThreads, int numElements) throws Exception {
-        log.info("testIterateAndDelete {} {}", numThreads, numElements);
+    private void iterateAndDelete(int numThreads, int numElements) throws Exception {
+        log.info("iterateAndDelete {} {}", numThreads, numElements);
         File dir = makeTemporaryDirectory();
         try {
             ConcurrentTree tree = new Builder(dir).numDeletionThreads(numThreads).
@@ -468,8 +467,8 @@ public class TestConcurrentTree {
 
     }
 
-    private void testDeleteMultiThread(int numElements, int numThreads, int numDeletionThreads) throws Exception {
-        log.info("testDeleteMultiThread {} {} {}", numElements, numThreads, numDeletionThreads);
+    private void deleteMultiThread(int numElements, int numThreads, int numDeletionThreads) throws Exception {
+        log.info("deleteMultiThread {} {} {}", numElements, numThreads, numDeletionThreads);
         File dir = makeTemporaryDirectory();
         try {
             ArrayList<Integer> values = new ArrayList<>(numElements);
@@ -524,5 +523,37 @@ public class TestConcurrentTree {
         }
     }
 
+    @Test
+    public void maximumNodeIdentifier() throws Exception {
+        File dir = makeTemporaryDirectory();
+        try {
+            ConcurrentTree tree = new Builder(dir).build();
+            ConcurrentTreeNode root = tree.getRootNode();
+            for (int i = 0; i < 1000; i++) {
+                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+                assertNotNull(node);
+                assertEquals(1, node.getLeaseCount());
+                assertEquals(Integer.toString(i), node.getName());
+                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+                child.release();
+                node.release();
+            }
+            assertTrue(tree.setNextNodeDB(Integer.MAX_VALUE));
+            for (int i = 1000; i < 2000; i++) {
+                ConcurrentTreeNode node = tree.getOrCreateNode(root, Integer.toString(i), null);
+                assertNotNull(node);
+                assertEquals(1, node.getLeaseCount());
+                assertEquals(Integer.toString(i), node.getName());
+                ConcurrentTreeNode child = tree.getOrCreateNode(node, Integer.toString(i), null);
+                child.release();
+                node.release();
+            }
+            tree.close(false, close);
+        } finally {
+            if (dir != null) {
+                Files.deleteDir(dir);
+            }
+        }
+    }
 
 }

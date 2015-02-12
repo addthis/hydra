@@ -14,7 +14,7 @@
 package com.addthis.hydra.data.tree.prop;
 
 import com.addthis.codec.binary.CodecBin2;
-import com.addthis.hydra.store.kv.KeyCoder;
+import com.addthis.hydra.store.kv.PageEncodeType;
 
 import junit.framework.TestCase;
 
@@ -27,11 +27,11 @@ public class DataTimeTest extends TestCase {
         long last = first + 100000;
         time.setFirst(first);
         time.setLast(last);
-        byte[] encoded = time.bytesEncode(KeyCoder.EncodeType.SPARSE.ordinal());
+        byte[] encoded = time.bytesEncode(PageEncodeType.SPARSE.ordinal());
         CodecBin2 codec = CodecBin2.INSTANCE;
         byte[] codecEncoded = codec.encode(time);
         DataTime timeDecoded = new DataTime();
-        timeDecoded.bytesDecode(encoded, KeyCoder.EncodeType.SPARSE.ordinal());
+        timeDecoded.bytesDecode(encoded, PageEncodeType.SPARSE.ordinal());
         assertTrue(timeDecoded.getValue("first").asLong().getLong() == time.getValue("first").asLong().getLong());
         assertTrue(timeDecoded.getValue("last").asLong().getLong() == time.getValue("last").asLong().getLong());
         assertTrue(encoded.length < codecEncoded.length);

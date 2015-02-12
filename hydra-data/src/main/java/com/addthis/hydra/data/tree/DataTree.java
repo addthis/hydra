@@ -33,7 +33,7 @@ public interface DataTree extends DataTreeNode {
 
     public void sync() throws IOException;
 
-    public int getDBCount();
+    public long getDBCount();
 
     public int getCacheSize();
 

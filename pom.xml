@@ -55,7 +55,7 @@
 
     <!-- addthis dependency versions -->
     <hydra.dep.bark.version>2.1.4</hydra.dep.bark.version>
-    <hydra.dep.basis.version>2.3.0</hydra.dep.basis.version>
+    <hydra.dep.basis.version>2.3.1-SNAPSHOT</hydra.dep.basis.version>
     <hydra.dep.bundle.version>2.5.0</hydra.dep.bundle.version>
     <hydra.dep.codec.version>3.3.0</hydra.dep.codec.version>
     <hydra.dep.meshy.version>3.3.1</hydra.dep.meshy.version>

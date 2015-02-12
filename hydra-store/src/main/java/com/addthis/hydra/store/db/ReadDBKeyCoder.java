@@ -15,6 +15,7 @@ package com.addthis.hydra.store.db;
 
 import com.addthis.codec.Codec;
 import com.addthis.codec.codables.BytesCodable;
+import com.addthis.hydra.store.kv.PageEncodeType;
 
 /**
  */
@@ -29,7 +30,7 @@ public class ReadDBKeyCoder<V extends IReadWeighable & BytesCodable> extends DBK
     }
 
     @Override
-    public V valueDecode(byte[] value, EncodeType encodeType) {
+    public V valueDecode(byte[] value, PageEncodeType encodeType) {
         V val = super.valueDecode(value, encodeType);
         val.setWeight(value.length);
         return val;

@@ -53,7 +53,7 @@ public class TestTreeSerializationVersions {
     }
 
     @Test
-    public void testConcurrentTreeUpgradePath() throws Exception {
+    public void legacyToSparseUpgradePath() throws Exception {
         File dir = makeTemporaryDirectory();
         try {
             int count = 1000;

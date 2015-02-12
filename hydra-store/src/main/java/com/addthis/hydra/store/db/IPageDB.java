@@ -13,8 +13,7 @@
  */
 package com.addthis.hydra.store.db;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import javax.annotation.Nonnull;
 
 import java.util.Map.Entry;
 
@@ -30,15 +29,16 @@ public interface IPageDB<K extends Key, V extends BytesCodable> extends AutoClos
 
     public interface Key {
 
-        public int id();
+        public long id();
 
         public byte[] key();
 
         public byte[] toBytes();
 
+        public byte[] deltaEncode(@Nonnull Key baseKey);
+
         public Raw rawKey();
 
-        public void writeOut(OutputStream out) throws IOException;
     }
 
     public interface Range<K, V> extends ClosableIterator<Entry<K, V>>, Iterable<Entry<K, V>> {

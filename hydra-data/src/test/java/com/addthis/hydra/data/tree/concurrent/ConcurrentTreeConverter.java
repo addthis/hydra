@@ -66,7 +66,7 @@ public class ConcurrentTreeConverter {
             ReadTreeNode readChild) {
         ConcurrentTreeNode writeNode = writeTree.getOrCreateNode(writeParent, readChild.getName(), null);
         writeNode.writeLock();
-        if (readChild.nodeDB() != null) {
+        if (readChild.hasNodes()) {
             writeNode.requireNodeDB();
         }
         writeNode.setCounter(readChild.getCounter());

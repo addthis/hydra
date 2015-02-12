@@ -14,25 +14,78 @@
 package com.addthis.hydra.store.kv;
 
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 public interface KeyCoder<K, V> {
 
-    enum EncodeType {LEGACY, SPARSE}
-
+    /**
+     * Returns the smallest possible key value.
+     *
+     * @return
+     */
     K negInfinity();
 
-    byte[] keyEncode(K key);
-
-    byte[] valueEncode(V value, EncodeType encodeType);
-
-    K keyDecode(byte[] key);
-
-    V valueDecode(byte[] value, EncodeType encodeType);
+    /**
+     * Unoptimized key encoding. Uses only the state of the key
+     * to generate byte array. The sorted order of two keys should
+     * be equal to the natural ordering of their corresponding byte arrays.
+     *
+     * @param key           input to encode
+     * @return key serialization to byte array
+     */
+    byte[] keyEncode(@Nullable K key);
 
     /**
-     * throws a NullPointerException if the input is null.
+     * Optimized key encoding. Can use the base key to generate
+     * a smaller byte array.
      *
-     * @param value a non-null value
-     * @return true if-and-only-if the input encodes the null value.
+     * @param key           input to encode
+     * @param baseKey       another key value that can be used for delta encoding
+     * @param encodeType    type of page encoding to apply to key
+     *
+     * @return key serialization to byte array
      */
-    boolean nullRawValueInternal(byte[] value);
+    byte[] keyEncode(@Nullable K key, @Nonnull K baseKey, @Nonnull PageEncodeType encodeType);
+
+    /**
+     * Value encoding.
+     *
+     * @param value         input to encode
+     * @param encodeType    type of page encoding to apply to value
+     * @return value serialization to byte array
+     */
+    byte[] valueEncode(V value, PageEncodeType encodeType);
+
+    /**
+     * Unoptimized key encoding. Uses only the state of the
+     * byte array to generate the key. The sorted order of
+     * two keys should be equal to the natural ordering of
+     * their corresponding byte arrays.
+     *
+     * @param key           serialization of byte array
+     * @return deserialized key
+     */
+    K keyDecode(byte[] key);
+
+    /**
+     * Optimized key decoding. Can use the byte array
+     * and the base key to generate the key.
+     *
+     * @param key           serialization of byte array
+     * @param baseKey       another key value that can be used for delta decoding
+     * @param encodeType    type of page encoding to apply to key
+     * @return deserialized key
+     */
+    K keyDecode(@Nullable byte[] key, @Nonnull K baseKey, @Nonnull PageEncodeType encodeType);
+
+    /**
+     * Value decoding.
+     *
+     * @param value         input to decode
+     * @param encodeType    type of page decoding to apply to value
+     * @return deserialized value
+     */
+    V valueDecode(byte[] value, @Nonnull PageEncodeType encodeType);
+
 }

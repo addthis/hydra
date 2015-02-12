@@ -91,7 +91,7 @@ public class ReadPageDB<V extends IReadWeighable & BytesCodable> implements IPag
     public TreeMap<DBKey, V> toTreeMap() {
         try {
             IPageDB.Range<DBKey, V> range =
-                    range(this.eps.getFirstKey(), new DBKey(Integer.MAX_VALUE, ""));
+                    range(this.eps.getFirstKey(), new DBKey(Long.MAX_VALUE, ""));
             Iterator<Map.Entry<DBKey, V>> iterator = range.iterator();
             TreeMap<DBKey, V> map = new TreeMap<>();
             while (iterator.hasNext()) {

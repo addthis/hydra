@@ -13,12 +13,13 @@
  */
 package com.addthis.hydra.store.skiplist;
 
+import java.io.DataOutputStream;
 import java.io.OutputStream;
 
 import java.util.ArrayList;
 
 import com.addthis.basis.io.GZOut;
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.Varint;
 
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.PageEncodeType;
@@ -37,24 +38,25 @@ import io.netty.buffer.ByteBufOutputStream;
  * We no longer encode pages in this format.
  */
 @Deprecated
-public class LegacyPage<K, V extends BytesCodable> extends Page<K, V> {
+public class SparsePage<K, V extends BytesCodable> extends Page<K, V> {
 
-    protected LegacyPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
+    protected SparsePage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
         super(cache, firstKey, nextFirstKey, encodeType);
     }
 
-    protected LegacyPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, int size, ArrayList<K> keys,
-            ArrayList<V> values, ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
+    protected SparsePage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, int size, ArrayList<K> keys,
+                         ArrayList<V> values, ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
         super(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
     }
 
-    @Override
+    protected static final int FLAGS_IS_SPARSE = 1 << 5;
+
     public byte[] encode(ByteBufOutputStream out, boolean record) {
         SkipListCacheMetrics metrics = parent.metrics;
         parent.numPagesEncoded.getAndIncrement();
         try {
             OutputStream os = out;
-            out.write(gztype | FLAGS_HAS_ESTIMATES);
+            out.write(gztype | FLAGS_HAS_ESTIMATES | FLAGS_IS_SPARSE);
             switch (gztype) {
                 case 0:
                     break;
@@ -74,31 +76,39 @@ public class LegacyPage<K, V extends BytesCodable> extends Page<K, V> {
                     throw new RuntimeException("invalid gztype: " + gztype);
             }
 
+            DataOutputStream dos = new DataOutputStream(os);
             byte[] firstKeyEncoded = keyCoder.keyEncode(firstKey);
             byte[] nextFirstKeyEncoded = keyCoder.keyEncode(nextFirstKey);
 
-            updateHistogram(metrics.encodeFirstKeySize, firstKeyEncoded.length, record);
             updateHistogram(metrics.encodeNextFirstKeySize, nextFirstKeyEncoded.length, record);
 
-            Bytes.writeLength(size, os);
-            Bytes.writeBytes(firstKeyEncoded, os);
-            Bytes.writeBytes(nextFirstKeyEncoded, os);
+            Varint.writeUnsignedVarInt(size, dos);
+            Varint.writeUnsignedVarInt(firstKeyEncoded.length, dos);
+            dos.write(firstKeyEncoded);
+            Varint.writeUnsignedVarInt(nextFirstKeyEncoded.length, dos);
+            if (nextFirstKeyEncoded.length > 0) {
+                dos.write(nextFirstKeyEncoded);
+            }
             for (int i = 0; i < size; i++) {
                 byte[] keyEncoded = keyCoder.keyEncode(keys.get(i));
                 byte[] rawVal = rawValues.get(i);
 
-                if (rawVal == null) {
-                    rawVal = keyCoder.valueEncode(values.get(i), PageEncodeType.LEGACY);
+                if (rawVal == null || encodeType != PageEncodeType.SPARSE) {
+                    fetchValue(i);
+                    rawVal = keyCoder.valueEncode(values.get(i), PageEncodeType.SPARSE);
                 }
 
                 updateHistogram(metrics.encodeKeySize, keyEncoded.length, record);
                 updateHistogram(metrics.encodeValueSize, rawVal.length, record);
 
-                Bytes.writeBytes(keyEncoded, os);
-                Bytes.writeBytes(rawVal, os);
+                Varint.writeUnsignedVarInt(keyEncoded.length, dos);
+                dos.write(keyEncoded);
+                Varint.writeUnsignedVarInt(rawVal.length, dos);
+                dos.write(rawVal);
             }
-            Bytes.writeLength((estimateTotal > 0 ? estimateTotal : 1), os);
-            Bytes.writeLength((estimates > 0 ? estimates : 1), os);
+
+            Varint.writeUnsignedVarInt((estimateTotal > 0 ? estimateTotal : 1), dos);
+            Varint.writeUnsignedVarInt((estimates > 0 ? estimates : 1), dos);
             switch (gztype) {
                 case 1:
                     ((DeflaterOutputStream) os).finish();
@@ -106,12 +116,9 @@ public class LegacyPage<K, V extends BytesCodable> extends Page<K, V> {
                 case 2:
                     ((GZOut) os).finish();
                     break;
-                case 4:
-                    os.flush();
-                    break;
             }
-            os.flush();
-            os.close();
+            os.flush(); // flush should be called by dos.close(), but better safe than sorry
+            dos.close();
 
             ByteBuf buffer = out.buffer();
 
@@ -119,32 +126,29 @@ public class LegacyPage<K, V extends BytesCodable> extends Page<K, V> {
 
             buffer.readBytes(returnValue);
             buffer.clear();
-
             updateHistogram(metrics.numberKeysPerPage, size, record);
             updateHistogram(metrics.encodePageSize, returnValue.length, record);
             return returnValue;
-        } catch (RuntimeException ex) {
-            throw ex;
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
     }
 
-    public static class LegacyPageFactory<K, V extends BytesCodable> extends PageFactory<K,V> {
+    public static class SparsePageFactory<K, V extends BytesCodable> extends PageFactory<K,V> {
 
-        public static final LegacyPageFactory singleton = new LegacyPageFactory();
+        public static final SparsePageFactory singleton = new SparsePageFactory();
 
-        private LegacyPageFactory() {}
+        private SparsePageFactory() {}
 
         @Override
         public Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
-            return new LegacyPage(cache, firstKey, nextFirstKey, PageEncodeType.LEGACY);
+            return new SparsePage(cache, firstKey, nextFirstKey, PageEncodeType.SPARSE);
         }
 
         @Override
         public Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, int size, ArrayList<K> keys,
                 ArrayList<V> values, ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
-            return new LegacyPage(cache, firstKey, nextFirstKey, size, keys, values, rawValues, PageEncodeType.LEGACY);
+            return new SparsePage(cache, firstKey, nextFirstKey, size, keys, values, rawValues, PageEncodeType.SPARSE);
         }
 
     }
