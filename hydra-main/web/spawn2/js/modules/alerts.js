@@ -54,7 +54,8 @@ function(
         			canaryConfigThreshold:this.get("canaryConfigThreshold"),
                     canaryOps:this.get("canaryOps"),
                     canaryRops:this.get("canaryRops"),
-                    canaryFilter:this.get("canaryFilter")
+                    canaryFilter:this.get("canaryFilter"),
+                    sigma:this.get("sigma")
         		};
         		if (!this.isNew()) {
         			postData.alertId= this.get("alertId");
@@ -296,6 +297,7 @@ function(
         		$("#alertCanaryConfig").toggle(type == 4 || type == 5);
         		// Show query path, ops, rops, and bundle filter fields for canary map filter (6)
         		$("#alertCanaryFilterConfig").toggle(type == 6);
+        		$("#alertSigmaConfig").toggle(type == 7);
         		if (type == 4) {
         			$("#canaryPathHint").text("For example, 'split/importantfiles/{{now-1}}/*.gz'. Mesh lookups are performed relative to the gold directories, so do not include jobid/taskid/gold in your path.")
         		} else if (type == 5) {
