@@ -228,8 +228,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     }
 
     public ConcurrentTreeNode getNode(final ConcurrentTreeNode parent, final String child, final boolean lease) {
-        Long nodedb = parent.nodeDB();
-        if (nodedb == null) {
+        long nodedb = parent.nodeDB();
+        if (nodedb <= 0) {
             log.trace("[node.get] {} --> {} NOMAP --> null", parent, child);
             return null;
         }
@@ -342,8 +342,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     boolean deleteNode(final ConcurrentTreeNode parent, final String child) {
         log.trace("[node.delete] {} --> {}", parent, child);
-        Long nodedb = parent.nodeDB();
-        if (nodedb == null) {
+        long nodedb = parent.nodeDB();
+        if (nodedb <= 0) {
             log.debug("parent has no children on delete : {} --> {}", parent, child);
             return false;
         }

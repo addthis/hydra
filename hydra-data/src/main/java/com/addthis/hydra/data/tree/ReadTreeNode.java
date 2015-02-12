@@ -100,7 +100,7 @@ public class ReadTreeNode extends AbstractTreeNode implements IReadWeighable {
         throw new UnsupportedOperationException();
     }
 
-    public Long nodeDB() {
+    public long nodeDB() {
         return nodedb;
     }
 
@@ -108,11 +108,11 @@ public class ReadTreeNode extends AbstractTreeNode implements IReadWeighable {
      * returns an iterator of this node's children
      */
     public ClosableIterator<DataTreeNode> getNodeIterator() {
-        return nodedb == null ? new Iter(null) : new Iter(tree.fetchNodeRange(nodedb));
+        return !hasNodes() ? new Iter(null) : new Iter(tree.fetchNodeRange(nodedb));
     }
 
     public ClosableIterator<DataTreeNode> getNodeIterator(int sampleRate) {
-        return nodedb == null ? new Iter(null) : new Iter(tree.fetchNodeRange(nodedb, sampleRate));
+        return !hasNodes() ? new Iter(null) : new Iter(tree.fetchNodeRange(nodedb, sampleRate));
     }
 
     /**
@@ -133,7 +133,7 @@ public class ReadTreeNode extends AbstractTreeNode implements IReadWeighable {
      * of from-to
      */
     public ClosableIterator<DataTreeNode> getNodeIterator(String from, String to) {
-        return nodedb == null ? new Iter(null) : new Iter(tree.fetchNodeRange(nodedb, from, to));
+        return !hasNodes() ? new Iter(null) : new Iter(tree.fetchNodeRange(nodedb, from, to));
     }
 
     @Override public DataTreeNode getNode(String name) {
@@ -176,19 +176,6 @@ public class ReadTreeNode extends AbstractTreeNode implements IReadWeighable {
     @Override
     public int getNodeCount() {
         return nodes;
-    }
-
-    @Override
-    public void postDecode() {
-        if (data != null) {
-            for (TreeNodeData actor : data.values()) {
-                actor.setBoundNode(this);
-            }
-        }
-    }
-
-    @Override
-    public void preEncode() {
     }
 
     @Override

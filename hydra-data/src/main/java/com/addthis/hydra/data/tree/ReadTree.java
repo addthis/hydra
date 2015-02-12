@@ -227,8 +227,8 @@ public final class ReadTree implements DataTree {
      * @return child
      */
     protected DataTreeNode getNode(final ReadTreeNode parent, final String child) {
-        Long nodedb = parent.nodeDB();
-        if (nodedb == null) {
+        long nodedb = parent.nodeDB();
+        if (nodedb <= 0) {
             if (log.isTraceEnabled()) {
                 log.trace("[node.get] " + parent + " --> " + child + " NOMAP --> null");
             }

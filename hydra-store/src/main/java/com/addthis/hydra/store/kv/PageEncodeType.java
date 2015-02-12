@@ -19,10 +19,11 @@ import javax.annotation.Nullable;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Varint;
+
+import com.google.common.primitives.Ints;
 
 import io.netty.buffer.ByteBuf;
 
@@ -121,11 +122,11 @@ public enum PageEncodeType {
      * @param version
      * @param nodedb
      */
-    public static void writeNodeId(ByteBuf buf, long version, Long nodedb) {
+    public static void writeNodeId(ByteBuf buf, long version, long nodedb) {
         if (version <= PageEncodeType.SPARSE.ordinal()) {
-            Varint.writeSignedVarInt(nodedb == null ? -1 : nodedb.intValue(), buf);
+            Varint.writeSignedVarInt(Ints.checkedCast(nodedb), buf);
         } else {
-            Varint.writeSignedVarLong(nodedb == null ? -1l : nodedb, buf);
+            Varint.writeSignedVarLong(nodedb, buf);
         }
     }
 
