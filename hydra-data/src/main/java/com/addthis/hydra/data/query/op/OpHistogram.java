@@ -41,7 +41,6 @@ public class OpHistogram extends AbstractRowOp {
 
     private final int scale;
     private final int column;
-    private final ChannelProgressivePromise queryPromise;
 
     /**
      * usage: column, scale
@@ -53,7 +52,6 @@ public class OpHistogram extends AbstractRowOp {
      */
     public OpHistogram(String args, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
-        this.queryPromise = queryPromise;
         int[] v = csvToInts(args);
         if (v.length < 1) {
             throw new RuntimeException("missing required column");
@@ -82,7 +80,7 @@ public class OpHistogram extends AbstractRowOp {
     public void sendComplete() {
         Map<Long, Long> map = histo.getSortedHistogram();
         for (Entry<Long, Long> e : map.entrySet()) {
-            if (queryPromise.isDone()) {
+            if (opPromise.isDone()) {
                 break;
             } else {
                 Bundle row = rowFactory.createBundle();

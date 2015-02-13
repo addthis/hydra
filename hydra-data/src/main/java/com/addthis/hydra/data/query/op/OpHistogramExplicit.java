@@ -42,7 +42,6 @@ public class OpHistogramExplicit extends AbstractRowOp {
     }
 
     private final int column;
-    private final ChannelProgressivePromise queryPromise;
     private final Mode mode;
     private final Number[] keys;
     private final long[] counts;
@@ -57,7 +56,6 @@ public class OpHistogramExplicit extends AbstractRowOp {
      */
     public OpHistogramExplicit(String args, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
-        this.queryPromise = queryPromise;
         int columns = args.indexOf(',');
         if (columns == -1) {
             throw new RuntimeException("syntax error two components not detected");
@@ -121,7 +119,7 @@ public class OpHistogramExplicit extends AbstractRowOp {
     @Override
     public void sendComplete() {
         for(int i = 0; i < keys.length; i++) {
-            if (queryPromise.isDone()) {
+            if (opPromise.isDone()) {
                 break;
             } else {
                 Bundle row = rowFactory.createBundle();
