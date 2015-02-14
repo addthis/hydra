@@ -15,10 +15,7 @@ package com.addthis.hydra.task.output;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletableFuture;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
@@ -31,9 +28,6 @@ import com.addthis.hydra.task.map.DataPurgeConfig;
 import com.addthis.hydra.task.map.DataPurgeService;
 import com.addthis.hydra.task.map.DataPurgeServiceImpl;
 import com.addthis.hydra.task.run.TaskRunConfig;
-
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
@@ -72,6 +66,7 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
 
     private String[] fileToken;
     private TokenIndex[] varToken;
+    private CompletableFuture<Void> purgeFuture;
 
     abstract AbstractOutputWriter getWriter();
 
@@ -83,7 +78,9 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
             writer.open();
         }
         if (dataPurgeConfig != null) {
-            purgeData();
+            purgeFuture = purgeData();
+        } else {
+            purgeFuture = CompletableFuture.completedFuture(null);
         }
         LinkedList<TokenIndex> vt = new LinkedList<>();
         String[] ft = new String[path.length];
@@ -159,6 +156,7 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
     public void sourceError(Throwable er) {
         AbstractOutputWriter writer = getWriter();
         writer.closeOpenOutputs();
+        waitOnPurge();
         log.error("[sourceError]", er);
     }
 
@@ -166,7 +164,15 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
     public void sendComplete() {
         AbstractOutputWriter writer = getWriter();
         writer.closeOpenOutputs();
+        waitOnPurge();
         log.info("[sendComplete]");
+    }
+
+    private void waitOnPurge() {
+        if (!purgeFuture.isDone()) {
+            log.info("waiting on background purges");
+        }
+        purgeFuture.join();
     }
 
     public AbstractDataOutput setPath(String[] path) {
@@ -193,17 +199,15 @@ public abstract class AbstractDataOutput extends DataOutputTypeList {
         }
     }
 
-    private void purgeData() {
-        if ((dataPurgeConfig.getMaxAgeInDays() > 0 || dataPurgeConfig.getMaxAgeInHours() > 0) && dataPurgeConfig.getDatePathFormat() != null) {
+    private CompletableFuture<Void> purgeData() {
+        if (((dataPurgeConfig.getMaxAgeInDays() > 0) || (dataPurgeConfig.getMaxAgeInHours() > 0))
+            && (dataPurgeConfig.getDatePathFormat() != null)) {
             log.info("Starting DataPurge in separate thread...");
             /* run the data purge in a separate thread to allow splitting to run concurrently with the purging process */
-            ExecutorService executorService = MoreExecutors.getExitingExecutorService(new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(), new ThreadFactoryBuilder().setNameFormat("DataOutputFilePurger-%d").build()));
-            executorService.execute(new DataPurgeRunner(new DataPurgeServiceImpl()));
-            executorService.shutdown();
+            return CompletableFuture.runAsync(new DataPurgeRunner(new DataPurgeServiceImpl()));
         } else {
-            if (log.isDebugEnabled()) {
-                log.debug("DataPurge parameters not provided, data will be maintained indefinitely.");
-            }
+            log.debug("DataPurge parameters not provided, data will be maintained indefinitely.");
+            return CompletableFuture.completedFuture(null);
         }
     }
 
