@@ -66,7 +66,8 @@ public class FileCountJobAlert extends AbstractJobAlert {
     }
 
     private static final String ERROR_MESSAGE =
-            "Host %s has %d log files which is %s than threshold %f derived as mean value %f %s (%f multiplied by the" +
+            "Host %s has %d log files which is %s than threshold %f" +
+            " derived as mean value %f %s Math.ceil(%f multiplied by the" +
             " standard deviation %f).\n";
 
     @Nullable @Override
@@ -95,13 +96,14 @@ public class FileCountJobAlert extends AbstractJobAlert {
              * The first and second conditions should never both be true.
              * But we test them independently to catch this illegal state.
              */
-            if (logCount < (mean - sigma * stddev)) {
+            double threshold = Math.ceil(sigma * stddev);
+            if (logCount < (mean - threshold)) {
                 errors.append(String.format(ERROR_MESSAGE, hostUUID, logCount, "<",
-                                            (mean - sigma * stddev), mean, "minus", sigma, stddev));
+                                            (mean - threshold), mean, "minus", sigma, stddev));
             }
-            if (logCount > (mean + sigma * stddev)) {
+            if (logCount > (mean + threshold)) {
                 errors.append(String.format(ERROR_MESSAGE, hostUUID, logCount, ">",
-                                            (mean + sigma * stddev), mean, "plus", sigma, stddev));
+                                            (mean + threshold), mean, "plus", sigma, stddev));
             }
         }
         String errorString = errors.toString();
