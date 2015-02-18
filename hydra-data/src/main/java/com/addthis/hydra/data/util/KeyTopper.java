@@ -13,28 +13,51 @@
  */
 package com.addthis.hydra.data.util;
 
+import javax.annotation.Nonnull;
+
+import java.io.UnsupportedEncodingException;
+
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.addthis.basis.util.Varint;
+
 import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.BytesCodable;
 import com.addthis.codec.codables.Codable;
+
+import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 
 
 /**
- * Class that helps maintain a top N list for any String Map TODO should move
- * into basis libraries
+ * Class that helps maintain a top N list for any String Map.
  */
-public final class KeyTopper implements Codable {
+public final class KeyTopper implements Codable, BytesCodable {
+
+    private static final byte[] EMPTY = new byte[0];
 
     public KeyTopper() {
     }
 
     @FieldConfig(codable = true, required = true)
     private HashMap<String, Long> map;
+    /**
+     * Minimum value in the data structure. Not serialized
+     * to byte representation. Regenerated as needed.
+     */
     @FieldConfig(codable = true)
     private long minVal;
+    /**
+     * Minimum key in the data structure. Not serialized
+     * to byte representation. Regenerated as needed.
+     */
     @FieldConfig(codable = true)
     private String minKey;
     @FieldConfig(codable = true)
@@ -67,32 +90,43 @@ public final class KeyTopper implements Codable {
         return map.get(key);
     }
 
+    private static final Comparator<Map.Entry<String,Long>> ENTRIES_COMPARATOR =
+            (arg0, arg1) -> (int) (arg1.getValue() - arg0.getValue());
+
     /**
      * returns the list sorted by greatest to least count.
      */
     @SuppressWarnings("unchecked")
     public Map.Entry<String, Long>[] getSortedEntries() {
-        Map.Entry[] e = new Map.Entry[map.size()];
+        Map.Entry<String,Long>[] e = new Map.Entry[map.size()];
         e = map.entrySet().toArray(e);
-        Arrays.sort(e, new Comparator() {
-            public int compare(Object arg0, Object arg1) {
-                return (int) (((Long) ((Map.Entry) arg1).getValue()) - ((Long) ((Map.Entry) arg0).getValue()));
-            }
-        });
+        Arrays.sort(e, ENTRIES_COMPARATOR);
         return e;
     }
 
-    /** */
-    private void recalcMin(boolean maxed, boolean newentry, String id) {
-        if (minKey == null || (maxed && newentry) || (!newentry && id.equals(minKey))) {
-            minVal = 0;
+    /**
+     * Recreate the minimum key and minimum value if the map
+     * contains one or more elements and current minimum key is null
+     * or the {@code force} parameter is true. Use {@code force}
+     * when the minimum key has been evicted from the data structure
+     * or the count associated with the minimum key has been updated.
+     *
+     * Postcondition: Either the top N is empty or the minimum key
+     * is a non-null value.
+     *
+     * @param force if true then always recreate minimum key and value
+     */
+    private void recreateMinimum(boolean force) {
+        if (map.size() > 0 && (minKey == null || force)) {
+            minVal = Long.MAX_VALUE;
             for (Map.Entry<String, Long> e : this.map.entrySet()) {
-                if (minVal == 0 || e.getValue() < minVal) {
+                if (e.getValue() < minVal) {
                     minVal = e.getValue();
                     minKey = e.getKey();
                 }
             }
         }
+        assert((minKey != null) ^ (map.size() == 0));
     }
 
     /**
@@ -103,12 +137,8 @@ public final class KeyTopper implements Codable {
      * @return element dropped from top or null if accepted into top with no
      *         drops
      */
-    public String increment(String id, int maxsize) {
-        Long count = map.get(id);
-        if (count == null) {
-            count = Math.max(lossy && (map.size() >= maxsize) ? minVal - 1 : 0L, 0L);
-        }
-        return update(id, count + 1, maxsize);
+    public String increment(@Nonnull String id, int maxsize) {
+        return increment(id, 1, maxsize);
     }
 
     /**
@@ -121,22 +151,17 @@ public final class KeyTopper implements Codable {
      * @return element dropped from top or null if accepted into top with no
      *         drops
      */
-    public String increment(String id, int weight, int maxsize) {
+    public String increment(@Nonnull String id, int weight, int maxsize) {
         Long count = map.get(id);
-
         if (count == null) {
-            count = Math.max(lossy && (map.size() >= maxsize) ? minVal - 1 : 0L, 0L);
+            if (lossy && map.size() >= maxsize) {
+                recreateMinimum(false);
+                count = minVal;
+            } else {
+                count = 0L;
+            }
         }
-
         return update(id, count + weight, maxsize);
-    }
-
-    public String decrement(String id, int maxsize) {
-        Long count = map.get(id);
-        if (count == null) {
-            count = Math.max(lossy && (map.size() >= maxsize) ? minVal + 1 : 0L, 0L);
-        }
-        return update(id, count - 1, maxsize);
     }
 
     /**
@@ -148,61 +173,127 @@ public final class KeyTopper implements Codable {
      * @param id the id to increment if it already exists in the map
      * @return whether the element was in the map
      */
-    public boolean incrementExisting(String id) {
-        if (map.containsKey(id)) {
-            map.put(id, get(id) + 1);
+    public boolean incrementExisting(@Nonnull String id) {
+        Long value = map.get(id);
+        if (value != null) {
+            map.put(id, value + 1L);
+            if (id.equals(minKey)) {
+                recreateMinimum(true);
+            }
             return true;
         }
         return false;
     }
 
     /**
-     * Adds 'ID' the top N if: 1) there are more empty slots or 2) count >
-     * smallest top count in the list
+     * Adds 'id' the top N if: (1) there are more empty slots or
+     * (2) value > minimum value in the top N.
      *
-     * @param id
-     * @param count
+     * @param id       key to insert or update
+     * @param value    count to associate with the key
      * @return element dropped from top or null if accepted into top with no
      *         drops. returns the offered key if it was rejected for update
      *         or inclusion in the top.
      */
-    public String update(String id, long count, int maxsize) {
-        String removed = null;
-        /** should go into top */
-        if (count >= minVal) {
-            boolean newentry = map.get(id) == null;
-            boolean maxed = map.size() >= maxsize;
-            // only remove if topN is full and we're not updating an existing entry
-            if (maxed && newentry) {
-                if (minKey == null && minVal == 0) {
-                    recalcMin(maxed, newentry, id);
-                }
+    public String update(@Nonnull String id, long value, int maxsize) {
+        Preconditions.checkArgument(value >= 0, "Argument was %s but expected nonnegative", value);
+        Preconditions.checkArgument(maxsize > 0, "Argument was %s but expected positive integer", maxsize);
+        String result = null;
+        /** compute minimum key and value if they are missing */
+        recreateMinimum(false);
+        /** insert or update key. Evict if necessary */
+        if (value >= minVal) {
+            /** only remove if topN is full and we're not updating an existing entry */
+            boolean remove = (map.size() >= maxsize) && !map.containsKey(id) && (minKey != null);
+            if (remove) {
                 map.remove(minKey);
-                removed = minKey;
+                result = minKey;
             }
-            // update or add entry
-            map.put(id, count);
-            // recalc min *only* if the min entry was removed or updated
-            // checking for null minkey is critical check for empty topN as it
-            // sets first min
-            if (count == minVal) {
-                minKey = id;
-            } else {
-                recalcMin(maxed, newentry, id);
+            /** update or add entry */
+            map.put(id, value);
+            /** recalculate min *only* if the min entry was removed or updated */
+            if (remove || id.equals(minKey)) {
+                recreateMinimum(true);
             }
         }
-        /** should go into top */
+        /** insert or update key. No eviction necessary. */
         else if (map.size() < maxsize) {
-            map.put(id, count);
-            if (minKey == null || count < minVal) {
+            map.put(id, value);
+            if (id.equals(minKey)) {
+                recreateMinimum(true);
+            } else if (value < minVal) {
                 minKey = id;
-                minVal = count;
+                minVal = value;
             }
         }
         /** not eligible for top */
         else {
-            removed = id;
+            result = id;
         }
-        return removed;
+        return result;
+    }
+
+    @Override public byte[] bytesEncode(long version) {
+        if (map.size() == 0) {
+            return EMPTY;
+        }
+        byte[] retBytes = null;
+        ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.buffer();
+        try {
+            Varint.writeUnsignedVarInt(map.size(), byteBuf);
+            for (Map.Entry<String, Long> mapEntry : map.entrySet()) {
+                String key = mapEntry.getKey();
+                if (key == null) {
+                    throw new NullPointerException("KeyTopper decoded null key");
+                }
+                byte[] keyBytes = key.getBytes("UTF-8");
+                Varint.writeUnsignedVarInt(keyBytes.length, byteBuf);
+                byteBuf.writeBytes(keyBytes);
+                Varint.writeUnsignedVarLong(mapEntry.getValue(), byteBuf);
+            }
+            retBytes = new byte[byteBuf.readableBytes()];
+            byteBuf.readBytes(retBytes);
+        } catch (UnsupportedEncodingException e) {
+            throw Throwables.propagate(e);
+        } finally {
+            byteBuf.release();
+        }
+        return retBytes;
+    }
+
+    @Override
+    public void bytesDecode(byte[] b, long version) {
+        map = new HashMap<>();
+        if (b.length == 0) {
+            return;
+        }
+        ByteBuf byteBuf = Unpooled.wrappedBuffer(b);
+        try {
+            int mapSize = Varint.readUnsignedVarInt(byteBuf);
+            try {
+                if (mapSize > 0) {
+                    for (int i = 0; i < mapSize; i++) {
+                        int keyLength = Varint.readUnsignedVarInt(byteBuf);
+                        byte[] keybytes = new byte[keyLength];
+                        byteBuf.readBytes(keybytes);
+                        String k = new String(keybytes, "UTF-8");
+                        long value = Varint.readUnsignedVarLong(byteBuf);
+                        map.put(k, value);
+                    }
+                }
+            } catch (Exception e) {
+                throw Throwables.propagate(e);
+            }
+        } finally {
+            byteBuf.release();
+        }
+    }
+
+    public long getMinVal() {
+        return minVal;
+    }
+
+    public String getMinKey() {
+        return minKey;
     }
 }
