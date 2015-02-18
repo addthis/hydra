@@ -502,7 +502,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
     protected void closePreOpenedQueue() throws IOException {
         for (Wrap wrap : preOpened) {
-            wrap.close();
+            wrap.close(false);
         }
     }
 
@@ -579,7 +579,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 log.debug("[{}] read", workerId);
             } finally {
                 if (wrap != null) {
-                    wrap.close();
+                    wrap.close(false);
                 }
             }
         }
@@ -593,8 +593,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 }
                 while (!queue.offer(next, 1, TimeUnit.SECONDS)) {
                     if (shuttingDown.get()) {
-                        wrap.mark.setEnd(false);
-                        wrap.close();
+                        wrap.close(false);
                         return false;
                     }
                 }
@@ -691,7 +690,11 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                         }
                     }
                     read--;
-                    bundleizer.next();
+
+                    if (shuttingDown.get() || (bundleizer.next() == null)) {
+                        close(false);
+                        break;
+                    }
                 }
                 skipping.dec();
                 localBundleSkip.set(localBundleSkip.get() + bundlesSkipped);
@@ -715,8 +718,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             return in;
         }
 
-        void close() throws IOException {
+        void close(boolean wasEnd) throws IOException {
             if (!closed) {
+                mark.setEnd(wasEnd);
                 input.close();
                 mark.update(stream);
                 markDB.put(dbKey, mark);
@@ -736,8 +740,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 Bundle next = bundleizer.next();
                 log.debug("next {} / {} = {}", mark, stream, next);
                 if (next == null) {
-                    mark.setEnd(true);
-                    close();
+                    close(true);
                 } else {
                     if (injectSourceName != null) {
                         injectSourceName.setValue(next, sourceName);
@@ -751,7 +754,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 }
                 log.warn("source error with mark: {}, stream file: {}", mark, stream, ex);
                 mark.setError(mark.getError() + 1);
-                close();
+                close(false);
             }
             return null;
         }
