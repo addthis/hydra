@@ -32,6 +32,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * If a value for a single host is above or below the threshold from the
+ * mean value then raise an alert. The treshold is calculated as the
+ * maximum of {@code tolerance} and ({@code sigma} multiplied by the
+ * standard deviation).
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class FileCountJobAlert extends AbstractJobAlert {
 
@@ -42,6 +48,11 @@ public class FileCountJobAlert extends AbstractJobAlert {
      * to trigger. Default is 1.0.
      */
     @JsonProperty public final double sigma;
+    /**
+     * Absolute delta in number of files that are tolerated
+     * before an alert triggers. Default is 0.0.
+     */
+    @JsonProperty public final int tolerance;
     @JsonProperty public final String canaryPath;
 
     public FileCountJobAlert(@Nullable @JsonProperty("alertId") String alertId,
@@ -54,9 +65,11 @@ public class FileCountJobAlert extends AbstractJobAlert {
                              @JsonProperty("activeJobs") Map<String, String> activeJobs,
                              @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes,
                              @JsonProperty("sigma") double sigma,
+                             @JsonProperty("tolerance") int tolerance,
                              @JsonProperty("canaryPath") String canaryPath) {
         super(alertId, description, timeout, delay, email, jobIds, lastAlertTime, activeJobs, activeTriggerTimes);
         this.sigma = sigma;
+        this.tolerance = tolerance;
         this.canaryPath = canaryPath;
     }
 
@@ -96,7 +109,7 @@ public class FileCountJobAlert extends AbstractJobAlert {
              * The first and second conditions should never both be true.
              * But we test them independently to catch this illegal state.
              */
-            double threshold = Math.ceil(sigma * stddev);
+            double threshold = Math.max(sigma * stddev, tolerance);
             if (logCount < (mean - threshold)) {
                 errors.append(String.format(ERROR_MESSAGE, hostUUID, logCount, "<",
                                             (mean - threshold), mean, "minus", sigma, stddev));
@@ -117,6 +130,9 @@ public class FileCountJobAlert extends AbstractJobAlert {
     @Nullable @Override public String isValid() {
         if (sigma <= 0.0) {
             return "sigma parameter must be a positive value";
+        }
+        if (tolerance < 0) {
+            return "tolerance parameter must be a non-negative value";
         }
         return null;
     }
