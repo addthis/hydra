@@ -20,7 +20,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">extracts a map from a string</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">extracts a map from a string</span>.
  * <p/>
  * <p>The input string is expected to be a sequence of (key,value) pairs.
  * {@link #elementSeparator elementSeperator} is the deliminator in between
@@ -38,7 +38,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name create-map
  */
-public class ValueFilterCreateMap extends ValueFilter {
+public class ValueFilterCreateMap extends AbstractValueFilter {
 
     /**
      * This field is never used. Do with it what you want.
@@ -63,9 +63,6 @@ public class ValueFilterCreateMap extends ValueFilter {
      */
     @FieldConfig(codable = true)
     private boolean includeNullValues = false;
-
-    @Override
-    public void open() {}
 
     @Override
     public ValueObject filterValue(ValueObject value) {

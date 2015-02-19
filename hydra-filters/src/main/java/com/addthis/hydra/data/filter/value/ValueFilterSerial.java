@@ -18,7 +18,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">auto-generates key sequences</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">auto-generates key sequences</span>.
  * <p/>
  * <p>This filter ignores the input value. The output is an incrementing counter.
  * The {@link #seed seed} field is the starting value in the sequence.
@@ -35,7 +35,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name serial
  */
-public class ValueFilterSerial extends ValueFilter {
+public class ValueFilterSerial extends AbstractValueFilter {
 
     /**
      * If non-null, then append this prefix onto the output. Default is null.
@@ -66,9 +66,6 @@ public class ValueFilterSerial extends ValueFilter {
      */
     @FieldConfig(codable = true)
     private int base;
-
-    @Override
-    public void open() { }
 
     @Override
     public synchronized ValueObject filterValue(ValueObject value) {

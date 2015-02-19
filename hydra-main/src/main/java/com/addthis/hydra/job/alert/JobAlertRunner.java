@@ -65,7 +65,7 @@ public class JobAlertRunner {
 
     private final Spawn spawn;
     private final SpawnDataStore spawnDataStore;
-    private final ConcurrentHashMap<String, JobAlert> alertMap;
+    private final ConcurrentHashMap<String, AbstractJobAlert> alertMap;
 
     private MeshyClient meshyClient;
     private boolean alertsEnabled;
@@ -110,12 +110,12 @@ public class JobAlertRunner {
         if (alertsEnabled) {
             log.info("Started alert scan of {} alerts...", alertMap.size());
             try {
-                for (Map.Entry<String, JobAlert> entry : alertMap.entrySet()) {
-                    JobAlert oldAlert = entry.getValue();
+                for (Map.Entry<String, AbstractJobAlert> entry : alertMap.entrySet()) {
+                    AbstractJobAlert oldAlert = entry.getValue();
                     Map<String, String> currentErrors = oldAlert.getActiveJobs();
                     // entry may be concurrently deleted, so only recompute if still present, and while locked
-                    JobAlert alert = alertMap.computeIfPresent(entry.getKey(), (id, currentAlert) -> {
-                        currentAlert.checkAlertForJobs(getAlertJobs(currentAlert), meshyClient);
+                    AbstractJobAlert alert = alertMap.computeIfPresent(entry.getKey(), (id, currentAlert) -> {
+                        currentAlert.checkAlertForJobs(currentAlert.getAlertJobs(spawn), meshyClient);
                         if (!currentAlert.getActiveJobs().equals(currentErrors)) {
                             storeAlert(currentAlert.alertId, currentAlert);
                         }
@@ -143,27 +143,6 @@ public class JobAlertRunner {
                 log.error("Unexpected error while scanning alerts: {}", e.getMessage(), e);
             }
         }
-    }
-
-    private Set<Job> getAlertJobs(JobAlert alert) {
-        Set<Job> rv = new HashSet<>();
-        if (alert != null && alert.jobIds != null) {
-            Map<String, List<String>> aliases = spawn.getAliasManager().getAliases();
-            for (String lookupId : alert.jobIds) {
-                Job job = spawn.getJob(lookupId);
-                if (job != null) {
-                    rv.add(job);
-                } else if (aliases.containsKey(lookupId)) {
-                    for (String jobId : aliases.get(lookupId)) {
-                        job = spawn.getJob(jobId);
-                        if (job != null) {
-                            rv.add(job);
-                        }
-                    }
-                }
-            }
-        }
-        return rv;
     }
 
     private static String summary(Job job) {
@@ -238,7 +217,7 @@ public class JobAlertRunner {
      * Send an email when an alert fires or clears.
      * @param jobAlert The alert to modify
      */
-    private void emailAlert(JobAlert jobAlert, String reason, Map<String, String> errors) {
+    private void emailAlert(AbstractJobAlert jobAlert, String reason, Map<String, String> errors) {
         if (errors.isEmpty()) {
             return;
         }
@@ -273,14 +252,14 @@ public class JobAlertRunner {
 
     private void loadAlert(String id, String raw) {
         try {
-            JobAlert jobAlert = CodecJSON.decodeString(JobAlert.class, raw);
+            AbstractJobAlert jobAlert = CodecJSON.decodeString(AbstractJobAlert.class, raw);
             alertMap.put(id, jobAlert);
         } catch (Exception ex) {
             log.error("Failed to decode JobAlert id={} raw={}", id, raw, ex);
         }
     }
 
-    public void putAlert(String id, JobAlert alert) {
+    public void putAlert(String id, AbstractJobAlert alert) {
         alertMap.compute(id, (key, old) -> {
             if (old != null) {
                 alert.setStateFrom(old);
@@ -299,7 +278,7 @@ public class JobAlertRunner {
         }
     }
 
-    private void storeAlert(String alertId, JobAlert alert) {
+    private void storeAlert(String alertId, AbstractJobAlert alert) {
         try {
             spawnDataStore.putAsChild(SPAWN_COMMON_ALERT_PATH, alertId, CodecJSON.encodeString(alert));
         } catch (Exception e) {
@@ -313,7 +292,7 @@ public class JobAlertRunner {
      */
     public JSONArray getAlertStateArray() {
         JSONArray rv = new JSONArray();
-        for (JobAlert jobAlert : alertMap.values()) {
+        for (AbstractJobAlert jobAlert : alertMap.values()) {
             try {
                 rv.put(jobAlert.toJSON());
             } catch (Exception e) {
@@ -325,7 +304,7 @@ public class JobAlertRunner {
 
     public JSONObject getAlertStateMap() {
         JSONObject rv = new JSONObject();
-        for (JobAlert jobAlert : alertMap.values()) {
+        for (AbstractJobAlert jobAlert : alertMap.values()) {
             try {
                 rv.put(jobAlert.alertId, jobAlert.toJSON());
             } catch (Exception e) {
@@ -337,7 +316,7 @@ public class JobAlertRunner {
 
     public String getAlert(String alertId) {
         try {
-            JobAlert alert = alertMap.get(alertId);
+            AbstractJobAlert alert = alertMap.get(alertId);
             if (alert == null) {
                 return null;
             } else {

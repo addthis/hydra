@@ -19,12 +19,12 @@ import com.addthis.hydra.store.util.Raw;
 class CacheKey {
 
     final int hc;
-    final int db;
+    final long db;
     final String name;
     volatile DBKey dbkey;
 
-    CacheKey(int db, String name) {
-        int hash = Math.abs(db + name.hashCode());
+    CacheKey(long db, String name) {
+        int hash = Math.abs(Long.hashCode(db) + name.hashCode());
         this.db = db;
         this.name = name;
         if (hash == Integer.MIN_VALUE) {

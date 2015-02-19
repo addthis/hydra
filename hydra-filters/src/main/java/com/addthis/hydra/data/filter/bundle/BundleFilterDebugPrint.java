@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name debug
  */
-public class BundleFilterDebugPrint extends BundleFilter {
+public class BundleFilterDebugPrint implements BundleFilter {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilterDebugPrint.class);
 
@@ -81,9 +81,6 @@ public class BundleFilterDebugPrint extends BundleFilter {
 
     // Should be used solely for unit testing.
     private boolean enableCacheOutput = false;
-
-    @Override
-    public void open() { }
 
     BundleFilterDebugPrint enableCacheOutput() {
         this.enableCacheOutput = true;

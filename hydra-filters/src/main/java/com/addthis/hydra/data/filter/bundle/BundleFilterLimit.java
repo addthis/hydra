@@ -31,17 +31,13 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name limit
  */
-public class BundleFilterLimit extends BundleFilter {
+public class BundleFilterLimit implements BundleFilter {
 
     /**
      * The number of rows to permit. This field is required.
      */
     @FieldConfig(codable = true, required = true)
     private int limit;
-
-    @Override
-    public void open() {
-    }
 
     @Override
     public boolean filter(Bundle row) {

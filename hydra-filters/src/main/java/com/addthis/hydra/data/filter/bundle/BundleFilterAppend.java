@@ -52,7 +52,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  * @user-reference
  * @hydra-name append
  */
-public class BundleFilterAppend extends BundleFilter {
+public class BundleFilterAppend implements BundleFilter {
 
     @JsonIgnore
     public BundleFilterAppend setValues(ArrayList<String> values) {
@@ -133,23 +133,6 @@ public class BundleFilterAppend extends BundleFilter {
     private int size = 5;
 
     @Override
-    public void open() {
-        if (filter != null) {
-            filter.open();
-        }
-    }
-
-    private boolean contains(ValueArray arr, ValueObject obj) {
-        for (int i = 0; i < arr.size(); i++) {
-            ValueObject ao = arr.get(i);
-            if (ao != null && obj != null) {
-                return ao == obj || ao.equals(obj);
-            }
-        }
-        return false;
-    }
-
-    @Override
     public boolean filter(Bundle bundle) {
         ValueObject toVal = to.getValue(bundle);
         ValueArray arr = null;
@@ -169,7 +152,7 @@ public class BundleFilterAppend extends BundleFilter {
         if (values != null) {
             for (String value : values) {
                 ValueString str = ValueFactory.create(value);
-                if (!unique || !contains(arr, str)) {
+                if (!unique || !arr.contains(str)) {
                     arr.add(str);
                 }
             }
@@ -183,11 +166,11 @@ public class BundleFilterAppend extends BundleFilter {
             if (fromVal != null) {
                 if (fromVal.getObjectType() == ValueObject.TYPE.ARRAY) {
                     for (ValueObject element : fromVal.asArray()) {
-                        if (!unique || !contains(arr, element)) {
+                        if (!unique || !arr.contains(element)) {
                             arr.add(element);
                         }
                     }
-                } else if (!unique || !contains(arr, fromVal)) {
+                } else if (!unique || !arr.contains(fromVal)) {
                     arr.add(fromVal);
                 }
             }

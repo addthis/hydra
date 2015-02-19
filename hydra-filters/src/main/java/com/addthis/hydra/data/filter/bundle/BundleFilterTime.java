@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name time
  */
-public class BundleFilterTime extends BundleFilter {
+public class BundleFilterTime implements BundleFilter {
 
     private final Logger log = LoggerFactory.getLogger(BundleFilterTime.class);
 
@@ -74,9 +74,6 @@ public class BundleFilterTime extends BundleFilter {
     public TimeField getOutput() {
         return dst;
     }
-
-    @Override
-    public void open() { }
 
     @Override
     public boolean filter(Bundle row) {

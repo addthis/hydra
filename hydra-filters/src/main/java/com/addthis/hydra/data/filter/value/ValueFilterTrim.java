@@ -17,7 +17,7 @@ import com.addthis.basis.util.Strings;
 
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">eliminates whitespace from the beginning and end of the input string</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">eliminates whitespace from the beginning and end of the input string</span>.
  * <p/>
  * <p>Example:</p>
  * <pre>
@@ -28,9 +28,6 @@ import com.addthis.basis.util.Strings;
  * @hydra-name trim
  */
 public class ValueFilterTrim extends StringFilter {
-
-    @Override
-    public void open() { }
 
     @Override
     public String filter(String value) {

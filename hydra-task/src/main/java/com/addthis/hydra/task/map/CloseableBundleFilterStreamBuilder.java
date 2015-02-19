@@ -36,9 +36,6 @@ public class CloseableBundleFilterStreamBuilder extends StreamBuilder {
 
     @Override
     public void init() {
-        if (cfilter != null) {
-            cfilter.open();
-        }
     }
 
 

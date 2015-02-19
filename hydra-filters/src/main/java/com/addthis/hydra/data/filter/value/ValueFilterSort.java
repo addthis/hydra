@@ -23,13 +23,13 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">sorts an array</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">sorts an array</span>.
  * <p/>
  * <p>Items in the array are sorted according to the natural ordering of their underlying type.
  * Only arrays with elements of TYPE STRING, INT, or FLOAT are supported. All elements of the array must be from the same type.
  * </p>
  */
-public class ValueFilterSort extends ValueFilter {
+public class ValueFilterSort extends AbstractValueFilter {
 
     private static final Comparator<ValueObject> valueObjectComparator = (o1, o2) -> {
         if (o1.getObjectType() != o2.getObjectType()) {
@@ -46,9 +46,6 @@ public class ValueFilterSort extends ValueFilter {
                 throw new RuntimeException("Sort error: unsupported object type " + o1.getObjectType());
         }
     };
-
-    @Override
-    public void open() { }
 
     @Override
     public ValueObject filterValue(ValueObject value) {

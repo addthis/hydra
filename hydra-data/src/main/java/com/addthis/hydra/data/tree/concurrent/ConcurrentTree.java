@@ -28,6 +28,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 
 import com.addthis.basis.concurrentlinkedhashmap.MediatedEvictionConcurrentHashMap;
@@ -101,7 +102,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     final IPageDB<DBKey, ConcurrentTreeNode> source;
     private final ConcurrentTreeNode treeRootNode;
     final ConcurrentTreeNode treeTrashNode;
-    private final AtomicInteger nextDBID;
+    private final AtomicLong nextDBID;
     final AtomicBoolean closed = new AtomicBoolean(false);
     private final Meter<METERTREE> meter;
     private final MeterFileLogger logger;
@@ -134,12 +135,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     ConcurrentTree(File root, int numDeletionThreads, int cleanQSize, int maxCacheSize,
                    int maxPageSize, PageFactory factory) throws Exception {
-        //Only attempt mkdirs if we are not readonly. Theoretically should not be needed, but guarding here
-        // prevent logic leak created by transient file detection issues. Regardless, while in readonly, we should
-        // certainly not be attempting to create directories.
-        if (!root.isDirectory() && !root.mkdirs()) {
-            throw new IOException("Unable to open or create root directory '" + root + "'");
-        }
+        Files.initDirectory(root);
         this.root = root;
         long start = System.currentTimeMillis();
 
@@ -170,9 +166,9 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         // get stored next db id
         idFile = new File(root, "nextID");
         if (idFile.exists() && idFile.isFile() && idFile.length() > 0) {
-            nextDBID = new AtomicInteger(Integer.parseInt(Bytes.toString(Files.read(idFile))));
+            nextDBID = new AtomicLong(Long.parseLong(Bytes.toString(Files.read(idFile))));
         } else {
-            nextDBID = new AtomicInteger(1);
+            nextDBID = new AtomicLong(1);
         }
 
         // get tree root
@@ -205,8 +201,26 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         meter.inc(meterval);
     }
 
-    int getNextNodeDB() {
-        return nextDBID.incrementAndGet();
+    /**
+     * This method is only for testing purposes.
+     * It has a built in safeguard but nonetheless
+     * it should not be invoked for other purposes.
+     */
+    @VisibleForTesting
+    boolean setNextNodeDB(long id) {
+        while (true) {
+            long current = nextDBID.get();
+            if (current > id) {
+                return false;
+            } else if (nextDBID.compareAndSet(current, id)) {
+                return true;
+            }
+        }
+    }
+
+    long getNextNodeDB() {
+        long nextValue = nextDBID.incrementAndGet();
+        return nextValue;
     }
 
     private static boolean setLease(final ConcurrentTreeNode node, final boolean lease) {
@@ -214,8 +228,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     }
 
     public ConcurrentTreeNode getNode(final ConcurrentTreeNode parent, final String child, final boolean lease) {
-        Integer nodedb = parent.nodeDB();
-        if (nodedb == null) {
+        long nodedb = parent.nodeDB();
+        if (nodedb <= 0) {
             log.trace("[node.get] {} --> {} NOMAP --> null", parent, child);
             return null;
         }
@@ -328,8 +342,8 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     boolean deleteNode(final ConcurrentTreeNode parent, final String child) {
         log.trace("[node.delete] {} --> {}", parent, child);
-        Integer nodedb = parent.nodeDB();
-        if (nodedb == null) {
+        long nodedb = parent.nodeDB();
+        if (nodedb <= 0) {
             log.debug("parent has no children on delete : {} --> {}", parent, child);
             return false;
         }
@@ -365,23 +379,22 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
          */
         assert node.hasNodes();
         assert !node.isAlias();
-        int nodeDB = treeTrashNode.nodeDB();
+        long nodeDB = treeTrashNode.nodeDB();
         int next = treeTrashNode.incrementNodeCount();
         DBKey key = new DBKey(nodeDB, Raw.get(Bytes.toBytes(next)));
         source.put(key, node);
         log.trace("[trash.mark] {} --> {}", next, treeTrashNode);
     }
 
-    @SuppressWarnings("unchecked") IPageDB.Range<DBKey, ConcurrentTreeNode> fetchNodeRange(int db) {
+    @SuppressWarnings("unchecked") IPageDB.Range<DBKey, ConcurrentTreeNode> fetchNodeRange(long db) {
         return source.range(new DBKey(db), new DBKey(db + 1));
     }
 
-    @SuppressWarnings({"unchecked", "unused"}) private IPageDB.Range<DBKey, ConcurrentTreeNode> fetchNodeRange(int db,
-                                                                                                               String from) {
+    @SuppressWarnings({"unchecked", "unused"}) private IPageDB.Range<DBKey, ConcurrentTreeNode> fetchNodeRange(long db, String from) {
         return source.range(new DBKey(db, Raw.get(from)), new DBKey(db + 1));
     }
 
-    @SuppressWarnings("unchecked") IPageDB.Range<DBKey, ConcurrentTreeNode> fetchNodeRange(int db, String from, String to) {
+    @SuppressWarnings("unchecked") IPageDB.Range<DBKey, ConcurrentTreeNode> fetchNodeRange(long db, String from, String to) {
         return source.range(new DBKey(db, Raw.get(from)),
                 to == null ? new DBKey(db+1, (Raw)null) : new DBKey(db, Raw.get(to)));
     }
@@ -457,7 +470,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     }
 
     @Override
-    public int getDBCount() {
+    public long getDBCount() {
         return nextDBID.get();
     }
 
@@ -690,7 +703,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                        long counter,
                        BooleanSupplier terminationCondition,
                        Logger deletionLogger) {
-        int nodeDB = rootNode.nodeDB();
+        long nodeDB = rootNode.nodeDB();
         IPageDB.Range<DBKey, ConcurrentTreeNode> range = fetchNodeRange(nodeDB);
         DBKey endRange;
         boolean reschedule;
@@ -773,4 +786,5 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             ((SkipListCache) store).testIntegrity(true);
         }
     }
+
 }

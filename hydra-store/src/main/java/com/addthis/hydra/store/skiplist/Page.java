@@ -19,6 +19,7 @@ import javax.annotation.concurrent.GuardedBy;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -27,13 +28,15 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.zip.GZIPInputStream;
 
 import com.addthis.basis.io.GZOut;
-import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.MemoryCounter;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.Varint;
 
 import com.addthis.codec.codables.BytesCodable;
+import com.addthis.hydra.store.kv.PageEncodeType;
 import com.addthis.hydra.store.kv.KeyCoder;
+
+import com.google.common.base.Throwables;
 
 import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.DeflaterOutputStream;
@@ -108,14 +111,15 @@ public class Page<K, V extends BytesCodable> {
     private int memoryEstimate;
 
     @GuardedBy("lock")
-    private KeyCoder.EncodeType encodeType;
+    protected PageEncodeType encodeType;
 
-    protected static final int FLAGS_IS_SPARSE = 1 << 5;
-    protected static final int FLAGS_HAS_ESTIMATES = 1 << 4;
+    protected static final int ESTIMATES_BIT_OFFSET = 4;
+    protected static final int TYPE_BIT_OFFSET = 5;
+    protected static final int FLAGS_HAS_ESTIMATES = 1 << ESTIMATES_BIT_OFFSET;
 
     protected final KeyCoder<K, V> keyCoder;
 
-    protected Page(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, KeyCoder.EncodeType encodeType) {
+    protected Page(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
         this.parent = cache;
         this.keyCoder = parent != null ? parent.keyCoder : null;
         this.firstKey = firstKey;
@@ -128,7 +132,7 @@ public class Page<K, V extends BytesCodable> {
 
     protected Page(SkipListCache<K, V> cache, K firstKey,
             K nextFirstKey, int size, ArrayList<K> keys, ArrayList<V> values,
-            ArrayList<byte[]> rawValues, KeyCoder.EncodeType encodeType) {
+            ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
         assert (keys != null);
         assert (values != null);
         assert (rawValues != null);
@@ -179,9 +183,10 @@ public class Page<K, V extends BytesCodable> {
     public byte[] encode(ByteBufOutputStream out, boolean record) {
         SkipListCacheMetrics metrics = parent.metrics;
         parent.numPagesEncoded.getAndIncrement();
+        PageEncodeType upgradeType = PageEncodeType.defaultType();
         try {
             OutputStream os = out;
-            out.write(gztype | FLAGS_HAS_ESTIMATES | FLAGS_IS_SPARSE);
+            out.write(gztype | FLAGS_HAS_ESTIMATES | (upgradeType.ordinal() << TYPE_BIT_OFFSET));
             switch (gztype) {
                 case 0:
                     break;
@@ -215,12 +220,12 @@ public class Page<K, V extends BytesCodable> {
                 dos.write(nextFirstKeyEncoded);
             }
             for (int i = 0; i < size; i++) {
-                byte[] keyEncoded = keyCoder.keyEncode(keys.get(i));
+                byte[] keyEncoded = keyCoder.keyEncode(keys.get(i), firstKey, upgradeType);
                 byte[] rawVal = rawValues.get(i);
 
-                if (rawVal == null || encodeType != KeyCoder.EncodeType.SPARSE) {
+                if (rawVal == null || upgradeType != encodeType) {
                     fetchValue(i);
-                    rawVal = keyCoder.valueEncode(values.get(i), KeyCoder.EncodeType.SPARSE);
+                    rawVal = keyCoder.valueEncode(values.get(i), upgradeType);
                 }
 
                 updateHistogram(metrics.encodeKeySize, keyEncoded.length, record);
@@ -255,7 +260,7 @@ public class Page<K, V extends BytesCodable> {
             updateHistogram(metrics.encodePageSize, returnValue.length, record);
             return returnValue;
         } catch (Exception ex) {
-            throw new RuntimeException(ex);
+            throw Throwables.propagate(ex);
         }
     }
 
@@ -267,9 +272,8 @@ public class Page<K, V extends BytesCodable> {
             InputStream in = new ByteBufInputStream(buffer);
             int flags = in.read() & 0xff;
             int gztype = flags & 0x0f;
-            boolean isSparse = (flags & FLAGS_IS_SPARSE) != 0;
+            int pageType = flags >>> TYPE_BIT_OFFSET;
             boolean hasEstimates = (flags & FLAGS_HAS_ESTIMATES) != 0;
-            int readEstimateTotal, readEstimates;
             switch (gztype) {
                 case 1:
                     in = new InflaterInputStream(in);
@@ -284,92 +288,76 @@ public class Page<K, V extends BytesCodable> {
                     in = new SnappyInputStream(in);
                     break;
             }
-            K firstKey;
-            byte[] nextFirstKey;
-            if (isSparse) {
-                encodeType = KeyCoder.EncodeType.SPARSE;
-                DataInputStream dis = new DataInputStream(in);
-                int entries = Varint.readUnsignedVarInt(dis);
-
-                firstKey = keyCoder.keyDecode(Bytes.readBytes(in, Varint.readUnsignedVarInt(dis)));
-                int nextFirstKeyLength = Varint.readUnsignedVarInt(dis);
-                if (nextFirstKeyLength > 0) {
-                    nextFirstKey = Bytes.readBytes(in, nextFirstKeyLength);
-                } else {
-                    nextFirstKey = null;
-                }
-
-                int bytes = 0;
-
-                size = entries;
-                keys = new ArrayList<>(size);
-                values = new ArrayList<>(size);
-                rawValues = new ArrayList<>(size);
-
-                for (int i = 0; i < entries; i++) {
-                    byte[] kb = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
-                    byte[] vb = Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
-                    bytes += kb.length + vb.length;
-                    keys.add(keyCoder.keyDecode(kb));
-                    values.add(null);
-                    rawValues.add(vb);
-                }
-
-                if (hasEstimates) {
-                    readEstimateTotal = Varint.readUnsignedVarInt(dis);
-                    readEstimates = Varint.readUnsignedVarInt(dis);
-                    setAverage(readEstimateTotal, readEstimates);
-                } else {
-                    /** use a pessimistic/conservative byte/entry estimate */
-                    setAverage(bytes * estimateMissingFactor, entries);
-                }
-            } else {
-                encodeType = KeyCoder.EncodeType.LEGACY;
-                int entries = (int) Bytes.readLength(in);
-
-                firstKey = keyCoder.keyDecode(Bytes.readBytes(in));
-                nextFirstKey = Bytes.readBytes(in);
-
-                int bytes = 0;
-
-                size = entries;
-                keys = new ArrayList<>(size);
-                values = new ArrayList<>(size);
-                rawValues = new ArrayList<>(size);
-
-                for (int i = 0; i < entries; i++) {
-                    byte[] kb = Bytes.readBytes(in);
-                    byte[] vb = Bytes.readBytes(in);
-                    bytes += kb.length + vb.length;
-                    keys.add(keyCoder.keyDecode(kb));
-                    values.add(null);
-                    rawValues.add(vb);
-                }
-
-                if (hasEstimates) {
-                    readEstimateTotal = (int) Bytes.readLength(in);
-                    readEstimates = (int) Bytes.readLength(in);
-                    setAverage(readEstimateTotal, readEstimates);
-                } else {
-                    /** use a pessimistic/conservative byte/entry estimate */
-                    setAverage(bytes * estimateMissingFactor, entries);
-                }
+            DataInputStream dis = null;
+            switch (pageType) {
+                case 0:
+                    encodeType = PageEncodeType.LEGACY;
+                    break;
+                case 1:
+                    encodeType = PageEncodeType.SPARSE;
+                    dis = new DataInputStream(in);
+                    break;
+                case 2:
+                    encodeType = PageEncodeType.LONGIDS;
+                    dis = new DataInputStream(in);
+                    break;
             }
-
-            updateMemoryEstimate();
-
-            assert (this.firstKey.equals(firstKey));
-
-            this.nextFirstKey = keyCoder.keyDecode(nextFirstKey);
-
+            decodeKeysAndValues(encodeType, in, dis, hasEstimates);
             in.close();
-        } catch (RuntimeException ex) {
-            throw ex;
         } catch (Exception ex) {
-            throw new RuntimeException(ex);
+            throw Throwables.propagate(ex);
         } finally {
             buffer.release();
         }
+    }
+
+    /**
+     *
+     * @param encodeType
+     * @param in
+     * @param dis
+     * @param hasEstimates
+     * @throws IOException
+     */
+    private void decodeKeysAndValues(PageEncodeType encodeType, InputStream in,
+                                     DataInputStream dis, boolean hasEstimates) throws IOException {
+        K firstKey;
+        byte[] nextFirstKeyBytes;
+        int readEstimateTotal;
+        int readEstimates;
+        int entries = encodeType.readInt(in, dis);
+
+        firstKey = keyCoder.keyDecode(encodeType.readBytes(in, dis));
+        nextFirstKeyBytes = encodeType.nextFirstKey(in, dis);
+        nextFirstKey = keyCoder.keyDecode(nextFirstKeyBytes);
+        assert(this.firstKey.equals(firstKey));
+
+        int bytes = 0;
+
+        size = entries;
+        keys = new ArrayList<>(size);
+        values = new ArrayList<>(size);
+        rawValues = new ArrayList<>(size);
+
+        for (int i = 0; i < entries; i++) {
+            byte[] kb = encodeType.readBytes(in, dis);
+            byte[] vb = encodeType.readBytes(in ,dis);
+            bytes += kb.length + vb.length;
+            keys.add(keyCoder.keyDecode(kb, firstKey, encodeType));
+            values.add(null);
+            rawValues.add(vb);
+        }
+
+        if (hasEstimates) {
+            readEstimateTotal = encodeType.readInt(in, dis);
+            readEstimates = encodeType.readInt(in, dis);
+            setAverage(readEstimateTotal, readEstimates);
+        } else {
+            /** use a pessimistic/conservative byte/entry estimate */
+            setAverage(bytes * estimateMissingFactor, entries);
+        }
+
+        updateMemoryEstimate();
     }
 
     private int estimatedMem() {
@@ -395,7 +383,8 @@ public class Page<K, V extends BytesCodable> {
             switch (memEstimationStrategy) {
                 case 0:
                     /** use encoded byte size as crude proxy for mem size */
-                    updateAverage((keyCoder.keyEncode(key).length + keyCoder.valueEncode(val, encodeType).length), count);
+                    updateAverage((keyCoder.keyEncode(key).length +
+                                   keyCoder.valueEncode(val, encodeType).length), count);
                     break;
                 case 1:
                     /** walk objects and estimate.  possibly slower and not demonstrably more accurate */
@@ -550,7 +539,7 @@ public class Page<K, V extends BytesCodable> {
         return state.isTransient();
     }
 
-    public KeyCoder.EncodeType getEncodeType() {
+    public PageEncodeType getEncodeType() {
         return encodeType;
     }
 
@@ -561,15 +550,16 @@ public class Page<K, V extends BytesCodable> {
         private DefaultPageFactory() {}
 
         @Override
-        public Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, KeyCoder.EncodeType encodeType) {
+        public Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
             return new Page(cache, firstKey, nextFirstKey, encodeType);
         }
 
         @Override
         public Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, int size, ArrayList<K> keys,
-                ArrayList<V> values, ArrayList<byte[]> rawValues, KeyCoder.EncodeType encodeType) {
+                ArrayList<V> values, ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
             return new Page(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
         }
+
     }
 }
 

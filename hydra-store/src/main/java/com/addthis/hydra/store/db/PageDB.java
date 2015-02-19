@@ -50,6 +50,8 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
     static final String PAGED_MAP_DB = "paged.mapdb";
     static final String PAGED_BERK_DB = "paged.bdb";
 
+    public static final String DB_TYPE_FILENAME = "db.type";
+
     static final String defaultDbName = Parameter.value("pagedb.dbname", "db.key");
     static final String DEFAULT_BYTESTORE = Parameter.value("pagedb.bytestore", PAGED_BERK_DB);
 
@@ -91,19 +93,15 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
         }
     }
 
-    protected PageDB(PagedKeyValueStore<DBKey, V> eps, DBKeyCoder<V> keyCoder) {
-        this.eps = eps;
-        this.keyCoder = keyCoder;
-    }
-
     public PageDB(File dir, Class<? extends V> clazz, int maxPageSize, int maxPages) throws IOException {
         this(dir, clazz, defaultDbName, maxPageSize, maxPages, Page.DefaultPageFactory.singleton);
     }
 
     public PageDB(File dir, Class<? extends V> clazz, String dbname, int maxPageSize,
                   int maxPages, PageFactory factory) throws IOException {
-        this.keyCoder = new DBKeyCoder<>(clazz);
         String dbType = getByteStoreNameForFile(dir);
+        this.keyCoder = new DBKeyCoder<>(clazz);
+        Files.initDirectory(dir);
         ByteStore store;
         switch (dbType) {
             case PAGED_MAP_DB:
@@ -115,13 +113,13 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
                 store = new ConcurrentByteStoreBDB(dir, dbname);
                 break;
         }
-        this.eps =  new SkipListCache.Builder<>(keyCoder, store, maxPageSize, maxPages).
-        pageFactory(factory).build();
-        Files.write(new File(dir, "db.type"), Bytes.toBytes(dbType), false);
+        this.eps =  new SkipListCache.Builder<>(keyCoder, store, maxPageSize).
+        maxPages(maxPages).pageFactory(factory).build();
+        Files.write(new File(dir, DB_TYPE_FILENAME), Bytes.toBytes(dbType), false);
     }
 
     public static String getByteStoreNameForFile(File dir) throws IOException {
-        File typeFile = new File(dir, "db.type");
+        File typeFile = new File(dir, DB_TYPE_FILENAME);
         if (typeFile.exists()) {
             return new String(Files.read(typeFile));
         } else {
@@ -156,7 +154,7 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
 
     public TreeMap<DBKey, V> toTreeMap() {
         try {
-            Range<DBKey, V> range = this.range(this.eps.getFirstKey(), new DBKey(Integer.MAX_VALUE, ""));
+            Range<DBKey, V> range = this.range(this.eps.getFirstKey(), new DBKey(Long.MAX_VALUE, ""));
             Iterator<Entry<DBKey, V>> iterator = range.iterator();
             TreeMap<DBKey, V> map = new TreeMap<>();
             while (iterator.hasNext()) {
@@ -316,4 +314,5 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
             return this;
         }
     }
+
 }

@@ -13,11 +13,14 @@
  */
 package com.addthis.hydra.store.skiplist;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import com.addthis.basis.util.Bytes;
 
 import com.addthis.hydra.store.DBIntValue;
+import com.addthis.hydra.store.kv.PageEncodeType;
 import com.addthis.hydra.store.kv.KeyCoder;
-
 
 public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
 
@@ -32,7 +35,15 @@ public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
     }
 
     @Override
-    public byte[] valueEncode(DBIntValue value, EncodeType encodeType) {
+    public byte[] keyEncode(@Nullable Integer key, @Nonnull Integer baseKey, @Nonnull PageEncodeType encodeType) {
+        if (key == null) {
+            return new byte[0];
+        }
+        return keyEncode(key - baseKey);
+    }
+
+    @Override
+    public byte[] valueEncode(DBIntValue value, PageEncodeType encodeType) {
         return value.bytesEncode(encodeType.ordinal());
     }
 
@@ -42,15 +53,19 @@ public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
     }
 
     @Override
-    public DBIntValue valueDecode(byte[] value, EncodeType encodeType) {
-        DBIntValue dbIntValue = new DBIntValue();
-        dbIntValue.bytesDecode(value, encodeType.ordinal());
-        return dbIntValue;
+    public Integer keyDecode(@Nullable byte[] key, @Nonnull Integer baseKey, @Nonnull PageEncodeType encodeType) {
+        Integer offset = keyDecode(key);
+        if (offset == null) {
+            return null;
+        }
+        return offset + baseKey;
     }
 
     @Override
-    public boolean nullRawValueInternal(byte[] value) {
-        return value.length == 0;
+    public DBIntValue valueDecode(byte[] value, PageEncodeType encodeType) {
+        DBIntValue dbIntValue = new DBIntValue();
+        dbIntValue.bytesDecode(value, encodeType.ordinal());
+        return dbIntValue;
     }
 
 }

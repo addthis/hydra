@@ -73,6 +73,10 @@ public class TaskRunner {
         }
     }
 
+    public static TaskRunnable makeTask(String configString) throws JsonProcessingException, IOException {
+        return makeTask(configString, Jackson.defaultCodec());
+    }
+
     /**
      * Creates a TaskRunnable using CodecConfig and a little custom handling. At the root
      * level object, if there is a field named "global", then that sub tree is hoisted
@@ -81,24 +85,26 @@ public class TaskRunner {
      * properties for the purposes of variable substitution. This will not merge them entirely
      * though and so the job config will be otherwise unaffected.
      */
-    public static TaskRunnable makeTask(String configString) throws JsonProcessingException, IOException {
+    public static TaskRunnable makeTask(String configString, CodecJackson defaultCodec)
+            throws JsonProcessingException, IOException {
         String subbedConfigString = subAt(configString);
         Config config = ConfigFactory.parseString(subbedConfigString,
                                                   ConfigParseOptions.defaults().setOriginDescription("job.conf"));
+        Config defaultGlobalDefaults = defaultCodec.getGlobalDefaults();
         Config jobConfig = config;
         CodecJackson codec;
         if (config.root().containsKey("global")) {
             jobConfig = config.root().withoutKey("global").toConfig()
                               .resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true));
             Config globalDefaults = config.getConfig("global")
-                                          .withFallback(ConfigFactory.load())
+                                          .withFallback(defaultGlobalDefaults)
                                           .resolve();
             jobConfig = jobConfig.resolveWith(globalDefaults);
-            codec = Jackson.defaultCodec().withConfig(globalDefaults);
+            codec = defaultCodec.withConfig(globalDefaults);
         } else {
             jobConfig = jobConfig.resolve(ConfigResolveOptions.defaults().setAllowUnresolved(true))
-                                 .resolveWith(ConfigFactory.load());
-            codec = Jackson.defaultCodec();
+                                 .resolveWith(defaultGlobalDefaults);
+            codec = defaultCodec;
         }
         return codec.decodeObject(TaskRunnable.class, jobConfig);
     }

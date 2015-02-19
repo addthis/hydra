@@ -202,7 +202,7 @@ public final class ReadTree implements DataTree {
      * @param childName - name of the node desired
      * @return the node desired
      */
-    protected ReadTreeNode getNode(int parentID, final String childName) {
+    protected ReadTreeNode getNode(long parentID, final String childName) {
         try {
             CacheKey key = new CacheKey(parentID, childName);
             ReadTreeNode node = loadingNodeCache.get(key);
@@ -227,8 +227,8 @@ public final class ReadTree implements DataTree {
      * @return child
      */
     protected DataTreeNode getNode(final ReadTreeNode parent, final String child) {
-        Integer nodedb = parent.nodeDB();
-        if (nodedb == null) {
+        long nodedb = parent.nodeDB();
+        if (nodedb <= 0) {
             if (log.isTraceEnabled()) {
                 log.trace("[node.get] " + parent + " --> " + child + " NOMAP --> null");
             }
@@ -254,16 +254,16 @@ public final class ReadTree implements DataTree {
     }
 
     @SuppressWarnings("unchecked")
-    protected Range<DBKey, ReadTreeNode> fetchNodeRange(int db) {
+    protected Range<DBKey, ReadTreeNode> fetchNodeRange(long db) {
         return source.range(new DBKey(db), new DBKey(db + 1));
     }
 
-    protected Range<DBKey, ReadTreeNode> fetchNodeRange(int db, int sampleRate) {
+    protected Range<DBKey, ReadTreeNode> fetchNodeRange(long db, int sampleRate) {
         return source.range(new DBKey(db), new DBKey(db + 1), sampleRate);
     }
 
     @SuppressWarnings("unchecked")
-    protected Range<DBKey, ReadTreeNode> fetchNodeRange(int db, String from, String to) {
+    protected Range<DBKey, ReadTreeNode> fetchNodeRange(long db, String from, String to) {
         return source.range(new DBKey(db, Raw.get(from)), to == null ? new DBKey(db+1, (Raw)null) : new DBKey(db, Raw.get(to)));
     }
 
@@ -308,7 +308,7 @@ public final class ReadTree implements DataTree {
     }
 
     @Override
-    public int getDBCount() {
+    public long getDBCount() {
         throw new UnsupportedOperationException();
     }
 
@@ -331,10 +331,10 @@ public final class ReadTree implements DataTree {
     protected static class CacheKey {
 
         private final int hc;
-        private final int parentID;
+        private final long parentID;
         private final String name;
 
-        protected CacheKey(int parentID, String name) {
+        protected CacheKey(long parentID, String name) {
             this.hc = Objects.hash(parentID, name);
             this.parentID = parentID;
             this.name = name;

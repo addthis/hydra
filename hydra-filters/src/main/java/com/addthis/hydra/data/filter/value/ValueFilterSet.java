@@ -15,13 +15,12 @@ package com.addthis.hydra.data.filter.value;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns a constant value</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns a constant value</span>.
  * <p/>
  * <p>Example:</p>
  * <pre>
@@ -31,7 +30,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @user-reference
  * @hydra-name set
  */
-public class ValueFilterSet extends ValueFilter {
+public class ValueFilterSet extends AbstractValueFilter {
 
     /**
      * The output value.
@@ -45,9 +44,6 @@ public class ValueFilterSet extends ValueFilter {
         this.value = value;
         this.cache = ValueFactory.create(value);
     }
-
-    @Override
-    public void open() { }
 
     @Override
     public ValueObject filterValue(ValueObject v) {

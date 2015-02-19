@@ -21,7 +21,7 @@ import com.addthis.basis.io.GZOut;
 import com.addthis.basis.util.Bytes;
 
 import com.addthis.codec.codables.BytesCodable;
-import com.addthis.hydra.store.kv.KeyCoder;
+import com.addthis.hydra.store.kv.PageEncodeType;
 
 import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.DeflaterOutputStream;
@@ -32,14 +32,19 @@ import org.xerial.snappy.SnappyOutputStream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 
+/**
+ * This class is for testing backwards-compatibility only.
+ * We no longer encode pages in this format.
+ */
+@Deprecated
 public class LegacyPage<K, V extends BytesCodable> extends Page<K, V> {
 
-    protected LegacyPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, KeyCoder.EncodeType encodeType) {
+    protected LegacyPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
         super(cache, firstKey, nextFirstKey, encodeType);
     }
 
     protected LegacyPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, int size, ArrayList<K> keys,
-            ArrayList<V> values, ArrayList<byte[]> rawValues, KeyCoder.EncodeType encodeType) {
+            ArrayList<V> values, ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
         super(cache, firstKey, nextFirstKey, size, keys, values, rawValues, encodeType);
     }
 
@@ -83,7 +88,7 @@ public class LegacyPage<K, V extends BytesCodable> extends Page<K, V> {
                 byte[] rawVal = rawValues.get(i);
 
                 if (rawVal == null) {
-                    rawVal = keyCoder.valueEncode(values.get(i), KeyCoder.EncodeType.LEGACY);
+                    rawVal = keyCoder.valueEncode(values.get(i), PageEncodeType.LEGACY);
                 }
 
                 updateHistogram(metrics.encodeKeySize, keyEncoded.length, record);
@@ -132,15 +137,16 @@ public class LegacyPage<K, V extends BytesCodable> extends Page<K, V> {
         private LegacyPageFactory() {}
 
         @Override
-        public Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, KeyCoder.EncodeType encodeType) {
-            return new LegacyPage(cache, firstKey, nextFirstKey, KeyCoder.EncodeType.LEGACY);
+        public Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, PageEncodeType encodeType) {
+            return new LegacyPage(cache, firstKey, nextFirstKey, PageEncodeType.LEGACY);
         }
 
         @Override
         public Page newPage(SkipListCache<K, V> cache, K firstKey, K nextFirstKey, int size, ArrayList<K> keys,
-                ArrayList<V> values, ArrayList<byte[]> rawValues, KeyCoder.EncodeType encodeType) {
-            return new LegacyPage(cache, firstKey, nextFirstKey, size, keys, values, rawValues, KeyCoder.EncodeType.LEGACY);
+                ArrayList<V> values, ArrayList<byte[]> rawValues, PageEncodeType encodeType) {
+            return new LegacyPage(cache, firstKey, nextFirstKey, size, keys, values, rawValues, PageEncodeType.LEGACY);
         }
+
     }
 
 }

@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">accepts a map as input and then performs
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">accepts a map as input and then performs
  * filtering operations on the input</span>.
  * <p/>
  * <p>If the {@link #whitelist whitelist} field is non-null, then any keys outside
@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name map-subset
  */
-public class ValueFilterMapSubset extends ValueFilter {
+public class ValueFilterMapSubset extends AbstractValueFilter {
     private static final Logger log = LoggerFactory.getLogger(ValueFilterMapSubset.class);
 
     /** Set of keys that are preserved by the filter. */
@@ -74,8 +74,6 @@ public class ValueFilterMapSubset extends ValueFilter {
     /** If toString is true, then use this field as the deliminator between two (key,value) pairs. */
     @JsonProperty private String valueSep = ",";
 
-
-    @Override public void open() { }
 
     @Override
     public ValueObject filterValue(ValueObject value) {

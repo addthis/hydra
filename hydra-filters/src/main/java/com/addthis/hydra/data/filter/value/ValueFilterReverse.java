@@ -18,7 +18,7 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">reverses a string or an array</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">reverses a string or an array</span>.
  * <p/>
  * <p>Example:</p>
  * <pre>
@@ -28,10 +28,7 @@ import com.addthis.bundle.value.ValueObject;
  * @user-reference
  * @hydra-name reverse
  */
-public class ValueFilterReverse extends ValueFilter {
-
-    @Override
-    public void open() { }
+public class ValueFilterReverse extends AbstractValueFilter {
 
     @Override
     public ValueObject filterValue(ValueObject value) {

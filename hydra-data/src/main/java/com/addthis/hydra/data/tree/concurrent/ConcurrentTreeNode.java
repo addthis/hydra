@@ -70,7 +70,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         };
         node.tree = tree;
         node.leases.incrementAndGet();
-        node.nodedb = 1;
+        node.nodedb = 1L;
         return node;
     }
 
@@ -127,10 +127,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
     @Override @SuppressWarnings("unchecked")
     public Map<String, TreeNodeData> getDataMap() {
         return data;
-    }
-
-    public boolean hasNodes() {
-        return nodedb != null;
     }
 
     public int getLeaseCount() {
@@ -290,16 +286,16 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
      * double-checked locking idiom to avoid unnecessary synchronization.
      */
     protected void requireNodeDB() {
-        if (nodedb == null) {
+        if (!hasNodes()) {
             synchronized (this) {
-                if (nodedb == null) {
+                if (!hasNodes()) {
                     nodedb = tree.getNextNodeDB();
                 }
             }
         }
     }
 
-    protected Integer nodeDB() {
+    protected long nodeDB() {
         return nodedb;
     }
 
@@ -307,7 +303,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
      * returns an iterator of read-only nodes
      */
     public ClosableIterator<DataTreeNode> getNodeIterator() {
-        return nodedb == null || isDeleted() ? new Iter(null, false) : new Iter(tree.fetchNodeRange(nodedb), true);
+        return !hasNodes() || isDeleted() ? new Iter(null, false) : new Iter(tree.fetchNodeRange(nodedb), true);
     }
 
     /**
@@ -333,7 +329,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
      * returns an iterator of read-only nodes
      */
     public ClosableIterator<DataTreeNode> getNodeIterator(String from, String to) {
-        if (nodedb == null || isDeleted()) {
+        if (!hasNodes() || isDeleted()) {
             return new Iter(null, false);
         }
         return new Iter(tree.fetchNodeRange(nodedb, from, to), true);
@@ -370,7 +366,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
             return false;
         }
         requireEditable();
-        if (nodedb != null) {
+        if (hasNodes()) {
             return false;
         }
         ((ConcurrentTreeNode) node).requireNodeDB();
@@ -489,16 +485,8 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
 
     @Override
     public void postDecode() {
+        super.postDecode();
         decoded.set(true);
-        if (data != null) {
-            for (TreeNodeData actor : data.values()) {
-                actor.setBoundNode(this);
-            }
-        }
-    }
-
-    @Override
-    public void preEncode() {
     }
 
     /**

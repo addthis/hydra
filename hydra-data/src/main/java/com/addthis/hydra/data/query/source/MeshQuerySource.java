@@ -23,6 +23,7 @@ import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.data.query.engine.QueryEngineCache;
+import com.addthis.hydra.store.db.PageDB;
 import com.addthis.meshy.LocalFileHandler;
 import com.addthis.meshy.VirtualFileFilter;
 import com.addthis.meshy.VirtualFileReference;
@@ -105,7 +106,7 @@ public class MeshQuerySource implements LocalFileHandler {
 
     @Override
     public boolean canHandleDirectory(File dir) {
-        return new File(dir, "db.type").isFile() || new File(dir, "nextID").isFile();
+        return new File(dir, PageDB.DB_TYPE_FILENAME).isFile() || new File(dir, "nextID").isFile();
     }
 
     @Override

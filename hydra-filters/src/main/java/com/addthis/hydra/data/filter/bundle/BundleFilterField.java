@@ -37,7 +37,7 @@ import com.addthis.hydra.data.filter.value.ValueFilter;
  * @user-reference
  * @hydra-name field
  */
-public class BundleFilterField extends BundleFilter {
+public class BundleFilterField implements BundleFilter {
 
     public BundleFilterField setNullFail(boolean nullFail) {
         this.nullFail = nullFail;
@@ -61,12 +61,6 @@ public class BundleFilterField extends BundleFilter {
 
     /** The value to return when nullFail is true and the value filter output is null. Default is false. */
     @FieldConfig private boolean not;
-
-    @Override public void open() {
-        if (filter != null) {
-            filter.open();
-        }
-    }
 
     @Override
     public boolean filter(Bundle row) {

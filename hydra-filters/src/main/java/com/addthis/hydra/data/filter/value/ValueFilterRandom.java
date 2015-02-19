@@ -22,7 +22,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns a random number</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns a random number</span>.
  * <p/>
  * <p>The input value to this filter is ignored. By default, this filter produces a random
  * number from a uniform distribution in the range (0, {@link #max max}]. A long value is
@@ -38,7 +38,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name random
  */
-public class ValueFilterRandom extends ValueFilter {
+public class ValueFilterRandom extends AbstractValueFilter {
 
     private final Random random = new Random();
 
@@ -88,8 +88,6 @@ public class ValueFilterRandom extends ValueFilter {
     private boolean asFloat;
 
     private DecimalFormat format;
-
-    @Override public void open() { }
 
     @Override
     public ValueObject filterValue(ValueObject value) {

@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.value;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">converts a value to lowercase or uppercase letters</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">converts a value to lowercase or uppercase letters</span>.
  * <p/>
  * <p>Enabling <a href="#lower">lower</a> will convert the input into lowercase latters.
  * Enabling <a href="#upper">upper</a> will convert the input into uppercase letters. If both
@@ -44,9 +44,6 @@ public class ValueFilterCase extends StringFilter {
      */
     @FieldConfig(codable = true)
     private boolean upper;
-
-    @Override
-    public void open() {}
 
     @Override
     public String filter(String value) {

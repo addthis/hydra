@@ -27,8 +27,11 @@ import java.util.UUID;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.compiler.JavaSimpleCompiler;
 import com.addthis.hydra.data.filter.eval.InputType;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,9 +70,12 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name eval-java
  */
-public class BundleFilterEvalJava extends BundleFilter {
+public class BundleFilterEvalJava implements BundleFilter, SuperCodable {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilterEvalJava.class);
+
+    @VisibleForTesting
+    BundleFilterEvalJava() {}
 
     /**
      * Names of the bundle fields. These
@@ -175,11 +181,10 @@ public class BundleFilterEvalJava extends BundleFilter {
         }
         classDecl.append("public class ");
         classDecl.append(className);
-        classDecl.append(" extends BundleFilter\n");
+        classDecl.append(" implements BundleFilter\n");
         classDecl.append("{\n");
         createConstructor(classDecl, className);
         createFieldsVariable(classDecl);
-        createInitializer(classDecl);
         createFilterMethod(classDecl);
         classDecl.append("}\n");
         classDeclString = classDecl.toString();
@@ -214,7 +219,6 @@ public class BundleFilterEvalJava extends BundleFilter {
                 log.warn("\n" + classDeclString);
                 throw new IllegalStateException(msg);
             }
-            filter.open();
             return filter;
         } finally {
             compiler.cleanupFiles(className);
@@ -234,10 +238,6 @@ public class BundleFilterEvalJava extends BundleFilter {
             }
             classDecl.append("};\n");
         }
-    }
-
-    private void createInitializer(StringBuffer classDecl) {
-        classDecl.append("public void open() {}\n");
     }
 
     private IllegalStateException handleCompilationError(String classDeclString, JavaSimpleCompiler compiler) {
@@ -265,7 +265,7 @@ public class BundleFilterEvalJava extends BundleFilter {
         if (typeBundle) {
             classDecl.append("Bundle " + variables[0] + " = __bundle;\n");
         } else {
-            classDecl.append("BundleField[] __bound = getBindings(__bundle, __fields);\n");
+            classDecl.append("BundleField[] __bound = BundleFilter.getBindings(__bundle, __fields);\n");
 
             for (int i = 0; i < variables.length; i++) {
                 InputType type = types[i];
@@ -362,9 +362,7 @@ public class BundleFilterEvalJava extends BundleFilter {
         this.types = types;
     }
 
-
-    @Override
-    public void open() {
+    @Override public void postDecode() {
         typeBundle = false;
         for (int i = 0; i < types.length; i++) {
             if (types[i].equals(InputType.BUNDLE_RAW)) {
@@ -385,4 +383,6 @@ public class BundleFilterEvalJava extends BundleFilter {
         }
         constructedFilter = createConstructedFilter();
     }
+
+    @Override public void preEncode() {}
 }

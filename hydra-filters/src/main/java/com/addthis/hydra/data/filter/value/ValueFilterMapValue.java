@@ -18,7 +18,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns the value associated with a specific key
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns the value associated with a specific key
  * from the input map</span>.
  * <p>A value of null is returned if the key is not present in the map.
  * <p>Example:</p>
@@ -29,15 +29,13 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name map-value
  */
-public class ValueFilterMapValue extends ValueFilter {
+public class ValueFilterMapValue extends AbstractValueFilter {
 
     /**
      * The key to match from the input map.
      */
     @FieldConfig(codable = true)
     private String key;
-
-    @Override public void open() { }
 
     @Override
     public ValueObject filterValue(ValueObject value) {

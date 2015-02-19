@@ -29,7 +29,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @user-reference
  * @hydra-name not
  */
-public class BundleFilterNot extends BundleFilter {
+public class BundleFilterNot implements BundleFilter {
 
     /** The field to test. This field is required. */
     private final AutoField field;
@@ -37,9 +37,6 @@ public class BundleFilterNot extends BundleFilter {
     public BundleFilterNot(@JsonProperty("field") AutoField field) {
         this.field = field;
     }
-
-    @Override
-    public void open() { }
 
     @Override
     public boolean filter(Bundle bundle) {

@@ -81,7 +81,7 @@ public class JobAlertManagerImpl implements JobAlertManager {
         return jobAlertRunner.isAlertsEnabled() && !jobAlertRunner.isLastAlertScanFailed();
     }
 
-    public void putAlert(String alertId, JobAlert alert) {
+    public void putAlert(String alertId, AbstractJobAlert alert) {
         jobAlertRunner.putAlert(alertId, alert);
     }
 

@@ -18,7 +18,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">perform pre- or post- string concatenation</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">perform pre- or post- string concatenation</span>.
  * <p/>
  * <p>Example:</p>
  * <pre>
@@ -28,7 +28,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name cat
  */
-public class ValueFilterCat extends ValueFilter {
+public class ValueFilterCat extends AbstractValueFilter {
 
     /**
      * If non-null, then prefix this string onto the beginning of the input.
@@ -41,9 +41,6 @@ public class ValueFilterCat extends ValueFilter {
      */
     @FieldConfig(codable = true)
     private String post;
-
-    @Override
-    public void open() {}
 
     @Override
     public ValueObject filterValue(ValueObject value) {

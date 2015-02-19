@@ -43,7 +43,7 @@ import org.joda.time.format.DateTimeFormatter;
  * @user-reference
  * @hydra-name time-range
  */
-public class BundleFilterTimeRange extends BundleFilter {
+public class BundleFilterTimeRange implements BundleFilter {
 
     private static final DateTimeFormatter ymd   = DateTimeFormat.forPattern("yyMMdd");
     private static final DateTimeFormatter ymdh  = DateTimeFormat.forPattern("yyMMddHH");
@@ -104,9 +104,6 @@ public class BundleFilterTimeRange extends BundleFilter {
             tafter = 0;
         }
     }
-
-    @Override
-    public void open() { }
 
     @Override
     public boolean filter(Bundle bundle) {

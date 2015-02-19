@@ -118,6 +118,7 @@ public class AliasResource {
         try {
             List<String> jobs = Lists.newArrayList(Splitter.on(',').split(kv.getValue("jobs")));
             aliasManager.addAlias(kv.getValue("name"), jobs);
+            log.info("user action from {}: saving alias {}", user, kv);
             return Response.ok().entity(new JSONObject().put("name", kv.getValue("name")).put("jobs", new JSONArray(jobs)).toString()).build();
         } catch (Exception e) {
             e.printStackTrace();

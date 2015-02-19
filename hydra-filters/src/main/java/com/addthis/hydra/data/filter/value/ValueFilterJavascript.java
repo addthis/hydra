@@ -17,6 +17,7 @@ import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
+import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.SuperCodable;
 
@@ -24,13 +25,15 @@ import com.addthis.codec.codables.SuperCodable;
  * Value filter based on the JSR 223 scripting interface, and the default
  * implementation based on Rhino, shipped with the 1.6 JDK.
  */
-public class ValueFilterJavascript extends StringFilter {
+public class ValueFilterJavascript extends StringFilter implements SuperCodable {
 
     @FieldConfig(codable = true)
     private String source;
     private Filter filter;
 
-    @Override public void open() {
+    private ValueFilterJavascript() {}
+
+    @Override public void postDecode() {
         if (source == null) {
             throw new IllegalArgumentException("no source specified!");
         }
@@ -61,6 +64,18 @@ public class ValueFilterJavascript extends StringFilter {
         }
 
         filter = ((Invocable) engine).getInterface(Filter.class);
+    }
+
+    @Override public void preEncode() {}
+
+    private static final class ValidationOnly extends ValueFilterJavascript {
+        @Override public void postDecode() {
+            // intentionally do nothing
+        }
+
+        @Override public ValueObject filter(ValueObject value) {
+            throw new UnsupportedOperationException("This class is only intended for use in construction validation.");
+        }
     }
 
     @Override

@@ -25,7 +25,7 @@ import java.io.IOException;
 
 import com.addthis.basis.kv.KVPairs;
 
-import com.addthis.hydra.job.alert.JobAlert;
+import com.addthis.hydra.job.alert.AbstractJobAlert;
 import com.addthis.hydra.job.alert.JobAlertManager;
 
 import org.slf4j.Logger;
@@ -45,7 +45,7 @@ public class AlertResource {
     @POST
     @Path("/save")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response putAlert(JobAlert jobAlert) throws IOException {
+    public Response putAlert(AbstractJobAlert jobAlert) throws IOException {
         String msg = jobAlert.isValid();
         if (msg != null) {
             return Response.ok("{\"message\" : \"" + msg + "\"}").build();

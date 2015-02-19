@@ -25,6 +25,9 @@ import com.addthis.codec.codables.BytesCodable;
 import com.addthis.codec.codables.ConcurrentCodable;
 import com.addthis.codec.codables.SuperCodable;
 import com.addthis.codec.reflection.Fields;
+import com.addthis.hydra.store.kv.PageEncodeType;
+
+import com.google.common.primitives.Ints;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -38,24 +41,24 @@ public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, Co
     @FieldConfig(codable = true)
     protected int nodes;
     @FieldConfig(codable = true)
-    protected volatile Integer nodedb;
+    protected Integer nodedbLegacy;
     @FieldConfig(codable = true)
     protected int bits;
     @SuppressWarnings("unchecked")
     @FieldConfig(codable = true)
     protected HashMap<String, TreeNodeData> data;
 
+    protected volatile long nodedb;
 
     @Override
     public byte[] bytesEncode(long version) {
-        preEncode();
         byte[] returnBytes;
         ByteBuf b = PooledByteBufAllocator.DEFAULT.buffer();
         encodeLock();
         try {
             Varint.writeUnsignedVarLong(hits, b);
-            Varint.writeSignedVarInt(nodedb == null ? -1 : nodedb, b);
-            if (data != null && data.size() > 0) {
+            PageEncodeType.writeNodeId(b, version, nodedb);
+            if ((data != null) && !data.isEmpty()) {
                 int numAttachments = data.size();
                 Varint.writeSignedVarInt(numAttachments, b);
                 for (Map.Entry<String, TreeNodeData> entry : data.entrySet()) {
@@ -74,7 +77,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, Co
             } else {
                 Varint.writeSignedVarInt(-1, b);
             }
-            if (nodedb != null) {
+            if (hasNodes()) {
                 Varint.writeUnsignedVarInt(nodes, b);
                 Varint.writeUnsignedVarInt(bits, b);
             }
@@ -94,7 +97,7 @@ public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, Co
         ByteBuf buf = Unpooled.wrappedBuffer(b);
         try {
             hits = Varint.readUnsignedVarLong(buf);
-            nodedb = Varint.readSignedVarInt(buf);
+            nodedb = PageEncodeType.readNodeId(buf, version);
             int numAttachments = Varint.readSignedVarInt(buf);
             if (numAttachments > 0) {
                 HashMap<String, TreeNodeData> dataMap = new HashMap<>();
@@ -113,11 +116,9 @@ public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, Co
                 }
                 data = dataMap;
             }
-            if (nodedb > 0) {
+            if (hasNodes()) {
                 nodes = Varint.readUnsignedVarInt(buf);
                 bits = Varint.readUnsignedVarInt(buf);
-            } else {
-                nodedb = null;
             }
             postDecode();
         } catch (Exception e) {
@@ -125,5 +126,28 @@ public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, Co
         } finally {
             buf.release();
         }
+    }
+
+    @Override
+    public void postDecode() {
+        if (nodedbLegacy != null) {
+            nodedb = nodedbLegacy.longValue();
+        }
+        if (data != null) {
+            for (TreeNodeData actor : data.values()) {
+                actor.setBoundNode(this);
+            }
+        }
+    }
+
+    @Override
+    public void preEncode() {
+        if (hasNodes()) {
+            nodedbLegacy = Ints.checkedCast(nodedb);
+        }
+    }
+
+    public boolean hasNodes() {
+        return nodedb > 0;
     }
 }

@@ -93,7 +93,7 @@ public class SpawnBalancer implements Codable {
     private ReentrantLock aggregateStatisticsLock = new ReentrantLock();
     private long lastAggregateStatUpdateTime = 0;
 
-    private static final Set<JobTaskState> movableTaskStates = ImmutableSet.of(JobTaskState.IDLE, JobTaskState.QUEUED, JobTaskState.QUEUED_HOST_UNAVAIL);
+    private static final Set<JobTaskState> movableTaskStates = ImmutableSet.of(JobTaskState.IDLE, JobTaskState.QUEUED, JobTaskState.QUEUED_HOST_UNAVAIL, JobTaskState.QUEUED_NO_SLOT);
 
     private AtomicBoolean autobalanceStarted = new AtomicBoolean(false);
 

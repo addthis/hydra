@@ -15,6 +15,7 @@ package com.addthis.hydra.data.filter.bundle;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.codec.codables.SuperCodable;
 
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">executes a sequence of {@link BundleFilterField BundleFilterField} operations</span>.
@@ -38,7 +39,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @user-reference
  * @hydra-name map
  */
-public class BundleFilterMap extends BundleFilter {
+public class BundleFilterMap implements BundleFilter, SuperCodable {
 
     /**
      * The sequence of field bundle filters to execute.
@@ -59,15 +60,17 @@ public class BundleFilterMap extends BundleFilter {
     @FieldConfig(codable = true)
     private Boolean nullFail;
 
-    @Override
-    public void open() {
+    private BundleFilterMap() {}
+
+    @Override public void postDecode() {
         for (BundleFilterField f : fields) {
-            f.open();
             if (nullFail != null) {
                 f.setNullFail(nullFail);
             }
         }
     }
+
+    @Override public void preEncode() {}
 
     @Override
     public boolean filter(Bundle bundle) {

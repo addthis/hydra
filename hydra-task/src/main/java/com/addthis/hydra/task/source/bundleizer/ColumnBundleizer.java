@@ -40,9 +40,6 @@ public class ColumnBundleizer extends NewlineBundleizer {
     @Override
     public void open() {
         super.open();
-        if (tokenFilter != null) {
-            tokenFilter.open();
-        }
     }
 
     @Override

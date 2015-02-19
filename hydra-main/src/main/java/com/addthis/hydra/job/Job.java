@@ -554,7 +554,7 @@ public final class Job implements IJob {
                 reb = true;
             } else if (t.isRunning()) {
                 run = true;
-            } else if (t.getState() == JobTaskState.ALLOCATED || t.getState() == JobTaskState.QUEUED || t.getState() == JobTaskState.QUEUED_HOST_UNAVAIL) {
+            } else if (t.getState() == JobTaskState.ALLOCATED || t.getState().isQueuedState()) {
                 sched = true;
             } else if (t.getState() == JobTaskState.ERROR) {
                 err = true;

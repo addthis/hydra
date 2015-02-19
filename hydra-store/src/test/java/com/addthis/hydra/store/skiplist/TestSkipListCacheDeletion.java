@@ -164,7 +164,8 @@ public class TestSkipListCacheDeletion {
             InsertionThread[] insertionThreads = new InsertionThread[numThreads];
             DeletionThread[] deletionThreads = new DeletionThread[numThreads];
             SkipListCache<Integer, DBIntValue> cache =
-                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore, pageSize, 1000).build();
+                    new SkipListCache.Builder<>(new SimpleIntKeyCoder(), externalStore,
+                                                pageSize).maxPages(1000).build();
 
             for (int i = 0; i < numElements; i++) {
                 values.add(i);

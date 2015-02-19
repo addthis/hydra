@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name sleep
  */
-public class BundleFilterSleep extends BundleFilter {
+public class BundleFilterSleep implements BundleFilter {
 
     private final Logger log = LoggerFactory.getLogger(BundleFilterSleep.class);
 
@@ -36,10 +36,6 @@ public class BundleFilterSleep extends BundleFilter {
      */
     @FieldConfig(codable = true, required = true)
     private int duration;
-
-    @Override
-    public void open() {
-    }
 
     @Override
     public boolean filter(Bundle row) {

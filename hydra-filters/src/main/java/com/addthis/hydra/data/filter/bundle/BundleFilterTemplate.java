@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.codec.annotations.FieldConfig;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -29,7 +28,7 @@ import org.slf4j.LoggerFactory;
 /**
  * @user-reference
  */
-public class BundleFilterTemplate extends BundleFilter {
+public class BundleFilterTemplate implements BundleFilter {
 
     private static final Logger log = LoggerFactory.getLogger(BundleFilterTemplate.class);
 
@@ -65,12 +64,9 @@ public class BundleFilterTemplate extends BundleFilter {
     }
 
     @Override
-    public void open() { }
-
-    @Override
     public boolean filter(Bundle bundle) {
         try {
-            BundleField[] bound = getBindings(bundle, fieldSet);
+            BundleField[] bound = BundleFilter.getBindings(bundle, fieldSet);
             StringBuilder sb = new StringBuilder();
             for (Token token : tokenSet) {
                 sb.append(token.value(bundle, bound));
@@ -85,7 +81,7 @@ public class BundleFilterTemplate extends BundleFilter {
 
     public String template(Bundle bundle) {
         filter(bundle);
-        BundleField[] bound = getBindings(bundle, fieldSet);
+        BundleField[] bound = BundleFilter.getBindings(bundle, fieldSet);
         return bundle.getValue(bound[bound.length - 1]).toString();
     }
 

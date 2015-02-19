@@ -20,9 +20,9 @@ import com.addthis.bundle.value.ValueObject;
 
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns the length of the array, map or string</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns the length of the array, map or string</span>.
  * <p/>
- * <p>To get the length of an array, the {@link ValueFilter#once once} field must be enabled,
+ * <p>To get the length of an array, the {@link AbstractValueFilter#once once} field must be enabled,
  * otherwise the filter attempts to iterate over the array elements.
  * <p>Example:</p>
  * <pre>
@@ -32,9 +32,7 @@ import com.addthis.bundle.value.ValueObject;
  * @user-reference
  * @hydra-name length
  */
-public class ValueFilterLength extends ValueFilter {
-
-    @Override public void open() { }
+public class ValueFilterLength extends AbstractValueFilter {
 
     @Override
     public ValueObject filterValue(ValueObject value) {

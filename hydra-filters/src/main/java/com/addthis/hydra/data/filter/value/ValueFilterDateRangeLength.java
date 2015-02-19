@@ -28,7 +28,7 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">calculates the total numbers of days represented
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">calculates the total numbers of days represented
  * in the input string</span>.
  * <p/>
  * <p>The input string is a sequence of items, where an item is either
@@ -82,9 +82,6 @@ public class ValueFilterDateRangeLength extends StringFilter {
         this.dateSep = dateSep;
         this.diffUnit = diffUnit;
     }
-
-    @Override
-    public void open() {}
 
     @Override
     public String filter(String value) {

@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">negates another value filter</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">negates another value filter</span>.
  * <p/>
  * <p>Example:</p>
  * <pre>
@@ -30,27 +30,23 @@ import com.fasterxml.jackson.annotation.JsonCreator;
  * @user-reference
  * @hydra-name not
  */
-public class ValueFilterNot extends ValueFilter {
+public class ValueFilterNot extends AbstractValueFilter {
 
     private final ValueFilter filter;
 
     @JsonCreator public ValueFilterNot(ValueFilter filter) {
         this.filter = filter;
-        this.once = filter.once;
-        this.nullAccept = filter.nullAccept;
     }
 
-    @Override public void open() {
-        filter.open();
-    }
-
-    @Override
-    @Nullable
-    public ValueObject filterValue(@Nullable ValueObject value) {
-        if (filter.filterValue(value) == null) {
+    @Override @Nullable public ValueObject filter(@Nullable ValueObject value) {
+        if (filter.filter(value) == null) {
             return value;
         } else {
             return null;
         }
+    }
+
+    @Nullable @Override public ValueObject filterValue(@Nullable ValueObject value) {
+        return filter.filter(value);
     }
 }

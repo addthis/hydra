@@ -41,7 +41,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @user-reference
  * @hydra-name random-field
  */
-public class BundleFilterRandomField extends BundleFilter {
+public class BundleFilterRandomField implements BundleFilter {
 
     /**
      * The possible input bundle fields from which one will be selected. This field is required.
@@ -58,9 +58,6 @@ public class BundleFilterRandomField extends BundleFilter {
         this.inFields = inFields;
         this.out = out;
     }
-
-    @Override
-    public void open() { }
 
     @Override
     public boolean filter(Bundle bundle) {

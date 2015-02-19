@@ -27,7 +27,7 @@ import com.addthis.hydra.common.hash.PluggableHashFunction;
 import org.apache.commons.codec.binary.Hex;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns the hash of a value</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns the hash of a value</span>.
  * <p/>
  * <p>The {@link #type type} field determines what type of hash is calculated.
  * <p>
@@ -48,7 +48,7 @@ import org.apache.commons.codec.binary.Hex;
  * @user-reference
  * @hydra-name hash
  */
-public class ValueFilterHash extends ValueFilter {
+public class ValueFilterHash extends AbstractValueFilter {
 
     /**
      * The type of hashing method to use. Default is 1.
@@ -61,8 +61,6 @@ public class ValueFilterHash extends ValueFilter {
      */
     @FieldConfig(codable = true)
     private boolean abs;
-
-    @Override public void open() { }
 
     @Override
     public ValueObject filterValue(ValueObject value) {

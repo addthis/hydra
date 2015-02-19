@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.value;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns a substring of the string input</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns a substring of the string input</span>.
  * <p/>
  * <p>Example:</p>
  * <pre>
@@ -45,8 +45,6 @@ public class ValueFilterRange extends StringFilter {
         this.end = end;
         return this;
     }
-
-    @Override public void open() { }
 
     @Override
     public String filter(String sv) {

@@ -52,7 +52,7 @@ import com.google.common.net.InternetDomainName;
  * @user-reference
  * @hydra-name url
  */
-public final class BundleFilterURL extends BundleFilter {
+public final class BundleFilterURL implements BundleFilter {
 
     private static final HotMap<String, String> iphost = new HotMap<>(new ConcurrentHashMap<String, String>());
     private static final int maxhostcache = Integer.parseInt(System.getProperty("packet.cachehost.max", "4000"));
@@ -233,9 +233,6 @@ public final class BundleFilterURL extends BundleFilter {
     }
 
     private static final Joiner DOT_JOINER = Joiner.on('.');
-
-    @Override
-    public void open() { }
 
     @Override
     public boolean filter(Bundle bundle) {

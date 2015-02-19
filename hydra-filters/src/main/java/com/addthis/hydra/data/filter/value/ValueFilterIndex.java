@@ -19,7 +19,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">returns the <i>i</i><sup>th</sup> element of an array</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns the <i>i</i><sup>th</sup> element of an array</span>.
  * <p/>
  * <p>The {@link #index index} specifies the 0-based offset of the element to retrieve.
  * A negative value for the index will retrieve the (-i) value from the opposite end of the array.
@@ -36,7 +36,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @hydra-name index
  * @exclude-fields once
  */
-public class ValueFilterIndex extends ValueFilter {
+public class ValueFilterIndex extends AbstractValueFilter {
 
     /**
      * The array offset of the element to return.
@@ -58,8 +58,6 @@ public class ValueFilterIndex extends ValueFilter {
         this.toNull = toNull;
         return this;
     }
-
-    @Override public void open() { }
 
     @Override
     public ValueObject filter(ValueObject value) {

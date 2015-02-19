@@ -21,7 +21,6 @@ import com.addthis.basis.collect.HotMap;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
@@ -40,7 +39,7 @@ import com.addthis.maljson.JSONObject;
  * @user-reference
  * @hydra-name json
  */
-public class BundleFilterJSON extends BundleFilter {
+public class BundleFilterJSON implements BundleFilter {
 
     public static BundleFilterJSON create(String json, String set, BundleFilterTemplate query) {
         BundleFilterJSON bfj = new BundleFilterJSON();
@@ -63,11 +62,6 @@ public class BundleFilterJSON extends BundleFilter {
 
     private HotMap<String, Object> objCache = new HotMap<>(new ConcurrentHashMap());
     private HotMap<String, ArrayList<QueryToken>> tokCache = new HotMap<>(new ConcurrentHashMap());
-
-    @Override
-    public void open() {
-        query.open();
-    }
 
     @Override
     public boolean filter(Bundle bundle) {

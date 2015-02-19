@@ -13,6 +13,9 @@
  */
 package com.addthis.hydra.store.kv;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import com.addthis.basis.util.Bytes;
 
 import com.addthis.hydra.store.DBValue;
@@ -29,8 +32,12 @@ class SimpleStringKeyCoder implements KeyCoder<String, DBValue> {
         return key != null ? Bytes.toBytes(key) : new byte[0];
     }
 
+    @Override public byte[] keyEncode(@Nullable String key, @Nonnull String baseKey, @Nonnull PageEncodeType encodeType) {
+        return keyEncode(key);
+    }
+
     @Override
-    public byte[] valueEncode(DBValue value, EncodeType encodeType) {
+    public byte[] valueEncode(DBValue value, PageEncodeType encodeType) {
         return value.bytesEncode(encodeType.ordinal());
     }
 
@@ -39,14 +46,13 @@ class SimpleStringKeyCoder implements KeyCoder<String, DBValue> {
         return key.length > 0 ? Bytes.toString(key) : null;
     }
 
-    @Override
-    public DBValue valueDecode(byte[] value, EncodeType encodeType) {
-        return new DBValue(new String(value));
+    @Override public String keyDecode(@Nullable byte[] key, @Nonnull String baseKey, @Nonnull PageEncodeType encodeType) {
+        return keyDecode(key);
     }
 
     @Override
-    public boolean nullRawValueInternal(byte[] value) {
-        throw new UnsupportedOperationException();
+    public DBValue valueDecode(byte[] value, PageEncodeType encodeType) {
+        return new DBValue(new String(value));
     }
 
 }

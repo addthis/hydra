@@ -16,7 +16,9 @@ package com.addthis.hydra.job.alert;
 import java.io.IOException;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import com.addthis.basis.util.Parameter;
@@ -30,6 +32,7 @@ import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.util.DateUtil;
 import com.addthis.hydra.data.util.JSONFetcher;
+import com.addthis.hydra.job.alert.types.BundleCanaryJobAlert;
 import com.addthis.hydra.task.stream.StreamFileUtil;
 import com.addthis.maljson.JSONArray;
 import com.addthis.meshy.MeshyClient;
@@ -97,6 +100,34 @@ public class JobAlertUtil {
         return 0;
     }
 
+    public static Map<String, Integer> getFileCountPerTask(MeshyClient meshyClient, String jobId, String dirPath) {
+        String meshLookupString = "/job*/" + jobId + "/*/gold/" + dirPath;
+        Map<String, Integer> result = new HashMap<>();
+        if (meshyClient != null) {
+            try {
+                Collection<FileReference> fileRefs = meshyClient.listFiles(new String[]{meshLookupString});
+                for (FileReference fileRef : fileRefs) {
+                    String uuid = fileRef.getHostUUID();
+                    String path = fileRef.name;
+                    int offset = path.indexOf("/gold/");
+                    String key = uuid + ":" + path.substring(0, offset);
+                    Integer count = result.get(key);
+                    if (count == null) {
+                        count = 1;
+                    } else {
+                        count = count + 1;
+                    }
+                    result.put(key, count);
+                }
+            } catch (IOException e) {
+                log.warn("Job alert mesh look up failed", e);
+            }
+        } else {
+            log.warn("Received mesh lookup request job={} dirPath={} while meshy client was not instantiated; returning zero", jobId, meshLookupString);
+        }
+        return result;
+    }
+
     /**
      * Count the total number of hits along a certain path in a tree object
      * @param jobId The job to query
@@ -155,7 +186,7 @@ public class JobAlertUtil {
         }
     }
 
-    public static String evaluateQueryWithFilter(JobAlert alert, String jobId) {
+    public static String evaluateQueryWithFilter(BundleCanaryJobAlert alert, String jobId) {
         String query = alert.canaryPath;
         String ops = firstNonNull(alert.canaryOps, "");
         String rops = firstNonNull(alert.canaryRops, "");
@@ -189,7 +220,6 @@ public class JobAlertUtil {
         BundleFilter bFilter = null;
         try {
             bFilter = CodecJSON.decodeString(BundleFilter.class, filter);
-            bFilter.open();
         } catch (Exception ex) {
             errorBuilder.append("Error attempting to create bundle filter: " + ex + "\n");
             log.error("Error attempting to create bundle filter", ex);

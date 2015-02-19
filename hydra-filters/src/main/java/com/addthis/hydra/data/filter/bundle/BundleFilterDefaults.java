@@ -38,7 +38,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @user-reference
  * @hydra-name defaults
  */
-public class BundleFilterDefaults extends BundleFilter {
+public class BundleFilterDefaults implements BundleFilter {
 
     /**
      * A mapping of bundle fields to default bundle values. This field is required.
@@ -58,9 +58,6 @@ public class BundleFilterDefaults extends BundleFilter {
         }
         this.defaults = map;
     }
-
-    @Override
-    public void open() { }
 
     @Override
     public boolean filter(Bundle row) {

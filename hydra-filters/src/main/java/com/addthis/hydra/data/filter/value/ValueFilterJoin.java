@@ -22,7 +22,7 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
 /**
- * This {@link ValueFilter ValueFilter} <span class="hydra-summary">joins an array or a map to a string</span>.
+ * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">joins an array or a map to a string</span>.
  * <p/>
  * <p>Items of the sequence are separated by the {@link #join join} field.
  * If the input is a map, then (key, value) pairs are separated by the {@link #keyJoin keyJoin} field.
@@ -42,7 +42,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @hydra-name join
  * @exclude-fields once
  */
-public class ValueFilterJoin extends ValueFilter {
+public class ValueFilterJoin extends AbstractValueFilter {
 
     /**
      * The deliminator between elements in the output string. Default is "," .
@@ -98,15 +98,6 @@ public class ValueFilterJoin extends ValueFilter {
     public ValueFilterJoin setSort(boolean sort) {
         this.sort = sort;
         return this;
-    }
-
-    @Override public void open() {
-        if (filter != null) {
-            filter.open();
-        }
-        if (keyFilter != null) {
-            keyFilter.open();
-        }
     }
 
     @Override

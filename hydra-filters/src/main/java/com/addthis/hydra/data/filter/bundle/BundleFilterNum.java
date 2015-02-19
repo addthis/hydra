@@ -317,7 +317,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @user-reference
  * @hydra-name num
  */
-public class BundleFilterNum extends BundleFilter {
+public class BundleFilterNum implements BundleFilter {
 
     /**
      * Sequence of commands to execute (comma-delimited)
@@ -338,9 +338,6 @@ public class BundleFilterNum extends BundleFilter {
         this.columns = columns;
         this.calculator = new BundleCalculator(define);
     }
-
-    @Override
-    public void open() {}
 
     protected Bundle makeAltBundle(Bundle bundle) {
         ListBundleFormat format = new ListBundleFormat();
