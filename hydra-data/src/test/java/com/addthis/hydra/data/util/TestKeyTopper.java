@@ -65,9 +65,9 @@ public class TestKeyTopper {
             assertEquals(Integer.toString(i), topper.getMinKey());
             assertEquals(i, topper.getMinVal());
         }
-        String evicted = topper.increment("101", 100);
+        String evicted = topper.increment("101", 101, 100);
         assertEquals("1", evicted);
-        assertEquals(new Long(2), topper.get("101"));
+        assertEquals(new Long(102), topper.get("101"));
         assertEquals("2", topper.getMinKey());
     }
 
