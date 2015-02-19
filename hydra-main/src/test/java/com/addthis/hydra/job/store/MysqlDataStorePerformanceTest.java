@@ -25,8 +25,6 @@ import com.carrotsearch.junitbenchmarks.annotation.LabelType;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Base test for performance testing the Jdbc data stores. 
@@ -34,10 +32,8 @@ import org.slf4j.LoggerFactory;
 @AxisRange(min = 0, max = 1)
 @BenchmarkMethodChart(filePrefix = "benchmark-lists")
 @BenchmarkHistoryChart(labelWith = LabelType.CUSTOM_KEY, maxRuns = 30)
-@BenchmarkOptions(callgc = false, benchmarkRounds = 30, warmupRounds = 5)
+@BenchmarkOptions(callgc = false, benchmarkRounds = 9, warmupRounds = 1)
 public class MysqlDataStorePerformanceTest extends JdbcDataStorePerformanceTest {
-    
-    private static final Logger LOG = LoggerFactory.getLogger(MysqlDataStorePerformanceTest.class);
     
     private static MysqlDataStore jdbcDataStore;
     
@@ -46,6 +42,8 @@ public class MysqlDataStorePerformanceTest extends JdbcDataStorePerformanceTest 
         //set up the connection
         final Properties properties = new Properties();
         properties.put("user", "performance");
+        properties.put("sql.datastore.minpoolsize", "10");
+        properties.put("sql.datastore.maxpoolsize", "50");
         jdbcDataStore = new MysqlDataStore("jdbc:mysql://localhost:3306/", "junitPerformance", "tableName", properties);
     }
 

@@ -254,28 +254,25 @@ public abstract class JdbcDataStore implements SpawnDataStore {
      * @throws SQLException
      */
     private String querySingleResult(String path, String childId) throws SQLException {
-        try (Connection connection = cpds.getConnection()) {
-            PreparedStatement preparedStatement = connection.prepareStatement(getQueryTemplate());
-            preparedStatement.setString(1, path);
-            preparedStatement.setString(2, childId);
-            ResultSet resultSet = executeAndTimeQuery(preparedStatement);
-            String firstValue;
-            boolean hasData = resultSet.next();
-            if (!hasData) {
-                return null;
-            } else {
+        final Connection connection = cpds.getConnection();
+        final PreparedStatement preparedStatement = connection.prepareStatement(getQueryTemplate());
+        preparedStatement.setString(1, path);
+        preparedStatement.setString(2, childId);
+        final ResultSet resultSet = executeAndTimeQuery(preparedStatement);
+        String firstValue;
+        boolean hasData = resultSet.next();
+        if (!hasData) {
+            return null;
+        } else {
 //                firstValue = blobToValue(resultSet.getBlob(1));
-                                firstValue = resultSet.getString(1);
-            }
-            boolean moreResults = resultSet.next();
-            // Given the UNIQUE constraint, it would be extremely unexpected to find multiple values for a single path/childId
-            if (moreResults) {
-                throw new RuntimeException("Found multiple results after expecting a unique result; bailing");
-            }
-            return firstValue;
-        } catch (LZFException e) {
-            throw new RuntimeException(e);
+            firstValue = resultSet.getString(1);
         }
+        boolean moreResults = resultSet.next();
+        // Given the UNIQUE constraint, it would be extremely unexpected to find multiple values for a single path/childId
+        if (moreResults) {
+            throw new RuntimeException("Found multiple results after expecting a unique result; bailing");
+        }
+        return firstValue;
     }
 
     private void delete(String path, String childId) throws SQLException {
@@ -380,10 +377,11 @@ public abstract class JdbcDataStore implements SpawnDataStore {
     public void close() {
         cpds.close();
     }
-    
+
     /**
-     * On startup, create the database if it doesn't exist.  Note: this is invoked from the
-     * constructor, DO NOT use any variables that may not be initialized.
+     * On startup, create the database if it doesn't exist. Note: this is
+     * invoked from the constructor, DO NOT use any variables that may not be
+     * initialized.
      *
      * @throws SQLException If creating execution fails
      */

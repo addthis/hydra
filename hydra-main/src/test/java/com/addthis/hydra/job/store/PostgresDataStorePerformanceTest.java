@@ -27,9 +27,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 @AxisRange(min = 0, max = 1)
-@BenchmarkMethodChart(filePrefix = "benchmark-lists")
+@BenchmarkMethodChart(filePrefix = "target/benchmark-lists")
 @BenchmarkHistoryChart(labelWith = LabelType.CUSTOM_KEY, maxRuns = 30)
-@BenchmarkOptions(callgc = false, benchmarkRounds = 30, warmupRounds = 5)
+@BenchmarkOptions(callgc = false, benchmarkRounds = 10, warmupRounds = 1)
 public class PostgresDataStorePerformanceTest extends JdbcDataStorePerformanceTest {
     
     private static PostgresDataStore jdbcDataStore;
@@ -39,6 +39,8 @@ public class PostgresDataStorePerformanceTest extends JdbcDataStorePerformanceTe
         //set up the connection
         final Properties properties = new Properties();
         properties.put("user", "performance");
+        properties.put("sql.datastore.minpoolsize", "10");
+        properties.put("sql.datastore.maxpoolsize", "50");
         jdbcDataStore = new PostgresDataStore("jdbc:postgresql://localhost/", "junitPerformance", "tableName", properties);
     }
 
