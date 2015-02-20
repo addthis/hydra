@@ -63,6 +63,12 @@ public final class KeyTopper implements Codable, BytesCodable {
     @FieldConfig(codable = true)
     private boolean lossy;
 
+    /**
+     * Error estimates are only supported in the BytesCodable
+     * serialization format. They are not supported
+     * in the older serialization format to preserve
+     * serialization compatibility.
+     */
     @FieldConfig(codable = false)
     private HashMap<String, Long> errors;
 
