@@ -63,6 +63,9 @@ public final class KeyTopper implements Codable, BytesCodable {
     @FieldConfig(codable = true)
     private boolean lossy;
 
+    @FieldConfig(codable = false)
+    private HashMap<String, Long> errors;
+
     @Override
     public String toString() {
         return "topper(min:" + minKey + "=" + minVal + "->" + map.toString() + ",lossy:" + lossy + ")";
@@ -78,6 +81,19 @@ public final class KeyTopper implements Codable, BytesCodable {
         return this;
     }
 
+    public KeyTopper enableErrors(boolean enable) {
+        if (enable) {
+            errors = new HashMap<>();
+        } else {
+            errors = null;
+        }
+        return this;
+    }
+
+    public boolean hasErrors() {
+        return errors != null;
+    }
+
     public boolean isLossy() {
         return lossy;
     }
@@ -86,8 +102,28 @@ public final class KeyTopper implements Codable, BytesCodable {
         return map.size();
     }
 
-    public Long get(String key) {
+    public Long get(@Nonnull String key) {
         return map.get(key);
+    }
+
+    /**
+     * Retrieve an upper bound on the error
+     * associated with an estimate or null
+     * if errors have not been enabled.
+     *
+     * @param key input key
+     * @return error estimate or null
+     */
+    public Long getError(@Nonnull String key) {
+        if (errors == null) {
+            return null;
+        }
+        Long error = errors.get(key);
+        if (error != null) {
+            return error;
+        } else {
+            return 0L;
+        }
     }
 
     private static final Comparator<Map.Entry<String,Long>> ENTRIES_COMPARATOR =
@@ -220,6 +256,10 @@ public final class KeyTopper implements Codable, BytesCodable {
             boolean remove = !map.containsKey(id) && (minKey != null);
             if (remove) {
                 map.remove(minKey);
+                if (hasErrors()) {
+                    errors.remove(minKey);
+                    errors.put(id, minVal);
+                }
                 result = minKey;
             }
             /** update or add entry */
@@ -236,6 +276,15 @@ public final class KeyTopper implements Codable, BytesCodable {
         }
     }
 
+    /**
+     * Encode the data structure into a serialized representation.
+     * Encode the number of elements followed by each (key, value)
+     * pair. If the error estimation is used then encode the special
+     * byte value 0 (since we will never encode 0 as the size
+     * of a non-empty map) at the head of the byte array.
+     * @param version
+     * @return
+     */
     @Override public byte[] bytesEncode(long version) {
         if (map.size() == 0) {
             return EMPTY;
@@ -243,6 +292,9 @@ public final class KeyTopper implements Codable, BytesCodable {
         byte[] retBytes = null;
         ByteBuf byteBuf = PooledByteBufAllocator.DEFAULT.buffer();
         try {
+            if (hasErrors()) {
+                byteBuf.writeByte(0);
+            }
             Varint.writeUnsignedVarInt(map.size(), byteBuf);
             for (Map.Entry<String, Long> mapEntry : map.entrySet()) {
                 String key = mapEntry.getKey();
@@ -253,6 +305,14 @@ public final class KeyTopper implements Codable, BytesCodable {
                 Varint.writeUnsignedVarInt(keyBytes.length, byteBuf);
                 byteBuf.writeBytes(keyBytes);
                 Varint.writeUnsignedVarLong(mapEntry.getValue(), byteBuf);
+                if (hasErrors()) {
+                    Long error = errors.get(key);
+                    if (error != null) {
+                        Varint.writeUnsignedVarLong(error, byteBuf);
+                    } else {
+                        Varint.writeUnsignedVarLong(0, byteBuf);
+                    }
+                }
             }
             retBytes = new byte[byteBuf.readableBytes()];
             byteBuf.readBytes(retBytes);
@@ -267,11 +327,18 @@ public final class KeyTopper implements Codable, BytesCodable {
     @Override
     public void bytesDecode(byte[] b, long version) {
         map = new HashMap<>();
+        errors = null;
         if (b.length == 0) {
             return;
         }
         ByteBuf byteBuf = Unpooled.wrappedBuffer(b);
         try {
+            byte marker = byteBuf.getByte(byteBuf.readerIndex());
+            if (marker == 0) {
+                errors = new HashMap<>();
+                // Consume the sentinel byte value
+                byteBuf.readByte();
+            }
             int mapSize = Varint.readUnsignedVarInt(byteBuf);
             try {
                 if (mapSize > 0) {
@@ -282,6 +349,12 @@ public final class KeyTopper implements Codable, BytesCodable {
                         String k = new String(keybytes, "UTF-8");
                         long value = Varint.readUnsignedVarLong(byteBuf);
                         map.put(k, value);
+                        if (hasErrors()) {
+                            long error = Varint.readUnsignedVarLong(byteBuf);
+                            if (error != 0) {
+                                errors.put(k, error);
+                            }
+                        }
                     }
                 }
             } catch (Exception e) {

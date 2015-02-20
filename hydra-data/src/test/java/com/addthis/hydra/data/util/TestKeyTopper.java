@@ -51,6 +51,29 @@ public class TestKeyTopper {
         assertEquals(new Long(2), topper2.get("b"));
         assertEquals(new Long(3), topper2.get("c"));
         assertEquals(new Long(4), topper2.get("d"));
+        assertNull(topper2.getError("a"));
+        assertNull(topper2.getError("b"));
+        assertNull(topper2.getError("c"));
+        assertNull(topper2.getError("d"));
+    }
+
+    @Test
+    public void encodeWithErrorEstimates() {
+        KeyTopper topper1 = new KeyTopper();
+        topper1.init().setLossy(true).enableErrors(true);
+        topper1.increment("a", 2);
+        topper1.increment("b", 2);
+        topper1.increment("c", 2);
+        topper1.increment("d", 2);
+        assertEquals(2, topper1.size());
+        byte[] serialized = topper1.bytesEncode(0);
+        KeyTopper topper2 = new KeyTopper();
+        topper2.bytesDecode(serialized, 0);
+        assertEquals(2, topper2.size());
+        assertEquals(new Long(2), topper2.get("c"));
+        assertEquals(new Long(2), topper2.get("d"));
+        assertEquals(new Long(1), topper2.getError("c"));
+        assertEquals(new Long(1), topper2.getError("d"));
     }
 
     @Test
