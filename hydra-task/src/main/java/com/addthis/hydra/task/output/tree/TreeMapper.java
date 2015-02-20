@@ -203,6 +203,8 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
 
     @FieldConfig private TaskRunConfig config;
 
+    @FieldConfig private String directory;
+
     private final ConcurrentMap<String, BundleField> fields    = new ConcurrentHashMap<>();
     private final IndexHash<PathElement[]>           pathIndex = new IndexHash();
 
@@ -295,7 +297,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
 
             log.info("[init] live={}, target={} job={}", live, root, this.config.jobId);
 
-            Path treePath = Paths.get(config.dir, "data");
+            Path treePath = Paths.get(config.dir, directory);
             tree = new ConcurrentTree(Files.initDirectory(treePath.toFile()));
             bench = new Bench(EnumSet.allOf(BENCH.class), 1000);
 

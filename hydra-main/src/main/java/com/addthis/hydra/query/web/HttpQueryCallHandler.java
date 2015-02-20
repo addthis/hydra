@@ -28,7 +28,6 @@ import com.addthis.hydra.util.StringMapHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.addthis.hydra.query.web.HttpUtils.sendError;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -38,6 +37,8 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.EventExecutor;
+
+import static com.addthis.hydra.query.web.HttpUtils.sendError;
 
 public final class HttpQueryCallHandler {
 
@@ -56,6 +57,11 @@ public final class HttpQueryCallHandler {
     public static ChannelFuture handleQuery(ChannelHandler queryToQueryResultsEncoder, KVPairs kv,
             HttpRequest request, ChannelHandlerContext ctx, EventExecutor executor) throws Exception {
         String job = kv.getValue("job");
+        // support either job=id/dir or job=id&dir=dir for convenience (and don't punish doing both)
+        String dir = kv.getValue("dir");
+        if ((dir != null) && !job.endsWith(dir)) {
+            job = job + '/' + dir;
+        }
         String path = kv.getValue("path", kv.getValue("q", ""));
         Query query = new Query(job, new String[]{path}, new String[]{kv.getValue("ops"), kv.getValue("rops")});
         query.setTraced(kv.getIntValue("trace", 0) == 1);

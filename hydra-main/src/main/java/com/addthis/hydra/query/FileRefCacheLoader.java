@@ -92,11 +92,22 @@ class FileRefCacheLoader extends CacheLoader<String, SetMultimap<Integer, FileRe
      */
     @Nonnull
     SetMultimap<Integer, FileReference> getFileReferences(String job, String task) throws InterruptedException {
-        final String prefix = "*/" + job + "/" + task + "/gold/data/query";
+        final String prefix = getFileMatchString(job, task);
         FileRefSource fileRefSource = new FileRefSource(meshy);
         fileRefSource.requestLocalFiles(prefix);
         SetMultimap<Integer, FileReference> fileRefMap = fileRefSource.getWithShortCircuit();
         MeshFileRefCache.log.debug("found: {} pairs", fileRefMap.keySet().size());
         return fileRefMap;
+    }
+
+    private String getFileMatchString(String job, String task) {
+        int dirIndex = job.indexOf('/');
+        if (dirIndex > -1) {
+            String jobId = job.substring(0, dirIndex);
+            String directory = job.substring(dirIndex + 1);
+            return "*/" + jobId + "/" + task + "/gold/" + directory + "/query";
+        } else {
+            return "*/" + job + "/" + task + "/gold/data/query";
+        }
     }
 }

@@ -169,13 +169,26 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         }
     }
 
+    private String getAndTrimJobSubdirectory(Query query) {
+        String jobId = query.getJob();
+        int dirIndex = query.getJob().indexOf('/');
+        if (dirIndex > -1) {
+            query.setJob(jobId.substring(0, dirIndex));
+            return jobId.substring(dirIndex);
+        } else {
+            return "";
+        }
+    }
+
     protected void writeQuery(ChannelHandlerContext ctx, Query query, ChannelPromise promise) throws Exception {
         String[] opsLog = query.getOps();   // being able to log and monitor rops is kind of important
 
         // resolves alias, checks querying enabled (!mutates query!)
         if (spawnDataStoreHandler != null) {
+            String suffix = getAndTrimJobSubdirectory(query);
             spawnDataStoreHandler.resolveAlias(query);
             spawnDataStoreHandler.validateJobForQuery(query);
+            query.setJob(query.getJob() + suffix);
         }
 
         // creates query for worker and updates local query ops (!mutates query!)
@@ -197,7 +210,9 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         int canonicalTasks;
         if (spawnDataStoreHandler != null) {
             try {
+                String suffix = getAndTrimJobSubdirectory(query);
                 canonicalTasks = spawnDataStoreHandler.validateTaskCount(query, fileReferenceMap);
+                query.setJob(query.getJob() + suffix);
             } catch (Exception ex) {
                 cachey.invalidate(query.getJob());
                 throw ex;
