@@ -362,7 +362,7 @@ public class Spawn implements Codable, AutoCloseable {
         try {
             Files.write(stateFile, CodecJSON.INSTANCE.encode(spawnState), false);
         } catch (Exception e) {
-            log.warn("WARNING: failed to write spawn state to log file at {}", stateFile, e);
+            log.warn("Failed to write spawn state to log file at {}", stateFile, e);
         }
     }
 
@@ -1527,7 +1527,7 @@ public class Spawn implements Codable, AutoCloseable {
             while (newReplicas.size() > desiredNumberOfReplicas) {
                 JobTaskReplica replica = newReplicas.remove(newReplicas.size() - 1);
                 spawnMQ.sendControlMessage(new CommandTaskDelete(replica.getHostUUID(), task.getJobUUID(), task.getTaskID(), task.getRunCount()));
-                log.warn("[replica.delete] " + task.getJobUUID() + "/" + task.getTaskID() + " from " + replica
+                log.info("[replica.delete] " + task.getJobUUID() + "/" + task.getTaskID() + " from " + replica
                         .getHostUUID() + " @ " +
                          hostManager.getHostState(replica.getHostUUID()).getHost());
             }
@@ -1547,7 +1547,7 @@ public class Spawn implements Codable, AutoCloseable {
         JobCommand jobcmd = getJobCommandManager().getEntity(job.getCommand());
         String command = (jobcmd != null && jobcmd.getCommand() != null) ? Strings.join(jobcmd.getCommand(), " ") : null;
         spawnMQ.sendControlMessage(new CommandTaskReplicate(task.getHostUUID(), task.getJobUUID(), task.getTaskID(), getTaskReplicaTargets(task, newReplicas), command, null, false, false));
-        log.warn("[replica.add] " + task.getJobUUID() + "/" + task.getTaskID() + " to " + targetHosts);
+        log.info("[replica.add] " + task.getJobUUID() + "/" + task.getTaskID() + " to " + targetHosts);
         taskQueuesByPriority.markHostTaskActive(task.getHostUUID());
         return newReplicas;
     }
