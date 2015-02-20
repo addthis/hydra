@@ -152,7 +152,7 @@ public class MysqlDataStoreTest {
         Mockito.when(selectPreparedStatement.executeQuery()).thenReturn(resultSet);
         Mockito.when(resultSet.next()).thenReturn(Boolean.TRUE, Boolean.FALSE);
         final Blob blob = Mockito.mock(Blob.class);
-        Mockito.when(resultSet.getBlob(1)).thenReturn(blob);
+        Mockito.when(resultSet.getObject(1, Blob.class)).thenReturn(blob);
         Mockito.when(blob.getBytes(Mockito.anyLong(), Mockito.anyInt())).thenReturn(LZFEncoder.encode(value.getBytes()));
         
         //run method under test
@@ -183,7 +183,7 @@ public class MysqlDataStoreTest {
         final List<String> keyList = new ArrayList<>(expected.keySet());
         final Blob blob = Mockito.mock(Blob.class);
         Mockito.when(resultSet.getString("path")).thenReturn(keyList.get(0), keyList.get(1), keyList.get(2));
-        Mockito.when(resultSet.getBlob("val")).thenReturn(blob);
+        Mockito.when(resultSet.getObject("val", Blob.class)).thenReturn(blob);
         Mockito.when(blob.getBytes(Mockito.anyLong(), Mockito.anyInt())).thenReturn(
                 LZFEncoder.encode(expected.get(keyList.get(0)).getBytes()),
                 LZFEncoder.encode(expected.get(keyList.get(1)).getBytes()),
@@ -260,7 +260,7 @@ public class MysqlDataStoreTest {
         Mockito.when(selectPreparedStatement.executeQuery()).thenReturn(resultSet);
         Mockito.when(resultSet.next()).thenReturn(Boolean.TRUE, Boolean.FALSE);
         final Blob blob = Mockito.mock(Blob.class);
-        Mockito.when(resultSet.getBlob(1)).thenReturn(blob);
+        Mockito.when(resultSet.getObject(1, Blob.class)).thenReturn(blob);
         Mockito.when(blob.getBytes(Mockito.anyLong(), Mockito.anyInt())).thenReturn(LZFEncoder.encode(value.getBytes()));
         
         //run method under test
@@ -350,7 +350,7 @@ public class MysqlDataStoreTest {
         final List<String> keyList = new ArrayList<>(expected.keySet());
         final Blob blob = Mockito.mock(Blob.class);
         Mockito.when(resultSet.getString(1)).thenReturn(keyList.get(0), keyList.get(1), keyList.get(2));
-        Mockito.when(resultSet.getBlob(2)).thenReturn(blob);
+        Mockito.when(resultSet.getObject(2, Blob.class)).thenReturn(blob);
         Mockito.when(blob.getBytes(Mockito.anyLong(), Mockito.anyInt())).thenReturn(
                 LZFEncoder.encode(expected.get(keyList.get(0)).getBytes()),
                 LZFEncoder.encode(expected.get(keyList.get(1)).getBytes()),

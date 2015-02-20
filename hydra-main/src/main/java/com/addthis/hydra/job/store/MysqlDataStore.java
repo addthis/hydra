@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.store;
 
+import javax.sql.rowset.serial.SerialBlob;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -23,16 +25,23 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
 
+import java.sql.Blob;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 
+import com.ning.compress.lzf.LZFDecoder;
+import com.ning.compress.lzf.LZFEncoder;
+import com.ning.compress.lzf.LZFException;
+
 /**
- * A class for storing spawn configuration data into a mysql database. Reads and writes values from a single table.
+ * A class for storing spawn configuration data into a mysql database. Reads and
+ * writes values from a single table.
  */
 public class MysqlDataStore extends JdbcDataStore {
+
     private static final Logger log = LoggerFactory.getLogger(MysqlDataStore.class);
     private static final String driverClass = Parameter.value("sql.datastore.driverclass", "org.drizzle.jdbc.DrizzleDriver");
-    
+
     /* There are known issues with Drizzle and InnoDB tables. Using the MyISAM type is strongly recommended. */
     private static final String tableType = Parameter.value("sql.datastore.tabletype", "MyISAM");
     private static final String description = "mysql";
@@ -41,7 +50,7 @@ public class MysqlDataStore extends JdbcDataStore {
         super(jdbcUrl, dbName, tableName, properties);
         log.info("Mysql Spawn Data Store Initialized");
     }
-    
+
     @Override
     protected void runSetupDatabaseCommand(final String dbName, final String jdbcUrl, final Properties properties) throws SQLException {
         try (Connection connection = DriverManager.getConnection(jdbcUrl, properties)) {
@@ -58,11 +67,11 @@ public class MysqlDataStore extends JdbcDataStore {
     @Override
     protected void runSetupTableCommand() throws SQLException {
         try (Connection connection = cpds.getConnection()) {
-            String tableSetupCommand = String.format("CREATE TABLE IF NOT EXISTS %s ( " +
-                                       "%s INT NOT NULL AUTO_INCREMENT, " + // Auto-incrementing int id
-                                       "%s VARCHAR(%d) NOT NULL, %s MEDIUMBLOB, %s VARCHAR(%d), " + // VARCHAR path, BLOB value, VARCHAR child
-                                       "PRIMARY KEY (%s), UNIQUE KEY (%s,%s)) " + // Use id as primary key, enforce unique (path, child) combo
-                                       "ENGINE=%s", // Use specified table type (MyISAM works best in practice)
+            String tableSetupCommand = String.format("CREATE TABLE IF NOT EXISTS %s ( "
+                    + "%s INT NOT NULL AUTO_INCREMENT, " + // Auto-incrementing int id
+                    "%s VARCHAR(%d) NOT NULL, %s MEDIUMBLOB, %s VARCHAR(%d), " + // VARCHAR path, BLOB value, VARCHAR child
+                    "PRIMARY KEY (%s), UNIQUE KEY (%s,%s)) " + // Use id as primary key, enforce unique (path, child) combo
+                    "ENGINE=%s", // Use specified table type (MyISAM works best in practice)
                     tableName, getIdKey(), getPathKey(), getMaxPathLength(), getValueKey(), getChildKey(),
                     getMaxPathLength(), getIdKey(), getPathKey(), getChildKey(), tableType);
             connection.prepareStatement(tableSetupCommand).execute();
@@ -85,7 +94,7 @@ public class MysqlDataStore extends JdbcDataStore {
         //TODO - cache this
         return String.format("SELECT %s FROM %s WHERE %s=? AND %s=?", getValueKey(), tableName, getPathKey(), getChildKey());
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -94,11 +103,11 @@ public class MysqlDataStore extends JdbcDataStore {
         final PreparedStatement preparedStatement = connection.prepareStatement(
                 String.format("REPLACE INTO %s (%s,%s,%s) VALUES(?,?,?)", tableName, getPathKey(), getValueKey(), getChildKey()));
         preparedStatement.setString(1, path);
-        preparedStatement.setBlob(2, valueToBlob(value));
+        preparedStatement.setBlob(2, valueToDBType(value));
         preparedStatement.setString(3, childId);
         return preparedStatement;
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -132,6 +141,28 @@ public class MysqlDataStore extends JdbcDataStore {
     @Override
     protected String getDriverClass() {
         return driverClass;
+    }
+
+    @Override
+    protected Class getValueType() {
+        return Blob.class;
+    }
+
+    @Override
+    protected Blob valueToDBType(String value) throws SQLException {
+        return value != null ? new SerialBlob(LZFEncoder.encode(value.getBytes())) : null;
+    }
+
+    @Override
+    protected <T> String dbTypeToValue(T dbValue) throws SQLException {
+        try {
+            return dbValue != null
+                    ? new String(LZFDecoder.decode(((Blob) dbValue).getBytes(1l, (int) ((Blob) dbValue).length())))
+                    : null;
+        } catch (LZFException ex) {
+            //Couldn't deal with the data
+            throw new SQLException(ex);
+        }
     }
 
 }

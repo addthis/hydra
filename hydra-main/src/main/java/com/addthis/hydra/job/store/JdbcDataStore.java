@@ -13,12 +13,9 @@
  */
 package com.addthis.hydra.job.store;
 
-import javax.sql.rowset.serial.SerialBlob;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -34,9 +31,6 @@ import java.util.Properties;
 import com.addthis.basis.util.Parameter;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
-import com.ning.compress.lzf.LZFDecoder;
-import com.ning.compress.lzf.LZFEncoder;
-import com.ning.compress.lzf.LZFException;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Timer;
@@ -205,21 +199,17 @@ public abstract class JdbcDataStore implements SpawnDataStore {
             }
             ResultSet resultSet = executeAndTimeQuery(preparedStatement);
             while (resultSet.next()) {
-                rv.put(resultSet.getString(pathKey), blobToValue(resultSet.getBlob(valueKey)));
+                rv.put(resultSet.getString(pathKey), dbTypeToValue(resultSet.getObject(valueKey, getValueType())));
             }
-        } catch (SQLException | LZFException e) {
+        } catch (SQLException e) {
             throw new RuntimeException(e);
         }
         return rv;
     }
 
-    protected Blob valueToBlob(String value) throws SQLException {
-        return value != null ? new SerialBlob(LZFEncoder.encode(value.getBytes())) : null;
-    }
+    protected abstract <T> T valueToDBType(String value) throws SQLException;
 
-    protected String blobToValue(Blob blob) throws SQLException, LZFException {
-        return blob != null ? new String(LZFDecoder.decode(blob.getBytes(1l, (int) blob.length()))) : null;
-    }
+    protected abstract <T> String dbTypeToValue(T dbValue) throws SQLException;
 
     @Override
     public void put(String path, String value) throws Exception {
@@ -254,25 +244,25 @@ public abstract class JdbcDataStore implements SpawnDataStore {
      * @throws SQLException
      */
     private String querySingleResult(String path, String childId) throws SQLException {
-        final Connection connection = cpds.getConnection();
-        final PreparedStatement preparedStatement = connection.prepareStatement(getQueryTemplate());
-        preparedStatement.setString(1, path);
-        preparedStatement.setString(2, childId);
-        final ResultSet resultSet = executeAndTimeQuery(preparedStatement);
-        String firstValue;
-        boolean hasData = resultSet.next();
-        if (!hasData) {
-            return null;
-        } else {
-//                firstValue = blobToValue(resultSet.getBlob(1));
-            firstValue = resultSet.getString(1);
+        try (Connection connection = cpds.getConnection()) {
+            PreparedStatement preparedStatement = connection.prepareStatement(getQueryTemplate());
+            preparedStatement.setString(1, path);
+            preparedStatement.setString(2, childId);
+            final ResultSet resultSet = executeAndTimeQuery(preparedStatement);
+            String firstValue;
+            boolean hasData = resultSet.next();
+            if (!hasData) {
+                return null;
+            } else {
+                firstValue = dbTypeToValue(resultSet.getObject(1, getValueType()));
+            }
+            boolean moreResults = resultSet.next();
+            // Given the UNIQUE constraint, it would be extremely unexpected to find multiple values for a single path/childId
+            if (moreResults) {
+                throw new RuntimeException("Found multiple results after expecting a unique result; bailing");
+            }
+            return firstValue;
         }
-        boolean moreResults = resultSet.next();
-        // Given the UNIQUE constraint, it would be extremely unexpected to find multiple values for a single path/childId
-        if (moreResults) {
-            throw new RuntimeException("Found multiple results after expecting a unique result; bailing");
-        }
-        return firstValue;
     }
 
     private void delete(String path, String childId) throws SQLException {
@@ -362,13 +352,13 @@ public abstract class JdbcDataStore implements SpawnDataStore {
             }
             do {
                 String key = resultSet.getString(1);
-                String val = blobToValue(resultSet.getBlob(2));
+                String val = dbTypeToValue(resultSet.getObject(2, getValueType()));
                 if (val != null) {
                     rv.put(key, val);
                 }
             } while (resultSet.next());
             return rv;
-        } catch (SQLException | LZFException e) {
+        } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
@@ -414,6 +404,8 @@ public abstract class JdbcDataStore implements SpawnDataStore {
     protected abstract String getGetChildNamesTemplate();
 
     protected abstract String getGetChildrenTemplate();
+    
+    protected abstract Class getValueType();
 
     public static int getMaxPathLength() {
         return maxPathLength;

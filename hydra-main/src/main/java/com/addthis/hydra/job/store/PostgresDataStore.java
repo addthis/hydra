@@ -146,4 +146,19 @@ public class PostgresDataStore extends JdbcDataStore {
         return "Postgres";
     }
 
+    @Override
+    protected Class getValueType() {
+        return String.class;
+    }
+    
+    @Override
+    protected String valueToDBType(String value) throws SQLException {
+        return value;
+    }
+
+    @Override
+    protected <T> String dbTypeToValue(T dbValue) throws SQLException {
+        return (String) dbValue;
+    }
+
 }
