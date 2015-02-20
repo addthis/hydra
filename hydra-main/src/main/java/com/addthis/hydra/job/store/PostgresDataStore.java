@@ -26,12 +26,6 @@ import java.sql.PreparedStatement;
 
 import com.addthis.basis.util.Parameter;
 
-import static com.addthis.hydra.job.store.JdbcDataStore.getChildKey;
-import static com.addthis.hydra.job.store.JdbcDataStore.getIdKey;
-import static com.addthis.hydra.job.store.JdbcDataStore.getMaxPathLength;
-import static com.addthis.hydra.job.store.JdbcDataStore.getPathKey;
-import static com.addthis.hydra.job.store.JdbcDataStore.getValueKey;
-
 /**
  * A class for storing spawn configuration data into a PostgreSQL database.
  * Reads and writes values from a single master table which uses partitioning

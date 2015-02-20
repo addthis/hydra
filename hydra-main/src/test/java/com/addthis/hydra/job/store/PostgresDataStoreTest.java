@@ -15,9 +15,6 @@
  */
 package com.addthis.hydra.job.store;
 
-import com.ning.compress.lzf.LZFDecoder;
-import com.ning.compress.lzf.LZFEncoder;
-
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -38,16 +35,12 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import static org.junit.Assert.*;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
-/**
- *
- * @author brad
- */
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 public class PostgresDataStoreTest {
 
     private static final String DB_URL = "mock:driver/";
@@ -123,7 +116,6 @@ public class PostgresDataStoreTest {
         //shut down the connection pooling
         if (postgresDataStore != null) {
             postgresDataStore.close();
-//            Mockito.verify(connection).close(); //this tests the close method as well
         }
 
         //clear the mocks
@@ -148,7 +140,8 @@ public class PostgresDataStoreTest {
 
         //set up mocks
         final PreparedStatement selectPreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.eq("SELECT val FROM tableName WHERE path=? AND child=?"))).thenReturn(selectPreparedStatement);
+        Mockito.doReturn(selectPreparedStatement).when(connection).prepareStatement(
+                Mockito.eq("SELECT val FROM tableName WHERE path=? AND child=?"));
         final ResultSet resultSet = Mockito.mock(ResultSet.class);
         Mockito.when(selectPreparedStatement.executeQuery()).thenReturn(resultSet);
         Mockito.when(resultSet.next()).thenReturn(Boolean.TRUE, Boolean.FALSE);
@@ -175,7 +168,8 @@ public class PostgresDataStoreTest {
 
         //set up mocks
         final PreparedStatement selectPreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.startsWith("SELECT path,val FROM tableName WHERE child=? AND path IN"))).thenReturn(selectPreparedStatement);
+        Mockito.doReturn(selectPreparedStatement).when(connection).prepareStatement(
+                Mockito.startsWith("SELECT path,val FROM tableName WHERE child=? AND path IN"));
         final ResultSet resultSet = Mockito.mock(ResultSet.class);
         Mockito.when(selectPreparedStatement.executeQuery()).thenReturn(resultSet);
         Mockito.when(resultSet.next()).thenReturn(Boolean.TRUE, Boolean.TRUE, Boolean.TRUE, Boolean.FALSE);
@@ -204,7 +198,8 @@ public class PostgresDataStoreTest {
     public void testPut() throws Exception {
         //set up mocks
         final PreparedStatement insertPreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.startsWith("select * from replace_entry(?,?,?)"))).thenReturn(insertPreparedStatement);
+        Mockito.doReturn(insertPreparedStatement).when(connection).prepareStatement(
+                Mockito.startsWith("select * from replace_entry(?,?,?)"));
 
         //run method under test
         postgresDataStore.put("key", "value");
@@ -220,7 +215,8 @@ public class PostgresDataStoreTest {
     public void testPutAsChild() throws Exception {
         //set up mocks
         final PreparedStatement insertPreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.startsWith("select * from replace_entry(?,?,?)"))).thenReturn(insertPreparedStatement);
+        Mockito.doReturn(insertPreparedStatement).when(connection).prepareStatement(
+                Mockito.startsWith("select * from replace_entry(?,?,?)"));
 
         //run method under test
         postgresDataStore.putAsChild("key", "childId", "value");
@@ -242,7 +238,8 @@ public class PostgresDataStoreTest {
 
         //set up mocks
         final PreparedStatement selectPreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.eq("SELECT val FROM tableName WHERE path=? AND child=?"))).thenReturn(selectPreparedStatement);
+        Mockito.doReturn(selectPreparedStatement).when(connection).prepareStatement(
+                Mockito.eq("SELECT val FROM tableName WHERE path=? AND child=?"));
         final ResultSet resultSet = Mockito.mock(ResultSet.class);
         Mockito.when(selectPreparedStatement.executeQuery()).thenReturn(resultSet);
         Mockito.when(resultSet.next()).thenReturn(Boolean.TRUE, Boolean.FALSE);
@@ -265,7 +262,8 @@ public class PostgresDataStoreTest {
     public void testDeleteChild() throws SQLException {
         //set up mocks
         final PreparedStatement deletePreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.startsWith("DELETE FROM "))).thenReturn(deletePreparedStatement);
+        Mockito.doReturn(deletePreparedStatement).when(connection).prepareStatement(
+                Mockito.startsWith("DELETE FROM "));
 
         //run method under test
         postgresDataStore.deleteChild("key", "childId");
@@ -280,7 +278,8 @@ public class PostgresDataStoreTest {
     public void testDelete() throws SQLException {
         //set up mocks
         final PreparedStatement deletePreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.startsWith("DELETE FROM "))).thenReturn(deletePreparedStatement);
+        Mockito.doReturn(deletePreparedStatement).when(connection).prepareStatement(
+                Mockito.startsWith("DELETE FROM "));
 
         //run method under test
         postgresDataStore.delete("key");
@@ -297,7 +296,8 @@ public class PostgresDataStoreTest {
     public void testGetChildrenNames() throws SQLException {
         //set up mocks
         final PreparedStatement selectPreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.startsWith("SELECT DISTINCT "))).thenReturn(selectPreparedStatement);
+        Mockito.doReturn(selectPreparedStatement).when(connection).prepareStatement(
+                Mockito.startsWith("SELECT DISTINCT "));
         final ResultSet resultSet = Mockito.mock(ResultSet.class);
         Mockito.when(selectPreparedStatement.executeQuery()).thenReturn(resultSet);
         Mockito.when(resultSet.next()).thenReturn(Boolean.TRUE, Boolean.TRUE, Boolean.FALSE); //two results
@@ -328,7 +328,8 @@ public class PostgresDataStoreTest {
 
         //set up mocks
         final PreparedStatement selectPreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.eq("SELECT child,val FROM tableName WHERE path=? AND child!=?"))).thenReturn(selectPreparedStatement);
+        Mockito.doReturn(selectPreparedStatement).when(connection).prepareStatement(
+                Mockito.eq("SELECT child,val FROM tableName WHERE path=? AND child!=?"));
         final ResultSet resultSet = Mockito.mock(ResultSet.class);
         Mockito.when(selectPreparedStatement.executeQuery()).thenReturn(resultSet);
         Mockito.when(resultSet.next()).thenReturn(Boolean.TRUE, Boolean.TRUE, Boolean.TRUE, Boolean.FALSE);
@@ -360,7 +361,7 @@ public class PostgresDataStoreTest {
      * jdbc driver. This will just defer to the actual mocked version managed by
      * Mockito that the unit test has access to.
      */
-    public class MockDriver implements Driver {
+    public static class MockDriver implements Driver {
 
         @Override
         public Connection connect(String url, Properties info) throws SQLException {

@@ -40,16 +40,14 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-/**
- *
- * @author brad
- */
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 public class MysqlDataStoreTest {
     
     private static final String DB_URL = "mock:driver/";
@@ -95,9 +93,9 @@ public class MysqlDataStoreTest {
         driver = Mockito.mock(Driver.class);
         connection = Mockito.mock(Connection.class);
         Mockito.when(driver.acceptsURL(Mockito.startsWith(DB_URL))).thenReturn(Boolean.TRUE); //tell the driver manager we can handle this url
-        Mockito.doAnswer((Answer) (InvocationOnMock invocation) -> connection).when(driver).connect(Mockito.startsWith(DB_URL), Mockito.any(Properties.class)); //go ahead and get a connection
-        Mockito.doAnswer((Answer) (InvocationOnMock invocation) -> null).when(connection).setAutoCommit(Matchers.anyBoolean());  //resolve some weird sporatic mockito issue that pops up sometimes
-        Mockito.doAnswer((Answer) (InvocationOnMock invocation) -> null).when(connection).clearWarnings();  //resolve some weird sporatic mockito issue that pops up sometimes
+        Mockito.doAnswer((InvocationOnMock invocation) -> connection).when(driver).connect(Mockito.startsWith(DB_URL), Mockito.any(Properties.class)); //go ahead and get a connection
+        Mockito.doAnswer((InvocationOnMock invocation) -> null).when(connection).setAutoCommit(Matchers.anyBoolean());  //resolve some weird sporatic mockito issue that pops up sometimes
+        Mockito.doAnswer((InvocationOnMock invocation) -> null).when(connection).clearWarnings();  //resolve some weird sporatic mockito issue that pops up sometimes
         final PreparedStatement createDatabasePreparedStatement = Mockito.mock(PreparedStatement.class); //temporary mock for creating the database
         Mockito.when(connection.prepareStatement(Mockito.startsWith("CREATE DATABASE IF NOT EXISTS"))).thenReturn(createDatabasePreparedStatement);
         Mockito.when(createDatabasePreparedStatement.execute()).thenReturn(Boolean.TRUE);
@@ -147,7 +145,8 @@ public class MysqlDataStoreTest {
         
         //set up mocks
         final PreparedStatement selectPreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.eq("SELECT val FROM tableName WHERE path=? AND child=?"))).thenReturn(selectPreparedStatement);
+        Mockito.doReturn(selectPreparedStatement).when(connection).prepareStatement(
+                Mockito.eq("SELECT val FROM tableName WHERE path=? AND child=?"));
         final ResultSet resultSet = Mockito.mock(ResultSet.class);
         Mockito.when(selectPreparedStatement.executeQuery()).thenReturn(resultSet);
         Mockito.when(resultSet.next()).thenReturn(Boolean.TRUE, Boolean.FALSE);
@@ -176,7 +175,8 @@ public class MysqlDataStoreTest {
         
         //set up mocks
         final PreparedStatement selectPreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.startsWith("SELECT path,val FROM tableName WHERE child=? AND path IN"))).thenReturn(selectPreparedStatement);
+        Mockito.doReturn(selectPreparedStatement).when(connection).prepareStatement(
+                Mockito.startsWith("SELECT path,val FROM tableName WHERE child=? AND path IN"));
         final ResultSet resultSet = Mockito.mock(ResultSet.class);
         Mockito.when(selectPreparedStatement.executeQuery()).thenReturn(resultSet);
         Mockito.when(resultSet.next()).thenReturn(Boolean.TRUE, Boolean.TRUE, Boolean.TRUE, Boolean.FALSE);
@@ -207,7 +207,7 @@ public class MysqlDataStoreTest {
     public void testPut() throws Exception {
         //set up mocks
         final PreparedStatement insertPreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.startsWith("REPLACE INTO "))).thenReturn(insertPreparedStatement);
+        Mockito.doReturn(insertPreparedStatement).when(connection).prepareStatement(Mockito.startsWith("REPLACE INTO "));
         Mockito.doAnswer((Answer) (InvocationOnMock invocation) -> {
             final Blob blob = (Blob)invocation.getArguments()[1];
             assertEquals(new String(LZFDecoder.decode(blob.getBytes(1l, (int) blob.length()))), "value");
@@ -228,7 +228,7 @@ public class MysqlDataStoreTest {
     public void testPutAsChild() throws Exception {
         //set up mocks
         final PreparedStatement insertPreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.startsWith("REPLACE INTO "))).thenReturn(insertPreparedStatement);
+        Mockito.doReturn(insertPreparedStatement).when(connection).prepareStatement(Mockito.startsWith("REPLACE INTO "));
         Mockito.doAnswer((Answer) (InvocationOnMock invocation) -> {
             final Blob blob = (Blob)invocation.getArguments()[1];
             assertEquals(new String(LZFDecoder.decode(blob.getBytes(1l, (int) blob.length()))), "value");
@@ -255,7 +255,7 @@ public class MysqlDataStoreTest {
         
         //set up mocks
         final PreparedStatement selectPreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.eq("SELECT val FROM tableName WHERE path=? AND child=?"))).thenReturn(selectPreparedStatement);
+        Mockito.doReturn(selectPreparedStatement).when(connection).prepareStatement(Mockito.eq("SELECT val FROM tableName WHERE path=? AND child=?"));
         final ResultSet resultSet = Mockito.mock(ResultSet.class);
         Mockito.when(selectPreparedStatement.executeQuery()).thenReturn(resultSet);
         Mockito.when(resultSet.next()).thenReturn(Boolean.TRUE, Boolean.FALSE);
@@ -280,7 +280,7 @@ public class MysqlDataStoreTest {
     public void testDeleteChild() throws SQLException {
         //set up mocks
         final PreparedStatement deletePreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.startsWith("DELETE FROM "))).thenReturn(deletePreparedStatement);
+        Mockito.doReturn(deletePreparedStatement).when(connection).prepareStatement(Mockito.startsWith("DELETE FROM "));
         
         //run method under test
         mysqlDataStore.deleteChild("key", "childId");
@@ -295,8 +295,8 @@ public class MysqlDataStoreTest {
     public void testDelete() throws SQLException {
         //set up mocks
         final PreparedStatement deletePreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.startsWith("DELETE FROM "))).thenReturn(deletePreparedStatement);
-        
+        Mockito.doReturn(deletePreparedStatement).when(connection).prepareStatement(Mockito.startsWith("DELETE FROM "));
+
         //run method under test
         mysqlDataStore.delete("key");
         
@@ -312,7 +312,7 @@ public class MysqlDataStoreTest {
     public void testGetChildrenNames() throws SQLException {
         //set up mocks
         final PreparedStatement selectPreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.startsWith("SELECT DISTINCT "))).thenReturn(selectPreparedStatement);
+        Mockito.doReturn(selectPreparedStatement).when(connection).prepareStatement(Mockito.startsWith("SELECT DISTINCT "));
         final ResultSet resultSet = Mockito.mock(ResultSet.class);
         Mockito.when(selectPreparedStatement.executeQuery()).thenReturn(resultSet);
         Mockito.when(resultSet.next()).thenReturn(Boolean.TRUE, Boolean.TRUE, Boolean.FALSE); //two results
@@ -343,7 +343,8 @@ public class MysqlDataStoreTest {
         
         //set up mocks
         final PreparedStatement selectPreparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(connection.prepareStatement(Mockito.eq("SELECT child,val FROM tableName WHERE path=? AND child!=?"))).thenReturn(selectPreparedStatement);
+        Mockito.doReturn(selectPreparedStatement).when(connection).prepareStatement(
+                Mockito.eq("SELECT child,val FROM tableName WHERE path=? AND child!=?"));
         final ResultSet resultSet = Mockito.mock(ResultSet.class);
         Mockito.when(selectPreparedStatement.executeQuery()).thenReturn(resultSet);
         Mockito.when(resultSet.next()).thenReturn(Boolean.TRUE, Boolean.TRUE, Boolean.TRUE, Boolean.FALSE);
@@ -376,7 +377,7 @@ public class MysqlDataStoreTest {
      * We need the qualified string representation of a concrete class that is a jdbc driver.  This will just 
      * defer to the actual mocked version managed by Mockito that the unit test has access to.
      */
-    public class MockDriver implements Driver {
+    public static class MockDriver implements Driver {
         
         @Override
         public Connection connect(String url, Properties info) throws SQLException {

@@ -306,10 +306,10 @@ public abstract class JdbcDataStore implements SpawnDataStore {
         }
     }
 
-    @Override
     /**
      * Find the names of all children of a given path.
      */
+    @Override
     public List<String> getChildrenNames(String path) {
         checkValidKey(path);
         try (Connection connection = cpds.getConnection()) {
@@ -334,10 +334,10 @@ public abstract class JdbcDataStore implements SpawnDataStore {
         }
     }
 
-    @Override
     /**
      * Get the names and values for each child of a given path.
      */
+    @Override
     public Map<String, String> getAllChildren(String path) {
         checkValidKey(path);
         try (Connection connection = cpds.getConnection()) {
