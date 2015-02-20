@@ -44,7 +44,6 @@
     <module>hydra-task</module>
     <module>hydra-hdfs</module>
     <module>hydra-uber</module>
-    <module>hydra-performance</module>
   </modules>
 
   <properties>
