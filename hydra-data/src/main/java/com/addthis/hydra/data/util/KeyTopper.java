@@ -91,7 +91,7 @@ public final class KeyTopper implements Codable, BytesCodable {
     }
 
     private static final Comparator<Map.Entry<String,Long>> ENTRIES_COMPARATOR =
-            (arg0, arg1) -> (int) (arg1.getValue() - arg0.getValue());
+            (arg0, arg1) -> Long.compare(arg1.getValue(), arg0.getValue());
 
     /**
      * returns the list sorted by greatest to least count.
