@@ -117,8 +117,7 @@ public class DataStoreUtil {
             case MYSQL:
                 return new MysqlDataStore("jdbc:mysql:thin://" + sqlHostName + ":" + sqlPort + "/", sqlDbName, sqlTableName, properties);
             case POSTGRES:
-                //TODO - fix the url
-                return new PostgresDataStore("jdbc:mysql:thin://" + sqlHostName + ":" + sqlPort + "/", sqlDbName, sqlTableName, properties);
+                return new PostgresDataStore("jdbc:postgres://" + sqlHostName + ":" + sqlPort + "/", sqlDbName, sqlTableName, properties);
             default: throw new IllegalArgumentException("Unexpected DataStoreType " + type);
         }
     }
