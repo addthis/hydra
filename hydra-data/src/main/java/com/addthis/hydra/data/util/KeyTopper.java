@@ -121,8 +121,8 @@ public final class KeyTopper implements Codable, BytesCodable {
             minVal = Long.MAX_VALUE;
             for (Map.Entry<String, Long> e : this.map.entrySet()) {
                 if (e.getValue() < minVal) {
-                    minVal = e.getValue();
                     minKey = e.getKey();
+                    minVal = e.getValue();
                 }
             }
         }
@@ -198,13 +198,26 @@ public final class KeyTopper implements Codable, BytesCodable {
     public String update(@Nonnull String id, long value, int maxsize) {
         Preconditions.checkArgument(value >= 0, "Argument was %s but expected nonnegative", value);
         Preconditions.checkArgument(maxsize > 0, "Argument was %s but expected positive integer", maxsize);
-        String result = null;
+        /** There is guaranteed capacity to update or insert value */
+        if (map.size() < maxsize) {
+            map.put(id, value);
+            /** new minimum key has been identified */
+            if (value < minVal) {
+                minKey = id;
+                minVal = value;
+            /** recalculate min if the minimum key was updated */
+            } else if (id.equals(minKey)) {
+                recreateMinimum(true);
+            }
+            return null;
+        }
         /** compute minimum key and value if they are missing */
         recreateMinimum(false);
         /** insert or update key. Evict if necessary */
         if (value >= minVal) {
+            String result = null;
             /** only remove if topN is full and we're not updating an existing entry */
-            boolean remove = (map.size() >= maxsize) && !map.containsKey(id) && (minKey != null);
+            boolean remove = !map.containsKey(id) && (minKey != null);
             if (remove) {
                 map.remove(minKey);
                 result = minKey;
@@ -215,22 +228,12 @@ public final class KeyTopper implements Codable, BytesCodable {
             if (remove || id.equals(minKey)) {
                 recreateMinimum(true);
             }
-        }
-        /** insert or update key. No eviction necessary. */
-        else if (map.size() < maxsize) {
-            map.put(id, value);
-            if (id.equals(minKey)) {
-                recreateMinimum(true);
-            } else if (value < minVal) {
-                minKey = id;
-                minVal = value;
-            }
+            return result;
         }
         /** not eligible for top */
         else {
-            result = id;
+            return id;
         }
-        return result;
     }
 
     @Override public byte[] bytesEncode(long version) {

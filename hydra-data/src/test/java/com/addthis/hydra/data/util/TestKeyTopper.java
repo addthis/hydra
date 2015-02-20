@@ -62,8 +62,7 @@ public class TestKeyTopper {
         for (int i = 99; i > 0; i--) {
             topper.increment(Integer.toString(i), i, 100);
             assertEquals(new Long(i), topper.get(Integer.toString(i)));
-            assertEquals(Integer.toString(i), topper.getMinKey());
-            assertEquals(i, topper.getMinVal());
+            assertNull(topper.getMinKey());
         }
         String evicted = topper.increment("101", 101, 100);
         assertEquals("1", evicted);
@@ -83,8 +82,7 @@ public class TestKeyTopper {
             topper.increment(Integer.toString(i), 100);
         }
 
-        assertEquals("0", topper.getMinKey());
-        assertEquals(1L, topper.getMinVal());
+        assertNull(topper.getMinKey());
 
         assertEquals(100, topper.size());
 
