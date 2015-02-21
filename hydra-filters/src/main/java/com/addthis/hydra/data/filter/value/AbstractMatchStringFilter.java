@@ -1,21 +1,28 @@
 package com.addthis.hydra.data.filter.value;
 
+import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.regex.Pattern;
 
+import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.util.AutoField;
+import com.addthis.bundle.util.AutoParam;
+import com.addthis.bundle.util.ConstantField;
+import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.util.JSONFetcher;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-abstract class AbstractMatchStringFilter extends StringFilter implements SuperCodable {
+abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual implements SuperCodable {
 
     /**
      * The input must match exactly to an element in this set.
      */
-    private HashSet<String> value;
+    private AutoField value;
 
     /**
      * A URL to retrieve the 'value' field.
@@ -45,7 +52,7 @@ abstract class AbstractMatchStringFilter extends StringFilter implements SuperCo
     /**
      * A substring of the input must match exactly to an element of this set.
      */
-    private String[] contains;
+    private AutoField contains;
 
     /**
      * A URL to retrieve the 'contains' field.
@@ -78,13 +85,13 @@ abstract class AbstractMatchStringFilter extends StringFilter implements SuperCo
     private ArrayList<Pattern> pattern;
     private ArrayList<Pattern> findPattern;
 
-    AbstractMatchStringFilter(HashSet<String> value,
+    AbstractMatchStringFilter(AutoField value,
                               String valueURL,
                               HashSet<String> match,
                               String matchURL,
                               HashSet<String> find,
                               String findURL,
-                              String[] contains,
+                              AutoField contains,
                               String containsURL,
                               boolean urlReturnsCSV,
                               boolean toLower,
@@ -132,11 +139,11 @@ abstract class AbstractMatchStringFilter extends StringFilter implements SuperCo
         return false;
     }
 
-    public boolean passedContains(String sv) {
+    public boolean passedContains(String sv, Bundle context) {
         // match contains
         if (contains != null) {
-            for (String search : contains) {
-                if (sv.indexOf(search) >= 0) {
+            for (ValueObject search : contains.getValue(context).asArray()) {
+                if (sv.contains(search.toString())) {
                     return true;
                 }
             }
@@ -144,9 +151,9 @@ abstract class AbstractMatchStringFilter extends StringFilter implements SuperCo
         return false;
     }
 
-    public boolean passedValue(String sv) {
+    public boolean passedValue(ValueObject sv, Bundle context) {
         // match exact values
-        if (value != null && value.contains(sv)) {
+        if ((value != null) && value.getValue(context).asArray().contains(sv)) {
             return true;
         }
         return false;
@@ -167,9 +174,11 @@ abstract class AbstractMatchStringFilter extends StringFilter implements SuperCo
     @Override public void postDecode() {
         if (valueURL != null) {
             if (urlReturnsCSV) {
-                value = JSONFetcher.staticLoadCSVSet(valueURL, urlTimeout, urlRetries, value);
+                value = new ConstantField(ValueFactory.createValueArray(
+                        JSONFetcher.staticLoadCSVSet(valueURL, urlTimeout, urlRetries, null)));
             } else {
-                value = JSONFetcher.staticLoadSet(valueURL, urlTimeout, urlRetries, value);
+                value = new ConstantField(ValueFactory.createValueArray(
+                        JSONFetcher.staticLoadSet(valueURL, urlTimeout, urlRetries, null)));
             }
         }
         if (matchURL != null) {
@@ -209,20 +218,20 @@ abstract class AbstractMatchStringFilter extends StringFilter implements SuperCo
                 tmp = JSONFetcher.staticLoadSet(containsURL);
             }
 
-            contains = tmp.toArray(new String[tmp.size()]);
+            contains = new ConstantField(ValueFactory.createValueArray(tmp));
         }
     }
 
     @Override public void preEncode() {}
 
     private static final class ValidationOnly extends AbstractMatchStringFilter {
-        public ValidationOnly(@JsonProperty("value") HashSet<String> value,
+        public ValidationOnly(@AutoParam @JsonProperty("value") AutoField value,
                               @JsonProperty("valueURL") String valueURL,
                               @JsonProperty("match") HashSet<String> match,
                               @JsonProperty("matchURL") String matchURL,
                               @JsonProperty("find") HashSet<String> find,
                               @JsonProperty("findURL") String findURL,
-                              @JsonProperty("contains") String[] contains,
+                              @AutoParam @JsonProperty("contains") AutoField contains,
                               @JsonProperty("containsURL") String containsURL,
                               @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
                               @JsonProperty("toLower") boolean toLower,
@@ -247,25 +256,27 @@ abstract class AbstractMatchStringFilter extends StringFilter implements SuperCo
             // intentionally do nothing
         }
 
-        @Override public ValueObject filter(ValueObject value) {
+        @Nullable @Override public ValueObject filterValue(@Nullable ValueObject value, @Nullable Bundle context) {
             throw new UnsupportedOperationException("This class is only intended for use in construction validation.");
         }
     }
 
-    @Override
-    public String filter(String sv) {
-        if (sv != null && (not || !sv.equals(""))) {
+    @Nullable @Override public ValueObject filterValue(@Nullable ValueObject value, @Nullable Bundle context) {
+        String sv = (value == null) ? null : value.toString();
+        if (sv != null && (not || !sv.isEmpty())) {
             if (toLower) {
                 sv = sv.toLowerCase();
+                value = ValueFactory.create(sv);
             }
-            boolean success = passedMatch(sv) || passedContains(sv) || passedValue(sv) || passedFind(sv);
+            boolean success = passedMatch(sv) || passedContains(sv, context) || passedValue(value, context) || passedFind(sv);
             if (not) {
-                return success ? null : sv;
+                return success ? null : value;
             } else {
-                return success ? sv : null;
+                return success ? value : null;
             }
+        } else {
+            return value;
         }
-        return sv;
     }
 
 }

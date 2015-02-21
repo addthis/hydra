@@ -13,9 +13,12 @@
  */
 package com.addthis.hydra.data.filter.value;
 
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Optional;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.addthis.bundle.util.ConstantField;
+import com.addthis.bundle.value.ValueFactory;
 
 import org.junit.Test;
 
@@ -25,19 +28,19 @@ public class TestValueFilterExclude {
 
     // TODO: Reduce ridiculous duplication with ValueFilterRequire
     private String excludeFilter(String val, HashSet<String> exactValues, HashSet<String> match, HashSet<String> find, String[] contains) {
-        return new ValueFilterExclude(
-                exactValues,
+        return Optional.ofNullable(new ValueFilterExclude(
+                exactValues == null ? null : new ConstantField(ValueFactory.createValueArray(exactValues)),
                 null,
                 match,
                 null,
                 find,
                 null,
-                contains,
+                contains == null ? null : new ConstantField(ValueFactory.createValueArray(Arrays.asList(contains))),
                 null,
                 false,
                 false,
                 0,
-                0).filter(val);
+                0).filter(ValueFactory.create(val))).map(Object::toString).orElse(null);
     }
 
     @Test
