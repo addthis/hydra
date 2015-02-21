@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.data.filter.value;
 
+import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
@@ -42,7 +43,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @hydra-name join
  * @exclude-fields once
  */
-public class ValueFilterJoin extends AbstractValueFilter {
+public class ValueFilterJoin extends AbstractValueFilterContextual {
 
     /**
      * The deliminator between elements in the output string. Default is "," .
@@ -101,18 +102,18 @@ public class ValueFilterJoin extends AbstractValueFilter {
     }
 
     @Override
-    public ValueObject filterValue(ValueObject value) {
-        return filter != null ? filter.filter(value) : value;
+    public ValueObject filterValue(ValueObject value, Bundle context) {
+        return filter != null ? filter.filter(value, context) : value;
     }
 
-    private String filterKey(String value) {
+    private String filterKey(String value, Bundle context) {
         return keyFilter != null ?
-               ValueUtil.asNativeString(keyFilter.filter(ValueFactory.create(value))) :
+               ValueUtil.asNativeString(keyFilter.filter(ValueFactory.create(value), context)) :
                value;
     }
 
     @Override
-    public ValueObject filter(ValueObject value) {
+    public ValueObject filter(ValueObject value, Bundle context) {
         if (value == null) {
             return null;
         }
@@ -142,7 +143,7 @@ public class ValueFilterJoin extends AbstractValueFilter {
                 if (count++ > 0) {
                     sb.append(join);
                 }
-                sb.append(filterKey(e.getKey()));
+                sb.append(filterKey(e.getKey(), context));
                 sb.append(keyJoin);
                 sb.append(ValueUtil.asNativeString(filterValue(e.getValue())));
             }

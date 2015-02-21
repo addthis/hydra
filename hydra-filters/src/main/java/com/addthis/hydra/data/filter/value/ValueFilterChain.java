@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.data.filter.value;
 
+import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueObject;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -33,7 +34,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @user-reference
  * @hydra-name chain
  */
-public class ValueFilterChain extends AbstractValueFilter {
+public class ValueFilterChain extends AbstractValueFilterContextual {
 
     /** The value filters to be performed in a chain. */
     @JsonProperty(required = true) private ValueFilter[] filter;
@@ -42,9 +43,9 @@ public class ValueFilterChain extends AbstractValueFilter {
     @JsonProperty private boolean nullStop = true;
 
     @Override
-    public ValueObject filterValue(ValueObject value) {
+    public ValueObject filterValue(ValueObject value, Bundle context) {
         for (ValueFilter f : filter) {
-            value = f.filter(value);
+            value = f.filter(value, context);
             if ((value == null) && nullStop) {
                 return null;
             }

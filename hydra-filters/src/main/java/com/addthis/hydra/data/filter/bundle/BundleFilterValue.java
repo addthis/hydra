@@ -61,7 +61,7 @@ public class BundleFilterValue implements BundleFilter {
     public boolean filter(Bundle bundle) {
         ValueObject val = ValueFactory.create(value);
         if (filter != null) {
-            val = filter.filter(val);
+            val = filter.filter(val, bundle);
         }
         if (nullFail && val == null) {
             return false;

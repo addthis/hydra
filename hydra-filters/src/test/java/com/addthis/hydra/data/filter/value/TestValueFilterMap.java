@@ -13,10 +13,19 @@
  */
 package com.addthis.hydra.data.filter.value;
 
+import java.io.IOException;
+
 import java.util.HashMap;
+
+import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.Bundles;
+import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueObject;
 
 import org.junit.Test;
 
+import static com.addthis.codec.config.Configs.decodeObject;
+import static java.util.Optional.ofNullable;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -25,12 +34,19 @@ public class TestValueFilterMap {
     private String mapFilter(String val, HashMap<String, String> map, String mapURL, boolean tonull) {
         ValueFilterMap filter = new ValueFilterMap().setMap(map).setMapURL(mapURL).setToNull(tonull);
         filter.postDecode();
-        return filter.filter(val);
+        return ofNullable(filter.filter(ValueFactory.create(val))).map(Object::toString).orElse(null);
     }
 
     @Test
     public void nullPassThrough() {
         assertEquals(null, mapFilter(null, new HashMap<String, String>(), null, false));
+    }
+
+    @Test public void contextualLookup() throws IOException {
+        ValueFilter valueFilter = decodeObject(ValueFilter.class, "map { map.field = lookup }");
+        Bundle bundle = Bundles.decode("lookup = {a = 1, b = 2, c = 3, d = 4}");
+        ValueObject val = ValueFactory.decodeValue("c");
+        assertEquals("3", valueFilter.filter(val, bundle).toString());
     }
 
     @Test

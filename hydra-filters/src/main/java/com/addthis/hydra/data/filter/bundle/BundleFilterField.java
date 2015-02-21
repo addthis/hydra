@@ -66,7 +66,7 @@ public class BundleFilterField implements BundleFilter {
     public boolean filter(Bundle row) {
         ValueObject val = from.getValue(row);
         if (filter != null) {
-            val = filter.filter(val);
+            val = filter.filter(val, row);
         }
         if (nullFail && (val == null)) {
             return not;

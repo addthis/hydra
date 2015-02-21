@@ -102,7 +102,7 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
                 if (conf.op != null) {
                     ValueFilter fo = conf.op.get(s.getKey());
                     if (fo != null) {
-                        v = fo.filter(v);
+                        v = fo.filter(v, p);
                         if (v == null) {
                             continue;
                         }

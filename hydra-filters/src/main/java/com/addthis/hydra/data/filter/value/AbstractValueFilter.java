@@ -15,6 +15,7 @@ package com.addthis.hydra.data.filter.value;
 
 import javax.annotation.Nullable;
 
+import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
@@ -47,11 +48,11 @@ public abstract class AbstractValueFilter implements ValueFilter {
         return this;
     }
 
-    @Nullable private ValueObject filterArray(ValueObject value) {
+    @Nullable private ValueObject filterArray(ValueObject value, Bundle context) {
         ValueArray in = value.asArray();
         ValueArray out = null;
         for (ValueObject vo : in) {
-            ValueObject val = filterValue(vo);
+            ValueObject val = filterValue(vo, context);
             if (val != null) {
                 if (out == null) {
                     out = ValueFactory.createArray(in.size());
@@ -62,6 +63,17 @@ public abstract class AbstractValueFilter implements ValueFilter {
         return out;
     }
 
+    @Override @Nullable public ValueObject filter(@Nullable ValueObject value, @Nullable Bundle context) {
+        if (once) {
+            return filterValue(value, context);
+        }
+        // TODO why is this behaviour not there for TYPE.MAPS ?
+        if ((value != null) && (value.getObjectType() == ValueObject.TYPE.ARRAY)) {
+            return filterArray(value, context);
+        }
+        return filterValue(value, context);
+    }
+
     /**
      * Wrapper method for {@link #filterValue(ValueObject)} that has special logic for {@link ValueArray}s.
      * This should be the primary method to be called in most circumstances, and should not be overridden unless
@@ -69,13 +81,10 @@ public abstract class AbstractValueFilter implements ValueFilter {
      * is not an array, this is the same as directly calling {@link #filterValue(ValueObject)}.
      */
     @Override @Nullable public ValueObject filter(@Nullable ValueObject value) {
-        if (once) {
-            return filterValue(value);
-        }
-        // TODO why is this behaviour not there for TYPE.MAPS ?
-        if ((value != null) && (value.getObjectType() == ValueObject.TYPE.ARRAY)) {
-            return filterArray(value);
-        }
+        return filter(value, null);
+    }
+
+    @Nullable public ValueObject filterValue(@Nullable ValueObject value, @Nullable Bundle context) {
         return filterValue(value);
     }
 

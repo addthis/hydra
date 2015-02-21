@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 
 import java.util.function.UnaryOperator;
 
+import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.Pluggable;
 
@@ -26,6 +27,15 @@ public interface ValueFilter extends UnaryOperator<ValueObject> {
 
     @Nullable @Override default ValueObject apply(ValueObject t) {
         return filter(t);
+    }
+
+    /**
+     * Optional variant of {@link #filter(ValueObject)} that includes context for the value. Implementations should
+     * not attempt to modify the bundle provided for contextual information, and this may result in exceptions or
+     * other undefined behavior.
+     */
+    @Nullable default ValueObject filter(@Nullable ValueObject value, @Nullable Bundle context) {
+        return filter(value);
     }
 
     @Nullable ValueObject filter(@Nullable ValueObject value);

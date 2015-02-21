@@ -117,7 +117,7 @@ public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistr
         ValueObject val = keyAccess.getValue(state.getBundle());
         if (val != null) {
             if (filter != null) {
-                val = filter.filter(val);
+                val = filter.filter(val, state.getBundle());
                 if (val == null) {
                     return false;
                 }

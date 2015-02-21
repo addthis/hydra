@@ -120,7 +120,7 @@ public class PathValue extends PathElement {
     public final ValueObject getFilteredValue(final TreeMapState state) {
         ValueObject value = getPathValue(state);
         if (vfilter != null) {
-            value = vfilter.filter(value);
+            value = vfilter.filter(value, state.getBundle());
         }
         return value;
     }

@@ -85,7 +85,7 @@ public final class FieldFilter {
     public void mapField(Bundle in, Bundle out) {
         ValueObject inVal = from.getValue(in);
         if (filter != null) {
-            inVal = filter.filter(inVal);
+            inVal = filter.filter(inVal, in);
         }
         if (inVal != null || toNull) {
             to.setValue(out, inVal);

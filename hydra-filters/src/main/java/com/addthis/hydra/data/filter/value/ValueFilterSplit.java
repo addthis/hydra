@@ -16,9 +16,10 @@ package com.addthis.hydra.data.filter.value;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.addthis.basis.util.Strings;
 import com.addthis.basis.util.Parameter;
+import com.addthis.basis.util.Strings;
 
+import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
@@ -50,7 +51,7 @@ import org.slf4j.LoggerFactory;
  * @hydra-name split
  * @exclude-fields once
  */
-public class ValueFilterSplit extends AbstractValueFilter {
+public class ValueFilterSplit extends AbstractValueFilterContextual {
 
     private static final Logger log = LoggerFactory.getLogger(ValueFilterSplit.class);
     private static final boolean ERROR_ON_ARRAY = Parameter.boolValue("hydra.filter.split.error", false);
@@ -119,16 +120,16 @@ public class ValueFilterSplit extends AbstractValueFilter {
     }
 
     @Override
-    public ValueObject filterValue(ValueObject value) {
-        return filter != null ? filter.filter(value) : value;
+    public ValueObject filterValue(ValueObject value, Bundle context) {
+        return filter != null ? filter.filter(value, context) : value;
     }
 
-    private String filterKey(String value) {
-        return keyFilter != null ? ValueUtil.asNativeString(keyFilter.filter(ValueFactory.create(value))) : value;
+    private String filterKey(String value, Bundle context) {
+        return keyFilter != null ? ValueUtil.asNativeString(keyFilter.filter(ValueFactory.create(value), context)) : value;
     }
 
     @Override
-    public ValueObject filter(ValueObject value) {
+    public ValueObject filter(ValueObject value, Bundle context) {
         if ((value != null) && (value.getObjectType() == ValueObject.TYPE.ARRAY) && !warnedOnArrayInput) {
             log.warn("Input value to 'split' ValueFilter is an array: {}. It may not be what you intended.", value);
             if (ERROR_ON_ARRAY) {
@@ -160,14 +161,14 @@ public class ValueFilterSplit extends AbstractValueFilter {
             for (String v : token) {
                 int pos;
                 if ((pos = v.indexOf(keySplit)) >= 0) {
-                    String k = filterKey(v.substring(0, pos));
+                    String k = filterKey(v.substring(0, pos), context);
                     if (k == null) {
                         continue;
                     }
                     v = v.substring(pos + keySplit.length());
                     map.put(k, filterValue(ValueFactory.create(v)));
                 } else {
-                    v = filterKey(v);
+                    v = filterKey(v, context);
                     if (v == null) {
                         continue;
                     }

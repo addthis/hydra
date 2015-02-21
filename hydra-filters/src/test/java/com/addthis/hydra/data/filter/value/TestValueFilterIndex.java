@@ -13,37 +13,51 @@
  */
 package com.addthis.hydra.data.filter.value;
 
+import java.io.IOException;
+
+import java.util.Collections;
+
+import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.Bundles;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 
 import org.junit.Test;
 
+import static com.addthis.codec.config.Configs.decodeObject;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 
 public class TestValueFilterIndex {
 
-    private ValueObject tokenFilter(ValueObject array, int index, boolean toNull) {
-        return new ValueFilterIndex().setIndex(index).setToNull(toNull).filter(array);
+    private ValueObject tokenFilter(ValueObject array, int index, boolean toNull) throws IOException {
+        ValueFilter valueFilter = decodeObject(ValueFilterIndex.class, "index = " + index + ", toNull = " + toNull);
+        return valueFilter.filter(array);
+    }
+
+    @Test public void contextualIndex() throws IOException {
+        ValueFilter valueFilter = decodeObject(ValueFilterIndex.class, "index.field = idx");
+        Bundle bundle = Bundles.decode("idx = 2");
+        ValueArray arr = ValueFactory.decodeValue("[a, b, c, d]").asArray();
+        assertEquals(valueFilter.filter(arr, bundle), arr.get(2));
     }
 
     @Test
-    public void emptyPassThrough() {
+    public void emptyPassThrough() throws IOException {
         ValueArray arr = ValueFactory.createArray(1);
-        assertEquals(null, tokenFilter(arr, 0, true));
+        assertNull(tokenFilter(arr, 0, true));
     }
 
     private ValueArray create(ValueObject[] value) {
         ValueArray a = ValueFactory.createArray(value.length);
-        for (ValueObject v : value) {
-            a.add(v);
-        }
+        Collections.addAll(a, value);
         return a;
     }
 
     @Test
-    public void tokenize() {
+    public void tokenize() throws IOException {
         ValueObject foo = ValueFactory.create("foo");
         ValueObject bar = ValueFactory.create("bar");
         ValueObject bax = ValueFactory.create("bax");

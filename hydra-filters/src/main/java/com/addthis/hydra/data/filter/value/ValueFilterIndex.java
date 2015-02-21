@@ -13,10 +13,14 @@
  */
 package com.addthis.hydra.data.filter.value;
 
+import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.util.AutoField;
+import com.addthis.bundle.util.AutoParam;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">returns the <i>i</i><sup>th</sup> element of an array</span>.
@@ -38,52 +42,33 @@ import com.addthis.codec.annotations.FieldConfig;
  */
 public class ValueFilterIndex extends AbstractValueFilter {
 
-    /**
-     * The array offset of the element to return.
-     */
-    @FieldConfig(codable = true)
-    private int     index;
-    /**
-     * If true, then return null when the index is out of bounds. Default is false.
-     */
-    @FieldConfig(codable = true)
-    private boolean toNull;
+    /** The array offset of the element to return. */
+    @AutoParam private AutoField index;
 
-    public ValueFilterIndex setIndex(int index) {
-        this.index = index;
-        return this;
-    }
+    /** If true, then return null when the index is out of bounds. Default is true. */
+    @JsonProperty private boolean toNull = true;
 
-    public ValueFilterIndex setToNull(boolean toNull) {
-        this.toNull = toNull;
-        return this;
-    }
-
-    @Override
-    public ValueObject filter(ValueObject value) {
+    @Override public ValueObject filter(ValueObject value, Bundle context) {
         ValueObject nullReturn = toNull ? null : value;
         if (ValueUtil.isEmpty(value)) {
             return nullReturn;
         }
         if (value.getObjectType() == ValueObject.TYPE.ARRAY) {
             ValueArray arr = value.asArray();
-            if (arr.size() == 0) {
+            if (arr.isEmpty()) {
                 return nullReturn;
             }
-            int i = index;
+            int i = index.getInt(context).getAsInt();
             while (i < 0) {
                 i = arr.size() + i;
             }
-            return arr.size() > i ? arr.get(i) : nullReturn;
+            return (arr.size() > i) ? arr.get(i) : nullReturn;
         }
         return nullReturn;
     }
 
-    /**
-     * required to override by contract -- not used
-     */
-    @Override
-    public ValueObject filterValue(ValueObject value) {
-        return value;
+    /** required to override by contract -- not used */
+    @Override public ValueObject filterValue(ValueObject value) {
+        throw new UnsupportedOperationException("only filter should be called");
     }
 }

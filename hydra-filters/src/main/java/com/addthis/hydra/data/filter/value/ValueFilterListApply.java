@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.data.filter.value;
 
+import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
@@ -37,16 +38,16 @@ public class ValueFilterListApply extends AbstractValueFilter {
     @FieldConfig(codable = true, required = true)
     private ValueFilter elementFilter;
 
-    @Override
     // This is a essentially a copy of the default ValueFilter.filter (which applies filterValue to list elements).
     // Reason: some filters override filter rather than filterValue, which prevents them from being applied
     // to lists.
-    public ValueObject filter(ValueObject value) {
+    @Override
+    public ValueObject filter(ValueObject value, Bundle context) {
         if (value != null && value.getObjectType() == ValueObject.TYPE.ARRAY) {
             ValueArray in = value.asArray();
             ValueArray out = null;
             for (ValueObject vo : in) {
-                ValueObject val = this.elementFilter.filter(vo);
+                ValueObject val = this.elementFilter.filter(vo, context);
                 if (val != null) {
                     if (out == null) {
                         out = ValueFactory.createArray(in.size());

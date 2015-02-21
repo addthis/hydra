@@ -81,7 +81,7 @@ public class PathKeyValue extends PathValue {
     public ValueObject getPathValue(TreeMapState state) {
         ValueObject v = getKeyValue(state.getBundle());
         if (prefilter != null) {
-            v = prefilter.filter(v);
+            v = prefilter.filter(v, state.getBundle());
         }
         return v;
     }

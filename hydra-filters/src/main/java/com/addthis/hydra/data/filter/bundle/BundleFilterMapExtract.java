@@ -100,7 +100,7 @@ public class BundleFilterMapExtract implements BundleFilter {
             }
             ValueObject val = mapValue.get(key);
             if (me.filter != null) {
-                val = me.filter.filter(val);
+                val = me.filter.filter(val, bundle);
             }
             if (val != null) {
                 String toField = me.to != null ? me.to : me.from;

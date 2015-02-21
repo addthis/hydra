@@ -40,7 +40,7 @@ public class StreamRowSplitBuilder extends StreamBuilder {
     public void process(Bundle bundle, StreamEmitter emitter) {
         ValueObject valueObject = bundle.getValue(bundle.getFormat().getField(field));
         if (filter != null) {
-            valueObject = filter.filter(valueObject);
+            valueObject = filter.filter(valueObject, bundle);
         }
         if (valueObject != null && valueObject.getObjectType() == ValueObject.TYPE.ARRAY) {
             ValueArray array = valueObject.asArray();

@@ -15,6 +15,7 @@ package com.addthis.hydra.data.filter.value;
 
 import javax.annotation.Nullable;
 
+import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueObject;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -30,7 +31,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
  * @user-reference
  * @hydra-name not
  */
-public class ValueFilterNot extends AbstractValueFilter {
+public class ValueFilterNot extends AbstractValueFilterContextual {
 
     private final ValueFilter filter;
 
@@ -38,15 +39,15 @@ public class ValueFilterNot extends AbstractValueFilter {
         this.filter = filter;
     }
 
-    @Override @Nullable public ValueObject filter(@Nullable ValueObject value) {
-        if (filter.filter(value) == null) {
+    @Override @Nullable public ValueObject filter(@Nullable ValueObject value, @Nullable Bundle context) {
+        if (filter.filter(value, context) == null) {
             return value;
         } else {
             return null;
         }
     }
 
-    @Nullable @Override public ValueObject filterValue(@Nullable ValueObject value) {
-        return filter.filter(value);
+    @Nullable @Override public ValueObject filterValue(@Nullable ValueObject value, @Nullable Bundle context) {
+        return filter.filter(value, context);
     }
 }

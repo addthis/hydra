@@ -13,14 +13,24 @@
  */
 package com.addthis.hydra.data.filter.value;
 
+import javax.annotation.Nullable;
+
 import java.util.HashMap;
 
+import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.util.AutoField;
+import com.addthis.bundle.util.AutoParam;
+import com.addthis.bundle.util.ConstantField;
+import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.util.JSONFetcher;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 
 /**
@@ -42,61 +52,43 @@ import com.google.common.annotations.VisibleForTesting;
  * @user-reference
  * @hydra-name map
  */
-public class ValueFilterMap extends StringFilter implements SuperCodable {
+@JsonAutoDetect(getterVisibility = JsonAutoDetect.Visibility.NONE,
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+        setterVisibility = JsonAutoDetect.Visibility.NONE)
+public class ValueFilterMap extends AbstractValueFilterContextual implements SuperCodable {
 
-    /**
-     * The map used to search for the input key.
-     */
-    @FieldConfig(codable = true)
-    private HashMap<String, String> map;
+    /** The map used to search for the input key. */
+    @AutoParam private AutoField map;
 
-    /**
-     * If true, then the filter returns null when no value is associated with the input. Default
-     * is false.
-     */
-    @FieldConfig(codable = true)
-    private boolean toNull;
+    /** If true, then the filter returns null when no value is associated with the input. Default is false. */
+    @JsonProperty private boolean toNull;
 
-    /**
-     * If non-null, then the filter returns defaultValue when no value is associated with the
-     * input. Default is null.
-     */
-    @FieldConfig(codable = true)
-    private String defaultValue;
+    /** If nonnull, then the filter returns defaultValue when no value is associated with the input. Default is null. */
+    @JsonProperty private ValueObject defaultValue;
 
-    /**
-     * Fetch the map from this URL.
-     */
-    @FieldConfig(codable = true)
-    private String mapURL;
+    /** Fetch the map from this URL. */
+    @JsonProperty private String mapURL;
 
-    /**
-     * The timeout value when mapURL is used.
-     */
-    @FieldConfig(codable = true)
-    private int httpTimeout = 60000;
+    /** The timeout value when mapURL is used. */
+    @JsonProperty private int httpTimeout = 60000;
 
-    /**
-     * If true, then print out a http trace when mapURL is used. Default is false.
-     */
-    @FieldConfig(codable = true)
-    private boolean httpTrace;
+    /** If true, then print out a http trace when mapURL is used. Default is false. */
+    @JsonProperty private boolean httpTrace;
 
     @VisibleForTesting
     ValueFilterMap() {}
 
     public ValueFilterMap setMap(HashMap<String, String> map) {
-        this.map = map;
+        ValueMap newMap = ValueFactory.createMap();
+        map.forEach((k, v) -> {
+            newMap.put(k, ValueFactory.create(v));
+        });
+        this.map = new ConstantField(newMap);
         return this;
     }
 
     public ValueFilterMap setToNull(boolean toNull) {
         this.toNull = toNull;
-        return this;
-    }
-
-    public ValueFilterMap setDefaultValue(String dv) {
-        defaultValue = dv;
         return this;
     }
 
@@ -118,7 +110,7 @@ public class ValueFilterMap extends StringFilter implements SuperCodable {
     @Override
     public void postDecode() {
         if (map == null && mapURL != null) {
-            map = new JSONFetcher(httpTimeout, httpTrace).loadMap(mapURL);
+            setMap(new JSONFetcher(httpTimeout, httpTrace).loadMap(mapURL));
         }
     }
 
@@ -129,18 +121,17 @@ public class ValueFilterMap extends StringFilter implements SuperCodable {
             // intentionally do nothing
         }
 
-        @Override public ValueObject filter(ValueObject value) {
+        @Nullable @Override public ValueObject filterValue(@Nullable ValueObject value, @Nullable Bundle context) {
             throw new UnsupportedOperationException("This class is only intended for use in construction validation.");
         }
     }
 
-    @Override
-    public String filter(String value) {
+    @Nullable @Override public ValueObject filterValue(@Nullable ValueObject value, @Nullable Bundle context) {
         if (value != null) {
             if (map == null) {
                 value = defaultValue != null ? defaultValue : toNull ? null : value;
             } else {
-                String v = map.get(value);
+                ValueObject v = map.getValue(context).asMap().get(value.toString());
                 if (v != null) {
                     value = v;
                 } else if (defaultValue != null) {

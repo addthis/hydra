@@ -55,7 +55,7 @@ public class ColumnBundleizer extends NewlineBundleizer {
             }
             ValueObject val = ValueFactory.create(col);
             if (tokenFilter != null) {
-                val = tokenFilter.filter(val);
+                val = tokenFilter.filter(val, next);
             }
             next.setValue(next.getFormat().getField(columns[pos++]), val);
         }

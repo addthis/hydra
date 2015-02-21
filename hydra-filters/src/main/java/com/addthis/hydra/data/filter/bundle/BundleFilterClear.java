@@ -59,7 +59,7 @@ public class BundleFilterClear implements BundleFilter {
     public boolean filter(Bundle bundle) {
         ValueObject val = field.getValue(bundle);
         if (filter != null) {
-            val = filter.filter(val);
+            val = filter.filter(val, bundle);
         }
         if (nullFail && val == null) {
             return false;

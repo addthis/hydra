@@ -161,7 +161,7 @@ public class BundleFilterAppend implements BundleFilter {
         if (from != null) {
             ValueObject fromVal = from.getValue(bundle);
             if (filter != null) {
-                fromVal = filter.filter(fromVal);
+                fromVal = filter.filter(fromVal, bundle);
             }
             if (fromVal != null) {
                 if (fromVal.getObjectType() == ValueObject.TYPE.ARRAY) {
