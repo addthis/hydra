@@ -21,9 +21,17 @@ import com.addthis.bundle.value.ValueObject;
 /** This class is provided as a convenience for value filters that optionally support bundle context. */
 public abstract class AbstractValueFilterContextual extends AbstractValueFilter {
 
+    @Override @Nullable public ValueObject filter(@Nullable ValueObject value, @Nullable Bundle context) {
+        return filterWithArrayHandling(value, context);
+    }
+
+    @Override @Nullable public final ValueObject filter(@Nullable ValueObject value) {
+        return filter(value, null);
+    }
+
     @Override @Nullable public abstract ValueObject filterValue(@Nullable ValueObject value, @Nullable Bundle context);
 
-    @Override @Nullable public ValueObject filterValue(@Nullable ValueObject value) {
+    @Override @Nullable public final ValueObject filterValue(@Nullable ValueObject value) {
         return filterValue(value, null);
     }
 }

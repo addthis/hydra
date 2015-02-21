@@ -40,7 +40,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @hydra-name index
  * @exclude-fields once
  */
-public class ValueFilterIndex extends AbstractValueFilter {
+public class ValueFilterIndex extends AbstractValueFilterContextual {
 
     /** The array offset of the element to return. */
     @AutoParam private AutoField index;
@@ -68,7 +68,7 @@ public class ValueFilterIndex extends AbstractValueFilter {
     }
 
     /** required to override by contract -- not used */
-    @Override public ValueObject filterValue(ValueObject value) {
+    @Override public ValueObject filterValue(ValueObject value, Bundle context) {
         throw new UnsupportedOperationException("only filter should be called");
     }
 }

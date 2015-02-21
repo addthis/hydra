@@ -64,14 +64,7 @@ public abstract class AbstractValueFilter implements ValueFilter {
     }
 
     @Override @Nullable public ValueObject filter(@Nullable ValueObject value, @Nullable Bundle context) {
-        if (once) {
-            return filterValue(value, context);
-        }
-        // TODO why is this behaviour not there for TYPE.MAPS ?
-        if ((value != null) && (value.getObjectType() == ValueObject.TYPE.ARRAY)) {
-            return filterArray(value, context);
-        }
-        return filterValue(value, context);
+        return filter(value);
     }
 
     /**
@@ -81,7 +74,18 @@ public abstract class AbstractValueFilter implements ValueFilter {
      * is not an array, this is the same as directly calling {@link #filterValue(ValueObject)}.
      */
     @Override @Nullable public ValueObject filter(@Nullable ValueObject value) {
-        return filter(value, null);
+        return filterWithArrayHandling(value, null);
+    }
+
+    @Nullable protected final ValueObject filterWithArrayHandling(@Nullable ValueObject value, @Nullable Bundle context) {
+        if (once) {
+            return filterValue(value, context);
+        }
+        // TODO why is this behaviour not there for TYPE.MAPS ?
+        if ((value != null) && (value.getObjectType() == ValueObject.TYPE.ARRAY)) {
+            return filterArray(value, context);
+        }
+        return filterValue(value, context);
     }
 
     @Nullable public ValueObject filterValue(@Nullable ValueObject value, @Nullable Bundle context) {

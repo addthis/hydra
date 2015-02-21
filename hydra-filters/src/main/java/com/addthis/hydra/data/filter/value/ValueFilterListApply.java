@@ -30,7 +30,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * @hydra-name list-apply
  * @exclude-fields once
  */
-public class ValueFilterListApply extends AbstractValueFilter {
+public class ValueFilterListApply extends AbstractValueFilterContextual {
 
     /**
      * The filter to be applied to each element of the input list.
@@ -61,7 +61,7 @@ public class ValueFilterListApply extends AbstractValueFilter {
     }
 
     @Override
-    public ValueObject filterValue(ValueObject value) {
+    public ValueObject filterValue(ValueObject value, Bundle context) {
         return value;
     }
 }
