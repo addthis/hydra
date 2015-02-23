@@ -48,6 +48,13 @@ public abstract class AbstractValueFilter implements ValueFilter {
         return this;
     }
 
+    /**
+     * Iterate over the input value and apply the filter to each element of the array.
+     *
+     * @param value    input array
+     * @param context  Optional context for this filter.
+     * @return output array
+     */
     @Nullable private ValueObject filterArray(ValueObject value, Bundle context) {
         ValueArray in = value.asArray();
         ValueArray out = null;
@@ -63,6 +70,12 @@ public abstract class AbstractValueFilter implements ValueFilter {
         return out;
     }
 
+    /**
+     * Optional variant of {@link #filter(ValueObject)} that includes context for the value. Implementations should
+     * not attempt to modify the bundle provided for contextual information, and this may result in exceptions or
+     * other undefined behavior. If not-overridden in a subclass then {@link AbstractValueFilter#filter(ValueObject)}
+     * is called without the bundle context.
+     */
     @Override @Nullable public ValueObject filter(@Nullable ValueObject value, @Nullable Bundle context) {
         return filter(value);
     }
@@ -77,6 +90,14 @@ public abstract class AbstractValueFilter implements ValueFilter {
         return filterWithArrayHandling(value, null);
     }
 
+    /**
+     * Helper method for {@link #filter(ValueObject)} and {@link AbstractValueFilterContextual#filter(ValueObject, Bundle)}
+     * that determines if array handling is necessary.
+     *
+     * @param value input value
+     * @param context optional bundle context
+     * @return output value
+     */
     @Nullable protected final ValueObject filterWithArrayHandling(@Nullable ValueObject value, @Nullable Bundle context) {
         if (once) {
             return filterValue(value, context);
@@ -88,9 +109,24 @@ public abstract class AbstractValueFilter implements ValueFilter {
         return filterValue(value, context);
     }
 
+    /**
+     * Optional variant of {@link #filterValue(ValueObject)} that includes context for the value.
+     * Implementations should not attempt to modify the bundle provided for contextual information,
+     * and this may result in exceptions or other undefined behavior.
+     */
     @Nullable public ValueObject filterValue(@Nullable ValueObject value, @Nullable Bundle context) {
         return filterValue(value);
     }
 
+    /**
+     * Accepts a value as input and returns a value as output.
+     *
+     * Implementers of {@link ValueFilter} are strongly discouraged
+     * from modifying the state of the input value in cases where the
+     * value object is mutable.
+     *
+     * @param value input value. Possibly null.
+     * @return output value. Possibly null.
+     */
     @Nullable public abstract ValueObject filterValue(@Nullable ValueObject value);
 }

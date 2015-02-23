@@ -38,5 +38,15 @@ public interface ValueFilter extends UnaryOperator<ValueObject> {
         return filter(value);
     }
 
+    /**
+     * Accepts a value as input and returns a value as output.
+     *
+     * Implementers of {@link ValueFilter} are strongly discouraged
+     * from modifying the state of the input value in cases where the
+     * value object is mutable.
+     *
+     * @param value input value. Possibly null.
+     * @return output value. Possibly null.
+     */
     @Nullable ValueObject filter(@Nullable ValueObject value);
 }
