@@ -35,7 +35,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class SplitCanaryJobAlert extends AbstractJobAlert {
 
     @JsonProperty public final String canaryPath;
-    @JsonProperty public final int canaryConfigThreshold;
+    @JsonProperty public final long canaryConfigThreshold;
 
     public SplitCanaryJobAlert(@Nullable @JsonProperty("alertId") String alertId,
                                @JsonProperty("description") String description,
@@ -44,7 +44,7 @@ public class SplitCanaryJobAlert extends AbstractJobAlert {
                                @JsonProperty("email") String email,
                                @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
                                @JsonProperty("canaryPath") String canaryPath,
-                               @JsonProperty("canaryConfigThreshold") int canaryConfigThreshold,
+                               @JsonProperty("canaryConfigThreshold") long canaryConfigThreshold,
                                @JsonProperty("lastAlertTime") long lastAlertTime,
                                @JsonProperty("activeJobs") Map<String, String> activeJobs,
                                @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes) {
