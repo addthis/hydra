@@ -80,8 +80,8 @@ public class FileCountJobAlert extends AbstractJobAlert {
 
     private static final String ERROR_MESSAGE =
             "Host %s has %d log files which is %s than threshold %f" +
-            " derived as mean value %f %s Math.ceil(%f multiplied by the" +
-            " standard deviation %f).\n";
+            " derived as mean value %f %s Math.max(%f multiplied by the" +
+            " standard deviation %f, %d).\n";
 
     @Nullable @Override
     protected String testAlertActiveForJob(@Nullable MeshyClient meshClient, Job job, String previousErrorMessage) {
@@ -112,11 +112,11 @@ public class FileCountJobAlert extends AbstractJobAlert {
             double threshold = Math.max(sigma * stddev, tolerance);
             if (logCount < (mean - threshold)) {
                 errors.append(String.format(ERROR_MESSAGE, hostUUID, logCount, "<",
-                                            (mean - threshold), mean, "minus", sigma, stddev));
+                                            (mean - threshold), mean, "minus", sigma, stddev, tolerance));
             }
             if (logCount > (mean + threshold)) {
                 errors.append(String.format(ERROR_MESSAGE, hostUUID, logCount, ">",
-                                            (mean + threshold), mean, "plus", sigma, stddev));
+                                            (mean + threshold), mean, "plus", sigma, stddev, tolerance));
             }
         }
         String errorString = errors.toString();
