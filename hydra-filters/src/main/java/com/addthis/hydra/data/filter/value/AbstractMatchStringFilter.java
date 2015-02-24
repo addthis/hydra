@@ -4,12 +4,13 @@ import javax.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.AutoParam;
-import com.addthis.bundle.util.ConstantField;
+import com.addthis.bundle.util.ConstantTypedField;
+import com.addthis.bundle.util.TypedField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.codables.SuperCodable;
@@ -22,7 +23,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
     /**
      * The input must match exactly to an element in this set.
      */
-    private AutoField value;
+    private TypedField<Set<String>> value;
 
     /**
      * A URL to retrieve the 'value' field.
@@ -52,7 +53,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
     /**
      * A substring of the input must match exactly to an element of this set.
      */
-    private AutoField contains;
+    private TypedField<Set<String>> contains;
 
     /**
      * A URL to retrieve the 'contains' field.
@@ -85,13 +86,13 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
     private ArrayList<Pattern> pattern;
     private ArrayList<Pattern> findPattern;
 
-    AbstractMatchStringFilter(AutoField value,
+    AbstractMatchStringFilter(TypedField<Set<String>> value,
                               String valueURL,
                               HashSet<String> match,
                               String matchURL,
                               HashSet<String> find,
                               String findURL,
-                              AutoField contains,
+                              TypedField<Set<String>> contains,
                               String containsURL,
                               boolean urlReturnsCSV,
                               boolean toLower,
@@ -142,8 +143,8 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
     public boolean passedContains(String sv, Bundle context) {
         // match contains
         if (contains != null) {
-            for (ValueObject search : contains.getValue(context).asArray()) {
-                if (sv.contains(search.toString())) {
+            for (String search : contains.getValue(context)) {
+                if (sv.contains(search)) {
                     return true;
                 }
             }
@@ -153,7 +154,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
 
     public boolean passedValue(ValueObject sv, Bundle context) {
         // match exact values
-        if ((value != null) && value.getValue(context).asArray().contains(sv)) {
+        if ((value != null) && value.getValue(context).contains(sv)) {
             return true;
         }
         return false;
@@ -174,11 +175,9 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
     @Override public void postDecode() {
         if (valueURL != null) {
             if (urlReturnsCSV) {
-                value = new ConstantField(ValueFactory.createValueArray(
-                        JSONFetcher.staticLoadCSVSet(valueURL, urlTimeout, urlRetries, null)));
+                value = new ConstantTypedField<>(JSONFetcher.staticLoadCSVSet(valueURL, urlTimeout, urlRetries, null));
             } else {
-                value = new ConstantField(ValueFactory.createValueArray(
-                        JSONFetcher.staticLoadSet(valueURL, urlTimeout, urlRetries, null)));
+                value = new ConstantTypedField<>(JSONFetcher.staticLoadSet(valueURL, urlTimeout, urlRetries, null));
             }
         }
         if (matchURL != null) {
@@ -218,20 +217,20 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                 tmp = JSONFetcher.staticLoadSet(containsURL);
             }
 
-            contains = new ConstantField(ValueFactory.createValueArray(tmp));
+            contains = new ConstantTypedField<>(tmp);
         }
     }
 
     @Override public void preEncode() {}
 
     private static final class ValidationOnly extends AbstractMatchStringFilter {
-        public ValidationOnly(@AutoParam @JsonProperty("value") AutoField value,
+        public ValidationOnly(@AutoParam @JsonProperty("value") TypedField<Set<String>> value,
                               @JsonProperty("valueURL") String valueURL,
                               @JsonProperty("match") HashSet<String> match,
                               @JsonProperty("matchURL") String matchURL,
                               @JsonProperty("find") HashSet<String> find,
                               @JsonProperty("findURL") String findURL,
-                              @AutoParam @JsonProperty("contains") AutoField contains,
+                              @AutoParam @JsonProperty("contains") TypedField<Set<String>> contains,
                               @JsonProperty("containsURL") String containsURL,
                               @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
                               @JsonProperty("toLower") boolean toLower,

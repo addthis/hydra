@@ -13,12 +13,13 @@
  */
 package com.addthis.hydra.data.filter.value;
 
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Optional;
 
-import com.addthis.bundle.util.ConstantField;
+import com.addthis.bundle.util.ConstantTypedField;
 import com.addthis.bundle.value.ValueFactory;
+
+import com.google.common.collect.Sets;
 
 import org.junit.Test;
 
@@ -28,13 +29,13 @@ public class TestValueFilterRequire {
 
     private String requireFilter(String val, HashSet<String> exactValues, HashSet<String> match, HashSet<String> find, String[] contains) {
         return Optional.ofNullable(new ValueFilterRequire(
-                exactValues == null ? null : new ConstantField(ValueFactory.createValueArray(exactValues)),
+                exactValues == null ? null : new ConstantTypedField<>(exactValues),
                 null,
                 match,
                 null,
                 find,
                 null,
-                contains == null ? null : new ConstantField(ValueFactory.createValueArray(Arrays.asList(contains))),
+                contains == null ? null : new ConstantTypedField<>(Sets.newHashSet(contains)),
                 null,
                 false,
                 false,

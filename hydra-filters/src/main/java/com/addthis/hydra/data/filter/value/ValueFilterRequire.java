@@ -14,9 +14,9 @@
 package com.addthis.hydra.data.filter.value;
 
 import java.util.HashSet;
+import java.util.Set;
 
-import com.addthis.bundle.util.AutoField;
-import com.addthis.bundle.util.AutoParam;
+import com.addthis.bundle.util.TypedField;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -53,13 +53,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class ValueFilterRequire extends AbstractMatchStringFilter {
 
     @JsonCreator @VisibleForTesting
-    ValueFilterRequire(@AutoParam @JsonProperty("value") AutoField value,
+    ValueFilterRequire(@JsonProperty("value") TypedField<Set<String>> value,
                        @JsonProperty("valueURL") String valueURL,
                        @JsonProperty("match") HashSet<String> match,
                        @JsonProperty("matchURL") String matchURL,
                        @JsonProperty("find") HashSet<String> find,
                        @JsonProperty("findURL") String findURL,
-                       @AutoParam @JsonProperty("contains") AutoField contains,
+                       @JsonProperty("contains") TypedField<Set<String>> contains,
                        @JsonProperty("containsURL") String containsURL,
                        @JsonProperty("urlReturnsCSV") boolean urlReturnsCSV,
                        @JsonProperty("toLower") boolean toLower,
