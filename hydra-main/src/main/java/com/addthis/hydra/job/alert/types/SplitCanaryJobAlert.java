@@ -61,12 +61,20 @@ public class SplitCanaryJobAlert extends AbstractJobAlert {
     @Nullable @Override
     protected String testAlertActiveForJob(@Nullable MeshyClient meshClient, Job job, String previousErrorMessage) {
         // Strip off preceding slash, if it exists.
+        StringBuilder message = new StringBuilder();
         String finalPath = canaryPath.startsWith("/") ? canaryPath.substring(1) : canaryPath;
-        long totalBytes = JobAlertUtil.getTotalBytesFromMesh(meshClient, job.getId(), finalPath);
-        if (totalBytes < canaryConfigThreshold) {
-            return "total bytes: " + totalBytes + " < " + canaryConfigThreshold;
-        } else {
+        Map<String,Long> bytesPerHost = JobAlertUtil.getTotalBytesFromMesh(meshClient, job.getId(), finalPath);
+        for (Map.Entry<String,Long> entry : bytesPerHost.entrySet()) {
+            String host = entry.getKey();
+            Long bytes = entry.getValue();
+            if (bytes < canaryConfigThreshold) {
+                message.append("For host " + host + " total bytes " + bytes + " < " + canaryConfigThreshold + "\n");
+            }
+        }
+        if (message.length() == 0) {
             return null;
+        } else {
+            return message.toString();
         }
     }
 

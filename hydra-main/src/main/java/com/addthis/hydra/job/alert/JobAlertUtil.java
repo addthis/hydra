@@ -39,6 +39,7 @@ import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -64,9 +65,7 @@ public class JobAlertUtil {
                                                                                  .appendMonthOfYear(2)
                                                                                  .appendDayOfMonth(2)
                                                                                  .appendHourOfDay(2).toFormatter();
-    private static final int pathTokenOffset = Parameter.intValue("source.mesh.path.token.offset", 2);
-    private static final int pathOff = Parameter.intValue("source.mesh.path.offset", 0);
-    private static final String sortToken = Parameter.value("source.mesh.path.token", "/");
+
     private static final Pattern QUERY_TRIM_PATTERN = Pattern.compile("[\\[\\]]");
 
     /**
@@ -75,29 +74,29 @@ public class JobAlertUtil {
      * @param dirPath The path to check within the jobId, e.g. split/{{now-1}}/importantfiles/*.gz
      * @return A long representing the total size in bytes of files along the specified path
      */
-    public static long getTotalBytesFromMesh(MeshyClient meshyClient, String jobId, String dirPath) {
+    public static Map<String, Long> getTotalBytesFromMesh(MeshyClient meshyClient, String jobId, String dirPath) {
         String meshLookupString = "/job*/" + jobId + "/*/gold/" + expandDateMacro(dirPath);
         if (meshyClient != null) {
             try {
+                Map<String,Long> bytesPerHost = new HashMap<>();
                 Collection<FileReference> fileRefs = meshyClient.listFiles(new String[]{meshLookupString});
-                HashSet<String> fileRefKeysUsed = new HashSet<>();
-                long totalBytes = 0;
                 for (FileReference fileRef : fileRefs) {
-                    // Use StreamSourceMeshy to generate a canonical path key. In particular, strip off any multi-minion prefixes if appropriate.
-                    String meshFileKey = StreamFileUtil.getCanonicalFileReferenceCacheKey(fileRef.name, pathOff, sortToken, pathTokenOffset);
-                    if (!fileRefKeysUsed.contains(meshFileKey)) {
-                        totalBytes += fileRef.size;
-                        fileRefKeysUsed.add(meshFileKey);
+                    String hostUUID = fileRef.getHostUUID();
+                    Long bytes = bytesPerHost.get(hostUUID);
+                    if (bytes == null) {
+                        bytes = 0l;
                     }
+                    bytes += fileRef.size;
+                    bytesPerHost.put(hostUUID, bytes);
                 }
-                return totalBytes;
+                return bytesPerHost;
             } catch (IOException e) {
                 log.warn("Job alert mesh look up failed", e);
             }
         } else {
             log.warn("Received mesh lookup request job={} dirPath={} while meshy client was not instantiated; returning zero", jobId, dirPath);
         }
-        return 0;
+        return ImmutableMap.of();
     }
 
     public static Map<String, Integer> getFileCountPerTask(MeshyClient meshyClient, String jobId, String dirPath) {
