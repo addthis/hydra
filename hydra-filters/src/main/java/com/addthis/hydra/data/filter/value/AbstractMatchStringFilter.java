@@ -152,12 +152,9 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
         return false;
     }
 
-    public boolean passedValue(ValueObject sv, Bundle context) {
+    public boolean passedValue(String sv, Bundle context) {
         // match exact values
-        if ((value != null) && value.getValue(context).contains(sv)) {
-            return true;
-        }
-        return false;
+        return (value != null) && value.getValue(context).contains(sv);
     }
 
     public boolean passedFind(String sv) {
@@ -267,7 +264,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
                 sv = sv.toLowerCase();
                 value = ValueFactory.create(sv);
             }
-            boolean success = passedMatch(sv) || passedContains(sv, context) || passedValue(value, context) || passedFind(sv);
+            boolean success = passedMatch(sv) || passedContains(sv, context) || passedValue(sv, context) || passedFind(sv);
             if (not) {
                 return success ? null : value;
             } else {
