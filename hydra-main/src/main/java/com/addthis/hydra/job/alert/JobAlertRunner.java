@@ -320,37 +320,6 @@ public class JobAlertRunner {
         });
     }
 
-    public void removeAlertsForJob(String jobId) {
-        Set<String> alertIds = ImmutableSet.copyOf(jobToAlertsMap.get(jobId));
-        for (String alertId : alertIds) {
-            AbstractJobAlert alert = alertMap.get(alertId);
-            if (alert != null) {
-                ImmutableList<String> jobIds = alert.jobIds;
-                if (jobIds.contains(jobId)) {
-                    if (jobIds.size() == 1) {
-                        removeAlert(alertId);
-                    } else {
-                        ObjectNode json = Jackson.defaultMapper().valueToTree(alert);
-                        ArrayNode jsonArray = json.putArray("jobIds");
-                        jobIds.stream().filter(id -> !id.equals(jobId)).forEach(id -> jsonArray.add(id));
-                        try {
-                            AbstractJobAlert newAlert = Jackson.defaultMapper().treeToValue(json, AbstractJobAlert.class);
-                            putAlert(alertId, newAlert);
-                        } catch (IOException ex) {
-                            log.error("Internal error removing job alerts:", ex);
-                        }
-                    }
-                } else {
-                    log.warn("jobToAlertsMap has mapping from job {} to alert {} but alert has no reference to job",
-                             jobId, alertId);
-                }
-            } else {
-                log.warn("jobToAlertsMap has mapping from job {} to alert {} but alert does not exist",
-                         jobId, alertId);
-            }
-        }
-    }
-
     public void removeAlert(String id) {
         if (id != null) {
             alertMap.computeIfPresent(id, (key, value) -> {
@@ -415,5 +384,76 @@ public class JobAlertRunner {
     public static String getClusterHead() {
         return clusterHead;
     }
+
+    /**
+     * Update an alert by removing a specific job id.
+     *
+     * @param id     alert identifier
+     * @param jobId  job identifier
+     */
+    private void updateAlertRemoveJobId(@Nonnull String id, @Nonnull String jobId) {
+        alertMap.computeIfPresent(id, (key, old) -> {
+            AbstractJobAlert newAlert = old;
+            ObjectNode json = Jackson.defaultMapper().valueToTree(old);
+            ArrayNode jsonArray = json.putArray("jobIds");
+            old.jobIds.stream().filter(x -> !x.equals(jobId)).forEach(x -> jsonArray.add(x));
+            try {
+                newAlert = Jackson.defaultMapper().treeToValue(json, AbstractJobAlert.class);
+                updateJobToAlertsMap(id, old, newAlert);
+                storeAlert(id, newAlert);
+            } catch (IOException ex) {
+                log.error("Internal error removing job alerts:", ex);
+            }
+            return newAlert;
+        });
+    }
+
+    /**
+     * Remove a job alert if it monitors exactly one job identifier
+     * and the job identifier equals the {@code jobId} parameter.
+     *
+     * @param id alert identifier
+     * @param jobId job identifier
+     */
+    private void removeAlertOrphanJobId(@Nonnull String id, @Nonnull String jobId) {
+        alertMap.computeIfPresent(id, (key, value) -> {
+            if (value.jobIds.size() == 1 && value.jobIds.contains(jobId)) {
+                updateJobToAlertsMap(id, value, null);
+                spawnDataStore.deleteChild(SPAWN_COMMON_ALERT_PATH, id);
+                return null;
+            } else {
+                log.info("Could not delete orphaned alert {} because it was concurrently updated.", id);
+                return value;
+            }
+        });
+    }
+
+    /**
+     * Remove {@code jobId} from all alerts that are monitoring it.
+     * Delete alerts that are only monitoring this job.
+     */
+    public void removeAlertsForJob(String jobId) {
+        Set<String> alertIds = ImmutableSet.copyOf(jobToAlertsMap.get(jobId));
+        for (String alertId : alertIds) {
+            AbstractJobAlert alert = alertMap.get(alertId);
+            if (alert != null) {
+                ImmutableList<String> jobIds = alert.jobIds;
+                if (jobIds.contains(jobId)) {
+                    if (jobIds.size() == 1) {
+                        removeAlertOrphanJobId(alertId, jobId);
+                    } else {
+                        updateAlertRemoveJobId(alertId, jobId);
+                    }
+                } else {
+                    log.warn("jobToAlertsMap has mapping from job {} to alert {} but alert has no reference to job",
+                             jobId, alertId);
+                }
+            } else {
+                log.warn("jobToAlertsMap has mapping from job {} to alert {} but alert does not exist",
+                         jobId, alertId);
+            }
+        }
+    }
+
 
 }
