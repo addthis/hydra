@@ -30,6 +30,8 @@ public interface JobAlertManager {
 
     void removeAlert(String alertId);
 
+    void removeAlertsForJob(String jobUUID);
+
     JSONArray fetchAllAlertsArray();
 
     JSONObject fetchAllAlertsMap();

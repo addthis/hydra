@@ -89,6 +89,10 @@ public class JobAlertManagerImpl implements JobAlertManager {
         jobAlertRunner.removeAlert(alertId);
     }
 
+    public void removeAlertsForJob(String jobId) {
+        jobAlertRunner.removeAlertsForJob(jobId);
+    }
+
     public JSONArray fetchAllAlertsArray() {
         return jobAlertRunner.getAlertStateArray();
     }

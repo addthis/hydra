@@ -1629,8 +1629,12 @@ public class Spawn implements Codable, AutoCloseable {
             }
             spawnState.jobs.remove(jobUUID);
             spawnState.jobDependencies.removeNode(jobUUID);
+            jobAlertManager.removeAlertsForJob(jobUUID);
             log.warn("[job.delete] {}", job.getId());
-            spawnMQ.sendControlMessage(new CommandTaskDelete(HostMessage.ALL_HOSTS, job.getId(), null, job.getRunCount()));
+            if (spawnMQ != null) {
+                spawnMQ.sendControlMessage(
+                        new CommandTaskDelete(HostMessage.ALL_HOSTS, job.getId(), null, job.getRunCount()));
+            }
             sendJobUpdateEvent("job.delete", job);
             jobConfigManager.deleteJob(job.getId());
             if (jobStore != null) {

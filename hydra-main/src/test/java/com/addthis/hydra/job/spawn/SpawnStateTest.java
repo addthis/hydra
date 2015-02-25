@@ -23,17 +23,24 @@ import com.addthis.basis.util.Files;
 import com.addthis.codec.config.Configs;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobConfigManager;
+import com.addthis.hydra.job.alert.AbstractJobAlert;
+import com.addthis.hydra.job.alert.types.OnErrorJobAlert;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.util.ZkCodecStartUtil;
 
+import com.google.common.collect.ImmutableList;
+
 import org.junit.After;
 import org.junit.Test;
 
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_COMMAND_PATH;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 
 // Tests that involve lots of state and setup.
@@ -80,6 +87,53 @@ public class SpawnStateTest extends ZkCodecStartUtil {
             spawn.updateJob(job);
             String jobId = job.getId();
             assertEquals("updateJob pipeline should correctly put/fetch configs", config, spawn.getJobConfig(jobId));
+        }
+    }
+
+    @Test
+    public void testAutomaticAlertDeletion() throws Exception {
+        try (Spawn spawn = Configs.newDefault(Spawn.class)) {
+
+            spawn.getJobCommandManager().putEntity("a", new JobCommand(), true);
+            HostState host = new HostState("h");
+            host.setUp(true);
+            host.setDead(false);
+            spawn.hostManager.updateHostState(host);
+            Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a");
+            OnErrorJobAlert input = new OnErrorJobAlert(null, "foobar", 0, 0, "foobar@localhost",
+                                                        ImmutableList.of(job.getId()), 0, null, null);
+            spawn.getJobAlertManager().putAlert(input.alertId, input);
+            String json = spawn.getJobAlertManager().getAlert(input.alertId);
+            OnErrorJobAlert output = Configs.decodeObject(OnErrorJobAlert.class, json);
+            assertEquals(input.alertId, output.alertId);
+            spawn.deleteJob(job.getId());
+            assertNull(spawn.getJobAlertManager().getAlert(input.alertId));
+        }
+    }
+
+    @Test
+    public void testAutomaticAlertReduction() throws Exception {
+        try (Spawn spawn = Configs.newDefault(Spawn.class)) {
+
+            spawn.getJobCommandManager().putEntity("a", new JobCommand(), true);
+            HostState host = new HostState("h");
+            host.setUp(true);
+            host.setDead(false);
+            spawn.hostManager.updateHostState(host);
+            Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a");
+            OnErrorJobAlert input = new OnErrorJobAlert(null, "foobar", 0, 0, "foobar@localhost",
+                                                        ImmutableList.of(job.getId(), "foobar"), 0, null, null);
+            spawn.getJobAlertManager().putAlert(input.alertId, input);
+            String json = spawn.getJobAlertManager().getAlert(input.alertId);
+            OnErrorJobAlert output = Configs.decodeObject(OnErrorJobAlert.class, json);
+            assertEquals(input.alertId, output.alertId);
+            assertEquals(2, output.jobIds.size());
+            spawn.deleteJob(job.getId());
+            json = spawn.getJobAlertManager().getAlert(input.alertId);
+            output = Configs.decodeObject(OnErrorJobAlert.class, json);
+            assertEquals(input.alertId, output.alertId);
+            assertEquals(1, output.jobIds.size());
+            assertTrue(output.jobIds.contains("foobar"));
         }
     }
 

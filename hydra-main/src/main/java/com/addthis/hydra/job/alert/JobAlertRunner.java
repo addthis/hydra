@@ -13,14 +13,21 @@
  */
 package com.addthis.hydra.job.alert;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collector;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -39,8 +46,13 @@ import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 import com.addthis.meshy.MeshyClient;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
 
 import com.typesafe.config.ConfigFactory;
 
@@ -55,7 +67,8 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_COMMON_ALERT_
 public class JobAlertRunner {
 
     private static final Logger log = LoggerFactory.getLogger(JobAlertRunner.class);
-    private static final String clusterHead = ConfigFactory.load().getString("com.addthis.hydra.job.spawn.Spawn.httpHost");
+    private static final String clusterHead =
+            ConfigFactory.load().getString("com.addthis.hydra.job.spawn.Spawn.httpHost");
     private static final String meshHost = SpawnMesh.getMeshHost();
     private static final int meshPort = SpawnMesh.getMeshPort();
 
@@ -66,6 +79,12 @@ public class JobAlertRunner {
     private final Spawn spawn;
     private final SpawnDataStore spawnDataStore;
     private final ConcurrentHashMap<String, AbstractJobAlert> alertMap;
+
+    /**
+     * A mapping from (jobIds + aliases) to a set of alertIds.
+     * Does not dereference aliases into their corresponding jobIds.
+     */
+    private final SetMultimap<String, String> jobToAlertsMap = Multimaps.synchronizedSetMultimap(HashMultimap.create());
 
     private MeshyClient meshyClient;
     private boolean alertsEnabled;
@@ -115,7 +134,8 @@ public class JobAlertRunner {
                     Map<String, String> currentErrors = oldAlert.getActiveJobs();
                     // entry may be concurrently deleted, so only recompute if still present, and while locked
                     AbstractJobAlert alert = alertMap.computeIfPresent(entry.getKey(), (id, currentAlert) -> {
-                        currentAlert.checkAlertForJobs(currentAlert.getAlertJobs(spawn, currentErrors.keySet()), meshyClient);
+                        currentAlert.checkAlertForJobs(currentAlert.getAlertJobs(spawn, currentErrors.keySet()),
+                                                       meshyClient);
                         if (!currentAlert.getActiveJobs().equals(currentErrors)) {
                             storeAlert(currentAlert.alertId, currentAlert);
                         }
@@ -165,15 +185,15 @@ public class JobAlertRunner {
                     running++;
                 }
                 switch (task.getState()) {
-                case IDLE:
-                    done++;
-                    break;
-                case ERROR:
-                    done++;
-                    errored++;
-                    break;
-                default:
-                    break;
+                    case IDLE:
+                        done++;
+                        break;
+                    case ERROR:
+                        done++;
+                        errored++;
+                        break;
+                    default:
+                        break;
                 }
             }
         }
@@ -215,6 +235,7 @@ public class JobAlertRunner {
 
     /**
      * Send an email when an alert fires or clears.
+     *
      * @param jobAlert The alert to modify
      */
     private void emailAlert(AbstractJobAlert jobAlert, String reason, Map<String, String> errors) {
@@ -254,8 +275,32 @@ public class JobAlertRunner {
         try {
             AbstractJobAlert jobAlert = CodecJSON.decodeString(AbstractJobAlert.class, raw);
             alertMap.put(id, jobAlert);
+            updateJobToAlertsMap(id, null, jobAlert);
         } catch (Exception ex) {
             log.error("Failed to decode JobAlert id={} raw={}", id, raw, ex);
+        }
+    }
+
+    /**
+     * Remove any outdated mappings from a (job + alias) to an alert and
+     * insert new mappings. If {@code old} is null then do not remove
+     * any mappings. If {@code alert} is null then do not insert any mappings.
+     *
+     * @param id    alertId
+     * @param old   if non-null then remove associations
+     * @param alert if non-null then insert associations
+     */
+    private void updateJobToAlertsMap(@Nonnull String id, @Nullable AbstractJobAlert old,
+                                      @Nullable AbstractJobAlert alert) {
+        if (old != null) {
+            for (String jobId : old.jobIds) {
+                jobToAlertsMap.remove(jobId, id);
+            }
+        }
+        if (alert != null) {
+            for (String jobId : alert.jobIds) {
+                jobToAlertsMap.put(jobId, id);
+            }
         }
     }
 
@@ -264,14 +309,58 @@ public class JobAlertRunner {
             if (old != null) {
                 alert.setStateFrom(old);
             }
+            updateJobToAlertsMap(id, old, alert);
             storeAlert(id, alert);
             return alert;
         });
     }
 
+    private static <T> Collector<T, ?, ImmutableList<T>> toImmutableList() {
+
+        Supplier<ImmutableList.Builder<T>> supplier =
+                ImmutableList.Builder::new;
+
+        BiConsumer<ImmutableList.Builder<T>, T> accumulator =
+                (b, v) -> b.add(v);
+
+        BinaryOperator<ImmutableList.Builder<T>> combiner =
+                (l, r) -> l.addAll(r.build());
+
+        Function<ImmutableList.Builder<T>, ImmutableList<T>> finisher =
+                ImmutableList.Builder::build;
+
+        return Collector.of(supplier, accumulator, combiner, finisher);
+    }
+
+    public void removeAlertsForJob(String jobId) {
+        Set<String> alertIds = ImmutableSet.copyOf(jobToAlertsMap.get(jobId));
+        for (String alertId : alertIds) {
+            AbstractJobAlert alert = alertMap.get(alertId);
+            if (alert != null) {
+                ImmutableList<String> jobIds = alert.jobIds;
+                if (jobIds.contains(jobId)) {
+                    if (jobIds.size() == 1) {
+                        removeAlert(alertId);
+                    } else {
+                        AbstractJobAlert newAlert = alert.copyWithNewJobIds(
+                                jobIds.stream().filter(id -> !id.equals(jobId)).collect(toImmutableList()));
+                        putAlert(alertId, newAlert);
+                    }
+                } else {
+                    log.warn("jobToAlertsMap has mapping from job {} to alert {} but alert has no reference to job",
+                             jobId, alertId);
+                }
+            } else {
+                log.warn("jobToAlertsMap has mapping from job {} to alert {} but alert does not exist",
+                         jobId, alertId);
+            }
+        }
+    }
+
     public void removeAlert(String id) {
         if (id != null) {
             alertMap.computeIfPresent(id, (key, value) -> {
+                updateJobToAlertsMap(id, value, null);
                 spawnDataStore.deleteChild(SPAWN_COMMON_ALERT_PATH, id);
                 return null;
             });
@@ -288,6 +377,7 @@ public class JobAlertRunner {
 
     /**
      * Get a snapshot of the alert map as an array, mainly for rendering in the UI.
+     *
      * @return A JSONObject representation of all existing alerts
      */
     public JSONArray getAlertStateArray() {
