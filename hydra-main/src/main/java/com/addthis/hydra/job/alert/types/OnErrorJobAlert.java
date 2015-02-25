@@ -13,7 +13,6 @@
  */
 package com.addthis.hydra.job.alert.types;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.util.List;
@@ -26,8 +25,6 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.alert.AbstractJobAlert;
 import com.addthis.meshy.MeshyClient;
-
-import com.google.common.collect.ImmutableList;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -46,10 +43,6 @@ public class OnErrorJobAlert extends AbstractJobAlert {
                            @JsonProperty("activeJobs") Map<String, String> activeJobs,
                            @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes) {
         super(alertId, description, timeout, delay, email, jobIds, lastAlertTime, activeJobs, activeTriggerTimes);
-    }
-
-    private OnErrorJobAlert(@Nonnull OnErrorJobAlert original, @Nonnull ImmutableList<String> jobIds) {
-        super(original, jobIds);
     }
 
     @JsonIgnore
@@ -72,7 +65,4 @@ public class OnErrorJobAlert extends AbstractJobAlert {
         return null;
     }
 
-    @Override public AbstractJobAlert copyWithNewJobIds(ImmutableList<String> jobIds) {
-        return new OnErrorJobAlert(this, jobIds);
-    }
 }

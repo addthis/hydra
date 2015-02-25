@@ -127,17 +127,6 @@ public abstract class AbstractJobAlert implements Codable {
         this.lastAlertTime = lastAlertTime;
     }
 
-    protected AbstractJobAlert(
-            @Nonnull AbstractJobAlert original,
-            @Nonnull ImmutableList<String> jobIds) {
-        this.alertId = original.alertId;
-        this.description = original.description;
-        this.timeout = original.timeout;
-        this.delay = original.delay;
-        this.email = original.email;
-        this.jobIds = jobIds;
-    }
-
     // getters/setters that trigger ser/deser and are not vanilla (also have in-code usages)
 
     public Map<String, String> getActiveJobs() {
@@ -291,7 +280,5 @@ public abstract class AbstractJobAlert implements Codable {
             return super.toString();
         }
     }
-
-    public abstract AbstractJobAlert copyWithNewJobIds(ImmutableList<String> jobIds);
 
 }

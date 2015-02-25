@@ -34,6 +34,7 @@ import java.text.SimpleDateFormat;
 
 import com.addthis.basis.util.Strings;
 
+import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobTask;
@@ -54,7 +55,11 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.typesafe.config.ConfigFactory;
+
+import org.apache.commons.math3.analysis.function.Abs;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -315,23 +320,6 @@ public class JobAlertRunner {
         });
     }
 
-    private static <T> Collector<T, ?, ImmutableList<T>> toImmutableList() {
-
-        Supplier<ImmutableList.Builder<T>> supplier =
-                ImmutableList.Builder::new;
-
-        BiConsumer<ImmutableList.Builder<T>, T> accumulator =
-                (b, v) -> b.add(v);
-
-        BinaryOperator<ImmutableList.Builder<T>> combiner =
-                (l, r) -> l.addAll(r.build());
-
-        Function<ImmutableList.Builder<T>, ImmutableList<T>> finisher =
-                ImmutableList.Builder::build;
-
-        return Collector.of(supplier, accumulator, combiner, finisher);
-    }
-
     public void removeAlertsForJob(String jobId) {
         Set<String> alertIds = ImmutableSet.copyOf(jobToAlertsMap.get(jobId));
         for (String alertId : alertIds) {
@@ -342,9 +330,15 @@ public class JobAlertRunner {
                     if (jobIds.size() == 1) {
                         removeAlert(alertId);
                     } else {
-                        AbstractJobAlert newAlert = alert.copyWithNewJobIds(
-                                jobIds.stream().filter(id -> !id.equals(jobId)).collect(toImmutableList()));
-                        putAlert(alertId, newAlert);
+                        ObjectNode json = Jackson.defaultMapper().valueToTree(alert);
+                        ArrayNode jsonArray = json.putArray("jobIds");
+                        jobIds.stream().filter(id -> !id.equals(jobId)).forEach(id -> jsonArray.add(id));
+                        try {
+                            AbstractJobAlert newAlert = Jackson.defaultMapper().treeToValue(json, AbstractJobAlert.class);
+                            putAlert(alertId, newAlert);
+                        } catch (IOException ex) {
+                            log.error("Internal error removing job alerts:", ex);
+                        }
                     }
                 } else {
                     log.warn("jobToAlertsMap has mapping from job {} to alert {} but alert has no reference to job",

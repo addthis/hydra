@@ -13,7 +13,6 @@
  */
 package com.addthis.hydra.job.alert.types;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.util.List;
@@ -25,8 +24,6 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.alert.AbstractJobAlert;
 import com.addthis.hydra.job.alert.JobAlertUtil;
 import com.addthis.meshy.MeshyClient;
-
-import com.google.common.collect.ImmutableList;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -74,13 +71,6 @@ public class FileCountJobAlert extends AbstractJobAlert {
         this.sigma = sigma;
         this.tolerance = tolerance;
         this.canaryPath = canaryPath;
-    }
-
-    private FileCountJobAlert(@Nonnull FileCountJobAlert original, @Nonnull ImmutableList<String> jobIds) {
-        super(original, jobIds);
-        this.sigma = original.sigma;
-        this.tolerance = original.tolerance;
-        this.canaryPath = original.canaryPath;
     }
 
     @JsonIgnore
@@ -147,7 +137,4 @@ public class FileCountJobAlert extends AbstractJobAlert {
         return null;
     }
 
-    @Override public AbstractJobAlert copyWithNewJobIds(ImmutableList<String> jobIds) {
-        return new FileCountJobAlert(this, jobIds);
-    }
 }
