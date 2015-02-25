@@ -23,11 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiConsumer;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collector;
 
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -58,8 +53,6 @@ import com.google.common.collect.SetMultimap;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.typesafe.config.ConfigFactory;
-
-import org.apache.commons.math3.analysis.function.Abs;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -324,15 +317,19 @@ public class JobAlertRunner {
         if (id != null) {
             alertMap.computeIfPresent(id, (key, value) -> {
                 updateJobToAlertsMap(id, value, null);
-                spawnDataStore.deleteChild(SPAWN_COMMON_ALERT_PATH, id);
+                storeAlert(id, null);
                 return null;
             });
         }
     }
 
-    private void storeAlert(String alertId, AbstractJobAlert alert) {
+    private void storeAlert(String alertId, @Nullable AbstractJobAlert alert) {
         try {
-            spawnDataStore.putAsChild(SPAWN_COMMON_ALERT_PATH, alertId, CodecJSON.encodeString(alert));
+            if (alert != null) {
+                spawnDataStore.putAsChild(SPAWN_COMMON_ALERT_PATH, alertId, CodecJSON.encodeString(alert));
+            } else {
+                spawnDataStore.deleteChild(SPAWN_COMMON_ALERT_PATH, alertId);
+            }
         } catch (Exception e) {
             log.warn("Warning: failed to save alert id={} alert={}", alertId, alert);
         }
@@ -385,72 +382,45 @@ public class JobAlertRunner {
         return clusterHead;
     }
 
-    /**
-     * Update an alert by removing a specific job id.
-     *
-     * @param id     alert identifier
-     * @param jobId  job identifier
-     */
-    private void updateAlertRemoveJobId(@Nonnull String id, @Nonnull String jobId) {
-        alertMap.computeIfPresent(id, (key, old) -> {
-            AbstractJobAlert newAlert = old;
-            ObjectNode json = Jackson.defaultMapper().valueToTree(old);
-            ArrayNode jsonArray = json.putArray("jobIds");
-            old.jobIds.stream().filter(x -> !x.equals(jobId)).forEach(x -> jsonArray.add(x));
-            try {
-                newAlert = Jackson.defaultMapper().treeToValue(json, AbstractJobAlert.class);
-                updateJobToAlertsMap(id, old, newAlert);
-                storeAlert(id, newAlert);
-            } catch (IOException ex) {
-                log.error("Internal error removing job alerts:", ex);
-            }
-            return newAlert;
-        });
+    /** Copy and then modify an alert by removing a specific job id. */
+    private AbstractJobAlert copyWithoutJobId(@Nonnull String jobId, AbstractJobAlert old) {
+        ObjectNode json = Jackson.defaultMapper().valueToTree(old);
+        ArrayNode jsonArray = json.putArray("jobIds");
+        old.jobIds.stream().filter(x -> !x.equals(jobId)).forEach(jsonArray::add);
+        try {
+            return Jackson.defaultMapper().treeToValue(json, AbstractJobAlert.class);
+        } catch (IOException ex) {
+            log.error("Internal error removing job alerts:", ex);
+            return old;
+        }
     }
 
     /**
-     * Remove a job alert if it monitors exactly one job identifier
-     * and the job identifier equals the {@code jobId} parameter.
-     *
-     * @param id alert identifier
-     * @param jobId job identifier
-     */
-    private void removeAlertOrphanJobId(@Nonnull String id, @Nonnull String jobId) {
-        alertMap.computeIfPresent(id, (key, value) -> {
-            if (value.jobIds.size() == 1 && value.jobIds.contains(jobId)) {
-                updateJobToAlertsMap(id, value, null);
-                spawnDataStore.deleteChild(SPAWN_COMMON_ALERT_PATH, id);
-                return null;
-            } else {
-                log.info("Could not delete orphaned alert {} because it was concurrently updated.", id);
-                return value;
-            }
-        });
-    }
-
-    /**
-     * Remove {@code jobId} from all alerts that are monitoring it.
-     * Delete alerts that are only monitoring this job.
+     * Remove {@code jobId} from all alerts that are monitoring it. Delete alerts that are only monitoring this job.
      */
     public void removeAlertsForJob(String jobId) {
         Set<String> alertIds = ImmutableSet.copyOf(jobToAlertsMap.get(jobId));
-        for (String alertId : alertIds) {
-            AbstractJobAlert alert = alertMap.get(alertId);
-            if (alert != null) {
+        for (String mappedAlertId : alertIds) {
+            if (alertMap.computeIfPresent(mappedAlertId, (alertId, alert) -> {
                 ImmutableList<String> jobIds = alert.jobIds;
                 if (jobIds.contains(jobId)) {
+                    @Nullable AbstractJobAlert newAlert;
                     if (jobIds.size() == 1) {
-                        removeAlertOrphanJobId(alertId, jobId);
+                        newAlert = null;
                     } else {
-                        updateAlertRemoveJobId(alertId, jobId);
+                        newAlert = copyWithoutJobId(jobId, alert);
                     }
+                    updateJobToAlertsMap(alertId, alert, newAlert);
+                    storeAlert(alertId, newAlert);
+                    return newAlert;
                 } else {
                     log.warn("jobToAlertsMap has mapping from job {} to alert {} but alert has no reference to job",
                              jobId, alertId);
+                    return alert;
                 }
-            } else {
+            }) == null) {
                 log.warn("jobToAlertsMap has mapping from job {} to alert {} but alert does not exist",
-                         jobId, alertId);
+                         jobId, mappedAlertId);
             }
         }
     }
