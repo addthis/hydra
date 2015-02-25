@@ -115,7 +115,7 @@ public class JobAlertRunner {
                     Map<String, String> currentErrors = oldAlert.getActiveJobs();
                     // entry may be concurrently deleted, so only recompute if still present, and while locked
                     AbstractJobAlert alert = alertMap.computeIfPresent(entry.getKey(), (id, currentAlert) -> {
-                        currentAlert.checkAlertForJobs(currentAlert.getAlertJobs(spawn), meshyClient);
+                        currentAlert.checkAlertForJobs(currentAlert.getAlertJobs(spawn, currentErrors.keySet()), meshyClient);
                         if (!currentAlert.getActiveJobs().equals(currentErrors)) {
                             storeAlert(currentAlert.alertId, currentAlert);
                         }

@@ -219,10 +219,10 @@ public abstract class AbstractJobAlert implements Codable {
      */
     @JsonIgnore public abstract String isValid();
 
-    @Nonnull public Set<Job> getAlertJobs(Spawn spawn) {
+    @Nonnull public Set<Job> getAlertJobs(Spawn spawn, Set<String> previousIds) {
         if (jobIds != null) {
             if (jobIds.size() == 1 && jobIds.get(0).equals(WILDCARD_JOB_STRING)) {
-                return streamingJobSet(spawn);
+                return streamingJobSet(spawn, previousIds);
             } else {
                 return discreteJobSet(spawn);
             }
@@ -250,7 +250,7 @@ public abstract class AbstractJobAlert implements Codable {
         return rv;
     }
 
-    @Nonnull private Set<Job> streamingJobSet(Spawn spawn) {
+    @Nonnull private Set<Job> streamingJobSet(Spawn spawn, Set<String> previousIds) {
         Set<Job> rv = new HashSet<>();
         if (streamingIterator == null) {
             streamingIterator = spawn.getSpawnState().jobsIterator();
@@ -261,6 +261,12 @@ public abstract class AbstractJobAlert implements Codable {
             } else {
                 streamingIterator = null;
                 break;
+            }
+        }
+        for (String lookupId : previousIds) {
+            Job job = spawn.getJob(lookupId);
+            if (job != null) {
+                rv.add(job);
             }
         }
         return rv;
