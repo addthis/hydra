@@ -13,10 +13,12 @@
  */
 package com.addthis.hydra.data.tree.prop;
 
+import java.util.HashMap;
 import java.util.NoSuchElementException;
 
 import com.addthis.basis.util.ClosableIterator;
 
+import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.concurrent.ConcurrentTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNode;
 
@@ -81,6 +83,14 @@ public final class VirtualTreeNode extends ConcurrentTreeNode {
             }
         }
         return null;
+    }
+
+    /**
+     * Upgrade access modifier of this operation for VirtualTreeNodes.
+     */
+    @Override
+    public HashMap<String, TreeNodeData> createMap() {
+        return super.createMap();
     }
 
     private class VirtualTreeNodeIterator implements ClosableIterator<DataTreeNode> {
