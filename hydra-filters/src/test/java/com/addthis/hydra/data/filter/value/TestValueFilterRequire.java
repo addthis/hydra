@@ -18,12 +18,15 @@ import java.util.Optional;
 
 import com.addthis.bundle.util.ConstantTypedField;
 import com.addthis.bundle.value.ValueFactory;
+import com.addthis.bundle.value.ValueObject;
+import com.addthis.codec.config.Configs;
 
 import com.google.common.collect.Sets;
 
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 public class TestValueFilterRequire {
 
@@ -107,4 +110,16 @@ public class TestValueFilterRequire {
         assertEquals(null, requireFilter("moo", exactValues, matches, null, contains));
     }
 
+    /**
+     * Verifies that require.value works on Long input.
+     *
+     * This is for bug fix commit: https://github.com/addthis/hydra/commit/60a1e46
+     */
+    @Test
+    public void longInputStringValue() throws Exception {
+        ValueFilterRequire filter = Configs.decodeObject(ValueFilterRequire.class, "value:[\"0\"]");
+        ValueObject result = filter.filter(ValueFactory.create(0));
+        assertNotNull(result);
+        assertEquals(new Long(0), result.asLong().asNative());
+    }
 }
