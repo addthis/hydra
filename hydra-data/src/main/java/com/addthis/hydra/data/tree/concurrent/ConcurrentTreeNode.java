@@ -375,7 +375,7 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         return true;
     }
 
-    HashMap<String, TreeNodeData> createMap() {
+    public HashMap<String, TreeNodeData> createMap() {
         if (data == null) {
             data = new HashMap<>();
         }

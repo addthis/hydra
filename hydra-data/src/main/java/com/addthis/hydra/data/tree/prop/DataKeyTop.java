@@ -16,6 +16,7 @@ package com.addthis.hydra.data.tree.prop;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import com.addthis.basis.util.Strings;
@@ -71,6 +72,10 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
      * <td>v[number]</td>
      * <td>value associated with the i^th element. Counting is assumed to begin at 1</td>
      * </tr>
+     * <tr>
+     * <td>e[number]</td>
+     * <td>error associated with the i^th element. Counting is assumed to begin at 1</td>
+     * </tr>
      * </table>
      *
      * <p>"%" operations support the following commands in the format /+%{attachment}={command}.
@@ -90,13 +95,19 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
      * <td>retrieve a cloned copy of the child nodes that are identified by the keys stored in the data attachment</td>
      * </tr>
      * <tr>
+     * <td>"=guaranteed"</td>
+     * <td>if error tracking has been enabled then only return the guaranteed top-k elements</td>
+     * </tr>
+     * <tr>
      * <td>"name1:name2:name3"</td>
      * <td>create virtual nodes using the keys specified in the command</td>
      * </tr>
      * </table>
      *
      * <p>Using "%" without any arguments creates virtual nodes using the keys
-     * stored in the data attachment.
+     * stored in the data attachment. If error estimation is enabled then the
+     * errors appear in the 'stats' data attachment that is a {@link DataMap}
+     * retrieved using the key 'error'.
      *
      * <p>Query Path Examples:</p>
      * <pre>
@@ -121,7 +132,14 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
          * This field is required.
          */
         @FieldConfig(codable = true, required = true)
-        private Integer size;
+        private int size;
+
+        /**
+         * Optionally track an error estimate associated with
+         * each key/value pair. Default is false.
+         */
+        @FieldConfig(codable = true)
+        private boolean errors;
 
         /**
          * Optionally split the input with this regular expression
@@ -141,7 +159,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
         public DataKeyTop newInstance() {
             DataKeyTop dataKeyTop = new DataKeyTop();
             dataKeyTop.size = size;
-            dataKeyTop.top = new KeyTopper().init().setLossy(true);
+            dataKeyTop.top = new KeyTopper().init().setLossy(true).enableErrors(errors);
             dataKeyTop.filter = filter;
             return dataKeyTop;
         }
@@ -170,10 +188,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
                 }
             }
             if (conf.splitRegex != null) {
-                // System.out.println("SPLITTING:" + val + ":" +
-                // conf.splitRegex);
                 String[] split = val.toString().split(conf.splitRegex);
-                // System.out.println(Arrays.toString(split));
                 for (int i = 0; i < split.length; i++) {
                     top.increment(split[i], size);
                 }
@@ -208,6 +223,17 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
                     int pos = Integer.parseInt(key.substring(1));
                     return pos <= top.size() ? ValueFactory.create(top.getSortedEntries()[pos - 1].getValue()) : null;
                 }
+                if (key.charAt(0) == 'e') {
+                    if (top.hasErrors()) {
+                        int pos = Integer.parseInt(key.substring(1));
+                        if (pos <= top.size()) {
+                            String element = top.getSortedEntries()[pos - 1].getKey();
+                            Long error = top.getError(element);
+                            return ValueFactory.create(error);
+                        }
+                    }
+                    return null;
+                }
                 if (key.charAt(0) == 'k') {
                     key = key.substring(1);
                 }
@@ -232,10 +258,9 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
         if (key != null && key.startsWith("=")) {
             key = key.substring(1);
             if (key.equals("hit") || key.equals("node")) {
-                KeyTopper map = top;
-                Entry<String, Long>[] top = map.getSortedEntries();
-                ArrayList<DataTreeNode> ret = new ArrayList<>(top.length);
-                for (Entry<String, Long> e : top) {
+                Entry<String, Long>[] list = top.getSortedEntries();
+                ArrayList<DataTreeNode> ret = new ArrayList<>(list.length);
+                for (Entry<String, Long> e : list) {
                     DataTreeNode node = parent.getNode(e.getKey());
                     if (node != null) {
                         ret.add(node);
@@ -260,6 +285,8 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
                     }
                 }
                 return ret;
+            } else if (key.equals("guaranteed")) {
+                return generateVirtualNodes(true);
             }
         } else if (key != null) {
             String[] keys = Strings.splitArray(key, ":");
@@ -272,9 +299,37 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
             }
             return list.size() > 0 ? list : null;
         }
+        return generateVirtualNodes(false);
+    }
+
+    /**
+     * Generate a list of virtual nodes and include error estimates
+     * if they are available.
+     *
+     * @param onlyGuaranteed if true then only return guaranteed top-K
+     *                       (requires error estimates)
+     * @return list of virtual nodes
+     */
+    private List<DataTreeNode> generateVirtualNodes(boolean onlyGuaranteed) {
         ArrayList<DataTreeNode> list = new ArrayList<>(top.size());
-        for (Entry<String, Long> s : top.getSortedEntries()) {
-            list.add(new VirtualTreeNode(s.getKey(), s.getValue()));
+        Entry<String, Long>[] entries = top.getSortedEntries();
+        for (int i = 0; i < entries.length; i++) {
+            Entry<String,Long> entry = entries[i];
+            String name = entry.getKey();
+            Long value = entry.getValue();
+            VirtualTreeNode node = new VirtualTreeNode(name, value);
+            if (top.hasErrors()) {
+                Long error = top.getError(name);
+                if (onlyGuaranteed && ((i + 1) < entries.length) &&
+                    ((value - error) < entries[i + 1].getValue())) {
+                    break;
+                }
+                Map<String, TreeNodeData> data = node.createMap();
+                DataMap dataMap = new DataMap(1);
+                dataMap.put("error", ValueFactory.create(error));
+                data.put("stats", dataMap);
+            }
+            list.add(node);
         }
         return list;
     }
