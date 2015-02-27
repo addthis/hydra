@@ -33,8 +33,8 @@ import org.arabidopsis.ahocorasick.SearchResult;
  * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">checks for strings, arrays or maps
  * that contain the target keys or values</span>.
  * <p/>
- * <p>If the input is a string then return the input if it is a substring of an element in {@link #value value},
- * or otherwise return null.
+ * <p>If the input is a string then return the input if an element in {@link #value value} is a substring of the
+ * input. otherwise return null.
  * <p>If the input is an array and {@link #once once} is {@code false} (the default value of the once
  * parameter is {@code false}), then iterate over each element of the array and
  * test if it is a substring of an element in {@link #value value}. If the input is an array and

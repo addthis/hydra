@@ -974,7 +974,7 @@ public class JobTask implements Codable {
                 "until [ $try -ge $retries ]; do\n" +
                 "\tif [ \"$try\" -ge \"1\" ]; then echo starting retry $try; sleep $retryDelaySeconds; fi\n" +
                 "\ttry=$((try+1)); eval $cmd; exitCode=$?\n" +
-                "\tif [ \"$exitCode\" == \"0\" ] || [ \"$exitCode\" == \"127\" ] || [ \"$exitCode\" == \"137\" ]; then return $exitCode; fi\n" +
+                "\tif [ \"$exitCode\" == \"0\" ]; then return $exitCode; fi\n" +
                 "done\n" +
                 "echo \"Command failed after $retries retries: $cmd\"; exit $exitCode\n" +
                 "}\n");
