@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.util.NoSuchElementException;
@@ -20,6 +21,8 @@ import java.util.NoSuchElementException;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.kvp.KVBundle;
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * This data source <span class="hydra-summary">creates an arbitrary number of empty bundles</span>.
@@ -48,6 +51,10 @@ public class DataSourceEmpty extends TaskDataSource {
     }
 
     @Override public void init() {}
+
+    @Nonnull @Override public ImmutableList<String> outputRootDirs() {
+        return ImmutableList.of();
+    }
 
     @Nullable
     @Override

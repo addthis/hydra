@@ -56,6 +56,7 @@ import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.meshy.MeshyServer;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -317,6 +318,10 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
         } catch (Exception ex) {
             Throwables.propagate(ex);
         }
+    }
+
+    @Override public ImmutableList<String> outputRootDirs() {
+        return ImmutableList.of(directory);
     }
 
     private void connectToMesh(File root, String jobId, int taskId, QueryEngine engine) throws IOException {

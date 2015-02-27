@@ -16,7 +16,13 @@
 package com.addthis.hydra.task.output;
 
 
+import javax.annotation.Nonnull;
+
+import java.util.List;
+
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * This output sink <span class="hydra-summary">sends the output stream to a http sink</span>.
@@ -52,6 +58,11 @@ public class DataOutputHttp extends AbstractDataOutput {
 
     @Override AbstractOutputWriter getWriter() {
         return writer;
+    }
+
+    @Override @Nonnull
+    public ImmutableList<String> outputRootDirs() {
+        return ImmutableList.of();
     }
 }
 

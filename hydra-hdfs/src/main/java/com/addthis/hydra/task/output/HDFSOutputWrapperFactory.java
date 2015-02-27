@@ -13,8 +13,12 @@
  */
 package com.addthis.hydra.task.output;
 
+import javax.annotation.Nonnull;
+
 import java.io.IOException;
 import java.io.OutputStream;
+
+import com.google.common.collect.ImmutableList;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -106,6 +110,10 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
         OutputStream wrappedStream = wrapOutputStream(outputFlags, exists, outputStream);
         return new HDFSOutputWrapper(wrappedStream, streamEmitter, outputFlags.isCompress(),
                                      outputFlags.getCompressType(), target, targetPath, targetPathTmp, fileSystem);
+    }
+
+    @Nonnull @Override public ImmutableList<String> outputRootDirs() {
+        return ImmutableList.of();
     }
 
     private String getModifiedTarget(String target, OutputStreamFlags outputFlags) throws IOException {

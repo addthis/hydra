@@ -13,11 +13,15 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
+
 import com.addthis.basis.util.Strings;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.stream.StreamFileSource;
 import com.addthis.hydra.task.stream.StreamSourceFileList;
+
+import com.google.common.collect.ImmutableList;
 
 
 /**
@@ -38,4 +42,5 @@ public class DataSourceStreamFiles extends DataSourceStreamList {
     public StreamFileSource getSourceList(Integer[] shard) {
         return new StreamSourceFileList(Strings.join(files, "\n"));
     }
+
 }

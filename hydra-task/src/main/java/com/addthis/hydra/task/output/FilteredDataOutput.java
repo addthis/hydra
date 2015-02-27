@@ -13,12 +13,16 @@
  */
 package com.addthis.hydra.task.output;
 
+import javax.annotation.Nonnull;
+
 import java.util.List;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
+
+import com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +54,11 @@ public class FilteredDataOutput extends TaskDataOutput {
     @Override
     protected void open() {
         output.open();
+    }
+
+    @Override @Nonnull
+    public ImmutableList<String> outputRootDirs() {
+        return output.outputRootDirs();
     }
 
     @Override

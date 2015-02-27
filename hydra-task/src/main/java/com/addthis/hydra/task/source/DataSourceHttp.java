@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -30,6 +32,7 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.source.bundleizer.Bundleizer;
 import com.addthis.hydra.task.source.bundleizer.BundleizerFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.escape.Escaper;
 import com.google.common.net.UrlEscapers;
 
@@ -78,6 +81,10 @@ public class DataSourceHttp extends TaskDataSource {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Nonnull @Override public ImmutableList<String> outputRootDirs() {
+        return ImmutableList.of();
     }
 
     @Override public Bundle next() throws DataChannelError {

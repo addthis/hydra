@@ -115,7 +115,7 @@ public final class MapFeeder implements Runnable {
             log.info("all ({}) task threads exited; sending taskComplete", feeders);
 
             // run in different threads to isolate them from interrupts. ie. "taskCompleteUninterruptibly"
-            // join awaits completion, is uninterruptible, and will propogate any exception
+            // join awaits completion, is uninterruptible, and will propagate any exception
             CompletableFuture.runAsync(task::taskComplete).join();
             // critical to get any file meta data written before process exits
             CompletableFuture.runAsync(MuxFileDirectoryCache::waitForWriteClosure).join();

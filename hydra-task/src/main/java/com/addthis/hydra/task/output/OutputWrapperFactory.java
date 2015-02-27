@@ -13,10 +13,16 @@
  */
 package com.addthis.hydra.task.output;
 
+import javax.annotation.Nonnull;
+
 import java.io.IOException;
+
+import java.util.List;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.Pluggable;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Interface for classes capable of [re]opening {@link OutputWrapper}s.
@@ -36,4 +42,7 @@ public interface OutputWrapperFactory {
     OutputWrapper openWriteStream(String target,
                                   OutputStreamFlags outputFlags,
                                   OutputStreamEmitter streamEmitter) throws IOException;
+
+    public @Nonnull ImmutableList<String> outputRootDirs();
+
 }

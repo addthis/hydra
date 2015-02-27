@@ -13,12 +13,18 @@
  */
 package com.addthis.hydra.task.output;
 
+import javax.annotation.Nonnull;
+
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.Bundles;
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,6 +89,13 @@ public class TaskDataOutputChain extends DataOutputTypeList {
             outputs[i].open();
         }
         log.warn("[init] all outputs initialized");
+    }
+
+    @Override @Nonnull
+    public ImmutableList<String> outputRootDirs() {
+        return ImmutableList.copyOf(
+                Arrays.stream(outputs).flatMap(
+                        output -> output.outputRootDirs().stream()).iterator());
     }
 
     @Override public void send(Bundle row) throws DataChannelError {

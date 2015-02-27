@@ -20,6 +20,7 @@ import java.io.IOException;
 
 import java.net.ServerSocket;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
@@ -39,6 +40,7 @@ import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.task.run.TaskRunnable;
 import com.addthis.hydra.task.source.TaskDataSource;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -114,6 +116,8 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
     @JsonProperty private boolean enableJmx;
     @JsonProperty private boolean emitTaskState;
     @JsonProperty private SimpleDateFormat dateFormat;
+
+    private final CompletableFuture<Void> taskCompleteFuture = new CompletableFuture<>();
 
     private final AtomicBoolean metricGate = new AtomicBoolean(false);
     private final LongAdder filterTime = new LongAdder();
@@ -313,6 +317,7 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
         output.sendComplete();
         emitTaskExitState();
         maybeCloseJmx();
+        taskCompleteFuture.complete(null);
         log.info("[taskComplete]");
     }
 
@@ -365,5 +370,16 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
                 log.error("", e);
             }
         }
+    }
+
+    public ImmutableList<String> outputRootDirs() {
+        return ImmutableList.<String>builder()
+                .addAll(source.outputRootDirs())
+                .addAll(output.outputRootDirs())
+                .build();
+    }
+
+    public CompletableFuture<Void> getTaskCompleteFuture() {
+        return taskCompleteFuture;
     }
 }

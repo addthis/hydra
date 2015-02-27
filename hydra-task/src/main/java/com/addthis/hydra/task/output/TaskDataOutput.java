@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.output;
 
+import javax.annotation.Nonnull;
+
 import java.util.List;
 
 import com.addthis.bundle.channel.DataChannelOutput;
@@ -20,6 +22,8 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.codec.annotations.Pluggable;
+
+import com.google.common.collect.ImmutableList;
 
 
 /**
@@ -44,6 +48,13 @@ public abstract class TaskDataOutput implements DataChannelOutput {
     }
 
     protected abstract void open();
+
+    /**
+     * List of root directories that are created. Each implementing
+     * class is responsible for specifying an URL scheme when
+     * not referring to a path on the filesystem (ie. hdfs:// for example).
+     */
+    public abstract @Nonnull ImmutableList<String> outputRootDirs();
 
     @Override public void send(List<Bundle> bundles) {
         for (Bundle bundle : bundles) {

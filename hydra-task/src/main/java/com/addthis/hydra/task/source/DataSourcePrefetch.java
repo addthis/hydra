@@ -13,10 +13,14 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
+
 import java.util.LinkedList;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * This {@link TaskDataSource source} <span class="hydra-summary">prefetches bundles from an underlying data source</span>.
@@ -50,6 +54,10 @@ public final class DataSourcePrefetch extends TaskDataSource {
     @Override
     public void init() {
         source.init();
+    }
+
+    @Nonnull @Override public ImmutableList<String> outputRootDirs() {
+        return source.outputRootDirs();
     }
 
     @Override

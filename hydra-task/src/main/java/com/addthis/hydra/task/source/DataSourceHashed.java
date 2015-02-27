@@ -13,12 +13,16 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
+
 import java.util.NoSuchElementException;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
 import com.addthis.hydra.task.run.TaskRunConfig;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * This data source <span class="hydra-summary">shards the input source by hashing on a bundle field</span>.
@@ -57,6 +61,10 @@ public class DataSourceHashed extends TaskDataSource {
     public void init() {
         shards = config.calcShardList(shardTotal);
         stream.init();
+    }
+
+    @Nonnull @Override public ImmutableList<String> outputRootDirs() {
+        return stream.outputRootDirs();
     }
 
     @Override

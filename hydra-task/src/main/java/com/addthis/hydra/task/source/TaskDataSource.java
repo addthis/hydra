@@ -13,11 +13,15 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
+
 import com.addthis.bundle.channel.DataChannelSource;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * This section of the job specification handles input sources.
@@ -43,6 +47,15 @@ public abstract class TaskDataSource implements Codable, DataChannelSource, Clon
     private boolean enabled = true;
 
     public abstract void init();
+
+    /**
+     * List of root directories that are created. Some data sources
+     * write persistent state to a directory in addition to
+     * reading from other sources. Each implementing
+     * class is responsible for specifying an URL scheme when
+     * not referring to a path on the filesystem (ie. hdfs:// for example).
+     */
+    public abstract @Nonnull ImmutableList<String> outputRootDirs();
 
     public final BundleField getShardField() {
         return shardField;
