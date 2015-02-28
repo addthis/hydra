@@ -124,8 +124,8 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
     private final LongAdder outputTime = new LongAdder();
 
     // metrics
-    private final Meter inputMeter = Metrics.newMeter(getClass(), "input", "input", TimeUnit.SECONDS);
-    private final Meter outputMeter = Metrics.newMeter(getClass(), "output", "output", TimeUnit.SECONDS);
+    private static final Meter inputMeter = Metrics.newMeter(StreamMapper.class, "input", "input", TimeUnit.SECONDS);
+    private static final Meter outputMeter = Metrics.newMeter(StreamMapper.class, "output", "output", TimeUnit.SECONDS);
 
     @GuardedBy("metricGate") private long lastTick;
     @GuardedBy("metricGate") private long lastOutputTime = 0;
