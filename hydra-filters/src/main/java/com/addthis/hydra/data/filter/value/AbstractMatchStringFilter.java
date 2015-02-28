@@ -4,7 +4,9 @@ import javax.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import com.addthis.bundle.core.Bundle;
@@ -17,6 +19,9 @@ import com.addthis.codec.codables.SuperCodable;
 import com.addthis.hydra.data.util.JSONFetcher;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import org.arabidopsis.ahocorasick.AhoCorasick;
+import org.arabidopsis.ahocorasick.SearchResult;
 
 abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual implements SuperCodable {
 
@@ -86,6 +91,8 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
     private ArrayList<Pattern> pattern;
     private ArrayList<Pattern> findPattern;
 
+    private AhoCorasick containsDictionary;
+
     AbstractMatchStringFilter(TypedField<Set<String>> value,
                               String valueURL,
                               HashSet<String> match,
@@ -142,7 +149,10 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
 
     public boolean passedContains(String sv, Bundle context) {
         // match contains
-        if (contains != null) {
+        if (containsDictionary != null) {
+            Iterator<SearchResult> matcher = containsDictionary.progressiveSearch(sv);
+            return matcher.hasNext();
+        } else if (contains != null) {
             for (String search : contains.getValue(context)) {
                 if (sv.contains(search)) {
                     return true;
@@ -206,15 +216,21 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
             }
         }
         if (containsURL != null) {
-            HashSet<String> tmp = null;
-
+            HashSet<String> tmp;
             if (urlReturnsCSV) {
-                tmp = JSONFetcher.staticLoadCSVSet(containsURL, urlTimeout, urlRetries, tmp);
+                tmp = JSONFetcher.staticLoadCSVSet(containsURL, urlTimeout, urlRetries, null);
             } else {
                 tmp = JSONFetcher.staticLoadSet(containsURL);
             }
-
             contains = new ConstantTypedField<>(tmp);
+        }
+        if (contains instanceof Supplier) {
+            Set<String> candidates = ((Supplier<Set<String>>) contains).get();
+            if (candidates != null) {
+                containsDictionary = new AhoCorasick();
+                candidates.forEach(containsDictionary::add);
+                containsDictionary.prepare();
+            }
         }
     }
 
