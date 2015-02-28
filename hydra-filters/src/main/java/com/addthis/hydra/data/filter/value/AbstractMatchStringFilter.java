@@ -224,7 +224,7 @@ abstract class AbstractMatchStringFilter extends AbstractValueFilterContextual i
             }
             contains = new ConstantTypedField<>(tmp);
         }
-        if (contains != null && (contains instanceof Supplier)) {
+        if (contains instanceof Supplier) {
             Set<String> candidates = ((Supplier<Set<String>>) contains).get();
             if (candidates != null) {
                 containsDictionary = new AhoCorasick();
