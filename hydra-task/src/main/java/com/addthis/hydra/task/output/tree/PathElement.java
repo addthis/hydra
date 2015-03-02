@@ -39,7 +39,8 @@ import org.slf4j.LoggerFactory;
  * Depending on the path element it will define one or more nodes of the tree.</p>
  * <p/>
  * @user-reference
- * @hydra-category
+ * @hydra-category Path Elements
+ * @hydra-doc-position 6
  * @exclude-fields name, count, op, term, feature, featureOff, data, filter, profileCalls, profileTime, disabled
  */
 @Pluggable("path element")

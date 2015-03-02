@@ -35,7 +35,8 @@ import com.addthis.hydra.data.tree.prop.DataSum;
  * fake nodes created during the query or pull real nodes from the tree.</p>
  *
  * @user-reference
- * @hydra-category
+ * @hydra-category Data Attachments
+ * @hydra-doc-position 7
  */
 @Pluggable("data-attachment")
 public abstract class TreeDataParameters<T extends TreeNodeData<?>> implements Codable {

@@ -19,7 +19,8 @@ import com.addthis.codec.annotations.Pluggable;
  * This is the specification for a Hydra job.
  *
  * @user-reference
- * @hydra-category
+ * @hydra-category Hydra Jobs
+ * @hydra-doc-position 1
  */
 @Pluggable("task")
 public interface TaskRunnable extends AutoCloseable {

@@ -27,7 +27,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * the result of the transformation.
  *
  * @user-reference
- * @hydra-category
+ * @hydra-category Value Filters
+ * @hydra-doc-position 4
  * @exclude-fields once, nullAccept
  */
 public abstract class AbstractValueFilter implements ValueFilter {

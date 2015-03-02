@@ -21,7 +21,8 @@ import com.addthis.codec.annotations.Pluggable;
  * <p>Formatters are responsible for the representation of output.</p>
  *
  * @user-reference
- * @hydra-category
+ * @hydra-category Output Stream Formatters
+ * @hydra-doc-position 9
  */
 @Pluggable("output stream formatter")
 public abstract class OutputStreamFormatter {

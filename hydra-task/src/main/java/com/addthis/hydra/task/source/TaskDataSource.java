@@ -25,7 +25,8 @@ import com.addthis.codec.codables.Codable;
  * <p>Data sources are responsible for providing a stream of Bundle objects.</p>
  *
  * @user-reference
- * @hydra-category
+ * @hydra-category Input Sources
+ * @hydra-doc-position 2
  * @exclude-fields shardField, enabled
  */
 @Pluggable("input-source")

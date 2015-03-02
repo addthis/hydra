@@ -25,7 +25,8 @@ import com.addthis.codec.annotations.Pluggable;
  * true or false to indicate whether the transformation was successful.
  *
  * @user-reference
- * @hydra-category
+ * @hydra-category Bundle Filters
+ * @hydra-doc-position 3
  */
 @FunctionalInterface
 @Pluggable("bundle-filter")

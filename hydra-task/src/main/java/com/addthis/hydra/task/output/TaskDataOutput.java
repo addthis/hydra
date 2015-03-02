@@ -28,7 +28,8 @@ import com.addthis.codec.annotations.Pluggable;
  * <p>Data sinks are responsible for emitting output.</p>
  *
  * @user-reference
- * @hydra-category
+ * @hydra-category Output Sinks
+ * @hydra-doc-position 5
  */
 @Pluggable("output-sink")
 public abstract class TaskDataOutput implements DataChannelOutput {

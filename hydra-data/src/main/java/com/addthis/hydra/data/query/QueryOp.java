@@ -41,7 +41,8 @@ import io.netty.channel.ChannelProgressivePromise;
  * <p>Query operations on Hydra tree output.</p>
  *
  * @user-reference
- * @hydra-category
+ * @hydra-category Query Operations
+ * @hydra-doc-position 8
  */
 public interface QueryOp extends BundleOutput, Closeable {
 
