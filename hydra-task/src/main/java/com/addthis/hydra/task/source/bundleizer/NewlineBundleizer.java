@@ -46,9 +46,8 @@ public abstract class NewlineBundleizer extends BundleizerFactory {
 
             @Override
             public Bundle next() throws IOException {
-                String line;
                 while (true) {
-                    line = reader.readLine();
+                    String line = reader.readLine();
                     if (line == null) {
                         return null;
                     }
@@ -58,9 +57,11 @@ public abstract class NewlineBundleizer extends BundleizerFactory {
                             continue;
                         }
                     }
-                    break;
+                    Bundle next = bundleize(factory.createBundle(), line);
+                    if (next != null) {
+                        return next;
+                    }
                 }
-                return bundleize(factory.createBundle(), line);
             }
         };
     }
