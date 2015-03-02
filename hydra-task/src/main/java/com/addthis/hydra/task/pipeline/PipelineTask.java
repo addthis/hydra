@@ -20,8 +20,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import com.addthis.bundle.core.Bundle;
-import com.addthis.hydra.task.map.StreamEmitter;
 import com.addthis.hydra.task.map.StreamMapper;
 import com.addthis.hydra.task.run.TaskRunnable;
 
@@ -57,7 +55,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-name pipeline
  */
-public class PipelineTask implements StreamEmitter, TaskRunnable {
+public class PipelineTask implements TaskRunnable {
 
     private static final Logger log = LoggerFactory.getLogger(PipelineTask.class);
 
@@ -77,23 +75,13 @@ public class PipelineTask implements StreamEmitter, TaskRunnable {
 
     private final Thread manager;
 
-    /**
-     * This field can be moved into the PipelineTaskManager
-     * and type modifier volatile can be dropped.
-     * It is declared in this scope for use in debugging purposes.
-     */
-    private volatile boolean phaseIsRunning = false;
-
     @JsonCreator
     public PipelineTask(@JsonProperty("phases") @Nonnull StreamMapper[] phases,
                         @JsonProperty("validateDirs") boolean validateDirs) {
         this.phases = phases;
         this.validateDirs = validateDirs;
         this.manager = new Thread(new PipelineTaskManager(), "PipelineTask");
-        String message = validateOutputDirectories();
-        if (message != null) {
-            throw new IllegalStateException(message);
-        }
+        validateOutputDirectories();
     }
 
     @Override public void start() {
@@ -105,18 +93,13 @@ public class PipelineTask implements StreamEmitter, TaskRunnable {
         manager.join();
     }
 
-    @Override public void emit(Bundle bundle) {
-        assert(phaseIsRunning);
-        phases[currentPhase].emit(bundle);
-    }
-
     /**
      * Return a message string is there are one or more problems
      * validating output directories. Otherwise return null.
      */
-    private String validateOutputDirectories() {
+    private void validateOutputDirectories() {
         if (!validateDirs) {
-            return null;
+            return;
         }
         Set<String>[] outputDirs = new Set[phases.length];
         StringBuilder builder = new StringBuilder();
@@ -133,16 +116,14 @@ public class PipelineTask implements StreamEmitter, TaskRunnable {
             }
         }
         if (builder.length() > 0) {
-            return builder.toString();
-        } else {
-            return null;
+            throw new IllegalStateException(builder.toString());
         }
     }
 
     private class PipelineTaskManager implements Runnable {
 
         @Override public void run() {
-
+            boolean phaseIsRunning = false;
             try {
                 while (currentPhase < phases.length) {
                     CompletableFuture<Void> taskComplete = phases[currentPhase].getTaskCompleteFuture();
