@@ -92,11 +92,6 @@ public final class GangliaOutput extends AbstractFilteredOutput {
         }).collect(Collectors.toList());
     }
 
-    @Override @Nonnull
-    public ImmutableList<String> outputRootDirs() {
-        return ImmutableList.of();
-    }
-
     // only needed because metrics-reporter-config did not write a toString method for HostPort
     private String hostsToString() {
         try {

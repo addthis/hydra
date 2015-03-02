@@ -83,10 +83,6 @@ public class DataSourceHttp extends TaskDataSource {
         }
     }
 
-    @Nonnull @Override public ImmutableList<String> outputRootDirs() {
-        return ImmutableList.of();
-    }
-
     @Override public Bundle next() throws DataChannelError {
         if (nextBundle != null) {
             nextBundle = null;

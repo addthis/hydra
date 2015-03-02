@@ -20,6 +20,7 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
+import com.addthis.hydra.task.output.OutputRootDirectories;
 
 import com.google.common.collect.ImmutableList;
 
@@ -33,7 +34,7 @@ import com.google.common.collect.ImmutableList;
  * @exclude-fields shardField, enabled
  */
 @Pluggable("input-source")
-public abstract class TaskDataSource implements Codable, DataChannelSource, Cloneable {
+public abstract class TaskDataSource implements Codable, DataChannelSource, OutputRootDirectories, Cloneable {
 
     /**
      * Optionally specify a field that will be used as input to a
@@ -47,15 +48,6 @@ public abstract class TaskDataSource implements Codable, DataChannelSource, Clon
     private boolean enabled = true;
 
     public abstract void init();
-
-    /**
-     * List of root directories that are created. Some data sources
-     * write persistent state to a directory in addition to
-     * reading from other sources. Each implementing
-     * class is responsible for specifying an URL scheme when
-     * not referring to a path on the filesystem (ie. hdfs:// for example).
-     */
-    public abstract @Nonnull ImmutableList<String> outputRootDirs();
 
     public final BundleField getShardField() {
         return shardField;

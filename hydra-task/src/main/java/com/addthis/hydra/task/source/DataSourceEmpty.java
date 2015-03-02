@@ -52,10 +52,6 @@ public class DataSourceEmpty extends TaskDataSource {
 
     @Override public void init() {}
 
-    @Nonnull @Override public ImmutableList<String> outputRootDirs() {
-        return ImmutableList.of();
-    }
-
     @Nullable
     @Override
     public Bundle peek() {

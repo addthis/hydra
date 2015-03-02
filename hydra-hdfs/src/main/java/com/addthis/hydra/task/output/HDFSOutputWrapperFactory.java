@@ -112,10 +112,6 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
                                      outputFlags.getCompressType(), target, targetPath, targetPathTmp, fileSystem);
     }
 
-    @Nonnull @Override public ImmutableList<String> outputRootDirs() {
-        return ImmutableList.of();
-    }
-
     private String getModifiedTarget(String target, OutputStreamFlags outputFlags) throws IOException {
         PartitionData partitionData = getPartitionData(target);
         String modifiedFileName;

@@ -60,9 +60,5 @@ public class DataOutputHttp extends AbstractDataOutput {
         return writer;
     }
 
-    @Override @Nonnull
-    public ImmutableList<String> outputRootDirs() {
-        return ImmutableList.of();
-    }
 }
 

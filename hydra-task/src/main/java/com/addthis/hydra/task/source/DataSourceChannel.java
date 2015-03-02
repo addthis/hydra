@@ -54,10 +54,6 @@ public class DataSourceChannel extends TaskDataSource implements BundleFactory {
         }
     }
 
-    @Nonnull @Override public ImmutableList<String> outputRootDirs() {
-        return ImmutableList.of();
-    }
-
     @Override
     public Bundle next() throws DataChannelError {
         Bundle next = peek();
