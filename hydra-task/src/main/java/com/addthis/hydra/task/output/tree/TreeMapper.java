@@ -510,6 +510,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
             if (post != null) {
                 doPost = sampleOperation(post, postRate, "post.sample", "post");
             }
+            tree.foregroundNodeDeletion(closing::get);
             if (outputs != null) {
                 for (PathOutput output : outputs) {
                     log.info("output: {}", output);

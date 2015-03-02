@@ -31,16 +31,20 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Logger;
 
+import com.addthis.basis.test.SlowTest;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+@Category(SlowTest.class)
 public class PostgresDataStoreTest {
 
     private static final String DB_URL = "mock:driver/";

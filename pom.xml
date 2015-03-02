@@ -23,7 +23,7 @@
   <groupId>com.addthis.hydra</groupId>
   <artifactId>hydra-parent</artifactId>
   <name>hydra</name>
-  <version>5.2.2-SNAPSHOT</version>
+  <version>5.2.3-SNAPSHOT</version>
   <packaging>pom</packaging>
   <licenses>
     <license>
@@ -56,9 +56,9 @@
     <!-- addthis dependency versions -->
     <hydra.dep.bark.version>2.1.4</hydra.dep.bark.version>
     <hydra.dep.basis.version>2.3.1</hydra.dep.basis.version>
-    <hydra.dep.bundle.version>2.7.1-SNAPSHOT</hydra.dep.bundle.version>
+    <hydra.dep.bundle.version>2.7.1</hydra.dep.bundle.version>
     <hydra.dep.codec.version>3.4.1</hydra.dep.codec.version>
-    <hydra.dep.meshy.version>3.3.2-SNAPSHOT</hydra.dep.meshy.version>
+    <hydra.dep.meshy.version>3.3.2</hydra.dep.meshy.version>
     <hydra.dep.muxy.version>2.1.2</hydra.dep.muxy.version>
     <hydra.dep.maljson.version>0.2.0</hydra.dep.maljson.version>
 
