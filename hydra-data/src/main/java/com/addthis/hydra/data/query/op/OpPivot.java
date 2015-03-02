@@ -322,7 +322,7 @@ public class OpPivot extends AbstractQueryOp {
             output = sort.getTable();
         }
         // prepend header
-        if (header.size() > 0) {
+        if (header.getFormat().getFieldCount() > 0) {
             output.insert(0, header);
         }
         // append footer

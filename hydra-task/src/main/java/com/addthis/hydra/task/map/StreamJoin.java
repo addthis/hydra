@@ -68,7 +68,7 @@ public class StreamJoin extends StreamBuilder {
 
     private synchronized void releaseMap(StreamEmitter emitter) {
         for (ListBundle bundle : keyMap.values()) {
-            if (bundle.size() == numExpectedFields) {
+            if (bundle.getFormat().getFieldCount() == numExpectedFields) {
                 emitter.emit(bundle);
             }
         }
@@ -102,7 +102,7 @@ public class StreamJoin extends StreamBuilder {
             }
         }
 
-        if (!newBundle && bundle.size() == numExpectedFields) {
+        if (!newBundle && bundle.getFormat().getFieldCount() == numExpectedFields) {
             emitBundle(keyValue, bundle, emitter);
         }
     }
@@ -129,7 +129,7 @@ public class StreamJoin extends StreamBuilder {
             for (String key : keyMap.keySet()) {
                 ListBundle bundle = keyMap.get(key);
 
-                if (bundle.size() == numExpectedFields) {
+                if (bundle.getFormat().getFieldCount() == numExpectedFields) {
                     emitBundle(key, bundle, streamEmitter);
                 }
             }

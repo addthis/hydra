@@ -76,18 +76,7 @@ class BundleCalculatorVector implements ValueCustom<Object>, Numeric {
         throw new IllegalStateException();
     }
 
-    @Override
-    public ValueBytes asBytes() throws ValueTranslationException {
-        throw new IllegalStateException();
-    }
-
-    @Override
-    public ValueArray asArray() throws ValueTranslationException {
-        throw new IllegalStateException();
-    }
-
-    @Override
-    public ValueMap asMap() throws ValueTranslationException {
+    @Override public ValueMap asMap() {
         throw new IllegalStateException();
     }
 
@@ -96,31 +85,6 @@ class BundleCalculatorVector implements ValueCustom<Object>, Numeric {
     }
 
     @Override public ValueSimple asSimple() {
-        throw new IllegalStateException();
-    }
-
-    @Override
-    public Numeric asNumeric() throws ValueTranslationException {
-        throw new IllegalStateException();
-    }
-
-    @Override
-    public ValueLong asLong() {
-        throw new IllegalStateException();
-    }
-
-    @Override
-    public ValueDouble asDouble() {
-        throw new IllegalStateException();
-    }
-
-    @Override
-    public ValueString asString() throws ValueTranslationException {
-        throw new IllegalStateException();
-    }
-
-    @Override
-    public ValueCustom asCustom() throws ValueTranslationException {
         throw new IllegalStateException();
     }
 }
