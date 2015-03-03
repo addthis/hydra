@@ -103,20 +103,23 @@ public final class MapFeeder implements Runnable {
         }
 
         try {
+            boolean interrupt = false;
             if (source.isEnabled()) {
                 while (fillBuffer()) {
                     if (Thread.interrupted()) {
+                        interrupt = true;
                         closeSourceIfNeeded();
                     }
                 }
             }
+            final boolean interrupted = interrupt;
             closeSourceIfNeeded();
             joinProcessors();
             log.info("all ({}) task threads exited; sending taskComplete", feeders);
 
             // run in different threads to isolate them from interrupts. ie. "taskCompleteUninterruptibly"
             // join awaits completion, is uninterruptible, and will propagate any exception
-            CompletableFuture.runAsync(task::taskComplete).join();
+            CompletableFuture.runAsync(() -> task.taskComplete(interrupted)).join();
             // critical to get any file meta data written before process exits
             CompletableFuture.runAsync(MuxFileDirectoryCache::waitForWriteClosure).join();
         } catch (Throwable t) {

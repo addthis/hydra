@@ -306,7 +306,7 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
     }
 
     /** called on process exit */
-    public void taskComplete() {
+    public void taskComplete(boolean interrupted) {
         if (builder != null) {
             builder.streamComplete(this);
             log.info("[streamComplete] builder");
@@ -317,8 +317,12 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
         output.sendComplete();
         emitTaskExitState();
         maybeCloseJmx();
-        boolean success = onTaskComplete.complete(null);
-        log.info("[taskComplete] Triggered future: {}", success);
+        if (interrupted) {
+            log.info("[taskComplete] onTaskComplete future skipped.");
+        } else {
+            boolean success = onTaskComplete.complete(null);
+            log.info("[taskComplete] Triggered future: {}", success);
+        }
     }
 
     /* leave artifact for minion, if desired */
