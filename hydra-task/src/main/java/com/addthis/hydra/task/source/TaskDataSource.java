@@ -13,16 +13,12 @@
  */
 package com.addthis.hydra.task.source;
 
-import javax.annotation.Nonnull;
-
 import com.addthis.bundle.channel.DataChannelSource;
 import com.addthis.bundle.core.BundleField;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.task.output.OutputRootDirectories;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * This section of the job specification handles input sources.

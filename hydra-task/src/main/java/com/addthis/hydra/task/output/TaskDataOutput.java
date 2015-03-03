@@ -13,8 +13,6 @@
  */
 package com.addthis.hydra.task.output;
 
-import javax.annotation.Nonnull;
-
 import java.util.List;
 
 import com.addthis.bundle.channel.DataChannelOutput;
@@ -22,8 +20,6 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.codec.annotations.Pluggable;
-
-import com.google.common.collect.ImmutableList;
 
 
 /**

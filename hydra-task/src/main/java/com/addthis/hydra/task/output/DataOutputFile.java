@@ -16,8 +16,6 @@ package com.addthis.hydra.task.output;
 
 import javax.annotation.Nonnull;
 
-import java.util.List;
-
 import com.addthis.codec.annotations.FieldConfig;
 
 import com.google.common.collect.ImmutableList;

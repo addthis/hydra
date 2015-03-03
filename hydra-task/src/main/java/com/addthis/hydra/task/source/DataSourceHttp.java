@@ -13,8 +13,6 @@
  */
 package com.addthis.hydra.task.source;
 
-import javax.annotation.Nonnull;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -32,7 +30,6 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.source.bundleizer.Bundleizer;
 import com.addthis.hydra.task.source.bundleizer.BundleizerFactory;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.escape.Escaper;
 import com.google.common.net.UrlEscapers;
 

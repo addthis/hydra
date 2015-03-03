@@ -13,7 +13,6 @@
  */
 package com.addthis.hydra.task.output;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.io.IOException;
@@ -33,7 +32,6 @@ import com.addthis.metrics.reporter.config.HostPort;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

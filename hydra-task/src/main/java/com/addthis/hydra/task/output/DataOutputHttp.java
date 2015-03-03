@@ -16,13 +16,7 @@
 package com.addthis.hydra.task.output;
 
 
-import javax.annotation.Nonnull;
-
-import java.util.List;
-
 import com.addthis.codec.annotations.FieldConfig;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * This output sink <span class="hydra-summary">sends the output stream to a http sink</span>.

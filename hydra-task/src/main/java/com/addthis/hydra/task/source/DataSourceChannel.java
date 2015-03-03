@@ -13,8 +13,6 @@
  */
 package com.addthis.hydra.task.source;
 
-import javax.annotation.Nonnull;
-
 import java.io.EOFException;
 import java.io.IOException;
 
@@ -25,8 +23,6 @@ import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.io.DataChannelReader;
 import com.addthis.codec.annotations.FieldConfig;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * This data source <span class="hydra-summary">accepts codec streams</span>.
