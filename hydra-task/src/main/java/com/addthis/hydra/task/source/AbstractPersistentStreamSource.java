@@ -21,7 +21,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 
 import com.addthis.basis.util.Bytes;
 import com.addthis.basis.util.Parameter;
@@ -44,7 +46,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * An abstract implementation of {@link com.addthis.hydra.task.stream.PersistentStreamFileSource}
+ * An abstract implementation of {@link PersistentStreamFileSource}
  * that provides much of the base functionality required to implement a streaming file source.
  * The main purpose of this class is to parse an input configuration in order to
  * to provide common necessary inputs that concrete implementations require to
@@ -66,6 +68,12 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
     private static final String NOW_PREFIX = "{{now";
     private static final String NOW_POSTFIX = "}}";
     public static final String TIME_NOW = "{{now}}";
+    private static final Pattern MOD_PATTERN = Pattern.compile("{{mod}}", Pattern.LITERAL);
+    private static final Pattern YY_PATTERN = Pattern.compile("{YY}", Pattern.LITERAL);
+    private static final Pattern Y_PATTERN = Pattern.compile("{Y}", Pattern.LITERAL);
+    private static final Pattern M_PATTERN = Pattern.compile("{M}", Pattern.LITERAL);
+    private static final Pattern D_PATTERN = Pattern.compile("{D}", Pattern.LITERAL);
+    private static final Pattern H_PATTERN = Pattern.compile("{H}", Pattern.LITERAL);
 
     /**
      * The format of startDate and endDate values using the
@@ -127,7 +135,6 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
     private File stateDir;
     protected File autoResumeFile;
     private final AtomicBoolean running = new AtomicBoolean(true);
-    private static final List<String> TIME_CONSTANTS = Lists.newArrayList("YY", "Y", "M", "D", "H");
 
     /**
      * perform any initialization steps specific to the implementing class
@@ -138,19 +145,6 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
 
     /** perform any shutdown steps specific to the implementing class */
     public abstract void doShutdown() throws IOException;
-
-    /** Defines the directory where state for this source will be maintained */
-    public void setStateDir(File dir) {
-        stateDir = dir;
-        autoResumeFile = new File(stateDir, "job.source");
-    }
-
-    /**
-     * @return true if this source has more data to provide
-     */
-    public boolean hasMoreData() {
-        return moreData;
-    }
 
     /**
      * @return true if the configuration for this source includes a template 'mod' element
@@ -170,39 +164,23 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         if (log.isDebugEnabled()) {
             log.debug("SSM: {}", CodecJSON.encodeString(this));
         }
-        setStateDir(stateDir);
+        this.stateDir = stateDir;
+        autoResumeFile = new File(this.stateDir, "job.source");
         if (log.isTraceEnabled()) {
             log.trace("shards :: {}", Strings.join(shards, " :: "));
         }
         /* expand files list */
-        HashSet<String> matches = new HashSet<>();
+        Set<String> matches = new HashSet<>();
         log.trace("files.1 :: {}", files);
         /* expand mods */
         for (String file : files) {
             for (Integer shard : shards) {
-                matches.add(file.replace("{{mod}}", Strings.padleft(shard.toString(), 3, Strings.pad0)));
+                matches.add(MOD_PATTERN.matcher(file).replaceAll(Strings.padleft(shard.toString(), 3, Strings.pad0)));
             }
         }
-        files = new ArrayList<>(matches);
-        /* expand {US,DE,FR} bash-style string list */
-        for (String file : files) {
-            int io1 = file.indexOf('{');
-            int io2 = file.indexOf('}');
-            if (io1 >= 0 && io2 > io1) {
-                String left = file.substring(0, io1);
-                String right = file.substring(io2 + 1);
-                for (String tok : Strings.splitArray(file.substring(io1 + 1, io2), ",")) {
-                    // ignore reserved strings for time based expansion
-                    if (!TIME_CONSTANTS.contains(tok)) {
-                        String expand = left.concat(tok).concat(right);
-                        matches.add(expand);
-                        log.trace("expand {} to {}", file, expand);
-                    }
-                }
-            }
-        }
-        files = new ArrayList<>(matches);
+        matches = expandPaths(matches);
         log.trace("files.2 :: {}", matches);
+        files = new ArrayList<>(matches);
         log.trace("files.3 :: {}", files);
         /* calculate start/end dates if required */
         formatter = DateTimeFormat.forPattern(dateFormat);
@@ -234,6 +212,10 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         fillDateList(start, end);
         log.info("[init] {} to {} = {} time units", start, end, dates.size());
         return doInit();
+    }
+
+    protected Set<String> expandPaths(Set<String> paths) {
+        return paths;
     }
 
     public void setStartTime(long time) {
@@ -295,13 +277,13 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
     }
 
     private static String replaceDateElements(DateTime time, String template) {
-        template = template.replace("{YY}", time.year().getAsString());
-        template = template.replace("{Y}", getTwoDigit(time.year().get()));
-        template = template.replace("{M}", getTwoDigit(time.monthOfYear().get()));
-        template = template.replace("{D}", getTwoDigit(time.dayOfMonth().get()));
-        template = template.replace("{H}", getTwoDigit(time.hourOfDay().get()));
-        log.debug("template={}", template);
-        return template;
+        String result = YY_PATTERN.matcher(template).replaceAll(time.year().getAsString());
+        result = Y_PATTERN.matcher(template).replaceAll(getTwoDigit(time.year().get()));
+        result = M_PATTERN.matcher(template).replaceAll(getTwoDigit(time.monthOfYear().get()));
+        result = D_PATTERN.matcher(template).replaceAll(getTwoDigit(time.dayOfMonth().get()));
+        result = H_PATTERN.matcher(template).replaceAll(getTwoDigit(time.hourOfDay().get()));
+        log.debug("template={}, result={}", template, result);
+        return result;
     }
 
     private static String getTwoDigit(int value) {

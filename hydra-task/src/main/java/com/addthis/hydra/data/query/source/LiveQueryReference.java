@@ -20,8 +20,10 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 
+import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
+
 import com.addthis.hydra.data.query.engine.QueryEngine;
-import com.addthis.meshy.VirtualFileFilter;
 import com.addthis.meshy.VirtualFileInput;
 import com.addthis.meshy.VirtualFileReference;
 
@@ -36,11 +38,13 @@ public class LiveQueryReference extends QueryReference {
     private static final Logger log = LoggerFactory.getLogger(LiveQueryReference.class);
 
     private final String job;
+    private final String treeDirectory;
     private final int taskId;
     private final QueryEngine queryEngine;
 
     public LiveQueryReference(File dir, String job, int taskId, QueryEngine queryEngine) {
         super(dir);
+        this.treeDirectory = dir.getName();
         this.job = job;
         this.taskId = taskId;
         this.queryEngine = queryEngine;
@@ -56,7 +60,7 @@ public class LiveQueryReference extends QueryReference {
 
     @Override
     public String getName() {
-        return "live/" + job + "/" + taskId + "/live/data/query";
+        return "live/" + job + "/" + taskId + "/gold/" + treeDirectory + "/query";
     }
 
     @Override
@@ -70,9 +74,8 @@ public class LiveQueryReference extends QueryReference {
     }
 
     @Override
-    public Iterator<VirtualFileReference> listFiles(VirtualFileFilter filter) {
-        String path = filter.getToken();
-        if (isPathValid(path)) {
+    public Iterator<VirtualFileReference> listFiles(PathMatcher filter) {
+        if (filter.matches(Paths.get(getName()))) {
             return Collections.singletonList((VirtualFileReference) this).iterator();
         } else {
             return null;

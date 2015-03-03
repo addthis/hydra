@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
+import java.nio.file.PathMatcher;
+
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
 
@@ -110,7 +112,7 @@ public class MeshQuerySource implements LocalFileHandler {
     }
 
     @Override
-    public Iterator<VirtualFileReference> listFiles(File dir, VirtualFileFilter filter) {
+    public Iterator<VirtualFileReference> listFiles(File dir, PathMatcher filter) {
         ArrayList<VirtualFileReference> list = new ArrayList<>(2);
         list.add(new QueryReference(dir));
         return list.iterator();

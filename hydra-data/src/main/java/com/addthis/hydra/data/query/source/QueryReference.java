@@ -19,6 +19,8 @@ import java.io.File;
 import java.util.Iterator;
 import java.util.Map;
 
+import java.nio.file.PathMatcher;
+
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.meshy.VirtualFileFilter;
@@ -86,7 +88,7 @@ class QueryReference implements VirtualFileReference {
     }
 
     @Override
-    public Iterator<VirtualFileReference> listFiles(VirtualFileFilter filter) {
+    public Iterator<VirtualFileReference> listFiles(PathMatcher filter) {
         return null;
     }
 
