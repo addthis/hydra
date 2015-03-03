@@ -46,6 +46,8 @@ import org.slf4j.LoggerFactory;
  * <p>By default error checking is enabled to verify that each job phase
  * does not write to an output directory of another job phase. If you want
  * to disable this error checking then set {@code validateDirs} to false.</p>
+ * <p>All logging information is printed out using human (counting from 1)
+ * numbering of the phases.</p>
  * <p>Example:</p>
  * <pre>{
  *    type : "pipeline",
@@ -95,11 +97,17 @@ public class PipelineTask implements TaskRunnable {
         }
         for (int i = (phaseManagement.length - 1); i >= 0; i--) {
             try {
-                phaseManagement[i].join();
+                if (!phaseManagement[i].isCancelled()) {
+                    phaseManagement[i].join();
+                }
             } catch (CompletionException ex) {
-                log.warn("Phase {} onComplete future encountered an exception while running: ",
-                         i, ex);
-            } catch (CancellationException ignored) {
+                log.error("Phase {} onComplete future encountered an exception while starting phase {}: ",
+                         i + 1, i + 2, ex);
+                throw ex;
+            } catch (CancellationException ex) {
+                log.error("Race condition: Phase {} onComplete future was cancelled by another thread: ",
+                          i + 1, ex);
+                throw ex;
             }
         }
         if (currentPhase != null) {
