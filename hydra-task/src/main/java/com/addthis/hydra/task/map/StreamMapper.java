@@ -117,7 +117,7 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
     @JsonProperty private boolean emitTaskState;
     @JsonProperty private SimpleDateFormat dateFormat;
 
-    private final CompletableFuture<Void> taskCompleteFuture = new CompletableFuture<>();
+    private final CompletableFuture<Void> onTaskComplete = new CompletableFuture<>();
 
     private final AtomicBoolean metricGate = new AtomicBoolean(false);
     private final LongAdder filterTime = new LongAdder();
@@ -317,8 +317,8 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
         output.sendComplete();
         emitTaskExitState();
         maybeCloseJmx();
-        taskCompleteFuture.complete(null);
-        log.info("[taskComplete]");
+        boolean success = onTaskComplete.complete(null);
+        log.info("[taskComplete] Triggered future: {}", success);
     }
 
     /* leave artifact for minion, if desired */
@@ -379,7 +379,19 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
                 .build();
     }
 
-    public CompletableFuture<Void> getTaskCompleteFuture() {
-        return taskCompleteFuture;
+    /**
+     * Append an synchronous action to
+     * be executed when the {@code onTaskComplete} future
+     * completes. These actions are executed synchronously
+     * so that the executing thread doesn't have the opportunity
+     * to exit and possibly close the JVM.
+     *
+     * The implementer is responsible for ensuring that the provided
+     * action either (a) does not throw an exception or (b) is intended
+     * to stop all actions when an exception is thrown.
+     */
+    public CompletableFuture<Void> onCompleteThenRun(Runnable action) {
+        return onTaskComplete.thenRun(action);
     }
+
 }

@@ -17,8 +17,9 @@ import javax.annotation.Nonnull;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.CompletionException;
 
 import com.addthis.hydra.task.map.StreamMapper;
 import com.addthis.hydra.task.run.TaskRunnable;
@@ -62,35 +63,57 @@ public class PipelineTask implements TaskRunnable {
     @Nonnull private final StreamMapper[] phases;
 
     /**
-     * Field is written to by one thread and read from
-     * by one or more threads.
-     */
-    private int currentPhase;
-
-    /**
      * If true then ensure that output directories are all unique.
      * Default is true.
      */
     private final boolean validateDirs;
 
-    private final Thread manager;
+    private final CompletableFuture<Void>[] phaseManagement;
+
+    private volatile StreamMapper currentPhase = null;
 
     @JsonCreator
     public PipelineTask(@JsonProperty("phases") @Nonnull StreamMapper[] phases,
                         @JsonProperty("validateDirs") boolean validateDirs) {
+        validateOutputDirectories();
         this.phases = phases;
         this.validateDirs = validateDirs;
-        this.manager = new Thread(new PipelineTaskManager(), "PipelineTask");
-        validateOutputDirectories();
+        this.phaseManagement = new CompletableFuture[Math.max(phases.length - 1, 0)];
+        for (int i = 0; i < phaseManagement.length; i++) {
+            final int current = i;
+            phaseManagement[i] = phases[i].onCompleteThenRun(() -> beginPhase(current + 1));
+        }
     }
 
     @Override public void start() {
-        manager.start();
+        beginPhase(0);
     }
 
     @Override public void close() throws Exception {
-        manager.interrupt();
-        manager.join();
+        for (int i = (phaseManagement.length - 1); i >= 0; i--) {
+            phaseManagement[i].cancel(false);
+        }
+        for (int i = (phaseManagement.length - 1); i >= 0; i--) {
+            try {
+                phaseManagement[i].join();
+            } catch (CompletionException ex) {
+                log.warn("Phase {} onComplete future encountered an exception while running: ",
+                         i, ex);
+            } catch (CancellationException ignored) {
+            }
+        }
+        if (currentPhase != null) {
+            currentPhase.close();
+        }
+    }
+
+    private void beginPhase(int pos) {
+        if (pos < phases.length) {
+            log.info("Initializing phase {} for execution.", pos + 1);
+            currentPhase = null;
+            phases[pos].start();
+            currentPhase = phases[pos];
+        }
     }
 
     /**
@@ -117,34 +140,6 @@ public class PipelineTask implements TaskRunnable {
         }
         if (builder.length() > 0) {
             throw new IllegalStateException(builder.toString());
-        }
-    }
-
-    private class PipelineTaskManager implements Runnable {
-
-        @Override public void run() {
-            boolean phaseIsRunning = false;
-            try {
-                while (currentPhase < phases.length) {
-                    CompletableFuture<Void> taskComplete = phases[currentPhase].getTaskCompleteFuture();
-                    log.info("Pipeline job starting phase {}", currentPhase);
-                    phases[currentPhase].start();
-                    phaseIsRunning = true;
-                    taskComplete.get();
-                    phaseIsRunning = false;
-                    phases[currentPhase].close();
-                    currentPhase++;
-                }
-            } catch (InterruptedException|ExecutionException outer) {
-                if (phaseIsRunning) {
-                    try {
-                        phases[currentPhase].close();
-                    } catch (InterruptedException inner) {
-                        log.info("Pipeline task manager interrupted while closing: ", inner);
-                    }
-                }
-            }
-
         }
     }
 
