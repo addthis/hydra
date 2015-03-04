@@ -79,6 +79,13 @@ public abstract class AbstractJobAlert implements Codable {
     @JsonProperty public final long delay;
     @JsonProperty public final String email;
     @JsonProperty public final ImmutableList<String> jobIds;
+    /**
+     * If true then rebroadcast the previous error message when
+     * an error is detected at the current iteration. Default is false.
+     * This is a trade-off where the most recent message for an alert
+     * is not emailed with the advantage of no continuous spam of emails.
+     */
+    @JsonProperty public final boolean suppressChanges;
 
     /* Map storing {job id : error description} for all alerted jobs the last time this alert was checked */
     @JsonProperty protected volatile ImmutableMap<String, String> activeJobs;
@@ -107,6 +114,7 @@ public abstract class AbstractJobAlert implements Codable {
                             @Time(TimeUnit.MINUTES) long delay,
                             String email,
                             List<String> jobIds,
+                            boolean suppressChanges,
                             long lastAlertTime,
                             Map<String, String> activeJobs,
                             Map<String, Long> activeTriggerTimes) {
@@ -122,6 +130,7 @@ public abstract class AbstractJobAlert implements Codable {
         this.delay = delay;
         this.email = email;
         this.jobIds = ImmutableList.copyOf(jobIds);
+        this.suppressChanges = suppressChanges;
         this.activeJobs = immutableOrEmpty(activeJobs);
         this.activeTriggerTimes = immutableOrEmpty(activeTriggerTimes);
         this.lastAlertTime = lastAlertTime;
@@ -155,6 +164,9 @@ public abstract class AbstractJobAlert implements Codable {
             String previousErrorMessage = activeJobs.get(job.getId()); // only interesting for certain edge cases
             String errorMessage = alertActiveForJob(meshyClient, job, previousErrorMessage);
             if (errorMessage != null) {
+                if (suppressChanges && (previousErrorMessage != null)) {
+                    errorMessage = previousErrorMessage;
+                }
                 newActiveTriggerTimesBuilder.put(job.getId(), triggerTime);
                 if ((now - triggerTime) >= delayMillis) {
                     newActiveJobsBuilder.put(job.getId(), errorMessage);

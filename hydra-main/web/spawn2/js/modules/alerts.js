@@ -49,13 +49,13 @@ function(
         			email:this.get("email"),
         			description:((this.get("description") instanceof Array) ? this.get("description")[0] : this.get("description")),
         			jobIds:this.get("jobIds").split(","),
+        			suppressChanges:this.get("suppressChanges"),
         			canaryPath:this.get("canaryPath"),
         			canaryConfigThreshold:this.get("canaryConfigThreshold"),
                     canaryOps:this.get("canaryOps"),
                     canaryRops:this.get("canaryRops"),
                     canaryFilter:this.get("canaryFilter"),
                     sigma:this.get("sigma"),
-                    tolerance:this.get("tolerance"),
                     continuous:this.get("continuous")
         		};
         		if (!this.isNew()) {

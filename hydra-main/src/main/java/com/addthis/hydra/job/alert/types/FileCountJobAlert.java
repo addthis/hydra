@@ -54,14 +54,6 @@ public class FileCountJobAlert extends AbstractJobAlert {
      */
     @JsonProperty public final int tolerance;
     @JsonProperty public final String canaryPath;
-    /**
-     * If true then always return the most recent error message.
-     * Otherwise rebroadcast the previous error message when
-     * an error is detected at the current iteration. Default is false.
-     * This is a trade-off where the most recent message for an alert
-     * is not emailed with the advantage of no continuous spam of emails.
-     */
-    @JsonProperty public final boolean continuous;
 
     public FileCountJobAlert(@Nullable @JsonProperty("alertId") String alertId,
                              @JsonProperty("description") String description,
@@ -69,18 +61,18 @@ public class FileCountJobAlert extends AbstractJobAlert {
                              @Time(TimeUnit.MINUTES) @JsonProperty("delay") long delay,
                              @JsonProperty("email") String email,
                              @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
+                             @JsonProperty("suppressChanges") boolean suppressChanges,
                              @JsonProperty("lastAlertTime") long lastAlertTime,
                              @JsonProperty("activeJobs") Map<String, String> activeJobs,
                              @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes,
                              @JsonProperty("sigma") double sigma,
                              @JsonProperty("tolerance") int tolerance,
-                             @JsonProperty("canaryPath") String canaryPath,
-                             @JsonProperty("continuous") boolean continuous) {
-        super(alertId, description, timeout, delay, email, jobIds, lastAlertTime, activeJobs, activeTriggerTimes);
+                             @JsonProperty("canaryPath") String canaryPath) {
+        super(alertId, description, timeout, delay, email, jobIds, suppressChanges,
+              lastAlertTime, activeJobs, activeTriggerTimes);
         this.sigma = sigma;
         this.tolerance = tolerance;
         this.canaryPath = canaryPath;
-        this.continuous = continuous;
     }
 
     @JsonIgnore
@@ -131,11 +123,7 @@ public class FileCountJobAlert extends AbstractJobAlert {
         }
         String errorString = errors.toString();
         if (!errorString.isEmpty()) {
-            if (continuous || (previousErrorMessage == null)) {
-                return errorString;
-            } else {
-                return previousErrorMessage;
-            }
+            return errorString;
         } else {
             return null;
         }

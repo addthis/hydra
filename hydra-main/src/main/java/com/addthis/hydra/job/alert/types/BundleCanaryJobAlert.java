@@ -47,6 +47,7 @@ public class BundleCanaryJobAlert extends AbstractJobAlert {
                                 @Time(TimeUnit.MINUTES) @JsonProperty("delay") long delay,
                                 @JsonProperty("email") String email,
                                 @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
+                                @JsonProperty("suppressChanges") boolean suppressChanges,
                                 @JsonProperty("canaryPath") String canaryPath,
                                 @JsonProperty("canaryOps") String canaryOps,
                                 @JsonProperty("canaryRops") String canaryRops,
@@ -54,7 +55,8 @@ public class BundleCanaryJobAlert extends AbstractJobAlert {
                                 @JsonProperty("lastAlertTime") long lastAlertTime,
                                 @JsonProperty("activeJobs") Map<String, String> activeJobs,
                                 @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes) {
-        super(alertId, description, timeout, delay, email, jobIds, lastAlertTime, activeJobs, activeTriggerTimes);
+        super(alertId, description, timeout, delay, email, jobIds, suppressChanges,
+              lastAlertTime, activeJobs, activeTriggerTimes);
         this.canaryPath = canaryPath;
         this.canaryOps = canaryOps;
         this.canaryRops = canaryRops;
