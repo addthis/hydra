@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 public class WriteableDiskCheck extends MeteredHealthCheck {
 
-    private List<File> checkedFiles;
+    private final List<File> checkedFiles;
 
     public WriteableDiskCheck(int maxFails, List<File> checkedFiles) {
         super(maxFails, "touch_disk_failure", TimeUnit.MINUTES);
@@ -31,15 +31,12 @@ public class WriteableDiskCheck extends MeteredHealthCheck {
     public boolean check() {
         for (File file : this.checkedFiles) {
             String[] cmdarray = {"touch", file.getAbsolutePath()};
-            try {
-                Process process = Runtime.getRuntime().exec(cmdarray);
-                if (process.waitFor() == 0) {
-                    return true;
-                }
-            } catch (Exception e) {
-                // keep trying files until one succeeds, or all fail
+            ProcessExecutor executor = new ProcessExecutor.Builder(cmdarray).setWait(30).build();
+            boolean success = executor.execute();
+            if (!success || (executor.exitValue() != 0)) {
+                return false;
             }
         }
-        return false;
+        return true;
     }
 }

@@ -13,11 +13,7 @@
  */
 package com.addthis.hydra.util;
 
-import java.io.OutputStreamWriter;
-
-import java.util.concurrent.TimeUnit;
-
-import com.google.common.io.ByteStreams;
+import com.addthis.basis.util.Strings;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,21 +28,17 @@ public class EmailUtil {
     public static void email(String to, String subject, String body) {
         try {
             String[] cmd = {"mailx", "-s " + subject, to};
-            Process p = Runtime.getRuntime().exec(cmd);
-            OutputStreamWriter osw = new OutputStreamWriter(p.getOutputStream());
-            osw.write(body);
-            osw.close();
-            boolean exited = p.waitFor(10, TimeUnit.SECONDS);
-            if (exited) {
-                String standardError = new String(ByteStreams.toByteArray(p.getErrorStream()));
-                int exitCode = p.exitValue();
-                if (!standardError.isEmpty() || (exitCode != 0)) {
-                    log.warn("Unable to send email with subject: {} to : {} due to subshell error : {} {}",
-                             subject, to, exitCode, standardError);
-                }
-            } else {
-                log.warn("Waited 10 seconds for subshell to send email with subject: {} to : {}, but it did not exit.",
-                         subject, to);
+            ProcessExecutor executor = new ProcessExecutor.Builder(cmd).setStdin(body).build();
+            boolean success = executor.execute();
+            int exitValue = executor.exitValue();
+            String standardError = executor.stderr();
+            /**
+             * If the process completed successfully but the standard error
+             * log is non-empty then emit the standard error.
+             */
+            if (success && (exitValue == 0) && !Strings.isEmpty(standardError)) {
+                log.warn("Stderr was non-empty in email with subject: {} to : {} due to subshell error : {} {}",
+                         subject, to, exitValue, standardError);
             }
         } catch (Exception e) {
             log.warn("Unable to send email with subject: {} to : {}", subject, to, e);
