@@ -17,6 +17,7 @@ package com.addthis.hydra.query.spawndatastore;
 import java.io.IOException;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.SortedMap;
@@ -100,6 +101,14 @@ public class SpawnDataStoreHandler {
         if (!queryConfigWatcher.safeToQuery(job)) {
             throw new QueryException("job is not safe to query (are queries enabled for this job in spawn?): " + job);
         }
+    }
+
+    public List<String> expandAlias(String job) {
+        List<String> possibleJobs = aliasBiMap.getJobs(job);
+        if ((possibleJobs != null) && !possibleJobs.isEmpty()) {
+            return possibleJobs;
+        }
+        return Collections.singletonList(job);
     }
 
     public String resolveAlias(String job) {

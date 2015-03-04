@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -204,12 +205,12 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         String subdirectories = getJobSubdirectory(combinedJob);
 
         List<QueryTaskSource[]> sourcesPerDir = new ArrayList<>(2);
-        for (String jobId : JOB_SPLITTER.split(jobIds)) {
+        JOB_SPLITTER.splitToList(jobIds).stream().map(this::expandAlias).flatMap(List::stream).forEachOrdered(jobId -> {
             for (String subdirectory : JOB_SPLITTER.split(subdirectories)) {
                 sourcesPerDir.add(
                         getSourcesById(jobId, subdirectory, Boolean.valueOf(query.getParameter("allowPartial"))));
             }
-        }
+        });
         QueryTaskSource[] sourcesByTaskID;
         if (sourcesPerDir.size() > 1) {
             sourcesByTaskID = sourcesPerDir.stream().flatMap(Arrays::stream).toArray(QueryTaskSource[]::new);
@@ -225,13 +226,17 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         ctx.pipeline().write(query, promise);
     }
 
-    private QueryTaskSource[] getSourcesById(String jobId, String subdirectory, boolean allowPartial) {
-        // resolves alias, checks querying enabled (!mutates query!)
+    private List<String> expandAlias(String jobId) {
         if (spawnDataStoreHandler != null) {
-            jobId = spawnDataStoreHandler.resolveAlias(jobId);
-            if (!allowPartial) {
-                spawnDataStoreHandler.validateJobForQuery(jobId);
-            }
+            return spawnDataStoreHandler.expandAlias(jobId);
+        } else {
+            return Collections.singletonList(jobId);
+        }
+    }
+
+    private QueryTaskSource[] getSourcesById(String jobId, String subdirectory, boolean allowPartial) {
+        if (spawnDataStoreHandler != null) {
+            spawnDataStoreHandler.validateJobForQuery(jobId);
         }
 
         String combinedJob;
@@ -254,7 +259,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         }
 
         int canonicalTasks;
-        if (spawnDataStoreHandler != null) {
+        if (!allowPartial && (spawnDataStoreHandler != null)) {
             try {
                 canonicalTasks = spawnDataStoreHandler.validateTaskCount(jobId, fileReferenceMap);
             } catch (Exception ex) {
