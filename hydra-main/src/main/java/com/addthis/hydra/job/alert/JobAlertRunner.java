@@ -149,9 +149,11 @@ public class JobAlertRunner {
                         MapDifference<String, String> difference = Maps.difference(currentErrors, newErrors);
                         emailAlert(oldAlert, "[CLEAR] ", difference.entriesOnlyOnLeft());
                         emailAlert(alert, "[TRIGGER] ", difference.entriesOnlyOnRight());
-                        emailAlert(alert, "[ERROR CHANGED] ",
-                                   Maps.transformValues(difference.entriesDiffering(),
-                                                        MapDifference.ValueDifference::rightValue));
+                        if (!alert.suppressChanges) {
+                            emailAlert(alert, "[ERROR CHANGED] ",
+                                       Maps.transformValues(difference.entriesDiffering(),
+                                                            MapDifference.ValueDifference::rightValue));
+                        }
                     }
                 }
                 lastAlertScanFailed = false;

@@ -56,7 +56,7 @@ function(
                     canaryRops:this.get("canaryRops"),
                     canaryFilter:this.get("canaryFilter"),
                     sigma:this.get("sigma"),
-                    continuous:this.get("continuous")
+                    tolerance:this.get("tolerance")
         		};
         		if (!this.isNew()) {
         			postData.alertId= this.get("alertId");

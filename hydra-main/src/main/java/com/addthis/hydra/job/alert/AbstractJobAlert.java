@@ -164,9 +164,6 @@ public abstract class AbstractJobAlert implements Codable {
             String previousErrorMessage = activeJobs.get(job.getId()); // only interesting for certain edge cases
             String errorMessage = alertActiveForJob(meshyClient, job, previousErrorMessage);
             if (errorMessage != null) {
-                if (suppressChanges && (previousErrorMessage != null)) {
-                    errorMessage = previousErrorMessage;
-                }
                 newActiveTriggerTimesBuilder.put(job.getId(), triggerTime);
                 if ((now - triggerTime) >= delayMillis) {
                     newActiveJobsBuilder.put(job.getId(), errorMessage);
