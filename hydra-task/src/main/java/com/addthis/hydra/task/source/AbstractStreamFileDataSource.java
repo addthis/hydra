@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 
@@ -62,6 +63,7 @@ import com.addthis.hydra.task.stream.StreamSourceFiltered;
 import com.addthis.hydra.task.stream.StreamSourceHashed;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -758,6 +760,10 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             }
             return null;
         }
+    }
+
+    @Nonnull @Override public ImmutableList<String> outputRootDirs() {
+        return ImmutableList.of(markDir);
     }
 
 }

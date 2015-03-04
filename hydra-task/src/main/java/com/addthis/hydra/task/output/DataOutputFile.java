@@ -14,7 +14,11 @@
 package com.addthis.hydra.task.output;
 
 
+import javax.annotation.Nonnull;
+
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * This output sink <span class="hydra-summary">shards the output stream to one or more files</span>.
@@ -94,4 +98,8 @@ public class DataOutputFile extends AbstractDataOutput {
         return writer;
     }
 
+    @Override @Nonnull
+    public ImmutableList<String> outputRootDirs() {
+        return writer.outputRootDirs();
+    }
 }

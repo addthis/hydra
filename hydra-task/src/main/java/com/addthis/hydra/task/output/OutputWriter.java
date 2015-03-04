@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.output;
 
+import javax.annotation.Nonnull;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -29,6 +31,8 @@ import com.addthis.basis.util.Files;
 import com.addthis.basis.util.JitterClock;
 
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.google.common.collect.ImmutableList;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
@@ -284,5 +288,9 @@ public class OutputWriter extends AbstractOutputWriter {
     public OutputWriter setMaxOpen(int maxOpen) {
         this.maxOpen = maxOpen;
         return this;
+    }
+
+    public @Nonnull ImmutableList<String> outputRootDirs() {
+        return factory.outputRootDirs();
     }
 }

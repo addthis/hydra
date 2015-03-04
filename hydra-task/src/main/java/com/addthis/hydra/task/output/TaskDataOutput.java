@@ -32,7 +32,7 @@ import com.addthis.codec.annotations.Pluggable;
  * @hydra-doc-position 5
  */
 @Pluggable("output-sink")
-public abstract class TaskDataOutput implements DataChannelOutput {
+public abstract class TaskDataOutput implements DataChannelOutput, OutputRootDirectories {
 
     protected final BundleFormat format;
 

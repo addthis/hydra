@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.task.run;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
@@ -55,7 +56,7 @@ public class TaskRunner {
         CompletableFuture<AutoCloseable> startedTask = new CompletableFuture<>();
         boolean hookAdded;
         try {
-            Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(() -> startedTask.join().close()),
+            Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(new TaskCloser(startedTask)),
                                                             "Task Shutdown Hook"));
             hookAdded = true;
         } catch (IllegalStateException ignored) {
@@ -69,6 +70,24 @@ public class TaskRunner {
             } catch (Throwable t) {
                 startedTask.complete(() -> log.debug("skipping task.close because it failed to start normally"));
                 throw t;
+            }
+        }
+    }
+
+    private static class TaskCloser implements Closeable {
+
+        private final CompletableFuture<AutoCloseable> task;
+
+        TaskCloser(CompletableFuture<AutoCloseable> task) {
+            this.task = task;
+        }
+
+        @Override public void close() throws IOException {
+            try {
+                task.join().close();
+            } catch (Exception ex) {
+                log.error("unrecoverable error shutting down task. immediately halting jvm", ex);
+                Runtime.getRuntime().halt(1);
             }
         }
     }

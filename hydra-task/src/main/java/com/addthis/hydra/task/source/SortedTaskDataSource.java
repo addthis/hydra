@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
+
 import java.util.Iterator;
 import java.util.TreeMap;
 
@@ -23,6 +25,8 @@ import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.util.BundleComparator;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * This {@link TaskDataSource source} <span class="hydra-summary">sorts an underlying data source</span>.
@@ -60,6 +64,10 @@ public class SortedTaskDataSource extends TaskDataSource {
 
     @Override public void init() {
         source.init();
+    }
+
+    @Nonnull @Override public ImmutableList<String> outputRootDirs() {
+        return source.outputRootDirs();
     }
 
     private void fill() {

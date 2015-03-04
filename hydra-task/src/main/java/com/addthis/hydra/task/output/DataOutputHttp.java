@@ -53,5 +53,6 @@ public class DataOutputHttp extends AbstractDataOutput {
     @Override AbstractOutputWriter getWriter() {
         return writer;
     }
+
 }
 

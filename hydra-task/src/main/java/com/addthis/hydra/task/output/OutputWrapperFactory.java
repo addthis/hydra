@@ -22,7 +22,7 @@ import com.addthis.codec.annotations.Pluggable;
  * Interface for classes capable of [re]opening {@link OutputWrapper}s.
  */
 @Pluggable("output-factory")
-public interface OutputWrapperFactory {
+public interface OutputWrapperFactory extends OutputRootDirectories {
 
     /**
      * Open a new or reopen an existing {@link OutputWrapper} and return a reference to that object
@@ -36,4 +36,5 @@ public interface OutputWrapperFactory {
     OutputWrapper openWriteStream(String target,
                                   OutputStreamFlags outputFlags,
                                   OutputStreamEmitter streamEmitter) throws IOException;
+
 }

@@ -13,9 +13,13 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
+
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.google.common.collect.ImmutableList;
 
 
 public abstract class AbstractDataSourceWrapper extends TaskDataSource {
@@ -52,6 +56,10 @@ public abstract class AbstractDataSourceWrapper extends TaskDataSource {
     @Override
     public Bundle peek() throws DataChannelError {
         return source.peek();
+    }
+
+    @Nonnull @Override public ImmutableList<String> outputRootDirs() {
+        return source.outputRootDirs();
     }
 
     @Override

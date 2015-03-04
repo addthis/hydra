@@ -20,6 +20,7 @@ import java.io.IOException;
 
 import java.net.ServerSocket;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
@@ -39,6 +40,7 @@ import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.task.run.TaskRunnable;
 import com.addthis.hydra.task.source.TaskDataSource;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -115,13 +117,15 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
     @JsonProperty private boolean emitTaskState;
     @JsonProperty private SimpleDateFormat dateFormat;
 
+    private final CompletableFuture<Void> onTaskComplete = new CompletableFuture<>();
+
     private final AtomicBoolean metricGate = new AtomicBoolean(false);
     private final LongAdder filterTime = new LongAdder();
     private final LongAdder outputTime = new LongAdder();
 
     // metrics
-    private final Meter inputMeter = Metrics.newMeter(getClass(), "input", "input", TimeUnit.SECONDS);
-    private final Meter outputMeter = Metrics.newMeter(getClass(), "output", "output", TimeUnit.SECONDS);
+    private static final Meter inputMeter = Metrics.newMeter(StreamMapper.class, "input", "input", TimeUnit.SECONDS);
+    private static final Meter outputMeter = Metrics.newMeter(StreamMapper.class, "output", "output", TimeUnit.SECONDS);
 
     @GuardedBy("metricGate") private long lastTick;
     @GuardedBy("metricGate") private long lastOutputTime = 0;
@@ -302,7 +306,7 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
     }
 
     /** called on process exit */
-    public void taskComplete() {
+    public void taskComplete(boolean interrupted) {
         if (builder != null) {
             builder.streamComplete(this);
             log.info("[streamComplete] builder");
@@ -313,7 +317,12 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
         output.sendComplete();
         emitTaskExitState();
         maybeCloseJmx();
-        log.info("[taskComplete]");
+        if (interrupted) {
+            log.info("[taskComplete] onTaskComplete future skipped.");
+        } else {
+            boolean success = onTaskComplete.complete(null);
+            log.info("[taskComplete] Triggered future: {}", success);
+        }
     }
 
     /* leave artifact for minion, if desired */
@@ -366,4 +375,27 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
             }
         }
     }
+
+    public ImmutableList<String> outputRootDirs() {
+        return ImmutableList.<String>builder()
+                .addAll(source.outputRootDirs())
+                .addAll(output.outputRootDirs())
+                .build();
+    }
+
+    /**
+     * Append an synchronous action to
+     * be executed when the {@code onTaskComplete} future
+     * completes. These actions are executed synchronously
+     * so that the executing thread doesn't have the opportunity
+     * to exit and possibly close the JVM.
+     *
+     * The implementer is responsible for ensuring that the provided
+     * action either (a) does not throw an exception or (b) is intended
+     * to stop all actions when an exception is thrown.
+     */
+    public CompletableFuture<Void> onCompleteThenRun(Runnable action) {
+        return onTaskComplete.thenRun(action);
+    }
+
 }

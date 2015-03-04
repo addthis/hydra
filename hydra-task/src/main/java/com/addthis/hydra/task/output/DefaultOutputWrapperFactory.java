@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.task.output;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.io.File;
@@ -30,6 +31,7 @@ import com.addthis.muxy.MuxFileDirectory;
 import com.addthis.muxy.MuxFileDirectoryCache;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -223,6 +225,11 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
         OutputStream wrappedStream = wrapOutputStream(outputFlags, targetOut.exists(), outputStream);
         return new DefaultOutputWrapper(wrappedStream, streamEmitter, targetOut, targetOutTmp,
                                         outputFlags.isCompress(), outputFlags.getCompressType(), rawTarget);
+    }
+
+    @Override @Nonnull
+    public ImmutableList<String> outputRootDirs() {
+        return ImmutableList.of(dir);
     }
 
     @Deprecated protected void setDir(String dir) {

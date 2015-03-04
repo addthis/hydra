@@ -38,4 +38,5 @@ public class DataSourceStreamFiles extends DataSourceStreamList {
     public StreamFileSource getSourceList(Integer[] shard) {
         return new StreamSourceFileList(Strings.join(files, "\n"));
     }
+
 }
