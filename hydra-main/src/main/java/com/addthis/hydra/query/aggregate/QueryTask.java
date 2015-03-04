@@ -15,13 +15,20 @@
 package com.addthis.hydra.query.aggregate;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.util.AutoField;
+import com.addthis.bundle.util.NoopField;
+import com.addthis.codec.config.Configs;
+import com.addthis.hydra.data.query.Query;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.addthis.bundle.value.ValueFactory.create;
 
 public class QueryTask implements Runnable {
 
@@ -30,9 +37,11 @@ public class QueryTask implements Runnable {
     private final MeshSourceAggregator sourceAggregator;
 
     private int pollFailures = 0;
+    private final AutoField sourceField;
 
     public QueryTask(MeshSourceAggregator sourceAggregator) {
         this.sourceAggregator = sourceAggregator;
+        this.sourceField = getSourceField(sourceAggregator.query);
     }
 
     @Override
@@ -62,6 +71,8 @@ public class QueryTask implements Runnable {
                     try {
                         Bundle nextBundle = taskSource.next();
                         if (nextBundle != null) {
+                            sourceField.setValue(nextBundle,
+                                                 create(taskSource.getSelectedSource().queryReference.name));
                             sourceAggregator.consumer.send(nextBundle);
                             processedBundle = true;
                             bundlesProcessed += 1;
@@ -122,6 +133,19 @@ public class QueryTask implements Runnable {
             sourceAggregator.executor.schedule(this, 25, TimeUnit.MILLISECONDS);
         } else { // > 1.875 seconds
             sourceAggregator.executor.schedule(this, 100, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    private static AutoField getSourceField(Query query) {
+        String sourceFieldName = query.getParameter("injectSource");
+        if (sourceFieldName != null) {
+            try {
+                return Configs.decodeObject(AutoField.class, sourceFieldName);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        } else {
+            return new NoopField();
         }
     }
 }

@@ -94,11 +94,7 @@ public class QueryTaskSource {
 
     public QueryTaskSourceOption getSelectedSource() {
         if (oneHasResponded()) {
-            for (QueryTaskSourceOption option : options) {
-                if (option.isActive()) {
-                    return option;
-                }
-            }
+            return dataChannelReader.sourceOption;
         }
         return null;
     }

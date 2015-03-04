@@ -81,6 +81,7 @@ public final class HttpQueryCallHandler {
         int timeout = Math.min(kv.getIntValue("timeout", maxQueryTime), maxQueryTime);
         query.setParameterIfNotYetSet("timeout", timeout);
         query.setParameter("sender", kv.getValue("sender"));
+        query.setParameter("injectSource", kv.getValue("injectSource"));
 
         if (log.isDebugEnabled()) {
             log.debug(new StringMapHelper()

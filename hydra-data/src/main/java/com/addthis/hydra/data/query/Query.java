@@ -22,11 +22,12 @@ import com.addthis.basis.util.CUID;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.channel.DataChannelOutput;
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.codec.json.CodecJSON;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
@@ -50,26 +51,18 @@ public class Query implements Codable {
 
     private static final AtomicLong queryIds = new AtomicLong(0);
 
-    @FieldConfig(codable = true)
-    private String[] paths;
-    @FieldConfig(codable = true)
-    private String[] ops;
-    @FieldConfig(codable = true)
-    private String   job;
-    @FieldConfig(codable = true)
-    private boolean  trace;
-    @FieldConfig(codable = true)
-    private String   sessionId;
-    @FieldConfig(codable = true)
-    private long     queryId;
-    @FieldConfig(codable = true)
-    private HashMap<String, String> params = new HashMap<>();
+    @JsonProperty private String[] paths;
+    @JsonProperty private String[] ops;
+    @JsonProperty private String   job;
+    @JsonProperty private boolean  trace;
+    @JsonProperty private String   sessionId;
+    @JsonProperty private long     queryId;
+    @JsonProperty private HashMap<String, String> params = new HashMap<>();
 
-    @FieldConfig(codable = false)
-    public ChannelProgressivePromise queryPromise = null;
+    @JsonIgnore
+    public transient ChannelProgressivePromise queryPromise = null;
 
-    // for codec
-    public Query() {}
+    private Query() {}
 
     public Query(String job, String[] paths, String[] ops) {
         this.job = job;
