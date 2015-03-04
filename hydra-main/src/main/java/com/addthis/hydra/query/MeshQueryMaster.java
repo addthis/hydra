@@ -18,8 +18,11 @@ import java.io.IOException;
 
 import java.net.InetSocketAddress;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
@@ -41,6 +44,7 @@ import com.addthis.hydra.query.tracker.TrackerHandler;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
 
+import com.google.common.base.Splitter;
 import com.google.common.collect.Multimap;
 
 import org.slf4j.Logger;
@@ -169,38 +173,80 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         }
     }
 
-    private String getAndTrimJobSubdirectory(Query query) {
-        String jobId = query.getJob();
-        int dirIndex = query.getJob().indexOf('/');
+    private String getJobSubdirectory(String combinedJob) {
+        int dirIndex = combinedJob.indexOf('/');
         if (dirIndex > -1) {
-            query.setJob(jobId.substring(0, dirIndex));
-            return jobId.substring(dirIndex);
+            return combinedJob.substring(dirIndex + 1);
         } else {
             return "";
         }
     }
 
-    protected void writeQuery(ChannelHandlerContext ctx, Query query, ChannelPromise promise) throws Exception {
-        String[] opsLog = query.getOps();   // being able to log and monitor rops is kind of important
+    private String getJobWithoutSubdirectory(String combinedJob) {
+        int dirIndex = combinedJob.indexOf('/');
+        if (dirIndex > -1) {
+            return combinedJob.substring(0, dirIndex);
+        } else {
+            return combinedJob;
+        }
+    }
 
-        // resolves alias, checks querying enabled (!mutates query!)
-        if (spawnDataStoreHandler != null) {
-            String suffix = getAndTrimJobSubdirectory(query);
-            spawnDataStoreHandler.resolveAlias(query);
-            spawnDataStoreHandler.validateJobForQuery(query);
-            query.setJob(query.getJob() + suffix);
+    private static final Splitter JOB_SPLITTER = Splitter.on(',');
+
+    protected void writeQuery(ChannelHandlerContext ctx, Query query, ChannelPromise promise) throws Exception {
+        // log rops prior to mutating query
+        String[] opsLog = query.getOps();
+        // creates query for worker and updates local query ops (!mutates query!)
+        Query remoteQuery = query.createPipelinedQuery();
+
+        String combinedJob = query.getJob();
+        String jobIds = getJobWithoutSubdirectory(combinedJob);
+        String subdirectories = getJobSubdirectory(combinedJob);
+
+        List<QueryTaskSource[]> sourcesPerDir = new ArrayList<>(2);
+        for (String jobId : JOB_SPLITTER.split(jobIds)) {
+            for (String subdirectory : JOB_SPLITTER.split(subdirectories)) {
+                sourcesPerDir.add(
+                        getSourcesById(jobId, subdirectory, Boolean.valueOf(query.getParameter("allowPartial"))));
+            }
+        }
+        QueryTaskSource[] sourcesByTaskID;
+        if (sourcesPerDir.size() > 1) {
+            sourcesByTaskID = sourcesPerDir.stream().flatMap(Arrays::stream).toArray(QueryTaskSource[]::new);
+        } else {
+            sourcesByTaskID = sourcesPerDir.get(0);
         }
 
-        // creates query for worker and updates local query ops (!mutates query!)
-        // TODO: fix this pipeline interface
-        Query remoteQuery = query.createPipelinedQuery();
+        MeshSourceAggregator aggregator = new MeshSourceAggregator(sourcesByTaskID, meshy, this, remoteQuery);
+        ctx.pipeline().addLast(ctx.executor(), "query aggregator", aggregator);
+        TrackerHandler trackerHandler = new TrackerHandler(tracker, opsLog);
+        ctx.pipeline().addLast(ctx.executor(), "query tracker", trackerHandler);
+        ctx.pipeline().remove(this);
+        ctx.pipeline().write(query, promise);
+    }
+
+    private QueryTaskSource[] getSourcesById(String jobId, String subdirectory, boolean allowPartial) {
+        // resolves alias, checks querying enabled (!mutates query!)
+        if (spawnDataStoreHandler != null) {
+            jobId = spawnDataStoreHandler.resolveAlias(jobId);
+            if (!allowPartial) {
+                spawnDataStoreHandler.validateJobForQuery(jobId);
+            }
+        }
+
+        String combinedJob;
+        if (!subdirectory.isEmpty()) {
+            combinedJob = jobId + '/' + subdirectory;
+        } else {
+            combinedJob = jobId;
+        }
 
         Multimap<Integer, FileReference> fileReferenceMap;
         try {
-            fileReferenceMap = cachey.get(query.getJob());
+            fileReferenceMap = cachey.get(combinedJob);
             if ((fileReferenceMap == null) || fileReferenceMap.isEmpty()) {
-                cachey.invalidate(query.getJob());
-                throw new QueryException("[MeshQueryMaster] No file references found for job: " + query.getJob());
+                cachey.invalidate(combinedJob);
+                throw new QueryException("[MeshQueryMaster] No file references found for job: " + combinedJob);
             }
         } catch (ExecutionException e) {
             log.warn("", e);
@@ -210,11 +256,9 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         int canonicalTasks;
         if (spawnDataStoreHandler != null) {
             try {
-                String suffix = getAndTrimJobSubdirectory(query);
-                canonicalTasks = spawnDataStoreHandler.validateTaskCount(query, fileReferenceMap);
-                query.setJob(query.getJob() + suffix);
+                canonicalTasks = spawnDataStoreHandler.validateTaskCount(jobId, fileReferenceMap);
             } catch (Exception ex) {
-                cachey.invalidate(query.getJob());
+                cachey.invalidate(combinedJob);
                 throw ex;
             }
         } else {
@@ -240,26 +284,21 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
             }
         }
 
-        MeshSourceAggregator aggregator = new MeshSourceAggregator(sourcesByTaskID, meshy, this, remoteQuery);
-        ctx.pipeline().addLast(ctx.executor(), "query aggregator", aggregator);
-        TrackerHandler trackerHandler = new TrackerHandler(tracker, opsLog);
-        ctx.pipeline().addLast(ctx.executor(), "query tracker", trackerHandler);
-        ctx.pipeline().remove(this);
-        ctx.pipeline().write(query, promise);
+        return sourcesByTaskID;
     }
 
     /**
      * Called after MeshSourceAggregator detects that one of the FileReferences in the cache is invalid/out of date.
      * Look for an alternate FileReferenceWrapper in the cache. If none exists, fetch a replacement via a mesh lookup.
      *
-     * @param job             The job id to search
-     * @param task            The task id to search
      * @param failedReference The FileReference that threw the exception
      * @return A replacement FileReference, which is also placed into the cache if it was newly generated
      * @throws IOException If there is a problem fetching a replacement FileReference
      */
-    public QueryTaskSourceOption getReplacementQueryTaskOption(String job, int task, FileReference failedReference)
+    public QueryTaskSourceOption getReplacementQueryTaskOption(FileReference failedReference)
             throws IOException, ExecutionException, InterruptedException {
+        String job = getJobFromPath(failedReference.name);
+        int task = getTaskFromPath(failedReference.name);
         Set<FileReference> oldReferences = cachey.getTaskReferencesIfPresent(job, task);
         Set<FileReference> newReferences = new HashSet<>(oldReferences);
         newReferences.remove(failedReference);
@@ -272,5 +311,19 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         FileReference cachedReplacement = newReferences.iterator().next();
         WorkerData workerData = worky.get(cachedReplacement.getHostUUID());
         return new QueryTaskSourceOption(cachedReplacement, workerData.queryLeases);
+    }
+
+    private static String getJobFromPath(String path) {
+        int jobStart = path.indexOf('/', 1);
+        int jobEnd = path.indexOf('/', jobStart + 1);
+        return path.substring(jobStart, jobEnd);
+    }
+
+    private static int getTaskFromPath(String path) {
+        int jobStart = path.indexOf('/', 1);
+        int jobEnd = path.indexOf('/', jobStart + 1);
+        int taskStart = jobEnd + 1;
+        int taskEnd = path.indexOf('/', taskStart + 1);
+        return Integer.parseInt(path.substring(taskStart, taskEnd));
     }
 }

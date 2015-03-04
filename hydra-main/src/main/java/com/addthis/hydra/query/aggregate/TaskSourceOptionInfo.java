@@ -14,21 +14,21 @@
 
 package com.addthis.hydra.query.aggregate;
 
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class TaskSourceOptionInfo implements Codable {
 
-    @FieldConfig(codable = true)
-    public final String hostUuid;
-    @FieldConfig(codable = true)
-    public final boolean active;
-    @FieldConfig(codable = true)
-    public final boolean selected;
+    @JsonProperty public final String hostUuid;
+    @JsonProperty public final boolean active;
+    @JsonProperty public final boolean selected;
+    @JsonProperty public final String path;
 
     public TaskSourceOptionInfo(QueryTaskSourceOption option, boolean selected) {
         this.hostUuid = option.queryReference.getHostUUID();
         this.active   = option.isActive();
         this.selected = selected;
+        this.path     = option.queryReference.name;
     }
 }

@@ -63,7 +63,6 @@ public class QueryEntry {
         stat.uuid = query.queryId();
         stat.ops = opsLog;
         stat.job = query.getJob();
-        stat.alias = query.getParameter("track.alias");
         stat.sources = query.getParameter("sources");
         stat.remoteip = query.getParameter("remoteip");
         stat.sender = query.getParameter("sender");

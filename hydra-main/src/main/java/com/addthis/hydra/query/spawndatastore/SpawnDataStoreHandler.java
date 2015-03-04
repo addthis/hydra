@@ -24,7 +24,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
@@ -97,20 +96,18 @@ public class SpawnDataStoreHandler {
         return jobConfigManager.getJobs().values();
     }
 
-    public void validateJobForQuery(Query query) {
-        if (!queryConfigWatcher.safeToQuery(query.getJob())) {
-            throw new QueryException("job is not safe to query (are queries enabled for this job in spawn?): " + query.getJob());
+    public void validateJobForQuery(String job) {
+        if (!queryConfigWatcher.safeToQuery(job)) {
+            throw new QueryException("job is not safe to query (are queries enabled for this job in spawn?): " + job);
         }
     }
 
-    public void resolveAlias(Query query) {
-        List<String> possibleJobs = aliasBiMap.getJobs(query.getJob());
+    public String resolveAlias(String job) {
+        List<String> possibleJobs = aliasBiMap.getJobs(job);
         if ((possibleJobs != null) && !possibleJobs.isEmpty()) {
-            query.setJob(possibleJobs.get(0));
-        } else {
-            String trackA = aliasBiMap.getLikelyAlias(query.getJob());
-            query.setParameter("track.alias", (trackA != null) ? trackA : "");
+            return possibleJobs.get(0);
         }
+        return job;
     }
 
     /**
@@ -118,21 +115,21 @@ public class SpawnDataStoreHandler {
      *
      * @return The canonical task count according to spawn/ zookeeper
      */
-    public int validateTaskCount(Query query, Multimap<Integer, FileReference> fileReferenceMap) {
+    public int validateTaskCount(String job, Multimap<Integer, FileReference> fileReferenceMap) {
         IJob zkJob;
         try {
-            zkJob = jobConfigurationCache.get(query.getJob());
+            zkJob = jobConfigurationCache.get(job);
         } catch (ExecutionException ignored) {
-            throw new QueryException("unable to retrieve job configuration for job: " + query.getJob());
+            throw new QueryException("unable to retrieve job configuration for job: " + job);
         }
         if (zkJob == null) {
-            final String errorMessage = "[MeshQueryMaster] Error:  unable to find ZK reference for job: " + query.getJob();
+            final String errorMessage = "[MeshQueryMaster] Error:  unable to find ZK reference for job: " + job;
             throw new QueryException(errorMessage);
         }
 
         final int taskCount = new Job(zkJob).getTaskCount();
         int fileReferenceCount = fileReferenceMap.keySet().size();
-        if (!Boolean.valueOf(query.getParameter("allowPartial")) && (fileReferenceCount != taskCount)) {
+        if (fileReferenceCount != taskCount) {
             final String errorMessage = "Did not find data for all tasks (and allowPartial is off): "
                                         + fileReferenceCount + " out of " + taskCount;
             final int numMissing = taskCount - fileReferenceCount;

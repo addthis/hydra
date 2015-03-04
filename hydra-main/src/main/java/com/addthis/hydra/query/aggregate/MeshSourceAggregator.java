@@ -137,14 +137,12 @@ public class MeshSourceAggregator extends ChannelDuplexHandler implements Channe
         return option.tryActivate(meshy, queryOptions);
     }
 
-    void replaceQuerySource(QueryTaskSource taskSource, QueryTaskSourceOption option,
-            int taskId) throws Exception {
+    void replaceQuerySource(QueryTaskSource taskSource, QueryTaskSourceOption option) throws Exception {
         taskSource.reset();
         // Invoked when a cached FileReference throws an IO Exception
         // Get a fresh FileReference and make a new QuerySource with that FileReference
         //      and the same parameters otherwise
-        QueryTaskSourceOption newOption = meshQueryMaster.getReplacementQueryTaskOption(query.getJob(),
-                taskId, option.queryReference);
+        QueryTaskSourceOption newOption = meshQueryMaster.getReplacementQueryTaskOption(option.queryReference);
         for (int i = 0; i < taskSource.options.length; i++) {
             if (taskSource.options[i] == option) {
                 taskSource.options[i] = newOption;
