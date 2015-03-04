@@ -22,7 +22,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * This {@link TaskDataSource source} <span class="hydra-summary">prefetches bundles from an underlying data source</span>.
  *
  * @user-reference
- * @hydra-name prefetch
  */
 public final class DataSourcePrefetch extends TaskDataSource {
 

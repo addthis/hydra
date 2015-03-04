@@ -37,7 +37,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name equals
  */
 public class BundleFilterEquals implements BundleFilter {
 

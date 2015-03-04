@@ -22,7 +22,6 @@ import com.addthis.hydra.data.tree.TreeNodeList;
  * bundles to the console (standard output)</span>.
  *
  * @user-reference
- * @hydra-name debug
  */
 public class PathDebug extends PathOp {
 

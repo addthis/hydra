@@ -34,7 +34,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * }</pre>
  *
  * @user-reference
- * @hydra-name http
  */
 public class DataOutputHttp extends AbstractDataOutput {
 

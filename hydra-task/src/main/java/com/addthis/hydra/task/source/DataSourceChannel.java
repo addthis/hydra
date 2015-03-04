@@ -28,7 +28,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * This data source <span class="hydra-summary">accepts codec streams</span>.
  *
  * @user-reference
- * @hydra-name channel
  */
 public class DataSourceChannel extends TaskDataSource implements BundleFactory {
 

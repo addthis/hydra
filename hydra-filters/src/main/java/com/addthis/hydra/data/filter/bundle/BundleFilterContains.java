@@ -40,7 +40,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *  </pre>
  *
  * @user-reference
- * @hydra-name contains
  */
 public class BundleFilterContains implements BundleFilter {
 

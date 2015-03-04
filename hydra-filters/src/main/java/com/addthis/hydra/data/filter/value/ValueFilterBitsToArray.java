@@ -33,7 +33,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name bit-split
  */
 public class ValueFilterBitsToArray extends AbstractValueFilter {
 

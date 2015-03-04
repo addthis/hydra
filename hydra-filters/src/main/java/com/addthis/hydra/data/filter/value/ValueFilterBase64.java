@@ -34,7 +34,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name base64
  */
 public class ValueFilterBase64 extends StringFilter {
 

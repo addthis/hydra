@@ -28,7 +28,6 @@ import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * @user-reference
- * @hydra-name channel
  */
 public class OutputStreamChannel extends OutputStreamFormatter {
 

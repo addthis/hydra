@@ -65,7 +65,6 @@ public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistr
      * </pre>
      *
      * @user-reference
-     * @hydra-name distribution
      */
     public static final class Config extends TreeDataParameters<DataPercentileDistribution> {
 

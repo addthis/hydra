@@ -315,7 +315,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * </pre>
  *
  * @user-reference
- * @hydra-name num
  */
 public class BundleFilterNum implements BundleFilter {
 

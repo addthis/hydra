@@ -35,7 +35,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name band-pass
  */
 @SuppressWarnings("serial")
 public class ValueFilterBandPass extends StringFilter {

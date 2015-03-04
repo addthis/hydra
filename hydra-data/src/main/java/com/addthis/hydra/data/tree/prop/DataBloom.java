@@ -76,7 +76,6 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements SuperCo
      * </pre>
      *
      * @user-reference
-     * @hydra-name bloom
      */
     public static final class Config extends TreeDataParameters<DataBloom> {
 

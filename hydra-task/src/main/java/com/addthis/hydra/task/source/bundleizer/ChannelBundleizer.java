@@ -25,7 +25,6 @@ import com.addthis.bundle.io.DataChannelReader;
 /**
  * chops a DataChannel stream into Bundles.
  *
- * @hydra-name channel
  */
 public class ChannelBundleizer extends BundleizerFactory {
 

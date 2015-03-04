@@ -54,7 +54,6 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements SuperCodabl
      * the stored value for that key. The /+ is what includes the virtual layer of child nodes containing the values.</p>
      *
      * @user-reference
-     * @hydra-name map
      */
     public static final class Config extends TreeDataParameters<DataMap> {
 

@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
  * }</pre>
  *
  * @user-reference
- * @hydra-name mesh2
  */
 public class DataSourceMeshy2 extends AbstractStreamFileDataSource {
 

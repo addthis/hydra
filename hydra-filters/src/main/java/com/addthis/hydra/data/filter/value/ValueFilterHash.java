@@ -46,7 +46,6 @@ import org.apache.commons.codec.binary.Hex;
  * </pre>
  *
  * @user-reference
- * @hydra-name hash
  */
 public class ValueFilterHash extends AbstractValueFilter {
 

@@ -69,7 +69,6 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
      * <p>The % notation is not supported for this data attachment.</p>
      *
      * @user-reference
-     * @hydra-name seen
      */
     public static final class Config extends TreeDataParameters<DataSeen> {
 

@@ -24,7 +24,6 @@ import com.addthis.hydra.task.run.TaskRunConfig;
  * This data source <span class="hydra-summary">shards the input source by hashing on a bundle field</span>.
  *
  * @user-reference
- * @hydra-name hashed
  */
 public class DataSourceHashed extends TaskDataSource {
 

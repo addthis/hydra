@@ -36,7 +36,6 @@ import com.addthis.hydra.data.filter.value.ValueFilter;
  * </pre>
  *
  * @user-reference
- * @hydra-name clear
  */
 public class BundleFilterClear implements BundleFilter {
 

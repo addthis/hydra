@@ -29,7 +29,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name limit
  */
 public class BundleFilterLimit implements BundleFilter {
 

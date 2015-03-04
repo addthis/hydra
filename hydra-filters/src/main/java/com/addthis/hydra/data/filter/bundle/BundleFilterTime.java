@@ -39,7 +39,6 @@ import org.slf4j.LoggerFactory;
  * </pre>
  *
  * @user-reference
- * @hydra-name time
  */
 public class BundleFilterTime implements BundleFilter {
 

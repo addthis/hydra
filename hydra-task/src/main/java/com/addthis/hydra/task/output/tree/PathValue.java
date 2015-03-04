@@ -41,7 +41,6 @@ import com.addthis.hydra.data.tree.TreeNodeList;
  * },</pre>
  *
  * @user-reference
- * @hydra-name const
  */
 public class PathValue extends PathElement {
 

@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
  * <p/>
  *
  * @user-reference
- * @hydra-name chain
  */
 public class BundleFilterChain implements BundleFilter {
 

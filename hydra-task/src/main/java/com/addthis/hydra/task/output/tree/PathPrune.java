@@ -49,7 +49,6 @@ import org.slf4j.LoggerFactory;
  *  relativeDown : 1},</pre>
  *
  * @user-reference
- * @hydra-name prune
  */
 public class PathPrune extends PathElement {
     private static final Logger logger = LoggerFactory.getLogger(PathPrune.class);

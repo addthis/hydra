@@ -36,7 +36,6 @@ import com.addthis.maljson.JSONObject;
  * </pre>
  *
  * @user-reference
- * @hydra-name json
  */
 public class ValueFilterJSON extends AbstractValueFilter implements SuperCodable {
 

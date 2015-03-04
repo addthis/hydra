@@ -26,7 +26,6 @@ import com.addthis.bundle.value.ValueObject;
  * </pre>
  *
  * @user-reference
- * @hydra-name reverse
  */
 public class ValueFilterReverse extends AbstractValueFilter {
 

@@ -44,7 +44,6 @@ import org.joda.time.format.DateTimeFormatter;
  * </pre>
  *
  * @user-reference
- * @hydra-name data-range-length
  */
 public class ValueFilterDateRangeLength extends StringFilter {
 

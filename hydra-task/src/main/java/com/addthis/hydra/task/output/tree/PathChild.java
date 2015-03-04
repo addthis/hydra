@@ -20,7 +20,6 @@ import com.addthis.hydra.data.tree.TreeNodeList;
 
 /**
  * @user-reference
- * @hydra-name child
  */
 public final class PathChild extends PathElement {
 

@@ -83,7 +83,6 @@ import static java.lang.String.join;
  * }</pre>
  *
  * @user-reference
- * @hydra-name map
  */
 public class StreamMapper implements StreamEmitter, TaskRunnable {
     private static final Logger log = LoggerFactory.getLogger(StreamMapper.class);

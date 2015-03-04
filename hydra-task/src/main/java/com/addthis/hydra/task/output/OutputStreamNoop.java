@@ -20,7 +20,6 @@ import com.addthis.bundle.core.Bundle;
 
 /**
  * @user-reference
- * @hydra-name noop
  */
 public class OutputStreamNoop extends OutputStreamFormatter {
 

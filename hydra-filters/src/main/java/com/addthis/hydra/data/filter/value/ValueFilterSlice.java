@@ -28,7 +28,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name slice
  * @exlude-fields once
  */
 public class ValueFilterSlice extends AbstractValueFilter {

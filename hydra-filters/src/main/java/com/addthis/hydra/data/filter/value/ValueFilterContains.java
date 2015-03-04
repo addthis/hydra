@@ -51,7 +51,6 @@ import org.arabidopsis.ahocorasick.SearchResult;
  * </pre>
  *
  * @user-reference
- * @hydra-name contains
  */
 public class ValueFilterContains extends AbstractValueFilter {
 

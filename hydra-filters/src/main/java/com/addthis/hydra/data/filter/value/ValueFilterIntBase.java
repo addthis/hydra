@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
  * </pre>
  *
  * @user-reference
- * @hydra-name intbase
  */
 public class ValueFilterIntBase extends AbstractValueFilter {
 

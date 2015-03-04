@@ -26,7 +26,6 @@ import com.addthis.bundle.value.ValueObject;
  * </pre>
  *
  * @user-reference
- * @hydra-name pass
  * @exclude-fields once
  */
 public class ValueFilterPass extends AbstractValueFilter {

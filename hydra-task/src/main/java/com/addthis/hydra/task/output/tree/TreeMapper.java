@@ -93,7 +93,6 @@ import org.slf4j.LoggerFactory;
  * },</pre>
  *
  * @user-reference
- * @hydra-name tree
  */
 public final class TreeMapper extends DataOutputTypeList implements Codable {
 

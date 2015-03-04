@@ -39,7 +39,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * </pre>
  *
  * @user-reference
- * @hydra-name random-field
  */
 public class BundleFilterRandomField implements BundleFilter {
 

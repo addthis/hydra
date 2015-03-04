@@ -66,7 +66,6 @@ public class DataHistogram extends TreeNodeData<DataHistogram.Config> implements
      * </pre>
      *
      * @user-reference
-     * @hydra-name histo
      */
     public static final class Config extends TreeDataParameters<DataHistogram> {
 

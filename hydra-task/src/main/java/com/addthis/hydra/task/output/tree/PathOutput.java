@@ -34,7 +34,6 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * @user-reference
- * @hydra-name output
  */
 public class PathOutput extends PathElement {
 

@@ -56,7 +56,6 @@ public class DataTime extends TreeNodeData<DataTime.Config> {
      * </pre>
      *
      * @user-reference
-     * @hydra-name time
      */
     public static final class Config extends TreeDataParameters<DataTime> {
 

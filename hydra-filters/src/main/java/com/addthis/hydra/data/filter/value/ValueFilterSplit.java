@@ -48,7 +48,6 @@ import org.slf4j.LoggerFactory;
  * </pre>
  *
  * @user-reference
- * @hydra-name split
  * @exclude-fields once
  */
 public class ValueFilterSplit extends AbstractValueFilterContextual {

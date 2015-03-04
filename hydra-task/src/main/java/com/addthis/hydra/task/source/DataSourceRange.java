@@ -24,7 +24,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </p>
  *
  * @user-reference
- * @hydra-name range
  */
 public class DataSourceRange extends TaskDataSource {
 

@@ -48,7 +48,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * </pre>
  *
  * @user-reference
- * @hydra-name count
  */
 public class ValueFilterCounter extends AbstractValueFilter {
 

@@ -37,7 +37,6 @@ import com.addthis.hydra.data.tree.TreeNodeList;
  * path element arrays is equal to the size of the "each" parameter.</p>
  * <p/>
  * @user-reference
- * @hydra-name branch
  */
 public final class PathBranch extends PathElement {
 

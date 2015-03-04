@@ -42,7 +42,6 @@ import com.addthis.hydra.data.util.Tokenizer;
  * </pre>
  *
  * @user-reference
- * @hydra-name file
  */
 public final class PathFile extends PathKeyValue {
 

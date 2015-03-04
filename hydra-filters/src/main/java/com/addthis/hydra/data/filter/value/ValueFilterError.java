@@ -40,7 +40,6 @@ import static com.fasterxml.jackson.annotation.JsonTypeInfo.Id.MINIMAL_CLASS;
  * </pre>
  *
  * @user-reference
- * @hydra-name error
  */
 public class ValueFilterError extends AbstractValueFilter {
 

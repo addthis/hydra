@@ -116,7 +116,6 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
      * </pre>
      *
      * @user-reference
-     * @hydra-name key.top
      */
     public static final class Config extends TreeDataParameters<DataKeyTop> {
 

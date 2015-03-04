@@ -31,7 +31,6 @@ import com.addthis.hydra.data.filter.value.StringFilter;
  * Token Separated Column Values
  *
  * @user-reference
- * @hydra-name column
  */
 public class OutputStreamColumnized extends OutputStreamFormatter implements SuperCodable {
 
