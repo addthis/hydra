@@ -278,10 +278,10 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
 
     private static String replaceDateElements(DateTime time, String template) {
         String result = YY_PATTERN.matcher(template).replaceAll(time.year().getAsString());
-        result = Y_PATTERN.matcher(template).replaceAll(getTwoDigit(time.year().get()));
-        result = M_PATTERN.matcher(template).replaceAll(getTwoDigit(time.monthOfYear().get()));
-        result = D_PATTERN.matcher(template).replaceAll(getTwoDigit(time.dayOfMonth().get()));
-        result = H_PATTERN.matcher(template).replaceAll(getTwoDigit(time.hourOfDay().get()));
+        result = Y_PATTERN.matcher(result).replaceAll(getTwoDigit(time.year().get()));
+        result = M_PATTERN.matcher(result).replaceAll(getTwoDigit(time.monthOfYear().get()));
+        result = D_PATTERN.matcher(result).replaceAll(getTwoDigit(time.dayOfMonth().get()));
+        result = H_PATTERN.matcher(result).replaceAll(getTwoDigit(time.hourOfDay().get()));
         log.debug("template={}, result={}", template, result);
         return result;
     }
