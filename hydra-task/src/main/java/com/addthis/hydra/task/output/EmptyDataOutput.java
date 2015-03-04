@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.output;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 
@@ -29,19 +31,19 @@ public class EmptyDataOutput extends TaskDataOutput {
 
     private static final Logger log = LoggerFactory.getLogger(EmptyDataOutput.class);
 
-    private long totalBundles = 0;
+    private AtomicLong totalBundles = new AtomicLong(0);
 
     @Override
     protected void open() {}
 
     @Override
     public void send(Bundle bundle) throws DataChannelError {
-        totalBundles++;
+        totalBundles.incrementAndGet();
     }
 
     @Override
     public void sendComplete() {
-        log.info("[sendComplete] Total bundles: {}", totalBundles);
+        log.info("[sendComplete] Total bundles: {}", totalBundles.get());
     }
 
     @Override
