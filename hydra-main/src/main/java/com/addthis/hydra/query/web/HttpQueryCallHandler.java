@@ -17,6 +17,10 @@ package com.addthis.hydra.query.web;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.util.Parameter;
 
@@ -60,7 +64,10 @@ public final class HttpQueryCallHandler {
         // support either job=id/dir or job=id&dir=dir for convenience (and don't punish doing both)
         String dir = kv.getValue("dir");
         if ((dir != null) && !job.endsWith(dir)) {
-            job = job + '/' + dir;
+            String[] jobs = job.split(",");
+            String[] dirs = dir.split(",");
+            job = Arrays.stream(jobs).flatMap(subJob ->  Arrays.stream(dirs).map(subDir -> subJob + '/' + subDir))
+                        .collect(Collectors.joining(","));
         }
         String path = kv.getValue("path", kv.getValue("q", ""));
         Query query = new Query(job, new String[]{path}, new String[]{kv.getValue("ops"), kv.getValue("rops")});

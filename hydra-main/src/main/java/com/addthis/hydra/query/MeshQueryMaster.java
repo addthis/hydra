@@ -200,17 +200,24 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         // creates query for worker and updates local query ops (!mutates query!)
         Query remoteQuery = query.createPipelinedQuery();
 
-        String combinedJob = query.getJob();
-        String jobIds = getJobWithoutSubdirectory(combinedJob);
-        String subdirectories = getJobSubdirectory(combinedJob);
 
+        boolean allowPartial = Boolean.valueOf(query.getParameter("allowPartial"));
         List<QueryTaskSource[]> sourcesPerDir = new ArrayList<>(2);
-        JOB_SPLITTER.splitToList(jobIds).stream().map(this::expandAlias).flatMap(List::stream).forEachOrdered(jobId -> {
-            for (String subdirectory : JOB_SPLITTER.split(subdirectories)) {
-                sourcesPerDir.add(
-                        getSourcesById(jobId, subdirectory, Boolean.valueOf(query.getParameter("allowPartial"))));
+        for (String combinedJob : JOB_SPLITTER.split(query.getJob())) {
+            String jobId = getJobWithoutSubdirectory(combinedJob);
+            String subdirectory = getJobSubdirectory(combinedJob);
+            for (String alias : expandAlias(jobId)) {
+                String aliasJobId = getJobWithoutSubdirectory(alias);
+                String aliasSubdirectory;
+                if (!subdirectory.isEmpty()) {
+                    aliasSubdirectory = subdirectory;
+                } else {
+                    aliasSubdirectory = getJobSubdirectory(alias);
+                }
+
+                sourcesPerDir.add(getSourcesById(aliasJobId, aliasSubdirectory, allowPartial));
             }
-        });
+        }
         QueryTaskSource[] sourcesByTaskID;
         if (sourcesPerDir.size() > 1) {
             sourcesByTaskID = sourcesPerDir.stream().flatMap(Arrays::stream).toArray(QueryTaskSource[]::new);
