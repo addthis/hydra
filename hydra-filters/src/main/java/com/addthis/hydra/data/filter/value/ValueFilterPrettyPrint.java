@@ -25,8 +25,6 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
 
-import com.google.common.collect.ImmutableSet;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -48,19 +46,15 @@ public class ValueFilterPrettyPrint extends AbstractValueFilter {
 
     private static final String DOUBLE_QUOTE_REPLACEMENT = Matcher.quoteReplacement("\\\"");
 
-    private static final ImmutableSet<String> ALLOWED_FORMATS = ImmutableSet.of("json");
+    public static enum Format { JSON }
 
     /**
      * Formatting for output. Current options
      * are ["json"]. Default is "json".
      */
-    @Nonnull private final String format;
+    @Nonnull private final Format format;
 
-    @JsonCreator public ValueFilterPrettyPrint(@JsonProperty("format") String format) {
-        format = format.toLowerCase();
-        if (!ALLOWED_FORMATS.contains(format)) {
-            throw new IllegalArgumentException("format is not one of " + ALLOWED_FORMATS.toString());
-        }
+    @JsonCreator public ValueFilterPrettyPrint(@JsonProperty("format") Format format) {
         this.format = format;
     }
 
@@ -74,12 +68,12 @@ public class ValueFilterPrettyPrint extends AbstractValueFilter {
         return ValueFactory.create(prettyPrint(v, format));
     }
 
-    public static String prettyPrint(ValueObject input, @Nonnull String format) {
+    public static String prettyPrint(ValueObject input, @Nonnull Format format) {
         if (input == null) {
             return null;
         }
         switch (format) {
-            case "json":
+            case JSON:
                 return prettyPrintAsJson(input);
             default:
                 throw new IllegalArgumentException("unknown format " + format);
