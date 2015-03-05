@@ -116,7 +116,7 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
     @JsonProperty private boolean emitTaskState;
     @JsonProperty private SimpleDateFormat dateFormat;
 
-    private final CompletableFuture<Void> onTaskComplete = new CompletableFuture<>();
+    private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
     private final AtomicBoolean metricGate = new AtomicBoolean(false);
     private final LongAdder filterTime = new LongAdder();
@@ -316,7 +316,7 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
         output.sendComplete();
         emitTaskExitState();
         maybeCloseJmx();
-        boolean success = onTaskComplete.complete(null);
+        boolean success = completionFuture.complete(null);
         log.info("[taskComplete] Triggered future: {}", success);
     }
 
@@ -371,8 +371,8 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
         }
     }
 
-    public CompletableFuture<Void> getOnTaskComplete() {
-        return onTaskComplete;
+    public CompletableFuture<Void> getCompletionFuture() {
+        return completionFuture;
     }
 
 }

@@ -15,6 +15,8 @@ package com.addthis.hydra.task.pipeline;
 
 import javax.annotation.Nonnull;
 
+import java.io.IOException;
+
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -76,10 +78,10 @@ public class PipelineTask implements TaskRunnable {
         ImmutableList.Builder<CompletableFuture<Void>> next = new ImmutableList.Builder<>();
         for (int i = 0; i < futures; i++) {
             final int current = i;
-            CompletableFuture<Void> onTaskComplete = phases[i].getOnTaskComplete();
-            CompletableFuture<Void> onTaskNext = onTaskComplete.thenRun(() -> beginPhase(current + 1));
-            complete.add(onTaskComplete);
-            next.add(onTaskNext);
+            CompletableFuture<Void> phaseCompleteFuture = phases[i].getCompletionFuture();
+            CompletableFuture<Void> phaseNextFuture = phaseCompleteFuture.thenRun(() -> beginPhase(current + 1));
+            complete.add(phaseCompleteFuture);
+            next.add(phaseNextFuture);
         }
         this.phaseComplete = complete.build();
         this.phaseNext = next.build();
@@ -92,22 +94,23 @@ public class PipelineTask implements TaskRunnable {
     @Override public void close() throws Exception {
         log.info("Pipeline task is starting shutdown");
         int size = phaseComplete.size();
+        boolean cancel[] = new boolean[size];
         for (int i = (size - 1); i >= 0; i--) {
-            phaseComplete.get(i).cancel(false);
+            cancel[i] = phaseComplete.get(i).cancel(false);
         }
         for (int i = (size - 1); i >= 0; i--) {
             try {
-                if (!phaseComplete.get(i).isCancelled()) {
+                if (!cancel[i]) {
                     phaseNext.get(i).join();
                 }
             } catch (CompletionException ex) {
-                log.error("Phase {} phaseNext future encountered an exception while starting phase {}: ",
-                         i + 1, i + 2, ex);
-                throw ex;
+                String msg = "Phase " + (i + 1) + " phaseNext future encountered an " +
+                             "exception while starting phase " + (i + 2);
+                throw new IOException(msg, ex);
             } catch (CancellationException ex) {
-                log.error("Race condition: Phase {} phaseNext future was cancelled by another thread: ",
-                          i + 1, ex);
-                throw ex;
+                String msg = "Race condition: Phase " + (i + 1) + " phaseNext " +
+                             "future was cancelled by another thread";
+                throw new IOException(msg, ex);
             }
         }
         /**

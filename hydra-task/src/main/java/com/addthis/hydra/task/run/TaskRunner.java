@@ -13,7 +13,6 @@
  */
 package com.addthis.hydra.task.run;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
@@ -26,7 +25,6 @@ import com.addthis.basis.util.Files;
 
 import com.addthis.codec.jackson.CodecJackson;
 import com.addthis.codec.jackson.Jackson;
-import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.muxy.MuxFileDirectoryCache;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -57,7 +55,7 @@ public class TaskRunner {
         CompletableFuture<AutoCloseable> startedTask = new CompletableFuture<>();
         boolean hookAdded;
         try {
-            Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(new TaskCloser(startedTask)),
+            Runtime.getRuntime().addShutdownHook(new Thread(new TaskShutdown(startedTask),
                                                             "Task Shutdown Hook"));
             hookAdded = true;
         } catch (IllegalStateException ignored) {
@@ -75,15 +73,15 @@ public class TaskRunner {
         }
     }
 
-    private static class TaskCloser implements Closeable {
+    private static class TaskShutdown implements Runnable {
 
         private final CompletableFuture<AutoCloseable> task;
 
-        TaskCloser(CompletableFuture<AutoCloseable> task) {
+        TaskShutdown(CompletableFuture<AutoCloseable> task) {
             this.task = task;
         }
 
-        @Override public void close() {
+        @Override public void run() {
             try {
                 task.join().close();
                 // critical to get any file meta data written before process exits
