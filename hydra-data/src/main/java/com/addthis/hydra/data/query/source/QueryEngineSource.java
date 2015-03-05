@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.query;
+package com.addthis.hydra.data.query.source;
 
 import java.util.concurrent.Semaphore;
 
@@ -21,8 +21,6 @@ import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.engine.QueryEngine;
-import com.addthis.hydra.data.query.source.QueryHandle;
-import com.addthis.hydra.data.query.source.QuerySource;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Gauge;
@@ -51,14 +49,14 @@ public abstract class QueryEngineSource implements QuerySource {
     private final Histogram engineGateHistogram = Metrics.newHistogram(QueryEngineSource.class, "engineGateHistogram");
 
     @Override
-    public QueryHandle query(final Query query, final DataChannelOutput consumer) throws QueryException {
+    public Handle query(final Query query, final DataChannelOutput consumer) throws QueryException {
         return new Handle(query, consumer);
     }
 
     public abstract QueryEngine getEngineLease();
 
     /** */
-    private class Handle extends Thread implements QueryHandle {
+    public class Handle extends Thread implements QueryHandle {
 
         private Query query;
         private QueryEngine engine;
