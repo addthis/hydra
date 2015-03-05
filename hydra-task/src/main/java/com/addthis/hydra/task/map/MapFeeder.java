@@ -33,7 +33,6 @@ import com.addthis.bundle.core.kvp.KVBundle;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
 import com.addthis.hydra.task.source.TaskDataSource;
-import com.addthis.muxy.MuxFileDirectoryCache;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 
@@ -117,8 +116,6 @@ public final class MapFeeder implements Runnable {
             // run in different threads to isolate them from interrupts. ie. "taskCompleteUninterruptibly"
             // join awaits completion, is uninterruptible, and will propogate any exception
             CompletableFuture.runAsync(task::taskComplete).join();
-            // critical to get any file meta data written before process exits
-            CompletableFuture.runAsync(MuxFileDirectoryCache::waitForWriteClosure).join();
         } catch (Throwable t) {
             handleUncaughtThrowable(t);
         }
