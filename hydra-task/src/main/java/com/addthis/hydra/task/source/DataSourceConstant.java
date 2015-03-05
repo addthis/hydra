@@ -15,72 +15,67 @@ package com.addthis.hydra.task.source;
 
 import javax.annotation.Nullable;
 
+import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.Bundles;
+
+import com.google.common.collect.Iterators;
+import com.google.common.collect.PeekingIterator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * This data source <span class="hydra-summary">creates specified constant bundles</span>.
- * <p>
- * The repeat parameter determines how many bundles are created. The default
- * value of maxPackets (-1) indicates that an infinite number of bundles are created.
- * <p/>
  *
  * @user-reference
- * @hydra-name const
  */
 public class DataSourceConstant extends TaskDataSource {
 
-    /** The constant bundles. Required */
+    /** 0 or more constant bundles. Required */
     @JsonProperty(required = true)
-    private Bundle[] bundles;
+    private List<Bundle> bundles;
 
     /**
      * How many times to repeat the bundles. Optional. Default is 0.
-     *
+     * <p/>
      * 0 to send the constant bundles once. Any negative value to repeatedly send the bundles
      * indefinitely.
      */
     @JsonProperty
-    private long repeat = 0;
+    private int repeat = 0;
 
+    private PeekingIterator<Bundle> iterator;
     private boolean closed = false;
-    private int cursor = 0;
 
     @Override public void init() {
-    }
-
-    @Nullable
-    @Override
-    public Bundle peek() {
-        return closed ? null : currentBundle();
-    }
-
-    @Override public Bundle next() {
-        Bundle val = peek();
-        advanaceCursor();
-        if (val != null) {
-            val = Bundles.deepCopyBundle(val);
-        }
-        return val;
-    }
-
-    private Bundle currentBundle() {
-        return (cursor >= bundles.length || cursor < 0)? null : bundles[cursor];
-    }
-
-    private void advanaceCursor() {
-        if (cursor < bundles.length) {
-            cursor++;
-            if (cursor == bundles.length) {
-                if (repeat < 0) {
-                    cursor = 0;
-                } else if (repeat > 0){
-                    repeat--;
-                    cursor = 0;
-                }
+        Iterator<Bundle> iter;
+        if (repeat == 0) {
+            iter = bundles.iterator();
+        } else {
+            iter = Iterators.cycle(bundles);
+            if (repeat > 0) {
+                iter = Iterators.limit(iter, (repeat + 1) * bundles.size());
             }
+        }
+        iterator = Iterators.peekingIterator(iter);
+    }
+
+    @Nullable @Override public Bundle peek() {
+        checkNotClosed();
+        return iterator.peek();
+    }
+
+    @Nullable @Override public Bundle next() {
+        checkNotClosed();
+        return Bundles.deepCopyBundle(iterator.next());
+    }
+
+    private void checkNotClosed() {
+        if (closed) {
+            throw new NoSuchElementException();
         }
     }
 
