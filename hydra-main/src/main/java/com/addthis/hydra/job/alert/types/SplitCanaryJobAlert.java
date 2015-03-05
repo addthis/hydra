@@ -66,6 +66,9 @@ public class SplitCanaryJobAlert extends AbstractJobAlert {
         StringBuilder message = new StringBuilder();
         String finalPath = canaryPath.startsWith("/") ? canaryPath.substring(1) : canaryPath;
         Map<String,Long> bytesPerHost = JobAlertUtil.getTotalBytesFromMesh(meshClient, job.getId(), finalPath);
+        if (bytesPerHost.size() == 0) {
+            return "No matching hosts found for path " + JobAlertUtil.meshLookupString(job.getId(), finalPath);
+        }
         for (Map.Entry<String,Long> entry : bytesPerHost.entrySet()) {
             String host = entry.getKey();
             Long bytes = entry.getValue();
