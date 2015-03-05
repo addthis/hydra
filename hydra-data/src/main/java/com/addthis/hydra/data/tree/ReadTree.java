@@ -80,12 +80,14 @@ public final class ReadTree implements DataTree {
      */
     private static final ReadTreeNode MISSING = new ReadTreeNode("missing", 8);
 
-    private final File root;
+    public final File root;
+    public final TreeConfig advanced;
+    public final ReadTreeNode rootNode;
+    public final boolean metrics;
+
     private final ReadPageDB<ReadTreeNode> source;
-    private final ReadTreeNode rootNode;
     private final LoadingCache<CacheKey, ReadTreeNode> loadingNodeCache;
     private final AtomicBoolean closed = new AtomicBoolean(false);
-    private final boolean metrics;
 
     public ReadTree(File root) throws Exception {
         this(root, false);
@@ -99,13 +101,14 @@ public final class ReadTree implements DataTree {
         }
 
         this.root = root;
+        this.advanced = TreeConfig.readFromDataDirectory(root.toPath());
         source = initSource();
         try {
             CacheBuilder<? super CacheKey, ? super ReadTreeNode> cacheBuilder = CacheBuilder.newBuilder();
             if (nodeCacheWeight != 0) {
                 // limit by weight
                 cacheBuilder = cacheBuilder
-                        .maximumWeight(nodeCacheWeight)
+                        .maximumWeight((long) (nodeCacheWeight * advanced.cacheWeight))
                         .weigher((key, value) -> {
                             /* A lean node goes from 24 to 24 + its string name and + cacheKey. the 24 becomes a
                             small percentage.
@@ -119,7 +122,7 @@ public final class ReadTree implements DataTree {
                         });
             } else {
                 // Limit by the number of nodes
-                cacheBuilder = cacheBuilder.maximumSize(nodeCacheSize);
+                cacheBuilder = cacheBuilder.maximumSize((long) (nodeCacheSize * advanced.cacheWeight));
             }
             loadingNodeCache = cacheBuilder.build(
                     new CacheLoader<CacheKey, ReadTreeNode>() {
@@ -225,6 +228,10 @@ public final class ReadTree implements DataTree {
 
     @Override @Nonnull public ReadTreeNode getRootNode() {
         return rootNode;
+    }
+
+    @Override @Nonnull public TreeConfig getAdvancedSettings() {
+        return advanced;
     }
 
     /** Must be called to close the source. The source generally considers being closed to be pretty important. */

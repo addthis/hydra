@@ -57,7 +57,7 @@ class EngineLoader extends CacheLoader<String, QueryEngine> {
 
     private final ExecutorService engineRefresherPool =
             new ThreadPoolExecutor(1, MAX_REFRESH_THREADS, 5000L, TimeUnit.MILLISECONDS,
-                                   new LinkedBlockingQueue<Runnable>(),
+                                   new LinkedBlockingQueue<>(),
                                    new ThreadFactoryBuilder().setDaemon(true)
                                                              .setNameFormat("engineRefresher-%d")
                                                              .build());

@@ -133,7 +133,9 @@ public class QueryEngineCache {
 
         // no easy way around escaping 'this' here, but at least it is more obvious what is going on now
         loadingEngineCache = CacheBuilder.newBuilder()
-                .maximumSize(engineCacheSize)
+                .maximumWeight(engineCacheSize * 100)
+                .<String, QueryEngine>weigher(
+                        (dir, engine) -> (int) (100 * engine.getTree().getAdvancedSettings().cacheWeight()))
                 .refreshAfterWrite(refreshInterval, TimeUnit.SECONDS)
                 .expireAfterWrite(failInterval, TimeUnit.SECONDS)
                 .removalListener(new EngineRemovalListener(this))
@@ -165,14 +167,9 @@ public class QueryEngineCache {
      */
     private void maybeInitMaintenance() {
         if (maintenanceInterval > 0) {
-            queryEngineCacheMaintainer.scheduleAtFixedRate(new Runnable() {
-                @Override
-                public void run() {
-                    loadingEngineCache.cleanUp();
-                    for (String key : loadingEngineCache.asMap().keySet()) {
-                        loadingEngineCache.getIfPresent(key);
-                    }
-                }
+            queryEngineCacheMaintainer.scheduleAtFixedRate(() -> {
+                loadingEngineCache.cleanUp();
+                loadingEngineCache.asMap().keySet().forEach(loadingEngineCache::getIfPresent);
             }, maintenanceInterval, maintenanceInterval, TimeUnit.SECONDS);
         }
     }

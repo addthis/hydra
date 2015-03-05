@@ -41,6 +41,10 @@ public interface DataTree extends DataTreeNode {
         // intentionally empty
     }
 
+    public default TreeConfig getAdvancedSettings() {
+        throw new UnsupportedOperationException();
+    }
+
     public default long getDBCount() {
         throw new UnsupportedOperationException();
     }
