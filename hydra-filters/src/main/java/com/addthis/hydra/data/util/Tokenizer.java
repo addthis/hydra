@@ -75,6 +75,10 @@ public class Tokenizer implements Codable {
         initialize();
     }
 
+    public Tokenizer setEscape(String escape) {
+        this.escape = escape;
+        return this;
+    }
 
     public Tokenizer setSeparator(String sep) {
         this.separator = sep;
