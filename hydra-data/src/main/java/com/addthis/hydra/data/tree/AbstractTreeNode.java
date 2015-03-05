@@ -33,8 +33,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
-public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, ConcurrentCodable,
-                                                  BytesCodable {
+public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, ConcurrentCodable, BytesCodable {
 
     @FieldConfig(codable = true)
     protected long hits;
@@ -146,6 +145,10 @@ public abstract class AbstractTreeNode implements DataTreeNode, SuperCodable, Co
             nodedbLegacy = Ints.checkedCast(nodedb);
         }
     }
+
+    @Override public void encodeLock() {}
+
+    @Override public void encodeUnlock() {}
 
     public boolean hasNodes() {
         return nodedb > 0;

@@ -15,7 +15,11 @@ package com.addthis.hydra.data.tree;
 
 import java.io.IOException;
 
+import java.util.Iterator;
+import java.util.Map;
 import java.util.function.BooleanSupplier;
+
+import com.addthis.basis.util.ClosableIterator;
 
 import com.addthis.hydra.store.db.CloseOperation;
 
@@ -26,18 +30,34 @@ public interface DataTree extends DataTreeNode {
     /**
      * Close the tree.
      *
-     * @param cleanLog if true then wait for the BerkeleyDB clean thread to finish.
+     * @param cleanLog  if true then wait for the BerkeleyDB clean thread to finish.
      * @param operation optionally test or repair the berkeleyDB.
      */
-    public void close(boolean cleanLog, CloseOperation operation) throws IOException;
+    public default void close(boolean cleanLog, CloseOperation operation) throws IOException {
+        close();
+    }
 
-    public void sync() throws IOException;
+    public default void sync() throws IOException {
+        // intentionally empty
+    }
 
-    public long getDBCount();
+    public default long getDBCount() {
+        throw new UnsupportedOperationException();
+    }
 
-    public int getCacheSize();
+    public default int getCacheSize() {
+        throw new UnsupportedOperationException();
+    }
 
-    public double getCacheHitRate();
+    public default double getCacheHitRate() {
+        throw new UnsupportedOperationException();
+    }
+
+    public DataTreeNode getRootNode();
+
+    @Override public default DataTreeNode getNode(String name) {
+        return getRootNode().getNode(name);
+    }
 
     /**
      * Delete from the backing storage all nodes that have been moved to be
@@ -49,5 +69,49 @@ public interface DataTree extends DataTreeNode {
      * @param terminationCondition invoked between subtree deletions to
      *                             determine whether to return from method.
      */
-    public void foregroundNodeDeletion(BooleanSupplier terminationCondition);
+    public default void foregroundNodeDeletion(BooleanSupplier terminationCondition) {
+        throw new UnsupportedOperationException("foregroundNodeDeletion");
+    }
+
+    // DataTreeNode implementations that delegate to the root node
+
+    @Override public default ClosableIterator<DataTreeNode> getIterator() {
+        return getRootNode().getIterator();
+    }
+
+    @Override public default ClosableIterator<DataTreeNode> getIterator(String prefix) {
+        return getRootNode().getIterator(prefix);
+    }
+
+    @Override public default ClosableIterator<DataTreeNode> getIterator(String from, String to) {
+        return getRootNode().getIterator(from, to);
+    }
+
+    @Override public default Iterator<DataTreeNode> iterator() {
+        return getRootNode().iterator();
+    }
+
+    @Override public default String getName() {
+        return getRootNode().getName();
+    }
+
+    @Override public default DataTree getTreeRoot() {
+        return this;
+    }
+
+    @Override public default int getNodeCount() {
+        return getRootNode().getNodeCount();
+    }
+
+    @Override public default long getCounter() {
+        return getRootNode().getCounter();
+    }
+
+    @Override public default DataTreeNodeActor getData(String key) {
+        return getRootNode().getData(key);
+    }
+
+    @Override public default Map<String, TreeNodeData> getDataMap() {
+        return getRootNode().getDataMap();
+    }
 }
