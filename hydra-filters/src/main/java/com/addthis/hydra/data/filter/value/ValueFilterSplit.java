@@ -89,21 +89,6 @@ public class ValueFilterSplit extends AbstractValueFilterContextual {
      */
     private final int fixedLength;
 
-    /** The escape character to use if {@link #tokenize} is true. Default is backslash character. */
-    private final String escape;
-
-    /** If {@link #tokenize} is true then use these strings
-     *  to generate a single token that spans across the separator. Default is ["\""]
-     */
-    private final String[] group;
-
-    /**
-     * If true then use the tokenizer to generate an array.
-     * The tokenizer uses the {@link #split}, {@link #escape}, and
-     * {@link #group} parameters.
-     */
-    private final boolean tokenize;
-
     private final Tokenizer tokenizer;
 
     /**
@@ -116,22 +101,16 @@ public class ValueFilterSplit extends AbstractValueFilterContextual {
                                          @JsonProperty("filter") ValueFilter filter,
                                          @JsonProperty("keyFilter") ValueFilter keyFilter,
                                          @JsonProperty("fixedLength") int fixedLength,
-                                         @JsonProperty("escape") String escape,
-                                         @JsonProperty("group") String[] group,
-                                         @JsonProperty("tokenize") boolean tokenize) {
+                                         @JsonProperty("tokenizer") Tokenizer tokenizer) {
         this.split = split;
         this.keySplit = keySplit;
         this.filter = filter;
         this.keyFilter = keyFilter;
         this.fixedLength = fixedLength;
-        this.escape = escape;
-        this.group = group;
-        this.tokenize = tokenize;
-        if (tokenize) {
-            tokenizer = new Tokenizer().setSeparator(split).setEscape(escape).setGrouping(group);
-            tokenizer.initialize();
+        if (tokenizer == null) {
+            this.tokenizer = null;
         } else {
-            tokenizer = null;
+            this.tokenizer = tokenizer.initialize();
         }
     }
 

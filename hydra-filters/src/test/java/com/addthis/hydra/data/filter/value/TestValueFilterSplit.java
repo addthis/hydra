@@ -34,7 +34,7 @@ public class TestValueFilterSplit {
 
     @Test
     public void tokenize() throws IOException {
-        ValueFilterSplit vf = Configs.decodeObject(ValueFilterSplit.class, "tokenize: true");
+        ValueFilterSplit vf = Configs.decodeObject(ValueFilterSplit.class, "tokenizer: {group: [\"\\\"\"]} ");
         assertEquals(getValueArray("foo", "bar"), vf.filter(ValueFactory.create("foo,bar")));
         assertEquals(getValueArray("foo,bar", "baz"), vf.filter(ValueFactory.create("\"foo,bar\",baz")));
         assertEquals(getValueArray("foo,", "bar"), vf.filter(ValueFactory.create("foo\\,,bar")));
