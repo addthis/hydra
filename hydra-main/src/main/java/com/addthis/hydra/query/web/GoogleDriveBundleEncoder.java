@@ -169,7 +169,7 @@ public class GoogleDriveBundleEncoder extends AbstractBufferingHttpBundleEncoder
     @Override
     public void send(ChannelHandlerContext ctx, Bundle row) {
         super.send(ctx, row);
-        printStream.print(DelimitedBundleEncoder.buildRow(row, ","));
+        printStream.print(DelimitedBundleEncoder.buildRow(row, ",", DelimitedBundleEncoder.ESCAPED_QUOTE_REPLACEMENT));
     }
 
     /**
