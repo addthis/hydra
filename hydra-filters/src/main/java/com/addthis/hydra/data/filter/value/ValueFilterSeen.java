@@ -34,7 +34,6 @@ import com.addthis.hydra.store.util.SeenFilterBasic;
  * </pre>
  *
  * @user-reference
- * @hydra-name seen
  */
 public class ValueFilterSeen extends AbstractValueFilter {
 

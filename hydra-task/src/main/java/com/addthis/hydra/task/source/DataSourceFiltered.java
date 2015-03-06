@@ -58,7 +58,6 @@ import com.addthis.hydra.data.filter.bundle.BundleFilter;
  *   }</pre>
  *
  * @user-reference
- * @hydra-name filter
  */
 public class DataSourceFiltered extends TaskDataSource {
 

@@ -50,7 +50,6 @@ import com.google.common.net.InternetDomainName;
  * </pre>
  *
  * @user-reference
- * @hydra-name url
  */
 public final class BundleFilterURL implements BundleFilter {
 

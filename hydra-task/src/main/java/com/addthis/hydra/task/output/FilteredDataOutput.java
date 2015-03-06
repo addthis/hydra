@@ -26,7 +26,6 @@ import org.slf4j.LoggerFactory;
  * This output sink <span class="hydra-summary">applies a filter before writing to output</span>.
  *
  * @user-reference
- * @hydra-name filtered
  */
 public class FilteredDataOutput extends TaskDataOutput {
 

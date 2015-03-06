@@ -28,7 +28,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * </pre>
  *
  * @user-reference
- * @hydra-name set
  */
 public class ValueFilterSet extends AbstractValueFilter {
 

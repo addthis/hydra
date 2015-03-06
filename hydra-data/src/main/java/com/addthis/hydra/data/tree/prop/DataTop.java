@@ -87,7 +87,6 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codable {
      * </table>
      *
      * @user-reference
-     * @hydra-name top
      */
     public static final class Config extends TreeDataParameters<DataTop> {
 

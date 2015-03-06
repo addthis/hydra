@@ -45,7 +45,6 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
 
     /**
      * @user-reference
-     * @hydra-name key.sieve
      */
     public static final class Config extends TreeDataParameters<DataKeySieve> {
 

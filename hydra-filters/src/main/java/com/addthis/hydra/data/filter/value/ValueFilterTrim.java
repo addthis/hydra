@@ -25,7 +25,6 @@ import com.addthis.basis.util.Strings;
  * </pre>
  *
  * @user-reference
- * @hydra-name trim
  */
 public class ValueFilterTrim extends StringFilter {
 

@@ -59,7 +59,6 @@ import static com.google.common.base.Preconditions.checkArgument;
  * </pre>
  *
  * @user-reference
- * @hydra-name time-range
  */
 public class ValueFilterTimeRange extends AbstractValueFilter {
 

@@ -29,7 +29,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * </pre>
  *
  * @user-reference
- * @hydra-name time-format
  */
 public class ValueFilterTimeFormat extends AbstractValueFilter {
 

@@ -49,7 +49,6 @@ import org.slf4j.LoggerFactory;
  * }</pre>
  *
  * @user-reference
- * @hydra-name chain
  */
 public class TaskDataOutputChain extends DataOutputTypeList {
 

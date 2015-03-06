@@ -30,7 +30,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * </pre>
  *
  * @user-reference
- * @hydra-name glob
  */
 public class ValueFilterGlob extends StringFilter {
 

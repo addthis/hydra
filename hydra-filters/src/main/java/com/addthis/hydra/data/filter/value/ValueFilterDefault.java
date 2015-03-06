@@ -31,7 +31,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name default
  */
 public class ValueFilterDefault extends StringFilter {
 

@@ -30,7 +30,6 @@ import com.addthis.bundle.value.ValueObject;
  * </pre>
  *
  * @user-reference
- * @hydra-name length
  */
 public class ValueFilterLength extends AbstractValueFilter {
 

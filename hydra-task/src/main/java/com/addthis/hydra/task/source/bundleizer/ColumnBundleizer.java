@@ -26,7 +26,6 @@ import com.addthis.hydra.data.util.Tokenizer;
 /**
  * chops strings into columns (no keys)
  *
- * @hydra-name column
  */
 public class ColumnBundleizer extends NewlineBundleizer {
 

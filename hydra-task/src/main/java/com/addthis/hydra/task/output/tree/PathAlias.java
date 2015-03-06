@@ -51,7 +51,6 @@ import com.addthis.hydra.data.tree.DataTreeUtil;
  *   }</pre>
  *
  * @user-reference
- * @hydra-name alias
  */
 public class PathAlias extends PathKeyValue {
 

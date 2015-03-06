@@ -37,7 +37,6 @@ import com.google.common.collect.Iterators;
  * </pre>
  *
  * @user-reference
- * @hydra-name string-slice
  */
 public class ValueFilterStringSlice extends StringFilter {
 

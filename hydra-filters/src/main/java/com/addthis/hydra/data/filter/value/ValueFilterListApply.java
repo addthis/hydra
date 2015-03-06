@@ -27,7 +27,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name list-apply
  * @exclude-fields once
  */
 public class ValueFilterListApply extends AbstractValueFilterContextual {

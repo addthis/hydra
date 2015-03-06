@@ -24,7 +24,6 @@ import com.addthis.hydra.task.stream.StreamSourceFileList;
  * This data source <span class="hydra-summary">retrieves files from the local filesystem (for testing purposes)</span>.
  *
  * @user-reference
- * @hydra-name files
  */
 public class DataSourceStreamFiles extends DataSourceStreamList {
 

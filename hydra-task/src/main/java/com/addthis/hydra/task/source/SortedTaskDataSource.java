@@ -28,7 +28,6 @@ import com.addthis.hydra.task.util.BundleComparator;
  * This {@link TaskDataSource source} <span class="hydra-summary">sorts an underlying data source</span>.
  *
  * @user-reference
- * @hydra-name sorted
  */
 public class SortedTaskDataSource extends TaskDataSource {
 

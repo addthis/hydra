@@ -26,7 +26,6 @@ import com.addthis.hydra.common.hash.MD5HashFunction;
  * </pre>
  *
  * @user-reference
- * @hydra-name md5
  */
 public class ValueFilterMD5 extends AbstractValueFilter {
 

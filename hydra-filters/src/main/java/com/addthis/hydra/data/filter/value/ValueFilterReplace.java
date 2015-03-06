@@ -31,7 +31,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * </pre>
  *
  * @user-reference
- * @hydra-name replace
  */
 public class ValueFilterReplace extends StringFilter {
 

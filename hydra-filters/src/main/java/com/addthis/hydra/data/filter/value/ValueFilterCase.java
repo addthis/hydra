@@ -29,7 +29,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name case
  */
 public class ValueFilterCase extends StringFilter {
 

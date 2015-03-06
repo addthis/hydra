@@ -217,7 +217,7 @@ function renderNavQuery(rpc) {
 function queryRaw() {
     var query = fieldsToQuery();
     query.other = $('qother').value;
-    var path = '/query/call?'+packQuery([['path',query.query],['ops',query.ops],['rops',query.rops],['format','json'],["job",jobid],['filename',query.name],["sender","spawn"],query.other]);
+    var path = '/query/call?'+packQuery([query.other,['path',query.query],['ops',query.ops],['rops',query.rops],['format','json'],["job",jobid],['filename',query.name],["sender","spawn"]]);
     alert(path);
     console.log(path);
     return false;
@@ -227,7 +227,7 @@ function queryRaw() {
 function queryCSV() {
     var query = fieldsToQuery();
     query.other = $('qother').value;
-    window.open('/query/call?'+packQuery([['path',query.query],['ops',query.ops],['rops',query.rops],['format','csv'],["job",jobid],['filename',query.name],["sender","spawn"],query.other]));
+    window.open('/query/call?'+packQuery([query.other,['path',query.query],['ops',query.ops],['rops',query.rops],['format','csv'],["job",jobid],['filename',query.name],["sender","spawn"]]));
     return false;
 }
 
@@ -474,9 +474,9 @@ function packKV(k,v) {
 
 /* perform actual AJAX query */
 function doQuery(query, callback, cacheBust) {
-    var params = [['path',query.query],['ops',query.ops],['rops',query.rops],
+    var params = [query.other,['path',query.query],['ops',query.ops],['rops',query.rops],
         ['format',query.format],['job',jobid],['filename',query.name],
-        ['sender','spawn'],query.other];
+        ['sender','spawn']];
     if (cacheBust) {
         params.push(['nocache','1']);
     }

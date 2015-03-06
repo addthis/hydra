@@ -36,7 +36,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name recent1
  */
 public final class BundleFilterRecent1 implements BundleFilter {
 

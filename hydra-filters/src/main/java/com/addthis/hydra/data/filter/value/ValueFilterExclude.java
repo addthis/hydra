@@ -37,7 +37,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * </pre>
  *
  * @user-reference
- * @hydra-name exclude
  */
 public class ValueFilterExclude extends AbstractMatchStringFilter {
 

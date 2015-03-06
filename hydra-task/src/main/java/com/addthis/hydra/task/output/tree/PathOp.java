@@ -33,7 +33,6 @@ import com.addthis.hydra.data.tree.TreeNodeList;
  * </pre>
  *
  * @user-reference
- * @hydra-name op
  */
 public class PathOp extends PathElement {
 

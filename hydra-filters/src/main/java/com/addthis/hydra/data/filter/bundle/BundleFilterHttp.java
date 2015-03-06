@@ -47,7 +47,6 @@ import org.slf4j.LoggerFactory;
  * </pre>
  *
  * @user-reference
- * @hydra-name http
  */
 public class BundleFilterHttp extends AbstractBundleFilterHttp implements SuperCodable {
 

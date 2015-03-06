@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * </pre>
  *
  * @user-reference
- * @hydra-name not
  */
 public class BundleFilterNot implements BundleFilter {
 

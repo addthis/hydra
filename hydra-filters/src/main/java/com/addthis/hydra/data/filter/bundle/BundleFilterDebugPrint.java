@@ -41,7 +41,6 @@ import org.slf4j.LoggerFactory;
  *   }</pre>
  *
  * @user-reference
- * @hydra-name debug
  */
 public class BundleFilterDebugPrint implements BundleFilter {
 

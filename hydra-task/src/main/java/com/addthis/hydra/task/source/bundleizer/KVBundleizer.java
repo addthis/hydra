@@ -22,7 +22,6 @@ import com.addthis.bundle.value.ValueFactory;
 /**
  * chops strings into kv pairs (url encoded)
  *
- * @hydra-name kv
  */
 public class KVBundleizer extends NewlineBundleizer {
 

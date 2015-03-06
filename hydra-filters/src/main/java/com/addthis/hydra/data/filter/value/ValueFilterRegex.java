@@ -53,7 +53,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name regex
  */
 public class ValueFilterRegex extends AbstractValueFilter {
 

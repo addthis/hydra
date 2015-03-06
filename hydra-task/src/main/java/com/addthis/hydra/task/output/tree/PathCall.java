@@ -27,7 +27,6 @@ import com.addthis.hydra.data.tree.TreeNodeList;
  * of the path element but instead places a link to an existing path element.</p>
  * <p/>
  * @user-reference
- * @hydra-name call
  */
 public final class PathCall extends PathOp {
 

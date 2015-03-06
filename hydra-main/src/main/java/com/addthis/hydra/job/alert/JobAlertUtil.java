@@ -13,6 +13,9 @@
  */
 package com.addthis.hydra.job.alert;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 
 import java.util.Collection;
@@ -69,13 +72,21 @@ public class JobAlertUtil {
     private static final Pattern QUERY_TRIM_PATTERN = Pattern.compile("[\\[\\]]");
 
     /**
+     * Convert a jobId and path into a mesh directory path.
+     */
+    public static String meshLookupString(@Nonnull String jobId, @Nonnull String dirPath) {
+        return("/job*/" + jobId + "/*/gold/" + expandDateMacro(dirPath));
+    }
+
+    /**
      * Count the total byte sizes of files along a certain path via mesh
      * @param jobId The job to check
      * @param dirPath The path to check within the jobId, e.g. split/{{now-1}}/importantfiles/*.gz
-     * @return A long representing the total size in bytes of files along the specified path
+     * @return A map of hostUUID to the total byte size on that host
      */
-    public static Map<String, Long> getTotalBytesFromMesh(MeshyClient meshyClient, String jobId, String dirPath) {
-        String meshLookupString = "/job*/" + jobId + "/*/gold/" + expandDateMacro(dirPath);
+    public static Map<String, Long> getTotalBytesFromMesh(@Nullable MeshyClient meshyClient,
+                                                          @Nonnull String jobId, @Nonnull String dirPath) {
+        String meshLookupString = meshLookupString(jobId, dirPath);
         if (meshyClient != null) {
             try {
                 Map<String,Long> bytesPerHost = new HashMap<>();
@@ -99,8 +110,9 @@ public class JobAlertUtil {
         return ImmutableMap.of();
     }
 
-    public static Map<String, Integer> getFileCountPerTask(MeshyClient meshyClient, String jobId, String dirPath) {
-        String meshLookupString = "/job*/" + jobId + "/*/gold/" + dirPath;
+    public static Map<String, Integer> getFileCountPerTask(@Nullable MeshyClient meshyClient,
+                                                           @Nonnull String jobId, @Nonnull String dirPath) {
+        String meshLookupString = meshLookupString(jobId, dirPath);
         Map<String, Integer> result = new HashMap<>();
         if (meshyClient != null) {
             try {

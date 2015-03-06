@@ -47,6 +47,7 @@ import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.query.source.LiveMeshyServer;
 import com.addthis.hydra.data.query.source.LiveQueryReference;
 import com.addthis.hydra.data.tree.DataTree;
+import com.addthis.hydra.data.tree.TreeConfig;
 import com.addthis.hydra.data.tree.concurrent.ConcurrentTree;
 import com.addthis.hydra.data.tree.concurrent.TreeCommonParameters;
 import com.addthis.hydra.data.util.TimeField;
@@ -93,7 +94,6 @@ import org.slf4j.LoggerFactory;
  * },</pre>
  *
  * @user-reference
- * @hydra-name tree
  */
 public final class TreeMapper extends DataOutputTypeList implements Codable {
 
@@ -205,6 +205,8 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
 
     @FieldConfig private String directory;
 
+    @FieldConfig private TreeConfig advanced;
+
     private final ConcurrentMap<String, BundleField> fields    = new ConcurrentHashMap<>();
     private final IndexHash<PathElement[]>           pathIndex = new IndexHash();
 
@@ -300,6 +302,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
             Path treePath = Paths.get(config.dir, directory);
             tree = new ConcurrentTree(Files.initDirectory(treePath.toFile()));
             bench = new Bench(EnumSet.allOf(BENCH.class), 1000);
+            TreeConfig.writeConfigToDataDirectory(treePath, advanced);
 
             if ((this.config.jobId != null) && live && (livePort > -1)) {
                 QueryEngine liveQueryEngine = new QueryEngine(tree);

@@ -98,7 +98,6 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
      * M bloom filters inside each layer.</p>
      *
      * @user-reference
-     * @hydra-name key.sieve2
      */
     public static final class Config extends TreeDataParameters<DataKeySieve2> {
 

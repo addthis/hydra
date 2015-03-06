@@ -37,7 +37,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * </pre>
  *
  * @user-reference
- * @hydra-name index
  * @exclude-fields once
  */
 public class ValueFilterIndex extends AbstractValueFilterContextual {

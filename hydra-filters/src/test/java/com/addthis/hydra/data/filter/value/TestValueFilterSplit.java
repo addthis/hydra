@@ -13,28 +13,41 @@
  */
 package com.addthis.hydra.data.filter.value;
 
+import java.io.IOException;
+
 import static org.junit.Assert.assertEquals;
 
 import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
+import com.addthis.codec.config.Configs;
 
 import org.junit.Test;
 
 public class TestValueFilterSplit {
 
-    private ValueObject splitFilter(ValueObject val, String split, int fixedLength) {
-        ValueFilterSplit vfc = new ValueFilterSplit().setSplit(split).setFixedLength(fixedLength);
-        return vfc.filter(val);
+    private ValueObject splitFilter(ValueObject val, String split, int fixedLength) throws IOException {
+        ValueFilterSplit vf = Configs.decodeObject(ValueFilterSplit.class,
+                                                    "split: \"" + split + "\", fixedLength: " + fixedLength);
+        return vf.filter(val);
     }
 
     @Test
-    public void nullPassThrough() {
+    public void tokenize() throws IOException {
+        ValueFilterSplit vf = Configs.decodeObject(ValueFilterSplit.class, "tokenizer: {group: [\"\\\"\"]} ");
+        assertEquals(getValueArray("foo", "bar"), vf.filter(ValueFactory.create("foo,bar")));
+        assertEquals(getValueArray("foo,bar", "baz"), vf.filter(ValueFactory.create("\"foo,bar\",baz")));
+        assertEquals(getValueArray("foo,", "bar"), vf.filter(ValueFactory.create("foo\\,,bar")));
+        assertEquals(null, vf.filter(ValueFactory.create("")));
+    }
+
+    @Test
+    public void nullPassThrough() throws IOException {
         assertEquals(null, splitFilter(null, ",", 0));
     }
 
     @Test
-    public void changeCase() {
+    public void changeCase() throws IOException {
         ValueArray t1 = getValueArray("foo", "bar");
         assertEquals(t1, splitFilter(new ValueFilterJoin().filter(t1), ",", -1));
         assertEquals(t1, splitFilter(ValueFactory.create("foo,bar"), ",", -1));
@@ -43,7 +56,7 @@ public class TestValueFilterSplit {
     }
     
     @Test
-    public void splitArray() {
+    public void splitArray()  throws IOException {
         ValueArray t1 = getValueArray("foo", "bar");
         assertEquals(t1, splitFilter(t1, ",", -1));
     }

@@ -399,7 +399,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
                 to == null ? new DBKey(db+1, (Raw)null) : new DBKey(db, Raw.get(to)));
     }
 
-    public ConcurrentTreeNode getRootNode() {
+    @Override public ConcurrentTreeNode getRootNode() {
         return treeRootNode;
     }
 
@@ -557,11 +557,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     }
 
     @Override
-    public DataTreeNode getNode(String name) {
-        return getRootNode().getNode(name);
-    }
-
-    @Override
     public DataTreeNode getLeasedNode(String name) {
         return getRootNode().getLeasedNode(name);
     }
@@ -603,11 +598,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     @Override
     public String getName() {
         return getRootNode().getName();
-    }
-
-    @Override
-    public DataTree getTreeRoot() {
-        return this;
     }
 
     @Override

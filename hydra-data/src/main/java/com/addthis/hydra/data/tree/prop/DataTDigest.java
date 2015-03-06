@@ -86,7 +86,6 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
      * </pre>
      *
      * @user-reference
-     * @hydra-name tdigest
      */
     public static final class Config extends TreeDataParameters<DataTDigest> {
 

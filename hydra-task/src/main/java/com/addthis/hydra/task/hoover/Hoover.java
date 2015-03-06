@@ -89,7 +89,6 @@ import org.slf4j.LoggerFactory;
  * }</pre>
  *
  * @user-reference
- * @hydra-name hoover
  */
 public class Hoover implements Runnable, TaskRunnable {
 

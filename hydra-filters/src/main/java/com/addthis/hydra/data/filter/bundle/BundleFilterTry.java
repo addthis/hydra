@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * conditionally rethrowing with a filter that may fail, and imagination.
  *
  * @user-reference
- * @hydra-name try
  */
 public class BundleFilterTry implements BundleFilter {
 

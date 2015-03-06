@@ -67,7 +67,6 @@ import org.slf4j.LoggerFactory;
  * },</pre>
  *
  * @user-reference
- * @hydra-name aggregate
  */
 public class AggregateTaskDataSource extends TaskDataSource {
 

@@ -50,7 +50,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  * </pre>
  *
  * @user-reference
- * @hydra-name append
  */
 public class BundleFilterAppend implements BundleFilter {
 

@@ -97,7 +97,6 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
      * </pre>
      *
      * @user-reference
-     * @hydra-name count
      */
     public static final class Config extends TreeDataParameters<DataCounting> {
 

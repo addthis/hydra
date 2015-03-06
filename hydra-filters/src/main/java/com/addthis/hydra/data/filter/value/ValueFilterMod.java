@@ -28,7 +28,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name mod
  */
 public class ValueFilterMod extends AbstractValueFilter {
 

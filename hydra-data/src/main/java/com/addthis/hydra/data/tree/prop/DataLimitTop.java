@@ -45,7 +45,6 @@ public class DataLimitTop extends TreeNodeData<DataLimitTop.Config> implements S
      * }},</pre>
      *
      * @user-reference
-     * @hydra-name limit.top
      */
     public static final class Config extends TreeDataParameters<DataLimitTop> {
 

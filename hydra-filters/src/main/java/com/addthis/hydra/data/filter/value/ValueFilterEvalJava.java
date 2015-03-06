@@ -93,7 +93,6 @@ import org.slf4j.LoggerFactory;
  *  }</pre>
  *
  * @user-reference
- * @hydra-name eval-java
  */
 public class ValueFilterEvalJava extends AbstractValueFilter implements SuperCodable {
 

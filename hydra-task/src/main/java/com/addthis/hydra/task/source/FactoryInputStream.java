@@ -48,7 +48,6 @@ public abstract class FactoryInputStream implements Codable {
 
     /**
      * @user-reference
-     * @hydra-name file
      */
     public static final class FileInputStreamSource extends FactoryInputStream {
 
@@ -63,7 +62,6 @@ public abstract class FactoryInputStream implements Codable {
 
     /**
      * @user-reference
-     * @hydra-name socket
      */
     public static final class SocketInputStreamSource extends FactoryInputStream {
 
@@ -83,7 +81,6 @@ public abstract class FactoryInputStream implements Codable {
 
     /**
      * @user-reference
-     * @hydra-name inject
      */
     public static final class InjectorStreamSource extends FactoryInputStream {
 

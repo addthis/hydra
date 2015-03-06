@@ -25,10 +25,13 @@ import com.addthis.bundle.value.ValueArray;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueMap;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
+import com.addthis.hydra.data.util.Tokenizer;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +51,6 @@ import org.slf4j.LoggerFactory;
  * </pre>
  *
  * @user-reference
- * @hydra-name split
  * @exclude-fields once
  */
 public class ValueFilterSplit extends AbstractValueFilterContextual {
@@ -57,8 +59,7 @@ public class ValueFilterSplit extends AbstractValueFilterContextual {
     private static final boolean ERROR_ON_ARRAY = Parameter.boolValue("hydra.filter.split.error", false);
 
     /** Use this field as a delimiter in between * elements in the input string. Default is ",". */
-    @FieldConfig(codable = true)
-    private String split = ",";
+    private final String split;
 
     /**
      * If this field is non-null,
@@ -66,21 +67,18 @@ public class ValueFilterSplit extends AbstractValueFilterContextual {
      * this delimiter between keys and values.
      * Default is null.
      */
-    @FieldConfig(codable = true)
-    private String keySplit;
+    private final String keySplit;
 
     /**
      * An optional filter on elements of the output sequence. Default is null.
      */
-    @FieldConfig(codable = true)
-    private ValueFilter filter;
+    private final ValueFilter filter;
 
     /**
      * If keySplit is used, then this is an optional
      * filter on keys of the output map. Default is null.
      */
-    @FieldConfig(codable = true)
-    private ValueFilter keyFilter;
+    private final ValueFilter keyFilter;
 
     /**
      * If this field is a positive integer,
@@ -89,34 +87,31 @@ public class ValueFilterSplit extends AbstractValueFilterContextual {
      * into elements of equal length.
      * Default is -1.
      */
-    @FieldConfig(codable = true)
-    private int fixedLength = -1;
-    
+    private final int fixedLength;
+
+    private final Tokenizer tokenizer;
+
+    /**
+     * Not thread safe. OK just used for logging purposes.
+     */
     private boolean warnedOnArrayInput = false;
 
-    public ValueFilterSplit setSplit(String split) {
+    @JsonCreator public ValueFilterSplit(@JsonProperty("split") String split,
+                                         @JsonProperty("keySplit") String keySplit,
+                                         @JsonProperty("filter") ValueFilter filter,
+                                         @JsonProperty("keyFilter") ValueFilter keyFilter,
+                                         @JsonProperty("fixedLength") int fixedLength,
+                                         @JsonProperty("tokenizer") Tokenizer tokenizer) {
         this.split = split;
-        return this;
-    }
-
-    public ValueFilterSplit setKeySplit(String keySplit) {
         this.keySplit = keySplit;
-        return this;
-    }
-
-    public ValueFilterSplit setFilter(ValueFilter filter) {
         this.filter = filter;
-        return this;
-    }
-
-    public ValueFilterSplit setKeyFilter(ValueFilter keyFilter) {
         this.keyFilter = keyFilter;
-        return this;
-    }
-    
-    public ValueFilterSplit setFixedLength(int fixedLength) {
         this.fixedLength = fixedLength;
-        return this;
+        if (tokenizer == null) {
+            this.tokenizer = null;
+        } else {
+            this.tokenizer = tokenizer.initialize();
+        }
     }
 
     @Override
@@ -143,7 +138,9 @@ public class ValueFilterSplit extends AbstractValueFilterContextual {
             return null;
         }
         String[] token;
-        if (fixedLength > 0) {
+        if (tokenizer != null) {
+            token = tokenizer.tokenize(string).toArray(new String[0]);
+        } else if (fixedLength > 0) {
             token = splitFixedLength(string, fixedLength);
         } else if (value.getObjectType() == ValueObject.TYPE.ARRAY && ",".equals(split)) {
             // XXX Make sure applying this filter on an array field still works.

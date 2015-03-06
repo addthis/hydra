@@ -38,7 +38,6 @@ public class DataLimitRecent extends TreeNodeData<DataLimitRecent.Config> {
      * This data attachment <span class="hydra-summary">limits child nodes to recent values</span>.
      *
      * @user-reference
-     * @hydra-name limit.recent
      */
     public static final class Config extends TreeDataParameters<DataLimitRecent> {
 

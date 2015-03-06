@@ -20,6 +20,7 @@ import java.io.IOException;
 
 import java.net.ServerSocket;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
@@ -83,7 +84,6 @@ import static java.lang.String.join;
  * }</pre>
  *
  * @user-reference
- * @hydra-name map
  */
 public class StreamMapper implements StreamEmitter, TaskRunnable {
     private static final Logger log = LoggerFactory.getLogger(StreamMapper.class);
@@ -115,13 +115,15 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
     @JsonProperty private boolean emitTaskState;
     @JsonProperty private SimpleDateFormat dateFormat;
 
+    private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
+
     private final AtomicBoolean metricGate = new AtomicBoolean(false);
     private final LongAdder filterTime = new LongAdder();
     private final LongAdder outputTime = new LongAdder();
 
     // metrics
-    private final Meter inputMeter = Metrics.newMeter(getClass(), "input", "input", TimeUnit.SECONDS);
-    private final Meter outputMeter = Metrics.newMeter(getClass(), "output", "output", TimeUnit.SECONDS);
+    private static final Meter inputMeter = Metrics.newMeter(StreamMapper.class, "input", "input", TimeUnit.SECONDS);
+    private static final Meter outputMeter = Metrics.newMeter(StreamMapper.class, "output", "output", TimeUnit.SECONDS);
 
     @GuardedBy("metricGate") private long lastTick;
     @GuardedBy("metricGate") private long lastOutputTime = 0;
@@ -313,7 +315,8 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
         output.sendComplete();
         emitTaskExitState();
         maybeCloseJmx();
-        log.info("[taskComplete]");
+        boolean success = completionFuture.complete(null);
+        log.info("[taskComplete] Triggered future: {}", success);
     }
 
     /* leave artifact for minion, if desired */
@@ -366,4 +369,9 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
             }
         }
     }
+
+    public CompletableFuture<Void> getCompletionFuture() {
+        return completionFuture;
+    }
+
 }

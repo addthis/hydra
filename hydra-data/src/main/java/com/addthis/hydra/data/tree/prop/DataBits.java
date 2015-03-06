@@ -51,7 +51,6 @@ public class DataBits extends TreeNodeData<DataBits.Config> {
      * </pre>
      *
      * @user-reference
-     * @hydra-name bits
      */
     public static final class Config extends TreeDataParameters<DataBits> {
 

@@ -87,7 +87,6 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
      * </pre>
      *
      * @user-reference
-     * @hydra-name count.min.sketch
      */
     public static final class Config extends TreeDataParameters<DataCountMinSketch> {
 

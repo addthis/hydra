@@ -41,7 +41,6 @@ import com.addthis.hydra.data.tree.TreeNodeList;
  * injected into the current input bundle with specified named fields.</p>
  * <p/>
  * @user-reference
- * @hydra-name query
  */
 public final class PathQuery extends PathOp {
 
