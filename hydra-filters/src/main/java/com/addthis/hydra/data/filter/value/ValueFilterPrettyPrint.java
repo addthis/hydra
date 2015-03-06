@@ -13,16 +13,12 @@
  */
 package com.addthis.hydra.data.filter.value;
 
-import javax.annotation.Nonnull;
-
 import java.io.UncheckedIOException;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.jackson.Jackson;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 /**
@@ -39,43 +35,23 @@ import com.fasterxml.jackson.core.JsonProcessingException;
  */
 public class ValueFilterPrettyPrint extends AbstractValueFilter {
 
-    public static enum Format { JSON }
-
-    /**
-     * Formatting for output. Current options
-     * are ["json"]. Default is "json".
-     */
-    @Nonnull private final Format format;
-
-    @JsonCreator public ValueFilterPrettyPrint(@JsonProperty("format") Format format) {
-        this.format = format;
-    }
-
     @Override
     public ValueObject filter(ValueObject v) {
-        return ValueFactory.create(prettyPrint(v, format));
+        return ValueFactory.create(prettyPrint(v));
     }
 
     @Override
     public ValueObject filterValue(ValueObject v) {
-        return ValueFactory.create(prettyPrint(v, format));
+        return ValueFactory.create(prettyPrint(v));
     }
 
-    public static String prettyPrint(ValueObject input, @Nonnull Format format) {
-        if (input == null) {
-            return null;
-        }
-        switch (format) {
-            case JSON:
-                return prettyPrintAsJson(input);
-            default:
-                throw new IllegalArgumentException("unknown format " + format);
-        }
-    }
-
-    public static String prettyPrintAsJson(@Nonnull ValueObject input) {
+    public static String prettyPrint(ValueObject input) {
         try {
-            return Jackson.defaultMapper().writeValueAsString(input.asNative());
+            if (input == null) {
+                return null;
+            } else {
+                return Jackson.defaultMapper().writeValueAsString(input.asNative());
+            }
         } catch (JsonProcessingException ex) {
             throw new UncheckedIOException(ex);
         }
