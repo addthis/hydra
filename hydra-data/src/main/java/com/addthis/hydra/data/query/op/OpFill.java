@@ -48,7 +48,7 @@ public class OpFill extends AbstractRowOp {
                     fillWith = ValueFactory.create(Double.parseDouble(args.substring(1)));
                     break;
                 case 's':
-                    fillWith = ValueFactory.create(args.substring(0));
+                    fillWith = ValueFactory.create(args.substring(1));
                     break;
                 default:
                     fillWith = ValueFactory.create(Long.parseLong(args));
