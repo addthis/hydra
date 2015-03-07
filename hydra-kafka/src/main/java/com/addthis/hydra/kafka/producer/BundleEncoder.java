@@ -2,28 +2,32 @@ package com.addthis.hydra.kafka.producer;
 
 import java.io.IOException;
 
+import java.util.Map;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.io.DataChannelCodec;
 
-import kafka.serializer.Encoder;
-import kafka.utils.VerifiableProperties;
+import org.apache.kafka.common.serialization.Serializer;
 
-/**
- * Created by steve on 2/3/15.
- */
-public class BundleEncoder implements Encoder<Bundle> {
+public class BundleEncoder implements Serializer<Bundle> {
 
-    public BundleEncoder(VerifiableProperties soUseful) {
-        // needed by kafka
+    @Override
+    public void configure(Map<String, ?> stringMap, boolean b) {
+        // not needed
     }
 
     @Override
-    public byte[] toBytes(Bundle bundle) {
+    public byte[] serialize(String topic, Bundle bundle) {
         try {
             return DataChannelCodec.encodeBundle(bundle);
         } catch (IOException e) {
             //this exception is never actually thrown
             return null;
         }
+    }
+
+    @Override
+    public void close() {
+        // not needed
     }
 }

@@ -1,31 +1,22 @@
 package com.addthis.hydra.kafka.producer;
 
 
-import java.util.Collections;
+import java.util.Collection;
 import java.util.Properties;
 
-import org.I0Itec.zkclient.ZkClient;
+import com.addthis.bundle.core.Bundle;
+import com.addthis.hydra.kafka.KafkaUtils;
 
-import kafka.cluster.Broker;
-import kafka.javaapi.producer.Producer;
-import kafka.producer.ProducerConfig;
-import kafka.utils.ZKStringSerializer$;
-import kafka.utils.ZkUtils;
-import scala.collection.Iterator;
-import scala.collection.Seq;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.common.Node;
 
 public class ProducerUtils {
-
-    public static ZkClient newZkClient(String zookeeper) {
-        return new ZkClient(zookeeper, 30*1000, 30*1000, ZKStringSerializer$.MODULE$);
-    }
-
-    public static String brokerListString(Seq<Broker> brokers) {
-        Iterator<Broker> butwhowasforeach = brokers.iterator();
+    public static String brokerListString(Collection<Node> brokers) {
         StringBuilder stringBuilder = new StringBuilder();
         boolean first = true;
-        while(butwhowasforeach.hasNext()) {
-            Broker broker = butwhowasforeach.next();
+        for(Node broker : brokers) {
             if(!first) {
                 stringBuilder.append(",");
             }
@@ -35,37 +26,26 @@ public class ProducerUtils {
         return stringBuilder.toString();
     }
 
-    public static ProducerConfig defaultConfig(String zookeeper, Properties overrides) {
+    public static Properties defaultConfig(String zookeeper, Properties overrides) throws Exception {
         Properties properties = new Properties();
-        ZkClient zkClient = newZkClient(zookeeper);
-        Seq<Broker> brokers = ZkUtils.getAllBrokersInCluster(zkClient);
+        CuratorFramework zkClient = KafkaUtils.newZkClient(zookeeper);
+        Collection<Node> brokers = KafkaUtils.getKafkaBrokers(zkClient).values();
         zkClient.close();
-        properties.put("metadata.broker.list", brokerListString(brokers));
-        properties.put("request.required.acks", "1");
-        properties.put("producer.type", "async");
-        properties.put("compression.codec", "gzip");
-        properties.put("queue.enqueue.timeout.ms", "0");
-        for(Object name : Collections.list(overrides.propertyNames())) {
-            properties.put(name, overrides.get(name));
+        if(brokers.isEmpty()) {
+            throw new Exception("failed to lookup kafka brokers from zookeeper: " + zookeeper);
         }
-        return new ProducerConfig(properties);
+        properties.put("bootstrap.servers", brokerListString(brokers));
+        properties.put("request.required.acks", "all");
+        properties.put("compression.codec", "gzip");
+        return properties;
     }
 
-    public static ProducerConfig newConfig(String zookeeper) {
+    public static Properties defaultConfig(String zookeeper) throws Exception {
         return defaultConfig(zookeeper, new Properties());
     }
 
-    public static <Key,Message> Producer<Key,Message> newProducer(String zookeeper, Properties overrides) {
-        return new Producer<Key,Message>(defaultConfig(zookeeper, overrides));
-    }
-
-    public static <Key,Message> Producer<Key,Message> newProducer(String zookeeper) {
-        return new Producer<Key,Message>(defaultConfig(zookeeper, new Properties()));
-    }
-
-    public static Producer newBundleProducer(String zookeeper) {
-        Properties encoder = new Properties();
-        encoder.setProperty("serializer.class", "com.addthis.hydra.kafka.producer.BundleEncoder");
-        return new Producer(defaultConfig(zookeeper, encoder));
+    public static Producer<Bundle,Bundle> newBundleProducer(String zookeeper, Properties overrides) throws Exception {
+        BundleEncoder encoder = new BundleEncoder();
+        return new KafkaProducer<Bundle,Bundle>(defaultConfig(zookeeper, overrides), encoder, encoder);
     }
 }
