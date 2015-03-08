@@ -325,7 +325,7 @@ public class OpRoll extends AbstractRowOp {
 
     @Override
     public void sendComplete() {
-        if (summary) {
+        if (summary && state != null) {
             for (int i = 0; i < state.length; i++) {
                 if (op == OP.AVG) {
                     lastRow.setValue(colOut[i], state[i].avg(rows));
