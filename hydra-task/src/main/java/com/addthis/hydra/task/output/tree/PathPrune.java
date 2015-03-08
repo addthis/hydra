@@ -31,6 +31,7 @@ import com.google.common.util.concurrent.Runnables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
@@ -82,8 +83,11 @@ public class PathPrune extends PathElement {
      */
     @Nullable private final DateTimeFormatter nameFormat;
 
-    public PathPrune(@Nullable @JsonProperty("nameFormat") String nameFormat) {
-        if (nameFormat != null) {
+    public PathPrune(@Nullable @JsonProperty("nameFormat") String nameFormat,
+                     @Nullable @JsonProperty("timeZone") String timeZone) {
+        if (nameFormat != null && timeZone != null) {
+            this.nameFormat = DateTimeFormat.forPattern(nameFormat).withZone(DateTimeZone.forID(timeZone));
+        } else if (nameFormat != null) {
             this.nameFormat = DateTimeFormat.forPattern(nameFormat);
         } else {
             this.nameFormat = null;
