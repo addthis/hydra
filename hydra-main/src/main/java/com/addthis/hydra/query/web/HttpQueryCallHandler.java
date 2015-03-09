@@ -18,7 +18,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import com.addthis.basis.kv.KVPairs;
@@ -132,6 +131,11 @@ public final class HttpQueryCallHandler {
                 ctx.pipeline().addLast(executor, "format",
                         GoogleDriveBundleEncoder.create(filename, gdriveAccessToken));
                 break;
+            case "csv2":
+            case "psv2":
+            case "tsv2":
+                ctx.pipeline().addLast(executor,
+                                       "format", DelimitedEscapedBundleEncoder.create(filename, format));
             default:
                 ctx.pipeline().addLast(executor,
                         "format", DelimitedBundleEncoder.create(filename, format));
