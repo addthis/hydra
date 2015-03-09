@@ -16,7 +16,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>5.0.2-SNAPSHOT</version>
+    <version>5.2.3-SNAPSHOT</version>
   </parent>
 
   <artifactId>hydra-kafka</artifactId>
@@ -44,7 +44,6 @@
     <dependency>
         <groupId>org.apache.curator</groupId>
         <artifactId>curator-framework</artifactId>
-        <version>${hydra.dep.apache.curator.version}</version>
     </dependency>
   </dependencies>
 </project>
