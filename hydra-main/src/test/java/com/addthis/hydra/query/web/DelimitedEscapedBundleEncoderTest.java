@@ -79,4 +79,13 @@ public class DelimitedEscapedBundleEncoderTest {
         input.add(ValueFactory.create("baz"));
         csvEncodedJSONRoundTrip(input);
     }
+
+    @Test
+    public void arrayWithSeveralEscapedRoundTrip() throws Exception {
+        ValueArray input = ValueFactory.createArray(3);
+        input.add(ValueFactory.create("foo\"hello\"world"));
+        input.add(ValueFactory.create("bar\\bar\"baz\\\\quux"));
+        input.add(ValueFactory.create("baz"));
+        csvEncodedJSONRoundTrip(input);
+    }
 }
