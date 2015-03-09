@@ -48,4 +48,9 @@ public class ProducerUtils {
         BundleEncoder encoder = new BundleEncoder();
         return new KafkaProducer<Bundle,Bundle>(defaultConfig(zookeeper, overrides), encoder, encoder);
     }
+
+    public static Producer<Bundle,Bundle> newBundleProducer(String zookeeper) throws Exception {
+        BundleEncoder encoder = new BundleEncoder();
+        return new KafkaProducer<Bundle,Bundle>(defaultConfig(zookeeper, new Properties()), encoder, encoder);
+    }
 }
