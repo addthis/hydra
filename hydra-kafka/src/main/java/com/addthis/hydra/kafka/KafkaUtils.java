@@ -16,16 +16,16 @@ import org.apache.kafka.common.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Created by steve on 3/6/15.
- */
-public class KafkaUtils {
+public final class KafkaUtils {
 
     public static final String brokersPath = "/brokers/ids";
 
     private static final Logger log = LoggerFactory.getLogger(KafkaUtils.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    private KafkaUtils() {
+        // intellij made me do it (so people dont instantiate utils class)
+    }
 
     public static CuratorFramework newZkClient(String zookeepers) {
         CuratorFramework framework = CuratorFrameworkFactory.builder()
