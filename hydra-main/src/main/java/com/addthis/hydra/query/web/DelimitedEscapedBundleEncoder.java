@@ -39,7 +39,7 @@ public class DelimitedEscapedBundleEncoder extends AbstractBufferingHttpBundleEn
         responseStart.headers().set("Content-Disposition", "attachment; filename=\"" + filename + "\"");
     }
 
-    public static DelimitedBundleEncoder create(String filename, String format) {
+    public static DelimitedEscapedBundleEncoder create(String filename, String format) {
         String delimiter;
         switch (format) {
             case "csv2":
@@ -58,7 +58,7 @@ public class DelimitedEscapedBundleEncoder extends AbstractBufferingHttpBundleEn
         if (!filename.toLowerCase().endsWith("." + suffix)) {
             filename = filename.concat("." + suffix);
         }
-        return new DelimitedBundleEncoder(filename, delimiter);
+        return new DelimitedEscapedBundleEncoder(filename, delimiter);
     }
 
     public static String buildRow(Bundle row, String delimiter) {
