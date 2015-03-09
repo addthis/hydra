@@ -136,6 +136,7 @@ public final class HttpQueryCallHandler {
             case "tsv2":
                 ctx.pipeline().addLast(executor,
                                        "format", DelimitedEscapedBundleEncoder.create(filename, format));
+                break;
             default:
                 ctx.pipeline().addLast(executor,
                         "format", DelimitedBundleEncoder.create(filename, format));
