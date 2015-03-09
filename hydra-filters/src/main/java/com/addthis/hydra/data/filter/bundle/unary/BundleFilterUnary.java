@@ -24,6 +24,43 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+/**
+ * <p></p>
+ * This {@link BundleFilter BundleFilter} <span class="hydra-summary">runs a unary operation on the specified filter result</span>.
+ * <p/>
+ * <p>The valid operations are <code>true</code>, <code>false</code>, <code>identity</code>, and <code>negation</code>.
+ * <code>true</code> will always return true, with the opposite for <code>false</code>.
+ * <code>negation</code> will return the opposite of the filter return value.
+ * </p>
+ * <p>If there is no filter specified, the operation will be performed on the value <code>true</code>.
+ * </p>
+ * <p>You should probably use the aliases that call this plugin:
+ * <ul>
+ *     <li>Return true:
+ *     <ul>
+ *         <li>true</li>
+ *         <li>safely</li>
+ *         <li>ignore</li>
+ *     </ul></li>
+ *
+ *     <li>Return false:
+ *     <ul>
+ *         <li>false</li>
+ *         <li>fail</li>
+ *         <li>then fail</li>
+ *     </ul></li>
+ *
+ *     <li>Return opposite of filter:
+ *     <ul>
+ *         <li>invert</li>
+ *         <li>is not</li>
+ *         <li>isn't</li>
+ *     </ul></li>
+ * </ul>
+ * </p>
+ *
+ * @user-reference
+ */
 public class BundleFilterUnary implements BundleFilter {
 
     @Nonnull  private final UnaryOperation operation;
