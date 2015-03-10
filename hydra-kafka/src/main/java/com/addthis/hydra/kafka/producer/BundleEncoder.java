@@ -18,6 +18,9 @@ public class BundleEncoder implements Serializer<Bundle> {
 
     @Override
     public byte[] serialize(String topic, Bundle bundle) {
+        if(bundle == null) {
+            return null;
+        }
         try {
             return DataChannelCodec.encodeBundle(bundle);
         } catch (IOException e) {
