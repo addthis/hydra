@@ -46,11 +46,19 @@ public class ProducerUtils {
 
     public static Producer<Bundle,Bundle> newBundleProducer(String zookeeper, Properties overrides) throws Exception {
         BundleEncoder encoder = new BundleEncoder();
-        return new KafkaProducer<Bundle,Bundle>(defaultConfig(zookeeper, overrides), encoder, encoder);
+        return new KafkaProducer<>(defaultConfig(zookeeper, overrides), encoder, encoder);
     }
 
     public static Producer<Bundle,Bundle> newBundleProducer(String zookeeper) throws Exception {
+        return newBundleProducer(zookeeper, new Properties());
+    }
+
+    public static Producer<Bundle,Bundle> newBundleProducer(String zookeeper, String topicSuffix, Properties overrides) throws Exception {
         BundleEncoder encoder = new BundleEncoder();
-        return new KafkaProducer<Bundle,Bundle>(defaultConfig(zookeeper, new Properties()), encoder, encoder);
+        return new TopicSuffixProducer<>(new KafkaProducer<>(defaultConfig(zookeeper, overrides), encoder, encoder), topicSuffix);
+    }
+
+    public static Producer<Bundle,Bundle> newBundleProducer(String zookeeper, String topicSuffix) throws Exception {
+        return newBundleProducer(zookeeper, topicSuffix, new Properties());
     }
 }
