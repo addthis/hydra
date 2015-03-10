@@ -51,7 +51,7 @@ public class QueryTracker implements Closeable {
     /**
      * Contains the queries that are running
      */
-    final ConcurrentMap<String, QueryEntry> running = new ConcurrentHashMapV8<>();
+    final ConcurrentMap<String, QueryEntry> running = new ConcurrentHashMap<>();
     final Cache<String, QueryEntryInfo> recentlyCompleted;
     final TaskDataOutput eventLog;
 
