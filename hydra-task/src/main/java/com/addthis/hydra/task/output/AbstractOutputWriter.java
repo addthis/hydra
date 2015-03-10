@@ -57,7 +57,7 @@ import org.slf4j.LoggerFactory;
  * in the order in which the bundles are produced. The second strategy is enabled
  * by setting {@link #waitForDiskFlushThread} to true.
  */
-public abstract class AbstractOutputWriter {
+public abstract class AbstractOutputWriter implements WritableRootPaths {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractOutputWriter.class);
 

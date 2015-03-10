@@ -17,14 +17,20 @@ import javax.annotation.Nonnull;
 
 import java.io.IOException;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+
+import java.nio.file.Path;
 
 import com.addthis.hydra.task.map.StreamMapper;
 import com.addthis.hydra.task.run.TaskRunnable;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -64,6 +70,12 @@ public class PipelineTask implements TaskRunnable {
 
     @Nonnull private final StreamMapper[] phases;
 
+    /**
+     * If true then ensure that writable directories are all unique.
+     * Default is true.
+     **/
+    private final boolean validateDirs;
+
     private final ImmutableList<CompletableFuture<Void>> phaseComplete;
 
     private final ImmutableList<CompletableFuture<Void>> phaseNext;
@@ -71,8 +83,10 @@ public class PipelineTask implements TaskRunnable {
     private volatile StreamMapper currentPhase = null;
 
     @JsonCreator
-    public PipelineTask(@JsonProperty("phases") @Nonnull StreamMapper[] phases) {
+    public PipelineTask(@JsonProperty("phases") @Nonnull StreamMapper[] phases,
+                        @JsonProperty("validateDirs") boolean validateDirs) {
         this.phases = phases;
+        this.validateDirs = validateDirs;
         int futures = Math.max(phases.length - 1, 0);
         ImmutableList.Builder<CompletableFuture<Void>> complete = new ImmutableList.Builder<>();
         ImmutableList.Builder<CompletableFuture<Void>> next = new ImmutableList.Builder<>();
@@ -134,6 +148,40 @@ public class PipelineTask implements TaskRunnable {
             currentPhase = null;
             phases[pos].start();
             currentPhase = phases[pos];
+        }
+    }
+
+    @Nonnull @Override
+    public ImmutableList<Path> writableRootPaths() {
+        return ImmutableList.copyOf(
+                Arrays.stream(phases).flatMap(
+                        phase -> phase.writableRootPaths().stream()).iterator());
+    }
+
+    @Override
+    public void validateWritableRootPaths() {
+        if (!validateDirs) {
+            return;
+        }
+        for (StreamMapper phase : phases) {
+            phase.validateWritableRootPaths();
+        }
+        Set<Path>[] outputDirs = new Set[phases.length];
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < phases.length; i++) {
+            outputDirs[i] = new HashSet<>();
+            outputDirs[i].addAll(phases[i].writableRootPaths());
+            for (int j = 0; j < i; j++) {
+                Sets.SetView<Path> intersect = Sets.intersection(outputDirs[i], outputDirs[j]);
+                if (intersect.size() > 0) {
+                    String message = String.format("Phases %d and %d have overlapping output directories: \"%s\"\n",
+                                                   (j + 1), (i + 1), intersect.toString());
+                    builder.append(message);
+                }
+            }
+        }
+        if (builder.length() > 0) {
+            throw new IllegalArgumentException(builder.toString());
         }
     }
 
