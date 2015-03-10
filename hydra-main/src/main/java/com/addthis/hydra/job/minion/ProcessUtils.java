@@ -18,8 +18,8 @@ import java.io.IOException;
 
 import java.util.Scanner;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.SimpleExec;
 
 import org.slf4j.Logger;
@@ -34,7 +34,7 @@ final class ProcessUtils {
         try {
             File tmp = File.createTempFile(".minion", "shell", directory);
             try {
-                Files.write(tmp, Bytes.toBytes("#!/bin/sh\n" + cmd + "\n"), false);
+                LessFiles.write(tmp, LessBytes.toBytes("#!/bin/sh\n" + cmd + "\n"), false);
                 int exit = Runtime.getRuntime().exec("sh " + tmp).waitFor();
                 if (log.isDebugEnabled()) {
                     log.debug("[shell] (" + cmd + ") exited with " + exit);
@@ -61,7 +61,7 @@ final class ProcessUtils {
                 log.debug("[getpid] pidFile is null");
             }
             if ((pidFile != null) && pidFile.exists()) {
-                return Integer.parseInt(Bytes.toString(Files.read(pidFile)).trim());
+                return Integer.parseInt(LessBytes.toString(LessFiles.read(pidFile)).trim());
             } else {
                 return null;
             }
@@ -84,7 +84,7 @@ final class ProcessUtils {
                 cmd = execCommandReturnStdOut("ps -f " + pid);
             } else {
                 File cmdFile = new File("/proc/" + pid + "/cmdline");
-                cmd = Bytes.toString(Files.read(cmdFile)).trim().replace('\0', ' ');
+                cmd = LessBytes.toString(LessFiles.read(cmdFile)).trim().replace('\0', ' ');
             }
             log.warn("found cmd {}  for pid: {}", cmd, pid);
             return cmd;

@@ -16,7 +16,7 @@ package com.addthis.hydra.data.query.op;
 
 import java.io.IOException;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
@@ -40,7 +40,7 @@ public class MergedRowFactory implements DiskBackedMap.DiskObjectFactory {
     @Override
     public DiskBackedMap.DiskObject fromBytes(byte[] bytes) {
         MergedRow mergedRow = new MergedRow(conf, new ListBundle(format));
-        mergedRow.numMergedRows = Bytes.toInt(ArrayUtils.subarray(bytes, 0, Integer.SIZE / 8));
+        mergedRow.numMergedRows = LessBytes.toInt(ArrayUtils.subarray(bytes, 0, Integer.SIZE / 8));
         ListBundleFormat format = new ListBundleFormat();
         ListBundle listBundle = new ListBundle(format);
         try {

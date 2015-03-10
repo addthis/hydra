@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.store.util;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.BytesCodable;
@@ -40,7 +40,7 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
     }
 
     public static final Raw get(char[] c) {
-        return new Raw(Bytes.toBytes(c));
+        return new Raw(LessBytes.toBytes(c));
     }
 
     public static final Raw get(byte[] b) {
@@ -48,7 +48,7 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
     }
 
     private Raw(String s) {
-        this.raw = Bytes.toBytes(s);
+        this.raw = LessBytes.toBytes(s);
     }
 
     private Raw(byte[] b) {
@@ -131,11 +131,11 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
     }
 
     public String toString() {
-        return Bytes.toString(raw);
+        return LessBytes.toString(raw);
     }
 
     public char[] toChars() {
-        return Bytes.toChars(raw);
+        return LessBytes.toChars(raw);
     }
 
     public byte[] toBytes() {
@@ -143,11 +143,11 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
     }
 
     public Raw cat(byte[] b) {
-        return get(Bytes.cat(raw, b));
+        return get(LessBytes.cat(raw, b));
     }
 
     public Raw cat(String b) {
-        return get(Bytes.cat(raw, Bytes.toBytes(b)));
+        return get(LessBytes.cat(raw, LessBytes.toBytes(b)));
     }
 
     public Raw cat(Raw ab) {
@@ -158,7 +158,7 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
         if (longcompare) {
             return compare(getLongs(), o.getLongs());
         }
-        return Bytes.compare(raw, o.raw);
+        return LessBytes.compare(raw, o.raw);
     }
 
     private long[] getLongs() {
@@ -187,7 +187,7 @@ public final class Raw implements Comparable<Raw>, BytesCodable {
 
     private long[] bytesToLong(byte[] data) {
         if (data.length % 8 != 0) {
-            data = Bytes.cat(data, new byte[8 - (data.length % 8)]);
+            data = LessBytes.cat(data, new byte[8 - (data.length % 8)]);
         }
         long[] l = new long[data.length / 8];
         for (int i = 0; i < l.length; i++) {

@@ -15,7 +15,7 @@ package com.addthis.hydra.data.tree.prop;
 
 import java.util.List;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -118,7 +118,7 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements SuperCo
     public ValueObject getValue(String key) {
         if (key != null) {
 
-            String[] keys = Strings.splitArray(key, "~");
+            String[] keys = LessStrings.splitArray(key, "~");
             for (String k : keys) {
                 if (filter.isPresent(k)) {
                     return present;
@@ -131,7 +131,7 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements SuperCo
 
     @Override
     public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
-        String[] keys = Strings.splitArray(key, ",");
+        String[] keys = LessStrings.splitArray(key, ",");
         TreeNodeList list = new TreeNodeList(keys.length);
         for (String k : keys) {
             if (filter.isPresent(k)) {

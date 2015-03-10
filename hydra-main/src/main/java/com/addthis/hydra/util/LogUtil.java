@@ -14,7 +14,7 @@
 package com.addthis.hydra.util;
 
 import com.addthis.basis.util.RollingLog;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.config.Configs;
 import com.addthis.hydra.task.output.TaskDataOutput;
@@ -43,7 +43,7 @@ public class LogUtil {
         if (eventLog == null) {
             log.warn(output.toString() + "----> EventLog was null redirecting to stdout");
         } else {
-            String msg = Strings.cat("<", format.print(System.currentTimeMillis()), ">");
+            String msg = LessStrings.cat("<", format.print(System.currentTimeMillis()), ">");
             output.add("timestamp", msg);
             eventLog.writeLine(output.createKVPairs().toString());
         }

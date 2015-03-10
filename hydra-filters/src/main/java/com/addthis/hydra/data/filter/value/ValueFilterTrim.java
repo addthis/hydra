@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.filter.value;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 
 /**
@@ -30,6 +30,6 @@ public class ValueFilterTrim extends StringFilter {
 
     @Override
     public String filter(String value) {
-        return Strings.isEmpty(value) ? value : value.trim();
+        return LessStrings.isEmpty(value) ? value : value.trim();
     }
 }

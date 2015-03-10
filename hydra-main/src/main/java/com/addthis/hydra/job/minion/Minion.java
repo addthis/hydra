@@ -43,10 +43,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.JitterClock;
-import com.addthis.basis.util.Numbers;
+import com.addthis.basis.util.LessNumbers;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.SimpleExec;
 
@@ -238,7 +238,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         this.rootDir = rootDir;
         nextPort = minJobPort;
         startTime = System.currentTimeMillis();
-        stateFile = new File(Files.initDirectory(rootDir), "minion.state");
+        stateFile = new File(LessFiles.initDirectory(rootDir), "minion.state");
         liveEverywhereMarkerFile = new File(rootDir, "liveeverywhere.marker");
         if (localHost != null) {
             myHost = localHost;
@@ -252,12 +252,12 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         diskReadOnly = false;
         minionTaskDeleter = new MinionTaskDeleter();
         if (stateFile.exists()) {
-            CodecJSON.decodeString(this, Bytes.toString(Files.read(stateFile)));
+            CodecJSON.decodeString(this, LessBytes.toString(LessFiles.read(stateFile)));
         } else {
             uuid = UUID.randomUUID().toString();
         }
         File minionTypesFile = new File(rootDir, "minion.types");
-        minionTypes = minionTypesFile.exists() ? new String(Files.read(minionTypesFile)).replaceAll("\n", "") : defaultMinionType;
+        minionTypes = minionTypesFile.exists() ? new String(LessFiles.read(minionTypesFile)).replaceAll("\n", "") : defaultMinionType;
         activeTaskKeys = new HashSet<>();
         jetty = new Server(webPort);
         jetty.setHandler(minionHandler);
@@ -621,7 +621,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         if (!(taskRoot.isDirectory() && taskRoot.exists())) {
             return false;
         }
-        Integer taskID = Numbers.parseInt(10, taskRoot.getName(), -1);
+        Integer taskID = LessNumbers.parseInt(10, taskRoot.getName(), -1);
         if (taskID < 0) {
             log.warn("[task.update] invalid task root {}", taskRoot);
             return false;
@@ -644,7 +644,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     void writeState() {
         minionStateLock.lock();
         try {
-            Files.write(stateFile, Bytes.toBytes(CodecJSON.encodeString(this)), false);
+            LessFiles.write(stateFile, LessBytes.toBytes(CodecJSON.encodeString(this)), false);
         } catch (IOException io) {
             log.warn("", io);
             /* assume disk failure: set diskReadOnly=true and exit */

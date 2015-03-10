@@ -15,7 +15,7 @@ package com.addthis.hydra.data.query.op;
 
 import java.util.List;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -60,7 +60,7 @@ public class OpChangePoints extends AbstractTableOp {
             inactiveThreshold = opt.length >= 6 ? Integer.parseInt(opt[5]) : 1;
             windowSize = opt.length >= 7 ? Integer.parseInt(opt[6]) : 5;
             log.info("Initiated changepoints with parameters " +
-                     Strings.join(new Object[]{valColumn, minChange, minRatio, minZScore, inactiveThreshold}, ","));
+                     LessStrings.join(new Object[]{valColumn, minChange, minRatio, minZScore, inactiveThreshold}, ","));
         } catch (Exception ex) {
             log.error("", ex);
         }

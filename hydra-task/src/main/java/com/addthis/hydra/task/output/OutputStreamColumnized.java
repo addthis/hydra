@@ -16,8 +16,8 @@ package com.addthis.hydra.task.output;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -82,16 +82,16 @@ public class OutputStreamColumnized extends OutputStreamFormatter implements Sup
                 if (filter != null) {
                     val = filter.filter(val);
                 }
-                if (!Strings.isEmpty(val)) {
+                if (!LessStrings.isEmpty(val)) {
                     if (nameSeparator != null) {
                         val = fields[i].getName() + nameSeparator + val;
                     }
                     if (stringQuote != null && val.indexOf(separator) >= 0) {
                         out.write(stqB);
-                        out.write(Bytes.toBytes(val));
+                        out.write(LessBytes.toBytes(val));
                         out.write(stqB);
                     } else {
-                        out.write(Bytes.toBytes(val));
+                        out.write(LessBytes.toBytes(val));
                     }
                 }
                 if (i < rowlen - 1) {
@@ -109,9 +109,9 @@ public class OutputStreamColumnized extends OutputStreamFormatter implements Sup
 
     @Override
     public void postDecode() {
-        sepB = separator != null ? Bytes.toBytes(separator) : null;
-        stqB = stringQuote != null ? Bytes.toBytes(stringQuote) : null;
-        eolB = Bytes.toBytes(eol);
+        sepB = separator != null ? LessBytes.toBytes(separator) : null;
+        stqB = stringQuote != null ? LessBytes.toBytes(stringQuote) : null;
+        eolB = LessBytes.toBytes(eol);
     }
 
     @Override

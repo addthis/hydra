@@ -18,12 +18,11 @@ import java.io.IOException;
 
 import java.util.Arrays;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.codec.config.Configs;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobConfigManager;
-import com.addthis.hydra.job.alert.AbstractJobAlert;
 import com.addthis.hydra.job.alert.types.OnErrorJobAlert;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.mq.HostState;
@@ -51,7 +50,7 @@ public class SpawnStateTest extends ZkCodecStartUtil {
     @Override
     protected void onAfterZKStart() {
         try {
-            logDir = Files.createTempDir();
+            logDir = LessFiles.createTempDir();
             System.setProperty("SPAWN_LOG_DIR", logDir.getCanonicalPath());
             SpawnDataStore spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore();
             spawnDataStore.delete(SPAWN_COMMON_COMMAND_PATH); // Clear out command path
@@ -62,7 +61,7 @@ public class SpawnStateTest extends ZkCodecStartUtil {
 
     @After
     public void cleanup() throws IOException {
-        Files.deleteDir(logDir);
+        LessFiles.deleteDir(logDir);
     }
 
     @Test
@@ -139,13 +138,13 @@ public class SpawnStateTest extends ZkCodecStartUtil {
 
     @Test
     public void testEmptyCommands() throws Exception {
-        File tmpRoot = Files.createTempDir();
+        File tmpRoot = LessFiles.createTempDir();
         System.setProperty("SPAWN_DATA_DIR", tmpRoot + "/tmp/spawn/data");
         System.setProperty("SPAWN_LOG_DIR", tmpRoot + "/tmp/spawn/log/events");
         try (Spawn spawn = Configs.newDefault(Spawn.class)) {
             assertEquals(0, spawn.getJobCommandManager().size());
         } finally {
-            Files.deleteDir(tmpRoot);
+            LessFiles.deleteDir(tmpRoot);
         }
     }
 
@@ -153,7 +152,7 @@ public class SpawnStateTest extends ZkCodecStartUtil {
 
     @Test
     public void testGetCommand() throws Exception {
-        File tmpRoot = Files.createTempDir();
+        File tmpRoot = LessFiles.createTempDir();
         System.setProperty("SPAWN_DATA_DIR", tmpRoot + "/tmp/spawn/data");
         System.setProperty("SPAWN_LOG_DIR", tmpRoot + "/tmp/spawn/log/events");
         try (Spawn spawn = Configs.newDefault(Spawn.class)) {
@@ -164,7 +163,7 @@ public class SpawnStateTest extends ZkCodecStartUtil {
             assertEquals(jcmd.toJSON().toString(),
                          spawn.getJobCommandManager().getEntity("test1").toJSON().toString());
         } finally {
-            Files.deleteDir(tmpRoot);
+            LessFiles.deleteDir(tmpRoot);
         }
     }
 

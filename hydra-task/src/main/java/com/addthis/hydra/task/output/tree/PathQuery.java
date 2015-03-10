@@ -17,7 +17,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.addthis.basis.util.ClosableIterator;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.ValueUtil;
@@ -141,7 +141,7 @@ public final class PathQuery extends PathOp {
             debug(false);
         }
         if (log.isDebugEnabled() || (debug == 1)) {
-            log.warn("query fail, missing {}", Strings.join(pathValues, " / "));
+            log.warn("query fail, missing {}", LessStrings.join(pathValues, " / "));
         }
     }
 

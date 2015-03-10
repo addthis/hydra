@@ -40,9 +40,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import com.addthis.basis.io.IOWrap;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
@@ -302,7 +302,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 }
             }
 
-            markDirFile = Files.initDirectory(markDir);
+            markDirFile = LessFiles.initDirectory(markDir);
             if (useSimpleMarks) {
                 markDB = new PageDB<>(markDirFile, SimpleMark.class, MARK_PAGE_SIZE, MARK_PAGES);
             } else {
@@ -339,7 +339,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 setSource(new StreamSourceHashed(source, shards, shardTotal, useLegacyStreamPath));
             }
             log.info("buffering[capacity={};workers={};preopen={};marks={};maxSkip={};shards={}]",
-                     buffer, workers, preOpen, markDir, skipSourceExit, Strings.join(shards, ","));
+                     buffer, workers, preOpen, markDir, skipSourceExit, LessStrings.join(shards, ","));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

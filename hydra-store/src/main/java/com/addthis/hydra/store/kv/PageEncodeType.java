@@ -20,7 +20,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.Varint;
 
 import com.google.common.primitives.Ints;
@@ -44,7 +44,7 @@ public enum PageEncodeType {
         switch (this) {
             case LEGACY:
                 assert in != null;
-                return (int) Bytes.readLength(in);
+                return (int) LessBytes.readLength(in);
             case SPARSE:
             case LONGIDS:
                 assert dis != null;
@@ -64,11 +64,11 @@ public enum PageEncodeType {
     public byte[] readBytes(@Nonnull InputStream in, @Nullable DataInputStream dis) throws IOException {
         switch (this) {
             case LEGACY:
-                return Bytes.readBytes(in);
+                return LessBytes.readBytes(in);
             case SPARSE:
             case LONGIDS:
                 assert dis != null;
-                return Bytes.readBytes(in, Varint.readUnsignedVarInt(dis));
+                return LessBytes.readBytes(in, Varint.readUnsignedVarInt(dis));
             default:
                 throw new IllegalStateException("unknown state " + this);
         }
@@ -84,13 +84,13 @@ public enum PageEncodeType {
     public byte[] nextFirstKey(@Nonnull InputStream in, @Nullable DataInputStream dis) throws IOException {
         switch (this) {
             case LEGACY:
-                return Bytes.readBytes(in);
+                return LessBytes.readBytes(in);
             case SPARSE:
             case LONGIDS: {
                 assert dis != null;
                 int nextFirstKeyLength = Varint.readUnsignedVarInt(dis);
                 if (nextFirstKeyLength > 0) {
-                    return Bytes.readBytes(in, nextFirstKeyLength);
+                    return LessBytes.readBytes(in, nextFirstKeyLength);
                 } else {
                     return null;
                 }

@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.job.spawn;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobTask;
@@ -135,7 +135,7 @@ class TaskMover {
                                                                   task.getJobUUID(),
                                                                   task.getTaskID(),
                                                                   target,
-                                                                  Strings.join(jobcmd.getCommand(), " "),
+                                                                  LessStrings.join(jobcmd.getCommand(), " "),
                                                                   choreWatcherKey(),
                                                                   true,
                                                                   kickOnComplete);

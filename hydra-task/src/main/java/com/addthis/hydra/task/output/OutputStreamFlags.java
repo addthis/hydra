@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.task.output;
 
-import com.addthis.basis.util.Numbers;
+import com.addthis.basis.util.LessNumbers;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.SuperCodable;
@@ -178,7 +178,7 @@ public class OutputStreamFlags implements SuperCodable {
     @Override
     public void postDecode() {
         if (maxSize != null) {
-            maxFileSize = Numbers.parseHumanReadable(maxSize);
+            maxFileSize = LessNumbers.parseHumanReadable(maxSize);
         }
     }
 

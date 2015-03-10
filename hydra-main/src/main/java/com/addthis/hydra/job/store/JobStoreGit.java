@@ -22,7 +22,7 @@ import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.maljson.JSONArray;
@@ -99,7 +99,7 @@ public class JobStoreGit {
         synchronized (gitDir) {
             File file = getFileForJobId(jobId);
             git.checkout().addPath(getPathForJobId(jobId)).setStartPoint(commitId).setName("master").call();
-            String rv = new String(Files.read(file));
+            String rv = new String(LessFiles.read(file));
             git.reset().setMode(ResetCommand.ResetType.HARD).call();
             return rv;
         }
@@ -215,7 +215,7 @@ public class JobStoreGit {
         synchronized (gitDir) {
             File file = getFileForJobId(jobId);
             assert (file.exists() || file.createNewFile());
-            Files.write(file, config.getBytes(), false);
+            LessFiles.write(file, config.getBytes(), false);
             commitMessage = generateFinalCommitMessage(jobId, author, commitMessage);
             git.add().addFilepattern(getPathForJobId(jobId)).call();
             git.commit().setMessage(commitMessage).call();
@@ -265,7 +265,7 @@ public class JobStoreGit {
                 }
             }
             if (!jobDir.exists()) {
-                Files.initDirectory(jobDir);
+                LessFiles.initDirectory(jobDir);
             }
         }
     }

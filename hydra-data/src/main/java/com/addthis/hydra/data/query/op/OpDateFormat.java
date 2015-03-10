@@ -14,7 +14,7 @@
 package com.addthis.hydra.data.query.op;
 
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.BundleColumnBinder;
@@ -61,7 +61,7 @@ public class OpDateFormat extends AbstractRowOp {
         try {
             String[] opt = args.split(":");
             if (opt.length >= 2) {
-                String[] cval = Strings.splitArray(opt[0], ",");
+                String[] cval = LessStrings.splitArray(opt[0], ",");
                 incols = new int[cval.length];
                 for (int i = 0; i < cval.length; i++) {
                     incols[i] = Integer.parseInt(cval[i]);

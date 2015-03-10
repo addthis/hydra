@@ -14,7 +14,7 @@
 package com.addthis.hydra.data.filter.value;
 
 import com.addthis.basis.util.JitterClock;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.FieldConfig;
 
@@ -59,7 +59,7 @@ public class ValueFilterDefault extends StringFilter {
 
     @Override
     public String filter(String v) {
-        if (Strings.isEmpty(v)) {
+        if (LessStrings.isEmpty(v)) {
             return time ? Long.toString(JitterClock.globalTime()) : value;
         }
         return v;

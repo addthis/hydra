@@ -20,7 +20,7 @@ import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -127,9 +127,9 @@ public class OpPivot extends AbstractQueryOp {
         this.tableFactory = tableFactory;
         this.output = tableFactory.createTable(0);
         this.queryPromise = queryPromise;
-        String[] parg = Strings.splitArray(args, ",");
-        rowkeys = Strings.splitArray(parg[0], ":");
-        colkeys = Strings.splitArray(parg[1], ":");
+        String[] parg = LessStrings.splitArray(args, ",");
+        rowkeys = LessStrings.splitArray(parg[0], ":");
+        colkeys = LessStrings.splitArray(parg[1], ":");
         cellkey = parg[2];
         if (parg.length >= 4) {
             List<PivotOp> pop = new LinkedList<>();

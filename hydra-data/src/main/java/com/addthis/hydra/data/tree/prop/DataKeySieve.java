@@ -20,7 +20,7 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import com.addthis.basis.util.ClosableIterator;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -211,7 +211,7 @@ public class DataKeySieve extends TreeNodeData<DataKeySieve.Config> {
             }
             return list;
         }
-        String[] keys = Strings.splitArray(key, ",");
+        String[] keys = LessStrings.splitArray(key, ",");
         ArrayList<DataTreeNode> list = new ArrayList<>(keys.length);
         synchronized (this) {
             keyloop:

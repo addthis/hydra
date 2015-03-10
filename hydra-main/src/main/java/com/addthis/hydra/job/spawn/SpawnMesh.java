@@ -19,7 +19,7 @@ import java.io.OutputStream;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.Codec;
@@ -150,7 +150,7 @@ public class SpawnMesh implements MessageListener {
 
     private void send(OutputStream out, String msg) {
         try {
-            out.write(Bytes.toBytes(msg));
+            out.write(LessBytes.toBytes(msg));
             out.write('\n');
             out.close();
         } catch (Exception ex) {

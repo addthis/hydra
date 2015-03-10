@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.task.source;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.stream.StreamFileSource;
@@ -35,6 +35,6 @@ public class DataSourceStreamFiles extends DataSourceStreamList {
 
     @Override
     public StreamFileSource getSourceList(Integer[] shard) {
-        return new StreamSourceFileList(Strings.join(files, "\n"));
+        return new StreamSourceFileList(LessStrings.join(files, "\n"));
     }
 }

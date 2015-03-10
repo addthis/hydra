@@ -34,8 +34,8 @@ import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 
 import com.addthis.basis.util.Bench;
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 
@@ -303,7 +303,7 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
             log.info("[init] live={}, target={} job={}", live, root, this.config.jobId);
 
             Path treePath = Paths.get(config.dir, directory);
-            tree = new ConcurrentTree(Files.initDirectory(treePath.toFile()));
+            tree = new ConcurrentTree(LessFiles.initDirectory(treePath.toFile()));
             bench = new Bench(EnumSet.allOf(BENCH.class), 1000);
             TreeConfig.writeConfigToDataDirectory(treePath, advanced);
 
@@ -567,14 +567,14 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
             File sampleFile = new File(filename);
             if (sampleFile.exists() && sampleFile.isFile() && sampleFile.length() > 0) {
                 try {
-                    sample = Integer.parseInt(Bytes.toString(Files.read(sampleFile)));
+                    sample = Integer.parseInt(LessBytes.toString(LessFiles.read(sampleFile)));
                     sample = (sample + 1) % rate;
                 } catch (NumberFormatException ignored) {
 
                 }
             }
             perform = (sample == 0);
-            Files.write(sampleFile, Bytes.toBytes(Integer.toString(sample)), false);
+            LessFiles.write(sampleFile, LessBytes.toBytes(Integer.toString(sample)), false);
         } else {
             perform = true;
         }

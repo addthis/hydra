@@ -16,12 +16,10 @@ package com.addthis.hydra.data.tree.prop;
 import java.util.List;
 import java.util.Optional;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.AutoField;
-import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueTranslationException;
@@ -34,8 +32,6 @@ import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.TreeNodeList;
 
 import com.clearspring.analytics.stream.frequency.CountMinSketch;
-
-import com.google.common.annotations.VisibleForTesting;
 
 public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> implements
                                                                                 SuperCodable {
@@ -190,7 +186,7 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
         if (key == null) {
             throw new IllegalArgumentException("No key arguments entered");
         }
-        String[] keys = Strings.splitArray(key, "~");
+        String[] keys = LessStrings.splitArray(key, "~");
         TreeNodeList list = new TreeNodeList(keys.length);
         for (String k : keys) {
             long count = sketch.estimateCount(k);

@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.ValueUtil;
@@ -157,7 +157,7 @@ public class OpString extends AbstractRowOp {
 
     public OpString(String args, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
-        String[] op = Strings.splitArray(args, ",");
+        String[] op = LessStrings.splitArray(args, ",");
         ops = new ArrayList<>(op.length);
         for (String o : op) {
             if (o.equals("+") || o.equals("cat")) {
@@ -220,7 +220,7 @@ public class OpString extends AbstractRowOp {
                     int pos = (int) stack.pop().asLong().getLong();
                     String sep = stack.pop().toString();
                     str = stack.pop().toString();
-                    String[] seg = Strings.splitArray(str, sep);
+                    String[] seg = LessStrings.splitArray(str, sep);
                     stack.push(ValueFactory.create(seg[pos]));
                     break;
                 case OP_COLVAL:

@@ -18,7 +18,7 @@ import java.util.List;
 
 import java.nio.ByteBuffer;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -138,7 +138,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
 
     @Override
     public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
-        String[] keys = Strings.splitArray(key, ",");
+        String[] keys = LessStrings.splitArray(key, ",");
         TreeNodeList list = new TreeNodeList(keys.length);
         for (String k : keys) {
             double quantile = filter.quantile(Double.valueOf(k));

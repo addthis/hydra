@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.job.Job;
@@ -75,7 +75,7 @@ public class MapCanaryJobAlert extends AbstractJobAlert {
     }
 
     @Override public String isValid() {
-        if (Strings.isEmpty(canaryPath)) {
+        if (LessStrings.isEmpty(canaryPath)) {
             return "Canary path is empty";
         } else if (canaryConfigThreshold <= 0) {
             return "Canary config is not a positive integer";

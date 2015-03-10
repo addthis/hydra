@@ -37,7 +37,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import com.addthis.basis.io.IOWrap;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueFactory;
@@ -202,7 +202,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
             sources = new StreamSourceHashed(sources, shards, shardTotal);
         }
         cacheFillerService.execute(new CacheFiller());
-        log.warn("shards=[" + Strings.join(shards, ",") + " of " + shardTotal + "] sources=" + sources + " peekers=" + peekerThreads + " maxCache=" + maxCacheSize);
+        log.warn("shards=[" + LessStrings.join(shards, ",") + " of " + shardTotal + "] sources=" + sources + " peekers=" + peekerThreads + " maxCache=" + maxCacheSize);
     }
 
     @Override

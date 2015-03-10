@@ -18,7 +18,7 @@ import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.addthis.basis.collect.HotMap;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.AutoField;
@@ -74,7 +74,7 @@ public class BundleFilterJSON implements BundleFilter {
                 return true;
         }
         String value = bundleValue.asString().toString();
-        if (Strings.isEmpty(value)) {
+        if (LessStrings.isEmpty(value)) {
             return true;
         }
         if (trim) {

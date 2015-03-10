@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.concurrent.CyclicBarrier;
 
 import com.addthis.basis.test.SlowTest;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.hydra.store.DBIntValue;
 import com.addthis.hydra.store.kv.ByteStore;
@@ -213,7 +213,7 @@ public class TestSkipListCacheDeletion {
             fail();
         } finally {
             if (directory != null) {
-                if (!Files.deleteDir(directory)) {
+                if (!LessFiles.deleteDir(directory)) {
                     fail();
                 }
             }

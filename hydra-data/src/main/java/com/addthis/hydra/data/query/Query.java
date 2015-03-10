@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.basis.util.CUID;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.codec.codables.Codable;
@@ -125,9 +125,9 @@ public class Query implements Codable {
             }
             return queryString;
         } catch (Exception ex) {
-            return Strings.join(paths, "|")
+            return LessStrings.join(paths, "|")
                           .concat(";")
-                          .concat(ops != null ? Strings.join(ops, "|") : "")
+                          .concat(ops != null ? LessStrings.join(ops, "|") : "")
                           .concat(";")
                           .concat(job != null ? job : "");
         }
@@ -160,7 +160,7 @@ public class Query implements Codable {
     private static QueryElement[] parseQueryPath(String path) {
         MutableInt column = new MutableInt(0);
         ArrayList<QueryElement> list = new ArrayList<>();
-        for (String pe : Strings.split(path, "/")) {
+        for (String pe : LessStrings.split(path, "/")) {
             list.add(new QueryElement().parse(pe, column));
         }
         return list.toArray(new QueryElement[list.size()]);

@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFormat;
@@ -36,7 +36,6 @@ import com.addthis.hydra.data.filter.bundle.BundleFilter;
 import com.addthis.hydra.data.util.DateUtil;
 import com.addthis.hydra.data.util.JSONFetcher;
 import com.addthis.hydra.job.alert.types.BundleCanaryJobAlert;
-import com.addthis.hydra.task.stream.StreamFileUtil;
 import com.addthis.maljson.JSONArray;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
@@ -244,8 +243,8 @@ public class JobAlertUtil {
     }
 
     private static String getQueryURL(String jobId, String path, String ops, String rops) {
-        return queryURLBase + "?job=" + jobId + "&path=" + Strings.urlEncode(expandDateMacro(path))
-               + "&ops=" + Strings.urlEncode(ops) + "&rops=" + Strings.urlEncode(rops);
+        return queryURLBase + "?job=" + jobId + "&path=" + LessStrings.urlEncode(expandDateMacro(path))
+               + "&ops=" + LessStrings.urlEncode(ops) + "&rops=" + LessStrings.urlEncode(rops);
     }
 
     /**

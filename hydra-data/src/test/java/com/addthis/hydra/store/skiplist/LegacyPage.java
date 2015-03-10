@@ -18,7 +18,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 
 import com.addthis.basis.io.GZOut;
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.codec.codables.BytesCodable;
 import com.addthis.hydra.store.kv.PageEncodeType;
@@ -80,9 +80,9 @@ public class LegacyPage<K, V extends BytesCodable> extends Page<K, V> {
             updateHistogram(metrics.encodeFirstKeySize, firstKeyEncoded.length, record);
             updateHistogram(metrics.encodeNextFirstKeySize, nextFirstKeyEncoded.length, record);
 
-            Bytes.writeLength(size, os);
-            Bytes.writeBytes(firstKeyEncoded, os);
-            Bytes.writeBytes(nextFirstKeyEncoded, os);
+            LessBytes.writeLength(size, os);
+            LessBytes.writeBytes(firstKeyEncoded, os);
+            LessBytes.writeBytes(nextFirstKeyEncoded, os);
             for (int i = 0; i < size; i++) {
                 byte[] keyEncoded = keyCoder.keyEncode(keys.get(i));
                 byte[] rawVal = rawValues.get(i);
@@ -94,11 +94,11 @@ public class LegacyPage<K, V extends BytesCodable> extends Page<K, V> {
                 updateHistogram(metrics.encodeKeySize, keyEncoded.length, record);
                 updateHistogram(metrics.encodeValueSize, rawVal.length, record);
 
-                Bytes.writeBytes(keyEncoded, os);
-                Bytes.writeBytes(rawVal, os);
+                LessBytes.writeBytes(keyEncoded, os);
+                LessBytes.writeBytes(rawVal, os);
             }
-            Bytes.writeLength((estimateTotal > 0 ? estimateTotal : 1), os);
-            Bytes.writeLength((estimates > 0 ? estimates : 1), os);
+            LessBytes.writeLength((estimateTotal > 0 ? estimateTotal : 1), os);
+            LessBytes.writeLength((estimates > 0 ? estimates : 1), os);
             switch (gztype) {
                 case 1:
                     ((DeflaterOutputStream) os).finish();

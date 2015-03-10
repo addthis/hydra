@@ -28,8 +28,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import java.nio.file.Path;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.JitterClock;
 
 import com.addthis.codec.annotations.FieldConfig;
@@ -266,7 +266,7 @@ public class OutputWriter extends AbstractOutputWriter {
 
     private void markModifiedFile(String fileName) {
         try {
-            Files.write(modifiedFileTracker, Bytes.toBytes(fileName + "\n"), true);
+            LessFiles.write(modifiedFileTracker, LessBytes.toBytes(fileName + "\n"), true);
         } catch (IOException e) {
             log.error("IOException saving modified files", e);
         }

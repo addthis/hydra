@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.data.query.Query;
@@ -100,8 +100,8 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         try {
             // Delete the tmp directory (disk sort directory)
             File tempDirFile = new File(tempDir).getCanonicalFile();
-            Files.deleteDir(tempDirFile);
-            Files.initDirectory(tempDirFile);
+            LessFiles.deleteDir(tempDirFile);
+            LessFiles.initDirectory(tempDirFile);
         } catch (Exception e) {
             log.warn("Error while cleaning / locating the temp directory (for disk sorts).", e);
         }

@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.query.op;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -102,7 +102,8 @@ public class OpHoltWinters extends AbstractTableOp {
                 futureDataPoints = opt.length >= 7 ? Integer.parseInt(opt[6]) : 3;
             }
             log.info("Initiated HoltWinters with parameters " +
-                    Strings.join(new Object[]{timeColumn, valColumn, alpha, beta, gamma, period, futureDataPoints}, ","));
+                    LessStrings.join(new Object[]{timeColumn, valColumn, alpha, beta, gamma, period, futureDataPoints},
+                                     ","));
         } catch (Exception ex) {
             log.error("", ex);
         }

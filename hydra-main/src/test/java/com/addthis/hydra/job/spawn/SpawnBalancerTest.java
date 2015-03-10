@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.addthis.basis.test.SlowTest;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.JitterClock;
 
 import com.addthis.codec.config.Configs;
@@ -66,7 +66,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
     @Before
     public void setup() throws Exception {
 
-        tmpRoot = Files.createTempDir().toString();
+        tmpRoot = LessFiles.createTempDir().toString();
         System.setProperty("SPAWN_DATA_DIR", tmpRoot + "/tmp/spawn/data");
         System.setProperty("SPAWN_LOG_DIR", tmpRoot + "/tmp/spawn/log/events");
         if (zkClient.checkExists().forPath("/minion/up") == null) {
@@ -93,7 +93,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         if (zkClient.checkExists().forPath("/minion/dead") != null) {
             zkClient.delete().forPath("/minon/dead");
         }
-        Files.deleteDir(new File(tmpRoot));
+        LessFiles.deleteDir(new File(tmpRoot));
         spawn.close();
     }
     

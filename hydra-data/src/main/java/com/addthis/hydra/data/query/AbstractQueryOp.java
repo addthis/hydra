@@ -18,7 +18,7 @@ import java.io.IOException;
 import java.util.List;
 
 import com.addthis.basis.util.MemoryCounter;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -128,7 +128,7 @@ public abstract class AbstractQueryOp implements QueryOp {
     }
 
     public static int[] csvToInts(String args) {
-        String[] sv = Strings.splitArray(args, ",");
+        String[] sv = LessStrings.splitArray(args, ",");
         int[] ov = new int[sv.length];
         for (int i = 0; i < ov.length; i++) {
             ov[i] = Integer.parseInt(sv[i]);
@@ -137,7 +137,7 @@ public abstract class AbstractQueryOp implements QueryOp {
     }
 
     public static float[] csvToFloats(String args) {
-        String[] sv = Strings.splitArray(args, ",");
+        String[] sv = LessStrings.splitArray(args, ",");
         float[] ov = new float[sv.length];
         for (int i = 0; i < ov.length; i++) {
             ov[i] = Float.parseFloat(sv[i]);

@@ -31,8 +31,8 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.PriorityQueue;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.MemoryCounter;
 import com.addthis.basis.util.Parameter;
 
@@ -73,7 +73,7 @@ public class DiskBackedList2<K> implements List<K> {
     private final File directory;
 
     public DiskBackedList2(ItemCodec<K> codec) throws IOException {
-        this(codec, defaultChunkSizeBytes, Files.createTempDir());
+        this(codec, defaultChunkSizeBytes, LessFiles.createTempDir());
     }
 
     public DiskBackedList2(ItemCodec<K> codec, long maxChunkSizeBytes, File directory) throws IOException {
@@ -621,7 +621,7 @@ public class DiskBackedList2<K> implements List<K> {
             int newNum = dis.readInt();
             for (int i = 0; i < newNum; i++) {
                 int newLen = dis.readInt();
-                byte[] bytes = Bytes.readBytes(dis, newLen);
+                byte[] bytes = LessBytes.readBytes(dis, newLen);
                 if (bytes == null || bytes.length == 0 || newLen == 0) {
                     log.warn("read null/0 bytes @ i=" + i + " of " + newNum + " for index=" + index + " file=" + file);
                 } else {
@@ -657,7 +657,7 @@ public class DiskBackedList2<K> implements List<K> {
                 public K next() {
                     try {
                         int eltLength = dis.readInt();
-                        byte[] bytes = Bytes.readBytes(dis, eltLength);
+                        byte[] bytes = LessBytes.readBytes(dis, eltLength);
                         itemsRemaining--;
                         if (itemsRemaining == 0) {
                             dis.close();

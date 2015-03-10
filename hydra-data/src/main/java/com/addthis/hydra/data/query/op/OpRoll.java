@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.query.op;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -242,7 +242,7 @@ public class OpRoll extends AbstractRowOp {
             summary = false;
             inPlace = false;
         }
-        this.args = Strings.splitArray(args, ":");
+        this.args = LessStrings.splitArray(args, ":");
         this.asInt = asInt;
     }
 
@@ -257,8 +257,8 @@ public class OpRoll extends AbstractRowOp {
     @Override
     public Bundle rowOp(Bundle row) {
         if (state == null) {
-            colIn = new BundleColumnBinder(row, Strings.splitArray(args[0], ",")).getFields();
-            colKeys = args.length > 1 ? new BundleColumnBinder(row, Strings.splitArray(args[1], ",")).getFields() : null;
+            colIn = new BundleColumnBinder(row, LessStrings.splitArray(args[0], ",")).getFields();
+            colKeys = args.length > 1 ? new BundleColumnBinder(row, LessStrings.splitArray(args[1], ",")).getFields() : null;
             state = new Numeric[colIn.length];
             oldvals = new Numeric[colIn.length];
             if (inPlace || summary) {

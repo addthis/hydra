@@ -17,7 +17,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
@@ -45,7 +45,7 @@ public class OpTitle extends AbstractQueryOp {
      * @param args
      */
     public OpTitle(String args, ChannelProgressivePromise queryPromise) {
-        this(Strings.splitArray(args, ","), queryPromise);
+        this(LessStrings.splitArray(args, ","), queryPromise);
     }
 
     /**

@@ -15,7 +15,7 @@ package com.addthis.hydra.task.output.tree;
 
 import java.util.LinkedList;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFactory;
@@ -200,7 +200,7 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
             TreeNodeList list = processPath(path, 0);
             if (debug > 0 && (list == null || list.size() == 0)) {
                 log.warn("proc FAIL " + list);
-                log.warn(".... PATH " + Strings.join(path, " // "));
+                log.warn(".... PATH " + LessStrings.join(path, " // "));
                 log.warn(".... PACK " + bundle);
             }
             // release lease list

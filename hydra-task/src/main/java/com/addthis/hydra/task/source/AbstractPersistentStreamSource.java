@@ -25,9 +25,9 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.task.stream.PersistentStreamFileSource;
@@ -167,7 +167,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         this.stateDir = stateDir;
         autoResumeFile = new File(this.stateDir, "job.source");
         if (log.isTraceEnabled()) {
-            log.trace("shards :: {}", Strings.join(shards, " :: "));
+            log.trace("shards :: {}", LessStrings.join(shards, " :: "));
         }
         /* expand files list */
         Set<String> matches = new HashSet<>();
@@ -175,7 +175,8 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         /* expand mods */
         for (String file : files) {
             for (Integer shard : shards) {
-                matches.add(MOD_PATTERN.matcher(file).replaceAll(Strings.padleft(shard.toString(), 3, Strings.pad0)));
+                matches.add(MOD_PATTERN.matcher(file).replaceAll(
+                        LessStrings.padleft(shard.toString(), 3, LessStrings.pad0)));
             }
         }
         matches = expandPaths(matches);
@@ -186,7 +187,8 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         formatter = DateTimeFormat.forPattern(dateFormat);
         if (autoResume && autoResumeFile.exists() && autoResumeFile.canRead() && autoResumeFile.length() > 0) {
             try {
-                JSONObject jo = new JSONObject(Bytes.toString(Bytes.readFully(new FileInputStream(autoResumeFile))));
+                JSONObject jo = new JSONObject(
+                        LessBytes.toString(LessBytes.readFully(new FileInputStream(autoResumeFile))));
                 String resumeDate = jo.optString("lastDate");
                 if (resumeDate != null) {
                     log.warn("auto resume from {}", jo);

@@ -17,8 +17,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.hydra.data.filter.value.ValueFilterHttpGet;
 import com.addthis.maljson.JSONArray;
@@ -98,9 +98,9 @@ public class JSONFetcher {
     public HashMap<String, String> loadMap(String mapURL, HashMap<String, String> map) {
         try {
             byte[] raw = retrieveBytes(mapURL);
-            String kv = Bytes.toString(raw).trim();
+            String kv = LessBytes.toString(raw).trim();
             if (!(kv.startsWith("{") && kv.endsWith("}"))) {
-                kv = Strings.cat("{", kv, "}");
+                kv = LessStrings.cat("{", kv, "}");
             }
             JSONObject o = new JSONObject(kv);
             if (map == null) {
@@ -129,7 +129,7 @@ public class JSONFetcher {
     public HashSet<String> loadCSVSet(String mapURL, HashSet<String> set) {
         try {
             byte[] raw = retrieveBytes(mapURL);
-            String list = Bytes.toString(raw);
+            String list = LessBytes.toString(raw);
 
             if (set == null) {
                 set = new HashSet<>();
@@ -150,9 +150,9 @@ public class JSONFetcher {
     public JSONArray loadJSONArray(String mapURL) {
         try {
             byte[] raw = retrieveBytes(mapURL);
-            String list = Bytes.toString(raw);
+            String list = LessBytes.toString(raw);
             if (!(list.startsWith("[") && list.endsWith("]"))) {
-                list = Strings.cat("[", list, "]");
+                list = LessStrings.cat("[", list, "]");
             }
             JSONArray array = new JSONArray(list);
             return array;
@@ -191,9 +191,9 @@ public class JSONFetcher {
     public HashSet<String> loadSet(String mapURL, HashSet<String> set) {
         try {
             byte[] raw = retrieveBytes(mapURL);
-            String list = Bytes.toString(raw);
+            String list = LessBytes.toString(raw);
             if (!(list.startsWith("[") && list.endsWith("]"))) {
-                list = Strings.cat("[", list, "]");
+                list = LessStrings.cat("[", list, "]");
             }
             JSONArray o = new JSONArray(list);
             if (set == null) {

@@ -20,7 +20,7 @@ import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
 
 import com.addthis.basis.util.ClosableIterator;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
@@ -136,7 +136,7 @@ public class QueryElement implements SuperCodable {
     public QueryElement parse(String q, MutableInt nextColumn) {
         int pos = 0;
         if (q.startsWith("(") && (pos = q.indexOf(")")) > 0) {
-            String[] range = Strings.splitArray(q.substring(1, pos), "-");
+            String[] range = LessStrings.splitArray(q.substring(1, pos), "-");
             if (range.length == 1) {
                 limit = Integer.parseInt(range[0]);
             } else {
@@ -158,7 +158,7 @@ public class QueryElement implements SuperCodable {
                 if (st.hasMoreTokens()) {
                     tok = st.nextToken();
                     if (sep.equals(":")) {
-                        String[] ps = Strings.splitArray(tok, ",");
+                        String[] ps = LessStrings.splitArray(tok, ",");
                         if (prop == null) {
                             prop = new ArrayList<>(ps.length);
                         }

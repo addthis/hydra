@@ -17,7 +17,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -45,8 +45,8 @@ public class ValueStreamFormatTSV extends ValuesStreamFormatter {
     @Override
     public void init(OutputStream out) {
         this.out = out;
-        byteToken = Bytes.toBytes(token);
-        byteEOL = Bytes.toBytes(eol);
+        byteToken = LessBytes.toBytes(token);
+        byteEOL = LessBytes.toBytes(eol);
     }
 
     @Override
@@ -61,14 +61,14 @@ public class ValueStreamFormatTSV extends ValuesStreamFormatter {
                 }
                 String str = val.toString();
                 if (urlencode) {
-                    str = Bytes.urlencode(str);
+                    str = LessBytes.urlencode(str);
                 }
                 if (str.indexOf(token) >= 0) {
                     if (replace != null) {
                         str.replace(token, replace);
                     }
                 }
-                bos.write(Bytes.toBytes(str));
+                bos.write(LessBytes.toBytes(str));
             } catch (Exception e) {
                 e.printStackTrace();
             }

@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.query.op;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -60,9 +60,9 @@ public class OpFill extends AbstractRowOp {
     }
 
     public OpFill(String args, boolean pad, ChannelProgressivePromise queryPromise) {
-        this(Strings.splitArray(args, ":")[0], queryPromise);
+        this(LessStrings.splitArray(args, ":")[0], queryPromise);
         if (pad) {
-            String[] pair = Strings.splitArray(args, ":");
+            String[] pair = LessStrings.splitArray(args, ":");
 
             this.pad = Integer.valueOf(pair[1]);
             this.fields = new String[this.pad];

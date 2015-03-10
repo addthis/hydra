@@ -20,7 +20,7 @@ import javax.annotation.Nonnull;
 
 import java.util.Arrays;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.Varint;
 
 import com.addthis.hydra.store.util.Raw;
@@ -68,13 +68,13 @@ public final class DBKey implements IPageDB.Key, Comparable<DBKey> {
         int numBytes;
         long id;
         if ((head >> 7) == 0) {
-            id = (long) Bytes.toInt(raw);
+            id = (long) LessBytes.toInt(raw);
             numBytes = 4;
         } else {
-            id = Bytes.toLong(raw) & ~(Long.MIN_VALUE);
+            id = LessBytes.toLong(raw) & ~(Long.MIN_VALUE);
             numBytes = 8;
         }
-        Raw key = Raw.get(Bytes.cut(raw, numBytes, raw.length - numBytes));
+        Raw key = Raw.get(LessBytes.cut(raw, numBytes, raw.length - numBytes));
         return new DBKey(id, key);
     }
 
@@ -148,9 +148,9 @@ public final class DBKey implements IPageDB.Key, Comparable<DBKey> {
     @Override public byte[] toBytes() {
         byte[] idBytes;
         if (id <= Integer.MAX_VALUE) {
-            idBytes = Bytes.toBytes((int) id);
+            idBytes = LessBytes.toBytes((int) id);
         } else {
-            idBytes = Bytes.toBytes(id | Long.MIN_VALUE);
+            idBytes = LessBytes.toBytes(id | Long.MIN_VALUE);
         }
         if (key == null) {
             return idBytes;

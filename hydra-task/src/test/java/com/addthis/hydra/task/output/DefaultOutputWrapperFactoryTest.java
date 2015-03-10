@@ -20,7 +20,7 @@ import java.io.PrintWriter;
 import java.lang.reflect.Method;
 
 import com.addthis.basis.test.SlowTest;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -174,7 +174,7 @@ public class DefaultOutputWrapperFactoryTest {
 
     @Test
     public void testGetFileName_noAppend_withCompress_withExistingFile() throws Exception {
-        String tmpDir = Files.createTempDir().toString();
+        String tmpDir = LessFiles.createTempDir().toString();
         localWriteStream = new DefaultOutputWrapperFactory();
         localWriteStream.setDir(tmpDir);
 
@@ -208,14 +208,14 @@ public class DefaultOutputWrapperFactoryTest {
             assertNotNull(result);
             assertEquals("foo-001.gz", result);
         } finally {
-            Files.deleteDir(new File(tmpDir));
+            LessFiles.deleteDir(new File(tmpDir));
         }
 
     }
 
     @Test
     public void testGetFileName_withExistingFile() throws Exception {
-        String tmpDir = Files.createTempDir().toString();
+        String tmpDir = LessFiles.createTempDir().toString();
         localWriteStream = new DefaultOutputWrapperFactory();
         localWriteStream.setDir(tmpDir);
 
@@ -249,13 +249,13 @@ public class DefaultOutputWrapperFactoryTest {
             assertNotNull(result);
             assertEquals("foo-000", result);
         } finally {
-            Files.deleteDir(new File(tmpDir));
+            LessFiles.deleteDir(new File(tmpDir));
         }
     }
 
     @Test
     public void testGetFileName_withExistingFile_exceedsMax() throws Exception {
-        String tmpDir = Files.createTempDir().toString();
+        String tmpDir = LessFiles.createTempDir().toString();
         localWriteStream = new DefaultOutputWrapperFactory();
         localWriteStream.setDir(tmpDir);
 
@@ -289,7 +289,7 @@ public class DefaultOutputWrapperFactoryTest {
             assertNotNull(result);
             assertEquals("foo-001", result);
         } finally {
-            Files.deleteDir(new File(tmpDir));
+            LessFiles.deleteDir(new File(tmpDir));
         }
     }
 }

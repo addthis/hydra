@@ -32,9 +32,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 
 import com.addthis.basis.concurrentlinkedhashmap.MediatedEvictionConcurrentHashMap;
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.ClosableIterator;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Meter;
 import com.addthis.basis.util.Parameter;
 
@@ -135,7 +135,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
 
     ConcurrentTree(File root, int numDeletionThreads, int cleanQSize, int maxCacheSize,
                    int maxPageSize, PageFactory factory) throws Exception {
-        Files.initDirectory(root);
+        LessFiles.initDirectory(root);
         this.root = root;
         long start = System.currentTimeMillis();
 
@@ -166,7 +166,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         // get stored next db id
         idFile = new File(root, "nextID");
         if (idFile.exists() && idFile.isFile() && idFile.length() > 0) {
-            nextDBID = new AtomicLong(Long.parseLong(Bytes.toString(Files.read(idFile))));
+            nextDBID = new AtomicLong(Long.parseLong(LessBytes.toString(LessFiles.read(idFile))));
         } else {
             nextDBID = new AtomicLong(1);
         }
@@ -381,7 +381,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         assert !node.isAlias();
         long nodeDB = treeTrashNode.nodeDB();
         int next = treeTrashNode.incrementNodeCount();
-        DBKey key = new DBKey(nodeDB, Raw.get(Bytes.toBytes(next)));
+        DBKey key = new DBKey(nodeDB, Raw.get(LessBytes.toBytes(next)));
         source.put(key, node);
         log.trace("[trash.mark] {} --> {}", next, treeTrashNode);
     }
@@ -466,7 +466,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
             }
         }
         log.debug("[sync] end nextdb={}", nextDBID);
-        Files.write(idFile, Bytes.toBytes(nextDBID.toString()), false);
+        LessFiles.write(idFile, LessBytes.toBytes(nextDBID.toString()), false);
     }
 
     @Override

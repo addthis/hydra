@@ -16,7 +16,7 @@ package com.addthis.hydra.store.util;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.SuperCodable;
@@ -142,7 +142,7 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, SuperCodable {
             return ((Raw) o).toBytes();
         }
         if (clazz == Long.class) {
-            return Bytes.toBytes((Long) o);
+            return LessBytes.toBytes((Long) o);
         }
         return Raw.get(o.toString()).toBytes();
     }
@@ -157,10 +157,10 @@ public class SeenFilterBasic<K> implements SeenFilter<K>, SuperCodable {
                 return o.hashCode();
             case HASH_HASHCODE_SHIFT_REV:
                 int hc = o.hashCode();
-                return (hc << 32) | Bytes.reverseBits(hc);
+                return (hc << 32) | LessBytes.reverseBits(hc);
             case HASH_HASHCODE_LONG_REV:
                 long lhc = (long) o.hashCode();
-                return lhc | Bytes.reverseBits(lhc);
+                return lhc | LessBytes.reverseBits(lhc);
             case HASH_MD5:
                 byte[] r1 = generatePreHash(o);
                 byte[] r2 = new byte[r1.length];

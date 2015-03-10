@@ -15,7 +15,7 @@ package com.addthis.hydra.data.query.op;
 
 import java.util.Random;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.data.query.AbstractRowOp;
@@ -39,7 +39,7 @@ public class OpSleep extends AbstractRowOp {
 
     public OpSleep(String arg, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
-        String[] op = Strings.splitArray(arg, ",");
+        String[] op = LessStrings.splitArray(arg, ",");
         sleep = Long.parseLong(op[0]);
         random = op.length > 1 ? Long.parseLong(op[1]) : 0;
     }

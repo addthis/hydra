@@ -15,7 +15,7 @@ package com.addthis.hydra.data;
 
 import java.io.File;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.maljson.JSONArray;
 
@@ -40,7 +40,7 @@ public class MakeBloom {
     public static String[] getWords(File in) throws java.io.IOException,
                                                     com.addthis.maljson.JSONException {
         log.debug("Reading " + in.length() + " bytes from [" + in + "]");
-        JSONArray words = new JSONArray("[" + new String(Files.read(in), "utf8") + "]");
+        JSONArray words = new JSONArray("[" + new String(LessFiles.read(in), "utf8") + "]");
         log.debug("Read " + words.length() + " words from [" + in + "]");
         String[] ret = new String[words.length()];
         for (int i = 0; i < words.length(); i++) {
@@ -67,9 +67,9 @@ public class MakeBloom {
         log.debug("Added words");
 
         File out = args.length == 2 ? new File(args[1]) :
-                   Files.replaceSuffix(in, "-" + words.length + "-" + fpRate + ".bloom");
+                   LessFiles.replaceSuffix(in, "-" + words.length + "-" + fpRate + ".bloom");
         log.debug("Writing [" + out + "]");
-        Files.write(out, org.apache.commons.codec.binary.Base64.encodeBase64(BloomFilter.serialize(bf)), false);
+        LessFiles.write(out, org.apache.commons.codec.binary.Base64.encodeBase64(BloomFilter.serialize(bf)), false);
         log.debug("Wrote " + out.length() + " bytes to [" + out + "]");
     }
 }

@@ -16,7 +16,7 @@ package com.addthis.hydra.data.tree.prop;
 import java.util.List;
 import java.util.Optional;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.AutoField;
@@ -199,7 +199,7 @@ public class DataCMSUpperBound extends TreeNodeData<DataCMSUpperBound.Config> im
         if (key == null) {
             throw new IllegalArgumentException("No key arguments entered");
         }
-        String[] keys = Strings.splitArray(key, "~");
+        String[] keys = LessStrings.splitArray(key, "~");
         TreeNodeList list = new TreeNodeList(keys.length);
         for (String k : keys) {
             long count = sketch.estimateCount(k);

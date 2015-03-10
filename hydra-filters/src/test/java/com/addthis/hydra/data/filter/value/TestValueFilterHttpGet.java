@@ -16,6 +16,7 @@ package com.addthis.hydra.data.filter.value;
 import java.io.File;
 
 import com.addthis.basis.test.SlowTest;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.codec.json.CodecJSON;
 
@@ -50,7 +51,7 @@ public class TestValueFilterHttpGet {
             e.printStackTrace();
         } finally {
             if (tmpDirLocation != null) {
-                com.addthis.basis.util.Files.deleteDir(tmpDirLocation);
+                LessFiles.deleteDir(tmpDirLocation);
             }
         }
     }

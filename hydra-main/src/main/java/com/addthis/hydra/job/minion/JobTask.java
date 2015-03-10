@@ -26,10 +26,10 @@ import java.util.List;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.SimpleExec;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
@@ -192,7 +192,7 @@ public class JobTask implements Codable {
 
     public void save() {
         try {
-            Files.write(new File(getConfigDir(), "job.state"), Bytes.toBytes(CodecJSON.encodeString(this)), false);
+            LessFiles.write(new File(getConfigDir(), "job.state"), LessBytes.toBytes(CodecJSON.encodeString(this)), false);
         } catch (Exception e) {
             log.warn("", e);
         }
@@ -213,7 +213,7 @@ public class JobTask implements Codable {
         FileStats stats = new FileStats();
         stats.update(jobDir);
         try {
-            Files.write(new File(getConfigDir(), "job.stats"), Bytes.toBytes(CodecJSON.encodeString(stats)), false);
+            LessFiles.write(new File(getConfigDir(), "job.stats"), LessBytes.toBytes(CodecJSON.encodeString(stats)), false);
         } catch (Exception e) {
             log.warn("", e);
         }
@@ -253,7 +253,7 @@ public class JobTask implements Codable {
         File jobExit = new File(jobDir, "job.exit");
         if (jobExit.exists() && jobExit.canRead()) {
             try {
-                CodecJSON.INSTANCE.decode(exitState, Files.read(jobExit));
+                CodecJSON.INSTANCE.decode(exitState, LessFiles.read(jobExit));
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
@@ -284,7 +284,7 @@ public class JobTask implements Codable {
         File liveDir = new File(taskDir, "live");
         File replicaDir = new File(taskDir, "replica");
         File configDir = new File(taskDir, "config");
-        Files.initDirectory(configDir);
+        LessFiles.initDirectory(configDir);
         String jobID = taskDir.getParentFile().getName();
         String nodeID = taskDir.getName();
         String taskPath = jobID + "/" + nodeID;
@@ -311,7 +311,7 @@ public class JobTask implements Codable {
         File jobState = new File(configDir, "job.state");
         if (jobState.exists()) {
             try {
-                CodecJSON.decodeString(this, Bytes.toString(Files.read(jobState)));
+                CodecJSON.decodeString(this, LessBytes.toString(LessFiles.read(jobState)));
             } catch (Exception e) {
                 log.warn("", e);
                 return false;
@@ -510,7 +510,7 @@ public class JobTask implements Codable {
         List<String> rvList = new ArrayList<>();
         for (File dir : dirs) {
             if (dir.isDirectory()) {
-                if (!completeOnly || Strings.contains(dir.list(), "backup.complete")) {
+                if (!completeOnly || LessStrings.contains(dir.list(), "backup.complete")) {
                     rvList.add(dir.getName());
                 }
             }
@@ -775,13 +775,13 @@ public class JobTask implements Codable {
 
     public void exec(@Nonnull CommandTaskKick kickMessage, boolean execute) throws Exception {
         // setup data directory
-        jobDir = Files.initDirectory(new File(minion.rootDir, id + File.separator + node + File.separator + "live"));
+        jobDir = LessFiles.initDirectory(new File(minion.rootDir, id + File.separator + node + File.separator + "live"));
         File configDir = getConfigDir();
         if (!configDir.exists()) {
-            Files.initDirectory(configDir);
+            LessFiles.initDirectory(configDir);
         }
         logDir = new File(jobDir, "log");
-        Files.initDirectory(logDir);
+        LessFiles.initDirectory(logDir);
         replicateDone = new File(configDir, "replicate.done");
         jobRun = new File(configDir, "job.run");
         jobDone = new File(configDir, "job.done");
@@ -800,7 +800,7 @@ public class JobTask implements Codable {
             log.debug("[task.exec] {}", kickMessage.getJobKey());
             require(testTaskIdle(), "task is not idle");
             String jobCommand = kickMessage.getCommand();
-            require(!Strings.isEmpty(jobCommand), "task command is missing or empty");
+            require(!LessStrings.isEmpty(jobCommand), "task command is missing or empty");
             // ensure we're not changing something critical on a re-spawn
             int jobNodes = kickMessage.getJobNodes();
             requireNewOrEqual(id, jobId, "Job ID");
@@ -820,7 +820,7 @@ public class JobTask implements Codable {
             }
             String jobConfig = kickMessage.getConfig();
             if (jobConfig != null) {
-                Files.write(new File(jobDir, "job.conf"), Bytes.toBytes(jobConfig), false);
+                LessFiles.write(new File(jobDir, "job.conf"), LessBytes.toBytes(jobConfig), false);
             }
             String portString = String.valueOf(minion.findNextPort());
             // create exec command
@@ -861,7 +861,7 @@ public class JobTask implements Codable {
             bash.append(Minion.echoWithDate_cmd + "Exiting task with return value: ${exit}" + "\n");
             bash.append("exit ${exit}\n");
             bash.append(") >" + logOutTmp + " 2>" + logErrTmp + " &\n");
-            Files.write(jobRun, Bytes.toBytes(bash.toString()), false);
+            LessFiles.write(jobRun, LessBytes.toBytes(bash.toString()), false);
             runCount++;
         }
         this.startTime = System.currentTimeMillis();
@@ -903,10 +903,11 @@ public class JobTask implements Codable {
         }
         minion.sendStatusMessage(new StatusTaskReplicate(minion.uuid, id, node, replicateAllBackups));
         try {
-            jobDir = Files.initDirectory(new File(minion.rootDir, id + File.separator + node + File.separator + "live"));
+            jobDir = LessFiles.initDirectory(
+                    new File(minion.rootDir, id + File.separator + node + File.separator + "live"));
             log.info("[task.execReplicate] replicating {}", jobDir.getPath());
             File configDir = getConfigDir();
-            Files.initDirectory(configDir);
+            LessFiles.initDirectory(configDir);
             // create shell wrapper
             replicateSH = new File(configDir, "replicate.sh");
             replicateRun = new File(configDir, "replicate.run");
@@ -915,9 +916,9 @@ public class JobTask implements Codable {
             if (execute) {
                 require(minion.deleteFiles(replicatePid, replicateDone), "failed to delete replicate config files");
                 String replicateRunScript = generateRunScript(replicateSH.getCanonicalPath(), replicatePid.getCanonicalPath(), replicateDone.getCanonicalPath());
-                Files.write(replicateRun, Bytes.toBytes(replicateRunScript), false);
+                LessFiles.write(replicateRun, LessBytes.toBytes(replicateRunScript), false);
                 String replicateSHScript = generateReplicateSHScript(replicateAllBackups);
-                Files.write(replicateSH, Bytes.toBytes(replicateSHScript), false);
+                LessFiles.write(replicateSH, LessBytes.toBytes(replicateSHScript), false);
             }
             replicateStartTime = System.currentTimeMillis();
             // save it
@@ -942,7 +943,7 @@ public class JobTask implements Codable {
         try {
             log.info("[task.execBackup] backing up {}", jobDir.getPath());
             File configDir = getConfigDir();
-            Files.initDirectory(configDir);
+            LessFiles.initDirectory(configDir);
             backupSH = new File(configDir, "backup.sh");
             backupRun = new File(configDir, "backup.run");
             backupDone = new File(configDir, "backup.done");
@@ -950,9 +951,9 @@ public class JobTask implements Codable {
             if (execute) {
                 require(minion.deleteFiles(backupPid, backupDone), "failed to delete backup config files");
                 String backupSHScript = generateBackupSHScript(replicas);
-                Files.write(backupSH, Bytes.toBytes(backupSHScript), false);
+                LessFiles.write(backupSH, LessBytes.toBytes(backupSHScript), false);
                 String backupRunScript = generateRunScript(backupSH.getCanonicalPath(), backupPid.getCanonicalPath(), backupDone.getCanonicalPath());
-                Files.write(backupRun, Bytes.toBytes(backupRunScript), false);
+                LessFiles.write(backupRun, LessBytes.toBytes(backupRunScript), false);
             }
             backupStartTime = System.currentTimeMillis();
             save();
@@ -983,7 +984,7 @@ public class JobTask implements Codable {
 
     private String generateReplicateSHScript(boolean replicateAllBackups) throws IOException {
         logDir = new File(jobDir, "log");
-        Files.initDirectory(logDir);
+        LessFiles.initDirectory(logDir);
         StringBuilder bash = new StringBuilder("#!/bin/bash\n");
         bash.append(makeRetryDefinition());
         bash.append(Minion.echoWithDate_cmd + "Deleting environment lock files in preparation for replication\n");
@@ -1034,7 +1035,7 @@ public class JobTask implements Codable {
 
     private String generateBackupSHScript(ReplicaTarget[] replicas) throws IOException {
         logDir = new File(jobDir, "log");
-        Files.initDirectory(logDir);
+        LessFiles.initDirectory(logDir);
         StringBuilder bash = new StringBuilder("#!/bin/bash\n");
         bash.append("cd " + jobDir.getCanonicalPath() + "\n");
         bash.append(makeRetryDefinition());
@@ -1132,7 +1133,7 @@ public class JobTask implements Codable {
         try {
             if (port == null && jobPort.exists())// && jobPort.lastModified() >= jobRun.lastModified())
             {
-                port = Integer.parseInt(Bytes.toString(Files.read(jobPort)));
+                port = Integer.parseInt(LessBytes.toString(LessFiles.read(jobPort)));
             }
         } catch (Exception ex) {
             log.warn("", ex);
@@ -1273,7 +1274,7 @@ public class JobTask implements Codable {
         File profile = new File(jobDir, "job.profile");
         if (profile.exists()) {
             try {
-                return Bytes.toString(Files.read(profile));
+                return LessBytes.toString(LessFiles.read(profile));
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -1348,7 +1349,7 @@ public class JobTask implements Codable {
     public int findLastJobStatus() {
         if (jobDone != null && jobDone.exists()) {
             try {
-                String jobDoneString = Bytes.toString(Files.read(jobDone));
+                String jobDoneString = LessBytes.toString(LessFiles.read(jobDone));
                 if (jobDoneString == null || jobDoneString.isEmpty()) {
                     return 0;
                 }

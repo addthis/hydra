@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.filter.value;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
@@ -90,7 +90,7 @@ public class ValueFilterSeen extends AbstractValueFilter {
                     url = null;
                     return false;
                 }
-                raw = Bytes.toString(bytes);
+                raw = LessBytes.toString(bytes);
                 if (filter != null) {
                     raw = ValueUtil.asNativeString(filter.filter(ValueFactory.create(raw)));
                 }

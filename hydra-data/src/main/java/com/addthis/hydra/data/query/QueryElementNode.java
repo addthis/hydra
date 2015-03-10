@@ -22,9 +22,9 @@ import java.util.Map;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.ClosableIterator;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
@@ -112,7 +112,7 @@ public class QueryElementNode implements Codable {
 
         QueryElementNode.MODE mode = MODE.MATCH;
 
-        String[] list = Strings.splitArray(tok, ",");
+        String[] list = LessStrings.splitArray(tok, ",");
         for (String component : list) {
             if (component.startsWith("*")) {
                 component = component.substring(1);
@@ -146,7 +146,7 @@ public class QueryElementNode implements Codable {
                 continue;
             }
             if (component.startsWith("%") && !(component.startsWith("%2d") || component.startsWith("%2c"))) {
-                String[] kv = Bytes.urldecode(component.substring(1)).split("=", 2);
+                String[] kv = LessBytes.urldecode(component.substring(1)).split("=", 2);
                 if (kv.length == 2) {
                     data = kv[0];
                     dataKey = kv[1];
@@ -156,14 +156,14 @@ public class QueryElementNode implements Codable {
                 continue;
             }
             if (component.startsWith("@@")) {
-                path = Strings.splitArray(Bytes.urldecode(component.substring(2)), "/");
+                path = LessStrings.splitArray(LessBytes.urldecode(component.substring(2)), "/");
                 continue;
             } else if (component.startsWith("@")) {
                 component = component.substring(1);
                 mode = MODE.MATCH;
                 rangeStrict = true;
             }
-            component = Bytes.urldecode(component);
+            component = LessBytes.urldecode(component);
             if (component.length() > 0) {
                 if (mode != MODE.TRAP) {
                     matchList.add(component);
@@ -209,7 +209,7 @@ public class QueryElementNode implements Codable {
                 if (i++ > 0) {
                     sb.append(",");
                 }
-                sb.append(Bytes.urlencode(m));
+                sb.append(LessBytes.urlencode(m));
             }
         }
         if (data != null) {
@@ -217,7 +217,7 @@ public class QueryElementNode implements Codable {
             sb.append(regex() ? "?" : data);
         }
         if (dataKey != null) {
-            sb.append("=").append(Bytes.urlencode(dataKey));
+            sb.append("=").append(LessBytes.urlencode(dataKey));
         }
     }
 

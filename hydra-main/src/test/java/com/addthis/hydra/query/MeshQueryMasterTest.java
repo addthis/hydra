@@ -21,7 +21,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.meshy.service.file.FileReference;
 
@@ -41,9 +41,9 @@ public class MeshQueryMasterTest {
 
     @Before
     public void before() throws Exception {
-        tmpRoot = Files.createTempDir().toString();
+        tmpRoot = LessFiles.createTempDir().toString();
         String tmpDir = tmpRoot + "/mqmastertest";
-        Files.initDirectory(tmpDir);
+        LessFiles.initDirectory(tmpDir);
 
         System.setProperty("qmaster.log.dir", tmpDir);
         System.setProperty("qmaster.web.dir", tmpDir);
@@ -58,7 +58,7 @@ public class MeshQueryMasterTest {
     @After
     public void after() throws InterruptedException {
         meshQueryMaster.shutdown();
-        Files.deleteDir(new File(tmpRoot));
+        LessFiles.deleteDir(new File(tmpRoot));
     }
 
     @Test

@@ -48,11 +48,11 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import java.text.ParseException;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.RollingLog;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.bark.StringSerializer;
@@ -247,7 +247,7 @@ public class Spawn implements Codable, AutoCloseable {
                   @Nullable @JsonProperty("queueType") String queueType,
                   @Nullable @JacksonInject CuratorFramework providedZkClient
     ) throws Exception {
-        Files.initDirectory(dataDir);
+        LessFiles.initDirectory(dataDir);
         this.stateFile = stateFile;
         if (stateFile.exists() && stateFile.isFile()) {
             spawnState = Jackson.defaultMapper().readValue(stateFile, SpawnState.class);
@@ -360,7 +360,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     void writeState() {
         try {
-            Files.write(stateFile, CodecJSON.INSTANCE.encode(spawnState), false);
+            LessFiles.write(stateFile, CodecJSON.INSTANCE.encode(spawnState), false);
         } catch (Exception e) {
             log.warn("Failed to write spawn state to log file at {}", stateFile, e);
         }
@@ -563,7 +563,7 @@ public class Spawn implements Codable, AutoCloseable {
         try {
             for (JobParameter param : job.getParameters()) {
                 String value = param.getValue();
-                if (Strings.isEmpty(value)) {
+                if (LessStrings.isEmpty(value)) {
                     value = param.getDefaultValue();
                 }
                 if (value != null) {
@@ -1055,7 +1055,7 @@ public class Spawn implements Codable, AutoCloseable {
         List<JobTaskMoveAssignment> assignments = balancer.getAssignmentsToBalanceHost(host,
                                                                                        hostManager.getLiveHosts(null));
         return new RebalanceOutcome(hostUUID, null, null,
-                                    Strings.join(executeReallocationAssignments(assignments, false).toArray(), "\n"));
+                                    LessStrings.join(executeReallocationAssignments(assignments, false).toArray(), "\n"));
     }
 
     /**
@@ -1154,10 +1154,11 @@ public class Spawn implements Codable, AutoCloseable {
             updateJob(job);
             // If any mismatches were found, skip the optimization step
             if (!allMismatches.isEmpty()) {
-                return new RebalanceOutcome(jobUUID, null, Strings.join(allMismatches.toArray(), "\n"), null);
+                return new RebalanceOutcome(jobUUID, null, LessStrings.join(allMismatches.toArray(), "\n"), null);
             } else {
                 // If all tasks had all expected directories, consider moving some tasks to better hosts
-                return new RebalanceOutcome(jobUUID, null, null, Strings.join(reallocateJob(jobUUID, tasksToMove).toArray(), "\n"));
+                return new RebalanceOutcome(jobUUID, null, null, LessStrings.join(
+                        reallocateJob(jobUUID, tasksToMove).toArray(), "\n"));
             }
         } catch (Exception ex) {
             log.warn("[job.rebalance] exception during rebalance for " + jobUUID, ex);
@@ -1545,7 +1546,7 @@ public class Spawn implements Codable, AutoCloseable {
         }
         Job job = getJob(task.getJobUUID());
         JobCommand jobcmd = getJobCommandManager().getEntity(job.getCommand());
-        String command = (jobcmd != null && jobcmd.getCommand() != null) ? Strings.join(jobcmd.getCommand(), " ") : null;
+        String command = (jobcmd != null && jobcmd.getCommand() != null) ? LessStrings.join(jobcmd.getCommand(), " ") : null;
         spawnMQ.sendControlMessage(new CommandTaskReplicate(task.getHostUUID(), task.getJobUUID(), task.getTaskID(), getTaskReplicaTargets(task, newReplicas), command, null, false, false));
         log.info("[replica.add] " + task.getJobUUID() + "/" + task.getTaskID() + " to " + targetHosts);
         taskQueuesByPriority.markHostTaskActive(task.getHostUUID());
@@ -2722,7 +2723,7 @@ public class Spawn implements Codable, AutoCloseable {
                 job.getMaxRunTime() != null ? job.getMaxRunTime() * 60000 : 0,
                 job.getRunCount(),
                 expandedJob,
-                Strings.join(jobCmd.getCommand(), " "),
+                LessStrings.join(jobCmd.getCommand(), " "),
                 job.getHourlyBackups(),
                 job.getDailyBackups(),
                 job.getWeeklyBackups(),
@@ -2781,7 +2782,7 @@ public class Spawn implements Codable, AutoCloseable {
                 job.getMaxRunTime() != null ? job.getMaxRunTime() * 60000 : 0,
                 job.getRunCount(),
                 null,
-                Strings.join(jobcmd.getCommand(), " "),
+                LessStrings.join(jobcmd.getCommand(), " "),
                 job.getHourlyBackups(),
                 job.getDailyBackups(),
                 job.getWeeklyBackups(),

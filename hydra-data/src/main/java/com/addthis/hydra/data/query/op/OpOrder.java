@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.query.op;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -60,7 +60,7 @@ public class OpOrder extends AbstractRowOp {
 
     public OpOrder(String args, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
-        fields = Strings.splitArray(args, ",");
+        fields = LessStrings.splitArray(args, ",");
     }
 
     @Override

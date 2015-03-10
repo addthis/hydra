@@ -14,7 +14,7 @@
 package com.addthis.hydra.data.util;
 
 import com.addthis.basis.util.JitterClock;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.ValueUtil;
@@ -22,7 +22,6 @@ import com.addthis.bundle.value.Numeric;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.codec.codables.SuperCodable;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -103,7 +102,7 @@ public final class TimeField {
                 return formatter.parseDateTime(ValueUtil.asNativeString(val)).getMillis();
             } catch (IllegalArgumentException e) {
                 log.warn("unable to parse date time for val starting with : " +
-                         Strings.printable(Strings.trunc(ValueUtil.asNativeString(val), 256)));
+                         LessStrings.printable(LessStrings.trunc(ValueUtil.asNativeString(val), 256)));
                 return -1;
             }
         }

@@ -16,7 +16,7 @@ package com.addthis.hydra.store.kv;
 
 import java.util.Map;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 class BytePageEntry implements Map.Entry<byte[], byte[]> {
 
@@ -34,7 +34,7 @@ class BytePageEntry implements Map.Entry<byte[], byte[]> {
 
     @Override
     public String toString() {
-        return "PE:" + Bytes.toString(key) + "=" + Bytes.toString(val);
+        return "PE:" + LessBytes.toString(key) + "=" + LessBytes.toString(val);
     }
 
     @Override

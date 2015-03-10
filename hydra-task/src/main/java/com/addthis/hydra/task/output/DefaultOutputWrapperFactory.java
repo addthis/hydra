@@ -26,8 +26,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import com.addthis.basis.io.IOWrap;
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.muxy.MuxFileDirectory;
 import com.addthis.muxy.MuxFileDirectoryCache;
@@ -120,7 +120,7 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
             wrappedStream = IOWrap.buffer(outputStream, BUFFER_SIZE);
         }
         if (!exists && (outputFlags.getHeader() != null)) {
-            wrappedStream.write(Bytes.toBytes(outputFlags.getHeader()));
+            wrappedStream.write(LessBytes.toBytes(outputFlags.getHeader()));
         }
         return wrappedStream;
     }
@@ -137,7 +137,7 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
             checkArgument(versionString.length() <= partitionData.getPadTo(),
                           "fileVersion (%s) cannot be longer than %s digits or else padding will loop; try {{PART:%s}}",
                           fileVersion, partitionData.getPadTo(), versionString.length());
-            String part = Strings.padleft(versionString, partitionData.getPadTo(), Strings.pad0);
+            String part = LessStrings.padleft(versionString, partitionData.getPadTo(), LessStrings.pad0);
             if (partitionData.getReplacementString() != null) {
                 result = target.replace(partitionData.getReplacementString(), part);
             } else {
