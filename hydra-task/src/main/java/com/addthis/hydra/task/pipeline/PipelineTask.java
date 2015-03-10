@@ -72,7 +72,6 @@ public class PipelineTask implements TaskRunnable {
 
     /**
      * If true then ensure that writable directories are all unique.
-     * Default is true.
      **/
     private final boolean validateDirs;
 
@@ -99,6 +98,7 @@ public class PipelineTask implements TaskRunnable {
         }
         this.phaseComplete = complete.build();
         this.phaseNext = next.build();
+        validateWritableRootPaths();
     }
 
     @Override public void start() {
@@ -158,7 +158,6 @@ public class PipelineTask implements TaskRunnable {
                         phase -> phase.writableRootPaths().stream()).iterator());
     }
 
-    @Override
     public void validateWritableRootPaths() {
         if (!validateDirs) {
             return;

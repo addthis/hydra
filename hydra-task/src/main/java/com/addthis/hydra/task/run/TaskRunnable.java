@@ -28,9 +28,4 @@ public interface TaskRunnable extends AutoCloseable, WritableRootPaths {
 
     public abstract void start();
 
-    /**
-     * @throws IllegalArgumentException if output directories
-     * overlap.
-     */
-    public default void validateWritableRootPaths() {}
 }

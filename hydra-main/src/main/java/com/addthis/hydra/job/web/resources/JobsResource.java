@@ -821,8 +821,7 @@ public class JobsResource {
         String message = null;
         int lineNumber = 1;
         try {
-            TaskRunnable task = TaskRunner.makeTask(expandedConfig, validationCodec);
-            task.validateWritableRootPaths();
+            TaskRunner.makeTask(expandedConfig, validationCodec);
             return Response.ok(new JSONObject().put("result", "valid").toString()).build();
         } catch (ConfigException ex) {
             ConfigOrigin exceptionOrigin = ex.origin();

@@ -170,6 +170,7 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
         this.emitTaskState = emitTaskState;
         this.dateFormat = dateFormat;
         this.validateDirs = validateDirs;
+        validateWritableRootPaths();
     }
 
     @Override
@@ -420,7 +421,6 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
         return completionFuture;
     }
 
-    @Override
     public void validateWritableRootPaths() {
         if (!validateDirs) {
             return;
