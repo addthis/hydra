@@ -27,14 +27,14 @@ import static org.junit.Assert.assertEquals;
 public class DataCountMinSketchTest {
 
     @Test
-    public void testCms() {
-        DataCountMinSketch dataCountMinSketch = new DataCountMinSketch(10,100_000);
+    public void countMinSketch() {
+        DataCountMinSketch dataCountMinSketch = new DataCountMinSketch(10, 100_000);
         dataCountMinSketch.add("a", 5);
         dataCountMinSketch.add("b", 2);
         dataCountMinSketch.add("a", 7);
         dataCountMinSketch.add("c", 3);
 
-        DataCountMinSketch dataCountMinSketch2 = new DataCountMinSketch(10,100_000);
+        DataCountMinSketch dataCountMinSketch2 = new DataCountMinSketch(10, 100_000);
         dataCountMinSketch2.add("c", 4);
         dataCountMinSketch2.add("d", 2);
         dataCountMinSketch2.add("c", 1);

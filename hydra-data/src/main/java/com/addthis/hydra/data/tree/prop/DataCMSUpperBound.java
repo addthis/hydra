@@ -19,9 +19,7 @@ import java.util.Optional;
 import com.addthis.basis.util.Strings;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.AutoField;
-import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueTranslationException;
@@ -37,11 +35,15 @@ import com.clearspring.analytics.stream.frequency.CountMinSketch;
 
 import com.google.common.annotations.VisibleForTesting;
 
-public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> implements
+public class DataCMSUpperBound extends TreeNodeData<DataCMSUpperBound.Config> implements
                                                                                 SuperCodable {
 
     /**
-     * <p>This data attachment is a <span class="hydra-summary">count-min sketch attached to a node</span>.
+     * <p>This data attachment is a <span class="hydra-summary">upper bound limit on keys</span>.
+     * <p/>
+     * <p>The {@link #limit limit} specifies the maximum number of occurrences that any value for
+     * a key can be observed. Once the limit is reached then this value will be removed
+     * from the bundle when it is encountered.</p>
      * <p/>
      * <p>The error is computed as a proportion of (T) the sum of the counts inserted into the data
      * structure. The error rate is T * e (2.71828) / width. For example if I expect to observe
@@ -56,14 +58,13 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
      * and specifies the bundle field name from which non-negative integer values will be used
      * as counts for the associated keys. If the count field is missing then each key instance
      * is assumed to have a count of 1.</p>
-     * <p/>
      * <p>Job Configuration Example:</p>
      * <pre>
      * {type : "const", value : "service", data : {
-     *   idcount : {type : "count.min.sketch", key : "ID", width : 100000},
+     *   idcount : {type : "limit.upper", key : "ID", width : 100000, limit: 5},
      * }},
      * {type : "const", value : "pixelator", data : {
-     *   idcount : {type : "count.min.sketch", key : "ID", count : "ID_COUNT", width : 100000},
+     *   idcount : {type : "limit.upper", key : "ID", count : "ID_COUNT", width : 100000, limit: 5},
      * }},
      * </pre>
      * <p/>
@@ -90,7 +91,7 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
      *
      * @user-reference
      */
-    public static final class Config extends TreeDataParameters<DataCountMinSketch> {
+    public static final class Config extends TreeDataParameters<DataCMSUpperBound> {
 
         /**
          * Bundle field name from which to insert keys into the sketch.
@@ -98,6 +99,14 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
          */
         @FieldConfig(codable = true, required = true)
         private AutoField key;
+
+        /**
+         * Upper bound for values in the sketch. Subsequent occurrences
+         * of the key will be deleted from the bundle.
+         * This field is required.
+         */
+        @FieldConfig(codable = true, required = true)
+        private long limit;
 
         /**
          * Optionally specify the depth of the sketch.
@@ -136,8 +145,8 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
         private AutoField count;
 
         @Override
-        public DataCountMinSketch newInstance() {
-            DataCountMinSketch db = new DataCountMinSketch();
+        public DataCMSUpperBound newInstance() {
+            DataCMSUpperBound db = new DataCMSUpperBound();
             if ((width == 0) && (percentage == 0.0)) {
                 throw new IllegalArgumentException("Either 'width' or " +
                                                    "'percentage' must be specified.");
@@ -165,9 +174,9 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
 
     private CountMinSketch sketch;
 
-    public DataCountMinSketch(){}
+    public DataCMSUpperBound(){}
 
-    public DataCountMinSketch(int depth, int width) {
+    public DataCMSUpperBound(int depth, int width) {
         this.sketch = new CountMinSketch(depth, width, 0);
     }
 
@@ -201,15 +210,25 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
 
     /* updates the CountMinSketch
     *  if the key is absent, return false
+    *  if the limit is reached then delete the field and return true
     *  if count field is not specified, always increment by one
     *  if count field is specified and not present or invalid, do not update and return false
     *  otherwise increment key by the count field's value
     */
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, Config conf) {
-        Bundle bundle = state.getBundle();
+        return updateChildData(state.getBundle(), conf);
+    }
+
+    @VisibleForTesting
+    boolean updateChildData(Bundle bundle, Config conf) {
         Optional<String> o = conf.key.getString(bundle);
         if (o.isPresent()) {
+            long current = sketch.estimateCount(o.get());
+            if (current >= conf.limit) {
+                conf.key.setValue(bundle, null);
+                return true;
+            }
             long myCount = 1;
             if (conf.count != null) {
                 ValueObject v = conf.count.getValue(bundle);
