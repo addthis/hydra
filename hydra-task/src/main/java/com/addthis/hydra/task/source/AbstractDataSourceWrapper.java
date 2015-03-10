@@ -13,9 +13,15 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
+
+import java.nio.file.Path;
+
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.google.common.collect.ImmutableList;
 
 
 public abstract class AbstractDataSourceWrapper extends TaskDataSource {
@@ -57,5 +63,10 @@ public abstract class AbstractDataSourceWrapper extends TaskDataSource {
     @Override
     public void close() {
         source.close();
+    }
+
+    @Nonnull @Override
+    public ImmutableList<Path> writableRootPaths() {
+        return source.writableRootPaths();
     }
 }

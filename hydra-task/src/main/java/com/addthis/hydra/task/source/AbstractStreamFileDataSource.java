@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 
@@ -34,6 +35,9 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import com.addthis.basis.io.IOWrap;
 import com.addthis.basis.util.Files;
@@ -62,6 +66,7 @@ import com.addthis.hydra.task.stream.StreamSourceFiltered;
 import com.addthis.hydra.task.stream.StreamSourceHashed;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -758,6 +763,11 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
             }
             return null;
         }
+    }
+
+    @Nonnull @Override
+    public ImmutableList<Path> writableRootPaths() {
+        return ImmutableList.of(Paths.get(markDir));
     }
 
 }

@@ -13,13 +13,20 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -162,4 +169,12 @@ public class AggregateTaskDataSource extends TaskDataSource {
         }
         return null;
     }
+
+    @Nonnull @Override
+    public ImmutableList<Path> writableRootPaths() {
+        return ImmutableList.copyOf(
+                Arrays.stream(sources).flatMap(
+                        output -> output.writableRootPaths().stream()).iterator());
+    }
+
 }

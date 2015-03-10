@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.output.tree;
 
+import javax.annotation.Nonnull;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -57,6 +59,7 @@ import com.addthis.hydra.task.run.TaskRunConfig;
 import com.addthis.meshy.MeshyServer;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -591,5 +594,10 @@ public final class TreeMapper extends DataOutputTypeList implements Codable {
     @Override
     public void sourceError(Throwable err) {
         // TODO
+    }
+
+    @Nonnull @Override
+    public ImmutableList<Path> writableRootPaths() {
+        return ImmutableList.of(Paths.get(config.dir, directory));
     }
 }

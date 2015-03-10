@@ -11,21 +11,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.task.run;
+package com.addthis.hydra.task.output;
 
-import com.addthis.codec.annotations.Pluggable;
-import com.addthis.hydra.task.output.WritableRootPaths;
+import javax.annotation.Nonnull;
 
-/**
- * This is the specification for a Hydra job.
- *
- * @user-reference
- * @hydra-category Hydra Jobs
- * @hydra-doc-position 1
- */
-@Pluggable("task")
-public interface TaskRunnable extends AutoCloseable, WritableRootPaths {
+import java.nio.file.Path;
 
-    public abstract void start();
+import com.google.common.collect.ImmutableList;
 
+public interface WritableRootPaths {
+
+    /**
+     * List of paths that will be written to.
+     */
+    public default @Nonnull ImmutableList<Path> writableRootPaths() {
+        return ImmutableList.of();
+    }
 }

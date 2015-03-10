@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.task.output;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.io.File;
@@ -21,6 +22,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import com.addthis.basis.io.IOWrap;
 import com.addthis.basis.util.Bytes;
@@ -30,6 +33,7 @@ import com.addthis.muxy.MuxFileDirectory;
 import com.addthis.muxy.MuxFileDirectoryCache;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -282,5 +286,10 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
             return null;
         }
         return file;
+    }
+
+    @Nonnull @Override
+    public ImmutableList<Path> writableRootPaths() {
+        return ImmutableList.of(Paths.get(dir));
     }
 }
