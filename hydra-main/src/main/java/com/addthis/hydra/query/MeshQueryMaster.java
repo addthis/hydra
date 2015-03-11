@@ -209,19 +209,19 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         boolean allowPartial = Boolean.valueOf(query.getParameter("allowPartial"));
         Set<Integer> tasks = parseTasks(query.getParameter("tasks"));
         List<QueryTaskSource[]> sourcesPerDir = new ArrayList<>(2);
-        for (String combinedJobOrAlias : JOB_SPLITTER.split(query.getJob())) {
-            String jobIdOrAlias = getJobWithoutSubdirectory(combinedJobOrAlias);
-            String combinedSubdirectory = getJobSubdirectory(combinedJobOrAlias);
-            for (String combinedJob : expandAlias(jobIdOrAlias)) {
-                String jobId = getJobWithoutSubdirectory(combinedJob);
-                String jobSubdirectory;
-                if (!combinedSubdirectory.isEmpty()) {
-                    jobSubdirectory = combinedSubdirectory;
+        for (String combinedUnresolved : JOB_SPLITTER.split(query.getJob())) {
+            String jobIdOrAlias = getJobWithoutSubdirectory(combinedUnresolved);
+            String subdirectory = getJobSubdirectory(combinedUnresolved);
+            for (String resolved : expandAlias(jobIdOrAlias)) {
+                String resolvedJobId = getJobWithoutSubdirectory(resolved);
+                String resolvedSubdirectory;
+                if (!subdirectory.isEmpty()) {
+                    resolvedSubdirectory = subdirectory;
                 } else {
-                    jobSubdirectory = getJobSubdirectory(combinedJob);
+                    resolvedSubdirectory = getJobSubdirectory(resolved);
                 }
 
-                sourcesPerDir.add(getSourcesById(jobId, jobSubdirectory, allowPartial, tasks));
+                sourcesPerDir.add(getSourcesById(resolvedJobId, resolvedSubdirectory, allowPartial, tasks));
             }
         }
         QueryTaskSource[] sourcesByTaskID;
