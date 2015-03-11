@@ -71,7 +71,7 @@
     <hydra.dep.jersey.version>1.18</hydra.dep.jersey.version>
     <hydra.dep.jetty.version>8.1.4.v20120524</hydra.dep.jetty.version>
     <hydra.dep.netty3.version>3.9.3.Final</hydra.dep.netty3.version>
-    <hydra.dep.netty4.version>4.0.26.Final</hydra.dep.netty4.version>
+    <hydra.dep.netty4.version>4.0.23.Final</hydra.dep.netty4.version>
     <hydra.dep.sleepycat.je.version>5.0.73</hydra.dep.sleepycat.je.version>
     <hydra.dep.hadoop.version>2.4.0.2.1.1.0-385</hydra.dep.hadoop.version>
 
