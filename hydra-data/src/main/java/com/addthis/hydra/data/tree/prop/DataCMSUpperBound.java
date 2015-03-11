@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.data.tree.prop;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,7 +30,6 @@ import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
-import com.addthis.hydra.data.tree.TreeNodeList;
 
 import com.clearspring.analytics.stream.frequency.CountMinSketch;
 
@@ -200,7 +200,7 @@ public class DataCMSUpperBound extends TreeNodeData<DataCMSUpperBound.Config> im
             throw new IllegalArgumentException("No key arguments entered");
         }
         String[] keys = LessStrings.splitArray(key, "~");
-        TreeNodeList list = new TreeNodeList(keys.length);
+        List<DataTreeNode> list = new ArrayList<>(keys.length);
         for (String k : keys) {
             long count = sketch.estimateCount(k);
             list.add(new VirtualTreeNode(k, count));

@@ -21,7 +21,7 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
-import com.addthis.hydra.data.tree.TreeNodeList;
+import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.util.Tokenizer;
 
 /**
@@ -141,7 +141,7 @@ public final class PathFile extends PathKeyValue {
     }
 
     @Override
-    public TreeNodeList processNodeUpdates(TreeMapState state, ValueObject ps) {
+    public List<DataTreeNode> processNodeUpdates(TreeMapState state, ValueObject ps) {
         ValueObject pv = getPathValue(state);
         String path = ValueUtil.asNativeString(pv);
         if (path.length() == 0 || path.equals(separator)) {
@@ -169,7 +169,7 @@ public final class PathFile extends PathKeyValue {
             root = path.substring(0, lastsep);
         }
         if (expand) {
-            TreeNodeList ret = null;
+            List<DataTreeNode> ret = null;
             boolean term = same;
             int pop = 0;
             if (root != null) {
@@ -227,9 +227,9 @@ public final class PathFile extends PathKeyValue {
             if (root == null) {
                 return new PathValue(file).processNode(state);
             }
-            TreeNodeList proc = new PathValue(root).processNode(state);
+            List<DataTreeNode> proc = new PathValue(root).processNode(state);
             state.push(proc.get(0));
-            TreeNodeList ret = super.processNodeUpdates(state, ValueFactory.create(file));
+            List<DataTreeNode> ret = super.processNodeUpdates(state, ValueFactory.create(file));
             state.pop();
             return ret;
         }

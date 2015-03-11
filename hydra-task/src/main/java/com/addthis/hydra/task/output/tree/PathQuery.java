@@ -16,6 +16,8 @@ package com.addthis.hydra.task.output.tree;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import java.util.List;
+
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.LessStrings;
 
@@ -25,7 +27,6 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.query.FieldValueList;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeUtil;
-import com.addthis.hydra.data.tree.TreeNodeList;
 
 /**
  * This {@link PathElement PathElement} <span class="hydra-summary">performs a query against
@@ -147,7 +148,7 @@ public final class PathQuery extends PathOp {
 
     @Nullable
     @Override
-    public TreeNodeList getNextNodeList(TreeMapState state) {
+    public List<DataTreeNode> getNextNodeList(TreeMapState state) {
         String[] pathValues = new String[path.length];
         for (int i = 0; i < pathValues.length; i++) {
             pathValues[i] = ValueUtil.asNativeString(path[i].getPathValue(state));
