@@ -22,8 +22,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.addthis.basis.kv.KVPairs;
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.entity.JobEntityManager;
@@ -81,9 +81,9 @@ public class CommandResource {
             if ((label == null) || command.isEmpty()) {
                 throw new Exception("missing required field");
             }
-            String[] cmdtok = Strings.splitArray(command, ",");
+            String[] cmdtok = LessStrings.splitArray(command, ",");
             for (int i = 0; i < cmdtok.length; i++) {
-                cmdtok[i] = Bytes.urldecode(cmdtok[i]);
+                cmdtok[i] = LessBytes.urldecode(cmdtok[i]);
             }
             JobCommand jobCommand = new JobCommand(owner, cmdtok, kv.getIntValue("reqCPU", 0), kv.getIntValue("reqMEM", 0), kv.getIntValue("reqIO", 0));
             jobCommandManager.putEntity(label, jobCommand, true);

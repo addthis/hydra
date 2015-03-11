@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.Time;
 import com.addthis.codec.json.CodecJSON;
@@ -80,9 +80,9 @@ public class BundleCanaryJobAlert extends AbstractJobAlert {
     }
 
     @Override public String isValid() {
-        if (Strings.isEmpty(canaryPath)) {
+        if (LessStrings.isEmpty(canaryPath)) {
             return "Canary path is empty";
-        } else if (Strings.isEmpty(canaryFilter)) {
+        } else if (LessStrings.isEmpty(canaryFilter)) {
             return "Canary filter is empty";
         }
         try {

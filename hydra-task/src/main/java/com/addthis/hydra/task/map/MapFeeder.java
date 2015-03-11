@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.text.DecimalFormat;
 
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -144,7 +144,7 @@ public final class MapFeeder implements Runnable {
             int hash = p.hashCode();
             if (shardField != null) {
                 String val = ValueUtil.asNativeString(p.getValue(shardField));
-                if (!Strings.isEmpty(val)) {
+                if (!LessStrings.isEmpty(val)) {
                     hash = PluggableHashFunction.hash(val);
                 }
             }

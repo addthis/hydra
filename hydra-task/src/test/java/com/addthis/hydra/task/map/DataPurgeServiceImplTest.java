@@ -18,7 +18,7 @@ import java.io.IOException;
 
 import java.util.List;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import org.apache.commons.io.FileUtils;
 
@@ -52,7 +52,7 @@ public class DataPurgeServiceImplTest {
 
     @Before
     public void before() throws IOException {
-        tmpPrefix = Files.createTempDir(); //  = /tmp
+        tmpPrefix = LessFiles.createTempDir(); //  = /tmp
         dataPurgeService = new DataPurgeServiceImpl();
     }
 

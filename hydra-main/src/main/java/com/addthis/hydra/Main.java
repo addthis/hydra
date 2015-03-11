@@ -18,7 +18,7 @@ import java.lang.reflect.Method;
 import java.util.Set;
 
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.config.Configs;
 import com.addthis.codec.plugins.PluginMap;
@@ -62,7 +62,7 @@ public class Main {
                         String mssRoot = Parameter.value("mss.root", "streams");
                         String meshyPorts = Parameter.value("mss.mesh.ports", "5000");
                         String meshyPeers = Parameter.value("mss.mesh.peers", "");
-                        for (String portGroup : Strings.splitArray(meshyPorts, ";")) {
+                        for (String portGroup : LessStrings.splitArray(meshyPorts, ";")) {
                             log.info("[mss] starting meshy with port group: " + portGroup);
                             com.addthis.meshy.Main.main(new String[]{"server", portGroup, mssRoot, meshyPeers});
                         }

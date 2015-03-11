@@ -17,8 +17,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
@@ -52,7 +52,7 @@ public class TestDiskBackedMap {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             byte[] result = null;
             try {
-                bos.write(Bytes.toBytes(merged));
+                bos.write(LessBytes.toBytes(merged));
                 int pos = 0;
                 ListBundleFormat format = new ListBundleFormat();
                 ListBundle listBundle = new ListBundle(format);
@@ -76,7 +76,7 @@ public class TestDiskBackedMap {
         @Override
         public DiskBackedMap.DiskObject fromBytes(byte[] bytes) {
             MergedRow mergedRow = new MergedRow();
-            mergedRow.merged = Bytes.toInt(ArrayUtils.subarray(bytes, 0, 8));
+            mergedRow.merged = LessBytes.toInt(ArrayUtils.subarray(bytes, 0, 8));
             ListBundleFormat lbf = new ListBundleFormat();
             ListBundle listBundle = new ListBundle(lbf);
             try {
@@ -99,7 +99,7 @@ public class TestDiskBackedMap {
     public void testDiskBackedMap() {
         // Create a diskbackedmap
         MergedRowFactory mergedRowFactory = new MergedRowFactory();
-        Files.deleteDir(new File("/tmp/testDiskBackedMap"));
+        LessFiles.deleteDir(new File("/tmp/testDiskBackedMap"));
         DiskBackedMap<MergedRow> diskBackedMap = new DiskBackedMap<>("/tmp/testDiskBackedMap",
                 mergedRowFactory, 16 * 1024 * 1024L);
 

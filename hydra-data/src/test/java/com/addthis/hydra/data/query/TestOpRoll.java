@@ -39,6 +39,15 @@ public class TestOpRoll extends TestOp {
     }
 
     @Test
+    public void testRollEmptyInput() throws Exception {
+        doOpTest(
+                new DataTableHelper(),
+                "sum=2,3",
+                new DataTableHelper()
+        );
+    }
+
+    @Test
     public void testRollColon() throws Exception {
         doOpTest(
                 new DataTableHelper().
@@ -99,6 +108,46 @@ public class TestOpRoll extends TestOp {
                         tr().td("dog", "a", "12", "9").
                         tr().td("dog", "b", "19", "10").
                         tr().td("dog", "c", "27", "10")
+        );
+    }
+
+    @Test
+    public void testRollInPlaceEmptyInput() throws Exception {
+        doOpTest(
+                new DataTableHelper(),
+                "sum=s2,3",
+                new DataTableHelper()
+        );
+    }
+
+    @Test
+    public void testRollSummary() throws Exception {
+        doOpTest(
+                new DataTableHelper().
+                        tr().td("cat", "a", "1", "2").
+                        tr().td("cat", "b", "2", "3").
+                        tr().td("cat", "c", "3", "4").
+                        tr().td("dog", "a", "6", "0").
+                        tr().td("dog", "b", "7", "1").
+                        tr().td("dog", "c", "8", "0"),
+                "sum=S2,3",
+                new DataTableHelper().
+                        tr().td("cat", "a", "1", "2").
+                        tr().td("cat", "b", "2", "3").
+                        tr().td("cat", "c", "3", "4").
+                        tr().td("dog", "a", "6", "0").
+                        tr().td("dog", "b", "7", "1").
+                        tr().td("dog", "c", "8", "0").
+                        tr().td(null, null, "27", "10")
+        );
+    }
+
+    @Test
+    public void testRollSummaryEmptyInput() throws Exception {
+        doOpTest(
+                new DataTableHelper(),
+                "sum=S2,3",
+                new DataTableHelper()
         );
     }
 }

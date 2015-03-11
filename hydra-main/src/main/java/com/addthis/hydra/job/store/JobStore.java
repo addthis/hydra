@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.maljson.JSONArray;
@@ -55,7 +55,7 @@ public class JobStore {
     public JobStore(File jobStoreDir) throws Exception {
         this.jobStoreDir = jobStoreDir;
         if (!jobStoreDir.exists()) {
-            Files.initDirectory(jobStoreDir);
+            LessFiles.initDirectory(jobStoreDir);
         }
         jobStoreGit = new JobStoreGit(jobStoreDir);
         cachedConfigHash = CacheBuilder.newBuilder().maximumSize(maxCacheSize).build();

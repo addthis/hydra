@@ -15,7 +15,7 @@ package com.addthis.hydra.data.query;
 
 import java.util.Iterator;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -89,9 +89,9 @@ public abstract class TestOp {
 
     public static DataTableHelper parse(String simple) {
         DataTableHelper t = new DataTableHelper();
-        for (String row : Strings.splitArray(simple, "|")) {
+        for (String row : LessStrings.splitArray(simple, "|")) {
             t.tr();
-            for (String col : Strings.splitArray(row, " ")) {
+            for (String col : LessStrings.splitArray(row, " ")) {
                 t.td(col);
             }
         }

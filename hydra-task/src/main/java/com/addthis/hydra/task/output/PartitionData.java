@@ -15,7 +15,7 @@ package com.addthis.hydra.task.output;
 
 import javax.annotation.Nullable;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 class PartitionData {
     private static final int DEFAULT_PADDING = 3;
@@ -46,7 +46,8 @@ class PartitionData {
             int closePartitionIndex = target.indexOf(PART_POSTFIX);
             if (closePartitionIndex > startPartitionIndex) {
                 replacement = target.substring(startPartitionIndex, closePartitionIndex + 2);
-                String[] tok = Strings.splitArray(target.substring(startPartitionIndex + 2, closePartitionIndex), ":");
+                String[] tok = LessStrings.splitArray(target.substring(startPartitionIndex + 2, closePartitionIndex),
+                                                      ":");
                 if (tok.length > 1) {
                     padTo = Integer.parseInt(tok[1]);
                 }

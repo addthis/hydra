@@ -32,7 +32,7 @@ public class CloseableBundleFilterStreamBuilder extends StreamBuilder {
     private CloseableBundleFilter cfilter;
 
     private final Meter filterPasses = Metrics.newMeter(getClass(), "filterPasses", "passes", TimeUnit.SECONDS);
-    private final Meter filterFailures = Metrics.newMeter(getClass(), "filterFailures", "failues", TimeUnit.SECONDS);
+    private final Meter filterFailures = Metrics.newMeter(getClass(), "filterFailures", "failures", TimeUnit.SECONDS);
 
     @Override
     public void init() {

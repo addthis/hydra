@@ -18,8 +18,8 @@ import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +34,7 @@ public class TaskReplacementFile implements TaskStringReplacement {
         int cpos = input.indexOf(")", atpos + 7);
         if (atpos >= 0 && cpos > atpos) {
             String path = input.substring(atpos + 7, cpos);
-            input = input.replace("@file(" + path + ")", Bytes.toString(Files.read(new File(path))));
+            input = input.replace("@file(" + path + ")", LessBytes.toString(LessFiles.read(new File(path))));
             log.info("found " + path);
         }
         return input;

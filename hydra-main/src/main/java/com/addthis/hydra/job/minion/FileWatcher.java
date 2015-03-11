@@ -16,7 +16,7 @@ package com.addthis.hydra.job.minion;
 import java.io.File;
 import java.io.RandomAccessFile;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,9 +64,9 @@ public class FileWatcher {
                             byte[] scan = new byte[(int) size];
                             access.seek(start);
                             access.readFully(scan);
-                            log.warn("scan of " + Bytes.toString(scan));
+                            log.warn("scan of " + LessBytes.toString(scan));
                             lastEnd = pos;
-                            return (Bytes.toString(scan).indexOf(needle) >= 0);
+                            return (LessBytes.toString(scan).indexOf(needle) >= 0);
                         }
                     }
                 }

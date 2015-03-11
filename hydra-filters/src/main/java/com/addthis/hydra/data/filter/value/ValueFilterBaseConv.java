@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.filter.value;
 
-import com.addthis.basis.util.NumberUtils;
+import com.addthis.basis.util.LessNumbers;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
@@ -52,9 +52,9 @@ public class ValueFilterBaseConv extends AbstractValueFilter {
         try {
             Long decodedVal = null;
             if (baseType.equals("theo36")) {
-                decodedVal = NumberUtils.longFromBase36(value.toString());
+                decodedVal = LessNumbers.longFromBase36(value.toString());
             } else if (baseType.equals("theo64")) {
-                decodedVal = NumberUtils.longFromBase64(value.toString());
+                decodedVal = LessNumbers.longFromBase64(value.toString());
             }
             // base 10 fall-through
             else {

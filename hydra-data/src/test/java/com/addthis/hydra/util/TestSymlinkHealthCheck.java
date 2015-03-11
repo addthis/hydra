@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import com.addthis.basis.util.LessFiles;
+
 import org.junit.Test;
 
 import static org.junit.Assert.assertFalse;
@@ -31,7 +33,7 @@ public class TestSymlinkHealthCheck {
     public void testHealthCheck() {
         File tempDir = null;
         try {
-            tempDir = com.addthis.basis.util.Files.createTempDir();
+            tempDir = LessFiles.createTempDir();
             Path tempDirPath = tempDir.toPath().toAbsolutePath();
             SymlinkHealthCheck check = new SymlinkHealthCheck(tempDirPath);
             assertTrue(check.runCheck());
@@ -47,7 +49,7 @@ public class TestSymlinkHealthCheck {
             fail();
         } finally {
             if (tempDir != null) {
-                com.addthis.basis.util.Files.deleteDir(tempDir);
+                LessFiles.deleteDir(tempDir);
             }
         }
     }
@@ -56,7 +58,7 @@ public class TestSymlinkHealthCheck {
     public void testRecursiveDepthCheck() {
         File tempDir = null;
         try {
-            tempDir = com.addthis.basis.util.Files.createTempDir();
+            tempDir = LessFiles.createTempDir();
             Path tempDirPath = tempDir.toPath().toAbsolutePath();
             SymlinkHealthCheck check = new SymlinkHealthCheck(tempDirPath);
             assertTrue(check.runCheck());
@@ -70,7 +72,7 @@ public class TestSymlinkHealthCheck {
             fail();
         } finally {
             if (tempDir != null) {
-                com.addthis.basis.util.Files.deleteDir(tempDir);
+                LessFiles.deleteDir(tempDir);
             }
         }
     }

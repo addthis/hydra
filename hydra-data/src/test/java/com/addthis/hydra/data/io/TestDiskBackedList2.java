@@ -25,7 +25,8 @@ import java.util.List;
 import java.util.Random;
 
 import com.addthis.basis.test.SlowTest;
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
@@ -49,16 +50,16 @@ public class TestDiskBackedList2 {
         public TestValue decode(byte[] row) throws IOException {
             ByteArrayInputStream in = new ByteArrayInputStream(row);
             TestValue tv = new TestValue();
-            tv.value = Bytes.readLong(in);
-            tv.randomBytes = Bytes.readBytes(in);
+            tv.value = LessBytes.readLong(in);
+            tv.randomBytes = LessBytes.readBytes(in);
             return tv;
         }
 
         @Override
         public byte[] encode(TestValue row) throws IOException {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            Bytes.writeLong(row.value, out);
-            Bytes.writeBytes(row.randomBytes, out);
+            LessBytes.writeLong(row.value, out);
+            LessBytes.writeBytes(row.randomBytes, out);
             return out.toByteArray();
         }
     }
@@ -115,7 +116,7 @@ public class TestDiskBackedList2 {
             Assert.assertEquals(numEntries - numEntries / 2, dbl.size());
             dbl.clear();
         } finally {
-            com.addthis.basis.util.Files.deleteDir(dbl.getDirectory());
+            LessFiles.deleteDir(dbl.getDirectory());
         }
     }
 
@@ -137,7 +138,7 @@ public class TestDiskBackedList2 {
             dbl.clear();
         } finally {
             if (dbl != null) {
-                com.addthis.basis.util.Files.deleteDir(dbl.getDirectory());
+                LessFiles.deleteDir(dbl.getDirectory());
             }
         }
     }
@@ -160,7 +161,7 @@ public class TestDiskBackedList2 {
             dbl.clear();
         } finally {
             if (dbl != null) {
-                com.addthis.basis.util.Files.deleteDir(dbl.getDirectory());
+                LessFiles.deleteDir(dbl.getDirectory());
             }
         }
     }
@@ -182,7 +183,7 @@ public class TestDiskBackedList2 {
             dbl.clear();
         } finally {
             if (dbl != null) {
-                com.addthis.basis.util.Files.deleteDir(dbl.getDirectory());
+                LessFiles.deleteDir(dbl.getDirectory());
             }
         }
     }
@@ -217,7 +218,7 @@ public class TestDiskBackedList2 {
             dbl.clear();
         } finally {
             if (dbl != null) {
-                com.addthis.basis.util.Files.deleteDir(dbl.getDirectory());
+                LessFiles.deleteDir(dbl.getDirectory());
             }
         }
     }
@@ -242,7 +243,7 @@ public class TestDiskBackedList2 {
             dbl.clear();
         } finally {
             if (dbl != null) {
-                com.addthis.basis.util.Files.deleteDir(dbl.getDirectory());
+                LessFiles.deleteDir(dbl.getDirectory());
             }
         }
     }
@@ -275,7 +276,7 @@ public class TestDiskBackedList2 {
             dbl.clear();
         } finally {
             if (dbl != null) {
-                com.addthis.basis.util.Files.deleteDir(dbl.getDirectory());
+                LessFiles.deleteDir(dbl.getDirectory());
             }
         }
     }
@@ -301,7 +302,7 @@ public class TestDiskBackedList2 {
             dbl.clear();
         } finally {
             if (directory != null) {
-                com.addthis.basis.util.Files.deleteDir(directory);
+                LessFiles.deleteDir(directory);
             }
         }
     }

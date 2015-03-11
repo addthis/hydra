@@ -32,7 +32,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.Bytes;
 import com.addthis.codec.annotations.FieldConfig;
@@ -498,7 +499,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
     /** */
     private List<MeshyStreamFile> getStreamSources(DateTime date, String[] matches) throws IOException {
         if (log.isTraceEnabled()) {
-            log.trace("getStreamSources :: " + date + " :: " + Strings.join(matches, " -- "));
+            log.trace("getStreamSources :: " + date + " :: " + LessStrings.join(matches, " -- "));
         }
         List<MeshyStreamFile> streamSources = findMeshFiles(date, matches);
         // sort files
@@ -542,7 +543,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
             try {
                 DateTime autoResumeDate = lastDate.minusDays(1);
                 JSONObject jo = new JSONObject().put("lastDate", formatter.print(autoResumeDate)).put("moreData", moreData);
-                Files.write(com.addthis.basis.util.Bytes.toBytes(jo.toString(2)), autoResumeFile);
+                Files.write(LessBytes.toBytes(jo.toString(2)), autoResumeFile);
             } catch (Exception ex) {
                 log.warn("unable to write auto-resume file", ex);
             }

@@ -20,6 +20,15 @@ import com.addthis.hydra.data.filter.util.UnaryOperation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
+/**
+ * <p>This {@link BundleFilter BundleFilter} <span class="hydra-summary">returns the negation of the filter result</span>.</p>
+ * <p>Example: return true if bundle doesn't have SOME_FIELD</p>
+ * <pre>
+ *   {invert.has:"SOME_FIELD"}
+ * </pre>
+ *
+ * @user-reference
+ */
 public class BundleFilterNegation extends BundleFilterUnary {
 
     @JsonCreator public BundleFilterNegation(@Nullable BundleFilter filter) {

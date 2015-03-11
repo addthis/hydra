@@ -13,10 +13,9 @@
  */
 package com.addthis.hydra.data.filter.bundle;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.CachingField;
 import com.addthis.bundle.util.ValueUtil;
@@ -82,7 +81,7 @@ public class BundleFilterFirstValue implements BundleFilter {
                     break;
                 default:
                     String str = ValueUtil.asNativeString(v);
-                    if (!Strings.isEmpty(str)) {
+                    if (!LessStrings.isEmpty(str)) {
                         if (which != null) {
                             ValueObject fieldName = ValueFactory.create(in[i].name);
                             which.setValue(bundle, fieldName);

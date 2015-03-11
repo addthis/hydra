@@ -21,13 +21,12 @@ import java.util.concurrent.TimeUnit;
 
 import java.nio.file.PathMatcher;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.data.query.engine.QueryEngineCache;
 import com.addthis.hydra.store.db.PageDB;
 import com.addthis.meshy.LocalFileHandler;
-import com.addthis.meshy.VirtualFileFilter;
 import com.addthis.meshy.VirtualFileReference;
 
 import com.yammer.metrics.Metrics;
@@ -98,8 +97,8 @@ public class MeshQuerySource implements LocalFileHandler {
         // Initialize the tmp dir
         try {
             File tmpDir = new File(tmpDirPath).getCanonicalFile();
-            Files.deleteDir(tmpDir);
-            Files.initDirectory(tmpDir);
+            LessFiles.deleteDir(tmpDir);
+            LessFiles.initDirectory(tmpDir);
             log.info("Using temporary directory:{}", tmpDir.getPath());
         } catch (Exception e) {
             log.warn("Error while cleaning or obtaining canonical path for tmpDir: {}", tmpDirPath, e);

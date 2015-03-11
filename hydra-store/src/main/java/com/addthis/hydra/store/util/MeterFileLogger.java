@@ -31,9 +31,9 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 
 import com.addthis.basis.jmx.MapMBean;
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
+import com.addthis.basis.util.LessStrings;
 
 
 
@@ -72,7 +72,7 @@ public class MeterFileLogger implements Runnable {
         this.rollLines = rollLines;
         this.done = new AtomicBoolean(false);
 
-        Files.initDirectory(dirout);
+        LessFiles.initDirectory(dirout);
         initNextOutput();
 
         thread = new Thread(this, "MeterFileLogger " + dirout);
@@ -128,14 +128,14 @@ public class MeterFileLogger implements Runnable {
                     for (String label : map.keySet()) {
                         line.add("\"" + label + "\"");
                     }
-                    currentOutput.write(Bytes.toBytes(Strings.join(line.toArray(), ",") + "\n"));
+                    currentOutput.write(LessBytes.toBytes(LessStrings.join(line.toArray(), ",") + "\n"));
                 }
                 LinkedList<String> line = new LinkedList<>();
                 line.add(dateFormat.format(System.currentTimeMillis()));
                 for (Long val : map.values()) {
                     line.add(Long.toString(val));
                 }
-                currentOutput.write(Bytes.toBytes(Strings.join(line.toArray(), ",") + "\n"));
+                currentOutput.write(LessBytes.toBytes(LessStrings.join(line.toArray(), ",") + "\n"));
                 currentOutput.flush();
             } catch (InterruptedException e) {
                 if (!done.get()) {

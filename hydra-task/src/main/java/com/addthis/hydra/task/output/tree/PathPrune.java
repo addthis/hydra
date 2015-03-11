@@ -31,6 +31,7 @@ import com.google.common.util.concurrent.Runnables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
@@ -78,12 +79,17 @@ public class PathPrune extends PathElement {
     /**
      * If non-null then parse the name of each node using the provided
      * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat
-     * .html">DateTimeFormat</a>. Default is null.
+     * .html">DateTimeFormat</a>. Default is null. By default the
+     * parser will use the default time zone. To change the time zone
+     * use the "timezone" field.
      */
     @Nullable private final DateTimeFormatter nameFormat;
 
-    public PathPrune(@Nullable @JsonProperty("nameFormat") String nameFormat) {
-        if (nameFormat != null) {
+    public PathPrune(@Nullable @JsonProperty("nameFormat") String nameFormat,
+                     @Nullable @JsonProperty("timezone") String timezone) {
+        if (nameFormat != null && timezone != null) {
+            this.nameFormat = DateTimeFormat.forPattern(nameFormat).withZone(DateTimeZone.forID(timezone));
+        } else if (nameFormat != null) {
             this.nameFormat = DateTimeFormat.forPattern(nameFormat);
         } else {
             this.nameFormat = null;

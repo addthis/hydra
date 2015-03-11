@@ -20,8 +20,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.codec.jackson.CodecJackson;
 import com.addthis.codec.jackson.Jackson;
@@ -130,7 +130,7 @@ public class TaskRunner {
     }
 
     static String loadStringFromFile(String fileName) throws IOException {
-        return Bytes.toString(Files.read(new File(fileName)));
+        return LessBytes.toString(LessFiles.read(new File(fileName)));
     }
 
     private static final Set<TaskStringReplacement> replaceOperators = new HashSet<>();

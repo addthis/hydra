@@ -17,7 +17,7 @@ package com.addthis.hydra.store.kv;
 import java.io.File;
 import java.io.IOException;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import org.junit.Test;
 
@@ -37,7 +37,7 @@ public abstract class AbstractByteStoreTest {
     public void testGetPut() {
         File tempDir = null;
         try {
-            tempDir = Files.createTempDir();
+            tempDir = LessFiles.createTempDir();
             ByteStore store = createByteStore(tempDir, "test");
             for (int i = 0; i < 10; i++) {
                 byte[] key = createBytes(i);
@@ -57,7 +57,7 @@ public abstract class AbstractByteStoreTest {
             fail(ex.getMessage());
         } finally {
             if (tempDir != null) {
-                Files.deleteDir(tempDir);
+                LessFiles.deleteDir(tempDir);
             }
         }
     }
@@ -67,7 +67,7 @@ public abstract class AbstractByteStoreTest {
     public void testNextHigherValue() {
         File tempDir = null;
         try {
-            tempDir = Files.createTempDir();
+            tempDir = LessFiles.createTempDir();
             ByteStore store = createByteStore(tempDir, "test");
             for (int i = 1; i < 10; i++) {
                 byte[] key = createBytes(i);
@@ -87,7 +87,7 @@ public abstract class AbstractByteStoreTest {
             fail(ex.getMessage());
         } finally {
             if (tempDir != null) {
-                Files.deleteDir(tempDir);
+                LessFiles.deleteDir(tempDir);
             }
         }
     }

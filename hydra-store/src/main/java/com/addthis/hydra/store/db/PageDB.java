@@ -23,9 +23,9 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.ClosableIterator;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.codables.BytesCodable;
@@ -101,7 +101,7 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
                   int maxPages, PageFactory factory) throws IOException {
         String dbType = getByteStoreNameForFile(dir);
         this.keyCoder = new DBKeyCoder<>(clazz);
-        Files.initDirectory(dir);
+        LessFiles.initDirectory(dir);
         ByteStore store;
         switch (dbType) {
             case PAGED_MAP_DB:
@@ -115,13 +115,13 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
         }
         this.eps =  new SkipListCache.Builder<>(keyCoder, store, maxPageSize).
         maxPages(maxPages).pageFactory(factory).build();
-        Files.write(new File(dir, DB_TYPE_FILENAME), Bytes.toBytes(dbType), false);
+        LessFiles.write(new File(dir, DB_TYPE_FILENAME), LessBytes.toBytes(dbType), false);
     }
 
     public static String getByteStoreNameForFile(File dir) throws IOException {
         File typeFile = new File(dir, DB_TYPE_FILENAME);
         if (typeFile.exists()) {
-            return new String(Files.read(typeFile));
+            return new String(LessFiles.read(typeFile));
         } else {
             return DEFAULT_BYTESTORE;
         }

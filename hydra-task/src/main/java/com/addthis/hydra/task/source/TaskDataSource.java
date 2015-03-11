@@ -18,6 +18,7 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
+import com.addthis.hydra.task.output.WritableRootPaths;
 
 /**
  * This section of the job specification handles input sources.
@@ -30,7 +31,7 @@ import com.addthis.codec.codables.Codable;
  * @exclude-fields shardField, enabled
  */
 @Pluggable("input-source")
-public abstract class TaskDataSource implements Codable, DataChannelSource, Cloneable {
+public abstract class TaskDataSource implements Codable, DataChannelSource, Cloneable, WritableRootPaths {
 
     /**
      * Optionally specify a field that will be used as input to a

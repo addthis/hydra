@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.value;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.FieldConfig;
 
@@ -81,7 +81,7 @@ public class ValueFilterStringSlice extends StringFilter {
 
     @Override
     public String filter(String value) {
-        if (Strings.isEmpty(value)) {
+        if (LessStrings.isEmpty(value)) {
             return null;
         }
 

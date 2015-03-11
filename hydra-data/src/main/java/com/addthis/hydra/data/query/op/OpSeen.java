@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.query.op;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.table.DataTable;
@@ -52,7 +52,7 @@ public class OpSeen extends AbstractTableOp {
 
     public OpSeen(DataTableFactory tableFactory, String args, ChannelProgressivePromise queryPromise) {
         super(tableFactory, queryPromise);
-        String[] v = Strings.splitArray(args, ":");
+        String[] v = LessStrings.splitArray(args, ":");
         this.column = Integer.parseInt(v[0]);
         this.bits = Integer.parseInt(v[1]);
         this.bitsper = v.length > 2 ? Integer.parseInt(v[2]) : 4;

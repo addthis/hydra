@@ -16,7 +16,7 @@ package com.addthis.hydra.data.query.op;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
@@ -64,9 +64,9 @@ public class OpOrderMap extends AbstractRowOp {
         super(queryPromise);
         oTuples = new ArrayList<>();
         try {
-            String[] tuples = Strings.splitArray(args, ":");
+            String[] tuples = LessStrings.splitArray(args, ":");
             for (String tuple : tuples) {
-                String[] arg = Strings.splitArray(tuple, ",");
+                String[] arg = LessStrings.splitArray(tuple, ",");
                 oTuples.add(new OrderTuple(arg[0], arg[1], arg[2], arg[3]));
             }
         } catch (Exception e) {

@@ -17,8 +17,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.job.mq.CommandTaskKick;
@@ -118,7 +118,7 @@ public abstract class MinionWorkItem implements Runnable {
         long waited = System.currentTimeMillis() - start;
         String pid = null;
         try {
-            pid = Bytes.toString(Files.read(pidFile)).trim();
+            pid = LessBytes.toString(LessFiles.read(pidFile)).trim();
         } catch (FileNotFoundException ex) {
             log.warn("{} pid file not found", task.getName());
         }
@@ -157,7 +157,7 @@ public abstract class MinionWorkItem implements Runnable {
                 task.createDoneFileIfNoProcessRunning(pidFile, doneFile);
             }
             Thread.sleep(100);
-            return Bytes.toString(Files.read(doneFile)).trim();
+            return LessBytes.toString(LessFiles.read(doneFile)).trim();
 
         } catch (Exception ex)  {
             log.warn("", ex);

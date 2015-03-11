@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.bundle;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.basis.util.JitterClock;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundlePrinter;
@@ -116,7 +116,7 @@ public class BundleFilterDebugPrint implements BundleFilter {
         boolean print = (bundleCounter.getAndIncrement() < maxBundles) || testBundleTimer();
         if (print) {
             String bundleString = formatBundle(bundle);
-            if (Strings.isEmpty(prefix)) {
+            if (LessStrings.isEmpty(prefix)) {
                 log.info(bundleString);
             } else {
                 log.info(prefix + " : " + bundleString);

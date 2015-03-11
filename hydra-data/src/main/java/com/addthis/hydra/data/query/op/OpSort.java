@@ -16,7 +16,7 @@ package com.addthis.hydra.data.query.op;
 import java.util.Comparator;
 import java.util.StringTokenizer;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -70,7 +70,7 @@ public class OpSort extends AbstractTableOp {
         super(factory, queryPromise);
 
         StringTokenizer st = new StringTokenizer(args, ":");
-        cols = Strings.splitArray(st.hasMoreElements() ? st.nextToken() : "0", ",");
+        cols = LessStrings.splitArray(st.hasMoreElements() ? st.nextToken() : "0", ",");
 
         String ts = st.hasMoreElements() ? st.nextToken() : "s";
         while (ts.length() < cols.length) {

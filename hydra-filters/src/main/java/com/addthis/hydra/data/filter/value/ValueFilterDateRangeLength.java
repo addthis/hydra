@@ -18,7 +18,7 @@ import java.util.TreeSet;
 
 import com.addthis.basis.time.DTimeUnit;
 import com.addthis.basis.time.Dates;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.FieldConfig;
 
@@ -108,7 +108,7 @@ public class ValueFilterDateRangeLength extends StringFilter {
     }
 
     private String[] toArray(String dates) {
-        return Strings.splitArray(dates, (dateRangeSep));
+        return LessStrings.splitArray(dates, (dateRangeSep));
     }
 
     protected int countDays(String dates) {

@@ -20,6 +20,19 @@ import com.addthis.hydra.data.filter.util.UnaryOperation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
+/**
+ * <p>This {@link BundleFilter BundleFilter} <span class="hydra-summary">wraps another bundle filter and always returns
+ * true</span>.</p>
+ * <p>Example: wrap a chain so it never fails</p>
+ * <pre>
+ *     {safely:[
+ *         {has:"SOME_FIELD}
+ *         {from:"SOME_FIELD", to:"SOME_FLAG"}
+ *     ]}
+ * </pre>
+ *
+ * @user-reference
+ */
 public class BundleFilterSafely extends BundleFilterUnary {
 
     @JsonCreator public BundleFilterSafely(@Nullable BundleFilter filter) {

@@ -24,7 +24,7 @@ import java.util.concurrent.CyclicBarrier;
 
 import com.addthis.basis.test.SlowTest;
 import com.addthis.basis.util.ClosableIterator;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.store.db.CloseOperation;
@@ -186,7 +186,7 @@ public class TestConcurrentTree {
             tree.close(false, close);
         } finally {
             if (dir != null) {
-                Files.deleteDir(dir);
+                LessFiles.deleteDir(dir);
             }
         }
     }
@@ -220,7 +220,7 @@ public class TestConcurrentTree {
             tree.close(false, close);
         } finally {
             if (dir != null) {
-                Files.deleteDir(dir);
+                LessFiles.deleteDir(dir);
             }
         }
     }
@@ -260,7 +260,7 @@ public class TestConcurrentTree {
             tree.close(false, close);
         } finally {
             if (dir != null) {
-                Files.deleteDir(dir);
+                LessFiles.deleteDir(dir);
             }
         }
     }
@@ -320,7 +320,7 @@ public class TestConcurrentTree {
             tree.close(false, close);
         } finally {
             if (dir != null) {
-                Files.deleteDir(dir);
+                LessFiles.deleteDir(dir);
             }
         }
     }
@@ -365,7 +365,7 @@ public class TestConcurrentTree {
             tree.close(false, close);
         } finally {
             if (dir != null) {
-                Files.deleteDir(dir);
+                LessFiles.deleteDir(dir);
             }
         }
     }
@@ -461,7 +461,7 @@ public class TestConcurrentTree {
 
         } finally {
             if (dir != null) {
-                Files.deleteDir(dir);
+                LessFiles.deleteDir(dir);
             }
         }
 
@@ -518,7 +518,7 @@ public class TestConcurrentTree {
             tree.close(false, close);
         } finally {
             if (dir != null) {
-                Files.deleteDir(dir);
+                LessFiles.deleteDir(dir);
             }
         }
     }
@@ -551,7 +551,7 @@ public class TestConcurrentTree {
             tree.close(false, close);
         } finally {
             if (dir != null) {
-                Files.deleteDir(dir);
+                LessFiles.deleteDir(dir);
             }
         }
     }

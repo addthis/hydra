@@ -20,7 +20,7 @@ import java.io.InputStream;
 
 import java.util.zip.GZIPInputStream;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.Bundles;
@@ -68,7 +68,7 @@ public class BundleStreamPeeker {
         try {
 
             if (mesh != null) {
-                String[] hostPort = Strings.splitArray(mesh, ":");
+                String[] hostPort = LessStrings.splitArray(mesh, ":");
                 meshy = new MeshyClient(hostPort[0], Integer.parseInt(hostPort[1]));
                 FileSource src = new FileSource(meshy, new String[]{file});
                 src.waitComplete();

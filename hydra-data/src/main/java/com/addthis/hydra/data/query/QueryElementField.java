@@ -16,8 +16,8 @@ package com.addthis.hydra.data.query;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
@@ -63,10 +63,10 @@ public class QueryElementField implements Codable {
             tok = tok.substring(1);
             keys = memKey;
         }
-        String[] kv = Strings.splitArray(Bytes.urldecode(tok), "=");
+        String[] kv = LessStrings.splitArray(LessBytes.urldecode(tok), "=");
         if (kv.length == 2) {
             name = kv[0];
-            String[] keyarr = Strings.splitArray(kv[1], ",");
+            String[] keyarr = LessStrings.splitArray(kv[1], ",");
             keys = new BoundedValue[keyarr.length];
             for (int i = 0; i < keyarr.length; i++) {
                 keys[i] = new BoundedValue().parse(keyarr[i], nextColumn);
@@ -87,7 +87,7 @@ public class QueryElementField implements Codable {
         } else if (show()) {
             sb.append("+");
         }
-        sb.append(Bytes.urlencode(name != null ? name : ""));
+        sb.append(LessBytes.urlencode(name != null ? name : ""));
         if (keys != null && !mem() && keys.length > 0) {
             sb.append("=");
             for (BoundedValue bv : keys) {

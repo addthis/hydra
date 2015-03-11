@@ -24,7 +24,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
@@ -118,7 +118,7 @@ public class DataSourceHttp extends TaskDataSource {
                     }
                     String contentString = content.toString();
                     log.info("First {} characters of POST body are {}", LOG_TRUNCATE_CHARS,
-                             Strings.trunc(contentString, LOG_TRUNCATE_CHARS));
+                             LessStrings.trunc(contentString, LOG_TRUNCATE_CHARS));
                     os.write(contentString.getBytes());
                     break;
                 }

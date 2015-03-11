@@ -29,7 +29,7 @@ import static org.mockito.Mockito.when;
 import java.util.Collections;
 
 import com.addthis.basis.kv.KVPairs;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobParameter;
@@ -104,7 +104,7 @@ public class JobRequestHandlerImplTest {
     @Test
     public void createJob_ConfigTooLarge() throws Exception {
         kv.add("command", "default-task");
-        kv.add("config", Strings.repeat('x', 1_000_001));
+        kv.add("config", LessStrings.repeat('x', 1_000_001));
         callAndVerifyBadRequest();
         verifyNoSpawnCreateJobCall();
     }

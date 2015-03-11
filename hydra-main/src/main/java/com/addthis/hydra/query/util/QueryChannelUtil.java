@@ -22,8 +22,8 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -158,7 +158,7 @@ public class QueryChannelUtil {
             } else if (arg.startsWith("path=")) {
                 paths.add(arg.substring(5));
             } else if (arg.startsWith("fpath=")) {
-                paths.add(Bytes.toString(Files.read(new File(arg.substring(6)))).trim());
+                paths.add(LessBytes.toString(LessFiles.read(new File(arg.substring(6)))).trim());
             } else if (arg.startsWith("data=")) {
                 data = arg.substring(5);
             } else if (arg.startsWith("out=")) {
@@ -196,7 +196,7 @@ public class QueryChannelUtil {
 
         while (iter-- > 0) {
             long start = System.currentTimeMillis();
-            File tempDir = Files.createTempDir();
+            File tempDir = LessFiles.createTempDir();
             BlockingNullConsumer consumer = new BlockingNullConsumer();
             QueryOpProcessor proc = new QueryOpProcessor.Builder(consumer, lops.toArray(new String[lops.size()]))
                     .tempDir(tempDir).build();
@@ -204,7 +204,7 @@ public class QueryChannelUtil {
                     new DefaultChannelProgressivePromise(null, ImmediateEventExecutor.INSTANCE)));
             client.query(query, proc);
             consumer.waitComplete();
-            Files.deleteDir(tempDir);
+            LessFiles.deleteDir(tempDir);
             if (!quiet) {
                 System.out.println(">>> done " + proc + " in " + ((System.currentTimeMillis() - start) / 1000.0) + " sec");
             }

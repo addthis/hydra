@@ -25,8 +25,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.addthis.basis.collect.HotMap;
 import com.addthis.basis.net.HttpUtil;
 import com.addthis.basis.net.http.HttpResponse;
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Multidict;
 
 import com.addthis.bundle.value.ValueObject;
@@ -101,12 +101,12 @@ public class ValueFilterHttpGet extends StringFilter implements SuperCodable {
     @Override
     public void postDecode() {
         if (persist) {
-            persistTo = Files.initDirectory(persistDir);
+            persistTo = LessFiles.initDirectory(persistDir);
             LinkedList<CacheObject> list = new LinkedList<>();
             for (File file : persistTo.listFiles()) {
                 if (file.isFile()) {
                     try {
-                        CacheObject cached = codec.decode(CacheObject.class, Files.read(file));
+                        CacheObject cached = codec.decode(CacheObject.class, LessFiles.read(file));
                         cached.hash = file.getName();
                         list.add(cached);
                         if (log.isDebugEnabled()) {
@@ -154,7 +154,7 @@ public class ValueFilterHttpGet extends StringFilter implements SuperCodable {
         cached.hash = MD5HashFunction.hashAsString(key);
         cache.put(cached.key, cached);
         try {
-            Files.write(new File(persistTo, cached.hash), codec.encode(cached), false);
+            LessFiles.write(new File(persistTo, cached.hash), codec.encode(cached), false);
             if (log.isDebugEnabled()) {
                 log.debug("creating " + cached.hash + " for " + cached.key);
             }
@@ -187,7 +187,7 @@ public class ValueFilterHttpGet extends StringFilter implements SuperCodable {
                     String replacement = template.replace("{{}}", sv);
                     byte[] val = httpGet(replacement, null, null, timeout, trace);
                     if (val != null && (emptyOk || val.length > 0)) {
-                        cached = cachePut(sv, Bytes.toString(val));
+                        cached = cachePut(sv, LessBytes.toString(val));
                         break;
                     } else if (trace) {
                         log.error("{} returned {} retries left = {}", replacement, (val != null ? val.length : -1), retries);

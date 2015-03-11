@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.ValueUtil;
@@ -151,7 +151,7 @@ public class ValueFilterSplit extends AbstractValueFilterContextual {
             // produce "[foo" and "bar]". This is special handling to deal with that
             token = extractArray(value.asArray());
         } else {
-            token = Strings.splitArray(string, split);
+            token = LessStrings.splitArray(string, split);
         }
         if (keySplit != null) {
             ValueMap map = ValueFactory.createMap();

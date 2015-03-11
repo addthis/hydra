@@ -18,7 +18,7 @@ import java.io.ByteArrayInputStream;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.meshy.MeshyClient;
@@ -74,11 +74,11 @@ public class MeshHostScoreCache {
                                         return 50;
                                     }
                                     ByteArrayInputStream in = new ByteArrayInputStream(response);
-                                    int count = Bytes.readInt(in);
+                                    int count = LessBytes.readInt(in);
                                     HashMap<String, Integer> stats = new HashMap<>(1);
                                     while (count-- > 0) {
-                                        String key = Bytes.readString(in);
-                                        Integer val = Bytes.readInt(in);
+                                        String key = LessBytes.readString(in);
+                                        Integer val = LessBytes.readInt(in);
                                         stats.put(key, val);
                                     }
                                     return stats.get("sO") + scoreFudge;

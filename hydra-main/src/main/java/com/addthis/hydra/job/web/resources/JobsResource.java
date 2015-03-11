@@ -36,7 +36,7 @@ import java.util.regex.Pattern;
 
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.codec.config.Configs;
@@ -573,7 +573,7 @@ public class JobsResource {
     }
     
     private String jobUpdateAction(String id) {
-        return Strings.isEmpty(id) ? "created" : "updated";
+        return LessStrings.isEmpty(id) ? "created" : "updated";
     }
 
     /**
@@ -714,7 +714,7 @@ public class JobsResource {
                               @QueryParam("task") @DefaultValue("-1") int task) {
         try {
             if (jobIds.isPresent()) {
-                String[] joblist = Strings.splitArray(jobIds.get(), ",");
+                String[] joblist = LessStrings.splitArray(jobIds.get(), ",");
                 for (String aJob : joblist) {
                     startJobHelper(aJob, select);
                 }
@@ -976,7 +976,7 @@ public class JobsResource {
         try {
             if (jobIds.isPresent()) {
                 String ids = jobIds.get();
-                String[] joblist = Strings.splitArray(ids, ",");
+                String[] joblist = LessStrings.splitArray(ids, ",");
                 for (String jobName : joblist) {
                     boolean status = stopJobHelper(jobName, cancelParam, forceParam, nodeParam);
                     if (!status) {

@@ -44,10 +44,12 @@ public class TestValueFilterJSON {
         assertEquals(ValueFactory.create(""), json.filterValue(ValueFactory.create("\"\"")));
         assertEquals(ValueFactory.create("foo"), json.filterValue(ValueFactory.create("\"foo\"")));
         assertEquals(ValueFactory.create("foo\"bar"), json.filterValue(ValueFactory.create("\"foo\\\"bar\"")));
+        assertEquals(ValueFactory.create("foo\\bar"), json.filterValue(ValueFactory.create("\"foo\\\\bar\"")));
         assertEquals(ValueFactory.create("foo,bar"), json.filterValue(ValueFactory.create("\"foo,bar\"")));
         roundTrip(ValueFactory.create(""));
         roundTrip(ValueFactory.create("foo"));
         roundTrip(ValueFactory.create("foo\"bar"));
+        roundTrip(ValueFactory.create("foo\\bar"));
         roundTrip(ValueFactory.create("foo,bar"));
     }
 

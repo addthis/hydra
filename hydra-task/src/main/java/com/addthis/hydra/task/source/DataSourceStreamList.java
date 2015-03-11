@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
+
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -31,8 +33,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import com.addthis.basis.io.IOWrap;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueFactory;
@@ -45,6 +50,7 @@ import com.addthis.hydra.task.stream.StreamFile;
 import com.addthis.hydra.task.stream.StreamFileSource;
 import com.addthis.hydra.task.stream.StreamSourceHashed;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -196,7 +202,7 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
             sources = new StreamSourceHashed(sources, shards, shardTotal);
         }
         cacheFillerService.execute(new CacheFiller());
-        log.warn("shards=[" + Strings.join(shards, ",") + " of " + shardTotal + "] sources=" + sources + " peekers=" + peekerThreads + " maxCache=" + maxCacheSize);
+        log.warn("shards=[" + LessStrings.join(shards, ",") + " of " + shardTotal + "] sources=" + sources + " peekers=" + peekerThreads + " maxCache=" + maxCacheSize);
     }
 
     @Override
@@ -579,5 +585,10 @@ public abstract class DataSourceStreamList extends TaskDataSource implements Sup
                 Thread.currentThread().interrupt();
             }
         }
+    }
+
+    @Nonnull @Override
+    public ImmutableList<Path> writableRootPaths() {
+        return ImmutableList.of(Paths.get(markDir));
     }
 }

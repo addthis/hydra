@@ -22,8 +22,8 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.annotations.FieldConfig;
@@ -52,7 +52,7 @@ public class FilesystemDataStore implements SpawnDataStore, Codable {
 
     public FilesystemDataStore(final File file) throws Exception {
         this.file = file;
-        Files.initDirectory(file.getParentFile());
+        LessFiles.initDirectory(file.getParentFile());
         read();
         thread = new Thread("FilesystemDataStore Sync") {
             public void run() {
@@ -182,7 +182,7 @@ public class FilesystemDataStore implements SpawnDataStore, Codable {
     private synchronized void read() throws Exception {
         if (file.exists() && file.isFile() && file.lastModified() > lastMod) {
             log.info("(re)loading");
-            CodecJSON.decodeString(this, Bytes.toString(Files.read(file)));
+            CodecJSON.decodeString(this, LessBytes.toString(LessFiles.read(file)));
             lastMod = file.lastModified();
         }
     }
@@ -191,7 +191,7 @@ public class FilesystemDataStore implements SpawnDataStore, Codable {
         if (changed.compareAndSet(true,false)) {
             try {
                 if (debug) log.info("writing");
-                Files.write(file, Bytes.toBytes(CodecJSON.encodeString(this)), false);
+                LessFiles.write(file, LessBytes.toBytes(CodecJSON.encodeString(this)), false);
                 lastMod = file.lastModified();
             } catch (Exception ex) {
                 log.error("unable to write to datastore", ex);

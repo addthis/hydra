@@ -15,7 +15,7 @@ package com.addthis.hydra.data.query;
 
 import java.util.StringTokenizer;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.SuperCodable;
@@ -38,7 +38,7 @@ public class BoundedValue implements SuperCodable {
     public boolean bounded;
 
     public BoundedValue parse(String tok, MutableInt nextColumn) {
-        StringTokenizer st = new StringTokenizer(Bytes.urldecode(tok), "<>=", true);
+        StringTokenizer st = new StringTokenizer(LessBytes.urldecode(tok), "<>=", true);
         name = st.nextToken();
         while (st.hasMoreTokens()) {
             String next = st.nextToken();
@@ -59,7 +59,7 @@ public class BoundedValue implements SuperCodable {
     }
 
     void toCompact(StringBuilder sb) {
-        sb.append(Bytes.urlencode(name != null ? name : ""));
+        sb.append(LessBytes.urlencode(name != null ? name : ""));
         if (gt != null) {
             sb.append(">" + gt);
         }

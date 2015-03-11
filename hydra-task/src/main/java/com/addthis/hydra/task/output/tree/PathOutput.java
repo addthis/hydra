@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.task.output.tree;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.table.DataTable;
@@ -72,7 +72,7 @@ public class PathOutput extends PathElement {
 
     @Override
     public String toString() {
-        return description != null ? description : Strings.join(query, "/");
+        return description != null ? description : LessStrings.join(query, "/");
     }
 
     @Override
@@ -82,7 +82,7 @@ public class PathOutput extends PathElement {
             throw new RuntimeException("either query or queryString required in PathOutput");
         }
         if (query == null) {
-            String[] q = Strings.splitArray(queryString, "/");
+            String[] q = LessStrings.splitArray(queryString, "/");
             query = new QueryElement[q.length];
             MutableInt col = new MutableInt(0);
             int i = 0;

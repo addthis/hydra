@@ -30,8 +30,8 @@ import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
 import com.addthis.basis.net.HttpUtil;
 import com.addthis.basis.net.http.HttpResponse;
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessStrings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.bark.StringSerializer;
@@ -155,7 +155,7 @@ public class SpawnManager {
                 String jobarg = kv.getValue("jobs");
                 boolean enable = kv.getValue("enable", "1").equals("1");
                 if (jobarg != null) {
-                    String[] joblist = Strings.splitArray(jobarg, ",");
+                    String[] joblist = LessStrings.splitArray(jobarg, ",");
                     emitLogLineForAction(kv, (enable ? "enable" : "disable") + " jobs " + jobarg);
                     for (String jobid : joblist) {
                         IJob job = spawn.getJob(jobid);
@@ -227,12 +227,12 @@ public class SpawnManager {
                 String post = kv.getValue("post", "");
                 int timeout = kv.getIntValue("timeout", 10000);
                 byte[] res = null;
-                HttpResponse response = HttpUtil.execute(HttpUtil.makePost(url, type, Bytes.toBytes(post)), timeout);
+                HttpResponse response = HttpUtil.execute(HttpUtil.makePost(url, type, LessBytes.toBytes(post)), timeout);
                 if (response.getStatus() == 200) {
                     res = response.getBody();
                 }
                 if (res != null && res.length > 0) {
-                    link.sendShortReply(200, "OK", Bytes.toString(res));
+                    link.sendShortReply(200, "OK", LessBytes.toString(res));
                 } else {
                     link.sendShortReply(500, "No Content", "");
                 }
@@ -308,9 +308,9 @@ public class SpawnManager {
                 String owner = kv.getValue("owner", "unknown").trim();
                 require(label != null, "missing label");
                 require(command.length() > 0, "missing command");
-                String[] cmdtok = Strings.splitArray(command, ",");
+                String[] cmdtok = LessStrings.splitArray(command, ",");
                 for (int i = 0; i < cmdtok.length; i++) {
-                    cmdtok[i] = Bytes.urldecode(cmdtok[i]);
+                    cmdtok[i] = LessBytes.urldecode(cmdtok[i]);
                 }
                 jobCommandManager.putEntity(label, new JobCommand(owner, cmdtok, kv.getIntValue("cpu", 0), kv.getIntValue("mem", 0), kv.getIntValue("io", 0)), true);
                 kv.putValue("return", 1);
@@ -604,7 +604,8 @@ public class SpawnManager {
                 String owner = kv.getValue("owner");
                 JSONArray a = new JSONArray();
                 for (IJob job : spawn.listJobsConcurrentImmutable()) {
-                    if ((owner == null && ids == null) || (ids != null && ids.contains(job.getId())) || Strings.isEqual(owner, job.getOwner())) {
+                    if ((owner == null && ids == null) || (ids != null && ids.contains(job.getId())) || LessStrings.isEqual(
+                            owner, job.getOwner())) {
                         a.put(job.toJSON().put("config", ""));
                     }
                 }
@@ -755,7 +756,7 @@ public class SpawnManager {
                 IJob job = spawn.createJob(
                         kv.getValue("owner", "anonymous"),
                         kv.getIntValue("nodes", -1),
-                        Arrays.asList(Strings.splitArray(kv.getValue("hosts", ""), ",")),
+                        Arrays.asList(LessStrings.splitArray(kv.getValue("hosts", ""), ",")),
                         kv.getValue("minionType", Minion.defaultMinionType),
                         kv.getValue("command"));
                 String id = job.getId();
@@ -939,8 +940,8 @@ public class SpawnManager {
                 KVPairs kv = link.getRequestValues();
                 try {
                     InputStream in = spawn.getMeshyClient().readFile(kv.getValue("uuid", "-"), kv.getValue("path", "-"));
-                    byte[] data = Bytes.readFully(in);
-                    String value = Bytes.toString(data);
+                    byte[] data = LessBytes.readFully(in);
+                    String value = LessBytes.toString(data);
                     link.sendShortReply(200, "OK", value.length() > 0 ? value : "");
                 } catch (Exception e) {
                     link.sendShortReply(200, "No Content", "");

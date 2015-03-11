@@ -15,7 +15,7 @@ package com.addthis.hydra.task.output.tree;
 
 import java.util.ArrayList;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.tree.TreeNodeList;
@@ -63,7 +63,7 @@ public final class PathBranch extends PathElement {
 
     @Override
     public String toString() {
-        return "[PathEach each=" + (each != null ? Strings.join(each, ",") : "null") + " list=" + list + "]";
+        return "[PathEach each=" + (each != null ? LessStrings.join(each, ",") : "null") + " list=" + list + "]";
     }
 
     public void setEach(PathElement[] each) {

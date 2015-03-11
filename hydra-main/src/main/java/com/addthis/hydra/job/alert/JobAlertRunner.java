@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
@@ -248,7 +248,7 @@ public class JobAlertRunner {
         StringBuilder sb = new StringBuilder(subject + "\n");
         sb.append("Alert link : http://" + clusterHead + ":5052/spawn2/index.html#alerts/" + jobAlert.alertId + "\n");
         String description = jobAlert.description;
-        if (Strings.isNotEmpty(description)) {
+        if (LessStrings.isNotEmpty(description)) {
             sb.append("Alert Description : " + description + "\n");
         }
         for (Map.Entry<String, String> entry : errors.entrySet()) {

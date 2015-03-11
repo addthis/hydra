@@ -25,7 +25,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.channel.DataChannelError;
@@ -255,8 +255,8 @@ class DataChannelToInputStream implements DataChannelOutput, VirtualFileInput, B
             if (!writer.isClosed()) {
                 synchronized (out) {
                     out.write(FramedDataChannelReader.FRAME_ERROR);
-                    Bytes.writeString(er.getClass().getCanonicalName(), out);
-                    Bytes.writeString(er.getMessage(), out);
+                    LessBytes.writeString(er.getClass().getCanonicalName(), out);
+                    LessBytes.writeString(er.getMessage(), out);
                     emitChunks();
                     eof = true;
                 }

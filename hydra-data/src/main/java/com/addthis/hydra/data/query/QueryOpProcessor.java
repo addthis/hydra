@@ -27,7 +27,7 @@ import java.nio.file.Path;
 
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.channel.DataChannelOutput;
@@ -166,7 +166,7 @@ public class QueryOpProcessor implements DataChannelOutput, QueryMemTracker, Clo
                 continue;
             }
 
-            for (String s : Strings.split(ops, ";")) {
+            for (String s : LessStrings.split(ops, ";")) {
                 KVPair kv = KVPair.parsePair(s);
                 String args = kv.getValue();
                 String opName = kv.getKey().toUpperCase();
