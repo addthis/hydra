@@ -290,7 +290,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         int canonicalTasks;
         if (!allowPartial && (spawnDataStoreHandler != null)) {
             try {
-                canonicalTasks = spawnDataStoreHandler.validateTaskCount(jobId, fileReferenceMap);
+                canonicalTasks = spawnDataStoreHandler.validateTaskCount(jobId, fileReferenceMap, tasks);
             } catch (Exception ex) {
                 cachey.invalidate(combinedJob);
                 throw ex;
