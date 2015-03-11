@@ -46,6 +46,7 @@ import com.addthis.hydra.query.tracker.TrackerHandler;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Multimap;
@@ -178,7 +179,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         }
     }
 
-    private String getJobSubdirectory(String combinedJob) {
+    private static String getJobSubdirectory(String combinedJob) {
         int dirIndex = combinedJob.indexOf('/');
         if (dirIndex > -1) {
             return combinedJob.substring(dirIndex + 1);
@@ -187,7 +188,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         }
     }
 
-    private String getJobWithoutSubdirectory(String combinedJob) {
+    private static String getJobWithoutSubdirectory(String combinedJob) {
         int dirIndex = combinedJob.indexOf('/');
         if (dirIndex > -1) {
             return combinedJob.substring(0, dirIndex);
@@ -238,14 +239,14 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         ctx.pipeline().write(query, promise);
     }
 
-    private Set<Integer> parseTasks(String tasks) {
+    private static Set<Integer> parseTasks(String tasks) {
         if (Strings.isNullOrEmpty(tasks)) {
             return Collections.emptySet();
         } else {
             return Sets.newHashSet(Splitter.on(',').trimResults().split(tasks)).stream()
-                .map(Ints::tryParse)
-                .filter(i -> i != null)
-                .collect(Collectors.toSet());
+                       .map(Ints::tryParse)
+                       .filter(i -> i != null)
+                       .collect(Collectors.toSet());
         }
     }
 
@@ -331,8 +332,10 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
      */
     public QueryTaskSourceOption getReplacementQueryTaskOption(FileReference failedReference)
             throws IOException, ExecutionException, InterruptedException {
-        String job = getJobFromPath(failedReference.name);
-        int task = getTaskFromPath(failedReference.name);
+        List<String> pathTokens = tokenizePath(failedReference.name);
+        String job = getJobFromPath(pathTokens);
+        int task = getTaskFromPath(pathTokens);
+
         Set<FileReference> oldReferences = cachey.getTaskReferencesIfPresent(job, task);
         Set<FileReference> newReferences = new HashSet<>(oldReferences);
         newReferences.remove(failedReference);
@@ -347,17 +350,21 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         return new QueryTaskSourceOption(cachedReplacement, workerData.queryLeases);
     }
 
-    private static String getJobFromPath(String path) {
-        int jobStart = path.indexOf('/', 1) + 1;
-        int jobEnd = path.indexOf('/', jobStart);
-        return path.substring(jobStart, jobEnd);
+    // omit empty strings so that we don't have to worry about random "//" instead of "/" or leading "/"s
+    private static final Splitter FILEREF_PATH_SPLITTER = Splitter.on('/').omitEmptyStrings().limit(5);
+
+    @VisibleForTesting static List<String> tokenizePath(String path) {
+       return FILEREF_PATH_SPLITTER.splitToList(path);
     }
 
-    private static int getTaskFromPath(String path) {
-        int jobStart = path.indexOf('/', 1) + 1;
-        int jobEnd = path.indexOf('/', jobStart);
-        int taskStart = jobEnd + 1;
-        int taskEnd = path.indexOf('/', taskStart);
-        return Integer.parseInt(path.substring(taskStart, taskEnd));
+    @VisibleForTesting static String getJobFromPath(List<String> pathTokens) {
+        String jobId = pathTokens.get(1);
+        String jobDirWithSuffix = pathTokens.get(4);
+        String jobDir = jobDirWithSuffix.substring(0, jobDirWithSuffix.length() - 6);
+        return jobId + '/' + jobDir;
+    }
+
+    @VisibleForTesting static int getTaskFromPath(List<String> pathTokens) {
+        return Integer.parseInt(pathTokens.get(2));
     }
 }
