@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import java.nio.file.Paths;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.bundle.core.Bundle;
@@ -30,11 +30,14 @@ import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.util.AutoField;
+import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.data.query.source.QueryEngineSource;
 import com.addthis.hydra.data.query.source.QueryEngineSourceSingle;
+import com.addthis.hydra.data.query.source.QueryHandle;
 import com.addthis.hydra.data.tree.ReadTree;
+import com.addthis.hydra.task.run.TaskRunConfig;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
@@ -82,11 +85,13 @@ public class DataSourceQuery extends AbstractStreamDataSource implements DataCha
      */
     @JsonProperty private AutoField[] fields;
 
+    @JsonProperty private TaskRunConfig config;
+
     private final AtomicReference<Throwable> firstError = new AtomicReference<>();
 
     private QueryEngineSourceSingle queryEngine;
 
-    private QueryEngineSource.Handle queryHandle;
+    private QueryHandle queryHandle;
 
     private File tempDir;
 
@@ -100,9 +105,9 @@ public class DataSourceQuery extends AbstractStreamDataSource implements DataCha
         }
         try {
             File dir = Paths.get(treeDir).toFile();
-            tempDir = Files.createTempDir();
+            tempDir = LessFiles.createTempDir();
             queryEngine = new QueryEngineSourceSingle(new ReadTree(dir));
-            Query query = new Query(System.getenv("HYDRA_JOBID"), new String[] {path}, null);
+            Query query = new Query(config.jobId, new String[] {path}, null);
             QueryOpProcessor proc = new QueryOpProcessor.Builder(this, new String[]{ops})
                     .tempDir(tempDir).build();
             queryHandle = queryEngine.query(query, proc);
@@ -116,16 +121,17 @@ public class DataSourceQuery extends AbstractStreamDataSource implements DataCha
     @Override public void close() {
         if (shuttingDown.compareAndSet(false, true)) {
             try {
-                if (queryHandle != null && queryHandle.isAlive()) {
+                if (queryHandle != null) {
                     queryHandle.cancel("closing query input source");
                 }
             } catch (Exception ex) {
                 firstError.compareAndSet(null, ex);
                 log.error("Error attempting to cancel query:", ex);
             }
+            queryEngine.close();
             try {
                 if (tempDir != null) {
-                    Files.deleteDir(tempDir);
+                    LessFiles.deleteDir(tempDir);
                 }
             } catch (Exception ex) {
                 firstError.compareAndSet(null, ex);

@@ -13,7 +13,13 @@
  */
 package com.addthis.hydra.data.query.source;
 
-import java.util.concurrent.Semaphore;
+import java.io.Closeable;
+
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.Parameter;
 
@@ -21,6 +27,8 @@ import com.addthis.bundle.channel.DataChannelOutput;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryException;
 import com.addthis.hydra.data.query.engine.QueryEngine;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Gauge;
@@ -33,47 +41,60 @@ import io.netty.channel.DefaultChannelProgressivePromise;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /** */
-public abstract class QueryEngineSource implements QuerySource {
+public abstract class QueryEngineSource implements QuerySource, Closeable {
 
     private static final int maxConcurrency = Parameter.intValue("query.engine.source.maxConcurrency", 4);
 
     private final Logger log = LoggerFactory.getLogger(QueryEngineSource.class);
-    private final Semaphore engineGate = new Semaphore(maxConcurrency);
 
-    private final Gauge<Integer> engineGatePermitMetric = Metrics.newGauge(QueryEngineSource.class, "engineGatePermitMetric", new Gauge<Integer>() {
+    @SuppressWarnings("unused")
+    private final Gauge<Integer> engineGatePermitMetric = Metrics.newGauge(QueryEngineSource.class,
+                                                                           "engineGatePermitMetric",
+                                                                           new Gauge<Integer>() {
         @Override
         public Integer value() {
-            return engineGate.availablePermits();
+            return (maxConcurrency - executor.getActiveCount());
         }
     });
+
     private final Histogram engineGateHistogram = Metrics.newHistogram(QueryEngineSource.class, "engineGateHistogram");
 
+    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(maxConcurrency, maxConcurrency,
+                                                                       0L, TimeUnit.MILLISECONDS,
+                                                                       new LinkedBlockingQueue<>(),
+                                                                       new ThreadFactoryBuilder()
+                                                                               .setNameFormat("QueryEngineSource-%d")
+                                                                               .setDaemon(true)
+                                                                               .build());
+
+    private final AtomicBoolean closed = new AtomicBoolean();
+
     @Override
-    public Handle query(final Query query, final DataChannelOutput consumer) throws QueryException {
-        return new Handle(query, consumer);
+    public QueryHandle query(final Query query, final DataChannelOutput consumer) throws QueryException {
+        Handle result = new Handle(query, consumer);
+        result.setFuture(executor.submit(result));
+        return result;
     }
 
     public abstract QueryEngine getEngineLease();
 
     /** */
-    public class Handle extends Thread implements QueryHandle {
+    public class Handle implements Runnable, QueryHandle {
 
-        private Query query;
-        private QueryEngine engine;
-        private DataChannelOutput consumer;
+        private final Query query;
+        private final DataChannelOutput consumer;
+        private Future<?> future;
 
         Handle(Query query, DataChannelOutput consumer) {
-            setName("EngineSource " + query.uuid());
             this.query = query;
             this.consumer = consumer;
-            start();
         }
 
-        @Override public void run() {
-            engine = null;
+        @Override
+        public void run() {
+            QueryEngine engine = null;
             try {
-                engineGate.acquire(1);
-                engineGateHistogram.update(engineGate.availablePermits());
+                engineGateHistogram.update(maxConcurrency - executor.getActiveCount());
                 engine = getEngineLease();
                 engine.search(query, consumer,
                         new DefaultChannelProgressivePromise(null, ImmediateEventExecutor.INSTANCE));
@@ -85,24 +106,27 @@ public abstract class QueryEngineSource implements QuerySource {
                 log.warn("query error " + query.uuid() + " " + e + " " + consumer, e);
                 consumer.sourceError(new QueryException(e));
             } finally {
-                engineGate.release();
-                engineGateHistogram.update(engineGate.availablePermits());
+                engineGateHistogram.update(maxConcurrency - executor.getActiveCount());
                 if (engine != null) {
                     try {
                         engine.release();
                     } catch (Throwable t) {
                         log.warn("[dispatch] error during db release of " + engine + " : " + t, t);
-                        }
+                    }
                 }
             }
         }
 
         @Override
         public void cancel(String message) {
-            log.warn(query.uuid() + " cancel called on handle " + consumer + " message: " + message);
-            if (engine != null) {
-                interrupt();
+            if (future != null) {
+                log.warn(query.uuid() + " cancel called on handle " + consumer + " message: " + message);
+                future.cancel(true);
             }
+        }
+
+        void setFuture(Future<?> future) {
+            this.future = future;
         }
     }
 
@@ -112,6 +136,13 @@ public abstract class QueryEngineSource implements QuerySource {
 
     @Override
     public boolean isClosed() {
-        return false;
+        return closed.get();
+    }
+
+    @Override
+    public void close() {
+        if(!closed.getAndSet(true)) {
+            executor.shutdownNow();
+        }
     }
 }
