@@ -18,6 +18,7 @@ import java.io.File;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -31,10 +32,13 @@ import com.google.common.collect.SetMultimap;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class MeshQueryMasterTest {
+    private static final Logger log = LoggerFactory.getLogger(MeshQueryMasterTest.class);
 
     private MeshQueryMaster meshQueryMaster;
     private String tmpRoot;
@@ -80,6 +84,15 @@ public class MeshQueryMasterTest {
             Collection<FileReference> filteredFileReferences = filteredFileReferenceMap.get(entry.getKey());
             assertEquals(fileReferenceWrappers.size(), filteredFileReferences.size());
         }
+    }
+
+    @Test public void pathSplitting() throws Exception {
+        String queryDirPath = "/job/abcdef/1/gold/data/maybe-more/query";
+        List<String> pathTokens = MeshQueryMaster.tokenizePath(queryDirPath);
+        String job = MeshQueryMaster.getJobFromPath(pathTokens);
+        int task = MeshQueryMaster.getTaskFromPath(pathTokens);
+        assertEquals("abcdef/data/maybe-more", job);
+        assertEquals(1, task);
     }
 
     @Test

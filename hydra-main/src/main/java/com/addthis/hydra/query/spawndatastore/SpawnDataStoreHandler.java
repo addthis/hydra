@@ -18,10 +18,9 @@ import java.io.IOException;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -37,6 +36,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 
 public class SpawnDataStoreHandler {
 
@@ -124,7 +124,7 @@ public class SpawnDataStoreHandler {
      *
      * @return The canonical task count according to spawn/ zookeeper
      */
-    public int validateTaskCount(String job, Multimap<Integer, FileReference> fileReferenceMap) {
+    public int validateTaskCount(String job, Multimap<Integer, FileReference> fileReferenceMap, Set<Integer> tasks) {
         IJob zkJob;
         try {
             zkJob = jobConfigurationCache.get(job);
@@ -136,30 +136,32 @@ public class SpawnDataStoreHandler {
             throw new QueryException(errorMessage);
         }
 
-        final int taskCount = new Job(zkJob).getTaskCount();
-        int fileReferenceCount = fileReferenceMap.keySet().size();
-        if (fileReferenceCount != taskCount) {
-            final String errorMessage = "Did not find data for all tasks (and allowPartial is off): "
-                                        + fileReferenceCount + " out of " + taskCount;
-            final int numMissing = taskCount - fileReferenceCount;
-            final String label = ". Missing the following " + numMissing + " tasks : ";
-            final StringBuilder sb = new StringBuilder();
-            final SortedMap<Integer, Collection<FileReference>> sortedMap = new TreeMap<>(fileReferenceMap.asMap());
-            final Iterator<Integer> it = sortedMap.keySet().iterator();
-            Integer key = it.next();
-            for (int i = 0; i < taskCount; i++) {
-                if ((key == null) || (i != key)) {
-                    if (sb.length() > 0) {
-                        sb.append(", ");
-                    }
-                    sb.append(i);
-                } else {
-                    key = it.hasNext() ? it.next() : null;
-                }
+        int canonicalTaskCount = new Job(zkJob).getTaskCount();
+        Set<Integer> availableTasks = fileReferenceMap.keySet();
+        if (availableTasks.size() != canonicalTaskCount) {
+            Set<Integer> requestedTasks = getRequestedTasks(tasks, canonicalTaskCount);
+            Set<Integer> missingTasks = Sets.difference(requestedTasks, availableTasks);
+            if (!missingTasks.isEmpty()) {
+                String err = "Did not find data for all " + requestedTasks.size() +
+                             " requested tasks (and allowPartial is off): " + availableTasks.size() +
+                             " available out of " + canonicalTaskCount + " total. Missing the following " +
+                             missingTasks.size() + " tasks: " + missingTasks;
+                throw new QueryException(err);
             }
-            throw new QueryException(errorMessage + label + sb.toString());
         }
-        return taskCount;
+        return canonicalTaskCount;
+    }
+
+    private TreeSet<Integer> getRequestedTasks(Set<Integer> tasks, int canonicalTaskCount) {
+        if (tasks.isEmpty()) {
+            TreeSet<Integer> requestedTasks = new TreeSet<>();
+            for (int i = 0; i < canonicalTaskCount; i++) {
+                requestedTasks.add(i);
+            }
+            return requestedTasks;
+        } else {
+            return new TreeSet<>(tasks);
+        }
     }
 
 }
