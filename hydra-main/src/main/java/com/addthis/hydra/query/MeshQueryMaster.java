@@ -209,19 +209,19 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         boolean allowPartial = Boolean.valueOf(query.getParameter("allowPartial"));
         Set<Integer> tasks = parseTasks(query.getParameter("tasks"));
         List<QueryTaskSource[]> sourcesPerDir = new ArrayList<>(2);
-        for (String combinedJob : JOB_SPLITTER.split(query.getJob())) {
-            String jobId = getJobWithoutSubdirectory(combinedJob);
-            String subdirectory = getJobSubdirectory(combinedJob);
-            for (String alias : expandAlias(jobId)) {
-                String aliasJobId = getJobWithoutSubdirectory(alias);
-                String aliasSubdirectory;
-                if (!subdirectory.isEmpty()) {
-                    aliasSubdirectory = subdirectory;
+        for (String combinedJobOrAlias : JOB_SPLITTER.split(query.getJob())) {
+            String jobIdOrAlias = getJobWithoutSubdirectory(combinedJobOrAlias);
+            String combinedSubdirectory = getJobSubdirectory(combinedJobOrAlias);
+            for (String combinedJob : expandAlias(jobIdOrAlias)) {
+                String jobId = getJobWithoutSubdirectory(combinedJob);
+                String jobSubdirectory;
+                if (!combinedSubdirectory.isEmpty()) {
+                    jobSubdirectory = combinedSubdirectory;
                 } else {
-                    aliasSubdirectory = getJobSubdirectory(alias);
+                    jobSubdirectory = getJobSubdirectory(combinedJob);
                 }
 
-                sourcesPerDir.add(getSourcesById(aliasJobId, aliasSubdirectory, allowPartial, tasks));
+                sourcesPerDir.add(getSourcesById(jobId, jobSubdirectory, allowPartial, tasks));
             }
         }
         QueryTaskSource[] sourcesByTaskID;
