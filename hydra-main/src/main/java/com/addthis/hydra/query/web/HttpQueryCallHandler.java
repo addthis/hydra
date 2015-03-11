@@ -80,6 +80,7 @@ public final class HttpQueryCallHandler {
         }
         query.setParameterIfNotYetSet("allocator", kv.getValue("allocator"));
         query.setParameterIfNotYetSet("allowPartial", kv.getValue("allowPartial"));
+        query.setParameterIfNotYetSet("tasks", kv.getValue("tasks"));
 
         String filename = kv.getValue("filename", "query");
         String format = kv.getValue("format", "json");
@@ -107,7 +108,8 @@ public final class HttpQueryCallHandler {
                     .put("timeout", query.getParameter("timeout"))
                     .put("requestIP", query.getParameter("remoteip"))
                     .put("allocator", query.getParameter("allocator"))
-                    .put("allowPartial", query.getParameter("allowPartial")).createKVPairs().toString());
+                    .put("allowPartial", query.getParameter("allowPartial"))
+                    .put("tasks", query.getParameter("tasks")).createKVPairs().toString());
         }
         // support legacy async query semantics
         query = LegacyHandler.handleQuery(query, kv, request, ctx);

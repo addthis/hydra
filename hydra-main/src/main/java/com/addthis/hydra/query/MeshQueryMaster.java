@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import com.addthis.basis.util.Files;
 import com.addthis.basis.util.Parameter;
@@ -46,7 +47,10 @@ import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -202,6 +206,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
 
 
         boolean allowPartial = Boolean.valueOf(query.getParameter("allowPartial"));
+        Set<Integer> tasks = parseTasks(query.getParameter("tasks"));
         List<QueryTaskSource[]> sourcesPerDir = new ArrayList<>(2);
         for (String combinedJob : JOB_SPLITTER.split(query.getJob())) {
             String jobId = getJobWithoutSubdirectory(combinedJob);
@@ -215,7 +220,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
                     aliasSubdirectory = getJobSubdirectory(alias);
                 }
 
-                sourcesPerDir.add(getSourcesById(aliasJobId, aliasSubdirectory, allowPartial));
+                sourcesPerDir.add(getSourcesById(aliasJobId, aliasSubdirectory, allowPartial, tasks));
             }
         }
         QueryTaskSource[] sourcesByTaskID;
@@ -233,6 +238,17 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         ctx.pipeline().write(query, promise);
     }
 
+    private Set<Integer> parseTasks(String tasks) {
+        if (Strings.isNullOrEmpty(tasks)) {
+            return Collections.emptySet();
+        } else {
+            return Sets.newHashSet(Splitter.on(',').trimResults().split(tasks)).stream()
+                .map(Ints::tryParse)
+                .filter(i -> i != null)
+                .collect(Collectors.toSet());
+        }
+    }
+
     private List<String> expandAlias(String jobId) {
         if (spawnDataStoreHandler != null) {
             return spawnDataStoreHandler.expandAlias(jobId);
@@ -241,7 +257,13 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         }
     }
 
-    private QueryTaskSource[] getSourcesById(String jobId, String subdirectory, boolean allowPartial) {
+    /**
+     * @param tasks only query these task ids. empty means query all tasks.
+     */
+    private QueryTaskSource[] getSourcesById(String jobId,
+                                             String subdirectory,
+                                             boolean allowPartial,
+                                             Set<Integer> tasks) {
         if (spawnDataStoreHandler != null) {
             spawnDataStoreHandler.validateJobForQuery(jobId);
         }
@@ -281,7 +303,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         QueryTaskSource[] sourcesByTaskID = new QueryTaskSource[canonicalTasks];
         for (int i = 0; i < canonicalTasks; i++) {
             Collection<FileReference> sourceOptions = fileReferenceMap.get(i);
-            if (sourceOptions != null) {
+            if (sourceOptions != null && (tasks.isEmpty() || tasks.contains(i))) {
                 QueryTaskSourceOption[] taskSourceOptions = new QueryTaskSourceOption[sourceOptions.size()];
                 int taskSourceOptionsIndex = 0;
                 for (FileReference queryReference : sourceOptions) {
