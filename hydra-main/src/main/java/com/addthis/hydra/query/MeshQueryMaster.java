@@ -348,16 +348,16 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
     }
 
     private static String getJobFromPath(String path) {
-        int jobStart = path.indexOf('/', 1);
-        int jobEnd = path.indexOf('/', jobStart + 1);
+        int jobStart = path.indexOf('/', 1) + 1;
+        int jobEnd = path.indexOf('/', jobStart);
         return path.substring(jobStart, jobEnd);
     }
 
     private static int getTaskFromPath(String path) {
-        int jobStart = path.indexOf('/', 1);
-        int jobEnd = path.indexOf('/', jobStart + 1);
+        int jobStart = path.indexOf('/', 1) + 1;
+        int jobEnd = path.indexOf('/', jobStart);
         int taskStart = jobEnd + 1;
-        int taskEnd = path.indexOf('/', taskStart + 1);
+        int taskEnd = path.indexOf('/', taskStart);
         return Integer.parseInt(path.substring(taskStart, taskEnd));
     }
 }
