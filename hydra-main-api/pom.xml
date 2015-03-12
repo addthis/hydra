@@ -30,6 +30,10 @@
     <!-- addthis open source -->
     <dependency>
       <groupId>com.addthis</groupId>
+      <artifactId>bundle</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.addthis</groupId>
       <artifactId>codec</artifactId>
     </dependency>
   </dependencies>

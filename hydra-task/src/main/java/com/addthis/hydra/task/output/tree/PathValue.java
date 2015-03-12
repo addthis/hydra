@@ -168,7 +168,14 @@ public class PathValue extends PathElement {
         } else {
             list = processNodeUpdates(state, value);
         }
-        return term ? null : list;
+        if (term) {
+            if (list != null) {
+                list.forEach(DataTreeNode::release);
+            }
+            return null;
+        } else {
+            return list;
+        }
     }
 
     /**
@@ -219,7 +226,7 @@ public class PathValue extends PathElement {
                         if (children != null) {
                             list.addAll(children);
                         }
-                        state.pop();
+                        state.pop().release();
                     }
                 }
             }
@@ -227,9 +234,13 @@ public class PathValue extends PathElement {
             pushed += processNodeByValue(list, state, name);
         }
         while (pushed-- > 0) {
-            state.pop();
+            state.pop().release();
         }
-        return list.size() > 0 ? list : null;
+        if (!list.isEmpty()) {
+            return list;
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -265,18 +276,24 @@ public class PathValue extends PathElement {
         }
         /* bail if only new nodes are required */
         if (once && !isnew) {
+            child.release();
             return 0;
         }
-        /** child node accounting and custom data updates */
-        child.updateChildData(state, this);
-        /** update node data accounting */
-        parent.updateParentData(state, child, isnew);
-        if (push) {
-            state.push(child);
-            return 1;
-        } else {
-            list.add(child);
-            return 0;
+        try {
+            /** child node accounting and custom data updates */
+            child.updateChildData(state, this);
+            /** update node data accounting */
+            parent.updateParentData(state, child, isnew);
+            if (push) {
+                state.push(child);
+                return 1;
+            } else {
+                list.add(child);
+                return 0;
+            }
+        } catch (Throwable t) {
+            child.release();
+            throw t;
         }
     }
 }

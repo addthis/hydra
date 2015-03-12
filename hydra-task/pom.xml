@@ -29,6 +29,10 @@
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-data</artifactId>
     </dependency>
+      <dependency>
+          <groupId>com.addthis.hydra</groupId>
+          <artifactId>hydra-main-api</artifactId>
+      </dependency>
     <dependency>
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-mq</artifactId>

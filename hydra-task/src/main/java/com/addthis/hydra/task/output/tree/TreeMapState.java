@@ -13,6 +13,10 @@
  */
 package com.addthis.hydra.task.output.tree;
 
+import javax.annotation.Nullable;
+
+import com.addthis.hydra.data.tree.DataTreeNode;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -35,14 +39,10 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
 
     private static final Logger log = LoggerFactory.getLogger(TreeMapState.class);
     private static final int debug = Integer.parseInt(System.getProperty("hydra.process.debug", "0"));
-    private static final boolean debuglist = System.getProperty("hydra.process.debuglist", "0").equals("1");
     private static final boolean debugthread = System.getProperty("hydra.process.debugthread", "0").equals("1");
     private static final List<DataTreeNode> empty = Collections.unmodifiableList(new ArrayList<>());
 
     static {
-        if (debuglist) {
-            log.warn("ENABLED debuglist");
-        }
         if (debugthread) {
             log.warn("ENABLED debugthread");
         }
@@ -72,7 +72,6 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         push(rootNode);
     }
 
-    private final LinkedList<DataTreeNode> leases = debuglist ? new DebugList() : new LinkedList<DataTreeNode>();
     private final LinkedList<DataTreeNode> stack;
     private final TreeMapper processor;
     private final PathElement[] path;
@@ -94,10 +93,6 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         return empty;
     }
 
-    public void addLeasedNode(DataTreeNode tn) {
-        leases.push(tn);
-    }
-
     @Override
     public int getCountValue() {
         return countValue;
@@ -115,17 +110,11 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
 
     public DataTreeNode getLeasedNode(String key) {
         DataTreeNode tn = current().getLeasedNode(key);
-        if (tn != null) {
-            addLeasedNode(tn);
-        }
         return tn;
     }
 
     public DataTreeNode getOrCreateNode(String key, DataTreeNodeInitializer init) {
         DataTreeNode tn = current().getOrCreateNode(key, init);
-        if (tn != null) {
-            addLeasedNode(tn);
-        }
         return tn;
     }
 
@@ -190,29 +179,22 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
      * PathCall and PathEachChild
      */
     public void dispatchRule(TreeMapperPathReference t) {
-        if (t != null && bundle != null && processor != null) {
+        if ((t != null) && (bundle != null) && (processor != null)) {
             processor.processBundle(bundle, t);
         } else if (debug > 0) {
-            log.warn("Proc Rule Dispatch DROP " + t + " b/c p=" + bundle + " rp=" + processor);
+            log.warn("Proc Rule Dispatch DROP {} b/c p={} rp={}", t, bundle, processor);
         }
     }
 
     public void process() {
-        try {
-            List<DataTreeNode> list = processPath(path, 0);
-            if (debug > 0 && (list == null || list.size() == 0)) {
-                log.warn("proc FAIL " + list);
-                log.warn(".... PATH " + LessStrings.join(path, " // "));
-                log.warn(".... PACK " + bundle);
-            }
-            // release lease list
-            while (leases.size() > 0) {
-                leases.pop().release();
-            }
-        } finally {
-            // there's something odd going on with leases getting new
-            // objects inserted after process() exits
-            leases.clear();
+        List<DataTreeNode> list = processPath(path, 0);
+        if ((debug > 0) && ((list == null) || list.isEmpty())) {
+            log.warn("proc FAIL {}", list);
+            log.warn(".... PATH {}", LessStrings.join(path, " // "));
+            log.warn(".... PACK {}", bundle);
+        }
+        if (list != null) {
+            list.forEach(DataTreeNode::release);
         }
     }
 
@@ -225,29 +207,37 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
     }
 
     /** */
-    private List<DataTreeNode> processPath(PathElement[] path, int index) {
-        if (path == null || path.length <= index) {
+    @Nullable private List<DataTreeNode> processPath(PathElement[] path, int index) {
+        if ((path == null) || (path.length <= index)) {
             return null;
         }
         List<DataTreeNode> nodes = processPathElement(path[index]);
-        if (nodes != null && nodes.size() == 0) {
+        if ((nodes != null) && nodes.isEmpty()) {
             // we get here from op elements, each elements, etc
-            if (index + 1 < path.length) {
+            if ((index + 1) < path.length) {
                 return processPath(path, index + 1);
             }
             return null;
-        }
-        List<DataTreeNode> ret = nodes;
-        if (nodes != null && nodes.size() > 0) {
-            if (index + 1 < path.length) {
-                for (DataTreeNode tn : nodes) {
-                    push(tn);
-                    ret = processPath(path, index + 1);
-                    pop();
+        } else if (nodes == null) {
+            return null;
+        } else if ((index + 1) < path.length) {
+            List<DataTreeNode> childNodes = null;
+            for (DataTreeNode tn : nodes) {
+                push(tn);
+                List<DataTreeNode> childNodesPartition = processPath(path, index + 1);
+                if (childNodesPartition != null) {
+                    if ((childNodes == null) || (childNodes == empty)) {
+                        childNodes = childNodesPartition;
+                    } else {
+                        childNodes.addAll(childNodesPartition);
+                    }
                 }
+                pop().release();
             }
+            return childNodes;
+        } else {
+            return nodes;
         }
-        return ret;
     }
 
     /**
@@ -277,20 +267,6 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
             touched += list.size();
         }
         return list;
-    }
-
-    /**
-     * for debugging
-     */
-    static class DebugList extends LinkedList<DataTreeNode> {
-
-        @Override
-        public void finalize() {
-            if (size() > 0) {
-                System.out.println("!!!! lease finalize() size == " + this);
-                System.exit(1);
-            }
-        }
     }
 
     @Override

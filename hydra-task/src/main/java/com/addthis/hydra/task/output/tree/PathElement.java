@@ -205,19 +205,33 @@ public abstract class PathElement implements Codable, TreeDataParent {
      */
     public final List<DataTreeNode> processNode(final TreeMapState state) {
         if (debug) {
-            log.warn("processNode<" + this + ">");
+            log.warn("processNode<{}>", this);
         }
         List<DataTreeNode> list = null;
         if (filter == null || filter.filter(state.getBundle())) {
             if (label != null) {
                 state.push(label.processNode(state));
                 list = getNextNodeList(state);
-                state.pop();
+                state.pop().release();
             } else {
                 list = getNextNodeList(state);
             }
         }
-        return term ? null : op ? TreeMapState.empty() : list;
+        if (term) {
+            if (list != null) {
+                list.forEach(DataTreeNode::release);
+            }
+            return null;
+        } else {
+            if (op) {
+                if (list != null) {
+                    list.forEach(DataTreeNode::release);
+                }
+                return TreeMapState.empty();
+            } else {
+                return list;
+            }
+        }
     }
 
     /**
