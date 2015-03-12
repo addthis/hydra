@@ -220,7 +220,7 @@ public final class PathFile extends PathKeyValue {
                 ret = super.processNodeUpdates(state, ValueFactory.create(file));
             }
             while (pop-- > 0) {
-                state.pop();
+                state.pop().release();
             }
             return ret;
         } else {
@@ -230,7 +230,7 @@ public final class PathFile extends PathKeyValue {
             TreeNodeList proc = new PathValue(root).processNode(state);
             state.push(proc.get(0));
             TreeNodeList ret = super.processNodeUpdates(state, ValueFactory.create(file));
-            state.pop();
+            state.pop().release();
             return ret;
         }
     }
