@@ -31,7 +31,9 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
+import com.addthis.basis.LessStreams;
 import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 
@@ -250,10 +252,10 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         if (Strings.isNullOrEmpty(tasks)) {
             return Collections.emptySet();
         } else {
-            return Sets.newHashSet(Splitter.on(',').trimResults().split(tasks)).stream()
-                       .map(Ints::tryParse)
-                       .filter(i -> i != null)
-                       .collect(Collectors.toSet());
+            return LessStreams.stream(Splitter.on(',').trimResults().split(tasks))
+                              .map(Ints::tryParse)
+                              .filter(i -> i != null)
+                              .collect(Collectors.toSet());
         }
     }
 
