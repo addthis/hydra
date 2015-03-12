@@ -14,10 +14,11 @@
 package com.addthis.hydra.data.query.op;
 
 import com.addthis.bundle.core.Bundle;
+import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.table.DataTable;
 import com.addthis.bundle.table.DataTableFactory;
-import com.addthis.bundle.util.BundleColumnBinder;
-import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.util.AutoField;
+import com.addthis.bundle.util.IndexField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.hydra.data.query.AbstractTableOp;
 import com.addthis.hydra.data.util.KeyPercentileDistribution;
@@ -40,7 +41,7 @@ import io.netty.channel.ChannelProgressivePromise;
 public class OpPercentileDistribution extends AbstractTableOp {
 
     private final int sampleSize;
-    private final int column;
+    private final AutoField column;
 
     /**
      * usage: column, sampleSize
@@ -57,36 +58,55 @@ public class OpPercentileDistribution extends AbstractTableOp {
         if (v.length < 1) {
             throw new RuntimeException("missing required column");
         }
-        column = v[0];
-        sampleSize = v.length > 1 ? v[1] : 1028;
+        column = new IndexField(v[0]);
+        if (v.length > 1) {
+            sampleSize = v[1];
+        } else {
+            sampleSize = 1028;
+        }
     }
 
     @Override
     public DataTable tableOp(DataTable result) {
-        KeyPercentileDistribution histo = new KeyPercentileDistribution().setSampleSize(sampleSize).init();
-        BundleColumnBinder binder = getSourceColumnBinder(result);
+        KeyPercentileDistribution histo = new KeyPercentileDistribution(sampleSize).init();
         // build histogram
         for (Bundle row : result) {
-            long ev = ValueUtil.asNumberOrParse(binder.getColumn(row, column)).asLong().getLong();
+            long ev = column.getLong(row).getAsLong();
             histo.update(ev);
         }
+        BundleFormat tableFormat = result.getFormat();
+        int existingCols = tableFormat.getFieldCount();
+        ensureMinimumFieldCount(tableFormat, existingCols + 2);
+        AutoField label = new IndexField(existingCols);
+        AutoField value = new IndexField(existingCols + 1);
         // output
         Snapshot snapshot = histo.getSnapshot();
         DataTable resultTable = createTable(6);
-        bindColumn(binder, resultTable, ".5", snapshot.getMedian());
-        bindColumn(binder, resultTable, ".75", snapshot.get75thPercentile());
-        bindColumn(binder, resultTable, ".95", snapshot.get95thPercentile());
-        bindColumn(binder, resultTable, ".98", snapshot.get98thPercentile());
-        bindColumn(binder, resultTable, ".99", snapshot.get99thPercentile());
-        bindColumn(binder, resultTable, ".999", snapshot.get999thPercentile());
+        bindColumn(label, value, resultTable, ".5", snapshot.getMedian());
+        bindColumn(label, value, resultTable, ".75", snapshot.get75thPercentile());
+        bindColumn(label, value, resultTable, ".95", snapshot.get95thPercentile());
+        bindColumn(label, value, resultTable, ".98", snapshot.get98thPercentile());
+        bindColumn(label, value, resultTable, ".99", snapshot.get99thPercentile());
+        bindColumn(label, value, resultTable, ".999", snapshot.get999thPercentile());
 
         return resultTable;
     }
 
-    private void bindColumn(BundleColumnBinder binder, DataTable resultTable, String column, double value) {
+    private void ensureMinimumFieldCount(BundleFormat format, int targetCount) {
+        int suffixNum = 0;
+        while (format.getFieldCount() < targetCount) {
+            format.getField("__op_percent_dist_anon_" + suffixNum);
+        }
+    }
+
+    private void bindColumn(AutoField labelField,
+                            AutoField valueField,
+                            DataTable resultTable,
+                            String label,
+                            double value) {
         Bundle bundle = resultTable.createBundle();
-        binder.appendColumn(bundle, ValueFactory.create(column));
-        binder.appendColumn(bundle, ValueFactory.create(value));
-        resultTable.append(bundle);
+        labelField.setValue(bundle, ValueFactory.create(label));
+        valueField.setValue(bundle, ValueFactory.create(value));
+        resultTable.add(bundle);
     }
 }

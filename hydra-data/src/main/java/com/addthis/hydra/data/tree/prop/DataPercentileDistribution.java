@@ -90,7 +90,7 @@ public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistr
         @Override
         public DataPercentileDistribution newInstance() {
             DataPercentileDistribution dt = new DataPercentileDistribution();
-            dt.histogram = new KeyPercentileDistribution().setSampleSize(sampleSize).init();
+            dt.histogram = new KeyPercentileDistribution(sampleSize).init();
             dt.filter = filter;
             dt.key = key;
             return dt;

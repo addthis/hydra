@@ -13,9 +13,6 @@
  */
 package com.addthis.hydra.data.util;
 
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.SuperCodable;
 
@@ -39,19 +36,13 @@ import static java.lang.Math.sqrt;
 public class KeyPercentileDistribution implements SuperCodable {
 
     @FieldConfig(codable = true)
-    private final AtomicLong min = new AtomicLong(Long.MAX_VALUE);
+    private long min = Long.MAX_VALUE;
     @FieldConfig(codable = true)
-    private final AtomicLong max = new AtomicLong(Long.MIN_VALUE);
+    private long max = Long.MIN_VALUE;
     @FieldConfig(codable = true)
-    private final AtomicLong sum = new AtomicLong();
-
-    // These are for the Welford algorithm for calculating running variance
-    // without floating-point doom.
-    private final AtomicReference<double[]> variance =
-            new AtomicReference<>(new double[]{-1, 0}); // M, S
+    private long sum = 0;
     @FieldConfig(codable = true)
-    private final AtomicLong count = new AtomicLong();
-    private final ArrayCache arrayCache = new ArrayCache();
+    private long count = 0;
 
     @FieldConfig(codable = true)
     private CodableUniformSample sample;
@@ -62,9 +53,16 @@ public class KeyPercentileDistribution implements SuperCodable {
     @FieldConfig(codable = true)
     private int sampleSize;
 
-    public KeyPercentileDistribution setSampleSize(int sampleSize) {
+    // These are for the Welford algorithm for calculating running variance
+    // without floating-point doom.
+    private transient double m;
+    private transient double s;
+
+    // for CodecBin2
+    public KeyPercentileDistribution() {}
+
+    public KeyPercentileDistribution(int sampleSize) {
         this.sampleSize = sampleSize;
-        return this;
     }
 
     public KeyPercentileDistribution init() {
@@ -72,67 +70,33 @@ public class KeyPercentileDistribution implements SuperCodable {
         return this;
     }
 
-    /**
-     * Cache arrays for the variance calculation, so as to avoid memory allocation.
-     */
-    private static class ArrayCache extends ThreadLocal<double[]> {
-
-        @Override
-        protected double[] initialValue() {
-            return new double[2];
-        }
-    }
-
     @Override
     public void postDecode() {
-
         if (sample == null) {
             sample = new CodableUniformSample().init(sampleSize);
         }
-        if (arrayCacheValue != null) {
-            arrayCache.set(arrayCacheValue);
-        }
-        if (varianceValues != null) {
-            variance.set(varianceValues);
-        }
     }
 
-    @Override
-    public void preEncode() {
-        arrayCacheValue = arrayCache.get();
-        varianceValues = variance.get();
-    }
+    @Override public void preEncode() {}
 
-    /**
-     * Adds a recorded value.
-     *
-     * @param value the length of the value
-     */
+    /** Adds a recorded value. */
     public void update(int value) {
         update((long) value);
     }
 
-    /**
-     * Adds a recorded value.
-     *
-     * @param value the length of the value
-     */
+    /** Adds a recorded value. */
     public void update(long value) {
-        count.incrementAndGet();
+        count += 1;
         sample.update(value);
         setMax(value);
         setMin(value);
-        sum.getAndAdd(value);
+        sum += value;
         updateVariance(value);
     }
 
-    /**
-     * Returns the number of values recorded.
-     *
-     * @return the number of values recorded
-     */
+    /** Returns the number of values recorded. */
     public long count() {
-        return count.get();
+        return count;
     }
 
     /* (non-Javadoc)
@@ -140,7 +104,7 @@ public class KeyPercentileDistribution implements SuperCodable {
     */
     public long max() {
         if (count() > 0) {
-            return max.get();
+            return max;
         }
         return 0;
     }
@@ -150,7 +114,7 @@ public class KeyPercentileDistribution implements SuperCodable {
     */
     public long min() {
         if (count() > 0) {
-            return min.get();
+            return min;
         }
         return 0;
     }
@@ -160,7 +124,7 @@ public class KeyPercentileDistribution implements SuperCodable {
     */
     public double mean() {
         if (count() > 0) {
-            return sum.get() / count();
+            return (double) (sum / count());
         }
         return 0;
     }
@@ -183,58 +147,29 @@ public class KeyPercentileDistribution implements SuperCodable {
         if (count() <= 1) {
             return 0.0;
         }
-        return variance.get()[1] / (count() - 1);
+        return s / (double) (count() - 1);
     }
 
     private void setMax(long potentialMax) {
-        while (true) {
-            long currentMax = max.get();
-            if (potentialMax <= currentMax) {
-                return;
-            }
-            if (max.compareAndSet(currentMax, potentialMax)) {
-                return;
-            }
-        }
+        max = Math.max(max, potentialMax);
     }
 
     private void setMin(long potentialMin) {
-        while (true) {
-            long currentMin = min.get();
-            if (potentialMin >= currentMin) {
-                return;
-            }
-            if (min.compareAndSet(currentMin, potentialMin)) {
-                return;
-            }
-        }
+        min = Math.min(min, potentialMin);
     }
 
     private void updateVariance(long value) {
-        boolean done = false;
-        while (!done) {
-            final double[] oldValues = variance.get();
-            final double[] newValues = arrayCache.get();
-            if (oldValues[0] == -1) {
-                newValues[0] = value;
-                newValues[1] = 0;
-            } else {
-                final double oldM = oldValues[0];
-                final double oldS = oldValues[1];
+        final double oldM = m;
+        final double oldS = s;
+        if (oldM == -1) {
+            m = value;
+            s = 0;
+        } else {
+            final double newM = oldM + ((value - oldM) / count());
+            final double newS = oldS + ((value - oldM) * (value - newM));
 
-                final double newM = oldM + ((value - oldM) / count());
-                final double newS = oldS + ((value - oldM) * (value - newM));
-
-                newValues[0] = newM;
-                newValues[1] = newS;
-            }
-            done = variance.compareAndSet(oldValues, newValues);
-            if (done) {
-                // recycle the old array into the cache
-                arrayCache.set(oldValues);
-            }
+            m = newM;
+            s = newS;
         }
     }
-
-
 }
