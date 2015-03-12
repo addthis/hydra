@@ -31,7 +31,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import com.addthis.basis.LessStreams;
 import com.addthis.basis.util.LessFiles;
@@ -248,11 +247,13 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         ctx.pipeline().write(query, promise);
     }
 
+    private static final Splitter TASKS_SPLITTER = Splitter.on(',').trimResults();
+
     @Nonnull private static Set<Integer> parseTasks(@Nullable String tasks) {
         if (Strings.isNullOrEmpty(tasks)) {
             return Collections.emptySet();
         } else {
-            return LessStreams.stream(Splitter.on(',').trimResults().split(tasks))
+            return LessStreams.stream(TASKS_SPLITTER.split(tasks))
                               .map(Ints::tryParse)
                               .filter(i -> i != null)
                               .collect(Collectors.toSet());
