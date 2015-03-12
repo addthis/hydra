@@ -15,14 +15,12 @@ package com.addthis.hydra.task.output.tree;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
-import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeDataParent;
 
@@ -203,29 +201,29 @@ public abstract class PathElement implements Codable, TreeDataParent {
     /**
      * wrapper that calls getPathValue to prevent multiple calls
      */
-    public final List<DataTreeNode> processNode(final TreeMapState state) {
+    public final LeasedTreeNodeList processNode(final TreeMapState state) {
         if (debug) {
             log.warn("processNode<{}>", this);
         }
-        List<DataTreeNode> list = null;
+        LeasedTreeNodeList list = null;
         if (filter == null || filter.filter(state.getBundle())) {
             if (label != null) {
                 state.push(label.processNode(state));
                 list = getNextNodeList(state);
-                state.pop().release();
+                state.pop();
             } else {
                 list = getNextNodeList(state);
             }
         }
         if (term) {
             if (list != null) {
-                list.forEach(DataTreeNode::release);
+                list.release();
             }
             return null;
         } else {
             if (op) {
                 if (list != null) {
-                    list.forEach(DataTreeNode::release);
+                    list.release();
                 }
                 return TreeMapState.empty();
             } else {
@@ -239,7 +237,7 @@ public abstract class PathElement implements Codable, TreeDataParent {
      *
      * @return list of child nodes of current node to process next
      */
-    public abstract List<DataTreeNode> getNextNodeList(final TreeMapState state);
+    public abstract LeasedTreeNodeList getNextNodeList(final TreeMapState state);
 
     public final PathElement label() {
         return label;

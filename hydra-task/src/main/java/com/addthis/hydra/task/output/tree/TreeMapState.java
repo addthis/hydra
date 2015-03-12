@@ -17,10 +17,7 @@ import javax.annotation.Nullable;
 
 import com.addthis.hydra.data.tree.DataTreeNode;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedList;
-import java.util.List;
 
 import com.addthis.basis.util.LessStrings;
 
@@ -28,7 +25,6 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFactory;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.BundleFormatted;
-import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeInitializer;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 
@@ -40,7 +36,7 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
     private static final Logger log = LoggerFactory.getLogger(TreeMapState.class);
     private static final int debug = Integer.parseInt(System.getProperty("hydra.process.debug", "0"));
     private static final boolean debugthread = System.getProperty("hydra.process.debugthread", "0").equals("1");
-    private static final List<DataTreeNode> empty = Collections.unmodifiableList(new ArrayList<>());
+    private static final LeasedTreeNodeList empty = LeasedTreeNodeList.unmodifiableList();
 
     static {
         if (debugthread) {
@@ -89,7 +85,7 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         }
     }
 
-    public static List<DataTreeNode> empty() {
+    public static LeasedTreeNodeList empty() {
         return empty;
     }
 
@@ -118,20 +114,20 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         return tn;
     }
 
-    public DataTreeNode pop() {
+    public void pop() {
         if (debugthread) {
             checkThread();
         }
-        return stack.pop();
+        stack.pop().release();
     }
 
     public int getNodeCount() {
         return current().getNodeCount();
     }
 
-    public void push(List<DataTreeNode> tnl) {
+    public void push(LeasedTreeNodeList tnl) {
         if (tnl.size() == 1) {
-            push(tnl.get(0));
+            push(tnl.head());
         } else {
             throw new RuntimeException("unexpected response: " + tnl.size() + " -> " + tnl);
         }
@@ -187,14 +183,14 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
     }
 
     public void process() {
-        List<DataTreeNode> list = processPath(path, 0);
+        LeasedTreeNodeList list = processPath(path, 0);
         if ((debug > 0) && ((list == null) || list.isEmpty())) {
             log.warn("proc FAIL {}", list);
             log.warn(".... PATH {}", LessStrings.join(path, " // "));
             log.warn(".... PACK {}", bundle);
         }
         if (list != null) {
-            list.forEach(DataTreeNode::release);
+            list.release();
         }
     }
 
@@ -202,16 +198,16 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
      * called from PathCall.processNode(), PathCombo.processNode() and
      * PathEach.processNode()
      */
-    public List<DataTreeNode> processPath(PathElement[] path) {
+    public LeasedTreeNodeList processPath(PathElement[] path) {
         return processPath(path, 0);
     }
 
     /** */
-    @Nullable private List<DataTreeNode> processPath(PathElement[] path, int index) {
+    @Nullable private LeasedTreeNodeList processPath(PathElement[] path, int index) {
         if ((path == null) || (path.length <= index)) {
             return null;
         }
-        List<DataTreeNode> nodes = processPathElement(path[index]);
+        LeasedTreeNodeList nodes = processPathElement(path[index]);
         if ((nodes != null) && nodes.isEmpty()) {
             // we get here from op elements, each elements, etc
             if ((index + 1) < path.length) {
@@ -221,10 +217,10 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         } else if (nodes == null) {
             return null;
         } else if ((index + 1) < path.length) {
-            List<DataTreeNode> childNodes = null;
+            LeasedTreeNodeList childNodes = null;
             for (DataTreeNode tn : nodes) {
                 push(tn);
-                List<DataTreeNode> childNodesPartition = processPath(path, index + 1);
+                LeasedTreeNodeList childNodesPartition = processPath(path, index + 1);
                 if (childNodesPartition != null) {
                     if ((childNodes == null) || (childNodes == empty)) {
                         childNodes = childNodesPartition;
@@ -232,7 +228,7 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
                         childNodes.addAll(childNodesPartition);
                     }
                 }
-                pop().release();
+                pop();
             }
             return childNodes;
         } else {
@@ -244,10 +240,10 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
      * called from this.processPath(), PathEach.processNode() and
      * PathSplit.processNode()
      */
-    public List<DataTreeNode> processPathElement(PathElement pe) {
+    public LeasedTreeNodeList processPathElement(PathElement pe) {
         if (profiling) {
             long mark = System.nanoTime();
-            List<DataTreeNode> list = processPathElementProfiled(pe);
+            LeasedTreeNodeList list = processPathElementProfiled(pe);
             processor.updateProfile(pe, System.nanoTime() - mark);
             return list;
         } else {
@@ -255,14 +251,14 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         }
     }
 
-    private List<DataTreeNode> processPathElementProfiled(PathElement pe) {
+    private LeasedTreeNodeList processPathElementProfiled(PathElement pe) {
         if (pe.disabled()) {
             return empty();
         }
         if (debugthread) {
             checkThread();
         }
-        List<DataTreeNode> list = pe.processNode(this);
+        LeasedTreeNodeList list = pe.processNode(this);
         if (list != null) {
             touched += list.size();
         }

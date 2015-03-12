@@ -15,7 +15,6 @@ package com.addthis.hydra.task.output.tree;
 
 import javax.annotation.Nullable;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.ClosableIterator;
@@ -99,8 +98,8 @@ public class PathPrune extends PathElement {
     // Is it better to try to do the pruning in this method or
     // whatever is getting the TreeNodeList back?
     @Override
-    public List<DataTreeNode> getNextNodeList(final TreeMapState state) {
-        List<DataTreeNode> result = TreeMapState.empty();
+    public LeasedTreeNodeList getNextNodeList(final TreeMapState state) {
+        LeasedTreeNodeList result = TreeMapState.empty();
         long now = JitterClock.globalTime();
         DataTreeNode root = state.current();
         if (preempt && (state.processorClosing() || expensiveShutdownTest())) {

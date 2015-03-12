@@ -16,8 +16,6 @@ package com.addthis.hydra.task.output.tree;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import java.util.List;
-
 import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.LessStrings;
 
@@ -148,7 +146,7 @@ public final class PathQuery extends PathOp {
 
     @Nullable
     @Override
-    public List<DataTreeNode> getNextNodeList(TreeMapState state) {
+    public LeasedTreeNodeList getNextNodeList(TreeMapState state) {
         String[] pathValues = new String[path.length];
         for (int i = 0; i < pathValues.length; i++) {
             pathValues[i] = ValueUtil.asNativeString(path[i].getPathValue(state));

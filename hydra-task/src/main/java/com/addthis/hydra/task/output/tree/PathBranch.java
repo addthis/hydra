@@ -14,12 +14,10 @@
 package com.addthis.hydra.task.output.tree;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.data.tree.DataTreeNode;
 
 
 /**
@@ -101,11 +99,11 @@ public final class PathBranch extends PathElement {
     }
 
     @Override
-    public List<DataTreeNode> getNextNodeList(TreeMapState state) {
-        List<DataTreeNode> res = new ArrayList<>(count);
+    public LeasedTreeNodeList getNextNodeList(TreeMapState state) {
+        LeasedTreeNodeList res = new LeasedTreeNodeList(count);
         if (each != null) {
             for (PathElement anEach : each) {
-                List<DataTreeNode> children = state.processPathElement(anEach);
+                LeasedTreeNodeList children = state.processPathElement(anEach);
                 if (children != null) {
                     res.addAll(children);
                 }
@@ -113,7 +111,7 @@ public final class PathBranch extends PathElement {
         }
         if (list != null) {
             for (PathElement[] pe : list) {
-                List<DataTreeNode> children = state.processPath(pe);
+                LeasedTreeNodeList children = state.processPath(pe);
                 if (children != null) {
                     res.addAll(children);
                 }

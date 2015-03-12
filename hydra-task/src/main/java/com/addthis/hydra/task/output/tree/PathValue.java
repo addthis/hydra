@@ -13,9 +13,6 @@
  */
 package com.addthis.hydra.task.output.tree;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
@@ -149,7 +146,7 @@ public class PathValue extends PathElement {
      * prevent subclasses from overriding as this is not used from here on
      */
     @Override
-    public final List<DataTreeNode> getNextNodeList(final TreeMapState state) {
+    public final LeasedTreeNodeList getNextNodeList(final TreeMapState state) {
         ValueObject value = getFilteredValue(state);
         if (setField != null) {
             state.getBundle().setValue(setField, value);
@@ -160,7 +157,7 @@ public class PathValue extends PathElement {
         if (op) {
             return TreeMapState.empty();
         }
-        List<DataTreeNode> list;
+        LeasedTreeNodeList list;
         if (sync) {
             synchronized (this) {
                 list = processNodeUpdates(state, value);
@@ -170,7 +167,7 @@ public class PathValue extends PathElement {
         }
         if (term) {
             if (list != null) {
-                list.forEach(DataTreeNode::release);
+                list.release();
             }
             return null;
         } else {
@@ -201,8 +198,8 @@ public class PathValue extends PathElement {
      * override this in subclasses. the rules for this path element are to be
      * applied to the child (next node) of the parent (current node).
      */
-    public List<DataTreeNode> processNodeUpdates(TreeMapState state, ValueObject name) {
-        List<DataTreeNode> list = new ArrayList<>(1);
+    public LeasedTreeNodeList processNodeUpdates(TreeMapState state, ValueObject name) {
+        LeasedTreeNodeList list = new LeasedTreeNodeList(1);
         int pushed = 0;
         if (name.getObjectType() == ValueObject.TYPE.ARRAY) {
             for (ValueObject o : name.asArray()) {
@@ -219,14 +216,14 @@ public class PathValue extends PathElement {
                     pushed += processNodeByValue(list, state, ValueFactory.create(key));
                 } else {
                     PathValue mapValue = new PathValue(key, count);
-                    List<DataTreeNode> tnl = mapValue.processNode(state);
+                    LeasedTreeNodeList tnl = mapValue.processNode(state);
                     if (tnl != null) {
                         state.push(tnl);
-                        List<DataTreeNode> children = processNodeUpdates(state, e.getValue());
+                        LeasedTreeNodeList children = processNodeUpdates(state, e.getValue());
                         if (children != null) {
                             list.addAll(children);
                         }
-                        state.pop().release();
+                        state.pop();
                     }
                 }
             }
@@ -234,7 +231,7 @@ public class PathValue extends PathElement {
             pushed += processNodeByValue(list, state, name);
         }
         while (pushed-- > 0) {
-            state.pop().release();
+            state.pop();
         }
         if (!list.isEmpty()) {
             return list;
@@ -246,15 +243,15 @@ public class PathValue extends PathElement {
     /**
      * can be called by subclasses to create/update nodes
      */
-    public final int processNodeByValue(List<DataTreeNode> list, TreeMapState state, ValueObject name) {
+    public final int processNodeByValue(LeasedTreeNodeList list, TreeMapState state, ValueObject name) {
         if (each != null) {
-            List<DataTreeNode> next = state.processPathElement(each);
+            LeasedTreeNodeList next = state.processPathElement(each);
             if (push) {
                 if (next.size() > 1) {
                     throw new RuntimeException("push and each are incompatible for > 1 return nodes");
                 }
                 if (next.size() == 1) {
-                    state.push(next.get(0));
+                    state.push(next.head());
                     return 1;
                 }
             } else if (next != null) {

@@ -21,7 +21,6 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
-import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.util.Tokenizer;
 
 /**
@@ -141,7 +140,7 @@ public final class PathFile extends PathKeyValue {
     }
 
     @Override
-    public List<DataTreeNode> processNodeUpdates(TreeMapState state, ValueObject ps) {
+    public LeasedTreeNodeList processNodeUpdates(TreeMapState state, ValueObject ps) {
         ValueObject pv = getPathValue(state);
         String path = ValueUtil.asNativeString(pv);
         if (path.length() == 0 || path.equals(separator)) {
@@ -169,7 +168,7 @@ public final class PathFile extends PathKeyValue {
             root = path.substring(0, lastsep);
         }
         if (expand) {
-            List<DataTreeNode> ret = null;
+            LeasedTreeNodeList ret = null;
             boolean term = same;
             int pop = 0;
             if (root != null) {
@@ -204,7 +203,7 @@ public final class PathFile extends PathKeyValue {
                     }
                     ret = value.processNode(state);
                     if (ret != null) {
-                        state.push(ret.get(0));
+                        state.push(ret.head());
                         pop++;
                         if (depth > 0 && pop == depth) {
                             term = true;
@@ -220,17 +219,17 @@ public final class PathFile extends PathKeyValue {
                 ret = super.processNodeUpdates(state, ValueFactory.create(file));
             }
             while (pop-- > 0) {
-                state.pop().release();
+                state.pop();
             }
             return ret;
         } else {
             if (root == null) {
                 return new PathValue(file).processNode(state);
             }
-            List<DataTreeNode> proc = new PathValue(root).processNode(state);
-            state.push(proc.get(0));
-            List<DataTreeNode> ret = super.processNodeUpdates(state, ValueFactory.create(file));
-            state.pop().release();
+            LeasedTreeNodeList proc = new PathValue(root).processNode(state);
+            state.push(proc.head());
+            LeasedTreeNodeList ret = super.processNodeUpdates(state, ValueFactory.create(file));
+            state.pop();
             return ret;
         }
     }

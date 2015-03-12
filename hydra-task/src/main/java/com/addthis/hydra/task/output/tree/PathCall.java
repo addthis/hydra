@@ -13,10 +13,7 @@
  */
 package com.addthis.hydra.task.output.tree;
 
-import java.util.List;
-
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.data.tree.DataTreeNode;
 
 
 /**
@@ -69,7 +66,7 @@ public final class PathCall extends PathOp {
     }
 
     @Override
-    public List<DataTreeNode> getNextNodeList(TreeMapState state) {
+    public LeasedTreeNodeList getNextNodeList(TreeMapState state) {
         if (target != null) {
             state.dispatchRule(target);
         }
