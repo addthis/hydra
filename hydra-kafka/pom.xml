@@ -27,10 +27,23 @@
     <!-- addthis deps -->
     <dependency>
       <groupId>com.addthis</groupId>
+      <artifactId>basis</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.addthis</groupId>
       <artifactId>bundle</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.addthis.hydra</groupId>
+      <artifactId>hydra-main-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.addthis.hydra</groupId>
+      <artifactId>hydra-task</artifactId>
+    </dependency>
 
-    <!-- 3rd party -->
+
+      <!-- 3rd party -->
     <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka-clients</artifactId>
