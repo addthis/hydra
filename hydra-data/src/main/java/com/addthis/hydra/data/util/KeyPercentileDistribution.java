@@ -41,11 +41,15 @@ public class KeyPercentileDistribution implements SuperCodable {
     private long max = Long.MIN_VALUE;
     @FieldConfig(codable = true)
     private long sum = 0;
+
+    // redundant with the count stored in sample
     @FieldConfig(codable = true)
     private long count = 0;
 
     @FieldConfig(codable = true)
     private CodableUniformSample sample;
+
+    // these three fields aren't really used
     @FieldConfig(codable = true)
     private double[] arrayCacheValue;
     @FieldConfig(codable = true)
@@ -75,6 +79,9 @@ public class KeyPercentileDistribution implements SuperCodable {
         if (sample == null) {
             sample = new CodableUniformSample().init(sampleSize);
         }
+        // these fields aren't helpful, so null them out to reduce their cost
+        arrayCacheValue = null;
+        varianceValues = null;
     }
 
     @Override public void preEncode() {}
