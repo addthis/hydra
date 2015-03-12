@@ -32,7 +32,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import com.addthis.basis.LessStreams;
+import com.addthis.basis.util.LessStreams;
 import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 
