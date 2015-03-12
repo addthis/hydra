@@ -146,7 +146,7 @@ public final class PathQuery extends PathOp {
 
     @Nullable
     @Override
-    public LeasedTreeNodeList getNextNodeList(TreeMapState state) {
+    public ReadOnceList<DataTreeNode> getNextNodeList(TreeMapState state) {
         String[] pathValues = new String[path.length];
         for (int i = 0; i < pathValues.length; i++) {
             pathValues[i] = ValueUtil.asNativeString(path[i].getPathValue(state));

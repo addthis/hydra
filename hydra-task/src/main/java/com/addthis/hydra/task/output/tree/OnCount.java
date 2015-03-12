@@ -15,6 +15,7 @@ package com.addthis.hydra.task.output.tree;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
+import com.addthis.hydra.data.tree.DataTreeNode;
 
 /**
  * This class represents possible triggering value changes.
@@ -39,7 +40,7 @@ public final class OnCount implements Codable {
 
     public void exec(TreeMapState state) {
         if (exec != null) {
-            LeasedTreeNodeList list = null;
+            ReadOnceList<DataTreeNode> list = null;
             try {
                 list = exec.processNode(state);
             } catch (Exception e) {

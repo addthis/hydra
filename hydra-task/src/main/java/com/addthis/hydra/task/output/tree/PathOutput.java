@@ -24,6 +24,7 @@ import com.addthis.hydra.data.query.QueryOp;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.tree.DataTree;
+import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.task.output.ValuesOutput;
 
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -92,7 +93,7 @@ public class PathOutput extends PathElement {
     }
 
     @Override
-    public LeasedTreeNodeList getNextNodeList(final TreeMapState state) {
+    public ReadOnceList<DataTreeNode> getNextNodeList(final TreeMapState state) {
         exec(state.current().getTreeRoot());
         return TreeMapState.empty();
     }

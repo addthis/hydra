@@ -21,6 +21,7 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
+import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeDataParent;
 
@@ -201,11 +202,11 @@ public abstract class PathElement implements Codable, TreeDataParent {
     /**
      * wrapper that calls getPathValue to prevent multiple calls
      */
-    public final LeasedTreeNodeList processNode(final TreeMapState state) {
+    public final ReadOnceList<DataTreeNode> processNode(final TreeMapState state) {
         if (debug) {
             log.warn("processNode<{}>", this);
         }
-        LeasedTreeNodeList list = null;
+        ReadOnceList<DataTreeNode> list = null;
         if (filter == null || filter.filter(state.getBundle())) {
             if (label != null) {
                 state.push(label.processNode(state));
@@ -237,7 +238,7 @@ public abstract class PathElement implements Codable, TreeDataParent {
      *
      * @return list of child nodes of current node to process next
      */
-    public abstract LeasedTreeNodeList getNextNodeList(final TreeMapState state);
+    public abstract ReadOnceList<DataTreeNode> getNextNodeList(final TreeMapState state);
 
     public final PathElement label() {
         return label;

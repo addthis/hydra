@@ -98,8 +98,8 @@ public class PathPrune extends PathElement {
     // Is it better to try to do the pruning in this method or
     // whatever is getting the TreeNodeList back?
     @Override
-    public LeasedTreeNodeList getNextNodeList(final TreeMapState state) {
-        LeasedTreeNodeList result = TreeMapState.empty();
+    public ReadOnceList<DataTreeNode> getNextNodeList(final TreeMapState state) {
+        ReadOnceList<DataTreeNode> result = TreeMapState.empty();
         long now = JitterClock.globalTime();
         DataTreeNode root = state.current();
         if (preempt && (state.processorClosing() || expensiveShutdownTest())) {

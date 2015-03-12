@@ -15,47 +15,46 @@ package com.addthis.hydra.task.output.tree;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
+import java.util.function.Consumer;
 
 import com.addthis.hydra.data.tree.DataTreeNode;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.netty.util.ResourceLeak;
+import io.netty.util.ResourceLeakDetector;
 
-public class LeasedTreeNodeList extends ReadOnceList<DataTreeNode> {
+public class LeasedTreeNodeList {
 
-    static final Logger log = LoggerFactory.getLogger(LeasedTreeNodeList.class);
+    private static final ResourceLeakDetector<ReadOnceList<DataTreeNode>> leakDetector = new ResourceLeakDetector<>(ReadOnceList.class);
 
-    public static LeasedTreeNodeList unmodifiableList() {
-        return new LeasedTreeNodeList(Collections.unmodifiableList(new ArrayList<>()));
-    }
+    private static final Consumer<DataTreeNode> releaser = (x) -> x.release();
 
-    public LeasedTreeNodeList() {
-        super();
-    }
+    // TODO replace with proper singleton such as Collections.EMPTY_LIST or ImmutableList.of()
+    private static final ReadOnceList<DataTreeNode> empty = new ReadOnceListSimple<>(releaser,
+                                                                                     Collections.unmodifiableList(new ArrayList<>()));
 
-    public LeasedTreeNodeList(int capacity) {
-        super(capacity);
-    }
-
-    protected LeasedTreeNodeList(List<DataTreeNode> nodes) {
-        super(nodes);
-    }
-
-    @Override protected void releaseItem(DataTreeNode data) {
-        data.release();
-    }
-
-    /**
-     * Should we delete this method is it worthless?
-     */
-    @Override
-    protected void finalize() throws Throwable {
-        if (!isRead() && !isReleased() && (size() > 0)) {
-            log.warn("LeasedTreeNodeList was neither read nor released.");
-            assert(false);
+    public static ReadOnceList<DataTreeNode> create() {
+        ReadOnceList<DataTreeNode> list = new ReadOnceListSimple<>(releaser);
+        ResourceLeak leak = leakDetector.open(list);
+        if (leak != null) {
+            return new ReadOnceListLeakDetection<>(leak, list);
+        } else {
+            return list;
         }
     }
 
+    public static ReadOnceList<DataTreeNode> create(int capacity) {
+        ReadOnceList<DataTreeNode> list = new ReadOnceListSimple<>(releaser, capacity);
+        ResourceLeak leak = leakDetector.open(list);
+        if (leak != null) {
+            return new ReadOnceListLeakDetection<>(leak, list);
+        } else {
+            return list;
+        }
+    }
+
+
+    public static ReadOnceList<DataTreeNode> unmodifiableList() {
+        return empty;
+    }
 
 }
