@@ -121,6 +121,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         job.setMonthlyBackups(kv.getIntValue("monthlyBackups", job.getMonthlyBackups()));
         job.setReplicas(kv.getIntValue("replicas", job.getReplicas()));
         job.setDontDeleteMe(KVUtils.getBooleanValue(kv, job.getDontDeleteMe(), "dontDeleteMe"));
+        job.setDontCloneMe(KVUtils.getBooleanValue(kv, job.getDontCloneMe(), "dontCloneMe"));
         job.setDontAutoBalanceMe(KVUtils.getBooleanValue(kv, job.getDontAutoBalanceMe(), "dontAutoBalanceMe"));
         job.setMaxSimulRunning(kv.getIntValue("maxSimulRunning", job.getMaxSimulRunning()));
         job.setMinionType(kv.getValue("minionType", job.getMinionType()));

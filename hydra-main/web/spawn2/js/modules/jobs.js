@@ -1516,7 +1516,11 @@ function(
         },
         handleCloneClick:function(event){
             event.preventDefault();
-            app.router.navigate("#jobs/"+this.model.id+"/conf/clone",{trigger:true});
+            if (this.model.attributes.dontCloneMe) {
+                Alertify.dialog.alert("Job with id "+this.model.id+" has \"do not clone\" parameter enabled.");
+            } else {
+                app.router.navigate("#jobs/"+this.model.id+"/conf/clone",{trigger:true});
+            }
         },
         handleCommitJobButton:function(event){
             event.preventDefault();

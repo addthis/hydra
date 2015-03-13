@@ -1121,6 +1121,7 @@ public class SpawnManager {
         job.setMonthlyBackups(kv.getIntValue("monthlyBackups", job.getMonthlyBackups()));
         job.setReplicas(kv.getIntValue("replicas", job.getReplicas()));
         job.setDontDeleteMe(kv.getIntValue("dontDeleteMe", job.getDontDeleteMe() ? 1 : 0) > 0);
+        job.setDontCloneMe(kv.getIntValue("dontCloneMe", job.getDontCloneMe() ? 1 : 0) > 0);
         job.setDontAutoBalanceMe(kv.getIntValue("dontAutoBalanceMe", job.getDontAutoBalanceMe() ? 1 : 0) > 0);
         job.setMaxSimulRunning(kv.getIntValue("maxSimulRunning", job.getMaxSimulRunning()));
         job.setMinionType(kv.getValue("minionType", job.getMinionType()));
