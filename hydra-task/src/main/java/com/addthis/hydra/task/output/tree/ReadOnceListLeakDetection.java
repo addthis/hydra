@@ -24,19 +24,14 @@ import java.util.function.Consumer;
 
 import io.netty.util.ResourceLeak;
 
-/**
- * Collection who contents can either be read exactly once or
- * whose contents can be released
- * @param <T>
- */
 @NotThreadSafe
 public class ReadOnceListLeakDetection<T> implements ReadOnceList<T> {
 
     @Nonnull
-    protected ResourceLeak leak;
+    protected final ResourceLeak leak;
 
     @Nonnull
-    protected ReadOnceList<T> list;
+    protected final ReadOnceList<T> list;
 
     public ReadOnceListLeakDetection(@Nonnull ResourceLeak leak, @Nonnull ReadOnceList list) {
         this.leak = leak;

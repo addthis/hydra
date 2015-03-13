@@ -22,11 +22,6 @@ import java.util.List;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 
-/**
- * Collection who contents can either be read exactly once or
- * whose contents can be released
- * @param <T>
- */
 @NotThreadSafe
 public class ReadOnceListSimple<T> implements ReadOnceList<T> {
 

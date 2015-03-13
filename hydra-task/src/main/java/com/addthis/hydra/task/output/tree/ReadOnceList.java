@@ -21,9 +21,16 @@ import java.util.Spliterator;
 import java.util.function.Consumer;
 
 /**
- * Collection who contents can either be read exactly once or
- * whose contents can be released
- * @param <T>
+ * Sequence of elements who contents can either be read
+ * exactly once or whose contents can be released exactly once.
+ * Contents cannot be both read and released.
+ *
+ * The {@link Iterable} methods and the {@link #head} and {@link #consume}
+ * methods are considered to be reading methods. The {@link #release}
+ * method is considered to be a release method. All insertions must
+ * occur prior to reading or releasing.
+ *
+ * An {@code IllegalStateException} is thrown if these constraints are violated.
  */
 @NotThreadSafe
 public interface ReadOnceList<T> extends Iterable<T> {
