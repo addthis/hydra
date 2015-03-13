@@ -29,7 +29,7 @@ public class ProducerUtils {
     public static Properties defaultConfig(String zookeeper, Properties overrides) throws Exception {
         Properties properties = new Properties();
         CuratorFramework zkClient = KafkaUtils.newZkClient(zookeeper);
-        Collection<Node> brokers = KafkaUtils.getKafkaBrokers(zkClient).values();
+        Collection<Node> brokers = KafkaUtils.getSeedKafkaBrokers(zkClient, 3).values();
         zkClient.close();
         if(brokers.isEmpty()) {
             throw new Exception("failed to lookup kafka brokers from zookeeper: " + zookeeper);
