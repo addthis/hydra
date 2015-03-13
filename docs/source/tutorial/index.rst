@@ -23,6 +23,7 @@ Tutorial
     :maxdepth: 2
 
     hydra-for-beginners
+    codec
     sources
     sinks
     bundle-filters

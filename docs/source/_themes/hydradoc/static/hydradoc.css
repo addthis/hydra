@@ -94,6 +94,7 @@ hr {
 div.document {
     background-color: #fff;
 	padding-top: 75px;
+    max-width: 1200px;
 }
  
 div.body {
