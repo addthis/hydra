@@ -13,6 +13,9 @@
  */
 package com.addthis.hydra.query;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -25,9 +28,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+import com.addthis.basis.util.LessStreams;
 import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 
@@ -49,7 +54,10 @@ import com.addthis.meshy.service.file.FileReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.collect.ContiguousSet;
+import com.google.common.collect.DiscreteDomain;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 
@@ -239,14 +247,16 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         ctx.pipeline().write(query, promise);
     }
 
-    private static Set<Integer> parseTasks(String tasks) {
+    private static final Splitter TASKS_SPLITTER = Splitter.on(',').trimResults();
+
+    @Nonnull private static Set<Integer> parseTasks(@Nullable String tasks) {
         if (Strings.isNullOrEmpty(tasks)) {
             return Collections.emptySet();
         } else {
-            return Sets.newHashSet(Splitter.on(',').trimResults().split(tasks)).stream()
-                       .map(Ints::tryParse)
-                       .filter(i -> i != null)
-                       .collect(Collectors.toSet());
+            return LessStreams.stream(TASKS_SPLITTER.split(tasks))
+                              .map(Ints::tryParse)
+                              .filter(i -> i != null)
+                              .collect(Collectors.toSet());
         }
     }
 
@@ -259,12 +269,12 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
     }
 
     /**
-     * @param tasks only query these task ids. empty means query all tasks.
+     * @param requestedTasks    only query these task ids. empty means query all tasks.
      */
     private QueryTaskSource[] getSourcesById(String jobId,
                                              String subdirectory,
                                              boolean allowPartial,
-                                             Set<Integer> tasks) {
+                                             Set<Integer> requestedTasks) {
         if (spawnDataStoreHandler != null) {
             spawnDataStoreHandler.validateJobForQuery(jobId);
         }
@@ -279,32 +289,27 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         Multimap<Integer, FileReference> fileReferenceMap;
         try {
             fileReferenceMap = cachey.get(combinedJob);
-            if ((fileReferenceMap == null) || fileReferenceMap.isEmpty()) {
-                cachey.invalidate(combinedJob);
-                throw new QueryException("[MeshQueryMaster] No file references found for job: " + combinedJob);
-            }
         } catch (ExecutionException e) {
             log.warn("", e);
             throw new QueryException("Exception getting file references: " + e.getMessage());
         }
-
-        int canonicalTasks;
-        if (!allowPartial && (spawnDataStoreHandler != null)) {
-            try {
-                canonicalTasks = spawnDataStoreHandler.validateTaskCount(jobId, fileReferenceMap, tasks);
-            } catch (Exception ex) {
-                cachey.invalidate(combinedJob);
-                throw ex;
-            }
-        } else {
-            // task-ids are zero indexed, so add one
-            canonicalTasks = fileReferenceMap.keySet().stream().mapToInt(Integer::intValue).max().orElse(-1) + 1;
+        if ((fileReferenceMap == null) || fileReferenceMap.isEmpty()) {
+            cachey.invalidate(combinedJob);
+            throw new QueryException("[MeshQueryMaster] No file references found for job: " + combinedJob);
         }
 
-        QueryTaskSource[] sourcesByTaskID = new QueryTaskSource[canonicalTasks];
-        for (int i = 0; i < canonicalTasks; i++) {
-            Collection<FileReference> sourceOptions = fileReferenceMap.get(i);
-            if (sourceOptions != null && (tasks.isEmpty() || tasks.contains(i))) {
+        int canonicalTaskCount;
+        try {
+            canonicalTaskCount = validateRequestedTasks(jobId, fileReferenceMap.keySet(), requestedTasks, allowPartial);
+        } catch (Exception ex) {
+            cachey.invalidate(combinedJob);
+            throw ex;
+        }
+
+        QueryTaskSource[] sourcesByTaskID = new QueryTaskSource[canonicalTaskCount];
+        for (int taskId = 0; taskId < canonicalTaskCount; taskId++) {
+            Collection<FileReference> sourceOptions = fileReferenceMap.get(taskId);
+            if (!sourceOptions.isEmpty() && (requestedTasks.isEmpty() || requestedTasks.contains(taskId))) {
                 QueryTaskSourceOption[] taskSourceOptions = new QueryTaskSourceOption[sourceOptions.size()];
                 int taskSourceOptionsIndex = 0;
                 for (FileReference queryReference : sourceOptions) {
@@ -313,13 +318,69 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
                             new QueryTaskSourceOption(queryReference, workerData.queryLeases);
                     taskSourceOptionsIndex += 1;
                 }
-                sourcesByTaskID[i] = new QueryTaskSource(taskSourceOptions);
+                sourcesByTaskID[taskId] = new QueryTaskSource(taskSourceOptions);
             } else {
-                sourcesByTaskID[i] = EMPTY_TASK_SOURCE;
+                sourcesByTaskID[taskId] = EMPTY_TASK_SOURCE;
             }
         }
 
         return sourcesByTaskID;
+    }
+
+    @VisibleForTesting
+    protected int validateRequestedTasks(String jobId,
+                                       Set<Integer> availableTasks,
+                                       Set<Integer> requestedTasks,
+                                       boolean allowPartial) {
+        int canonicalTasks;
+        if (spawnDataStoreHandler != null) {
+            canonicalTasks = spawnDataStoreHandler.getCononicalTaskCount(jobId);
+        } else {
+            // the best guess is that there are at least max_available_task_id + 1 tasks
+            canonicalTasks = Collections.max(availableTasks) + 1;
+        }
+        validateRequestedTasks(canonicalTasks, availableTasks, requestedTasks, allowPartial);
+        return canonicalTasks;
+    }
+
+    /**
+     * Validates if all requested tasks are available.
+     *
+     * @param canonicalTaskCount    total number of tasks.
+     * @param availableTasks        available task ids.
+     * @param tasks                 requested tasks ids. If empty, all tasks are requested, i.e. 0 to
+     *                              {@code canonicalTaskCount-1}
+     */
+    private void validateRequestedTasks(int canonicalTaskCount,
+                                        Set<Integer> availableTasks,
+                                        Set<Integer> tasks,
+                                        boolean allowPartial) {
+        if (availableTasks.size() != canonicalTaskCount) {
+            Set<Integer> requestedTasks = expandRequestedTasks(tasks, canonicalTaskCount);
+            Set<Integer> missingTasks = new TreeSet<>(Sets.difference(requestedTasks, availableTasks));
+            if (!allowPartial && !missingTasks.isEmpty()) {
+                // if allowPartial = false, fail if any requested task is unavailable
+                throw new QueryException("Did not find data for all " + requestedTasks.size() +
+                                         " requested tasks (and allowPartial is off): " + availableTasks.size() +
+                                         " available out of " + canonicalTaskCount + " total. Missing the following " +
+                                         missingTasks.size() + " tasks: " + missingTasks);
+            } else if (allowPartial && requestedTasks.size() == missingTasks.size()) {
+                // if allowPartial = true, fail only if all requested tasks are unavailable
+                throw new QueryException("Did not find data for any of the " + requestedTasks.size() +
+                                         " requested tasks (and allowPartial is on): " + availableTasks.size() +
+                                         " available out of " + canonicalTaskCount + " total. Missing the following " +
+                                         missingTasks.size() + " tasks: " + missingTasks);
+            }
+        }
+    }
+
+    /** Returns the specified requested tasks as is if not empty, or expands to all known tasks if it is empty. */
+    private Set<Integer> expandRequestedTasks(Set<Integer> tasks, int canonicalTaskCount) {
+        if (tasks.isEmpty()) {
+            return ContiguousSet.create(Range.closedOpen(0, canonicalTaskCount), DiscreteDomain.integers());
+        } else {
+            return tasks;
+        }
     }
 
     /**

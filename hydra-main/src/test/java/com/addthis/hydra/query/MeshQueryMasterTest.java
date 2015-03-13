@@ -24,10 +24,12 @@ import java.util.Set;
 
 import com.addthis.basis.util.LessFiles;
 
+import com.addthis.hydra.data.query.QueryException;
 import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 
 import org.junit.After;
 import org.junit.Before;
@@ -35,7 +37,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class MeshQueryMasterTest {
     private static final Logger log = LoggerFactory.getLogger(MeshQueryMasterTest.class);
@@ -262,5 +265,48 @@ public class MeshQueryMasterTest {
 //		QueryData bestQueryData = MeshSourceAggregator.allocateQueryTaskUsingHostMetrics(queryTaskCountMap, queryDataSet, readOnlyHostMap);
 //		assertEquals(bestQueryData.hostEntryInfo.getHostName(), fileReference3.getHostUUID());
 //	}
+
+    @Test
+    public void requestedTaskValidation_allowPartialOff() {
+        verifyTaskValidationSuccess("req = avail", 3, tasks(0, 1, 2), tasks(0, 1, 2), false);
+        verifyTaskValidationSuccess("req = avail (req empty)", 3, tasks(0, 1, 2), tasks(), false);
+        verifyTaskValidationSuccess("ignore invalid req task id", 3, tasks(0, 1, 2), tasks(0, 1, 2, 3), false);
+        verifyTaskValidationSuccess("req < avail", 3, tasks(0, 1, 2), tasks(0, 1), false);
+        verifyTaskValidationSuccess("req < avail (avail incomplete)", 3, tasks(0, 2), tasks(0), false);
+        verifyTaskValidationFail("avail incomplete", tasks(0, 2), tasks(0, 1, 2), false);
+        verifyTaskValidationFail("avail incomplete, req empty", tasks(0, 2), tasks(), false);
+    }
+
+    @Test
+    public void requestedTaskValidation_allowPartialOn() {
+        verifyTaskValidationSuccess("req = avail", 3, tasks(0, 1, 2), tasks(0, 1, 2), true);
+        verifyTaskValidationSuccess("req = avail (req empty)", 3, tasks(0, 1, 2), tasks(), true);
+        verifyTaskValidationSuccess("ignore invalid req task id", 3, tasks(0, 1, 2), tasks(0, 1, 2, 3), true);
+        verifyTaskValidationSuccess("req > avail (avail incomplete)", 3, tasks(0, 2), tasks(0, 1, 2), true);
+        verifyTaskValidationSuccess("req > avail (avail incomplete, req empty)", 3, tasks(0, 2), tasks(), true);
+        verifyTaskValidationSuccess("ignore invalid req task id (avail incomplete)", 3, tasks(0, 2), tasks(0, 3), true);
+        verifyTaskValidationFail("all req missing", tasks(0, 2), tasks(1), true);
+    }
+
+    private Set<Integer> tasks(Integer... args) {
+        return Sets.newHashSet(args);
+    }
+
+    private void verifyTaskValidationSuccess(String failMsg,
+                                             int expectedTaskCount,
+                                             Set<Integer> avail,
+                                             Set<Integer> req,
+                                             boolean allowPartial) {
+        int n = meshQueryMaster.validateRequestedTasks("job", avail, req, allowPartial);
+        assertEquals(failMsg, expectedTaskCount, n);
+    }
+
+    private void verifyTaskValidationFail(String failMsg, Set<Integer> avail, Set<Integer> req, boolean allowPartial) {
+        try {
+            meshQueryMaster.validateRequestedTasks("job", avail, req, allowPartial);
+            fail(failMsg);
+        } catch (QueryException e) {
+        }
+    }
 
 }

@@ -72,7 +72,7 @@ public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistr
          * Name of the field to monitor. This field is required.
          */
         @FieldConfig(codable = true, required = true)
-        private String key;
+        private AutoField key;
 
         /**
          * Sample size. Default is 1024.
@@ -90,7 +90,7 @@ public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistr
         @Override
         public DataPercentileDistribution newInstance() {
             DataPercentileDistribution dt = new DataPercentileDistribution();
-            dt.histogram = new KeyPercentileDistribution().setSampleSize(sampleSize).init();
+            dt.histogram = new KeyPercentileDistribution(sampleSize).init();
             dt.filter = filter;
             dt.key = key;
             return dt;
@@ -98,22 +98,22 @@ public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistr
     }
 
 
-    @FieldConfig(codable = true)
-    private String key;
-    @FieldConfig(codable = true)
-    private ValueFilter filter;
-    @FieldConfig(codable = true)
-    private KeyPercentileDistribution histogram;
+    @FieldConfig(codable = true) private KeyPercentileDistribution histogram;
 
-    private AutoField keyAccess;
+    // these fields should not have been marked as codable, but these placeholders will handle the bin2 binary format
+    @FieldConfig(codable = true) private String key_Legacy_Support;
+    @FieldConfig(codable = true) private ValueFilter filter_Legacy_Support;
+
+    private transient ValueFilter filter;
+    private transient AutoField key;
 
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, Config conf) {
-        if (keyAccess == null) {
-            keyAccess = AutoField.newAutoField(conf.key);
+        if (key == null) {
+            key = conf.key;
             filter = conf.filter;
         }
-        ValueObject val = keyAccess.getValue(state.getBundle());
+        ValueObject val = key.getValue(state.getBundle());
         if (val != null) {
             if (filter != null) {
                 val = filter.filter(val, state.getBundle());
@@ -133,36 +133,32 @@ public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistr
     }
 
     private void update(ValueObject value) {
-        try {
-            histogram.update(ValueUtil.asNumberOrParseLong(value, 10).asLong().getLong());
-        } catch (Exception e) {
-            log.warn("[DataPercentileDistribution] unable to update sample because input was not a number: " + value.asString().toString());
-        }
+        histogram.update(ValueUtil.asNumberOrParseLong(value, 10).asLong().getLong());
     }
 
     @Override
     public ValueObject getValue(String key) {
-        if (key == null || "".equals(key) || "mean".equals(key)) {
+        if ((key == null) || key.isEmpty() || "mean".equals(key)) {
             return ValueFactory.create(histogram.mean());
-        } else if (key.equals("max")) {
+        } else if ("max".equals(key)) {
             return ValueFactory.create(histogram.max());
-        } else if (key.equals("min")) {
+        } else if ("min".equals(key)) {
             return ValueFactory.create(histogram.min());
-        } else if (key.equals("stdev")) {
+        } else if ("stdev".equals(key)) {
             return ValueFactory.create(histogram.stdDev());
-        } else if (key.equals("median")) {
+        } else if ("median".equals(key)) {
             return ValueFactory.create(histogram.getSnapshot().getMedian());
-        } else if (key.equals("snapshot")) {
+        } else if ("snapshot".equals(key)) {
             return ValueFactory.create(Arrays.toString(histogram.getSnapshot().getValues()));
-        } else if (key.equals("75")) {
+        } else if ("75".equals(key)) {
             return ValueFactory.create(histogram.getSnapshot().get75thPercentile());
-        } else if (key.equals("95")) {
+        } else if ("95".equals(key)) {
             return ValueFactory.create(histogram.getSnapshot().get95thPercentile());
-        } else if (key.equals("98")) {
+        } else if ("98".equals(key)) {
             return ValueFactory.create(histogram.getSnapshot().get98thPercentile());
-        } else if (key.equals("99")) {
+        } else if ("99".equals(key)) {
             return ValueFactory.create(histogram.getSnapshot().get99thPercentile());
-        } else if (key.equals("999")) {
+        } else if ("999".equals(key)) {
             return ValueFactory.create(histogram.getSnapshot().get999thPercentile());
         } else {
             throw new UnsupportedOperationException("Unhandled key: " + key);

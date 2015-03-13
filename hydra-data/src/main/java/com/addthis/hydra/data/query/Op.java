@@ -210,7 +210,7 @@ enum Op {
         QueryOp build(QueryOpProcessor processor,
                       String args,
                       ChannelProgressivePromise opPromise) {
-            return new OpPercentileDistribution(processor.tableFactory(), args, opPromise);
+            return new OpPercentileDistribution(processor::createBundle, args, opPromise);
         }
     },
     GROUPBY {

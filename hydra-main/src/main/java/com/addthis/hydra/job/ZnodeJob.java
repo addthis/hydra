@@ -76,6 +76,7 @@ public class ZnodeJob implements IJob {
         @FieldConfig private int replicas;
         @FieldConfig private boolean dontAutoBalanceMe;
         @FieldConfig private boolean dontDeleteMe;
+        @FieldConfig private boolean dontCloneMe;
         @FieldConfig private boolean wasStopped;
 
         @FieldConfig private int hourlyBackups;
@@ -112,8 +113,8 @@ public class ZnodeJob implements IJob {
                     .add("parameters", parameters)
                     .add("replicas", replicas)
                     .add("dontDeleteMe", dontDeleteMe)
+                    .add("dontCloneMe", dontCloneMe)
                     .add("dontAutoBalanceMe", dontAutoBalanceMe)
-                    .add("dontDeleteMe", dontDeleteMe)
                     .add("wasStopped", wasStopped)
                     .add("hourlyBackups", hourlyBackups)
                     .add("dailyBackups", dailyBackups)
@@ -145,6 +146,7 @@ public class ZnodeJob implements IJob {
         rznData.endTime = rznData.createTime;
         rznData.dontAutoBalanceMe = false;
         rznData.dontDeleteMe = false;
+        rznData.dontCloneMe = false;
         config = "";
         tasks = new ArrayList<>();
         queryConfig = new JobQueryConfig();
@@ -188,6 +190,7 @@ public class ZnodeJob implements IJob {
         rznData.replicas = job.getReplicas();
         rznData.dontAutoBalanceMe = job.getDontAutoBalanceMe();
         rznData.dontDeleteMe = job.getDontDeleteMe();
+        rznData.dontCloneMe = job.getDontCloneMe();
         rznData.wasStopped = job.getWasStopped();
         rznData.hourlyBackups = job.getHourlyBackups();
         rznData.dailyBackups = job.getDailyBackups();
@@ -453,6 +456,16 @@ public class ZnodeJob implements IJob {
     @Override
     public void setDontDeleteMe(boolean dontDeleteMe) {
         rznData.dontDeleteMe = dontDeleteMe;
+    }
+
+    @Override
+    public boolean getDontCloneMe() {
+        return rznData.dontCloneMe;
+    }
+
+    @Override
+    public void setDontCloneMe(boolean dontCloneMe) {
+        rznData.dontCloneMe = dontCloneMe;
     }
 
     @Override

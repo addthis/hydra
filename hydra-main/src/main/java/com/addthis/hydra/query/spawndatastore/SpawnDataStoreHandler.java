@@ -19,8 +19,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -30,13 +28,10 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobConfigManager;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
-import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 
 public class SpawnDataStoreHandler {
 
@@ -119,12 +114,7 @@ public class SpawnDataStoreHandler {
         return job;
     }
 
-    /**
-     * Tries to make sure enough tasks were found to satisfy the query options.
-     *
-     * @return The canonical task count according to spawn/ zookeeper
-     */
-    public int validateTaskCount(String job, Multimap<Integer, FileReference> fileReferenceMap, Set<Integer> tasks) {
+    public int getCononicalTaskCount(String job) {
         IJob zkJob;
         try {
             zkJob = jobConfigurationCache.get(job);
@@ -132,36 +122,10 @@ public class SpawnDataStoreHandler {
             throw new QueryException("unable to retrieve job configuration for job: " + job);
         }
         if (zkJob == null) {
-            final String errorMessage = "[MeshQueryMaster] Error:  unable to find ZK reference for job: " + job;
-            throw new QueryException(errorMessage);
+            throw new QueryException("[MeshQueryMaster] Error:  unable to find ZK reference for job: " + job);
         }
 
-        int canonicalTaskCount = new Job(zkJob).getTaskCount();
-        Set<Integer> availableTasks = fileReferenceMap.keySet();
-        if (availableTasks.size() != canonicalTaskCount) {
-            Set<Integer> requestedTasks = getRequestedTasks(tasks, canonicalTaskCount);
-            Set<Integer> missingTasks = Sets.difference(requestedTasks, availableTasks);
-            if (!missingTasks.isEmpty()) {
-                String err = "Did not find data for all " + requestedTasks.size() +
-                             " requested tasks (and allowPartial is off): " + availableTasks.size() +
-                             " available out of " + canonicalTaskCount + " total. Missing the following " +
-                             missingTasks.size() + " tasks: " + missingTasks;
-                throw new QueryException(err);
-            }
-        }
-        return canonicalTaskCount;
-    }
-
-    private TreeSet<Integer> getRequestedTasks(Set<Integer> tasks, int canonicalTaskCount) {
-        if (tasks.isEmpty()) {
-            TreeSet<Integer> requestedTasks = new TreeSet<>();
-            for (int i = 0; i < canonicalTaskCount; i++) {
-                requestedTasks.add(i);
-            }
-            return requestedTasks;
-        } else {
-            return new TreeSet<>(tasks);
-        }
+        return new Job(zkJob).getTaskCount();
     }
 
 }

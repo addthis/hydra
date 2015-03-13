@@ -13,11 +13,9 @@
  */
 package com.yammer.metrics.stats;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
-
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.google.common.primitives.Longs;
 
 /**
  * A codable version of Sample from CodaHales metrics project
@@ -29,22 +27,22 @@ public class CodableUniformSample implements Sample {
     private static final int BITS_PER_LONG = 63;
 
     @FieldConfig(codable = true)
-    private AtomicLong count = new AtomicLong();
+    private long count = 0;
     @FieldConfig(codable = true)
     private int reservoirSize;
     @FieldConfig(codable = true)
-    private AtomicLong[] values;
+    private long[] values;
 
     public CodableUniformSample init(int reservoirSize) {
         this.reservoirSize = reservoirSize;
-        values = new AtomicLong[reservoirSize];
+        values = new long[reservoirSize];
         clear();
         return this;
     }
 
     @Override
     public int size() {
-        final long c = count.get();
+        final long c = count;
         if (c > values.length) {
             return values.length;
         }
@@ -54,20 +52,20 @@ public class CodableUniformSample implements Sample {
     @Override
     public void clear() {
         for (int i = 0; i < values.length; i++) {
-            values[i] = new AtomicLong(0);
+            values[i] = 0;
         }
-        count.set(0);
+        count = 0;
     }
 
     @Override
     public void update(long value) {
-        final long c = count.incrementAndGet();
+        final long c = ++count;
         if (c <= values.length) {
-            values[(int) c - 1].set(value);
+            values[(int) c - 1] = value;
         } else {
             final long r = nextLong(c);
             if (r < values.length) {
-                values[(int) r].set(value);
+                values[(int) r] = value;
             }
         }
     }
@@ -80,7 +78,8 @@ public class CodableUniformSample implements Sample {
      * @return a value select randomly from the range {@code [0..n)}.
      */
     private static long nextLong(long n) {
-        long bits, val;
+        long bits;
+        long val;
         do {
             bits = ThreadLocalRandom.current().nextLong() & (~(1L << BITS_PER_LONG));
             val = bits % n;
@@ -90,11 +89,6 @@ public class CodableUniformSample implements Sample {
 
     @Override
     public Snapshot getSnapshot() {
-        final int s = size();
-        final List<Long> copy = new ArrayList<>(s);
-        for (int i = 0; i < s; i++) {
-            copy.add(values[i].get());
-        }
-        return new Snapshot(copy);
+        return new Snapshot(Longs.asList(values));
     }
 }
