@@ -279,7 +279,12 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
             spawnDataStoreHandler.validateJobForQuery(jobId);
         }
 
-        String combinedJob = subdirectory.isEmpty() ? jobId : jobId + '/' + subdirectory;
+        String combinedJob;
+        if (!subdirectory.isEmpty()) {
+            combinedJob = jobId + '/' + subdirectory;
+        } else {
+            combinedJob = jobId;
+        }
 
         Multimap<Integer, FileReference> fileReferenceMap;
         try {
