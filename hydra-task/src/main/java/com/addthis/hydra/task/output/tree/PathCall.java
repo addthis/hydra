@@ -14,7 +14,7 @@
 package com.addthis.hydra.task.output.tree;
 
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.data.tree.TreeNodeList;
+import com.addthis.hydra.data.tree.DataTreeNode;
 
 
 /**
@@ -67,7 +67,7 @@ public final class PathCall extends PathOp {
     }
 
     @Override
-    public TreeNodeList getNextNodeList(TreeMapState state) {
+    public ReadOnceList<DataTreeNode> getNextNodeList(TreeMapState state) {
         if (target != null) {
             state.dispatchRule(target);
         }

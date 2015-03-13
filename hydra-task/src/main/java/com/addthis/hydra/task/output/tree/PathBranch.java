@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.data.tree.TreeNodeList;
+import com.addthis.hydra.data.tree.DataTreeNode;
 
 
 /**
@@ -100,16 +100,22 @@ public final class PathBranch extends PathElement {
     }
 
     @Override
-    public TreeNodeList getNextNodeList(TreeMapState state) {
-        TreeNodeList res = new TreeNodeList(count);
+    public ReadOnceList<DataTreeNode> getNextNodeList(TreeMapState state) {
+        ReadOnceList<DataTreeNode> res = LeasedTreeNodeList.create(count);
         if (each != null) {
             for (PathElement anEach : each) {
-                res.addAll(state.processPathElement(anEach));
+                ReadOnceList<DataTreeNode> children = state.processPathElement(anEach);
+                if (children != null) {
+                    res.addAll(children);
+                }
             }
         }
         if (list != null) {
             for (PathElement[] pe : list) {
-                res.addAll(state.processPath(pe));
+                ReadOnceList<DataTreeNode> children = state.processPath(pe);
+                if (children != null) {
+                    res.addAll(children);
+                }
             }
         }
         if (!res.isEmpty() || op) {

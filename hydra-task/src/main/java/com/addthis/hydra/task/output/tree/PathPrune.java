@@ -23,7 +23,6 @@ import com.addthis.basis.util.JitterClock;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.data.tree.DataTreeNode;
-import com.addthis.hydra.data.tree.TreeNodeList;
 import com.addthis.hydra.data.tree.prop.DataTime;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -99,8 +98,8 @@ public class PathPrune extends PathElement {
     // Is it better to try to do the pruning in this method or
     // whatever is getting the TreeNodeList back?
     @Override
-    public TreeNodeList getNextNodeList(final TreeMapState state) {
-        TreeNodeList result = TreeMapState.empty();
+    public ReadOnceList<DataTreeNode> getNextNodeList(final TreeMapState state) {
+        ReadOnceList<DataTreeNode> result = TreeMapState.empty();
         long now = JitterClock.globalTime();
         DataTreeNode root = state.current();
         if (preempt && (state.processorClosing() || expensiveShutdownTest())) {

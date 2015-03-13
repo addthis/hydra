@@ -14,7 +14,7 @@
 package com.addthis.hydra.task.output.tree;
 
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.data.tree.TreeNodeList;
+import com.addthis.hydra.data.tree.DataTreeNode;
 
 
 /**
@@ -32,7 +32,7 @@ public class PathDebug extends PathOp {
     private String debug;
 
     @Override
-    public TreeNodeList getNextNodeList(TreeMapState state) {
+    public ReadOnceList<DataTreeNode> getNextNodeList(TreeMapState state) {
         System.out.println("---> debug (" + debug + ") " + state.getBundle());
         return TreeMapState.empty();
     }

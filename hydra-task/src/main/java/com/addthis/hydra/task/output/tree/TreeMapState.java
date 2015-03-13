@@ -15,6 +15,8 @@ package com.addthis.hydra.task.output.tree;
 
 import javax.annotation.Nullable;
 
+import com.addthis.hydra.data.tree.DataTreeNode;
+
 import java.util.LinkedList;
 
 import com.addthis.basis.util.LessStrings;
@@ -23,10 +25,8 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFactory;
 import com.addthis.bundle.core.BundleFormat;
 import com.addthis.bundle.core.BundleFormatted;
-import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeInitializer;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
-import com.addthis.hydra.data.tree.TreeNodeList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +36,7 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
     private static final Logger log = LoggerFactory.getLogger(TreeMapState.class);
     private static final int debug = Integer.parseInt(System.getProperty("hydra.process.debug", "0"));
     private static final boolean debugthread = System.getProperty("hydra.process.debugthread", "0").equals("1");
-    private static final TreeNodeList empty = new TreeNodeList(0).getImmutable();
+    private static final ReadOnceList<DataTreeNode> empty = LeasedTreeNodeList.unmodifiableList();
 
     static {
         if (debugthread) {
@@ -85,7 +85,7 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         }
     }
 
-    public static TreeNodeList empty() {
+    public static ReadOnceList<DataTreeNode> empty() {
         return empty;
     }
 
@@ -114,20 +114,20 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         return tn;
     }
 
-    public DataTreeNode pop() {
+    public void pop() {
         if (debugthread) {
             checkThread();
         }
-        return stack.pop();
+        stack.pop().release();
     }
 
     public int getNodeCount() {
         return current().getNodeCount();
     }
 
-    public void push(TreeNodeList tnl) {
+    public void push(ReadOnceList<DataTreeNode> tnl) {
         if (tnl.size() == 1) {
-            push(tnl.get(0));
+            push(tnl.head());
         } else {
             throw new RuntimeException("unexpected response: " + tnl.size() + " -> " + tnl);
         }
@@ -183,14 +183,14 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
     }
 
     public void process() {
-        TreeNodeList list = processPath(path, 0);
+        ReadOnceList<DataTreeNode> list = processPath(path, 0);
         if ((debug > 0) && ((list == null) || list.isEmpty())) {
             log.warn("proc FAIL {}", list);
             log.warn(".... PATH {}", LessStrings.join(path, " // "));
             log.warn(".... PACK {}", bundle);
         }
         if (list != null) {
-            list.forEach(DataTreeNode::release);
+            list.release();
         }
     }
 
@@ -198,17 +198,17 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
      * called from PathCall.processNode(), PathCombo.processNode() and
      * PathEach.processNode()
      */
-    public TreeNodeList processPath(PathElement[] path) {
+    public ReadOnceList<DataTreeNode> processPath(PathElement[] path) {
         return processPath(path, 0);
     }
 
     /** */
-    @Nullable private TreeNodeList processPath(PathElement[] path, int index) {
+    @Nullable private ReadOnceList<DataTreeNode> processPath(PathElement[] path, int index) {
         if ((path == null) || (path.length <= index)) {
             return null;
         }
-        TreeNodeList nodes = processPathElement(path[index]);
-        if ((nodes == empty) || ((nodes != null) && nodes.isEmpty())) {
+        ReadOnceList<DataTreeNode> nodes = processPathElement(path[index]);
+        if ((nodes != null) && nodes.isEmpty()) {
             // we get here from op elements, each elements, etc
             if ((index + 1) < path.length) {
                 return processPath(path, index + 1);
@@ -217,10 +217,10 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         } else if (nodes == null) {
             return null;
         } else if ((index + 1) < path.length) {
-            TreeNodeList childNodes = null;
+            ReadOnceList<DataTreeNode> childNodes = null;
             for (DataTreeNode tn : nodes) {
                 push(tn);
-                TreeNodeList childNodesPartition = processPath(path, index + 1);
+                ReadOnceList<DataTreeNode> childNodesPartition = processPath(path, index + 1);
                 if (childNodesPartition != null) {
                     if ((childNodes == null) || (childNodes == empty)) {
                         childNodes = childNodesPartition;
@@ -228,7 +228,7 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
                         childNodes.addAll(childNodesPartition);
                     }
                 }
-                pop().release();
+                pop();
             }
             return childNodes;
         } else {
@@ -240,10 +240,10 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
      * called from this.processPath(), PathEach.processNode() and
      * PathSplit.processNode()
      */
-    public TreeNodeList processPathElement(PathElement pe) {
+    public ReadOnceList<DataTreeNode> processPathElement(PathElement pe) {
         if (profiling) {
             long mark = System.nanoTime();
-            TreeNodeList list = processPathElementProfiled(pe);
+            ReadOnceList<DataTreeNode> list = processPathElementProfiled(pe);
             processor.updateProfile(pe, System.nanoTime() - mark);
             return list;
         } else {
@@ -251,14 +251,14 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         }
     }
 
-    private TreeNodeList processPathElementProfiled(PathElement pe) {
+    private ReadOnceList<DataTreeNode> processPathElementProfiled(PathElement pe) {
         if (pe.disabled()) {
             return empty();
         }
         if (debugthread) {
             checkThread();
         }
-        TreeNodeList list = pe.processNode(this);
+        ReadOnceList<DataTreeNode> list = pe.processNode(this);
         if (list != null) {
             touched += list.size();
         }
