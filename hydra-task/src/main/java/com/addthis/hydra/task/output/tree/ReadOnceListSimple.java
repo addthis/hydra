@@ -23,29 +23,24 @@ import java.util.Spliterator;
 import java.util.function.Consumer;
 
 @NotThreadSafe
-public class ReadOnceListSimple<T> implements ReadOnceList<T> {
+public abstract class ReadOnceListSimple<T> implements ReadOnceList<T> {
 
     @Nonnull
-    private final List<T> data;
+    protected final List<T> data;
 
-    private final Consumer<T> releaseItem;
+    protected boolean read;
 
-    private boolean read;
+    protected boolean released;
 
-    private boolean released;
-
-    ReadOnceListSimple(Consumer<T> releaseItem) {
-        this.releaseItem = releaseItem;
+    ReadOnceListSimple() {
         this.data = new ArrayList<>();
     }
 
-    ReadOnceListSimple(Consumer<T> releaseItem, int capacity) {
-        this.releaseItem = releaseItem;
+    ReadOnceListSimple(int capacity) {
         this.data = new ArrayList<>(capacity);
     }
 
-    ReadOnceListSimple(Consumer<T> releaseItem, List<T> data) {
-        this.releaseItem = releaseItem;
+    ReadOnceListSimple(List<T> data) {
         this.data = data;
     }
 
@@ -127,8 +122,10 @@ public class ReadOnceListSimple<T> implements ReadOnceList<T> {
             throw new IllegalStateException("cannot release a ReadOnceList that has already been released");
         }
         released = true;
-        forEach((x) -> releaseItem.accept(x));
+        doRelease();
     }
+
+    protected abstract void doRelease();
 
     /**
      * Returns number of elements in the list. Does not affect the read or release state.
