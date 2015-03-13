@@ -2,6 +2,8 @@ package com.addthis.hydra.kafka;
 
 import java.io.IOException;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,18 +46,38 @@ public final class KafkaUtils {
         return new Node(id, (String)map.get("host"), (Integer)map.get("port"));
     }
 
-    public static Map<Integer, Node> getKafkaBrokers(CuratorFramework zkClient) throws Exception {
-        Map<Integer, Node> brokers = new HashMap<>();
+    public static List<Integer> getKafkaBrokerIds(CuratorFramework zkClient) throws Exception {
         List<String> ids = zkClient.getChildren().forPath("/brokers/ids");
+        List<Integer> intIds = new ArrayList<>();
         for (String id : ids) {
             try {
                 int intId = Integer.parseInt(id);
-                byte[] brokerInfo = zkClient.getData().forPath(brokersPath + '/' + intId);
-                brokers.put(intId, parseBrokerInfo(intId, brokerInfo));
+                intIds.add(intId);
             } catch (Exception e) {
-                log.error("failed to get/parse broker info for broker: " + id, e);
+                log.warn("ignoring invalid broker id: " + id, e);
+            }
+        }
+        return intIds;
+    }
+
+    public static Map<Integer, Node> getSeedKafkaBrokers(CuratorFramework zkClient, int brokerCount) throws Exception {
+        Map<Integer, Node> brokers = new HashMap<>();
+        List<Integer> ids = getKafkaBrokerIds(zkClient);
+        Collections.shuffle(ids);
+        brokerCount = (brokerCount == -1 ? ids.size() : Math.min(brokerCount, ids.size()));
+        for (int id : ids.subList(0, brokerCount)) {
+            try {
+                byte[] brokerInfo = zkClient.getData().forPath(brokersPath + '/' + id);
+                brokers.put(id, parseBrokerInfo(id, brokerInfo));
+            } catch (Exception e) {
+                log.warn("failed to get/parse broker info for broker: " + id, e);
             }
         }
         return brokers;
     }
+
+    public static Map<Integer, Node> getKafkaBrokers(CuratorFramework zkClient) throws Exception {
+        return getSeedKafkaBrokers(zkClient, -1);
+    }
 }
+
