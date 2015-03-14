@@ -115,11 +115,6 @@ public interface DataTreeNode extends Iterable<DataTreeNode> {
     }
 
     /** TODO temporary workaround.  MUST call ONLY for nodes retrieved via getOrCreateNode(). */
-    public default void lease() {
-        throw new UnsupportedOperationException("lease");
-    }
-
-    /** TODO temporary workaround.  MUST call ONLY for nodes retrieved via getOrCreateNode(). */
     public default void release() {
         throw new UnsupportedOperationException("release");
     }

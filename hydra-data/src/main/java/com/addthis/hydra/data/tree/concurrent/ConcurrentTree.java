@@ -651,11 +651,6 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
     }
 
     @Override
-    public void lease() {
-        getRootNode().lease();
-    }
-
-    @Override
     public void release() {
         getRootNode().release();
     }
