@@ -15,7 +15,10 @@ package com.addthis.hydra.task.output.tree;
 
 import javax.annotation.Nullable;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
+import java.util.List;
 
 import com.addthis.basis.util.LessStrings;
 
@@ -26,7 +29,6 @@ import com.addthis.bundle.core.BundleFormatted;
 import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeInitializer;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
-import com.addthis.hydra.data.tree.TreeNodeList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +38,8 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
     private static final Logger log = LoggerFactory.getLogger(TreeMapState.class);
     private static final int debug = Integer.parseInt(System.getProperty("hydra.process.debug", "0"));
     private static final boolean debugthread = System.getProperty("hydra.process.debugthread", "0").equals("1");
-    private static final TreeNodeList empty = new TreeNodeList(0).getImmutable();
+    // TODO: remove any uses of reference equality to this value and redefine as a proper empty list
+    private static final List<DataTreeNode> empty = Collections.unmodifiableList(new ArrayList<>());
 
     static {
         if (debugthread) {
@@ -85,7 +88,7 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         }
     }
 
-    public static TreeNodeList empty() {
+    public static List<DataTreeNode> empty() {
         return empty;
     }
 
@@ -125,7 +128,7 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         return current().getNodeCount();
     }
 
-    public void push(TreeNodeList tnl) {
+    public void push(List<DataTreeNode> tnl) {
         if (tnl.size() == 1) {
             push(tnl.get(0));
         } else {
@@ -183,7 +186,7 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
     }
 
     public void process() {
-        TreeNodeList list = processPath(path, 0);
+        List<DataTreeNode> list = processPath(path, 0);
         if ((debug > 0) && ((list == null) || list.isEmpty())) {
             log.warn("proc FAIL {}", list);
             log.warn(".... PATH {}", LessStrings.join(path, " // "));
@@ -198,17 +201,17 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
      * called from PathCall.processNode(), PathCombo.processNode() and
      * PathEach.processNode()
      */
-    public TreeNodeList processPath(PathElement[] path) {
+    public List<DataTreeNode> processPath(PathElement[] path) {
         return processPath(path, 0);
     }
 
     /** */
-    @Nullable private TreeNodeList processPath(PathElement[] path, int index) {
+    @Nullable private List<DataTreeNode> processPath(PathElement[] path, int index) {
         if ((path == null) || (path.length <= index)) {
             return null;
         }
-        TreeNodeList nodes = processPathElement(path[index]);
-        if ((nodes == empty) || ((nodes != null) && nodes.isEmpty())) {
+        List<DataTreeNode> nodes = processPathElement(path[index]);
+        if ((nodes != null) && nodes.isEmpty()) {
             // we get here from op elements, each elements, etc
             if ((index + 1) < path.length) {
                 return processPath(path, index + 1);
@@ -217,10 +220,10 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         } else if (nodes == null) {
             return null;
         } else if ((index + 1) < path.length) {
-            TreeNodeList childNodes = null;
+            List<DataTreeNode> childNodes = null;
             for (DataTreeNode tn : nodes) {
                 push(tn);
-                TreeNodeList childNodesPartition = processPath(path, index + 1);
+                List<DataTreeNode> childNodesPartition = processPath(path, index + 1);
                 if (childNodesPartition != null) {
                     if ((childNodes == null) || (childNodes == empty)) {
                         childNodes = childNodesPartition;
@@ -240,10 +243,10 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
      * called from this.processPath(), PathEach.processNode() and
      * PathSplit.processNode()
      */
-    public TreeNodeList processPathElement(PathElement pe) {
+    public List<DataTreeNode> processPathElement(PathElement pe) {
         if (profiling) {
             long mark = System.nanoTime();
-            TreeNodeList list = processPathElementProfiled(pe);
+            List<DataTreeNode> list = processPathElementProfiled(pe);
             processor.updateProfile(pe, System.nanoTime() - mark);
             return list;
         } else {
@@ -251,14 +254,14 @@ public final class TreeMapState implements DataTreeNodeUpdater, DataTreeNodeInit
         }
     }
 
-    private TreeNodeList processPathElementProfiled(PathElement pe) {
+    private List<DataTreeNode> processPathElementProfiled(PathElement pe) {
         if (pe.disabled()) {
             return empty();
         }
         if (debugthread) {
             checkThread();
         }
-        TreeNodeList list = pe.processNode(this);
+        List<DataTreeNode> list = pe.processNode(this);
         if (list != null) {
             touched += list.size();
         }

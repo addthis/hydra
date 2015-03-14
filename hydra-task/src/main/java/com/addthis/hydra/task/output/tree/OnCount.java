@@ -13,10 +13,11 @@
  */
 package com.addthis.hydra.task.output.tree;
 
+import java.util.List;
+
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.tree.DataTreeNode;
-import com.addthis.hydra.data.tree.TreeNodeList;
 
 /**
  * This class represents possible triggering value changes.
@@ -42,7 +43,7 @@ public final class OnCount implements Codable {
     public void exec(TreeMapState state) {
         if (exec != null) {
             try {
-                TreeNodeList list = exec.processNode(state);
+                List<DataTreeNode> list = exec.processNode(state);
                 if (list != null) {
                     list.forEach(DataTreeNode::release);
                 }
