@@ -11,9 +11,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.query;
+package com.addthis.hydra.data.query.source;
 
 import com.addthis.hydra.data.query.engine.QueryEngine;
+import com.addthis.hydra.data.query.source.QueryEngineSource;
 import com.addthis.hydra.data.tree.DataTree;
 
 

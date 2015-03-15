@@ -24,16 +24,13 @@ import java.io.UncheckedIOException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import java.nio.file.Path;
@@ -72,9 +69,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ning.compress.lzf.LZFInputStream;
 import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.core.Timer;
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.FileUtils;
@@ -87,7 +82,6 @@ import lzma.sdk.lzma.Decoder;
 import lzma.streams.LzmaInputStream;
 
 import static com.google.common.base.Throwables.propagate;
-import static com.google.common.util.concurrent.Uninterruptibles.awaitUninterruptibly;
 import static com.google.common.util.concurrent.Uninterruptibles.getUninterruptibly;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.runAsync;
@@ -118,7 +112,7 @@ import static java.util.concurrent.CompletableFuture.runAsync;
  * have already been completely consumed.  The data is maintained in a KV data
  * store using the source file name as the key.
  */
-public abstract class AbstractStreamFileDataSource extends TaskDataSource implements BundleFactory {
+public abstract class AbstractStreamFileDataSource extends AbstractStreamDataSource implements BundleFactory {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractStreamFileDataSource.class);
 
@@ -134,11 +128,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
      */
     @JsonProperty private StringFilter filter;
 
-    @Time(TimeUnit.MILLISECONDS)
-    @JsonProperty private int pollInterval;
-
-    @JsonProperty private int pollCountdown;
-
     @Time(TimeUnit.SECONDS)
     @JsonProperty private int latchTimeout;
 
@@ -150,9 +139,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
     /** Ignore the mark directory */
     @JsonProperty private boolean ignoreMarkDir;
-
-    /** Enable metrics visible only from jmx */
-    @JsonProperty private boolean jmxMetrics;
 
     /** Number of shards in the input source. */
     @JsonProperty protected Integer shardTotal;
@@ -194,12 +180,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     @JsonProperty private int skipSourceExit;
 
     /**
-     * Maximum size of the queue that stores bundles prior to their processing.
-     * Default is either "dataSourceMeshy2.buffer" configuration value or 128.
-     */
-    @JsonProperty(required = true) private int buffer;
-
-    /**
      * Number of worker threads that request data from the meshy source.
      * Default is either "dataSourceMeshy2.workers" configuration value or 2.
      */
@@ -229,17 +209,8 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
     /* metrics */
     private final Histogram queueSizeHisto = Metrics.newHistogram(getClass(), "queueSizeHisto");
-    private final Histogram fileSizeHisto = Metrics.newHistogram(getClass(), "fileSizeHisto");
-    private final Timer readTimer = Metrics.newTimer(getClass(), "readTimer", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
-    private final Counter openNew = Metrics.newCounter(getClass(), "openNew");
-    private final Counter openIndex = Metrics.newCounter(getClass(), "openIndex");
-    private final Counter openSkip = Metrics.newCounter(getClass(), "openSkip");
-    private final Counter skipping = Metrics.newCounter(getClass(), "skipping");
-    private final Counter reading = Metrics.newCounter(getClass(), "reading");
-    private final Counter opening = Metrics.newCounter(getClass(), "opening");
 
     // Concurrency provisions
-    private final Counter globalBundleSkip = Metrics.newCounter(getClass(), "globalBundleSkip");
     private final AtomicInteger consecutiveFileSkip = new AtomicInteger();
     private final ThreadLocal<Integer> localBundleSkip =
             new ThreadLocal<Integer>() {
@@ -251,12 +222,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
     // State control
     private final LinkedBlockingQueue<Wrap> preOpened = new LinkedBlockingQueue<>();
-    protected final AtomicBoolean shuttingDown = new AtomicBoolean(false);
-    protected final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
-    private final CountDownLatch initialized = new CountDownLatch(1);
-    private boolean localInitialized = false;
 
-    private BlockingQueue<Bundle> queue;
     private PageDB<SimpleMark> markDB;
     private File markDirFile;
     private CompletableFuture<Void> aggregateWorkerFuture;
@@ -282,6 +248,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
     }
 
     @Override public void init() {
+        super.init();
         if (legacyMode != null) {
             magicMarksNumber = 0;
             useSimpleMarks = true;
@@ -343,7 +310,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        queue = new LinkedBlockingQueue<>(buffer);
 
         List<CompletableFuture<Void>> workerFutures = new ArrayList<>();
         for (int i = 0; i < workers; i++) {
@@ -362,105 +328,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         if ((skipSourceExit > 0) && (consecutiveFileSkip.get() >= skipSourceExit)) {
             throw new DataChannelError("skipped too many sources: " + skipSourceExit + ".  please check your job config.");
         }
-        int countdown = pollCountdown;
-        while (((localInitialized || waitForInitialized()) && (pollCountdown == 0)) || (countdown-- > 0)) {
-            long startTime = jmxMetrics ? System.currentTimeMillis() : 0;
-            Bundle next = pollAndCloseOnInterrupt(pollInterval, TimeUnit.MILLISECONDS);
-            if (jmxMetrics) {
-                readTimer.update(System.currentTimeMillis() - startTime, TimeUnit.MILLISECONDS);
-            }
-            if (next != null) {
-                return next;
-            }
-            if (closeFuture.isDone()) {
-                closeFuture.join();
-                return null;
-            }
-            if (pollCountdown > 0) {
-                log.info("next polled null, retrying {} more times. shuttingDown={}", countdown, shuttingDown.get());
-            }
-            log.info(fileStatsToString("null poll "));
-        }
-        if (countdown < 0) {
-            log.info("exit with no data during poll countdown");
-        }
-        return null;
-    }
-
-    private Bundle pollAndCloseOnInterrupt(long pollFor, TimeUnit unit) {
-        boolean interrupted = false;
-        try {
-            long remainingNanos = unit.toNanos(pollFor);
-            long end = System.nanoTime() + remainingNanos;
-            while (true) {
-                try {
-                    return queue.poll(remainingNanos, TimeUnit.NANOSECONDS);
-                } catch (InterruptedException e) {
-                    interrupted = true;
-                    log.info("interrupted while polling for bundles; closing source then resuming poll");
-                    close();
-                    remainingNanos = end - System.nanoTime();
-                }
-            }
-        } finally {
-            if (interrupted) {
-                Thread.currentThread().interrupt();
-            }
-        }
-    }
-
-    @Override public String toString() {
-        return populateToString(Objects.toStringHelper(this));
-    }
-
-    private String fileStatsToString(String reason) {
-        return populateToString(Objects.toStringHelper(reason));
-    }
-
-    private String populateToString(Objects.ToStringHelper helper) {
-        return helper.add("reading", reading.count())
-                     .add("opening", opening.count())
-                     .add("unseen", openNew.count())
-                     .add("continued", openIndex.count())
-                     .add("skipping", skipping.count())
-                     .add("skipped", openSkip.count())
-                     .add("bundles-skipped", globalBundleSkip.count())
-                     .add("median-size", fileSizeHisto.getSnapshot().getMedian())
-                     .toString();
-    }
-
-    @Nullable @Override public Bundle peek() throws DataChannelError {
-        if (localInitialized || waitForInitialized()) {
-            try {
-                return queue.peek();
-            } catch (Exception ex) {
-                throw propagate(ex);
-            }
-        }
-        return null;
-    }
-
-    private boolean waitForInitialized() {
-        boolean wasInterrupted = false;
-        try {
-            while (!localInitialized
-                   && !awaitUninterruptibly(initialized, 3, TimeUnit.SECONDS)
-                   && !shuttingDown.get()) {
-                log.info(fileStatsToString("waiting for initialization"));
-                if (Thread.interrupted()) {
-                    wasInterrupted = true;
-                    log.info("interrupted while waiting for initialization; closing source then resuming wait");
-                    close();
-                }
-            }
-            log.info(fileStatsToString("initialized"));
-            localInitialized = true;
-            return true;
-        } finally {
-            if (wasInterrupted) {
-                Thread.currentThread().interrupt();
-            }
-        }
+        return super.next();
     }
 
     @Override
