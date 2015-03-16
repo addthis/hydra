@@ -128,7 +128,7 @@ class FetchTask implements Runnable {
                 if (messageSet != null) {
                     for (MessageAndOffset messageAndOffset : messageSet) {
                         putWhileRunning(messageQueue, new MessageWrapper(messageAndOffset, consumer.host(), topic, partitionId, sourceIdentifier), running);
-                        offset = messageAndOffset.offset();
+                        offset = messageAndOffset.nextOffset();
                     }
                 }
             }

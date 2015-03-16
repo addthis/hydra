@@ -72,11 +72,11 @@ class DecodeTask implements Runnable {
                 bundle = DataChannelCodec.decodeBundle(new ListBundle(format), messageBytes);
             } catch (Exception e) {
                 log.error("failed to decode bundle from host: {}, topic: {}, partition: {}, offset: {}, bytes: {}",
-                        messageWrapper.host, messageWrapper.topic, messageWrapper.partition, messageWrapper.messageAndOffset.offset(), messageWrapper.messageAndOffset.message().payloadSize());
+                        messageWrapper.host, messageWrapper.topic, messageWrapper.partition, messageWrapper.messageAndOffset.nextOffset(), messageWrapper.messageAndOffset.message().payloadSize());
                 log.error("decode exception: ", e);
             }
             if (bundle != null) {
-                putWhileRunning(bundleQueue, new BundleWrapper(bundle, messageWrapper.sourceIdentifier, messageWrapper.messageAndOffset.offset()), running);
+                putWhileRunning(bundleQueue, new BundleWrapper(bundle, messageWrapper.sourceIdentifier, messageWrapper.messageAndOffset.nextOffset()), running);
             }
         }
         return true;
