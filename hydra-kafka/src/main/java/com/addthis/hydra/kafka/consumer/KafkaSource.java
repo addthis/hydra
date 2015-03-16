@@ -1,12 +1,8 @@
 package com.addthis.hydra.kafka.consumer;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -184,13 +180,8 @@ public class KafkaSource extends TaskDataSource {
             List<FetchTask> sortedConsumers = new ArrayList<>();
             for (final int shard : shards) {
                 final PartitionMetadata partition = metadata.partitionsMetadata().get(shard);
-                FetchTask fetcher = new FetchTask(this, fetchLatch, zkClient, partition, startTime);
-                sortedConsumers.add(fetcher);
-            }
-            // sort consumer broker-partitions by partition to avoid multiple connections to same broker
-            Collections.sort(sortedConsumers);
-            for (FetchTask consumer : sortedConsumers) {
-                fetchExecutor.execute(consumer);
+                FetchTask fetcher = new FetchTask(this, fetchLatch, topic, partition, startTime);
+                fetchExecutor.execute(fetcher);
             }
             fetchExecutor.submit(new MarkEndTask<>(fetchLatch, running, messageQueue, messageQueueEndMarker));
 

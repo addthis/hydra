@@ -14,7 +14,10 @@ import org.apache.kafka.common.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import kafka.api.PartitionOffsetRequestInfo;
 import kafka.common.ErrorMapping;
+import kafka.common.TopicAndPartition;
+import kafka.javaapi.OffsetResponse;
 import kafka.javaapi.TopicMetadata;
 import kafka.javaapi.TopicMetadataRequest;
 import kafka.javaapi.TopicMetadataResponse;
@@ -93,4 +96,21 @@ public final class ConsumerUtils {
         return metadatas.get(topic);
     }
 
+    // Also taken from wiki wholesale: https://cwiki.apache.org/confluence/display/KAFKA/0.8.0+SimpleConsumer+Example
+    // You have to wonder how this wrapper isn't included as part of the standard API...
+    public static long[] getOffsetsBefore(SimpleConsumer consumer, String topic, int partition, long whichTime) {
+        TopicAndPartition topicAndPartition = new TopicAndPartition(topic, partition);
+        Map<TopicAndPartition, PartitionOffsetRequestInfo> requestInfo = new HashMap<>();
+        requestInfo.put(topicAndPartition, new PartitionOffsetRequestInfo(whichTime, 1));
+        kafka.javaapi.OffsetRequest request = new kafka.javaapi.OffsetRequest(requestInfo, kafka.api.OffsetRequest.CurrentVersion(), "get-offsets");
+        OffsetResponse response = consumer.getOffsetsBefore(request);
+        if (response.hasError()) {
+            Throwable exception = ErrorMapping.exceptionFor(response.errorCode(topic, partition));
+            log.error("failed to get offset for {}-{} time {} from broker: {}:{}", topic, partition, whichTime,
+                    consumer.host(), consumer.port(), ErrorMapping.exceptionFor(response.errorCode(topic, partition)));
+            throw new RuntimeException(exception);
+        }
+        long[] offsets = response.offsets(topic, partition);
+        return offsets;
+    }
 }
