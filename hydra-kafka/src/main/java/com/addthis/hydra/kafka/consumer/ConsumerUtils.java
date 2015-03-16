@@ -83,6 +83,11 @@ public final class ConsumerUtils {
         }
     }
 
+    public static TopicMetadata getTopicMetadata(CuratorFramework zkClient, int seedBrokers, String topic) {
+        Map<String,TopicMetadata> metadatas = getTopicsMetadata(zkClient, seedBrokers, Collections.singletonList(topic));
+        return metadatas.get(topic);
+    }
+
     public static TopicMetadata getTopicMetadata(String zookeepers, int seedBrokers, String topic) {
         Map<String,TopicMetadata> metadatas = getTopicsMetadata(zookeepers, seedBrokers, Collections.singletonList(topic));
         return metadatas.get(topic);

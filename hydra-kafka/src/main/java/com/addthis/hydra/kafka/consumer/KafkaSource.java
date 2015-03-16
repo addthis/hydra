@@ -44,6 +44,8 @@ import org.slf4j.LoggerFactory;
 
 import static com.addthis.hydra.kafka.consumer.BundleWrapper.bundleQueueEndMarker;
 import static com.addthis.hydra.kafka.consumer.MessageWrapper.messageQueueEndMarker;
+import kafka.javaapi.PartitionMetadata;
+import kafka.javaapi.TopicMetadata;
 
 public class KafkaSource extends TaskDataSource {
 
@@ -69,6 +71,8 @@ public class KafkaSource extends TaskDataSource {
     private int decodeThreads = Parameter.intValue("hydra.kafka.decodeThreads", 1);
     @FieldConfig(codable = true)
     private int queueSize     = Parameter.intValue("hydra.kafka.queueSize", 10000);
+    @FieldConfig(codable = true)
+    private int seedBrokers   = Parameter.intValue("hydra.kafka.seedBrokers", 3);
 
     @FieldConfig
     private TaskRunConfig config;
@@ -173,19 +177,15 @@ public class KafkaSource extends TaskDataSource {
             final DateTime startTime = (startDate != null) ? DateUtil.getDateTime(dateFormat, startDate) : null;
 
             zkClient = ZkUtil.makeStandardClient(zookeeper, false);
-            final Set<Integer> shards = new HashSet<>(Arrays.asList(config.calcShardList(countTotalPartitions(injectedBrokerList))));
-            final CountDownLatch fetchLatch = new CountDownLatch(shards.size());
-            // need to make due with legacy broker info format, since jobs have historic brokers serialized to spawn data store
-            int partitionIndex = 0;
+            TopicMetadata metadata = ConsumerUtils.getTopicMetadata(zkClient, seedBrokers, topic);
+
+            final Integer[] shards = config.calcShardList(metadata.partitionsMetadata().size());
+            final CountDownLatch fetchLatch = new CountDownLatch(shards.length);
             List<FetchTask> sortedConsumers = new ArrayList<>();
-            for (final InjectedBrokerInfo brokerInfo : injectedBrokerList) {
-                for (int i = 0; i < brokerInfo.getNumberOfPartitions(); i++) {
-                    if (shards.contains(partitionIndex)) {
-                        FetchTask fetcher = new FetchTask(this, fetchLatch, zkClient, brokerInfo, i, startTime);
-                        sortedConsumers.add(fetcher);
-                    }
-                    partitionIndex++;
-                }
+            for (final int shard : shards) {
+                final PartitionMetadata partition = metadata.partitionsMetadata().get(shard);
+                FetchTask fetcher = new FetchTask(this, fetchLatch, zkClient, partition, startTime);
+                sortedConsumers.add(fetcher);
             }
             // sort consumer broker-partitions by partition to avoid multiple connections to same broker
             Collections.sort(sortedConsumers);
@@ -205,14 +205,6 @@ public class KafkaSource extends TaskDataSource {
             log.error("Error initializing kafka source: ", ex);
             throw new RuntimeException(ex);
         }
-    }
-
-    private static int countTotalPartitions(InjectedBrokerInfo[] brokerInfos) {
-        int total = 0;
-        for (InjectedBrokerInfo info : brokerInfos) {
-            total += info.getNumberOfPartitions();
-        }
-        return total;
     }
 
     // Put onto linked blocking queue, giving up (via exception) if running becomes false (interrupts are ignored in favor of the running flag).
