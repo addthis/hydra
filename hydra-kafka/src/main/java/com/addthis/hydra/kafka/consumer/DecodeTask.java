@@ -14,8 +14,8 @@ import com.addthis.bundle.io.DataChannelCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.addthis.hydra.data.io.kafka.KafkaSource.putWhileRunning;
-import static com.addthis.hydra.data.io.kafka.MessageWrapper.messageQueueEndMarker;
+import static com.addthis.hydra.kafka.consumer.KafkaSource.putWhileRunning;
+import static com.addthis.hydra.kafka.consumer.MessageWrapper.messageQueueEndMarker;
 import kafka.message.Message;
 
 class DecodeTask implements Runnable {

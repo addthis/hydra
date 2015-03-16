@@ -4,7 +4,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.addthis.hydra.data.io.kafka.KafkaSource.putWhileRunning;
+import static com.addthis.hydra.kafka.consumer.KafkaSource.putWhileRunning;
 
 class MarkEndTask<T> implements Runnable {
 
