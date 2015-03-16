@@ -14,6 +14,7 @@ import org.apache.kafka.common.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import kafka.common.ErrorMapping;
 import kafka.javaapi.TopicMetadata;
 import kafka.javaapi.TopicMetadataRequest;
 import kafka.javaapi.TopicMetadataResponse;
@@ -32,6 +33,12 @@ public final class ConsumerUtils {
             TopicMetadataResponse response = consumer.send(request);
             HashMap<String, TopicMetadata> topicsMetadata = new HashMap<>();
             for(TopicMetadata metadata : response.topicsMetadata()) {
+                if(metadata.errorCode() != ErrorMapping.NoError()) {
+                    String message = "failed to get metadata for topic: " + metadata.topic() + ", from broker: " + kafkaHost + ":" + kafkaPort;
+                    Throwable cause = ErrorMapping.exceptionFor(metadata.errorCode());
+                    log.error(message, cause);
+                    throw new RuntimeException(message, cause);
+                }
                 topicsMetadata.put(metadata.topic(), metadata);
             }
             return topicsMetadata;
@@ -45,17 +52,17 @@ public final class ConsumerUtils {
         }
     }
 
-    public static Map<String, TopicMetadata> getTopicsMetadata(CuratorFramework zkClient, int seedBrokers, List<String> topics) throws Exception {
+    public static Map<String, TopicMetadata> getTopicsMetadata(CuratorFramework zkClient, int seedBrokers, List<String> topics) {
         Iterator<Node> brokers = KafkaUtils.getSeedKafkaBrokers(zkClient, seedBrokers).values().iterator();
         Map<String, TopicMetadata> metadata = null;
-        Exception exception = null;
+        RuntimeException exception = new RuntimeException();
         // try to get metadata while we havent yet succeeded and still have more brokers to try
         while(metadata == null && brokers.hasNext()) {
             try {
                 Node broker = brokers.next();
                 metadata = getTopicsMetadataFromBroker(broker.host(), broker.port(), topics);
             } catch(Exception e) {
-                exception = e;
+                exception.addSuppressed(e);
             }
         }
         if(metadata != null) {
@@ -64,11 +71,11 @@ public final class ConsumerUtils {
         throw exception;
     }
 
-    public static Map<String, TopicMetadata> getTopicsMetadata(String zookeepers, int seedBrokers, List<String> topics) throws Exception {
+    public static Map<String, TopicMetadata> getTopicsMetadata(String zookeepers, int seedBrokers, List<String> topics) {
         CuratorFramework zkClient = null;
         try {
             zkClient = KafkaUtils.newZkClient(zookeepers);
-            return getTopicsMetadata(zookeepers, seedBrokers, topics);
+            return getTopicsMetadata(zkClient, seedBrokers, topics);
         } finally {
             if (zkClient != null) {
                 zkClient.close();
@@ -76,13 +83,9 @@ public final class ConsumerUtils {
         }
     }
 
-    public static TopicMetadata getTopicMetadata(String zookeepers, int seedBrokers, String topic) throws Exception {
-        Map<String,TopicMetadata> metadatas = getTopicMetadata(zookeepers, seedBrokers, Collections.singletonList(topic));
-        TopicMetadata metadata = metadatas.get(topic);
-        if(metadata == null) {
-            throw new Exception("metadata request completed, but found no data for topic: " + topic + ", from zookeepers: " + zookeepers);
-        }
-        return metadata;
+    public static TopicMetadata getTopicMetadata(String zookeepers, int seedBrokers, String topic) {
+        Map<String,TopicMetadata> metadatas = getTopicsMetadata(zookeepers, seedBrokers, Collections.singletonList(topic));
+        return metadatas.get(topic);
     }
 
 }
