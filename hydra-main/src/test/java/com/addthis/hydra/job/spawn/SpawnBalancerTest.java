@@ -376,7 +376,7 @@ public class SpawnBalancerTest extends ZkCodecStartUtil {
         installHostStateWithUUID("host", spawn, true);
         Job job = createJobAndUpdateHosts(spawn, 4, Arrays.asList("host"), now, 1000, 0);
         JobKey myKey = new JobKey(job.getId(), 0);
-        spawn.addToTaskQueue(myKey, false, false);
+        spawn.addToTaskQueue(myKey, 0, false);
         spawn.writeSpawnQueue();
         // FIXME spawn2 can't be instantiated due to 5050 already being used by spawn
         try (Spawn spawn2 = Configs.newDefault(Spawn.class)) {

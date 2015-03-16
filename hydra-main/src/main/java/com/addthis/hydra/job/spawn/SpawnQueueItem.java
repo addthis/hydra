@@ -21,21 +21,21 @@ import com.addthis.hydra.job.mq.JobKey;
  */
 public class SpawnQueueItem extends JobKey implements Codable {
 
-    private boolean ignoreQuiesce; // Whether this task is allowed to kick even if Spawn is quiesced
+    private int priority;
 
     private final long creationTime; // When this task was added to the queue
 
     // Need this empty constructor for deserialization
     public SpawnQueueItem() {
         super();
-        ignoreQuiesce = false;
+        priority = 0;
         creationTime = System.currentTimeMillis();
     }
 
-    public SpawnQueueItem(JobKey key, boolean ignoreQuiesce) {
+    public SpawnQueueItem(JobKey key, int priority) {
         this.setJobUuid(key.getJobUuid());
         this.setNodeNumber(key.getNodeNumber());
-        this.ignoreQuiesce = ignoreQuiesce;
+        this.priority = priority;
         this.creationTime = System.currentTimeMillis();
     }
 
@@ -43,17 +43,21 @@ public class SpawnQueueItem extends JobKey implements Codable {
         return creationTime;
     }
 
-    public boolean getIgnoreQuiesce() {
-        return ignoreQuiesce;
-    }
-
     public void setIgnoreQuiesce(boolean ignoreQuiesce) // Necessary for correct deserialization
     {
-        this.ignoreQuiesce = ignoreQuiesce;
+        this.priority = ignoreQuiesce ? 1 : 0;
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public void setPriority(int priority) {
+        this.priority = priority;
     }
 
     @Override
     public String toString() {
-        return "SpawnQueueItem{jobKey=" + this.getJobKey() + ",canIgnoreQuiesce=" + ignoreQuiesce + '}';
+        return "SpawnQueueItem{jobKey=" + this.getJobKey() + ",priority=" + priority + '}';
     }
 }

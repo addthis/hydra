@@ -771,7 +771,7 @@ public class SpawnManager {
             public void kvCall(KVPairs kv) throws Exception {
                 String id = kv.getValue("job", "");
                 emitLogLineForAction(kv, "start job " + id);
-                spawn.startJob(id, true);
+                spawn.startJob(id, 1);
             }
         });
         /** url for killing a job */
@@ -801,7 +801,7 @@ public class SpawnManager {
                 String defaultSource = isReplica ? task.getReplicas().get(0).getHostUUID() : task.getHostUUID();
                 String source = kv.getValue("source", defaultSource);
                 String target = kv.getValue("target", "");
-                if (task != null && spawn.moveTask(task.getJobKey(), source, target)) {
+                if (spawn.moveTask(task.getJobKey(), source, target)) {
                     emitLogLineForAction(kv, "move job " + id + " node " + node + " from " + source + " to " + target);
                 }
             }
@@ -814,7 +814,7 @@ public class SpawnManager {
                 String job = kv.getValue("job", "");
                 int task = kv.getIntValue("task", -1);
                 emitLogLineForAction(kv, "start task " + job + "/" + task);
-                spawn.startTask(job, task, true, true, false);
+                spawn.startTask(job, task, true, 1, false);
             }
         });
         /** url for stopping a task */

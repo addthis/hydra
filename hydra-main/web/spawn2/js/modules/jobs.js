@@ -265,7 +265,7 @@ function(
         kick:function(){
             var self=this;
             $.ajax({
-                 url: "/job/start?jobid="+self.id,
+                 url: "/job/start?priority=1&jobid="+self.id,
                  type: "GET",
                  dataType: "json"
             }).done(function(data){
@@ -549,7 +549,7 @@ function(
         kickSelected:function(jobIds){
             var count = jobIds.length;
             $.ajax({
-                url: "/job/start?jobid="+jobIds,
+                url: "/job/start?priority=1&jobid="+jobIds,
                 type: "GET",
                 dataType: "json"
             }).done(function(data){

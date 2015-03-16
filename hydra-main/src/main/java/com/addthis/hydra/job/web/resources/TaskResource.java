@@ -30,16 +30,10 @@ import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Optional;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 @Path("/task")
 public class TaskResource {
 
-    private static final Logger log = LoggerFactory.getLogger(TaskResource.class);
-
     private final Spawn spawn;
-
-    private static final String defaultUser = "UNKNOWN_USER";
 
     public TaskResource(Spawn spawn) {
         this.spawn = spawn;
@@ -50,9 +44,8 @@ public class TaskResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response startTask(@QueryParam("job") Optional<String> jobId,
             @QueryParam("task") Optional<Integer> task) {
-//      emitLogLineForAction(kv, "start task " + job + "/" + task);
         try {
-            spawn.startTask(jobId.or(""), task.or(-1), true, true, false);
+            spawn.startTask(jobId.or(""), task.or(-1), true, 1, false);
             return Response.ok().build();
         } catch (Exception ex) {
             return Response.serverError().entity(ex.getMessage()).build();
@@ -64,7 +57,6 @@ public class TaskResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response stopTask(@QueryParam("job") Optional<String> jobId,
             @QueryParam("task") Optional<Integer> task) {
-//      emitLogLineForAction(kv, "stop task " + job + "/" + task);
         try {
             spawn.stopTask(jobId.or(""), task.or(-1));
             return Response.ok().build();
@@ -78,7 +70,6 @@ public class TaskResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response killTask(@QueryParam("job") Optional<String> jobId,
             @QueryParam("task") Optional<Integer> task) {
-//      emitLogLineForAction(kv, "kill task " + job + "/" + task);
         try {
             spawn.killTask(jobId.or(""), task.or(-1));
             return Response.ok().build();

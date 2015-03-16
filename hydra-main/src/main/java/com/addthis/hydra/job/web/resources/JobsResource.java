@@ -693,11 +693,11 @@ public class JobsResource {
         return Response.ok(user.getUsername()).build();
     }
 
-    private void startJobHelper(String jobId, int taskId) throws Exception {
+    private void startJobHelper(String jobId, int taskId, int priority) throws Exception {
         if (taskId < 0) {
-            spawn.startJob(jobId, true);
+            spawn.startJob(jobId, priority);
         } else {
-            spawn.startTask(jobId, taskId, true, true, false);
+            spawn.startTask(jobId, taskId, true, priority, false);
         }
     }
 
@@ -711,16 +711,17 @@ public class JobsResource {
     public Response startJob(@QueryParam("jobid") Optional<String> jobIds,
                               @QueryParam("select") @DefaultValue("-1") int select,
                               @QueryParam("id") Optional<String> id,
-                              @QueryParam("task") @DefaultValue("-1") int task) {
+                              @QueryParam("task") @DefaultValue("-1") int task,
+                              @QueryParam("priority") @DefaultValue("0") int priority) {
         try {
             if (jobIds.isPresent()) {
                 String[] joblist = LessStrings.splitArray(jobIds.get(), ",");
                 for (String aJob : joblist) {
-                    startJobHelper(aJob, select);
+                    startJobHelper(aJob, select, priority);
                 }
                 return Response.ok("{\"id\":\"" + jobIds.get() + "\",  \"updated\": \"true\"}").build();
             } else if (id.isPresent()) {
-                startJobHelper(id.get(), task);
+                startJobHelper(id.get(), task, priority);
                 return Response.ok("{\"id\":\"" + id.get() + "\",  \"updated\": \"true\"}").build();
             } else {
                 return Response.status(Response.Status.BAD_REQUEST).entity("job id not specified").build();
