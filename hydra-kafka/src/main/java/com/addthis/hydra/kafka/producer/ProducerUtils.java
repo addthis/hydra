@@ -26,39 +26,45 @@ public class ProducerUtils {
         return stringBuilder.toString();
     }
 
-    public static Properties defaultConfig(String zookeeper, Properties overrides) throws Exception {
-        Properties properties = new Properties();
-        CuratorFramework zkClient = KafkaUtils.newZkClient(zookeeper);
-        Collection<Node> brokers = KafkaUtils.getSeedKafkaBrokers(zkClient, 3).values();
-        zkClient.close();
-        if(brokers.isEmpty()) {
-            throw new Exception("failed to lookup kafka brokers from zookeeper: " + zookeeper);
+    public static Properties defaultConfig(String zookeeper, Properties overrides) {
+        CuratorFramework zkClient = null;
+        try {
+            Properties properties = new Properties();
+            zkClient = KafkaUtils.newZkClient(zookeeper);
+            Collection<Node> brokers = KafkaUtils.getSeedKafkaBrokers(zkClient, 3).values();
+            if (brokers.isEmpty()) {
+                throw new RuntimeException("no kafka brokers available from zookeeper: " + zookeeper);
+            }
+            properties.put("bootstrap.servers", brokerListString(brokers));
+            properties.put("request.required.acks", "all");
+            properties.put("compression.codec", "gzip");
+            return properties;
+        } finally {
+            if(zkClient != null) {
+                zkClient.close();
+            }
         }
-        properties.put("bootstrap.servers", brokerListString(brokers));
-        properties.put("request.required.acks", "all");
-        properties.put("compression.codec", "gzip");
-        return properties;
     }
 
-    public static Properties defaultConfig(String zookeeper) throws Exception {
+    public static Properties defaultConfig(String zookeeper) {
         return defaultConfig(zookeeper, new Properties());
     }
 
-    public static Producer<Bundle,Bundle> newBundleProducer(String zookeeper, Properties overrides) throws Exception {
+    public static Producer<Bundle,Bundle> newBundleProducer(String zookeeper, Properties overrides) {
         BundleEncoder encoder = new BundleEncoder();
         return new KafkaProducer<>(defaultConfig(zookeeper, overrides), encoder, encoder);
     }
 
-    public static Producer<Bundle,Bundle> newBundleProducer(String zookeeper) throws Exception {
+    public static Producer<Bundle,Bundle> newBundleProducer(String zookeeper) {
         return newBundleProducer(zookeeper, new Properties());
     }
 
-    public static Producer<Bundle,Bundle> newBundleProducer(String zookeeper, String topicSuffix, Properties overrides) throws Exception {
+    public static Producer<Bundle,Bundle> newBundleProducer(String zookeeper, String topicSuffix, Properties overrides) {
         BundleEncoder encoder = new BundleEncoder();
         return new TopicSuffixProducer<>(new KafkaProducer<>(defaultConfig(zookeeper, overrides), encoder, encoder), topicSuffix);
     }
 
-    public static Producer<Bundle,Bundle> newBundleProducer(String zookeeper, String topicSuffix) throws Exception {
+    public static Producer<Bundle,Bundle> newBundleProducer(String zookeeper, String topicSuffix) {
         return newBundleProducer(zookeeper, topicSuffix, new Properties());
     }
 }
