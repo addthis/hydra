@@ -114,6 +114,18 @@ public class ListenResource {
     }
 
     @GET
+    @Path("/is-quiesce")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response getIsQuiesced() {
+        try {
+            return Response.ok(Boolean.toString(spawn.getSystemManager().isQuiesced())).build();
+        } catch (Exception ex) {
+            log.error("Error during construction of \"/is-quiesce\" response: ", ex);
+            return Response.serverError().entity(ex.getMessage()).build();
+        }
+    }
+
+    @GET
     @Path("/setup")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getSetup() {
@@ -159,7 +171,7 @@ public class ListenResource {
             setup.put("clientId", clientCounter.incrementAndGet());
             return Response.ok(setup.toString()).build();
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Error during construction of \"/setup\" response: " ,ex);
             return Response.serverError().entity(ex.getMessage()).build();
         }
     }
