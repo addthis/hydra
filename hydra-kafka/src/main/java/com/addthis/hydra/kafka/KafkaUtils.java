@@ -1,7 +1,5 @@
 package com.addthis.hydra.kafka;
 
-import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -41,26 +39,36 @@ public final class KafkaUtils {
         return framework;
     }
 
-    public static Node parseBrokerInfo(int id, byte[] brokerInfo) throws IOException {
-        Map<String,Object> map = (Map)objectMapper.readValue(brokerInfo, Object.class);
-        return new Node(id, (String)map.get("host"), (Integer)map.get("port"));
+    public static Node parseBrokerInfo(int id, byte[] brokerInfo) {
+        try {
+            Map<String,Object> map = (Map)objectMapper.readValue(brokerInfo, Object.class);
+            return new Node(id, (String)map.get("host"), (Integer)map.get("port"));
+        } catch(Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    public static List<Integer> getKafkaBrokerIds(CuratorFramework zkClient) throws Exception {
-        List<String> ids = zkClient.getChildren().forPath("/brokers/ids");
+    public static List<Integer> getKafkaBrokerIds(CuratorFramework zkClient) {
+        List<String> ids = null;
+        try {
+            ids = zkClient.getChildren().forPath("/brokers/ids");
+        } catch (Exception e) {
+            // no reasonable way to handle, rethrow as runtime exception
+            throw new RuntimeException(e);
+        }
         List<Integer> intIds = new ArrayList<>();
         for (String id : ids) {
             try {
                 int intId = Integer.parseInt(id);
                 intIds.add(intId);
             } catch (Exception e) {
-                log.warn("ignoring invalid broker id: " + id, e);
+                log.warn("ignoring invalid broker id: {}", id, e);
             }
         }
         return intIds;
     }
 
-    public static Map<Integer, Node> getSeedKafkaBrokers(CuratorFramework zkClient, int brokerCount) throws Exception {
+    public static Map<Integer, Node> getSeedKafkaBrokers(CuratorFramework zkClient, int brokerCount) {
         Map<Integer, Node> brokers = new HashMap<>();
         List<Integer> ids = getKafkaBrokerIds(zkClient);
         Collections.shuffle(ids);
@@ -70,13 +78,13 @@ public final class KafkaUtils {
                 byte[] brokerInfo = zkClient.getData().forPath(brokersPath + '/' + id);
                 brokers.put(id, parseBrokerInfo(id, brokerInfo));
             } catch (Exception e) {
-                log.warn("failed to get/parse broker info for broker: " + id, e);
+                log.warn("failed to get/parse info for (ignored) broker: {}\n", id, e);
             }
         }
         return brokers;
     }
 
-    public static Map<Integer, Node> getKafkaBrokers(CuratorFramework zkClient) throws Exception {
+    public static Map<Integer, Node> getKafkaBrokers(CuratorFramework zkClient) {
         return getSeedKafkaBrokers(zkClient, -1);
     }
 }
