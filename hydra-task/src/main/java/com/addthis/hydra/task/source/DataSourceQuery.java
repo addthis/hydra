@@ -250,30 +250,35 @@ public class DataSourceQuery extends AbstractStreamDataSource implements DataCha
         return FluentIterable.from(bundle.getFormat()).transform((field) -> field.getName()).toArray(String.class);
     }
 
-    @Override public void send(Bundle input) {
+    @Override public void send(Bundle bundle) {
         try {
-            Bundle output;
-            if (fields == null) {
-                output = input;
-            } else {
-                if (fields.length != input.getFormat().getFieldCount()) {
-                    throw new IllegalStateException("Expecting " + fields.length + " fields " +
-                                                    Arrays.toString(fields) + " and result from query has " +
-                                                    input.getFormat().getFieldCount() + " fields " +
-                                                    Arrays.toString(fieldNames(input)));
-                }
-                output = formatOut.createBundle();
-                Iterator<BundleField> fieldsIn = input.getFormat().iterator();
-                for (int i = 0; i < fields.length; i++) {
-                    AutoField fieldOut = fields[i];
-                    fieldOut.setValue(output, input.getValue(fieldsIn.next()));
-                }
-            }
-            queue.put(output);
+            bundle = renameFields(bundle);
+            queue.put(bundle);
         } catch (Exception ex) {
             firstError.compareAndSet(null, ex);
             close();
         }
+    }
+
+    private Bundle renameFields(Bundle input) {
+        Bundle output;
+        if (fields == null) {
+            output = input;
+        } else {
+            if (fields.length != input.getFormat().getFieldCount()) {
+                throw new IllegalStateException("Expecting " + fields.length + " fields " +
+                                                Arrays.toString(fields) + " and result from query has " +
+                                                input.getFormat().getFieldCount() + " fields " +
+                                                Arrays.toString(fieldNames(input)));
+            }
+            output = formatOut.createBundle();
+            Iterator<BundleField> fieldsIn = input.getFormat().iterator();
+            for (int i = 0; i < fields.length; i++) {
+                AutoField fieldOut = fields[i];
+                fieldOut.setValue(output, input.getValue(fieldsIn.next()));
+            }
+        }
+        return output;
     }
 
     @Override public void send(List<Bundle> list) {
@@ -340,6 +345,7 @@ public class DataSourceQuery extends AbstractStreamDataSource implements DataCha
             }
             Bundle next = dataChannel.read();
             if (next != null) {
+                next = renameFields(next);
                 while (!queue.offer(next, 1, TimeUnit.SECONDS)) {
                     if (shuttingDown.get()) {
                         return true;
