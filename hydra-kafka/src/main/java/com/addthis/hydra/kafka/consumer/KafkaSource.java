@@ -14,13 +14,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.LessFiles;
-import com.addthis.basis.util.Parameter;
 
 import com.addthis.bark.ZkUtil;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.util.DateUtil;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.PageDB;
@@ -31,6 +29,8 @@ import com.addthis.hydra.task.source.TaskDataSource;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.apache.curator.framework.CuratorFramework;
 
@@ -45,33 +45,34 @@ import kafka.javaapi.TopicMetadata;
 
 public class KafkaSource extends TaskDataSource {
 
-    private static final Logger log         = LoggerFactory.getLogger(KafkaSource.class);
-    private static final int    pollRetries = Parameter.intValue("hydra.kafka.pollRetries", 180);
+    private static final Logger log = LoggerFactory.getLogger(KafkaSource.class);
 
-    @FieldConfig(codable = true, required = true)
+    @JsonProperty(required = true)
     private String zookeeper;
-    @FieldConfig(codable = true, required = true)
+    @JsonProperty(required = true)
     private String topic;
-    @FieldConfig(codable = true)
+    @JsonProperty
     private String inputBundleFormatType = KafkaByteDecoder.KafkaByteDecoderType.BUNDLE.toString();
-    @FieldConfig(codable = true)
+    @JsonProperty
     private String startDate;
-    @FieldConfig(codable = true)
+    @JsonProperty
     private String dateFormat = "YYMMdd";
-    @FieldConfig(codable = true)
-    private String markDir    = "marks";
+    @JsonProperty
+    private String markDir = "marks";
 
-    @FieldConfig(codable = true)
-    private int fetchThreads  = Parameter.intValue("hydra.kafka.fetchThreads", 1);
-    @FieldConfig(codable = true)
-    private int decodeThreads = Parameter.intValue("hydra.kafka.decodeThreads", 1);
-    @FieldConfig(codable = true)
-    private int queueSize     = Parameter.intValue("hydra.kafka.queueSize", 10000);
-    @FieldConfig(codable = true)
-    private int seedBrokers   = Parameter.intValue("hydra.kafka.seedBrokers", 3);
+    @JsonProperty
+    private int fetchThreads = 1;
+    @JsonProperty
+    private int decodeThreads = 1;
+    @JsonProperty
+    private int queueSize = 10000;
+    @JsonProperty
+    private int seedBrokers = 3;
 
-    @FieldConfig
+    @JsonProperty
     private TaskRunConfig config;
+    @JsonProperty
+    private int pollRetries = 180;
 
     PageDB<SimpleMark> markDb;
     AtomicBoolean running;
