@@ -100,6 +100,11 @@ public final class ConsumerUtils {
         return metadatas.get(topic);
     }
 
+    public static Broker getNewLeader(SimpleConsumer consumer, String topic, int partition) {
+        TopicMetadata metadata = getTopicsMetadataFromBroker(consumer, Collections.singletonList(topic)).get(topic);
+        return metadata.partitionsMetadata().get(partition).leader();
+    }
+
     // Also taken from wiki wholesale: https://cwiki.apache.org/confluence/display/KAFKA/0.8.0+SimpleConsumer+Example
     // You have to wonder how this wrapper isn't included as part of the standard API...
     public static long getOffsetBefore(SimpleConsumer consumer, String topic, int partition, long whichTime) {
@@ -151,8 +156,7 @@ public final class ConsumerUtils {
                 }
                 // create new consumer to current leader if more attempts remain
                 if (i < attempts - 1) {
-                    TopicMetadata metadata = getTopicsMetadataFromBroker(consumer, Collections.singletonList(topic)).get(topic);
-                    Broker leader = metadata.partitionsMetadata().get(partition).leader();
+                    Broker leader = getNewLeader(consumer, topic, partition);
                     offsetConsumer = new SimpleConsumer(leader.host(), leader.port(), 100000, 64 * 1024, "get-offset");
                 }
             }

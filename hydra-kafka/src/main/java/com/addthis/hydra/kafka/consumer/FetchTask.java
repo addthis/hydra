@@ -30,8 +30,9 @@ class FetchTask implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(FetchTask.class);
 
-    private static final int fetchSize = Parameter.intValue("hydra.kafka.fetchSize", 1048576);
-    private static final int timeout = Parameter.intValue("hydra.kafka.timeout", 10000);
+    private static final int fetchSize = Parameter.intValue(FetchTask.class + ".fetchSize", 1048576);
+    private static final int timeout = Parameter.intValue(FetchTask.class + ".timeout", 10000);
+    private static final int offsetAttempts = Parameter.intValue(FetchTask.class + ".offsetAttempts", 3);
 
     private KafkaSource kafkaSource;
     private final CountDownLatch fetchLatch;
@@ -55,6 +56,7 @@ class FetchTask implements Runnable {
     private static void consume(AtomicBoolean running, CountDownLatch latch,
             String topic, PartitionMetadata partition, PageDB<SimpleMark> markDb, DateTime startTime,
             LinkedBlockingQueue<MessageWrapper> messageQueue, ConcurrentMap<String, Long> sourceOffsets) {
+        SimpleConsumer consumer = null;
         try {
             if (!running.get()) {
                 return;
@@ -62,23 +64,20 @@ class FetchTask implements Runnable {
             // initialize consumer and offsets
             int partitionId = partition.partitionId();
             Broker broker = partition.leader();
-            final SimpleConsumer consumer = new SimpleConsumer(broker.host(), broker.port(), timeout, fetchSize, "kafka-source-consumer");
+            consumer = new SimpleConsumer(broker.host(), broker.port(), timeout, fetchSize, "kafka-source-consumer");
             String sourceIdentifier = topic + "-" + partitionId;
-            final long endOffset = ConsumerUtils.latestOffsetAvailable(consumer, topic, partitionId);
+            final long endOffset = ConsumerUtils.latestOffsetAvailable(consumer, topic, partitionId, offsetAttempts);
             final SimpleMark previousMark = markDb.get(new DBKey(0, sourceIdentifier));
             long offset = -1;
             if (previousMark != null) {
                 offset = previousMark.getIndex();
             } else if (startTime != null) {
-                long[] offsets = ConsumerUtils.getOffsetsBefore(consumer, topic, partitionId, startTime.getMillis());
-                if (offsets.length == 1) {
-                    log.info("no previous mark for host: {}, partition: {}, starting from offset: {}, closest to: {}", consumer.host(), partitionId, offsets[0], startTime);
-                    offset = offsets[0];
-                }
+                offset = ConsumerUtils.getOffsetBefore(consumer, topic, partitionId, startTime.getMillis(), offsetAttempts);
+                log.info("no previous mark for host: {}, partition: {}, starting from offset: {}, closest to: {}", consumer.host(), partitionId, offset, startTime);
             }
             if (offset == -1) {
                 log.info("no previous mark for host: {}:{}, topic: {}, partition: {}, no offsets available for startTime: {}, starting from earliest", consumer.host(), consumer.port(), topic, partitionId, startTime);
-                offset = ConsumerUtils.earliestOffsetAvailable(consumer, topic, partitionId);
+                offset = ConsumerUtils.earliestOffsetAvailable(consumer, topic, partitionId, offsetAttempts);
             } else if(offset > endOffset) {
                 log.warn("initial offset for: {}:{}, topic: {}, partition: {} is beyond latest, {} > {}; kafka data was either wiped (resetting offsets) or corrupted - skipping " +
                          "ahead to offset {} to recover consuming from latest", consumer.host(), consumer.port(), topic, partitionId, offset, endOffset, endOffset);
@@ -101,16 +100,24 @@ class FetchTask implements Runnable {
                 }
                 // clamp out-of-range offsets
                 else if(errorCode == ErrorMapping.OffsetOutOfRangeCode()) {
-                    long earliestOffset = ConsumerUtils.earliestOffsetAvailable(consumer, topic, partitionId);
+                    long earliestOffset = ConsumerUtils.earliestOffsetAvailable(consumer, topic, partitionId, offsetAttempts);
                     if (offset < earliestOffset) {
                         log.error("forwarding invalid early offset: {}:{}, topic: {}, partition: {}, from offset: {}, to: {}", consumer.host(), consumer.port(), topic, partition, offset, earliestOffset);
                         offset = earliestOffset;
                         // offset exceptions should only be thrown when offset < earliest, so this case shouldnt ever happen
                     } else {
-                        long latestOffset = ConsumerUtils.latestOffsetAvailable(consumer, topic, partitionId);
+                        long latestOffset = ConsumerUtils.latestOffsetAvailable(consumer, topic, partitionId, offsetAttempts);
                         log.error("rewinding invalid future offset: {}:{}, topic: {}, partition: {}, from offset: {}, to: {}", consumer.host(), consumer.port(), topic, partition, offset, latestOffset);
                         offset = latestOffset;
                     }
+                }
+                // partition was moved/rebalanced in background, so this consumer's host no longer has data
+                else if(errorCode == ErrorMapping.NotLeaderForPartitionCode() || errorCode == ErrorMapping.UnknownTopicOrPartitionCode()) {
+                    Broker newLeader = ConsumerUtils.getNewLeader(consumer, topic, partitionId);
+                    log.warn("current partition was moved off of current host while consuming, reconnecting to new leader; topic: {}-{}, old: {}:{}, new leader: {}:{}",
+                            topic, partitionId, consumer.host(), consumer.port(), newLeader.host(), newLeader.port());
+                    consumer.close();
+                    consumer = new SimpleConsumer(newLeader.host(), newLeader.port(), timeout, fetchSize, "kafka-source-consumer");
                 }
                 // any other error
                 else if(errorCode != ErrorMapping.NoError()) {
@@ -131,6 +138,9 @@ class FetchTask implements Runnable {
             log.error("kafka consume thread failed: ", e);
         } finally {
             latch.countDown();
+            if(consumer != null) {
+                consumer.close();
+            }
         }
     }
 }
