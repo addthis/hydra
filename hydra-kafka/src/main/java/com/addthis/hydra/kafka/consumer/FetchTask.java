@@ -81,22 +81,24 @@ class FetchTask implements Runnable {
             } else if (startTime != null) {
                 long[] offsets = ConsumerUtils.getOffsetsBefore(consumer, topic, partitionId, startTime.getMillis());
                 if (offsets.length == 1) {
-                    log.info("no previous mark for host: {}, partition: {}, starting from offset: {}, closest to: {}", consumer.host(), partition, offsets[0], startTime);
+                    log.info("no previous mark for host: {}, partition: {}, starting from offset: {}, closest to: {}", consumer.host(), partitionId, offsets[0], startTime);
                     offset = offsets[0];
                 }
             }
             if (offset == -1) {
-                log.info("no previous mark for host: {}:{}, topic: {}, partition: {}, no offsets available for startTime: {}, starting from earliest", consumer.host(), consumer.port(), topic, partition, startTime);
+                log.info("no previous mark for host: {}:{}, topic: {}, partition: {}, no offsets available for startTime: {}, starting from earliest", consumer.host(), consumer.port(), topic, partitionId, startTime);
                 offset = earliestOffsetAvailable(consumer, topic, partitionId);
             } else if(offset > endOffset) {
                 log.warn("initial offset for: {}:{}, topic: {}, partition: {} is beyond latest, {} > {}; kafka data was either wiped (resetting offsets) or corrupted - skipping " +
-                         "ahead to offset {} to recover consuming from latest", consumer.host(), consumer.port(), topic, partition, offset, endOffset, endOffset);
+                         "ahead to offset {} to recover consuming from latest", consumer.host(), consumer.port(), topic, partitionId, offset, endOffset, endOffset);
                 offset = endOffset;
                 // Offsets are normally updated when the bundles are consumed from source.next() - since we wont be fetching any bundles to be consumed, we need
                 // to update offset map (that gets persisted to marks) here.
                 // The sourceOffsets map probably *should not* be modified anywhere else outside of next().
                 sourceOffsets.put(sourceIdentifier, offset);
             }
+            log.info("starting to consume topic: {}, partition: {} from broker: {}:{} at offset: {}, until offset: {}",
+                    topic, partitionId, consumer.host(), consumer.port(), offset, endOffset);
             // fetch from broker, add to queue (decoder threads will process queue in parallel)
             while (running.get() && (offset < endOffset)) {
                 FetchRequest request = new FetchRequestBuilder().addFetch(topic, partitionId, offset, fetchSize).build();
@@ -121,7 +123,7 @@ class FetchTask implements Runnable {
                 }
                 // any other error
                 else if(errorCode != ErrorMapping.NoError()) {
-                    log.error("failed to consume from broker: {}:{}, topic: {}, partition: {}, offset: {}", consumer.host(), consumer.port(), topic, partition, offset);
+                    log.error("failed to consume from broker: {}:{}, topic: {}, partition: {}, offset: {}", consumer.host(), consumer.port(), topic, partitionId, offset);
                     throw new RuntimeException(ErrorMapping.exceptionFor(errorCode));
                 }
 
@@ -132,7 +134,7 @@ class FetchTask implements Runnable {
                     }
                 }
             }
-            log.info("finished consuming from broker: {}:{}, topic: {}, partition: {}, offset: {}", consumer.host(), consumer.port(), topic, partition, offset);
+            log.info("finished consuming from broker: {}:{}, topic: {}, partition: {}, offset: {}", consumer.host(), consumer.port(), topic, partitionId, offset);
         } catch (BenignKafkaException ignored) {
         } catch (Exception e) {
             log.error("kafka consume thread failed: ", e);
