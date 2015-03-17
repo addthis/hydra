@@ -35,9 +35,9 @@ import com.addthis.hydra.data.channel.BlockingNullConsumer;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.data.query.engine.QueryEngine;
+import com.addthis.hydra.data.query.source.QueryEngineSource;
 import com.addthis.hydra.data.query.source.QuerySource;
 import com.addthis.hydra.data.tree.ReadTree;
-import com.addthis.hydra.query.QueryEngineSource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
