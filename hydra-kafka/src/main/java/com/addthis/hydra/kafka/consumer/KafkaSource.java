@@ -1,7 +1,5 @@
 package com.addthis.hydra.kafka.consumer;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,8 +49,6 @@ public class KafkaSource extends TaskDataSource {
     private String zookeeper;
     @JsonProperty(required = true)
     private String topic;
-    @JsonProperty
-    private String inputBundleFormatType = KafkaByteDecoder.KafkaByteDecoderType.BUNDLE.toString();
     @JsonProperty
     private String startDate;
     @JsonProperty
@@ -161,13 +157,13 @@ public class KafkaSource extends TaskDataSource {
             this.fetchExecutor = MoreExecutors.getExitingExecutorService(
                     new ThreadPoolExecutor(fetchThreads, fetchThreads,
                             0l, TimeUnit.SECONDS,
-                            new LinkedBlockingQueue<Runnable>(),
+                            new LinkedBlockingQueue<>(),
                             new ThreadFactoryBuilder().setNameFormat("source-kafka-fetch-%d").build())
             );
             this.decodeExecutor = MoreExecutors.getExitingExecutorService(
                     new ThreadPoolExecutor(decodeThreads, decodeThreads,
                             0l, TimeUnit.SECONDS,
-                            new LinkedBlockingQueue<Runnable>(),
+                            new LinkedBlockingQueue<>(),
                             new ThreadFactoryBuilder().setNameFormat("source-kafka-decode-%d").build())
             );
             this.running = new AtomicBoolean(true);
@@ -178,7 +174,6 @@ public class KafkaSource extends TaskDataSource {
 
             final Integer[] shards = config.calcShardList(metadata.partitionsMetadata().size());
             final CountDownLatch fetchLatch = new CountDownLatch(shards.length);
-            List<FetchTask> sortedConsumers = new ArrayList<>();
             for (final int shard : shards) {
                 final PartitionMetadata partition = metadata.partitionsMetadata().get(shard);
                 FetchTask fetcher = new FetchTask(this, fetchLatch, topic, partition, startTime);
