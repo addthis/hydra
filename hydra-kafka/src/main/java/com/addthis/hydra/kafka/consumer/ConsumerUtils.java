@@ -14,6 +14,7 @@ import org.apache.kafka.common.Node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import kafka.api.OffsetRequest;
 import kafka.api.PartitionOffsetRequestInfo;
 import kafka.common.ErrorMapping;
 import kafka.common.TopicAndPartition;
@@ -112,5 +113,13 @@ public final class ConsumerUtils {
         }
         long[] offsets = response.offsets(topic, partition);
         return offsets;
+    }
+
+    public static long earliestOffsetAvailable(SimpleConsumer consumer, String topic, int partition) {
+        return getOffsetsBefore(consumer, topic, partition, OffsetRequest.EarliestTime())[0];
+    }
+
+    public static long latestOffsetAvailable(SimpleConsumer consumer, String topic, int partition) {
+        return getOffsetsBefore(consumer, topic, partition, OffsetRequest.LatestTime())[0];
     }
 }

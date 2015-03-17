@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import static com.addthis.hydra.kafka.consumer.KafkaSource.putWhileRunning;
 import kafka.api.FetchRequest;
 import kafka.api.FetchRequestBuilder;
-import kafka.api.OffsetRequest;
 import kafka.cluster.Broker;
 import kafka.common.ErrorMapping;
 import kafka.javaapi.FetchResponse;
@@ -53,14 +52,6 @@ class FetchTask implements Runnable {
         consume(kafkaSource.running, fetchLatch, topic, partition, kafkaSource.markDb, startTime, kafkaSource.messageQueue, kafkaSource.sourceOffsets);
     }
 
-    private static long earliestOffsetAvailable(SimpleConsumer consumer, String topic, int partition) {
-        return ConsumerUtils.getOffsetsBefore(consumer, topic, partition, OffsetRequest.EarliestTime())[0];
-    }
-
-    private static long latestOffsetAvailable(SimpleConsumer consumer, String topic, int partition) {
-        return ConsumerUtils.getOffsetsBefore(consumer, topic, partition, OffsetRequest.LatestTime())[0];
-    }
-
     private static void consume(AtomicBoolean running, CountDownLatch latch,
             String topic, PartitionMetadata partition, PageDB<SimpleMark> markDb, DateTime startTime,
             LinkedBlockingQueue<MessageWrapper> messageQueue, ConcurrentMap<String, Long> sourceOffsets) {
@@ -73,7 +64,7 @@ class FetchTask implements Runnable {
             Broker broker = partition.leader();
             final SimpleConsumer consumer = new SimpleConsumer(broker.host(), broker.port(), timeout, fetchSize, "kafka-source-consumer");
             String sourceIdentifier = topic + "-" + partitionId;
-            final long endOffset = latestOffsetAvailable(consumer, topic, partitionId);
+            final long endOffset = ConsumerUtils.latestOffsetAvailable(consumer, topic, partitionId);
             final SimpleMark previousMark = markDb.get(new DBKey(0, sourceIdentifier));
             long offset = -1;
             if (previousMark != null) {
@@ -87,7 +78,7 @@ class FetchTask implements Runnable {
             }
             if (offset == -1) {
                 log.info("no previous mark for host: {}:{}, topic: {}, partition: {}, no offsets available for startTime: {}, starting from earliest", consumer.host(), consumer.port(), topic, partitionId, startTime);
-                offset = earliestOffsetAvailable(consumer, topic, partitionId);
+                offset = ConsumerUtils.earliestOffsetAvailable(consumer, topic, partitionId);
             } else if(offset > endOffset) {
                 log.warn("initial offset for: {}:{}, topic: {}, partition: {} is beyond latest, {} > {}; kafka data was either wiped (resetting offsets) or corrupted - skipping " +
                          "ahead to offset {} to recover consuming from latest", consumer.host(), consumer.port(), topic, partitionId, offset, endOffset, endOffset);
@@ -110,13 +101,13 @@ class FetchTask implements Runnable {
                 }
                 // clamp out-of-range offsets
                 else if(errorCode == ErrorMapping.OffsetOutOfRangeCode()) {
-                    long earliestOffset = earliestOffsetAvailable(consumer, topic, partitionId);
+                    long earliestOffset = ConsumerUtils.earliestOffsetAvailable(consumer, topic, partitionId);
                     if (offset < earliestOffset) {
                         log.error("forwarding invalid early offset: {}:{}, topic: {}, partition: {}, from offset: {}, to: {}", consumer.host(), consumer.port(), topic, partition, offset, earliestOffset);
                         offset = earliestOffset;
                         // offset exceptions should only be thrown when offset < earliest, so this case shouldnt ever happen
                     } else {
-                        long latestOffset = latestOffsetAvailable(consumer, topic, partitionId);
+                        long latestOffset = ConsumerUtils.latestOffsetAvailable(consumer, topic, partitionId);
                         log.error("rewinding invalid future offset: {}:{}, topic: {}, partition: {}, from offset: {}, to: {}", consumer.host(), consumer.port(), topic, partition, offset, latestOffset);
                         offset = latestOffset;
                     }
