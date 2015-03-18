@@ -67,6 +67,7 @@
     <hydra.dep.log4j2.version>2.1</hydra.dep.log4j2.version>
     <hydra.dep.apache.commons.lang3.version>3.1</hydra.dep.apache.commons.lang3.version>
     <hydra.dep.apache.curator.version>2.4.0</hydra.dep.apache.curator.version>
+    <hydra.dep.apache.kafka.version>0.8.2.0</hydra.dep.apache.kafka.version>
     <hydra.dep.jackson.jackson-mapper-asl.version>1.9.13</hydra.dep.jackson.jackson-mapper-asl.version>
     <hydra.dep.commons-codec.version>1.8</hydra.dep.commons-codec.version>
     <hydra.dep.spring.version>4.0.0.RELEASE</hydra.dep.spring.version>
@@ -228,6 +229,16 @@
         <groupId>org.apache.curator</groupId>
         <artifactId>curator-recipes</artifactId>
         <version>${hydra.dep.apache.curator.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.kafka</groupId>
+        <artifactId>kafka-clients</artifactId>
+        <version>${hydra.dep.apache.kafka.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.kafka</groupId>
+        <artifactId>kafka_2.10</artifactId>
+        <version>${hydra.dep.apache.kafka.version}</version>
       </dependency>
       <dependency>
         <groupId>junit</groupId>
