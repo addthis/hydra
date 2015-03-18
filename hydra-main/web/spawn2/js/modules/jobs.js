@@ -626,7 +626,7 @@ function(
         deleteSelected:function(jobIds){
             var count = jobIds.length;
             var self=this;
-            Alertify.dialog.confirm("Are you sure you would like to DELETE " + (count > 1 ? " jobs" : " job") + "?", function (resp) {
+            Alertify.dialog.confirm("Are you sure you would like to DELETE " + count + " " + (count > 1 ? " jobs" : " job") + "?", function (resp) {
 
                 _.each(jobIds,function(jobId){
                     var job = self.get(jobId);
