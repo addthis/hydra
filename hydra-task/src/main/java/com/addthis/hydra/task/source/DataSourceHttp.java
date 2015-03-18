@@ -44,6 +44,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * This data source <span class="hydra-summary">fetches data from an http endpoint</span>.
+ *
+ * @user-reference
+ */
 public class DataSourceHttp extends TaskDataSource {
 
     static final int LOG_TRUNCATE_CHARS = 500;
