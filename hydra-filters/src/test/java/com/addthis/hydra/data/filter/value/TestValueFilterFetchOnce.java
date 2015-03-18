@@ -42,6 +42,12 @@ public class TestValueFilterFetchOnce {
         fetch.filter("http://blog.addthis.com");
     }
 
+    @Test(expected=NullPointerException.class)
+    public void nullInput() {
+        ValueFilterFetchOnce fetch = new ValueFilterFetchOnce(5000);
+        fetch.filter((String) null);
+    }
+
     @Test
     public void fetchError() {
         boolean error = false;

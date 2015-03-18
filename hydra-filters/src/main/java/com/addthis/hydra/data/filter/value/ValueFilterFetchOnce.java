@@ -25,6 +25,7 @@ import com.addthis.basis.net.http.HttpResponse;
 
 import com.addthis.codec.annotations.Time;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -61,6 +62,7 @@ public class ValueFilterFetchOnce extends StringFilter {
     private CompletableFuture<String> result = new CompletableFuture<>();
 
     @Override public String filter(String input) {
+        Preconditions.checkNotNull(input, "input to fetch-once filter must be non-null");
         while (true) {
             String cacheRead = cache;
             if (cacheRead == null) {
