@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.util;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +36,7 @@ public class EmailUtil {
              * If the process completed successfully but the standard error
              * log is non-empty then emit the standard error.
              */
-            if (success && (exitValue == 0) && !Strings.isEmpty(standardError)) {
+            if (success && (exitValue == 0) && !LessStrings.isEmpty(standardError)) {
                 log.warn("Stderr was non-empty in email with subject: {} to : {} due to subshell error : {} {}",
                          subject, to, exitValue, standardError);
             }
