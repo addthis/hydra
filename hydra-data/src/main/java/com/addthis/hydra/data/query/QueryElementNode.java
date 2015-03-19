@@ -37,6 +37,7 @@ import com.addthis.hydra.data.tree.DataTreeNodeActor;
 import com.addthis.hydra.data.tree.ReadTreeNode;
 import com.addthis.hydra.data.tree.TreeNodeData;
 
+import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -271,6 +272,35 @@ public class QueryElementNode implements Codable {
         return node;
     }
 
+    private static class LazyNodeMatch extends AbstractIterator<DataTreeNode> {
+
+        final DataTreeNode parent;
+
+        final String[] match;
+
+        int index;
+
+        LazyNodeMatch(DataTreeNode parent, String[] match) {
+            this.parent = parent;
+            this.match = match;
+            this.index = 0;
+        }
+
+        protected DataTreeNode computeNext() {
+            DataTreeNode next = null;
+            while ((next == null) && (index < match.length)) {
+                next = parent.getNode(match[index]);
+                index++;
+            }
+            if (next == null) {
+                return endOfData();
+            } else {
+                return next;
+            }
+        }
+
+    }
+
     public Iterator<DataTreeNode> getNodes(LinkedList<DataTreeNode> stack) {
         List<DataTreeNode> ret = null;
         if (up()) {
@@ -337,6 +367,8 @@ public class QueryElementNode implements Codable {
                     }
                 } else if (rangeStrict()) {
                     return parent.getIterator(match.length > 0 ? match[0] : null, match.length > 1 ? match[1] : null);
+                } else if (data == null) {
+                    return new LazyNodeMatch(parent, match);
                 } else {
                     for (String name : match) {
                         DataTreeNode find = parent.getNode(name);
