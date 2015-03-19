@@ -22,20 +22,30 @@ import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.data.util.Tokenizer;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 
 /**
  * chops strings into columns (no keys)
  *
- * @hydra-name column
  */
 public class ColumnBundleizer extends NewlineBundleizer {
 
-    @FieldConfig(codable = true, required = true)
-    private String[] columns;
-    @FieldConfig(codable = true, required = true)
-    private Tokenizer tokens;
-    @FieldConfig(codable = true)
-    private ValueFilter tokenFilter;
+    private final String[] columns;
+
+    private final Tokenizer tokens;
+
+    private final ValueFilter tokenFilter;
+
+    @JsonCreator
+    public ColumnBundleizer(@JsonProperty(value = "columns", required = true) String[] columns,
+                            @JsonProperty(value = "tokens", required = true) Tokenizer tokens,
+                            @JsonProperty(value = "tokenFilter") ValueFilter tokenFilter) {
+        this.columns = columns;
+        this.tokens = tokens;
+        this.tokenFilter =tokenFilter;
+    }
 
     @Override
     public void open() {

@@ -19,7 +19,7 @@ import java.io.IOException;
 
 import java.util.Iterator;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleException;
@@ -73,7 +73,7 @@ public class MergedRow implements DiskBackedMap.DiskObject, Bundle {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         byte[] result;
         try {
-            bos.write(Bytes.toBytes(numMergedRows));
+            bos.write(LessBytes.toBytes(numMergedRows));
             ListBundleFormat format = new ListBundleFormat();
             ListBundle listBundle = new ListBundle(format);
             emit();

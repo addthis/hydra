@@ -20,7 +20,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
@@ -87,7 +87,6 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codable {
      * </table>
      *
      * @user-reference
-     * @hydra-name top
      */
     public static final class Config extends TreeDataParameters<DataTop> {
 
@@ -264,7 +263,7 @@ public class DataTop extends TreeNodeData<DataTop.Config> implements Codable {
             // url decode
             java.util.Set<String> dataListSet = new HashSet<>();
             for (String dataElement : dataListArray) {
-                dataListSet.add(Strings.urlDecode(dataElement));
+                dataListSet.add(LessStrings.urlDecode(dataElement));
             }
             ArrayList<DataTreeNode> ret = new ArrayList<>(top.length);
             for (Entry<String, Long> e : top) {

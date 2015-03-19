@@ -94,19 +94,19 @@ public class SpawnQueuesByPriority extends TreeMap<Integer, LinkedList<SpawnQueu
         return queueLock.tryLock();
     }
 
-    public boolean addTaskToQueue(int priority, JobKey task, boolean canIgnoreQuiesce, boolean toHead) {
+    public boolean addTaskToQueue(int jobPriority, JobKey task, int kickPriority, boolean toHead) {
         queueLock.lock();
         try {
-            LinkedList<SpawnQueueItem> queue = this.get(priority);
+            LinkedList<SpawnQueueItem> queue = this.get(jobPriority);
             if (queue == null) {
                 queue = new LinkedList<>();
-                this.put(priority, queue);
+                this.put(jobPriority, queue);
             }
             if (toHead) {
-                queue.add(0, new SpawnQueueItem(task, canIgnoreQuiesce));
+                queue.add(0, new SpawnQueueItem(task, kickPriority));
                 return true;
             }
-            return queue.add(new SpawnQueueItem(task, canIgnoreQuiesce));
+            return queue.add(new SpawnQueueItem(task, kickPriority));
         } finally {
             queueLock.unlock();
         }

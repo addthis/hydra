@@ -99,6 +99,7 @@ public final class Job implements IJob {
     @FieldConfig private int readOnlyReplicas;
     @FieldConfig private boolean dontAutoBalanceMe;
     @FieldConfig private boolean dontDeleteMe;
+    @FieldConfig private boolean dontCloneMe;
     @FieldConfig private boolean wasStopped;
     @FieldConfig private int maxSimulRunning;
     @FieldConfig private String minionType;
@@ -129,6 +130,7 @@ public final class Job implements IJob {
         this.endTime = createTime;
         this.dontAutoBalanceMe = false;
         this.dontDeleteMe = false;
+        this.dontCloneMe = false;
         this.config = "";
         this.queryConfig = new JobQueryConfig();
     }
@@ -166,6 +168,7 @@ public final class Job implements IJob {
         this.queryConfig = job.getQueryConfig();
         this.dontAutoBalanceMe = job.getDontAutoBalanceMe();
         this.dontDeleteMe = job.getDontDeleteMe();
+        this.dontCloneMe = job.getDontCloneMe();
         this.maxSimulRunning = job.getMaxSimulRunning();
         this.minionType = job.getMinionType();
         this.wasStopped = job.getWasStopped();
@@ -605,6 +608,14 @@ public final class Job implements IJob {
     @Override
     public boolean getDontDeleteMe() {
         return dontDeleteMe;
+    }
+
+    @Override
+    public void setDontCloneMe(boolean dontCloneMe) { this.dontCloneMe = dontCloneMe; }
+
+    @Override
+    public boolean getDontCloneMe() {
+        return dontCloneMe;
     }
 
     @Override

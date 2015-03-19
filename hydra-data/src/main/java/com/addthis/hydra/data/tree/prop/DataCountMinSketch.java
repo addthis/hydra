@@ -13,13 +13,14 @@
  */
 package com.addthis.hydra.data.tree.prop;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
-import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.bundle.value.ValueTranslationException;
@@ -29,11 +30,8 @@ import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
-import com.addthis.hydra.data.tree.TreeNodeList;
 
 import com.clearspring.analytics.stream.frequency.CountMinSketch;
-
-import com.google.common.annotations.VisibleForTesting;
 
 public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> implements
                                                                                 SuperCodable {
@@ -87,7 +85,6 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
      * </pre>
      *
      * @user-reference
-     * @hydra-name count.min.sketch
      */
     public static final class Config extends TreeDataParameters<DataCountMinSketch> {
 
@@ -96,7 +93,7 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
          * This field is required.
          */
         @FieldConfig(codable = true, required = true)
-        private String key;
+        private AutoField key;
 
         /**
          * Optionally specify the depth of the sketch.
@@ -132,31 +129,7 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
          * each key instance is assumed to have a count of 1.
          */
         @FieldConfig(codable = true)
-        private String count;
-
-        public void setKey(String key) {
-            this.key = key;
-        }
-
-        public void setDepth(int depth) {
-            this.depth = depth;
-        }
-
-        public void setConfidence(double confidence) {
-            this.confidence = confidence;
-        }
-
-        public void setWidth(int width) {
-            this.width = width;
-        }
-
-        public void setPercentage(double percentage) {
-            this.percentage = percentage;
-        }
-
-        public void setCount(String count) {
-            this.count = count;
-        }
+        private AutoField count;
 
         @Override
         public DataCountMinSketch newInstance() {
@@ -187,8 +160,6 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
     private byte[] raw;
 
     private CountMinSketch sketch;
-    private BundleField keyAccess;
-    private BundleField countAccess;
 
     public DataCountMinSketch(){}
 
@@ -215,8 +186,8 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
         if (key == null) {
             throw new IllegalArgumentException("No key arguments entered");
         }
-        String[] keys = Strings.splitArray(key, "~");
-        TreeNodeList list = new TreeNodeList(keys.length);
+        String[] keys = LessStrings.splitArray(key, "~");
+        List<DataTreeNode> list = new ArrayList<>(keys.length);
         for (String k : keys) {
             long count = sketch.estimateCount(k);
             list.add(new VirtualTreeNode(k, count));
@@ -232,18 +203,12 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
     */
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, Config conf) {
-        Bundle p = state.getBundle();
-        if (keyAccess == null) {
-            keyAccess = p.getFormat().getField(conf.key);
-        }
-        if (conf.count != null && countAccess == null) {
-            countAccess = p.getFormat().getField(conf.count);
-        }
-        String o = ValueUtil.asNativeString(p.getValue(keyAccess));
-        if (o != null) {
+        Bundle bundle = state.getBundle();
+        Optional<String> o = conf.key.getString(bundle);
+        if (o.isPresent()) {
             long myCount = 1;
-            if (countAccess != null) {
-                ValueObject v = p.getValue(countAccess);
+            if (conf.count != null) {
+                ValueObject v = conf.count.getValue(bundle);
                 if (v != null) {
                     try {
                         myCount = v.asLong().getLong();
@@ -254,7 +219,7 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
                     return false;
                 }
             }
-            sketch.add(o, myCount);
+            sketch.add(o.get(), myCount);
             return true;
         }
         return false;

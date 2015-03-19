@@ -22,9 +22,9 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.ClosableIterator;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.hydra.store.db.SettingsJE;
 import com.addthis.hydra.store.util.JEUtil;
@@ -70,7 +70,7 @@ public class ByteStoreBDB implements ByteStore {
     private final boolean readonly;
 
     public ByteStoreBDB(File dir, String dbname, boolean ro) {
-        this.dir = Files.initDirectory(dir);
+        this.dir = LessFiles.initDirectory(dir);
         this.readonly = ro;
         settings = new SettingsJE();
         EnvironmentConfig bdb_eco = new EnvironmentConfig();
@@ -290,7 +290,7 @@ public class ByteStoreBDB implements ByteStore {
 
             @Override
             public String toString() {
-                return "CI:" + Bytes.toString(dk.getData()) + "," + next + "," + cursor;
+                return "CI:" + LessBytes.toString(dk.getData()) + "," + next + "," + cursor;
             }
 
             {
@@ -307,9 +307,10 @@ public class ByteStoreBDB implements ByteStore {
                     }
                     if (status == opSuccess) {
                         if (log.isDebugEnabled()) {
-                            log.debug("--> floor --> key=" + Bytes.toString(start) + " vs found=" + Bytes.toString(dk.getData()));
+                            log.debug("--> floor --> key=" + LessBytes.toString(
+                                    start) + " vs found=" + LessBytes.toString(dk.getData()));
                         }
-                        if (!Bytes.equals(start, dk.getData())) {
+                        if (!LessBytes.equals(start, dk.getData())) {
                             useAltKey = true;
                             status = cursor.getPrev(dk, dvs, lockMode);
                             if (log.isDebugEnabled()) log.debug("<-- prev -- " + status);
@@ -317,7 +318,8 @@ public class ByteStoreBDB implements ByteStore {
                     } else {
                         status = cursor.getLast(dk, dvs, lockMode);
                         if (log.isDebugEnabled()) {
-                            log.debug("--> floor --> tolast key=" + Bytes.toString(start) + " vs last=" + Bytes.toString(dk.getData()));
+                            log.debug("--> floor --> tolast key=" + LessBytes.toString(
+                                    start) + " vs last=" + LessBytes.toString(dk.getData()));
                         }
                     }
                     if (status == opSuccess || (useAltKey && !mustInclude)) {
@@ -325,7 +327,7 @@ public class ByteStoreBDB implements ByteStore {
                             cursor.getCurrent(dvs, dv, lockMode);
                         }
                         next = current();
-                        if (log.isDebugEnabled()) log.debug("--> next key=" + Bytes.toString(next.getKey()));
+                        if (log.isDebugEnabled()) log.debug("--> next key=" + LessBytes.toString(next.getKey()));
                         synchronized (openIterators) {
                             openIterators.add(this);
                         }
@@ -377,7 +379,7 @@ public class ByteStoreBDB implements ByteStore {
                     }
                     if (status == opSuccess) {
                         next = current();
-                        if (log.isDebugEnabled()) log.debug("--  hasNext key=" + Bytes.toString(next.getKey()));
+                        if (log.isDebugEnabled()) log.debug("--  hasNext key=" + LessBytes.toString(next.getKey()));
                     } else {
                         close();
                     }
@@ -389,7 +391,7 @@ public class ByteStoreBDB implements ByteStore {
             public Map.Entry<byte[], byte[]> next() {
                 if (hasNext()) {
                     Map.Entry<byte[], byte[]> ret = next;
-                    if (log.isDebugEnabled()) log.debug("<-- next key=" + Bytes.toString(next.getKey()));
+                    if (log.isDebugEnabled()) log.debug("<-- next key=" + LessBytes.toString(next.getKey()));
                     next = null;
                     return ret;
                 }

@@ -18,7 +18,7 @@ import java.io.IOException;
 
 import java.util.Map;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.prop.DataTime;
@@ -138,7 +138,7 @@ public class TestTreeSerializationVersions {
             }
         } finally {
             if (dir != null) {
-                Files.deleteDir(dir);
+                LessFiles.deleteDir(dir);
             }
         }
     }

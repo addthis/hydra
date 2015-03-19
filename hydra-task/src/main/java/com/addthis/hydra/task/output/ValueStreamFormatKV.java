@@ -16,7 +16,7 @@ package com.addthis.hydra.task.output;
 import java.io.OutputStream;
 
 import com.addthis.basis.kv.KVPairs;
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -57,7 +57,7 @@ public class ValueStreamFormatKV extends ValuesStreamFormatter {
             kv.add(fields[i].getName(), ValueUtil.asNativeString(next));
         }
         try {
-            out.write(Bytes.toBytes(kv.toString()));
+            out.write(LessBytes.toBytes(kv.toString()));
             out.write('\n');
         } catch (Exception ex) {
             ex.printStackTrace();

@@ -36,7 +36,6 @@ package com.addthis.hydra.task.output.tree;
  *    ]}},</pre>
  *
  * @user-reference
- * @hydra-name keyop
  */
 public class PathKeyOp extends PathKeyValue {
 

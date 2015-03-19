@@ -14,12 +14,12 @@
 package com.addthis.hydra.data.query.op;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.table.DataTable;
-import com.addthis.bundle.table.DataTableFactory;
-import com.addthis.bundle.util.BundleColumnBinder;
-import com.addthis.bundle.util.ValueUtil;
+import com.addthis.bundle.core.BundleFactory;
+import com.addthis.bundle.core.BundleFormat;
+import com.addthis.bundle.util.AutoField;
+import com.addthis.bundle.util.IndexField;
 import com.addthis.bundle.value.ValueFactory;
-import com.addthis.hydra.data.query.AbstractTableOp;
+import com.addthis.hydra.data.query.AbstractQueryOp;
 import com.addthis.hydra.data.util.KeyPercentileDistribution;
 
 import com.yammer.metrics.stats.Snapshot;
@@ -37,56 +37,71 @@ import io.netty.channel.ChannelProgressivePromise;
  * @user-reference
  * @hydra-name distribution
  */
-public class OpPercentileDistribution extends AbstractTableOp {
+public class OpPercentileDistribution extends AbstractQueryOp {
 
-    private final int sampleSize;
-    private final int column;
+    private final KeyPercentileDistribution histo;
+    private final AutoField column;
+    private final BundleFactory bundleFactory;
 
     /**
      * usage: column, sampleSize
      * <p/>
      * column defines the column source for the percentile value
      * sampleSize determines the size of the sample set to use when calculating percentiles
-     *
-     * @param tableFactory
-     * @param args
      */
-    public OpPercentileDistribution(DataTableFactory tableFactory, String args, ChannelProgressivePromise queryPromise) {
-        super(tableFactory, queryPromise);
+    public OpPercentileDistribution(BundleFactory bundleFactory, String args, ChannelProgressivePromise queryPromise) {
+        super(queryPromise);
+        this.bundleFactory = bundleFactory;
         int[] v = csvToInts(args);
         if (v.length < 1) {
             throw new RuntimeException("missing required column");
         }
-        column = v[0];
-        sampleSize = v.length > 1 ? v[1] : 1028;
+        column = new IndexField(v[0]);
+        int sampleSize;
+        if (v.length > 1) {
+            sampleSize = v[1];
+        } else {
+            sampleSize = 1028;
+        }
+        histo = new KeyPercentileDistribution(sampleSize).init();
     }
 
-    @Override
-    public DataTable tableOp(DataTable result) {
-        KeyPercentileDistribution histo = new KeyPercentileDistribution().setSampleSize(sampleSize).init();
-        BundleColumnBinder binder = getSourceColumnBinder(result);
-        // build histogram
-        for (Bundle row : result) {
-            long ev = ValueUtil.asNumberOrParse(binder.getColumn(row, column)).asLong().getLong();
-            histo.update(ev);
-        }
+    @Override public void send(Bundle bundle) {
+        long ev = column.getLong(bundle).getAsLong();
+        histo.update(ev);
+    }
+
+    @Override public void sendComplete() {
+        // prep bundle format
+        Bundle bundle = bundleFactory.createBundle();
+        BundleFormat tableFormat = bundle.getFormat();
+        ensureMinimumFieldCount(tableFormat, 2);
+        AutoField label = new IndexField(0);
+        AutoField value = new IndexField(1);
         // output
         Snapshot snapshot = histo.getSnapshot();
-        DataTable resultTable = createTable(6);
-        bindColumn(binder, resultTable, ".5", snapshot.getMedian());
-        bindColumn(binder, resultTable, ".75", snapshot.get75thPercentile());
-        bindColumn(binder, resultTable, ".95", snapshot.get95thPercentile());
-        bindColumn(binder, resultTable, ".98", snapshot.get98thPercentile());
-        bindColumn(binder, resultTable, ".99", snapshot.get99thPercentile());
-        bindColumn(binder, resultTable, ".999", snapshot.get999thPercentile());
-
-        return resultTable;
+        writeLine(label, value, bundle, ".5", snapshot.getMedian());
+        writeLine(label, value, bundleFactory.createBundle(), ".75", snapshot.get75thPercentile());
+        writeLine(label, value, bundleFactory.createBundle(), ".95", snapshot.get95thPercentile());
+        writeLine(label, value, bundleFactory.createBundle(), ".98", snapshot.get98thPercentile());
+        writeLine(label, value, bundleFactory.createBundle(), ".99", snapshot.get99thPercentile());
+        writeLine(label, value, bundleFactory.createBundle(), ".999", snapshot.get999thPercentile());
     }
 
-    private void bindColumn(BundleColumnBinder binder, DataTable resultTable, String column, double value) {
-        Bundle bundle = resultTable.createBundle();
-        binder.appendColumn(bundle, ValueFactory.create(column));
-        binder.appendColumn(bundle, ValueFactory.create(value));
-        resultTable.append(bundle);
+    private void writeLine(AutoField labelField,
+                           AutoField valueField,
+                           Bundle bundle,
+                           String label,
+                           double value) {
+        labelField.setValue(bundle, ValueFactory.create(label));
+        valueField.setValue(bundle, ValueFactory.create(value));
+        getNext().send(bundle);
+    }
+
+    private static void ensureMinimumFieldCount(BundleFormat format, int targetCount) {
+        int suffixNum = 0;
+        while (format.getFieldCount() < targetCount) {
+            format.getField("__op_percent_dist_anon_" + suffixNum);
+        }
     }
 }

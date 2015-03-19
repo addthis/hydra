@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -98,7 +98,6 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
      * M bloom filters inside each layer.</p>
      *
      * @user-reference
-     * @hydra-name key.sieve2
      */
     public static final class Config extends TreeDataParameters<DataKeySieve2> {
 
@@ -258,7 +257,7 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
             }
             return list;
         }
-        String[] keys = Strings.splitArray(key, ",");
+        String[] keys = LessStrings.splitArray(key, ",");
         ArrayList<DataTreeNode> list = new ArrayList<>(keys.length);
         synchronized (this) {
             for (String k : keys) {

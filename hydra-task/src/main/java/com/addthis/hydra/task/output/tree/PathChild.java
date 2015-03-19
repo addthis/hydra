@@ -13,14 +13,15 @@
  */
 package com.addthis.hydra.task.output.tree;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.data.tree.TreeNodeList;
+import com.addthis.hydra.data.tree.DataTreeNode;
 
 /**
  * @user-reference
- * @hydra-name child
  */
 public final class PathChild extends PathElement {
 
@@ -50,10 +51,10 @@ public final class PathChild extends PathElement {
     }
 
     @Override
-    public TreeNodeList getNextNodeList(TreeMapState state) {
-        TreeNodeList res = state.processPath(layers);
+    public List<DataTreeNode> getNextNodeList(TreeMapState state) {
+        List<DataTreeNode> res = state.processPath(layers);
         if (res == null) {
-            res = new TreeNodeList(0);
+            res = new ArrayList<>(0);
         }
         if (!res.isEmpty() || op) {
             return res;

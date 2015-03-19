@@ -13,16 +13,21 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
+
 import java.util.LinkedList;
+
+import java.nio.file.Path;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * This {@link TaskDataSource source} <span class="hydra-summary">prefetches bundles from an underlying data source</span>.
  *
  * @user-reference
- * @hydra-name prefetch
  */
 public final class DataSourcePrefetch extends TaskDataSource {
 
@@ -73,5 +78,10 @@ public final class DataSourcePrefetch extends TaskDataSource {
     @Override
     public synchronized Bundle peek() {
         return prefetch() ? prefetch.getFirst() : null;
+    }
+
+    @Nonnull @Override
+    public ImmutableList<Path> writableRootPaths() {
+        return source.writableRootPaths();
     }
 }

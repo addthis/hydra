@@ -201,11 +201,6 @@ public class ConcurrentTreeNode extends AbstractTreeNode {
         bits &= (~set);
     }
 
-    @Override
-    public void lease() {
-        throw new UnsupportedOperationException();
-    }
-
     /**
      * A node is reactivated when it is retrieved from the backing storage
      * and its state transitions from the inactive state to the active state

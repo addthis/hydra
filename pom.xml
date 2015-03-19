@@ -23,7 +23,7 @@
   <groupId>com.addthis.hydra</groupId>
   <artifactId>hydra-parent</artifactId>
   <name>hydra</name>
-  <version>5.2.3-SNAPSHOT</version>
+  <version>5.2.5-SNAPSHOT</version>
   <packaging>pom</packaging>
   <licenses>
     <license>
@@ -55,11 +55,11 @@
 
     <!-- addthis dependency versions -->
     <hydra.dep.bark.version>2.1.4</hydra.dep.bark.version>
-    <hydra.dep.basis.version>2.3.1</hydra.dep.basis.version>
-    <hydra.dep.bundle.version>2.7.2-SNAPSHOT</hydra.dep.bundle.version>
-    <hydra.dep.codec.version>3.4.1</hydra.dep.codec.version>
-    <hydra.dep.meshy.version>3.3.3-SNAPSHOT</hydra.dep.meshy.version>
-    <hydra.dep.muxy.version>2.1.2</hydra.dep.muxy.version>
+    <hydra.dep.basis.version>2.3.2</hydra.dep.basis.version>
+    <hydra.dep.bundle.version>2.7.3</hydra.dep.bundle.version>
+    <hydra.dep.codec.version>3.4.2</hydra.dep.codec.version>
+    <hydra.dep.meshy.version>3.3.4</hydra.dep.meshy.version>
+    <hydra.dep.muxy.version>2.1.3</hydra.dep.muxy.version>
     <hydra.dep.maljson.version>0.2.0</hydra.dep.maljson.version>
 
     <!-- external dependency versions -->
@@ -71,7 +71,7 @@
     <hydra.dep.jersey.version>1.18</hydra.dep.jersey.version>
     <hydra.dep.jetty.version>8.1.4.v20120524</hydra.dep.jetty.version>
     <hydra.dep.netty3.version>3.9.3.Final</hydra.dep.netty3.version>
-    <hydra.dep.netty4.version>4.0.23.Final</hydra.dep.netty4.version>
+    <hydra.dep.netty4.version>4.0.26.Final</hydra.dep.netty4.version>
     <hydra.dep.sleepycat.je.version>5.0.73</hydra.dep.sleepycat.je.version>
     <hydra.dep.hadoop.version>2.4.0.2.1.1.0-385</hydra.dep.hadoop.version>
 

@@ -16,7 +16,7 @@ package com.addthis.hydra.task.run;
 import java.io.File;
 import java.io.IOException;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import org.junit.Test;
 
@@ -27,15 +27,15 @@ public class ConfigSubTest {
     @Test
     public void subAt() throws IOException {
         String input = "hello world";
-        File tempDir = Files.createTempDir();
+        File tempDir = LessFiles.createTempDir();
         File tempFile = new File(tempDir.getAbsolutePath() + File.separator + "temp");
-        Files.write(tempFile, input.getBytes(), true);
+        LessFiles.write(tempFile, input.getBytes(), true);
         try {
             assertEquals(input, TaskRunner.subAt(input));
             assertEquals(":" + input, TaskRunner.subAt(":@file(" + tempFile.getAbsolutePath() + ")"));
         } finally {
             if (tempDir != null)
-                Files.deleteDir(tempDir);
+                LessFiles.deleteDir(tempDir);
         }
     }
 

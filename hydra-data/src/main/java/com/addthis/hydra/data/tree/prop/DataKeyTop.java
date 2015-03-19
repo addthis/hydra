@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 import com.addthis.basis.util.Varint;
 
 import com.addthis.bundle.util.AutoField;
@@ -116,7 +116,6 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
      * </pre>
      *
      * @user-reference
-     * @hydra-name key.top
      */
     public static final class Config extends TreeDataParameters<DataKeyTop> {
 
@@ -289,7 +288,7 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
                 return generateVirtualNodes(true);
             }
         } else if (key != null) {
-            String[] keys = Strings.splitArray(key, ":");
+            String[] keys = LessStrings.splitArray(key, ":");
             ArrayList<DataTreeNode> list = new ArrayList<>(keys.length);
             for (String k : keys) {
                 Long v = top.get(k);

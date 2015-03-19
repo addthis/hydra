@@ -13,22 +13,19 @@
  */
 package com.addthis.hydra.data.tree;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 
-import java.util.Iterator;
-import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BooleanSupplier;
 
-import com.addthis.basis.util.ClosableIterator;
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.store.db.CloseOperation;
 import com.addthis.hydra.store.db.DBKey;
-import com.addthis.hydra.store.db.IPageDB.Range;
+import com.addthis.hydra.store.db.IPageDB;
 import com.addthis.hydra.store.db.ReadPageDB;
 import com.addthis.hydra.store.kv.ReadExternalPagedStore;
 import com.addthis.hydra.store.util.Raw;
@@ -36,10 +33,10 @@ import com.addthis.hydra.store.util.Raw;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.cache.Weigher;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * <p/>
  * Read-only Tree (for querying)
@@ -77,12 +74,20 @@ public final class ReadTree implements DataTree {
         A value of zero disables page weights and uses page count only. */
     private static final int pageCacheWeight = Parameter.intValue("hydra.tree.cache.pageCacheWeight", pageCacheSize * 1724);
 
-    private final File root;
+    /**
+     * Represents missing nodes in the cache so that we don't have to do repeated look ups or deal with exceptions.
+     * A weight of 8 was chosen as a rough estimate of the relative overhead of the cache entry for each key.
+     */
+    private static final ReadTreeNode MISSING = new ReadTreeNode("missing", 8);
+
+    public final File root;
+    public final TreeConfig advanced;
+    public final ReadTreeNode rootNode;
+    public final boolean metrics;
+
     private final ReadPageDB<ReadTreeNode> source;
-    private final ReadTreeNode treeRootNode;
     private final LoadingCache<CacheKey, ReadTreeNode> loadingNodeCache;
     private final AtomicBoolean closed = new AtomicBoolean(false);
-    private final boolean metrics;
 
     public ReadTree(File root) throws Exception {
         this(root, false);
@@ -96,56 +101,44 @@ public final class ReadTree implements DataTree {
         }
 
         this.root = root;
+        this.advanced = TreeConfig.readFromDataDirectory(root.toPath());
         source = initSource();
         try {
+            CacheBuilder<? super CacheKey, ? super ReadTreeNode> cacheBuilder = CacheBuilder.newBuilder();
             if (nodeCacheWeight != 0) {
                 // limit by weight
-                loadingNodeCache = CacheBuilder.newBuilder()
-                        .maximumWeight(nodeCacheWeight)
-                        .weigher(new Weigher<CacheKey, ReadTreeNode>() {
-                            @Override
-                            public int weigh(CacheKey key, ReadTreeNode value) {
-                            /* A lean node goes from 24 to 24 + its string name and + cacheKey. the 24 becomes a small percentage.
+                cacheBuilder = cacheBuilder
+                        .maximumWeight((long) (nodeCacheWeight * advanced.cacheWeight))
+                        .weigher((key, value) -> {
+                            /* A lean node goes from 24 to 24 + its string name and + cacheKey. the 24 becomes a
+                            small percentage.
 
-                                Dangerous, fat nodes typically have lots of serialized strings in their value payload. The inflation
-                                ratio there is actually probably less than for lean nodes since the various pointers for the string
-                                objects may not be nearly as large as the strings themselves. Therefore, holding them to the lean
-                                node's expansion standard is probably conservative enough. */
-                                return value.getWeight();
-                            }
-                        })
-                        .build(
-                                new CacheLoader<CacheKey, ReadTreeNode>() {
-                                    public ReadTreeNode load(CacheKey key) throws Exception {
-                                        ReadTreeNode node = sourceGet(key.dbkey());
-                                        if (node != null) {
-                                            node.init(ReadTree.this, key.name);
-                                            return node;
-                                        } else {
-                                            throw new ExecutionException("Source did not have node", new NullPointerException());
-                                        }
-                                    }
-                                });
+                            Dangerous, fat nodes typically have lots of serialized strings in their value payload.
+                            The inflation ratio there is actually probably less than for lean nodes since the various
+                            pointers for the string objects may not be nearly as large as the strings themselves.
+                            Therefore, holding them to the lean node's expansion standard is probably conservative
+                            enough. */
+                            return value.getWeight();
+                        });
             } else {
                 // Limit by the number of nodes
-                loadingNodeCache = CacheBuilder.newBuilder()
-                        .maximumSize(nodeCacheSize)
-                        .build(
-                                new CacheLoader<CacheKey, ReadTreeNode>() {
-                                    public ReadTreeNode load(CacheKey key) throws Exception {
-                                        ReadTreeNode node = sourceGet(key.dbkey());
-                                        if (node != null) {
-                                            node.init(ReadTree.this, key.name);
-                                            return node;
-                                        } else {
-                                            throw new ExecutionException("Source did not have node", new NullPointerException());
-                                        }
-                                    }
-                                });
+                cacheBuilder = cacheBuilder.maximumSize((long) (nodeCacheSize * advanced.cacheWeight));
             }
-            treeRootNode = getNode(1, "root");
-            if (treeRootNode == null) {
-                throw new RuntimeException("missing root in readonly tree");
+            loadingNodeCache = cacheBuilder.build(
+                    new CacheLoader<CacheKey, ReadTreeNode>() {
+                        @Override public ReadTreeNode load(CacheKey key) throws Exception {
+                            ReadTreeNode node = sourceGet(key.dbkey());
+                            if (node != null) {
+                                node.init(ReadTree.this, key.name);
+                                return node;
+                            } else {
+                                return MISSING;
+                            }
+                        }
+                    });
+            rootNode = getNode(1, "root");
+            if (rootNode == null) {
+                throw new IllegalStateException("missing root in readonly tree");
             }
         } catch (Exception e) {
             source.close();
@@ -154,10 +147,8 @@ public final class ReadTree implements DataTree {
     }
 
     /**
-     * Creates the ReadPageDB source object and also emits some timing metrics for that operation.
-     *
-     * @return the source - make sure to close it eventually
-     * @throws Exception
+     * Creates the ReadPageDB source object and also emits some timing metrics for that operation. The returned source
+     * MUST be closed when no longer needed.
      */
     private ReadPageDB<ReadTreeNode> initSource() throws Exception {
         long start = System.currentTimeMillis();
@@ -167,53 +158,47 @@ public final class ReadTree implements DataTree {
                 pageCacheSize, pageCacheWeight, metrics);
 
         long openTime = System.currentTimeMillis() - start;
-        log.info("dir=" + root + " openms=" + openTime);
+        log.info("dir={} openms={}", root, openTime);
         return source;
     }
 
     /**
-     * Preloads the cache keys given to it under the presumption that they will be asked for
-     * again in the near future. Doesn't include the eviction hinting status of them, but could
-     * be better than nothing.
+     * Preloads the cache keys given to it under the presumption that they may be asked for again in the near future.
+     * Doesn't include the eviction hinting status of them, but better than nothing.
      */
     public void warmCacheFrom(Iterable<CacheKey> keys) {
         try {
             loadingNodeCache.getAll(keys);
-        } catch (ExecutionException e) {
-            // Some of the nodes failed to load -- expected if they were deleted/pruned when job last ran
+        } catch (Exception e) {
+            log.error("Unexpected error warming cache for {} from {}", this, keys, e);
         }
     }
 
     /**
      * Returns an iterable of cache keys representing a weakly consistent view of the cache. Mostly to
      * be used for warming other caches but could also be helpful for metrics or debugging.
-     *
-     * @return the iterable object
      */
     public Iterable<CacheKey> getCacheIterable() {
         return loadingNodeCache.asMap().keySet();
     }
 
     /**
-     * Method that wraps access to the loading node cache. Returns a node from the tree with the given
-     * parent id and the given name.
-     *
-     * @param parentID  - integer parent id of the node's parent
-     * @param childName - name of the node desired
-     * @return the node desired
+     * Returns a node from the tree with the given parent id and the given name. This mostly just wraps access to
+     * the loading node cache.
      */
-    protected ReadTreeNode getNode(long parentID, final String childName) {
+    @Nullable private ReadTreeNode getNode(long parentID, final String childName) {
         try {
             CacheKey key = new CacheKey(parentID, childName);
             ReadTreeNode node = loadingNodeCache.get(key);
-            if (log.isTraceEnabled()) {
-                log.trace("[node.get] " + parentID + " --> " + childName + " --> " + node);
+            if (node == MISSING) {
+                log.trace("[node.get] {} --> {} --> MISSING", parentID, childName);
+                return null;
+            } else {
+                log.trace("[node.get] {} --> {} --> {}", parentID, childName, node);
+                return node;
             }
-            return node;
-        } catch (ExecutionException e) { //Source does not have node
-            return null;
-        } catch (Exception e) { //Unexpected runtime error from source
-            log.error("", e);
+        } catch (Exception e) {
+            log.error("Unexpected error loading node ({}:{}) from tree ({})", parentID, childName, this, e);
             return null;
         }
     }
@@ -221,105 +206,77 @@ public final class ReadTree implements DataTree {
     /**
      * Returns a DataTreeNode given a ReadTreeNode parent node and the name of the child. Just
      * extracts the integer parent id from the parent node and then calls getNode(int, string).
-     *
-     * @param parent - parent node
-     * @param child  - name of child
-     * @return child
      */
-    protected DataTreeNode getNode(final ReadTreeNode parent, final String child) {
+    @Nullable DataTreeNode getNode(final ReadTreeNode parent, final String child) {
         long nodedb = parent.nodeDB();
         if (nodedb <= 0) {
-            if (log.isTraceEnabled()) {
-                log.trace("[node.get] " + parent + " --> " + child + " NOMAP --> null");
-            }
+            log.trace("[node.get] {} --> {} NOMAP --> null", parent, child);
             return null;
         }
         return getNode(nodedb, child);
     }
 
     /**
-     * Gets a node from the backing store (eg ReadPageDB) for a given DBKey. DBKeys are generally
-     * obtained from CacheKeys. This method should probably only be called from the loading node cache's
-     * load method.
-     *
-     * @param key - db key for desired node
-     * @return desired node
+     * Gets a node from the backing store (eg ReadPageDB) for a given DBKey. DBKeys are generally obtained from
+     * CacheKeys. This method should probably only be called from the loading node cache's load method.
      */
-    protected ReadTreeNode sourceGet(final DBKey key) {
+    private ReadTreeNode sourceGet(final DBKey key) {
         ReadTreeNode node = source.get(key);
-        if (log.isTraceEnabled()) {
-            log.trace("[source.get] " + key + " --> " + node);
-        }
+        log.trace("[source.get] {} --> {}", key, node);
         return node;
     }
 
-    @SuppressWarnings("unchecked")
-    protected Range<DBKey, ReadTreeNode> fetchNodeRange(long db) {
-        return source.range(new DBKey(db), new DBKey(db + 1));
+    @Override @Nonnull public ReadTreeNode getRootNode() {
+        return rootNode;
     }
 
-    protected Range<DBKey, ReadTreeNode> fetchNodeRange(long db, int sampleRate) {
-        return source.range(new DBKey(db), new DBKey(db + 1), sampleRate);
+    @Override @Nonnull public TreeConfig getAdvancedSettings() {
+        return advanced;
     }
 
-    @SuppressWarnings("unchecked")
-    protected Range<DBKey, ReadTreeNode> fetchNodeRange(long db, String from, String to) {
-        return source.range(new DBKey(db, Raw.get(from)), to == null ? new DBKey(db+1, (Raw)null) : new DBKey(db, Raw.get(to)));
-    }
-
-    public ReadTreeNode getRootNode() {
-        return treeRootNode;
-    }
-
-    @Override
-    public void sync() {
-
-    }
-
-    /**
-     * Close the source.
-     *
-     * @param cleanLog unused in the ReadTree implementation.
-     * @param operation unused in the ReadTree implementation.
-     **/
-    @Override
-    public void close(boolean cleanLog, CloseOperation operation) {
-        close();
-    }
-
-    /**
-     * Must be called to close the source. The source generally considers being closed
-     * to be pretty important.
-     */
-    @Override
-    public void close() {
+    /** Must be called to close the source. The source generally considers being closed to be pretty important. */
+    @Override public void close() {
         if (!closed.compareAndSet(false, true)) {
             log.trace("already closed");
             return;
         }
-        if (log.isDebugEnabled()) {
-            log.debug("closing " + this);
-        }
-        try {//source is final in read-tree
+        log.debug("closing {}", this);
+        try {
             source.close();
         } catch (Exception ex)  {
             log.error("While closing source:", ex);
         }
     }
 
-    @Override
-    public long getDBCount() {
-        throw new UnsupportedOperationException();
+    @Override public String toString() {
+        return com.google.common.base.Objects.toStringHelper(this)
+                                             .add("nodeCacheSize", nodeCacheSize)
+                                             .add("nodeCacheWeight", nodeCacheWeight)
+                                             .add("pageCacheSize", pageCacheSize)
+                                             .add("pageCacheWeight", pageCacheWeight)
+                                             .add("root", root)
+                                             .add("source", source)
+                                             .add("rootNode", rootNode)
+                                             .add("loadingNodeCache", loadingNodeCache)
+                                             .add("closed", closed)
+                                             .add("metrics", metrics)
+                                             .toString();
     }
 
-    @Override
-    public int getCacheSize() {
-        throw new UnsupportedOperationException();
+    IPageDB.Range<DBKey, ReadTreeNode> fetchNodeRange(long db) {
+        return source.range(new DBKey(db), new DBKey(db + 1));
     }
 
-    @Override
-    public double getCacheHitRate() {
-        throw new UnsupportedOperationException();
+    IPageDB.Range<DBKey, ReadTreeNode> fetchNodeRange(long db, int sampleRate) {
+        return source.range(new DBKey(db), new DBKey(db + 1), sampleRate);
+    }
+
+    IPageDB.Range<DBKey, ReadTreeNode> fetchNodeRange(long db, String from, String to) {
+        if (to == null) {
+            return source.range(new DBKey(db, Raw.get(from)), new DBKey(db + 1, (Raw) null));
+        } else {
+            return source.range(new DBKey(db, Raw.get(from)), new DBKey(db, Raw.get(to)));
+        }
     }
 
     /**
@@ -344,151 +301,18 @@ public final class ReadTree implements DataTree {
             return new DBKey(parentID, Raw.get(name));
         }
 
-        @Override
-        public boolean equals(Object key) {
-            CacheKey ck = (CacheKey) key;
-            return ck.parentID == parentID && ck.name.equals(name);
+        @Override public boolean equals(Object obj) {
+            if (obj instanceof CacheKey) {
+                CacheKey ck = (CacheKey) obj;
+                return (ck.parentID == parentID) && ck.name.equals(name);
+            } else {
+                return false;
+            }
         }
 
-        @Override
-        public int hashCode() {
+        @Override public int hashCode() {
             return hc;
         }
-    }
-
-    @Override
-    public String toString() {
-        return "Tree@" + root;
-    }
-
-    /**
-     * These methods implement the node interface. Mostly they just wrap the root node's methods of the
-     * same name, although if they are a write-based method we just go ahead and throw the unsupported
-     * operation exception (which the root node would probably throw anyway).
-     */
-
-    @Override
-    public DataTreeNode getNode(String name) {
-        return getRootNode().getNode(name);
-    }
-
-    @Override
-    public DataTreeNode getLeasedNode(String name) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public DataTreeNode getOrCreateNode(String name, DataTreeNodeInitializer init) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean deleteNode(String node) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ClosableIterator<DataTreeNode> getIterator() {
-        ReadTreeNode rootNode = getRootNode();
-        if (rootNode != null) {
-            return getRootNode().getIterator();
-        }
-        return null;
-    }
-
-    @Override
-    public ClosableIterator<DataTreeNode> getIterator(String begin) {
-        return getRootNode().getIterator(begin);
-    }
-
-    @Override
-    public ClosableIterator<DataTreeNode> getIterator(String from, String to) {
-        return getRootNode().getIterator(from, to);
-    }
-
-    @Override
-    public Iterator<DataTreeNode> iterator() {
-        return getRootNode().iterator();
-    }
-
-    @Override
-    public String getName() {
-        return getRootNode().getName();
-    }
-
-    @Override
-    public DataTree getTreeRoot() {
-        return this;
-    }
-
-    @Override
-    public int getNodeCount() {
-        return getRootNode().getNodeCount();
-    }
-
-    @Override
-    public long getCounter() {
-        return getRootNode().getCounter();
-    }
-
-    @Override
-    public void incrementCounter() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long incrementCounter(long val) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void writeLock() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void writeUnlock() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void setCounter(long val) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void updateChildData(DataTreeNodeUpdater state, TreeDataParent path) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void updateParentData(DataTreeNodeUpdater state, DataTreeNode child, boolean isnew) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean aliasTo(DataTreeNode target) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void lease() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void release() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public DataTreeNodeActor getData(String key) {
-        return getRootNode().getData(key);
-    }
-
-    @Override
-    public Map<String, TreeNodeData> getDataMap() {
-        return getRootNode().getDataMap();
     }
 
     public ReadExternalPagedStore<DBKey, ReadTreeNode> getReadEps() {
@@ -502,10 +326,4 @@ public final class ReadTree implements DataTree {
         ReadExternalPagedStore store = source.getReadEps();
         store.testIntegrity();
     }
-
-    @Override
-    public void foregroundNodeDeletion(BooleanSupplier terminationCondition) {
-        throw new UnsupportedOperationException();
-    }
-
 }

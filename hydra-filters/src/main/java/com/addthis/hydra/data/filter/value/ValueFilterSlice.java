@@ -24,11 +24,10 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *     {op:"field", from:"DATE", to:"DATE_YMD", filter:{op:"slice", to:6}} *
+ *     {op:"field", from:"DATE", to:"DATE_YMD", filter:{op:"slice", to:6}}
  * </pre>
  *
  * @user-reference
- * @hydra-name slice
  * @exlude-fields once
  */
 public class ValueFilterSlice extends AbstractValueFilter {
@@ -40,7 +39,10 @@ public class ValueFilterSlice extends AbstractValueFilter {
     private int from; // inclusive (defaults to start)
 
     /**
-     * The end position of the subset in a 0-based offset (exclusive). Default is input length.
+     * The end position of the subset in a 0-based offset (exclusive).
+     * Default is string length. To remove from the end of the string
+     * use -((# of characters to remove) + 1). For example to remove the
+     * last character use -2.
      */
     @FieldConfig(codable = true)
     private int to = -1; // exclusive (defaults to end)

@@ -17,7 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.BundleColumnBinder;
@@ -59,7 +59,7 @@ public class OpRMap extends AbstractRowOp {
             if (opt.length >= 2) {
                 col = Integer.parseInt(opt[0]);
                 map = new HashMap<>();
-                JSONObject jo = new JSONObject(Bytes.urldecode(opt[1]));
+                JSONObject jo = new JSONObject(LessBytes.urldecode(opt[1]));
                 for (String key : jo.keySet()) {
                     map.put(Pattern.compile(key), ValueFactory.create(jo.optString(key)));
                 }

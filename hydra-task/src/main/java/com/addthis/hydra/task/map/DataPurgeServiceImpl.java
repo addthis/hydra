@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
@@ -160,7 +160,7 @@ public class DataPurgeServiceImpl implements DataPurgeService {
         }
         File cur = path.startsWith(dirSeperator) ? new File(dirSeperator) : new File(".");
         LinkedList<File> list = new LinkedList<>();
-        String[] tokens = Strings.splitArray(path, dirRegexSeperator);
+        String[] tokens = LessStrings.splitArray(path, dirRegexSeperator);
         expandPrefix(list, cur, tokens, 0);
         return list;
     }

@@ -15,15 +15,16 @@ package com.addthis.hydra.task.output.tree;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
+import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeDataParent;
-import com.addthis.hydra.data.tree.TreeNodeList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -202,21 +203,35 @@ public abstract class PathElement implements Codable, TreeDataParent {
     /**
      * wrapper that calls getPathValue to prevent multiple calls
      */
-    public final TreeNodeList processNode(final TreeMapState state) {
+    public final List<DataTreeNode> processNode(final TreeMapState state) {
         if (debug) {
-            log.warn("processNode<" + this + ">");
+            log.warn("processNode<{}>", this);
         }
-        TreeNodeList list = null;
+        List<DataTreeNode> list = null;
         if (filter == null || filter.filter(state.getBundle())) {
             if (label != null) {
                 state.push(label.processNode(state));
                 list = getNextNodeList(state);
-                state.pop();
+                state.pop().release();
             } else {
                 list = getNextNodeList(state);
             }
         }
-        return term ? null : op ? TreeMapState.empty() : list;
+        if (term) {
+            if (list != null) {
+                list.forEach(DataTreeNode::release);
+            }
+            return null;
+        } else {
+            if (op) {
+                if (list != null) {
+                    list.forEach(DataTreeNode::release);
+                }
+                return TreeMapState.empty();
+            } else {
+                return list;
+            }
+        }
     }
 
     /**
@@ -224,7 +239,7 @@ public abstract class PathElement implements Codable, TreeDataParent {
      *
      * @return list of child nodes of current node to process next
      */
-    public abstract TreeNodeList getNextNodeList(final TreeMapState state);
+    public abstract List<DataTreeNode> getNextNodeList(final TreeMapState state);
 
     public final PathElement label() {
         return label;

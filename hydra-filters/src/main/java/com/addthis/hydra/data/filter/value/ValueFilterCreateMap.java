@@ -36,7 +36,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name create-map
  */
 public class ValueFilterCreateMap extends AbstractValueFilter {
 

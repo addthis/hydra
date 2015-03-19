@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.job.Job;
@@ -66,6 +66,9 @@ public class SplitCanaryJobAlert extends AbstractJobAlert {
         StringBuilder message = new StringBuilder();
         String finalPath = canaryPath.startsWith("/") ? canaryPath.substring(1) : canaryPath;
         Map<String,Long> bytesPerHost = JobAlertUtil.getTotalBytesFromMesh(meshClient, job.getId(), finalPath);
+        if (bytesPerHost.size() == 0) {
+            return "No matching hosts found for path " + JobAlertUtil.meshLookupString(job.getId(), finalPath);
+        }
         for (Map.Entry<String,Long> entry : bytesPerHost.entrySet()) {
             String host = entry.getKey();
             Long bytes = entry.getValue();
@@ -81,7 +84,7 @@ public class SplitCanaryJobAlert extends AbstractJobAlert {
     }
 
     @Override public String isValid() {
-        if (Strings.isEmpty(canaryPath)) {
+        if (LessStrings.isEmpty(canaryPath)) {
             return "Canary path is empty";
         } else if (canaryConfigThreshold <= 0) {
             return "Canary config is not a positive integer";

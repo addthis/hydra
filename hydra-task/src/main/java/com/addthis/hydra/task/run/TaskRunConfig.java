@@ -43,6 +43,10 @@ public class TaskRunConfig {
         this.dir = dir;
     }
 
+    public String jobIdWithNode() {
+        return jobId + "/" + node;
+    }
+
     public Integer[] calcShardList(int shardTotal) {
         List<Integer> list = new ArrayList<>(nodeCount);
         for (int off = node; off < shardTotal; off += nodeCount) {

@@ -27,9 +27,9 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
@@ -96,7 +96,7 @@ public class MeshMessageConsumer implements MessageConsumer {
         }
         final LinkedList<FileReference> newSources = new LinkedList<>();
         try {
-            if (debug) log.info("scanning : "+ Strings.join(findPaths, ", "));
+            if (debug) log.info("scanning : "+ LessStrings.join(findPaths, ", "));
             mesh.listFiles(findPaths, new MeshyClient.ListCallback() {
                 @Override
                 public void receiveReference(FileReference ref) {
@@ -129,7 +129,7 @@ public class MeshMessageConsumer implements MessageConsumer {
         try {
             if (debug) log.info("polling ref={} options={}", fileRef, options);
             InputStream in = mesh.readFile(fileRef,options);
-            int fetch = Bytes.readInt(in);
+            int fetch = LessBytes.readInt(in);
             if (debug) log.info("recv {} items ref={}", fetch, fileRef.name);
             ObjectInputStream ois = new ObjectInputStream(in);
             while (fetch-- > 0) {
@@ -165,10 +165,10 @@ public class MeshMessageConsumer implements MessageConsumer {
             public void requestContents(String fileName, Map<String, String> options, OutputStream out) throws IOException {
                 boolean scan = options != null && options.get("scan") != null;
                 if (debug) log.info("topic consumer request fileName={}, options={} on topic={} scan={}", fileName, options, topic, scan);
-                Bytes.writeString(uuid, out);
-                Bytes.writeInt(routingKeys.size(), out);
+                LessBytes.writeString(uuid, out);
+                LessBytes.writeInt(routingKeys.size(), out);
                 for (String routingKey : routingKeys) {
-                    Bytes.writeString(routingKey, out);
+                    LessBytes.writeString(routingKey, out);
                 }
                 out.close();
                 if (scan) {

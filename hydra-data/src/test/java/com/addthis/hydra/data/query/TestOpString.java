@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.query;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import org.junit.Test;
 
@@ -23,7 +23,7 @@ public class TestOpString extends TestOp {
     public void testSort() throws Exception {
         doOpTest(parse(""), "str=c1,c2,cat", parse(""));
         doOpTest(parse(" "), "str=vhi,vho,cat,v-1,set", parse("hiho"));
-        doOpTest(parse("A 1 art|B 2 bot|C 3 cog|D 4 din"), "str=" + Bytes.urlencode("c0,c1,+,v2,="), parse("A 1 A1|B 2 B2|C 3 C3|D 4 D4"));
+        doOpTest(parse("A 1 art|B 2 bot|C 3 cog|D 4 din"), "str=" + LessBytes.urlencode("c0,c1,+,v2,="), parse("A 1 A1|B 2 B2|C 3 C3|D 4 D4"));
         doOpTest(parse("k1:v1|k2:v2|k3:v3|"), "str=c0,v:,v0,split,v0,set", parse("k1|k2|k3"));
         doOpTest(parse("k1:v1|k2:v2|k3:v3|"), "str=c0,v1,v-1,range,v0,set", parse("1:v|2:v|3:v"));
         doOpTest(parse("abc,def"), "str=c0,v,,v0,split,v1,set", parse("abc,def abc"));

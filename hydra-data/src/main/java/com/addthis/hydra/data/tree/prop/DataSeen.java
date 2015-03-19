@@ -13,8 +13,8 @@
  */
 package com.addthis.hydra.data.tree.prop;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -69,7 +69,6 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
      * <p>The % notation is not supported for this data attachment.</p>
      *
      * @user-reference
-     * @hydra-name seen
      */
     public static final class Config extends TreeDataParameters<DataSeen> {
 
@@ -122,16 +121,16 @@ public class DataSeen extends TreeNodeData<DataSeen.Config> implements SuperCoda
 
     @Override
     public ValueObject getValue(String key) {
-        if (Strings.isEmpty(key)) {
+        if (LessStrings.isEmpty(key)) {
             return new ValueBloom(bloom);
         } else if (key.equals("sat")) {
             return ValueFactory.create(bloom.getSaturation());
         } else if (key.equals("bits")) {
             return ValueFactory.create(bloom.getBits());
         } else if (key.startsWith("ck-")) {
-            return ValueFactory.create(bloom.getSeen(Raw.get(Bytes.urldecode(key.substring(3)))) ? 1 : 0);
+            return ValueFactory.create(bloom.getSeen(Raw.get(LessBytes.urldecode(key.substring(3)))) ? 1 : 0);
         } else if (key.startsWith("st-")) {
-            long[] set = bloom.getHashSet(Raw.get(Bytes.urldecode(key.substring(3))));
+            long[] set = bloom.getHashSet(Raw.get(LessBytes.urldecode(key.substring(3))));
             boolean seen = bloom.checkHashSet(set);
             bloom.updateHashSet(set);
             return ValueFactory.create(seen ? 1 : 0);

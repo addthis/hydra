@@ -19,7 +19,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.hydra.job.store.JobStore;
 import com.addthis.maljson.JSONArray;
@@ -39,13 +39,13 @@ public class JobStoreTest {
     @Before
     public void setUp() throws Exception {
         System.setProperty("job.store.remote", "false");
-        tempDir = Files.createTempDir();
+        tempDir = LessFiles.createTempDir();
         jobStore = new JobStore(tempDir);
     }
 
     @After
     public void tearDown() throws Exception {
-        Files.deleteDir(tempDir);
+        LessFiles.deleteDir(tempDir);
     }
 
     @Test
@@ -60,7 +60,8 @@ public class JobStoreTest {
         assertTrue("update should have correct changes", arr.getJSONObject(5).getString("msg").matches(".*added 1.*removed 1.*"));
         String midCommitId = arr.getJSONObject(5).getString("commit");
         assertEquals("should get correct historical config", "jobconfig5\n", jobStore.fetchHistoricalConfig("abc123", midCommitId));
-        assertEquals("should still have correct latest config", finalConfig + "\n", new String(Files.read(new File(tempDir + "/jobs/" + JOB_ID))));
+        assertEquals("should still have correct latest config", finalConfig + "\n", new String(
+                LessFiles.read(new File(tempDir + "/jobs/" + JOB_ID))));
         String diff = jobStore.getDiff(JOB_ID, midCommitId);
         assertTrue("diff should have expected components", diff.contains("-jobconfig") && diff.contains("+a"));
     }

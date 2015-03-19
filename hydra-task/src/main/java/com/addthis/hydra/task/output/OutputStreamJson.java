@@ -25,7 +25,6 @@ import com.addthis.maljson.JSONObject;
 
 /**
  * @user-reference
- * @hydra-name json
  */
 public class OutputStreamJson extends OutputStreamFormatter implements Codable {
 

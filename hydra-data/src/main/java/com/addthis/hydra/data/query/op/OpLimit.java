@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.data.query.op;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
@@ -57,7 +57,7 @@ public class OpLimit extends AbstractQueryOp {
 
     public OpLimit(String args, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
-        String[] v = Strings.splitArray(args, ":");
+        String[] v = LessStrings.splitArray(args, ":");
         if (v.length == 1) {
             this.originalSkipCount = Integer.parseInt(v[0]);
             this.skipCount = 0;

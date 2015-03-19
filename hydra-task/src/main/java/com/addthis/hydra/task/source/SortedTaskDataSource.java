@@ -13,8 +13,12 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
+
 import java.util.Iterator;
 import java.util.TreeMap;
+
+import java.nio.file.Path;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
@@ -24,11 +28,12 @@ import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.util.BundleComparator;
 
+import com.google.common.collect.ImmutableList;
+
 /**
  * This {@link TaskDataSource source} <span class="hydra-summary">sorts an underlying data source</span>.
  *
  * @user-reference
- * @hydra-name sorted
  */
 public class SortedTaskDataSource extends TaskDataSource {
 
@@ -118,5 +123,10 @@ public class SortedTaskDataSource extends TaskDataSource {
     @Override
     public void close() {
         source.close();
+    }
+
+    @Nonnull @Override
+    public ImmutableList<Path> writableRootPaths() {
+        return source.writableRootPaths();
     }
 }

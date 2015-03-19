@@ -27,7 +27,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.meshy.MeshyClient;
@@ -108,7 +108,7 @@ public class MeshMessageProducer implements MessageProducer {
             long now = System.currentTimeMillis();
             if (now - lastNotify > noticeRefreshTime) {
                 try {
-                    Bytes.readFully(mesh.readFile(wantRef));
+                    LessBytes.readFully(mesh.readFile(wantRef));
                     lastNotify = now;
                     return true;
                 } catch (IOException ex) {
@@ -129,13 +129,13 @@ public class MeshMessageProducer implements MessageProducer {
                 public void requestContents(String fileName, Map<String, String> options, OutputStream out) throws IOException {
                     if (debug) log.info("topic producer request fileName={} queue={} options={}", fileName, size(), options);
                     if (options == null || options.size() == 0) {
-                        out.write(Bytes.toBytes("{items:" + size()+",keys:\""+routing+"\"}"));
+                        out.write(LessBytes.toBytes("{items:" + size() + ",keys:\"" + routing + "\"}"));
                     } else {
                         ByteArrayOutputStream bos = new ByteArrayOutputStream();
                         synchronized (Queue.this) {
                             int fetch = Math.max(0, Math.min(size(), Integer.parseInt(options.get("fetch"))));
                             if (debug) log.info("encoding {} objects", fetch);
-                            Bytes.writeInt(fetch, bos);
+                            LessBytes.writeInt(fetch, bos);
                             if (fetch > 0) {
                                 ObjectOutputStream oos = new ObjectOutputStream(bos);
                                 while (size() > 0 && fetch-- > 0) {
@@ -231,10 +231,10 @@ public class MeshMessageProducer implements MessageProducer {
                     HashMap<String,String> opt = new HashMap<>();
                     opt.put("scan","scan");
                     InputStream in = mesh.readFile(ref, opt);
-                    String uuid = Bytes.readString(in);
-                    int keyCount = Bytes.readInt(in);
+                    String uuid = LessBytes.readString(in);
+                    int keyCount = LessBytes.readInt(in);
                     while (keyCount-- > 0) {
-                        String routingKey = Bytes.readString(in);
+                        String routingKey = LessBytes.readString(in);
                         if (debug) log.info("update want={} peer={} key={}", wantPath, uuid, routingKey);
                         ensureHaveQueue(ref, uuid, routingKey);
                     }

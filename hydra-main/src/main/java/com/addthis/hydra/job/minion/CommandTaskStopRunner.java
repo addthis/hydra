@@ -15,7 +15,7 @@ package com.addthis.hydra.job.minion;
 
 import java.util.List;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.hydra.job.mq.CommandTaskStop;
 import com.addthis.hydra.job.mq.CoreMessage;
@@ -55,7 +55,7 @@ class CommandTaskStopRunner implements Runnable {
         }
         for (JobTask task : match) {
             if (!task.getConfigDir().exists()) {
-                Files.initDirectory(task.getConfigDir());
+                LessFiles.initDirectory(task.getConfigDir());
             }
             if (task.isRunning() || task.isReplicating() || task.isBackingUp()) {
                 if (!stop.force() && task.isBackingUp()) {

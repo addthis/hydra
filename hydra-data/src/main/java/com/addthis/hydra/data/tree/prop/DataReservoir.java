@@ -103,7 +103,6 @@ public class DataReservoir extends TreeNodeData<DataReservoir.Config> implements
      * The contents of the array are ["delta", "measurement", "mean", "stddev", "mode", "percentile"].
      *
      * @user-reference
-     * @hydra-name reservoir
      */
     public static final class Config extends TreeDataParameters<DataReservoir> {
 

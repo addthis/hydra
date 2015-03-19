@@ -22,7 +22,7 @@ import java.io.OutputStreamWriter;
 
 import java.util.List;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.channel.DataChannelError;
@@ -60,7 +60,7 @@ public class CLIQuery {
         String insep = args.length > 1 ? args[1] : ",";
         String outsep = args.length > 2 ? args[2] : ",";
         String[] group = new String[]{"\"", "'", "()", "[]", "{}"};
-        File tempDir = Files.createTempDir();
+        File tempDir = LessFiles.createTempDir();
         QueryOpProcessor rp = new QueryOpProcessor.Builder(new CMDLineDataChannelOutput(outsep), args[0])
                 .tempDir(tempDir).build();
         if (args.length > 3) {
@@ -100,7 +100,7 @@ public class CLIQuery {
 
         // pass input results to processor, it will print
         rp.sendComplete();
-        Files.deleteDir(tempDir);
+        LessFiles.deleteDir(tempDir);
     }
 }
 

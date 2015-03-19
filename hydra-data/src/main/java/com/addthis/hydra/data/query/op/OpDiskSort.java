@@ -31,8 +31,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFactory;
@@ -134,7 +135,7 @@ public class OpDiskSort extends AbstractRowOp {
         }
 
         StringTokenizer st = new StringTokenizer(args, ":");
-        cols = Strings.splitArray(st.hasMoreElements() ? st.nextToken() : "0", ",");
+        cols = LessStrings.splitArray(st.hasMoreElements() ? st.nextToken() : "0", ",");
 
         String ts = st.hasMoreElements() ? st.nextToken() : "s";
         while (ts.length() < cols.length) {
@@ -158,7 +159,7 @@ public class OpDiskSort extends AbstractRowOp {
             mfm.waitForWriteClosure(0);
         } finally {
             if (Files.exists(tempDir)) {
-                boolean success = com.addthis.basis.util.Files.deleteDir(tempDir.toFile());
+                boolean success = LessFiles.deleteDir(tempDir.toFile());
                 if (!success) {
                     log.warn("ERROR while deleting {} for disk sort", tempDir);
                 }

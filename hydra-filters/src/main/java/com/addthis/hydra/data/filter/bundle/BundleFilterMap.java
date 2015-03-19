@@ -37,7 +37,6 @@ import com.addthis.codec.codables.SuperCodable;
  * </pre>
  *
  * @user-reference
- * @hydra-name map
  */
 public class BundleFilterMap implements BundleFilter, SuperCodable {
 

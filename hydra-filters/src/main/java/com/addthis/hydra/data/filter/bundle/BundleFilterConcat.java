@@ -33,7 +33,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name concat
  */
 public class BundleFilterConcat implements BundleFilter {
 

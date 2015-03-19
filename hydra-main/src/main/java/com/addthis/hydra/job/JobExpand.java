@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 
 import com.addthis.basis.net.HttpUtil;
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 import com.addthis.basis.util.TokenReplacer;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
@@ -143,7 +143,7 @@ public class JobExpand {
         return new TokenReplacer("%[", "]%") {
             @Override
             public String replace(Region region, String label) {
-                return map.get(Strings.splitArray(label, ":")[0]);
+                return map.get(LessStrings.splitArray(label, ":")[0]);
             }
 
             @Override
@@ -161,7 +161,7 @@ public class JobExpand {
                 String name = param.getName();
                 String value = param.getValue();
                 String defaultValue = param.getDefaultValue();
-                map.put(name, Strings.isEmpty(value) ? defaultValue : value);
+                map.put(name, LessStrings.isEmpty(value) ? defaultValue : value);
             }
             StringBuilder builder = new StringBuilder();
             List<String> contents = new ArrayList<>();
@@ -182,7 +182,7 @@ public class JobExpand {
                 if (prevDelimiter.equals("//") || prevDelimiter.equals("/*")) {
                     builder.append(contents.get(i));
                 } else if (prevDelimiter.equals("%[") && nextDelimiter.equals("]%")) {
-                    String value = map.get(Strings.splitArray(contents.get(i), ":")[0]);
+                    String value = map.get(LessStrings.splitArray(contents.get(i), ":")[0]);
                     if (value != null) {
                         builder.append(value);
                     }

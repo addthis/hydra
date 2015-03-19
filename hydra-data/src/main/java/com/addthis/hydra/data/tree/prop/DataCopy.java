@@ -53,7 +53,6 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
      * <p>% operations are not supported</p>
      *
      * @user-reference
-     * @hydra-name copy
      */
     public static final class Config extends TreeDataParameters<DataCopy> {
 

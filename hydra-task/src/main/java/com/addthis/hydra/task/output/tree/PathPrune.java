@@ -15,6 +15,7 @@ package com.addthis.hydra.task.output.tree;
 
 import javax.annotation.Nullable;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.basis.util.ClosableIterator;
@@ -23,7 +24,6 @@ import com.addthis.basis.util.JitterClock;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.data.tree.DataTreeNode;
-import com.addthis.hydra.data.tree.TreeNodeList;
 import com.addthis.hydra.data.tree.prop.DataTime;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -31,6 +31,7 @@ import com.google.common.util.concurrent.Runnables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
@@ -49,7 +50,6 @@ import org.slf4j.LoggerFactory;
  *  relativeDown : 1},</pre>
  *
  * @user-reference
- * @hydra-name prune
  */
 public class PathPrune extends PathElement {
     private static final Logger logger = LoggerFactory.getLogger(PathPrune.class);
@@ -79,12 +79,17 @@ public class PathPrune extends PathElement {
     /**
      * If non-null then parse the name of each node using the provided
      * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat
-     * .html">DateTimeFormat</a>. Default is null.
+     * .html">DateTimeFormat</a>. Default is null. By default the
+     * parser will use the default time zone. To change the time zone
+     * use the "timezone" field.
      */
     @Nullable private final DateTimeFormatter nameFormat;
 
-    public PathPrune(@Nullable @JsonProperty("nameFormat") String nameFormat) {
-        if (nameFormat != null) {
+    public PathPrune(@Nullable @JsonProperty("nameFormat") String nameFormat,
+                     @Nullable @JsonProperty("timezone") String timezone) {
+        if (nameFormat != null && timezone != null) {
+            this.nameFormat = DateTimeFormat.forPattern(nameFormat).withZone(DateTimeZone.forID(timezone));
+        } else if (nameFormat != null) {
             this.nameFormat = DateTimeFormat.forPattern(nameFormat);
         } else {
             this.nameFormat = null;
@@ -94,8 +99,8 @@ public class PathPrune extends PathElement {
     // Is it better to try to do the pruning in this method or
     // whatever is getting the TreeNodeList back?
     @Override
-    public TreeNodeList getNextNodeList(final TreeMapState state) {
-        TreeNodeList result = TreeMapState.empty();
+    public List<DataTreeNode> getNextNodeList(final TreeMapState state) {
+        List<DataTreeNode> result = TreeMapState.empty();
         long now = JitterClock.globalTime();
         DataTreeNode root = state.current();
         if (preempt && (state.processorClosing() || expensiveShutdownTest())) {

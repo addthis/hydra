@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.output;
 
+import javax.annotation.Nonnull;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -24,11 +26,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import java.nio.file.Path;
+
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.JitterClock;
 
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.google.common.collect.ImmutableList;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
@@ -260,7 +266,7 @@ public class OutputWriter extends AbstractOutputWriter {
 
     private void markModifiedFile(String fileName) {
         try {
-            Files.write(modifiedFileTracker, Bytes.toBytes(fileName + "\n"), true);
+            LessFiles.write(modifiedFileTracker, LessBytes.toBytes(fileName + "\n"), true);
         } catch (IOException e) {
             log.error("IOException saving modified files", e);
         }
@@ -285,4 +291,10 @@ public class OutputWriter extends AbstractOutputWriter {
         this.maxOpen = maxOpen;
         return this;
     }
+
+    @Nonnull @Override
+    public ImmutableList<Path> writableRootPaths() {
+        return factory.writableRootPaths();
+    }
+
 }

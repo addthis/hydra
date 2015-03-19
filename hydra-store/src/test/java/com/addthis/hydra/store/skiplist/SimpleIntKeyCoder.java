@@ -16,7 +16,7 @@ package com.addthis.hydra.store.skiplist;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.hydra.store.DBIntValue;
 import com.addthis.hydra.store.kv.PageEncodeType;
@@ -31,7 +31,7 @@ public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
 
     @Override
     public byte[] keyEncode(Integer key) {
-        return key != null ? Bytes.toBytes(key.intValue() ^ Integer.MIN_VALUE) : new byte[0];
+        return key != null ? LessBytes.toBytes(key.intValue() ^ Integer.MIN_VALUE) : new byte[0];
     }
 
     @Override
@@ -49,7 +49,7 @@ public class SimpleIntKeyCoder implements KeyCoder<Integer, DBIntValue> {
 
     @Override
     public Integer keyDecode(byte[] key) {
-        return (key != null && key.length > 0) ? (Bytes.toInt(key) ^ Integer.MIN_VALUE) : null;
+        return (key != null && key.length > 0) ? (LessBytes.toInt(key) ^ Integer.MIN_VALUE) : null;
     }
 
     @Override

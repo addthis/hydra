@@ -13,7 +13,9 @@
  */
 package com.addthis.hydra.task.output.tree;
 
-import com.addthis.basis.util.Strings;
+import java.util.List;
+
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.table.DataTable;
@@ -24,7 +26,7 @@ import com.addthis.hydra.data.query.QueryOp;
 import com.addthis.hydra.data.query.QueryOpProcessor;
 import com.addthis.hydra.data.query.engine.QueryEngine;
 import com.addthis.hydra.data.tree.DataTree;
-import com.addthis.hydra.data.tree.TreeNodeList;
+import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.task.output.ValuesOutput;
 
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -34,7 +36,6 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * @user-reference
- * @hydra-name output
  */
 public class PathOutput extends PathElement {
 
@@ -73,7 +74,7 @@ public class PathOutput extends PathElement {
 
     @Override
     public String toString() {
-        return description != null ? description : Strings.join(query, "/");
+        return description != null ? description : LessStrings.join(query, "/");
     }
 
     @Override
@@ -83,7 +84,7 @@ public class PathOutput extends PathElement {
             throw new RuntimeException("either query or queryString required in PathOutput");
         }
         if (query == null) {
-            String[] q = Strings.splitArray(queryString, "/");
+            String[] q = LessStrings.splitArray(queryString, "/");
             query = new QueryElement[q.length];
             MutableInt col = new MutableInt(0);
             int i = 0;
@@ -94,7 +95,7 @@ public class PathOutput extends PathElement {
     }
 
     @Override
-    public TreeNodeList getNextNodeList(final TreeMapState state) {
+    public List<DataTreeNode> getNextNodeList(final TreeMapState state) {
         exec(state.current().getTreeRoot());
         return TreeMapState.empty();
     }

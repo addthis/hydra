@@ -17,6 +17,7 @@ import java.io.Closeable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -24,7 +25,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import com.addthis.basis.collect.ConcurrentHashMapV8;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.task.output.TaskDataOutput;
@@ -51,7 +51,7 @@ public class QueryTracker implements Closeable {
     /**
      * Contains the queries that are running
      */
-    final ConcurrentMap<String, QueryEntry> running = new ConcurrentHashMapV8<>();
+    final ConcurrentMap<String, QueryEntry> running = new ConcurrentHashMap<>();
     final Cache<String, QueryEntryInfo> recentlyCompleted;
     final TaskDataOutput eventLog;
 

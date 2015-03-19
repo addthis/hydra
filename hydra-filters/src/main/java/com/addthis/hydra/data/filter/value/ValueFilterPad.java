@@ -32,7 +32,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name pad
  */
 public class ValueFilterPad extends StringFilter {
 

@@ -20,12 +20,12 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.codec.jackson.CodecJackson;
 import com.addthis.codec.jackson.Jackson;
-import com.addthis.hydra.common.util.CloseTask;
+import com.addthis.muxy.MuxFileDirectoryCache;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.typesafe.config.Config;
@@ -55,7 +55,7 @@ public class TaskRunner {
         CompletableFuture<AutoCloseable> startedTask = new CompletableFuture<>();
         boolean hookAdded;
         try {
-            Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(() -> startedTask.join().close()),
+            Runtime.getRuntime().addShutdownHook(new Thread(new TaskShutdown(startedTask),
                                                             "Task Shutdown Hook"));
             hookAdded = true;
         } catch (IllegalStateException ignored) {
@@ -69,6 +69,26 @@ public class TaskRunner {
             } catch (Throwable t) {
                 startedTask.complete(() -> log.debug("skipping task.close because it failed to start normally"));
                 throw t;
+            }
+        }
+    }
+
+    private static class TaskShutdown implements Runnable {
+
+        private final CompletableFuture<AutoCloseable> task;
+
+        TaskShutdown(CompletableFuture<AutoCloseable> task) {
+            this.task = task;
+        }
+
+        @Override public void run() {
+            try {
+                task.join().close();
+                // critical to get any file meta data written before process exits
+                CompletableFuture.runAsync(MuxFileDirectoryCache::waitForWriteClosure).join();
+            } catch (Exception ex) {
+                log.error("unrecoverable error shutting down task. immediately halting jvm", ex);
+                Runtime.getRuntime().halt(1);
             }
         }
     }
@@ -110,7 +130,7 @@ public class TaskRunner {
     }
 
     static String loadStringFromFile(String fileName) throws IOException {
-        return Bytes.toString(Files.read(new File(fileName)));
+        return LessBytes.toString(LessFiles.read(new File(fileName)));
     }
 
     private static final Set<TaskStringReplacement> replaceOperators = new HashSet<>();

@@ -37,7 +37,6 @@ public class DataLimitHot extends TreeNodeData<DataLimitHot.Config> {
      * This data attachment <span class="hydra-summary">limits child nodes to hot values</span>.
      *
      * @user-reference
-     * @hydra-name limit.hot
      */
     public static final class Config extends TreeDataParameters<DataLimitHot> {
 

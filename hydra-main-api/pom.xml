@@ -16,7 +16,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>5.2.3-SNAPSHOT</version>
+    <version>5.2.5-SNAPSHOT</version>
   </parent>
 
   <artifactId>hydra-main-api</artifactId>
@@ -28,6 +28,10 @@
 
   <dependencies>
     <!-- addthis open source -->
+    <dependency>
+      <groupId>com.addthis</groupId>
+      <artifactId>bundle</artifactId>
+    </dependency>
     <dependency>
       <groupId>com.addthis</groupId>
       <artifactId>codec</artifactId>

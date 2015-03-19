@@ -36,7 +36,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * </pre>
  *
  * @user-reference
- * @hydra-name defaults
  */
 public class BundleFilterDefaults implements BundleFilter {
 

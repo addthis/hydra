@@ -19,7 +19,7 @@ import java.io.File;
 import java.util.Iterator;
 import java.util.Map;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import com.google.common.primitives.UnsignedBytes;
 
@@ -40,7 +40,7 @@ public class MapDbByteStore implements ByteStore {
 
     public MapDbByteStore(File dir, String dbname, boolean readonly) {
         this.dir = dir;
-        Files.initDirectory(dir);
+        LessFiles.initDirectory(dir);
         this.dbFile = new File(dir, "mapdb");
 
         DBMaker dbMaker = DBMaker.newFileDB(dbFile)

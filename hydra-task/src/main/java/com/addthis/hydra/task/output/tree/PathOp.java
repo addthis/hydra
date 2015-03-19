@@ -13,7 +13,9 @@
  */
 package com.addthis.hydra.task.output.tree;
 
-import com.addthis.hydra.data.tree.TreeNodeList;
+import java.util.List;
+
+import com.addthis.hydra.data.tree.DataTreeNode;
 
 /**
  * This {@link PathElement PathElement} <span class="hydra-summary">performs a set of operations on the data</span>.
@@ -33,7 +35,6 @@ import com.addthis.hydra.data.tree.TreeNodeList;
  * </pre>
  *
  * @user-reference
- * @hydra-name op
  */
 public class PathOp extends PathElement {
 
@@ -42,7 +43,7 @@ public class PathOp extends PathElement {
     }
 
     @Override
-    public TreeNodeList getNextNodeList(final TreeMapState state) {
+    public List<DataTreeNode> getNextNodeList(final TreeMapState state) {
         return TreeMapState.empty();
     }
 }

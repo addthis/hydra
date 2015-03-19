@@ -25,125 +25,105 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
 public interface DataTreeNode extends Iterable<DataTreeNode> {
 
-    /**
-     * TODO temporary workaround.  MUST call ONLY for nodes retrieved via getOrCreateNode().
-     */
-    public void lease();
-
-    /**
-     * TODO temporary workaround.  MUST call ONLY for nodes retrieved via getOrCreateNode().
-     */
-    public void release();
-
-    /**
-     * @return this node's name (label) in the tree
-     */
+    /** Returns the name of this node. This node can be found by querying for this against its parent node. */
     public String getName();
 
-    /**
-     * @return tree that this node belongs to
-     */
+    /** Returns the tree that this node belongs to. */
     public DataTree getTreeRoot();
 
-    /**
-     * @return number of iterable child nodes
-     */
+    /** Returns the number of child nodes. */
     public int getNodeCount();
 
-    /**
-     * @return value of intrinsic counter
-     */
+    /** Returns the number of "hits". "Hits" are increments to the node's intrinsic counter. */
     public long getCounter();
 
-    /**
-     * atomically increment intrinsic counter
-     */
-    public void incrementCounter();
-
-    /**
-     * atomically increment intrinsic counter and return new value
-     */
-    public long incrementCounter(long val);
-
-    /**
-     * set value of intrinsic counter
-     */
-    public void setCounter(long val);
-
-    public void writeLock();
-
-    public void writeUnlock();
-
-    /**
-     * @return data bound to this node/key
-     */
+    /** Returns data attachment (if any) with the given name. */
     public DataTreeNodeActor getData(String key);
 
-    /**
-     * return node if it exists, do not create otherwise.
-     * returned node is read only.  do not call release().
-     */
+    /** Return node if it exists. Does not create otherwise. returned node is read only -- do not call release(). */
     public DataTreeNode getNode(String name);
 
+    /** Returns the map of data attachments. */
+    public Map<String, TreeNodeData> getDataMap();
+
+    /** Returns an iterator of all child nodes. */
+    public ClosableIterator<DataTreeNode> getIterator();
+
+    /** Returns an iterator over the set of child nodes with the matching prefix. */
+    public ClosableIterator<DataTreeNode> getIterator(String prefix);
+
+    /** Returns an iterator over child nodes whose names are in the range [from, to] (inclusive). */
+    public ClosableIterator<DataTreeNode> getIterator(String from, String to);
+
+    // Mutation Methods
+
+    /** atomically increment intrinsic counter */
+    public default void incrementCounter() {
+        throw new UnsupportedOperationException("incrementCounter");
+    }
+
+    /** atomically increment intrinsic counter and return new value */
+    public default long incrementCounter(long val) {
+        throw new UnsupportedOperationException("incrementCounter");
+    }
+
+    /** set value of intrinsic counter */
+    public default void setCounter(long val) {
+        throw new UnsupportedOperationException("setCounter");
+    }
+
     /**
-     * return node if it exists, do not create otherwise.
-     * returned node is mutable.  MUST call release().
+     * TODO for immediate compatibility -- rethink this
      */
-    public DataTreeNode getLeasedNode(String name);
+    public default void updateChildData(DataTreeNodeUpdater state, TreeDataParent path) {
+        throw new UnsupportedOperationException("updateChildData");
+    }
+
+    /**
+     * TODO for immediate compatibility -- rethink this
+     */
+    public default void updateParentData(DataTreeNodeUpdater state, DataTreeNode child, boolean isnew) {
+        throw new UnsupportedOperationException("updateParentData");
+    }
+
+    /** Make this node an alias (link) to another node. This can succeed only if this node currently has no children. */
+    public default boolean aliasTo(DataTreeNode target) {
+        throw new UnsupportedOperationException("aliasTo");
+    }
+
+    /** Attempts to delete named child node. Returns true if node existed and was successfully deleted. */
+    public default boolean deleteNode(String node) {
+        throw new UnsupportedOperationException("deleteNode");
+    }
+
+    // Leasing / Locking methods
 
     /**
      * return node if it exists, create and return new otherwise.
      * returned node is read/write.  MUST call release() when complete to commit changes OR discard.
      */
-    public DataTreeNode getOrCreateNode(String name, DataTreeNodeInitializer init);
+    public default DataTreeNode getOrCreateNode(String name, DataTreeNodeInitializer init) {
+        throw new UnsupportedOperationException("getOrCreateNode");
+    }
 
     /**
-     * create new node as alias (link) to another node;
+     * return node if it exists, do not create otherwise.
+     * returned node is mutable.  MUST call release().
      */
-    public boolean aliasTo(DataTreeNode target);
+    public default DataTreeNode getLeasedNode(String name) {
+        throw new UnsupportedOperationException("getLeasedNode");
+    }
 
-    /**
-     * @return true if node existed and was successfully deleted
-     */
-    public boolean deleteNode(String node);
+    /** TODO temporary workaround.  MUST call ONLY for nodes retrieved via getOrCreateNode(). */
+    public default void release() {
+        throw new UnsupportedOperationException("release");
+    }
 
-    /**
-     * @return an iterator of all nodes in this branch
-     */
-    public ClosableIterator<DataTreeNode> getIterator();
+    public default void writeLock() {
+        throw new UnsupportedOperationException("writeLock");
+    }
 
-    /**
-     * @return an in iterator starting at first node with a matching <i>prefix</i>
-     * and exclude all nodes that do not begin with <i>prefix</i>.  for example a
-     * prefix of "abc" would <b>not</b> match names beginning with "abd".  for that
-     * use case, use getIterator(from, to) where "to" could be null or a lexicographic
-     * value &gt; "abd".
-     */
-    public ClosableIterator<DataTreeNode> getIterator(String prefix);
-
-    /**
-     * @param from optional beginning point (null = first)
-     * @param to optional end point (null = last)
-     * @return an in iterator starting at first node with a name &gt;= begin and &lt; to
-     */
-    public ClosableIterator<DataTreeNode> getIterator(String from, String to);
-
-    /**
-     * TODO for immediate compatibility -- rethink this
-     *
-     * @param state
-     * @param path
-     */
-    public void updateChildData(DataTreeNodeUpdater state, TreeDataParent path);
-
-    /**
-     * TODO for immediate compatibility -- rethink this
-     *
-     * @param state
-     * @param child
-     * @param isnew
-     */
-    public void updateParentData(DataTreeNodeUpdater state, DataTreeNode child, boolean isnew);
-
-    Map<String, TreeNodeData> getDataMap();
+    public default void writeUnlock() {
+        throw new UnsupportedOperationException("writeUnlock");
+    }
 }

@@ -14,7 +14,7 @@
 package com.addthis.hydra.data.filter.value;
 
 import com.addthis.basis.util.Base64;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.FieldConfig;
 
@@ -34,7 +34,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name base64
  */
 public class ValueFilterBase64 extends StringFilter {
 
@@ -52,7 +51,7 @@ public class ValueFilterBase64 extends StringFilter {
 
     @Override
     public String filter(String value) {
-        if (!Strings.isEmpty(value)) {
+        if (!LessStrings.isEmpty(value)) {
             if (encode) {
                 value = Base64.encode(value);
             }

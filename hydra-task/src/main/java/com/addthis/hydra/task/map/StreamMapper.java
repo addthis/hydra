@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.task.map;
 
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.GuardedBy;
 
 import java.io.File;
@@ -20,10 +21,14 @@ import java.io.IOException;
 
 import java.net.ServerSocket;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
 
+import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 
 import com.addthis.basis.jmx.MBeanRemotingSupport;
@@ -39,8 +44,11 @@ import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.task.run.TaskRunnable;
 import com.addthis.hydra.task.source.TaskDataSource;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Meter;
@@ -83,45 +91,52 @@ import static java.lang.String.join;
  * }</pre>
  *
  * @user-reference
- * @hydra-name map
  */
 public class StreamMapper implements StreamEmitter, TaskRunnable {
     private static final Logger log = LoggerFactory.getLogger(StreamMapper.class);
 
     /** The data source for this job. */
-    @JsonProperty(required = true) private TaskDataSource source;
+    private final TaskDataSource source;
 
     /** The transformations to apply onto the data. */
-    @JsonProperty private MapDef map;
+    private final MapDef map;
 
     /** The data sink for emitting the result of the transformations. */
-    @JsonProperty(required = true) private TaskDataOutput output;
+    private final TaskDataOutput output;
 
     /**
      * Allow more flexible stream builders.  For example, asynchronous or builders
      * where one or more bundles roll up into a single bundle or a single bundle causes
      * the emission of multiple bundles.
      */
-    @JsonProperty private StreamBuilder builder;
+    private final StreamBuilder builder;
 
     /** Print to the console statistics while processing the data. Default is {@code true}. */
-    @JsonProperty private boolean stats;
+    private final boolean stats;
 
     /** How frequently statistics should be printed. */
-    @JsonProperty @Time(TimeUnit.NANOSECONDS) private long metricTick;
+    private final long metricTick;
 
-    @JsonProperty(required = true) private int threads;
-    @JsonProperty private boolean enableJmx;
-    @JsonProperty private boolean emitTaskState;
-    @JsonProperty private SimpleDateFormat dateFormat;
+    /**
+     * If true then ensure that writable directories are all unique.
+     * Default is true.
+     **/
+    private final boolean validateDirs;
+
+    private final int threads;
+    private final boolean enableJmx;
+    private final boolean emitTaskState;
+    private final SimpleDateFormat dateFormat;
+
+    private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
     private final AtomicBoolean metricGate = new AtomicBoolean(false);
     private final LongAdder filterTime = new LongAdder();
     private final LongAdder outputTime = new LongAdder();
 
     // metrics
-    private final Meter inputMeter = Metrics.newMeter(getClass(), "input", "input", TimeUnit.SECONDS);
-    private final Meter outputMeter = Metrics.newMeter(getClass(), "output", "output", TimeUnit.SECONDS);
+    private static final Meter inputMeter = Metrics.newMeter(StreamMapper.class, "input", "input", TimeUnit.SECONDS);
+    private static final Meter outputMeter = Metrics.newMeter(StreamMapper.class, "output", "output", TimeUnit.SECONDS);
 
     @GuardedBy("metricGate") private long lastTick;
     @GuardedBy("metricGate") private long lastOutputTime = 0;
@@ -131,6 +146,32 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
 
     private MBeanRemotingSupport jmxremote;
     private Thread feeder;
+
+    @JsonCreator
+    public StreamMapper(@JsonProperty(value = "source", required = true) TaskDataSource source,
+            @JsonProperty("map") MapDef map,
+            @JsonProperty(value = "output", required = true) TaskDataOutput output,
+            @JsonProperty("builder") StreamBuilder builder,
+            @JsonProperty("stats") boolean stats,
+            @JsonProperty("metricTick") @Time(TimeUnit.NANOSECONDS) long metricTick,
+            @JsonProperty(value = "threads", required = true) int threads,
+            @JsonProperty("enableJmx") boolean enableJmx,
+            @JsonProperty("emitTaskState") boolean emitTaskState,
+            @JsonProperty("dateFormat") SimpleDateFormat dateFormat,
+            @JsonProperty("validateDirs") boolean validateDirs) {
+        this.source = source;
+        this.map = map;
+        this.output = output;
+        this.builder = builder;
+        this.stats = stats;
+        this.metricTick = metricTick;
+        this.threads = threads;
+        this.enableJmx = enableJmx;
+        this.emitTaskState = emitTaskState;
+        this.dateFormat = dateFormat;
+        this.validateDirs = validateDirs;
+        validateWritableRootPaths();
+    }
 
     @Override
     public void start() {
@@ -313,7 +354,8 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
         output.sendComplete();
         emitTaskExitState();
         maybeCloseJmx();
-        log.info("[taskComplete]");
+        boolean success = completionFuture.complete(null);
+        log.info("[taskComplete] Triggered future: {}", success);
     }
 
     /* leave artifact for minion, if desired */
@@ -366,4 +408,52 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
             }
         }
     }
+
+    @Nonnull @Override
+    public ImmutableList<Path> writableRootPaths() {
+        return ImmutableList.<Path>builder()
+                            .addAll(source.writableRootPaths())
+                            .addAll(output.writableRootPaths())
+                            .build();
+    }
+
+    public CompletableFuture<Void> getCompletionFuture() {
+        return completionFuture;
+    }
+
+    public void validateWritableRootPaths() {
+        if (!validateDirs) {
+            return;
+        }
+        StringBuilder builder = new StringBuilder();
+        ImmutableList<Path> sources = source.writableRootPaths();
+        ImmutableList<Path> sinks = output.writableRootPaths();
+        Set<Path> sourcesSet = new HashSet<>();
+        Set<Path> sinksSet = new HashSet<>();
+        for (Path source : sources) {
+            if(!sourcesSet.add(source)) {
+                String message = String.format("The writable directory is used in more than one location " +
+                                               "in the input section: \"%s\"\n", source);
+                builder.append(message);
+            }
+        }
+        for (Path sink : sinks) {
+            if(!sinksSet.add(sink)) {
+                String message = String.format("The writable directory is used in more than one location " +
+                                               "in the output section: \"%s\"\n", sink);
+                builder.append(message);
+            }
+        }
+        Sets.SetView<Path> intersect = Sets.intersection(sourcesSet, sinksSet);
+        if (intersect.size() > 0) {
+            String message = String.format("The following one or more directories are used in both an input " +
+                                           "section and an output section: \"%s\"\n",
+                                           intersect.toString());
+            builder.append(message);
+        }
+        if (builder.length() > 0) {
+            throw new IllegalArgumentException(builder.toString());
+        }
+    }
+
 }

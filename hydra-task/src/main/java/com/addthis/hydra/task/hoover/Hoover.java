@@ -31,9 +31,9 @@ import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 
 import com.addthis.basis.util.Backoff;
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
@@ -89,7 +89,6 @@ import org.slf4j.LoggerFactory;
  * }</pre>
  *
  * @user-reference
- * @hydra-name hoover
  */
 public class Hoover implements Runnable, TaskRunnable {
 
@@ -306,7 +305,7 @@ public class Hoover implements Runnable, TaskRunnable {
     @Override
     public void start() {
         this.mods = config.calcShardList(config.nodeCount);
-        this.markRoot = Files.initDirectory(new File(markDir));
+        this.markRoot = LessFiles.initDirectory(new File(markDir));
         this.datePattern = Pattern.compile(dateMatcher);
         if (startDate != null) {
             this.jodaStartDate = DateUtil.getDateTime(DateUtil.getFormatter(startEndDateFormat), startDate);
@@ -315,19 +314,19 @@ public class Hoover implements Runnable, TaskRunnable {
             this.jodaEndDate = DateUtil.getDateTime(DateUtil.getFormatter(startEndDateFormat), endDate);
         }
 
-        log.info("init config={} mods={}", config, Strings.join(mods, ","));
+        log.info("init config={} mods={}", config, LessStrings.join(mods, ","));
         /* create job files from map if not already existing or changed */
         for (Map.Entry<String, String> file : staticFiles.entrySet()) {
-            String[] fileName = Strings.splitArray(file.getKey(), ";");
+            String[] fileName = LessStrings.splitArray(file.getKey(), ";");
             String mode = fileName.length > 1 ? fileName[1] : "755";
             File out = new File(fileName[0]);
-            byte[] raw = Bytes.toBytes(file.getValue());
+            byte[] raw = LessBytes.toBytes(file.getValue());
             if (out.exists() && out.isFile() && out.length() == raw.length) {
                 continue;
             }
             try {
-                Files.initDirectory(out.getParentFile());
-                Files.write(out, raw, false);
+                LessFiles.initDirectory(out.getParentFile());
+                LessFiles.write(out, raw, false);
                 Runtime.getRuntime().exec("chmod " + mode + " " + out).waitFor();
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
@@ -544,7 +543,7 @@ public class Hoover implements Runnable, TaskRunnable {
         for (int i = 0; i < newCmd.length; i++) {
             newCmd[i] = listCommand[i].replace("{{USER}}", user).replace("{{HOST}}", host).replace("{{PATH}}", path);
         }
-        if (verboseCheck || log.isDebugEnabled()) log.info("find cmd=" + Strings.join(newCmd, " "));
+        if (verboseCheck || log.isDebugEnabled()) log.info("find cmd=" + LessStrings.join(newCmd, " "));
         try {
             Process proc = Runtime.getRuntime().exec(newCmd);
             BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
@@ -577,15 +576,15 @@ public class Hoover implements Runnable, TaskRunnable {
                 path[i] = path[i].replace("{{H}}", markFile.dateHour);
             }
         }
-        String pathString = outDir + "/" + Strings.join(path, "/");
+        String pathString = outDir + "/" + LessStrings.join(path, "/");
         String[] newCmd = new String[copyCommand.length];
         File fileOut = new File(pathString);
-        File fileDir = Files.initDirectory(fileOut.getParentFile());
+        File fileDir = LessFiles.initDirectory(fileOut.getParentFile());
         if (verboseCheck || log.isDebugEnabled()) log.info("fileDir=" + fileDir + " fileOut=" + fileOut+" outDir="+fileDir+", "+fileDir.exists());
         for (int i = 0; i < newCmd.length; i++) {
             newCmd[i] = copyCommand[i].replace("{{USER}}", user).replace("{{HOST}}", host).replace("{{LOCALPATH}}", pathString).replace("{{REMOTEPATH}}", markFile.path);
         }
-        if (log.isDebugEnabled()) log.debug("copy cmd = " + Strings.join(newCmd, " "));
+        if (log.isDebugEnabled()) log.debug("copy cmd = " + LessStrings.join(newCmd, " "));
         try {
             Process proc = Runtime.getRuntime().exec(newCmd);
             BufferedReader reader = new BufferedReader(new InputStreamReader(traceError ? proc.getErrorStream() : proc.getInputStream()));
@@ -596,7 +595,7 @@ public class Hoover implements Runnable, TaskRunnable {
             reader.close();
             int ret = proc.waitFor();
             if (ret != 0) {
-                log.warn("non-zero return code ("+ret+") while executing: " + Strings.join(newCmd, " "));
+                log.warn("non-zero return code ("+ret+") while executing: " + LessStrings.join(newCmd, " "));
                 return false;
             }
             if (compress && !pathString.endsWith(".gz")) {
@@ -627,7 +626,7 @@ public class Hoover implements Runnable, TaskRunnable {
         for (int i = 0; i < newCmd.length; i++) {
             newCmd[i] = purgeCommand[i].replace("{{DIR}}", dir).replace("{{DAYS}}", Integer.toString(days));
         }
-        if (log.isDebugEnabled()) log.debug("purge cmd = " + Strings.join(newCmd, " "));
+        if (log.isDebugEnabled()) log.debug("purge cmd = " + LessStrings.join(newCmd, " "));
         if (verbose || log.isDebugEnabled()) log.info("purging older than days=" + days + " from dir=" + dir);
         try {
             Process proc = Runtime.getRuntime().exec(newCmd);
@@ -662,10 +661,10 @@ public class Hoover implements Runnable, TaskRunnable {
             this.path = path;
             this.fileName = new File(path).getName();
             try {
-                File hostRoot = Files.initDirectory(new File(markRoot, host));
+                File hostRoot = LessFiles.initDirectory(new File(markRoot, host));
                 MessageDigest md5 = MessageDigest.getInstance("MD5");
-                BigInteger val = new BigInteger(1, md5.digest(Bytes.toBytes(path)));
-                String hashName = Strings.padleft(val.toString(16), 32, Strings.pad0);
+                BigInteger val = new BigInteger(1, md5.digest(LessBytes.toBytes(path)));
+                String hashName = LessStrings.padleft(val.toString(16), 32, LessStrings.pad0);
                 markFile = new File(hostRoot, hashName);
                 Matcher fileMatcher = datePattern.matcher(fileName);
                 Matcher pathMatcher = datePattern.matcher(path);
@@ -719,7 +718,7 @@ public class Hoover implements Runnable, TaskRunnable {
 
         public void write() {
             try {
-                Files.write(markFile, Bytes.toBytes(name()), false);
+                LessFiles.write(markFile, LessBytes.toBytes(name()), false);
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
             }

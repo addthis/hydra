@@ -23,7 +23,7 @@ import java.util.List;
 import java.text.NumberFormat;
 import java.text.ParseException;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleFormatted;
@@ -89,7 +89,7 @@ public class BundleCalculator {
     private BundleColumnBinder sourceBinder;
 
     public BundleCalculator(String args) {
-        String[] op = Strings.splitArray(args, ",");
+        String[] op = LessStrings.splitArray(args, ",");
         ops = new ArrayList<>(op.length);
         for (String o : op) {
             switch (o) {
@@ -232,22 +232,22 @@ public class BundleCalculator {
                     break;
                 default: {
                     if (o.startsWith("a")) {
-                        String[] cols = Strings.splitArray(o.substring(1), ":");
+                        String[] cols = LessStrings.splitArray(o.substring(1), ":");
                         for (String col : cols) {
                             ops.add(new MathOp(Operation.OP_COLARRAY, ValueFactory.create(col)));
                         }
                     } else if (o.startsWith("c")) {
-                        String[] cols = Strings.splitArray(o.substring(1), ":");
+                        String[] cols = LessStrings.splitArray(o.substring(1), ":");
                         for (String col : cols) {
                             ops.add(new MathOp(Operation.OP_COLVAL, ValueFactory.create(col)));
                         }
                     } else if (o.startsWith("C")) {
-                        String[] cols = Strings.splitArray(o.substring(1), ":");
+                        String[] cols = LessStrings.splitArray(o.substring(1), ":");
                         for (String col : cols) {
                             ops.add(new MathOp(Operation.OP_COLNAMEVAL, ValueFactory.create(col)));
                         }
                     } else if (o.startsWith("n")) {
-                        String[] nums = Strings.splitArray(o.substring(1), ":");
+                        String[] nums = LessStrings.splitArray(o.substring(1), ":");
                         for (String num : nums) {
                             if (num.indexOf(".") >= 0) {
                                 ops.add(new MathOp(Operation.OP_VAL,

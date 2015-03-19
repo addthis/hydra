@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -49,13 +49,13 @@ public class OpFrequencyTable extends AbstractTableOp {
     // foo=0,1,2,3:4,5:0.99,p12
     public OpFrequencyTable(DataTableFactory processor, String args, ChannelProgressivePromise queryPromise) {
         super(processor, queryPromise);
-        String[] tuple = Strings.splitArray(args, ":");
-        cols = Strings.splitArray(tuple[0], ",");
+        String[] tuple = LessStrings.splitArray(args, ":");
+        cols = LessStrings.splitArray(tuple[0], ",");
 
-        valueIndex = Integer.valueOf(Strings.splitArray(tuple[1], ",")[0]);
-        freqIndex = Integer.valueOf(Strings.splitArray(tuple[1], ",")[1]);
+        valueIndex = Integer.valueOf(LessStrings.splitArray(tuple[1], ",")[0]);
+        freqIndex = Integer.valueOf(LessStrings.splitArray(tuple[1], ",")[1]);
 
-        String[] pcols = Strings.splitArray(tuple[2], ",");
+        String[] pcols = LessStrings.splitArray(tuple[2], ",");
 
         List<Double> percentiles = new ArrayList<>();
         for (int i = 0; i < pcols.length; i++) {

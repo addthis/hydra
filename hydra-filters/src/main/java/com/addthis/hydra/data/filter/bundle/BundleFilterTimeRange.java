@@ -41,7 +41,6 @@ import org.joda.time.format.DateTimeFormatter;
  * </pre>
  *
  * @user-reference
- * @hydra-name time-range
  */
 public class BundleFilterTimeRange implements BundleFilter {
 

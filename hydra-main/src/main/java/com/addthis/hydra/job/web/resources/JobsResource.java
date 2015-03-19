@@ -36,7 +36,7 @@ import java.util.regex.Pattern;
 
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.codec.config.Configs;
@@ -573,7 +573,7 @@ public class JobsResource {
     }
     
     private String jobUpdateAction(String id) {
-        return Strings.isEmpty(id) ? "created" : "updated";
+        return LessStrings.isEmpty(id) ? "created" : "updated";
     }
 
     /**
@@ -693,11 +693,11 @@ public class JobsResource {
         return Response.ok(user.getUsername()).build();
     }
 
-    private void startJobHelper(String jobId, int taskId) throws Exception {
+    private void startJobHelper(String jobId, int taskId, int priority) throws Exception {
         if (taskId < 0) {
-            spawn.startJob(jobId, true);
+            spawn.startJob(jobId, priority);
         } else {
-            spawn.startTask(jobId, taskId, true, true, false);
+            spawn.startTask(jobId, taskId, true, priority, false);
         }
     }
 
@@ -711,16 +711,17 @@ public class JobsResource {
     public Response startJob(@QueryParam("jobid") Optional<String> jobIds,
                               @QueryParam("select") @DefaultValue("-1") int select,
                               @QueryParam("id") Optional<String> id,
-                              @QueryParam("task") @DefaultValue("-1") int task) {
+                              @QueryParam("task") @DefaultValue("-1") int task,
+                              @QueryParam("priority") @DefaultValue("0") int priority) {
         try {
             if (jobIds.isPresent()) {
-                String[] joblist = Strings.splitArray(jobIds.get(), ",");
+                String[] joblist = LessStrings.splitArray(jobIds.get(), ",");
                 for (String aJob : joblist) {
-                    startJobHelper(aJob, select);
+                    startJobHelper(aJob, select, priority);
                 }
                 return Response.ok("{\"id\":\"" + jobIds.get() + "\",  \"updated\": \"true\"}").build();
             } else if (id.isPresent()) {
-                startJobHelper(id.get(), task);
+                startJobHelper(id.get(), task, priority);
                 return Response.ok("{\"id\":\"" + id.get() + "\",  \"updated\": \"true\"}").build();
             } else {
                 return Response.status(Response.Status.BAD_REQUEST).entity("job id not specified").build();
@@ -976,7 +977,7 @@ public class JobsResource {
         try {
             if (jobIds.isPresent()) {
                 String ids = jobIds.get();
-                String[] joblist = Strings.splitArray(ids, ",");
+                String[] joblist = LessStrings.splitArray(ids, ",");
                 for (String jobName : joblist) {
                     boolean status = stopJobHelper(jobName, cancelParam, forceParam, nodeParam);
                     if (!status) {

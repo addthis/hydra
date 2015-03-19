@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.task.output.tree;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.codec.annotations.FieldConfig;
@@ -51,7 +51,6 @@ import com.addthis.hydra.data.tree.DataTreeUtil;
  *   }</pre>
  *
  * @user-reference
- * @hydra-name alias
  */
 public class PathAlias extends PathKeyValue {
 
@@ -161,7 +160,7 @@ public class PathAlias extends PathKeyValue {
                 debug(false);
             }
             if (log.isDebugEnabled() || debug == 1) {
-                log.warn("alias fail, missing " + Strings.join(p, " / "));
+                log.warn("alias fail, missing " + LessStrings.join(p, " / "));
             }
             return null;
         }

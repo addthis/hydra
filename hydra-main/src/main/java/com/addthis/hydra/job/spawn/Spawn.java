@@ -48,11 +48,11 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import java.text.ParseException;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.JitterClock;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.RollingLog;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.bark.StringSerializer;
@@ -247,7 +247,7 @@ public class Spawn implements Codable, AutoCloseable {
                   @Nullable @JsonProperty("queueType") String queueType,
                   @Nullable @JacksonInject CuratorFramework providedZkClient
     ) throws Exception {
-        Files.initDirectory(dataDir);
+        LessFiles.initDirectory(dataDir);
         this.stateFile = stateFile;
         if (stateFile.exists() && stateFile.isFile()) {
             spawnState = Jackson.defaultMapper().readValue(stateFile, SpawnState.class);
@@ -360,7 +360,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     void writeState() {
         try {
-            Files.write(stateFile, CodecJSON.INSTANCE.encode(spawnState), false);
+            LessFiles.write(stateFile, CodecJSON.INSTANCE.encode(spawnState), false);
         } catch (Exception e) {
             log.warn("Failed to write spawn state to log file at {}", stateFile, e);
         }
@@ -563,7 +563,7 @@ public class Spawn implements Codable, AutoCloseable {
         try {
             for (JobParameter param : job.getParameters()) {
                 String value = param.getValue();
-                if (Strings.isEmpty(value)) {
+                if (LessStrings.isEmpty(value)) {
                     value = param.getDefaultValue();
                 }
                 if (value != null) {
@@ -1055,7 +1055,7 @@ public class Spawn implements Codable, AutoCloseable {
         List<JobTaskMoveAssignment> assignments = balancer.getAssignmentsToBalanceHost(host,
                                                                                        hostManager.getLiveHosts(null));
         return new RebalanceOutcome(hostUUID, null, null,
-                                    Strings.join(executeReallocationAssignments(assignments, false).toArray(), "\n"));
+                                    LessStrings.join(executeReallocationAssignments(assignments, false).toArray(), "\n"));
     }
 
     /**
@@ -1154,10 +1154,11 @@ public class Spawn implements Codable, AutoCloseable {
             updateJob(job);
             // If any mismatches were found, skip the optimization step
             if (!allMismatches.isEmpty()) {
-                return new RebalanceOutcome(jobUUID, null, Strings.join(allMismatches.toArray(), "\n"), null);
+                return new RebalanceOutcome(jobUUID, null, LessStrings.join(allMismatches.toArray(), "\n"), null);
             } else {
                 // If all tasks had all expected directories, consider moving some tasks to better hosts
-                return new RebalanceOutcome(jobUUID, null, null, Strings.join(reallocateJob(jobUUID, tasksToMove).toArray(), "\n"));
+                return new RebalanceOutcome(jobUUID, null, null, LessStrings.join(
+                        reallocateJob(jobUUID, tasksToMove).toArray(), "\n"));
             }
         } catch (Exception ex) {
             log.warn("[job.rebalance] exception during rebalance for " + jobUUID, ex);
@@ -1545,7 +1546,7 @@ public class Spawn implements Codable, AutoCloseable {
         }
         Job job = getJob(task.getJobUUID());
         JobCommand jobcmd = getJobCommandManager().getEntity(job.getCommand());
-        String command = (jobcmd != null && jobcmd.getCommand() != null) ? Strings.join(jobcmd.getCommand(), " ") : null;
+        String command = (jobcmd != null && jobcmd.getCommand() != null) ? LessStrings.join(jobcmd.getCommand(), " ") : null;
         spawnMQ.sendControlMessage(new CommandTaskReplicate(task.getHostUUID(), task.getJobUUID(), task.getTaskID(), getTaskReplicaTargets(task, newReplicas), command, null, false, false));
         log.info("[replica.add] " + task.getJobUUID() + "/" + task.getTaskID() + " to " + targetHosts);
         taskQueuesByPriority.markHostTaskActive(task.getHostUUID());
@@ -1700,14 +1701,14 @@ public class Spawn implements Codable, AutoCloseable {
      * The entry point for requests to start every task from a job (for example, from the UI.)
      *
      * @param jobUUID      Job ID
-     * @param isManualKick Whether the task came from the interface, which is given special treatment during quiesce
+     * @param priority     immediacy of start request
      * @throws Exception
      */
-    public void startJob(String jobUUID, boolean isManualKick) throws Exception {
+    public void startJob(String jobUUID, int priority) throws Exception {
         Job job = getJob(jobUUID);
         checkArgument(job != null, "job not found");
         checkArgument(job.isEnabled(), "job disabled");
-        checkArgument(scheduleJob(job, isManualKick), "unable to schedule job");
+        checkArgument(scheduleJob(job, priority), "unable to schedule job");
         queueJobTaskUpdateEvent(job);
         Job.logJobEvent(job, JobEvent.START, eventLog);
     }
@@ -1810,11 +1811,11 @@ public class Spawn implements Codable, AutoCloseable {
      * @param jobUUID      Job ID
      * @param taskID       Node #
      * @param addToQueue   Whether the task should be added to the queue (false if the task is already on the queue)
-     * @param isManualKick Whether the task came from the interface, which is given special treatment during quiesce
+     * @param priority     Immediacy of the start request
      * @param toQueueHead  Whether to add the task to the head of the queue rather than the end
      * @throws Exception When the task is invalid or already active
      */
-    public void startTask(String jobUUID, int taskID, boolean addToQueue, boolean isManualKick, boolean toQueueHead) throws Exception {
+    public void startTask(String jobUUID, int taskID, boolean addToQueue, int priority, boolean toQueueHead) throws Exception {
         Job job = getJob(jobUUID);
         checkArgument(job != null, "job not found");
         checkArgument(job.isEnabled(), "job is disabled");
@@ -1824,11 +1825,10 @@ public class Spawn implements Codable, AutoCloseable {
         checkArgument(task != null, "no such task");
         checkArgument(task.getState() != JobTaskState.BUSY && task.getState() != JobTaskState.ALLOCATED &&
                       task.getState() != JobTaskState.QUEUED, "invalid task state");
-        boolean ignoreQuiesce = isManualKick && systemManager.isQuiesced();
         if (addToQueue) {
-            addToTaskQueue(task.getJobKey(), ignoreQuiesce, toQueueHead);
+            addToTaskQueue(task.getJobKey(), priority, toQueueHead);
         } else {
-            kickIncludingQueue(job, task, expandJob(job), false, ignoreQuiesce);
+            kickIncludingQueue(job, task, expandJob(job), false, priority);
         }
         log.warn("[task.kick] started " + job.getId() + " / " + task.getTaskID() + " = " + job.getDescription());
         queueJobTaskUpdateEvent(job);
@@ -2042,7 +2042,7 @@ public class Spawn implements Codable, AutoCloseable {
                     try {
                         job.setTaskState(task, JobTaskState.IDLE);
                         log.info("[task.cantbegin] kicking " + task.getJobKey());
-                        startTask(cantBegin.getJobUuid(), cantBegin.getNodeID(), true, true, true);
+                        startTask(cantBegin.getJobUuid(), cantBegin.getNodeID(), true, 1, true);
                     } catch (Exception ex) {
                         log.warn("[task.schedule] failed to reschedule task for " + task.getJobKey(), ex);
                     }
@@ -2216,7 +2216,7 @@ public class Spawn implements Codable, AutoCloseable {
 
                 deleteTask(job.getId(), rebalanceSource, task.getTaskID(), false);
                 if (update.wasQueued()) {
-                    addToTaskQueue(task.getJobKey(), false, false);
+                    addToTaskQueue(task.getJobKey(), 0, false);
                 }
             } else {
                 // The hosts returned by end message were not found, or weren't in a usable state.
@@ -2651,7 +2651,7 @@ public class Spawn implements Codable, AutoCloseable {
      * @param ignoreQuiesce Whether the task can kick regardless of Spawn's quiesce state
      * @throws Exception If there is a problem scheduling the task
      */
-    private void kickIncludingQueue(Job job, JobTask task, String config, boolean inQueue, boolean ignoreQuiesce) throws Exception {
+    private void kickIncludingQueue(Job job, JobTask task, String config, boolean inQueue, int priority) throws Exception {
         boolean success = false;
         while (!success && !shuttingDown.get()) {
             jobLock.lock();
@@ -2660,7 +2660,7 @@ public class Spawn implements Codable, AutoCloseable {
                     success = true;
                     boolean kicked = kickOnExistingHosts(job, task, config, 0L, true);
                     if (!kicked && !inQueue) {
-                        addToTaskQueue(task.getJobKey(), ignoreQuiesce, false);
+                        addToTaskQueue(task.getJobKey(), priority, false);
                     }
                 }
             } finally {
@@ -2676,11 +2676,11 @@ public class Spawn implements Codable, AutoCloseable {
      * Schedule every task from a job.
      *
      * @param job          Job to kick
-     * @param isManualKick If the kick is coming from the UI, which is specially allowed to run during quiesce
+     * @param priority     immediacy of kick request
      * @return True if the job is scheduled successfully
      * @throws Exception If there is a problem scheduling a task
      */
-    boolean scheduleJob(Job job, boolean isManualKick) throws Exception {
+    boolean scheduleJob(Job job, int priority) throws Exception {
         if (!schedulePrep(job)) {
             return false;
         }
@@ -2698,8 +2698,7 @@ public class Spawn implements Codable, AutoCloseable {
             if (task == null || task.getState() != JobTaskState.IDLE) {
                 continue;
             }
-            boolean ignoreQuiesce = isManualKick && systemManager.isQuiesced();
-            addToTaskQueue(task.getJobKey(), ignoreQuiesce, false);
+            addToTaskQueue(task.getJobKey(), priority, false);
         }
         updateJob(job);
         return true;
@@ -2722,7 +2721,7 @@ public class Spawn implements Codable, AutoCloseable {
                 job.getMaxRunTime() != null ? job.getMaxRunTime() * 60000 : 0,
                 job.getRunCount(),
                 expandedJob,
-                Strings.join(jobCmd.getCommand(), " "),
+                LessStrings.join(jobCmd.getCommand(), " "),
                 job.getHourlyBackups(),
                 job.getDailyBackups(),
                 job.getWeeklyBackups(),
@@ -2781,7 +2780,7 @@ public class Spawn implements Codable, AutoCloseable {
                 job.getMaxRunTime() != null ? job.getMaxRunTime() * 60000 : 0,
                 job.getRunCount(),
                 null,
-                Strings.join(jobcmd.getCommand(), " "),
+                LessStrings.join(jobcmd.getCommand(), " "),
                 job.getHourlyBackups(),
                 job.getDailyBackups(),
                 job.getWeeklyBackups(),
@@ -3022,15 +3021,15 @@ public class Spawn implements Codable, AutoCloseable {
      * Add a jobkey to the appropriate task queue, given its priority
      *
      * @param jobKey        The jobkey to add
-     * @param ignoreQuiesce Whether the task can kick regardless of Spawn's quiesce state
+     * @param priority      immediacy of the addition operation
      */
-    public void addToTaskQueue(JobKey jobKey, boolean ignoreQuiesce, boolean toHead) {
+    public void addToTaskQueue(JobKey jobKey, int priority, boolean toHead) {
         Job job = getJob(jobKey.getJobUuid());
         JobTask task = getTask(jobKey.getJobUuid(), jobKey.getNodeNumber());
         if (job != null && task != null) {
             if (task.getState() == JobTaskState.QUEUED || job.setTaskState(task, JobTaskState.QUEUED)) {
-                log.info("[taskQueuesByPriority] adding " + jobKey + " to queue with ignoreQuiesce=" + ignoreQuiesce);
-                taskQueuesByPriority.addTaskToQueue(job.getPriority(), jobKey, ignoreQuiesce, toHead);
+                log.info("[taskQueuesByPriority] adding " + jobKey + " to queue with priority=" + priority);
+                taskQueuesByPriority.addTaskToQueue(job.getPriority(), jobKey, priority, toHead);
                 queueJobTaskUpdateEvent(job);
                 sendTaskQueueUpdateEvent();
             } else {
@@ -3096,7 +3095,7 @@ public class Spawn implements Codable, AutoCloseable {
                     iter.remove();
                     continue;
                 }
-                if (systemManager.isQuiesced() && !key.getIgnoreQuiesce()) {
+                if (systemManager.isQuiesced() && (key.getPriority() < 1)) {
                     skippedQuiesceCount++;
                     log.debug("[task.queue] skipping {} because spawn is quiesced and the kick wasn't manual", key);
                     if (task.getState() == JobTaskState.QUEUED_NO_SLOT) {

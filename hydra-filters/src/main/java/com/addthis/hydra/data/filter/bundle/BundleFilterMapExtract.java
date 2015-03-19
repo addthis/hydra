@@ -54,7 +54,6 @@ import org.slf4j.LoggerFactory;
  * </pre>
  *
  * @user-reference
- * @hydra-name map-extract
  */
 public class BundleFilterMapExtract implements BundleFilter {
 

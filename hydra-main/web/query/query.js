@@ -133,7 +133,7 @@ function storedQueriesEncode() {
     var qc = [];
     for (var i=0; i<queries.length; i++) {
         var q = queries[i];
-        qc.push(esc([esc(q.name),esc(q.query),esc(q.ops),esc(q.rops)].join(":")));
+        qc.push(esc([esc(q.name),esc(q.query),esc(q.ops),esc(q.rops),esc(q.tasks)].join(":")));
     }
     store['queries'] = qc;
 }
@@ -155,7 +155,8 @@ function fieldsToQuery() {
         query:$('query').value,
         ops:$('qops').value,
         rops:$('qrops').value,
-        name:$('qname').value
+        name:$('qname').value,
+        tasks:$('qtasks').value
     };
 }
 
@@ -165,6 +166,7 @@ function queryToFields(query) {
     $('qops').value = query.ops || '';
     $('qrops').value = query.rops || '';
     $('qname').value = query.name || '';
+    $('qtasks').value = query.tasks || '';
 }
 
 /* transfer nav to query */
@@ -217,7 +219,7 @@ function renderNavQuery(rpc) {
 function queryRaw() {
     var query = fieldsToQuery();
     query.other = $('qother').value;
-    var path = '/query/call?'+packQuery([['path',query.query],['ops',query.ops],['rops',query.rops],['format','json'],["job",jobid],['filename',query.name],["sender","spawn"],query.other]);
+    var path = '/query/call?'+packQuery([query.other,['path',query.query],['ops',query.ops],['rops',query.rops],['format','json'],["job",jobid],['filename',query.name],["sender","spawn"],['tasks',query.tasks]]);
     alert(path);
     console.log(path);
     return false;
@@ -227,7 +229,7 @@ function queryRaw() {
 function queryCSV() {
     var query = fieldsToQuery();
     query.other = $('qother').value;
-    window.open('/query/call?'+packQuery([['path',query.query],['ops',query.ops],['rops',query.rops],['format','csv'],["job",jobid],['filename',query.name],["sender","spawn"],query.other]));
+    window.open('/query/call?'+packQuery([query.other,['path',query.query],['ops',query.ops],['rops',query.rops],['format','csv'],["job",jobid],['filename',query.name],["sender","spawn"],['tasks',query.tasks]]));
     return false;
 }
 
@@ -262,7 +264,7 @@ function queryDelete(i) {
 function querySet(i,exec) {
     var q = queries[i];
     queryToFields(q);
-    window.localStorage['lastQuery'] = packQuery([['path',q.query],['ops',q.ops],['rops',q.rops],['format','json'],['filename',q.name],$('qother').value]);
+    window.localStorage['lastQuery'] = packQuery([['path',q.query],['ops',q.ops],['rops',q.rops],['tasks',q.tasks],['format','json'],['filename',q.name],$('qother').value]);
     if (exec) doFormQuery('json');
     return false;
 }
@@ -474,9 +476,9 @@ function packKV(k,v) {
 
 /* perform actual AJAX query */
 function doQuery(query, callback, cacheBust) {
-    var params = [['path',query.query],['ops',query.ops],['rops',query.rops],
+    var params = [query.other,['path',query.query],['ops',query.ops],['rops',query.rops],
         ['format',query.format],['job',jobid],['filename',query.name],
-        ['sender','spawn'],query.other];
+        ['sender','spawn'],['tasks',query.tasks]];
     if (cacheBust) {
         params.push(['nocache','1']);
     }
@@ -761,6 +763,7 @@ function init() {
     $('query').value  = hkv.query  || '';
     $('qops').value   = hkv.ops    || '';
     $('qrops').value  = hkv.rops   || '';
+    $('qtasks').value  = hkv.tasks || '';
     $('qother').value = hkv.qother || fetchValue('qother', '');
     
     if ($('query').value) {

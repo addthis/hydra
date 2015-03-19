@@ -54,7 +54,6 @@ import org.slf4j.LoggerFactory;
  * </pre>
  *
  * @user-reference
- * @hydra-name map-subset
  */
 public class ValueFilterMapSubset extends AbstractValueFilter {
     private static final Logger log = LoggerFactory.getLogger(ValueFilterMapSubset.class);

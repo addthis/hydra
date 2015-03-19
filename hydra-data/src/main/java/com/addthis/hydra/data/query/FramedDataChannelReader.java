@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
@@ -113,14 +113,14 @@ public class FramedDataChannelReader implements BundleReader {
                 err = new DataChannelError("busy frames are not supported");
                 throw err;
             case FRAME_MORE:
-                return DataChannelCodec.decodeBundle(factory.createBundle(), Bytes.readBytes(bis), fieldMap, classMap);
+                return DataChannelCodec.decodeBundle(factory.createBundle(), LessBytes.readBytes(bis), fieldMap, classMap);
             case FRAME_EOF:
                 close();
                 return null;
             case FRAME_ERROR:
                 try {
-                    String error = Bytes.readString(bis);
-                    String errorMessage = Bytes.readString(bis);
+                    String error = LessBytes.readString(bis);
+                    String errorMessage = LessBytes.readString(bis);
                     Class clazz = Class.forName(error);
                     err = (DataChannelError) clazz.getConstructor(String.class).newInstance(errorMessage);
                 } catch (DataChannelError ex) {

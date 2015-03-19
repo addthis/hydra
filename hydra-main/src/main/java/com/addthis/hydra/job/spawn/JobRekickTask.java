@@ -61,7 +61,7 @@ class JobRekickTask implements Runnable {
                         // check for recurring jobs (that aren't already running)
                         if (job.shouldAutoRekick(clock)) {
                             try {
-                                if (spawn.scheduleJob(job, false)) {
+                                if (spawn.scheduleJob(job, 0)) {
                                     log.info("[schedule] rekicked " + job.getId());
                                     kicked = true;
                                 }

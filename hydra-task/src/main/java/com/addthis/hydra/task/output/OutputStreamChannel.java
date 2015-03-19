@@ -18,7 +18,7 @@ import java.io.OutputStream;
 
 import java.util.HashSet;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.io.DataChannelCodec;
@@ -28,7 +28,6 @@ import com.addthis.codec.annotations.FieldConfig;
 
 /**
  * @user-reference
- * @hydra-name channel
  */
 public class OutputStreamChannel extends OutputStreamFormatter {
 
@@ -52,7 +51,7 @@ public class OutputStreamChannel extends OutputStreamFormatter {
                     row = new FilteredBundle(row, include, exclude);
                 }
                 synchronized (this) {
-                    Bytes.writeBytes(DataChannelCodec.encodeBundle(row, fieldMap, classMap), out);
+                    LessBytes.writeBytes(DataChannelCodec.encodeBundle(row, fieldMap, classMap), out);
                 }
             }
 

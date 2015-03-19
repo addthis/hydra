@@ -16,7 +16,7 @@ package com.addthis.hydra.data.filter.value;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.bundle.value.ValueFactory;
@@ -46,7 +46,6 @@ import org.apache.commons.codec.binary.Hex;
  * </pre>
  *
  * @user-reference
- * @hydra-name hash
  */
 public class ValueFilterHash extends AbstractValueFilter {
 
@@ -82,7 +81,7 @@ public class ValueFilterHash extends AbstractValueFilter {
             case 3:
                 try {
                     MessageDigest md = MessageDigest.getInstance("SHA");
-                    md.update(Bytes.toBytes(sv));
+                    md.update(LessBytes.toBytes(sv));
                     byte[] b = md.digest();
                     for (int i = 0; i < b.length && i < 8; i++) {
                         hash = (hash << 8) | (b[i] & 0xff);
@@ -95,7 +94,7 @@ public class ValueFilterHash extends AbstractValueFilter {
                 try {
                     MessageDigest md = MessageDigest.getInstance("SHA-1");
                     md.reset();
-                    md.update(Bytes.toBytes(sv));
+                    md.update(LessBytes.toBytes(sv));
                     return ValueFactory.create(new String(Hex.encodeHex(md.digest())));
                 } catch (NoSuchAlgorithmException e) {
                     // ignore

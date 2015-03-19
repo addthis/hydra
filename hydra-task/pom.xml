@@ -16,7 +16,7 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>5.2.3-SNAPSHOT</version>
+    <version>5.2.5-SNAPSHOT</version>
   </parent>
 
   <artifactId>hydra-task</artifactId>
@@ -29,6 +29,10 @@
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-data</artifactId>
     </dependency>
+      <dependency>
+          <groupId>com.addthis.hydra</groupId>
+          <artifactId>hydra-main-api</artifactId>
+      </dependency>
     <dependency>
       <groupId>com.addthis.hydra</groupId>
       <artifactId>hydra-mq</artifactId>

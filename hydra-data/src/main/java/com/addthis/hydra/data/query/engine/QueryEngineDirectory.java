@@ -62,10 +62,6 @@ public class QueryEngineDirectory extends QueryEngine {
         ((ReadTree) tree).warmCacheFrom(((ReadTree) other.getTree()).getCacheIterable());
     }
 
-    public DataTree getTree() {
-        return tree;
-    }
-
     @Override
     public void close() throws IOException {
         super.close();

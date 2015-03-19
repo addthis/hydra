@@ -29,7 +29,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
  * </pre>
  *
  * @user-reference
- * @hydra-name not
  */
 public class ValueFilterNot extends AbstractValueFilterContextual {
 

@@ -13,12 +13,19 @@
  */
 package com.addthis.hydra.task.output;
 
+import javax.annotation.Nonnull;
+
+import java.util.Arrays;
 import java.util.List;
+
+import java.nio.file.Path;
 
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.Bundles;
 import com.addthis.codec.annotations.FieldConfig;
+
+import com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +56,6 @@ import org.slf4j.LoggerFactory;
  * }</pre>
  *
  * @user-reference
- * @hydra-name chain
  */
 public class TaskDataOutputChain extends DataOutputTypeList {
 
@@ -127,4 +133,12 @@ public class TaskDataOutputChain extends DataOutputTypeList {
         }
         log.warn("[sourceError] forwarding complete");
     }
+
+
+    @Nonnull @Override public ImmutableList<Path> writableRootPaths() {
+        return ImmutableList.copyOf(
+                Arrays.stream(outputs).flatMap(
+                        output -> output.writableRootPaths().stream()).iterator());
+    }
+
 }

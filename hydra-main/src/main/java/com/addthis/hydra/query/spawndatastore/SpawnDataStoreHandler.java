@@ -18,10 +18,7 @@ import java.io.IOException;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -31,12 +28,10 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobConfigManager;
 import com.addthis.hydra.job.store.DataStoreUtil;
 import com.addthis.hydra.job.store.SpawnDataStore;
-import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.Multimap;
 
 public class SpawnDataStoreHandler {
 
@@ -119,12 +114,7 @@ public class SpawnDataStoreHandler {
         return job;
     }
 
-    /**
-     * Tries to make sure enough tasks were found to satisfy the query options.
-     *
-     * @return The canonical task count according to spawn/ zookeeper
-     */
-    public int validateTaskCount(String job, Multimap<Integer, FileReference> fileReferenceMap) {
+    public int getCononicalTaskCount(String job) {
         IJob zkJob;
         try {
             zkJob = jobConfigurationCache.get(job);
@@ -132,34 +122,10 @@ public class SpawnDataStoreHandler {
             throw new QueryException("unable to retrieve job configuration for job: " + job);
         }
         if (zkJob == null) {
-            final String errorMessage = "[MeshQueryMaster] Error:  unable to find ZK reference for job: " + job;
-            throw new QueryException(errorMessage);
+            throw new QueryException("[MeshQueryMaster] Error:  unable to find ZK reference for job: " + job);
         }
 
-        final int taskCount = new Job(zkJob).getTaskCount();
-        int fileReferenceCount = fileReferenceMap.keySet().size();
-        if (fileReferenceCount != taskCount) {
-            final String errorMessage = "Did not find data for all tasks (and allowPartial is off): "
-                                        + fileReferenceCount + " out of " + taskCount;
-            final int numMissing = taskCount - fileReferenceCount;
-            final String label = ". Missing the following " + numMissing + " tasks : ";
-            final StringBuilder sb = new StringBuilder();
-            final SortedMap<Integer, Collection<FileReference>> sortedMap = new TreeMap<>(fileReferenceMap.asMap());
-            final Iterator<Integer> it = sortedMap.keySet().iterator();
-            Integer key = it.next();
-            for (int i = 0; i < taskCount; i++) {
-                if ((key == null) || (i != key)) {
-                    if (sb.length() > 0) {
-                        sb.append(", ");
-                    }
-                    sb.append(i);
-                } else {
-                    key = it.hasNext() ? it.next() : null;
-                }
-            }
-            throw new QueryException(errorMessage + label + sb.toString());
-        }
-        return taskCount;
+        return new Job(zkJob).getTaskCount();
     }
 
 }

@@ -20,7 +20,7 @@ import java.io.RandomAccessFile;
 
 import java.nio.channels.FileLock;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.channel.DataChannelError;
@@ -43,7 +43,7 @@ public class SourceTracker {
     private final FileLock lockDir;
 
     public SourceTracker(String dir) {
-        File dirFile = Files.initDirectory(dir);
+        File dirFile = LessFiles.initDirectory(dir);
         try {
             lockDir = new RandomAccessFile(new File(dirFile, "tracker.lock"), "rw").getChannel().lock();
             db = new PageDB<>(dirFile, SimpleMark.class, 100, 100);

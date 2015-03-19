@@ -28,7 +28,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * value of maxPackets (-1) indicates that an infinite number of bundles are created.
  *
  * @user-reference
- * @hydra-name empty
  */
 public class DataSourceEmpty extends TaskDataSource {
 

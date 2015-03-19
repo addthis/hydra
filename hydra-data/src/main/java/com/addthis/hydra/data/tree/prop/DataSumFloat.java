@@ -53,7 +53,6 @@ public class DataSumFloat extends TreeNodeData<DataSumFloat.Config> {
      * </pre>
      *
      * @user-reference
-     * @hydra-name sumf
      */
 
     public static final class Config extends TreeDataParameters<DataSumFloat> {

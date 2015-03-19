@@ -13,6 +13,9 @@
  */
 package com.addthis.hydra.query;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -25,9 +28,12 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessStreams;
+import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.data.query.Query;
@@ -45,8 +51,15 @@ import com.addthis.hydra.query.tracker.TrackerHandler;
 import com.addthis.meshy.MeshyServer;
 import com.addthis.meshy.service.file.FileReference;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
+import com.google.common.collect.ContiguousSet;
+import com.google.common.collect.DiscreteDomain;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Range;
+import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,8 +113,8 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         try {
             // Delete the tmp directory (disk sort directory)
             File tempDirFile = new File(tempDir).getCanonicalFile();
-            Files.deleteDir(tempDirFile);
-            Files.initDirectory(tempDirFile);
+            LessFiles.deleteDir(tempDirFile);
+            LessFiles.initDirectory(tempDirFile);
         } catch (Exception e) {
             log.warn("Error while cleaning / locating the temp directory (for disk sorts).", e);
         }
@@ -174,7 +187,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         }
     }
 
-    private String getJobSubdirectory(String combinedJob) {
+    private static String getJobSubdirectory(String combinedJob) {
         int dirIndex = combinedJob.indexOf('/');
         if (dirIndex > -1) {
             return combinedJob.substring(dirIndex + 1);
@@ -183,7 +196,7 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         }
     }
 
-    private String getJobWithoutSubdirectory(String combinedJob) {
+    private static String getJobWithoutSubdirectory(String combinedJob) {
         int dirIndex = combinedJob.indexOf('/');
         if (dirIndex > -1) {
             return combinedJob.substring(0, dirIndex);
@@ -202,20 +215,21 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
 
 
         boolean allowPartial = Boolean.valueOf(query.getParameter("allowPartial"));
+        Set<Integer> tasks = parseTasks(query.getParameter("tasks"));
         List<QueryTaskSource[]> sourcesPerDir = new ArrayList<>(2);
-        for (String combinedJob : JOB_SPLITTER.split(query.getJob())) {
-            String jobId = getJobWithoutSubdirectory(combinedJob);
-            String subdirectory = getJobSubdirectory(combinedJob);
-            for (String alias : expandAlias(jobId)) {
-                String aliasJobId = getJobWithoutSubdirectory(alias);
-                String aliasSubdirectory;
+        for (String combinedUnresolved : JOB_SPLITTER.split(query.getJob())) {
+            String jobIdOrAlias = getJobWithoutSubdirectory(combinedUnresolved);
+            String subdirectory = getJobSubdirectory(combinedUnresolved);
+            for (String resolved : expandAlias(jobIdOrAlias)) {
+                String resolvedJobId = getJobWithoutSubdirectory(resolved);
+                String resolvedSubdirectory;
                 if (!subdirectory.isEmpty()) {
-                    aliasSubdirectory = subdirectory;
+                    resolvedSubdirectory = subdirectory;
                 } else {
-                    aliasSubdirectory = getJobSubdirectory(alias);
+                    resolvedSubdirectory = getJobSubdirectory(resolved);
                 }
 
-                sourcesPerDir.add(getSourcesById(aliasJobId, aliasSubdirectory, allowPartial));
+                sourcesPerDir.add(getSourcesById(resolvedJobId, resolvedSubdirectory, allowPartial, tasks));
             }
         }
         QueryTaskSource[] sourcesByTaskID;
@@ -233,6 +247,19 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         ctx.pipeline().write(query, promise);
     }
 
+    private static final Splitter TASKS_SPLITTER = Splitter.on(',').trimResults();
+
+    @Nonnull private static Set<Integer> parseTasks(@Nullable String tasks) {
+        if (Strings.isNullOrEmpty(tasks)) {
+            return Collections.emptySet();
+        } else {
+            return LessStreams.stream(TASKS_SPLITTER.split(tasks))
+                              .map(Ints::tryParse)
+                              .filter(i -> i != null)
+                              .collect(Collectors.toSet());
+        }
+    }
+
     private List<String> expandAlias(String jobId) {
         if (spawnDataStoreHandler != null) {
             return spawnDataStoreHandler.expandAlias(jobId);
@@ -241,7 +268,13 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         }
     }
 
-    private QueryTaskSource[] getSourcesById(String jobId, String subdirectory, boolean allowPartial) {
+    /**
+     * @param requestedTasks    only query these task ids. empty means query all tasks.
+     */
+    private QueryTaskSource[] getSourcesById(String jobId,
+                                             String subdirectory,
+                                             boolean allowPartial,
+                                             Set<Integer> requestedTasks) {
         if (spawnDataStoreHandler != null) {
             spawnDataStoreHandler.validateJobForQuery(jobId);
         }
@@ -256,32 +289,27 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         Multimap<Integer, FileReference> fileReferenceMap;
         try {
             fileReferenceMap = cachey.get(combinedJob);
-            if ((fileReferenceMap == null) || fileReferenceMap.isEmpty()) {
-                cachey.invalidate(combinedJob);
-                throw new QueryException("[MeshQueryMaster] No file references found for job: " + combinedJob);
-            }
         } catch (ExecutionException e) {
             log.warn("", e);
             throw new QueryException("Exception getting file references: " + e.getMessage());
         }
-
-        int canonicalTasks;
-        if (!allowPartial && (spawnDataStoreHandler != null)) {
-            try {
-                canonicalTasks = spawnDataStoreHandler.validateTaskCount(jobId, fileReferenceMap);
-            } catch (Exception ex) {
-                cachey.invalidate(combinedJob);
-                throw ex;
-            }
-        } else {
-            // task-ids are zero indexed, so add one
-            canonicalTasks = fileReferenceMap.keySet().stream().mapToInt(Integer::intValue).max().orElse(-1) + 1;
+        if ((fileReferenceMap == null) || fileReferenceMap.isEmpty()) {
+            cachey.invalidate(combinedJob);
+            throw new QueryException("[MeshQueryMaster] No file references found for job: " + combinedJob);
         }
 
-        QueryTaskSource[] sourcesByTaskID = new QueryTaskSource[canonicalTasks];
-        for (int i = 0; i < canonicalTasks; i++) {
-            Collection<FileReference> sourceOptions = fileReferenceMap.get(i);
-            if (sourceOptions != null) {
+        int canonicalTaskCount;
+        try {
+            canonicalTaskCount = validateRequestedTasks(jobId, fileReferenceMap.keySet(), requestedTasks, allowPartial);
+        } catch (Exception ex) {
+            cachey.invalidate(combinedJob);
+            throw ex;
+        }
+
+        QueryTaskSource[] sourcesByTaskID = new QueryTaskSource[canonicalTaskCount];
+        for (int taskId = 0; taskId < canonicalTaskCount; taskId++) {
+            Collection<FileReference> sourceOptions = fileReferenceMap.get(taskId);
+            if (!sourceOptions.isEmpty() && (requestedTasks.isEmpty() || requestedTasks.contains(taskId))) {
                 QueryTaskSourceOption[] taskSourceOptions = new QueryTaskSourceOption[sourceOptions.size()];
                 int taskSourceOptionsIndex = 0;
                 for (FileReference queryReference : sourceOptions) {
@@ -290,13 +318,69 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
                             new QueryTaskSourceOption(queryReference, workerData.queryLeases);
                     taskSourceOptionsIndex += 1;
                 }
-                sourcesByTaskID[i] = new QueryTaskSource(taskSourceOptions);
+                sourcesByTaskID[taskId] = new QueryTaskSource(taskSourceOptions);
             } else {
-                sourcesByTaskID[i] = EMPTY_TASK_SOURCE;
+                sourcesByTaskID[taskId] = EMPTY_TASK_SOURCE;
             }
         }
 
         return sourcesByTaskID;
+    }
+
+    @VisibleForTesting
+    protected int validateRequestedTasks(String jobId,
+                                       Set<Integer> availableTasks,
+                                       Set<Integer> requestedTasks,
+                                       boolean allowPartial) {
+        int canonicalTasks;
+        if (spawnDataStoreHandler != null) {
+            canonicalTasks = spawnDataStoreHandler.getCononicalTaskCount(jobId);
+        } else {
+            // the best guess is that there are at least max_available_task_id + 1 tasks
+            canonicalTasks = Collections.max(availableTasks) + 1;
+        }
+        validateRequestedTasks(canonicalTasks, availableTasks, requestedTasks, allowPartial);
+        return canonicalTasks;
+    }
+
+    /**
+     * Validates if all requested tasks are available.
+     *
+     * @param canonicalTaskCount    total number of tasks.
+     * @param availableTasks        available task ids.
+     * @param tasks                 requested tasks ids. If empty, all tasks are requested, i.e. 0 to
+     *                              {@code canonicalTaskCount-1}
+     */
+    private void validateRequestedTasks(int canonicalTaskCount,
+                                        Set<Integer> availableTasks,
+                                        Set<Integer> tasks,
+                                        boolean allowPartial) {
+        if (availableTasks.size() != canonicalTaskCount) {
+            Set<Integer> requestedTasks = expandRequestedTasks(tasks, canonicalTaskCount);
+            Set<Integer> missingTasks = new TreeSet<>(Sets.difference(requestedTasks, availableTasks));
+            if (!allowPartial && !missingTasks.isEmpty()) {
+                // if allowPartial = false, fail if any requested task is unavailable
+                throw new QueryException("Did not find data for all " + requestedTasks.size() +
+                                         " requested tasks (and allowPartial is off): " + availableTasks.size() +
+                                         " available out of " + canonicalTaskCount + " total. Missing the following " +
+                                         missingTasks.size() + " tasks: " + missingTasks);
+            } else if (allowPartial && requestedTasks.size() == missingTasks.size()) {
+                // if allowPartial = true, fail only if all requested tasks are unavailable
+                throw new QueryException("Did not find data for any of the " + requestedTasks.size() +
+                                         " requested tasks (and allowPartial is on): " + availableTasks.size() +
+                                         " available out of " + canonicalTaskCount + " total. Missing the following " +
+                                         missingTasks.size() + " tasks: " + missingTasks);
+            }
+        }
+    }
+
+    /** Returns the specified requested tasks as is if not empty, or expands to all known tasks if it is empty. */
+    private Set<Integer> expandRequestedTasks(Set<Integer> tasks, int canonicalTaskCount) {
+        if (tasks.isEmpty()) {
+            return ContiguousSet.create(Range.closedOpen(0, canonicalTaskCount), DiscreteDomain.integers());
+        } else {
+            return tasks;
+        }
     }
 
     /**
@@ -309,8 +393,10 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
      */
     public QueryTaskSourceOption getReplacementQueryTaskOption(FileReference failedReference)
             throws IOException, ExecutionException, InterruptedException {
-        String job = getJobFromPath(failedReference.name);
-        int task = getTaskFromPath(failedReference.name);
+        List<String> pathTokens = tokenizePath(failedReference.name);
+        String job = getJobFromPath(pathTokens);
+        int task = getTaskFromPath(pathTokens);
+
         Set<FileReference> oldReferences = cachey.getTaskReferencesIfPresent(job, task);
         Set<FileReference> newReferences = new HashSet<>(oldReferences);
         newReferences.remove(failedReference);
@@ -325,17 +411,21 @@ public class MeshQueryMaster extends ChannelOutboundHandlerAdapter {
         return new QueryTaskSourceOption(cachedReplacement, workerData.queryLeases);
     }
 
-    private static String getJobFromPath(String path) {
-        int jobStart = path.indexOf('/', 1);
-        int jobEnd = path.indexOf('/', jobStart + 1);
-        return path.substring(jobStart, jobEnd);
+    // omit empty strings so that we don't have to worry about random "//" instead of "/" or leading "/"s
+    private static final Splitter FILEREF_PATH_SPLITTER = Splitter.on('/').omitEmptyStrings().limit(5);
+
+    @VisibleForTesting static List<String> tokenizePath(String path) {
+       return FILEREF_PATH_SPLITTER.splitToList(path);
     }
 
-    private static int getTaskFromPath(String path) {
-        int jobStart = path.indexOf('/', 1);
-        int jobEnd = path.indexOf('/', jobStart + 1);
-        int taskStart = jobEnd + 1;
-        int taskEnd = path.indexOf('/', taskStart + 1);
-        return Integer.parseInt(path.substring(taskStart, taskEnd));
+    @VisibleForTesting static String getJobFromPath(List<String> pathTokens) {
+        String jobId = pathTokens.get(1);
+        String jobDirWithSuffix = pathTokens.get(4);
+        String jobDir = jobDirWithSuffix.substring(0, jobDirWithSuffix.length() - 6);
+        return jobId + '/' + jobDir;
+    }
+
+    @VisibleForTesting static int getTaskFromPath(List<String> pathTokens) {
+        return Integer.parseInt(pathTokens.get(2));
     }
 }

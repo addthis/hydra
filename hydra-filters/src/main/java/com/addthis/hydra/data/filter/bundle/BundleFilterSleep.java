@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
  * The job will sleep for N milliseconds per bundle that is processed.
  *
  * @user-reference
- * @hydra-name sleep
  */
 public class BundleFilterSleep implements BundleFilter {
 

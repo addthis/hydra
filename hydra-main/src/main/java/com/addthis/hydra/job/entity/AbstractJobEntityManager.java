@@ -16,9 +16,8 @@ package com.addthis.hydra.job.entity;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import com.addthis.basis.collect.ConcurrentHashMapV8;
 
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.Job;
@@ -37,7 +36,7 @@ public abstract class AbstractJobEntityManager<T> implements JobEntityManager<T>
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
-    private final ConcurrentMap<String, T> entities = new ConcurrentHashMapV8<>();
+    private final ConcurrentMap<String, T> entities = new ConcurrentHashMap<>();
 
     private final Spawn spawn;
     private final SpawnDataStore spawnDataStore;

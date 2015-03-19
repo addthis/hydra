@@ -265,7 +265,7 @@ function(
         kick:function(){
             var self=this;
             $.ajax({
-                 url: "/job/start?jobid="+self.id,
+                 url: "/job/start?priority=1&jobid="+self.id,
                  type: "GET",
                  dataType: "json"
             }).done(function(data){
@@ -549,7 +549,7 @@ function(
         kickSelected:function(jobIds){
             var count = jobIds.length;
             $.ajax({
-                url: "/job/start?jobid="+jobIds,
+                url: "/job/start?priority=1&jobid="+jobIds,
                 type: "GET",
                 dataType: "json"
             }).done(function(data){
@@ -626,7 +626,7 @@ function(
         deleteSelected:function(jobIds){
             var count = jobIds.length;
             var self=this;
-            Alertify.dialog.confirm("Are you sure you would like to DELETE " + (count > 1 ? " jobs" : " job") + "?", function (resp) {
+            Alertify.dialog.confirm("Are you sure you would like to DELETE " + count + " " + (count > 1 ? " jobs" : " job") + "?", function (resp) {
 
                 _.each(jobIds,function(jobId){
                     var job = self.get(jobId);
@@ -1516,7 +1516,11 @@ function(
         },
         handleCloneClick:function(event){
             event.preventDefault();
-            app.router.navigate("#jobs/"+this.model.id+"/conf/clone",{trigger:true});
+            if (this.model.attributes.dontCloneMe) {
+                Alertify.dialog.alert("Job with id "+this.model.id+" has \"do not clone\" parameter enabled.");
+            } else {
+                app.router.navigate("#jobs/"+this.model.id+"/conf/clone",{trigger:true});
+            }
         },
         handleCommitJobButton:function(event){
             event.preventDefault();

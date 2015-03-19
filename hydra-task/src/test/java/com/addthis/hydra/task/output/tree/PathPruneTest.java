@@ -21,11 +21,15 @@ import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.codec.config.Configs;
 import com.addthis.hydra.data.tree.DataTreeNode;
 
+import org.joda.time.DateTimeZone;
+import org.joda.time.IllegalInstantException;
 import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -65,6 +69,20 @@ public class PathPruneTest {
         long now = DateTimeFormat.forPattern("YYMMDD").parseMillis("140105");
         pathPrune.pruneChildren(state, parent, now);
         verify(parent, never()).deleteNode("140101");
+    }
+
+    @Test
+    public void daylightSavingsTime() throws IOException {
+        boolean error = false;
+        try {
+            DateTimeFormatter formatter = DateTimeFormat.forPattern("yyMMddHH").withZone(DateTimeZone.forID("America/New_York"));
+            formatter.parseMillis("15030802");
+        } catch (IllegalInstantException ex) {
+            error = true;
+        }
+        assertTrue(error);
+        DateTimeFormatter formatter = DateTimeFormat.forPattern("yyMMddHH").withZone(DateTimeZone.forID("EST"));
+        formatter.parseMillis("15030802");
     }
 
     private DataTreeNode mockParent() {

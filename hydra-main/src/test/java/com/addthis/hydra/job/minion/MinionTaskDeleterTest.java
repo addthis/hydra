@@ -18,14 +18,13 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.backup.BackupToDelete;
 import com.addthis.hydra.job.backup.DailyBackup;
 import com.addthis.hydra.job.backup.GoldBackup;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
-import com.addthis.hydra.job.minion.MinionTaskDeleter;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -65,7 +64,7 @@ public class MinionTaskDeleterTest {
      */
     @Test
     public void taskDeleteTest() throws Exception {
-        File tmpDir = Files.createTempDir();
+        File tmpDir = LessFiles.createTempDir();
         try {
             GoldBackup goldBackup = new GoldBackup();
             List<String> directories = Arrays.asList("live", "config", "gold", goldBackup.generateNameForTime(now - dayInMillis, true), goldBackup.generateNameForTime(now, true));
@@ -79,7 +78,7 @@ public class MinionTaskDeleterTest {
             assertArrayEquals("should have only recent b-gold directory remaining", tmpDir.list(), new String[]{directories.get(4)});
             assertEquals("should have remaining backup in backupsToDelete", del.getBackupsToDelete(), ImmutableSet.of(new BackupToDelete(basePath + directories.get(4), "gold")));
         } finally {
-            assertTrue(Files.deleteDir(tmpDir));
+            assertTrue(LessFiles.deleteDir(tmpDir));
         }
     }
 

@@ -44,7 +44,7 @@
     <form name="foo" method="get">
     <div id="setup" class="padme">
         <table id="table_setup" width=100%>
-            <tr><th width=5% nowrap>query append</th><td><input id="qother" type="text" onkeyup="return QM.submitQuery(this.value,event)"/></td></tr>
+            <tr><th width=5% nowrap>query prepend</th><td><input id="qother" type="text" onkeyup="return QM.submitQuery(this.value,event)"/></td></tr>
             <tr><th width=5% nowrap>to object</th><td><input id="q2o" type="text" onkeyup="return QM.queryCodec(this.value,event,'encode')"/></td></tr>
             <tr><th width=5% nowrap>to query</th><td><input id="o2q" type="text" onkeyup="return QM.queryCodec(this.value,event,'decode')"/></td></tr>
         </table>
@@ -102,6 +102,7 @@
                 <tr><th width=5%>query</th><td><input id="query" type="text" onkeypress="return QM.submitQuery(this.value,event)"/></td></tr>
                 <tr><th width=5%>ops</th><td><input id="qops" type="text" onkeypress="return QM.submitQuery(this.value,event)"/></td></tr>
                 <tr><th width=5%>rops</th><td><input id="qrops" type="text" onkeypress="return QM.submitQuery(this.value,event)"/></td></tr>
+                <tr><th width=5%>tasks</th><td><input id="qtasks" type="text" onkeypress="return QM.submitQuery(this.value,event)"/></td></tr>
             </table>
             <div class="buttonbar">
                 <button onclick="return QM.queryCSV()">csv export</button>

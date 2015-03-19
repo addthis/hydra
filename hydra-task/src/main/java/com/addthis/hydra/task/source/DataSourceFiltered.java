@@ -13,11 +13,18 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
+
+import java.util.Arrays;
 import java.util.NoSuchElementException;
+
+import java.nio.file.Path;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.bundle.BundleFilter;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * This data source <span class="hydra-summary">applies a filter to an input source</span>.
@@ -58,7 +65,6 @@ import com.addthis.hydra.data.filter.bundle.BundleFilter;
  *   }</pre>
  *
  * @user-reference
- * @hydra-name filter
  */
 public class DataSourceFiltered extends TaskDataSource {
 
@@ -110,5 +116,10 @@ public class DataSourceFiltered extends TaskDataSource {
         }
         peek = null;
         return ret;
+    }
+
+    @Nonnull @Override
+    public ImmutableList<Path> writableRootPaths() {
+        return stream.writableRootPaths();
     }
 }

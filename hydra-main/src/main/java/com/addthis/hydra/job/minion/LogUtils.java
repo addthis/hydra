@@ -25,7 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.maljson.JSONObject;
 
@@ -95,7 +95,7 @@ public final class LogUtils {
                 bytesRead = (int) (len - off);
                 byte[] buf = new byte[bytesRead];
                 raf.read(buf);
-                content = Bytes.toString(buf);
+                content = LessBytes.toString(buf);
                 endOffset = len;
             } else if (len > 0 && startOffset < len) {
                 off = startOffset;
@@ -110,7 +110,7 @@ public final class LogUtils {
                 byte[] buf = new byte[bytesRead];
                 raf.seek(startOffset);
                 raf.read(buf);
-                content = Bytes.toString(buf);
+                content = LessBytes.toString(buf);
                 endOffset = off;
             } else if (startOffset == len) {
                 endOffset = len;
@@ -142,7 +142,7 @@ public final class LogUtils {
             }
             byte[] buf = new byte[(int) (len - off)];
             raf.read(buf);
-            return Bytes.toString(buf);
+            return LessBytes.toString(buf);
         } catch (Exception e) {
             log.warn("", e);
         }
@@ -165,7 +165,7 @@ public final class LogUtils {
             byte[] buf = new byte[(int) off];
             raf.seek(0);
             raf.read(buf);
-            return Bytes.toString(buf);
+            return LessBytes.toString(buf);
         } catch (Exception e) {
             log.warn("", e);
         }

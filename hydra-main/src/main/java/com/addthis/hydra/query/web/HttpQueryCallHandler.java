@@ -18,7 +18,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import com.addthis.basis.kv.KVPairs;
@@ -81,6 +80,7 @@ public final class HttpQueryCallHandler {
         }
         query.setParameterIfNotYetSet("allocator", kv.getValue("allocator"));
         query.setParameterIfNotYetSet("allowPartial", kv.getValue("allowPartial"));
+        query.setParameterIfNotYetSet("tasks", kv.getValue("tasks"));
 
         String filename = kv.getValue("filename", "query");
         String format = kv.getValue("format", "json");
@@ -108,7 +108,8 @@ public final class HttpQueryCallHandler {
                     .put("timeout", query.getParameter("timeout"))
                     .put("requestIP", query.getParameter("remoteip"))
                     .put("allocator", query.getParameter("allocator"))
-                    .put("allowPartial", query.getParameter("allowPartial")).createKVPairs().toString());
+                    .put("allowPartial", query.getParameter("allowPartial"))
+                    .put("tasks", query.getParameter("tasks")).createKVPairs().toString());
         }
         // support legacy async query semantics
         query = LegacyHandler.handleQuery(query, kv, request, ctx);
@@ -131,6 +132,12 @@ public final class HttpQueryCallHandler {
                 ctx.pipeline().addLast(executor, "stringer", stringer);
                 ctx.pipeline().addLast(executor, "format",
                         GoogleDriveBundleEncoder.create(filename, gdriveAccessToken));
+                break;
+            case "csv2":
+            case "psv2":
+            case "tsv2":
+                ctx.pipeline().addLast(executor,
+                                       "format", DelimitedEscapedBundleEncoder.create(filename, format));
                 break;
             default:
                 ctx.pipeline().addLast(executor,

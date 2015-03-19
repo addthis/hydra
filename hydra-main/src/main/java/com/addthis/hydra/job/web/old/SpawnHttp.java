@@ -32,8 +32,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.util.MetricsServletMaker;
@@ -172,7 +172,7 @@ public class SpawnHttp extends AbstractHandler {
         public static HashSet<String> csvListToSet(String list) {
             if (list != null) {
                 HashSet<String> set = new HashSet<>();
-                for (String s : Strings.splitArray(list, ",")) {
+                for (String s : LessStrings.splitArray(list, ",")) {
                     set.add(s);
                 }
                 return set;
@@ -263,12 +263,12 @@ public class SpawnHttp extends AbstractHandler {
         public String getPostBody() {
             if (post == null) {
                 try {
-                    post = Bytes.readFully(request.getInputStream());
+                    post = LessBytes.readFully(request.getInputStream());
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
             }
-            return Bytes.toString(post);
+            return LessBytes.toString(post);
         }
 
         public void setResponseContentType(String contentType) {

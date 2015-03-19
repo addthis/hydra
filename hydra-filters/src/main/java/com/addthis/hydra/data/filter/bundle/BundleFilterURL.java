@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 
 import com.addthis.basis.collect.HotMap;
 import com.addthis.basis.net.NetUtil;
-import com.addthis.basis.util.Bytes;
+import com.addthis.basis.util.LessBytes;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.AutoField;
@@ -50,7 +50,6 @@ import com.google.common.net.InternetDomainName;
  * </pre>
  *
  * @user-reference
- * @hydra-name url
  */
 public final class BundleFilterURL implements BundleFilter {
 
@@ -245,7 +244,7 @@ public final class BundleFilterURL implements BundleFilter {
             if (!(lpv.startsWith("http"))) {
                 if (fixProto) {
                     if (clean && lpv.indexOf("%2f") >= 0) {
-                        pv = Bytes.urldecode(pv);
+                        pv = LessBytes.urldecode(pv);
                     }
                     pv = "http://".concat(pv);
                 } else {
@@ -253,7 +252,7 @@ public final class BundleFilterURL implements BundleFilter {
                 }
             }
             if (clean && (lpv.startsWith("http%") || lpv.startsWith("https%"))) {
-                pv = Bytes.urldecode(pv);
+                pv = LessBytes.urldecode(pv);
             }
         }
         // up to two 'decoding' passes on the url to try and find a valid one
@@ -329,7 +328,7 @@ public final class BundleFilterURL implements BundleFilter {
                 }
             } catch (MalformedURLException e) {
                 if (pv.indexOf("%3") > 0 && pv.indexOf("%2") > 0) {
-                    pv = Bytes.urldecode(pv);
+                    pv = LessBytes.urldecode(pv);
                 } else {
                     if (debugMalformed) {
                         System.err.println("malformed(" + i + ") " + pv);

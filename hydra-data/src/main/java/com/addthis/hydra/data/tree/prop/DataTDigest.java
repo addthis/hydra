@@ -13,12 +13,13 @@
  */
 package com.addthis.hydra.data.tree.prop;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import java.nio.ByteBuffer;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -41,7 +42,6 @@ import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
-import com.addthis.hydra.data.tree.TreeNodeList;
 
 import com.clearspring.analytics.stream.quantile.TDigest;
 
@@ -86,7 +86,6 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
      * </pre>
      *
      * @user-reference
-     * @hydra-name tdigest
      */
     public static final class Config extends TreeDataParameters<DataTDigest> {
 
@@ -139,8 +138,8 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
 
     @Override
     public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
-        String[] keys = Strings.splitArray(key, ",");
-        TreeNodeList list = new TreeNodeList(keys.length);
+        String[] keys = LessStrings.splitArray(key, ",");
+        List<DataTreeNode> list = new ArrayList<>(keys.length);
         for (String k : keys) {
             double quantile = filter.quantile(Double.valueOf(k));
             list.add(new VirtualTreeNode(k, (long) quantile));

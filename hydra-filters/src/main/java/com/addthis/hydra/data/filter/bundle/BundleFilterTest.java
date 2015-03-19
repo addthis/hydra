@@ -30,7 +30,6 @@ import com.addthis.codec.annotations.FieldConfig;
  * </pre>
  *
  * @user-reference
- * @hydra-name test
  */
 public class BundleFilterTest implements BundleFilter {
 

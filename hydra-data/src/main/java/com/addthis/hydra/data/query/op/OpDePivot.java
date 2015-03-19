@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -57,7 +57,7 @@ public class OpDePivot extends AbstractBufferOp {
     public OpDePivot(String args, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
         if (args != null && args.length() > 0) {
-            String[] ops = Strings.splitArray(args, ",");
+            String[] ops = LessStrings.splitArray(args, ",");
             for (String op : ops) {
                 if (op.equals("row")) {
                     rowcol = cols++;

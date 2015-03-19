@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.util.zip.GZIPOutputStream;
 
 import com.addthis.basis.util.MemoryCounter;
-import com.addthis.basis.util.Numbers;
+import com.addthis.basis.util.LessNumbers;
 
 import com.addthis.codec.Codec;
 import com.addthis.codec.binary.CodecBin2;
@@ -58,9 +58,9 @@ public class TestSeenFilterSize {
         int bitsper = 4;
         int hash = 4;
 
-        if (args.length > 0) bits = Numbers.parseInt(args[0], bits, 10);
-        if (args.length > 1) bitsper = Numbers.parseInt(args[1], bitsper, 10);
-        if (args.length > 2) hash = Numbers.parseInt(args[2], hash, 10);
+        if (args.length > 0) bits = LessNumbers.parseInt(args[0], bits, 10);
+        if (args.length > 1) bitsper = LessNumbers.parseInt(args[1], bitsper, 10);
+        if (args.length > 2) hash = LessNumbers.parseInt(args[2], hash, 10);
 
         SeenFilter<String> sf = new SeenFilterBasic<>(bits, bitsper, hash);
         long memSize = MemoryCounter.estimateSize(sf);

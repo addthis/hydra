@@ -13,9 +13,10 @@
  */
 package com.addthis.hydra.data.tree.prop;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -36,7 +37,6 @@ import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeUpdater;
 import com.addthis.hydra.data.tree.TreeDataParameters;
 import com.addthis.hydra.data.tree.TreeNodeData;
-import com.addthis.hydra.data.tree.TreeNodeList;
 
 import com.clearspring.analytics.stream.membership.BloomFilter;
 
@@ -76,7 +76,6 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements SuperCo
      * </pre>
      *
      * @user-reference
-     * @hydra-name bloom
      */
     public static final class Config extends TreeDataParameters<DataBloom> {
 
@@ -119,7 +118,7 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements SuperCo
     public ValueObject getValue(String key) {
         if (key != null) {
 
-            String[] keys = Strings.splitArray(key, "~");
+            String[] keys = LessStrings.splitArray(key, "~");
             for (String k : keys) {
                 if (filter.isPresent(k)) {
                     return present;
@@ -132,8 +131,8 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements SuperCo
 
     @Override
     public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
-        String[] keys = Strings.splitArray(key, ",");
-        TreeNodeList list = new TreeNodeList(keys.length);
+        String[] keys = LessStrings.splitArray(key, ",");
+        List<DataTreeNode> list = new ArrayList<>(keys.length);
         for (String k : keys) {
             if (filter.isPresent(k)) {
                 DataTreeNode find = parent.getNode(k);

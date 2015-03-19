@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.task.source;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.task.stream.StreamFileSource;
@@ -24,7 +24,6 @@ import com.addthis.hydra.task.stream.StreamSourceFileList;
  * This data source <span class="hydra-summary">retrieves files from the local filesystem (for testing purposes)</span>.
  *
  * @user-reference
- * @hydra-name files
  */
 public class DataSourceStreamFiles extends DataSourceStreamList {
 
@@ -36,6 +35,6 @@ public class DataSourceStreamFiles extends DataSourceStreamList {
 
     @Override
     public StreamFileSource getSourceList(Integer[] shard) {
-        return new StreamSourceFileList(Strings.join(files, "\n"));
+        return new StreamSourceFileList(LessStrings.join(files, "\n"));
     }
 }

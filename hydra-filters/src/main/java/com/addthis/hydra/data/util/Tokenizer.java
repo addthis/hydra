@@ -16,7 +16,7 @@ package com.addthis.hydra.data.util;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
@@ -75,6 +75,10 @@ public class Tokenizer implements Codable {
         initialize();
     }
 
+    public Tokenizer setEscape(String escape) {
+        this.escape = escape;
+        return this;
+    }
 
     public Tokenizer setSeparator(String sep) {
         this.separator = sep;
@@ -161,7 +165,7 @@ public class Tokenizer implements Codable {
             initialize();
         }
 
-        if (line == null || Strings.isEmpty(line.trim())) {
+        if (line == null || LessStrings.isEmpty(line.trim())) {
             return null;
         }
 

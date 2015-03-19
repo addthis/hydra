@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.BundleField;
@@ -79,11 +79,11 @@ public class OpFold extends AbstractBufferOp implements BundleFormatted {
 
     public OpFold(String args, ChannelProgressivePromise queryPromise) {
         super(queryPromise);
-        String[] seg = Strings.splitArray(args, ":");
-        keycols = Strings.splitArray(seg[0], ",");
+        String[] seg = LessStrings.splitArray(args, ":");
+        keycols = LessStrings.splitArray(seg[0], ",");
         foldcol = seg[1];
-        foldvals = Strings.splitArray(seg[2], ",");
-        copycols = Strings.splitArray(seg[3], ",");
+        foldvals = LessStrings.splitArray(seg[2], ",");
+        copycols = LessStrings.splitArray(seg[3], ",");
         List<String> cols = new ArrayList<>(keycols.length + copycols.length + 1);
         // capture input fields
         Collections.addAll(cols, keycols);

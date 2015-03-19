@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import com.addthis.basis.collect.HotMap;
-import com.addthis.basis.util.Strings;
+import com.addthis.basis.util.LessStrings;
 import com.addthis.basis.util.Varint;
 
 import com.addthis.bundle.core.BundleField;
@@ -54,7 +54,6 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements SuperCodabl
      * the stored value for that key. The /+ is what includes the virtual layer of child nodes containing the values.</p>
      *
      * @user-reference
-     * @hydra-name map
      */
     public static final class Config extends TreeDataParameters<DataMap> {
 
@@ -174,7 +173,7 @@ public class DataMap extends TreeNodeData<DataMap.Config> implements SuperCodabl
 
     @Override
     public List<DataTreeNode> getNodes(DataTreeNode parent, String key) {
-        String[] keys = key != null ? Strings.splitArray(key, ",") : null;
+        String[] keys = key != null ? LessStrings.splitArray(key, ",") : null;
         ArrayList<DataTreeNode> list = new ArrayList<>(map.size());
         synchronized (map) {
             if (keys != null && keys.length > 0) {

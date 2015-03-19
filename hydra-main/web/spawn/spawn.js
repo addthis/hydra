@@ -1787,6 +1787,7 @@ function fillFormsFromJob(uuid, clone) {
 	$('form_job_replicas').value = typeof job.replicas == 'undefined' ? defaultReplicaCount.toString() : job.replicas;
 	$('form_job_readOnlyReplicas').value = typeof job.readOnlyReplicas == 'undefined' ? '0' : job.readOnlyReplicas;
 	$('form_job_dontDeleteMe').value = typeof job.dontDeleteMe == 'undefined' ? '0' : job.dontDeleteMe ? '1' : '0';
+	$('form_job_dontCloneMe').value = typeof job.dontCloneMe == 'undefined' ? '0' : job.dontCloneMe ? '1' : '0';
 	$('form_job_dontAutoBalanceMe').value = typeof job.dontAutoBalanceMe == 'undefined' ? '0' : job.dontAutoBalanceMe ? '1' : '0';
 	$('form_job_maxSimulRunning').value = typeof job.maxSimulRunning == 'undefined' ? '0' : job.maxSimulRunning;
 	$('form_job_minionType').value = typeof job.minionType == 'undefined' ? 'default' : job.minionType;

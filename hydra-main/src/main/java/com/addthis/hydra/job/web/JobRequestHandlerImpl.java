@@ -47,7 +47,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     public Job createOrUpdateJob(KVPairs kv, String username) throws Exception {
         String id = KVUtils.getValue(kv, "", "id", "job");
         String config = kv.getValue("config");
-        String expandedConfig = null;
+        String expandedConfig;
         String command = kv.getValue("command");
         boolean configMayHaveChanged = true;
         Job job;
@@ -121,6 +121,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         job.setMonthlyBackups(kv.getIntValue("monthlyBackups", job.getMonthlyBackups()));
         job.setReplicas(kv.getIntValue("replicas", job.getReplicas()));
         job.setDontDeleteMe(KVUtils.getBooleanValue(kv, job.getDontDeleteMe(), "dontDeleteMe"));
+        job.setDontCloneMe(KVUtils.getBooleanValue(kv, job.getDontCloneMe(), "dontCloneMe"));
         job.setDontAutoBalanceMe(KVUtils.getBooleanValue(kv, job.getDontAutoBalanceMe(), "dontAutoBalanceMe"));
         job.setMaxSimulRunning(kv.getIntValue("maxSimulRunning", job.getMaxSimulRunning()));
         job.setMinionType(kv.getValue("minionType", job.getMinionType()));
@@ -181,10 +182,11 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         if (kick) {
             boolean manual = KVUtils.getBooleanValue(kv, false, "manual");
             int select = kv.getIntValue("select", -1);
+            int priority = manual ? 1 : 0;
             if (select >= 0) {
-                spawn.startTask(job.getId(), select, true, manual, false);
+                spawn.startTask(job.getId(), select, true, priority, false);
             } else {
-                spawn.startJob(job.getId(), manual);
+                spawn.startJob(job.getId(), priority);
             }
         }
         return kick;

@@ -164,7 +164,7 @@ public class JobOnFinishStateHandlerImpl implements JobOnFinishStateHandler {
 
     private void safeStartJob(String jobId) {
         try {
-            spawn.startJob(jobId, false);
+            spawn.startJob(jobId, 0);
         } catch (Exception ex) {
             log.warn("[safe.start] {} failed due to {}", jobId, ex.getMessage(), ex);
         }

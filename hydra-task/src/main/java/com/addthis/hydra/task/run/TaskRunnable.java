@@ -14,6 +14,7 @@
 package com.addthis.hydra.task.run;
 
 import com.addthis.codec.annotations.Pluggable;
+import com.addthis.hydra.task.output.WritableRootPaths;
 
 /**
  * This is the specification for a Hydra job.
@@ -23,7 +24,8 @@ import com.addthis.codec.annotations.Pluggable;
  * @hydra-doc-position 1
  */
 @Pluggable("task")
-public interface TaskRunnable extends AutoCloseable {
+public interface TaskRunnable extends AutoCloseable, WritableRootPaths {
 
     public abstract void start();
+
 }

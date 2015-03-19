@@ -54,13 +54,13 @@ public class SpawnQueuesByPriorityTest {
     public void queueTest() {
         SpawnQueuesByPriority spawnQueuesByPriority = new SpawnQueuesByPriority();
         JobKey key1 = new JobKey("job", 0);
-        spawnQueuesByPriority.addTaskToQueue(0, key1, false, false);
+        spawnQueuesByPriority.addTaskToQueue(0, key1, 0, false);
         JobKey key2 = new JobKey("job", 1);
-        spawnQueuesByPriority.addTaskToQueue(0, key2, false, false);
+        spawnQueuesByPriority.addTaskToQueue(0, key2, 0, false);
         JobKey headKey = new JobKey("job", 2);
-        spawnQueuesByPriority.addTaskToQueue(0, headKey, false, true);
+        spawnQueuesByPriority.addTaskToQueue(0, headKey, 0, true);
         JobKey highPriKey = new JobKey("job2", 10);
-        spawnQueuesByPriority.addTaskToQueue(1, highPriKey, false, false);
+        spawnQueuesByPriority.addTaskToQueue(1, highPriKey, 0, false);
         Iterator<JobKey> expected = Arrays.asList(highPriKey, headKey, key1, key2).iterator();
         assertEquals("should get expected number of pri=1 tasks", 1, spawnQueuesByPriority.getTaskQueuedCount(1));
         assertEquals("should get expected number of pri=0 tasks", 3, spawnQueuesByPriority.getTaskQueuedCount(0));

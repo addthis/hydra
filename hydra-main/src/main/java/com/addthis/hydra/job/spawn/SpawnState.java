@@ -15,11 +15,10 @@ package com.addthis.hydra.job.spawn;
 
 import java.util.Iterator;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.addthis.basis.collect.ConcurrentHashMapV8;
 
 import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.Job;
@@ -39,7 +38,7 @@ public class SpawnState implements Codable {
     @JsonProperty final AtomicBoolean quiesce;
     @JsonProperty final CopyOnWriteArraySet<String> disabledHosts;
 
-    final transient ConcurrentMap<String, Job> jobs = new ConcurrentHashMapV8<>();
+    final transient ConcurrentMap<String, Job> jobs = new ConcurrentHashMap<>();
     final transient DirectedGraph<String> jobDependencies = new DirectedGraph<>();
 
     SpawnState(@JsonProperty("uuid") String uuid,

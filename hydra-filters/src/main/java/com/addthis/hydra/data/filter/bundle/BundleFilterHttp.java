@@ -22,8 +22,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.addthis.basis.collect.HotMap;
-import com.addthis.basis.util.Bytes;
-import com.addthis.basis.util.Files;
+import com.addthis.basis.util.LessBytes;
+import com.addthis.basis.util.LessFiles;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.util.AutoField;
@@ -47,7 +47,6 @@ import org.slf4j.LoggerFactory;
  * </pre>
  *
  * @user-reference
- * @hydra-name http
  */
 public class BundleFilterHttp extends AbstractBundleFilterHttp implements SuperCodable {
 
@@ -76,12 +75,12 @@ public class BundleFilterHttp extends AbstractBundleFilterHttp implements SuperC
         }
         ocache = new HotMap<>(new ConcurrentHashMap());
         if (cache.dir != null) {
-            persistTo = Files.initDirectory(cache.dir);
+            persistTo = LessFiles.initDirectory(cache.dir);
             LinkedList<CacheObject> list = new LinkedList<>();
             for (File file : persistTo.listFiles()) {
                 if (file.isFile()) {
                     try {
-                        CacheObject cached = codec.decode(CacheObject.class, Files.read(file));
+                        CacheObject cached = codec.decode(CacheObject.class, LessFiles.read(file));
                         cached.hash = file.getName();
                         list.add(cached);
                         if (log.isDebugEnabled()) {
@@ -138,7 +137,7 @@ public class BundleFilterHttp extends AbstractBundleFilterHttp implements SuperC
         CacheObject old;
         if (cache.dir != null) {
             try {
-                Files.write(new File(persistTo, cached.hash), codec.encode(cached), false);
+                LessFiles.write(new File(persistTo, cached.hash), codec.encode(cached), false);
                 if (log.isDebugEnabled()) {
                     log.debug("creating " + cached.hash + " for " + cached.key);
                 }
@@ -177,7 +176,7 @@ public class BundleFilterHttp extends AbstractBundleFilterHttp implements SuperC
                 try {
                     byte[] val = httpGet(urlValue, null, null, http.timeout, trace);
                     if (val != null && val.length >= 0) {
-                        cached = cachePut(urlValue, Bytes.toString(val));
+                        cached = cachePut(urlValue, LessBytes.toString(val));
                         break;
                     } else if (trace) {
                         System.err.println(urlValue + " returned " + (val != null ? val.length : -1) + " retries left = " + retries);

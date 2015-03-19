@@ -129,6 +129,10 @@ public class QueryEngine {
         }
     }
 
+    public DataTree getTree() {
+        return tree;
+    }
+
     /**
      * Calls close on the tree object
      */
