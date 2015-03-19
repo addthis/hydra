@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.task.map;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.util.NoSuchElementException;
@@ -25,15 +26,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.text.DecimalFormat;
 
 import com.addthis.basis.util.Parameter;
-import com.addthis.basis.util.LessStrings;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.kvp.KVBundle;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
 import com.addthis.hydra.task.source.TaskDataSource;
 
+import com.google.common.base.Strings;
 import com.google.common.util.concurrent.Uninterruptibles;
 
 import com.yammer.metrics.Metrics;
@@ -62,9 +62,12 @@ public final class MapFeeder implements Runnable {
 
     // mapper task controls
     private final int feeders;
-    private final BundleField shardField;
+    private final String shardField;
+    private final MapperTask[] mapperTasks;
     private final Thread[] threads;
     private final BlockingQueue<Bundle>[] queues;
+
+    private Thread feederThread;
 
     // metrics
     private final long start = System.currentTimeMillis();
@@ -86,16 +89,20 @@ public final class MapFeeder implements Runnable {
         this.feeders = feeders;
 
         shardField = source.getShardField();
+        mapperTasks = new MapperTask[feeders];
         threads = new Thread[feeders];
         queues = new LinkedBlockingQueue[feeders];
 
         for (int i = 0; i < threads.length; i++) {
             queues[i] = new LinkedBlockingQueue<>(QUEUE_DEPTH);
-            threads[i] = new Thread(new MapperTask(this, i), "MapProcessor #" + i);
+            mapperTasks[i] = new MapperTask(this, i);
+            threads[i] = new Thread(mapperTasks[i], "MapProcessor #" + i);
         }
+        log.info("work stealing = {}", shouldSteal);
     }
 
     @Override public void run() {
+        feederThread = Thread.currentThread();
         log.info("starting {} thread(s) for src={}", feeders, source);
         for (Thread thread : threads) {
             thread.start();
@@ -104,7 +111,7 @@ public final class MapFeeder implements Runnable {
         try {
             if (source.isEnabled()) {
                 while (fillBuffer()) {
-                    if (Thread.interrupted()) {
+                    if (task.isClosing()) {
                         closeSourceIfNeeded();
                     }
                 }
@@ -134,27 +141,75 @@ public final class MapFeeder implements Runnable {
     }
 
     private boolean fillBuffer() {
-        // iterate over inputs and execute default target
+        Bundle p = nextSourceBundle();
+        if (p == null) {
+            return false;
+        }
+        int hash = p.hashCode();
+        if (shardField != null) {
+            String val = ValueUtil.asNativeString(p.getValue(p.getFormat().getField(shardField)));
+            if (!Strings.isNullOrEmpty(val)) {
+                hash = PluggableHashFunction.hash(val);
+            }
+        }
+        int mod = Math.abs(hash % queues.length);
         try {
-            Bundle p = source.next();
-            if (p == null) {
-                log.info("exiting on null bundle from {}", source);
+            queues[mod].put(p);
+        } catch (InterruptedException e) {
+            if (!batchFillAllDrainedQueues(mod, p)) {
                 return false;
             }
-            int hash = p.hashCode();
-            if (shardField != null) {
-                String val = ValueUtil.asNativeString(p.getValue(shardField));
-                if (!LessStrings.isEmpty(val)) {
-                    hash = PluggableHashFunction.hash(val);
+        }
+        return true;
+    }
+
+    private Bundle nextSourceBundle() {
+        Bundle bundle = null;
+        try {
+            bundle = source.next();
+        } catch (NoSuchElementException e) {
+        }
+        if (bundle == null) {
+            log.info("exiting on null bundle or NoSuchElementException from {}", source);
+        }
+        return bundle;
+    }
+
+    private boolean batchFillAllDrainedQueues(int interruptedQueue, @Nonnull Bundle interruptedBundle) {
+        boolean interruptedBundlePutBack = false;
+        int fillCount;
+        for (MapperTask t : mapperTasks) {
+            if (t.queueDrained) {
+                t.queueDrained = false;
+                if (!interruptedBundlePutBack) {
+                    pushQueue(t.processorID, interruptedBundle);
+                    interruptedBundlePutBack = true;
+                    fillCount = QUEUE_DEPTH - 1;
+                } else {
+                    fillCount = QUEUE_DEPTH;
+                }
+                if (!fillQueue(t.processorID, fillCount)) {
+                    return false;
                 }
             }
-            int mod = Math.abs(hash % queues.length);
-            pushQueue(mod, p);
-            return true;
-        } catch (NoSuchElementException ignored) {
-            log.info("exiting on premature stream termination");
         }
-        return false;
+        if (!interruptedBundlePutBack) {
+            log.error("Batch fill is called when no queue is drained. This is a bug!");
+            // just force the bundle into the queue that it was being put into
+            pushQueue(interruptedQueue, interruptedBundle);
+        }
+        return true;
+    }
+
+    private boolean fillQueue(int queueNum, int count) {
+        for (int i = 0; i < count; i++) {
+            Bundle b = nextSourceBundle();
+            if (b == null) {
+                return false;
+            }
+            pushQueue(queueNum, b);
+        }
+        return true;
     }
 
     private void pushQueue(int queueNum, Bundle item) {
@@ -181,13 +236,27 @@ public final class MapFeeder implements Runnable {
         }
     }
 
+    private void signalDrainedMapperTaskQueue(int mapperTaskId) {
+        log.debug("MapperTask #{} drained its queue", mapperTaskId);
+        feederThread.interrupt();
+    }
+
     private static class MapperTask implements Runnable {
         private final int processorID;
         private final MapFeeder mapFeeder;
+        private final Meter bundleProcMeter;
+        private final Meter queueDrainMeter;
+        private final Meter feederInterruptMeter;
+
+        private long bundlesConsumedSinceLastDrainSignal;
+        private volatile boolean queueDrained;
 
         public MapperTask(MapFeeder mapFeeder, int processorID) {
             this.processorID = processorID;
             this.mapFeeder = mapFeeder;
+            bundleProcMeter = Metrics.newMeter(getClass(), "bundleProcRate." + processorID, "bundles", TimeUnit.SECONDS);
+            queueDrainMeter = Metrics.newMeter(getClass(), "queueDrainRate." + processorID, "dranins", TimeUnit.SECONDS);
+            feederInterruptMeter = Metrics.newMeter(getClass(), "feederInterrupt." + processorID, "interrupts", TimeUnit.SECONDS);
         }
 
         @Override
@@ -196,13 +265,27 @@ public final class MapFeeder implements Runnable {
                 try {
                     Bundle next = popQueue();
                     if (next == null) {
+                        printMeter("bundles", bundleProcMeter);
+                        printMeter("drains", queueDrainMeter);
+                        printMeter("interrupts", feederInterruptMeter);
                         return;
                     }
+                    bundlesConsumedSinceLastDrainSignal++;
                     mapFeeder.task.process(next);
+                    bundleProcMeter.mark();
                 } catch (Throwable t) {
                     mapFeeder.handleUncaughtThrowable(t);
                 }
             }
+        }
+
+        private void printMeter(String name, Meter meter) {
+            log.info("Meter {}:", name);
+            log.info("             count = {}", meter.count());
+            log.info("         mean rate = {}", meter.meanRate());
+            log.info("     1-minute rate = {}", meter.oneMinuteRate());
+            log.info("     5-minute rate = {}", meter.fiveMinuteRate());
+            log.info("    15-minute rate = {}", meter.fifteenMinuteRate());
         }
 
         @Nullable private Bundle popQueue() throws InterruptedException {
@@ -212,8 +295,17 @@ public final class MapFeeder implements Runnable {
                 // first check our own queue
                 item = queue.poll();
                 if (item == null) {
-                    // then check every other queue
-                    item = steal(queue);
+                    queueDrained = true;
+                    queueDrainMeter.mark();
+                    // if source is slower than processing, this could avoid interrupting mapFeeder too much - because
+                    // we know QUEUE_DEPTH bundles will be batch filled, no need to ask again until at least that many
+                    // have been processed. though if source is the bottleneck, ideally we would do none of this - the
+                    // interruptions, even at a lower frequency, still add to mapFeeder's overhead.
+                    if (bundlesConsumedSinceLastDrainSignal >= QUEUE_DEPTH) {
+                        mapFeeder.signalDrainedMapperTaskQueue(processorID);
+                        bundlesConsumedSinceLastDrainSignal = 0;
+                        feederInterruptMeter.mark();
+                    }
                 }
             }
             if (item == null) {

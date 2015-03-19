@@ -146,6 +146,7 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
 
     private MBeanRemotingSupport jmxremote;
     private Thread feeder;
+    private volatile boolean closing;
 
     @JsonCreator
     public StreamMapper(@JsonProperty(value = "source", required = true) TaskDataSource source,
@@ -338,8 +339,12 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
 
     @Override
     public void close() throws InterruptedException {
-        feeder.interrupt();
+        closing = true;
         feeder.join();
+    }
+
+    public boolean isClosing() {
+        return closing;
     }
 
     /** called on process exit */
