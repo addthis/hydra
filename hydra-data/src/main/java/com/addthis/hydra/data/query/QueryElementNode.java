@@ -36,6 +36,7 @@ import com.addthis.hydra.data.tree.DataTreeNode;
 import com.addthis.hydra.data.tree.DataTreeNodeActor;
 import com.addthis.hydra.data.tree.ReadTreeNode;
 import com.addthis.hydra.data.tree.TreeNodeData;
+import com.addthis.hydra.data.tree.prop.VirtualTreeNode;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
@@ -49,6 +50,10 @@ import org.apache.commons.lang3.mutable.MutableInt;
  */
 public class QueryElementNode implements Codable {
 
+    private static final String DEFAULT_NODE = "+[";
+
+    private static final String DEFAULT_ATTACHMENT = "+%[";
+
     private static final String memKey = "";
 
     @FieldConfig(codable = true)
@@ -59,6 +64,10 @@ public class QueryElementNode implements Codable {
     public String data;
     @FieldConfig(codable = true)
     public String dataKey;
+    @FieldConfig(codable = true)
+    public String defaultValue;
+    @FieldConfig(codable = true)
+    public int defaultHits;
     @FieldConfig(codable = true)
     public Boolean flat;
     // output column this element is bound to 'show' (or null if dropped)
@@ -110,6 +119,8 @@ public class QueryElementNode implements Codable {
             tok = tok.substring(1);
             regex = true;
         }
+        tok = extractDefaultValue(tok);
+
 
         QueryElementNode.MODE mode = MODE.MATCH;
 
@@ -186,6 +197,39 @@ public class QueryElementNode implements Codable {
             trap = trapList.toArray(new String[trapList.size()]);
         }
         return this;
+    }
+
+    /**
+     * The prefix "+[text]" or "+%[text] is interpreted as a default
+     * value. Extract the default value and remove it from
+     * the input token. Optionally "+[text|hits]" can be used to set
+     * the number of hits on the default node.
+     */
+    private String extractDefaultValue(String tok) {
+        int startDefault = -1;
+        if (tok.startsWith(DEFAULT_NODE)) {
+            startDefault = DEFAULT_NODE.length();
+        } else if (tok.startsWith(DEFAULT_ATTACHMENT)) {
+            startDefault = DEFAULT_ATTACHMENT.length();
+        }
+        int endDefault = tok.indexOf(']');
+        if ((startDefault != -1) && (endDefault != -1)) {
+            int hitsLocation = tok.indexOf('|');
+            if ((hitsLocation >= 0) && (hitsLocation < endDefault)) {
+                defaultHits = Integer.parseInt(tok.substring(hitsLocation + 1, endDefault));
+                defaultValue = tok.substring(startDefault, hitsLocation);
+            } else {
+                defaultValue = tok.substring(startDefault, endDefault);
+            }
+            if (tok.startsWith(DEFAULT_NODE)) {
+                tok = "+" + tok.substring(endDefault + 1);
+            } else if (tok.startsWith(DEFAULT_ATTACHMENT)) {
+                tok = "+%" + tok.substring(endDefault + 1);
+            } else {
+                throw new IllegalStateException("Unexpected state in default value extraction");
+            }
+        }
+        return tok;
     }
 
     void toCompact(StringBuilder sb) {
@@ -278,12 +322,18 @@ public class QueryElementNode implements Codable {
 
         final String[] match;
 
+        final DataTreeNode defaultNode;
+
         int index;
 
-        LazyNodeMatch(DataTreeNode parent, String[] match) {
+        boolean first;
+
+        LazyNodeMatch(DataTreeNode parent, String[] match, DataTreeNode defaultNode) {
             this.parent = parent;
             this.match = match;
+            this.defaultNode = defaultNode;
             this.index = 0;
+            this.first = true;
         }
 
         protected DataTreeNode computeNext() {
@@ -293,8 +343,14 @@ public class QueryElementNode implements Codable {
                 index++;
             }
             if (next == null) {
-                return endOfData();
+                if (first && (defaultNode != null)) {
+                    first = false;
+                    return defaultNode;
+                } else {
+                    return endOfData();
+                }
             } else {
+                first = false;
                 return next;
             }
         }
@@ -309,6 +365,10 @@ public class QueryElementNode implements Codable {
             return ret.iterator();
         }
         DataTreeNode parent = stack.peek();
+        DataTreeNode defaultNode = null;
+        if (defaultValue != null) {
+            defaultNode = new VirtualTreeNode(defaultValue, defaultHits);
+        }
         try {
             DataTreeNode tmp;
             if (path != null) {
@@ -333,8 +393,13 @@ public class QueryElementNode implements Codable {
                     }
                 }
             }
-            if (match == null && regex == null && data == null) {
-                return parent.getIterator();
+            if ((match == null) && (regex == null) && (data == null)) {
+                Iterator<DataTreeNode> result = parent.getIterator();
+                if (result.hasNext() || (defaultNode == null)) {
+                    return result;
+                } else {
+                    return Iterators.singletonIterator(defaultNode);
+                }
             }
             ret = new LinkedList<>();
             if (match != null) {
@@ -368,7 +433,7 @@ public class QueryElementNode implements Codable {
                 } else if (rangeStrict()) {
                     return parent.getIterator(match.length > 0 ? match[0] : null, match.length > 1 ? match[1] : null);
                 } else if (data == null) {
-                    return new LazyNodeMatch(parent, match);
+                    return new LazyNodeMatch(parent, match, defaultNode);
                 } else {
                     for (String name : match) {
                         DataTreeNode find = parent.getNode(name);
@@ -402,6 +467,10 @@ public class QueryElementNode implements Codable {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        return ret.iterator();
+        if ((ret.size() == 0) && (defaultNode != null)) {
+            return Iterators.singletonIterator(defaultNode);
+        } else {
+            return ret.iterator();
+        }
     }
 }
