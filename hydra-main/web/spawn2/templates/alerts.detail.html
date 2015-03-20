@@ -112,6 +112,12 @@
             <textarea rows="4" cols="50" class="form-control" id="description" name="description" placeholder=""><%-alert.description%></textarea>
         </div>
     </div>
+    <div id="activeAlerts" class="form" role="form">
+        <div class="form-group">
+            <label class="sr-only" for="timeout" style="margin-bottom:0px;">Active alerts</label>
+            <textarea readonly rows="4" cols="50" class="form-control" id="active" name="active" placeholder=""><%-JSON.stringify(alert.activeJobs, null, '\t')%></textarea>
+        </div>
+    </div>
 </div>
 <div id="alertDetailContainer" class="main-container">
 </div>
