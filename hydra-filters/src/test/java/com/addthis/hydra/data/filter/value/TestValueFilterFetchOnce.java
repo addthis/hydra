@@ -17,12 +17,16 @@ import java.net.UnknownHostException;
 
 import java.util.concurrent.ExecutionException;
 
+import com.addthis.basis.test.SlowTest;
+
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+@Category(SlowTest.class)
 public class TestValueFilterFetchOnce {
 
 
