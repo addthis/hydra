@@ -214,7 +214,7 @@ public class ReadPageDB<V extends IReadWeighable & BytesCodable> implements IPag
         throw new UnsupportedOperationException();
     }
 
-    @Override public void remove(DBKey start, DBKey end, boolean inclusive) {
+    @Override public void remove(DBKey start, DBKey end) {
         throw new UnsupportedOperationException();
     }
 

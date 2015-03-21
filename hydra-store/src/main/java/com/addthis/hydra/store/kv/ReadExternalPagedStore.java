@@ -385,7 +385,7 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         }
 
         @Override
-        public void removeValues(K start, K end, boolean inclusive) {
+        public void removeValues(K start, K end) {
             throw new UnsupportedOperationException();
         }
 

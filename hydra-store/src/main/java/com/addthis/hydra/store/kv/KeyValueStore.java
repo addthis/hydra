@@ -86,11 +86,10 @@ public interface KeyValueStore<K, V extends BytesCodable> {
     /**
      * removes a range of (key, value) pairs
      *
-     * @param start     lower bound of range deletion
-     * @param end       upper bound of range deletion
-     * @param inclusive if true then delete the end key
+     * @param start     lower bound of range deletion (inclusive)
+     * @param end       upper bound of range deletion (exclusive)
      */
-    public void removeValues(K start, K end, boolean inclusive);
+    public void removeValues(K start, K end);
 
     /**
      * lexicographically ordered iterator

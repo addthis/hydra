@@ -193,21 +193,21 @@ public class TestSkipListCache {
         Random generator = new Random();
         for (int i = 0; i < iterations; i++) {
             rangeDeletionIteration(generator.nextInt(elements),
-                    generator.nextInt(elements), generator.nextBoolean(), elements);
+                    generator.nextInt(elements), elements);
         }
 
         for (int i = 0; i < iterations; i++) {
-            rangeDeletionIteration(-1, generator.nextInt(elements), generator.nextBoolean(), elements);
+            rangeDeletionIteration(-1, generator.nextInt(elements), elements);
         }
 
         for (int i = 0; i < iterations; i++) {
-            rangeDeletionIteration(generator.nextInt(elements), elements, generator.nextBoolean(), elements);
+            rangeDeletionIteration(generator.nextInt(elements), elements, elements);
         }
 
 
     }
 
-    private void rangeDeletionIteration(int startKey, int endKey, boolean inclusive, int elements) {
+    private void rangeDeletionIteration(int startKey, int endKey, int elements) {
         File directory = null;
 
         try {
@@ -220,12 +220,11 @@ public class TestSkipListCache {
                 assertEquals(null, cache.put(i, new DBIntValue(elements - i)));
             }
 
-            cache.removeValues(startKey, endKey, inclusive);
+            cache.removeValues(startKey, endKey);
 
             for (int i = 0; i < elements; i++) {
                 if ((i >= startKey) &&
-                    ((inclusive && i <= endKey) ||
-                     (!inclusive && i < endKey))) {
+                    (i < endKey)) {
                     assertNull(cache.get(i));
                 } else {
                     assertEquals(new Integer(elements - i), cache.get(i).getVal());

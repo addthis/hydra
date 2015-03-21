@@ -51,7 +51,7 @@ public interface IPageDB<K extends Key, V extends BytesCodable> extends AutoClos
 
     public V remove(K key);
 
-    public void remove(K from, K to, boolean inclusive);
+    public void remove(K from, K to);
 
     public Range<K, V> range(K from, K to);
 

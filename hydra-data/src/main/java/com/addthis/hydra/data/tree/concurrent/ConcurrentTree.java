@@ -723,7 +723,7 @@ public final class ConcurrentTree implements DataTree, MeterDataSource {
         } finally {
             range.close();
         }
-        source.remove(new DBKey(nodeDB), endRange, false);
+        source.remove(new DBKey(nodeDB), endRange);
         if (reschedule) {
             markForChildDeletion(rootNode);
         }

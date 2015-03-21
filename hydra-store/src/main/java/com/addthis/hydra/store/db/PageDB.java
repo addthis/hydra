@@ -148,8 +148,8 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
     }
 
     @Override
-    public void remove(DBKey from, DBKey to, boolean inclusive) {
-        eps.removeValues(from, to, inclusive);
+    public void remove(DBKey from, DBKey to) {
+        eps.removeValues(from, to);
     }
 
     public TreeMap<DBKey, V> toTreeMap() {

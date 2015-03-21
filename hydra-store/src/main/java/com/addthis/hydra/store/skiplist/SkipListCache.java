@@ -1053,13 +1053,12 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
     }
 
     /**
-     * @param start     lower bound of range deletion
-     * @param end       upper bound of range deletion
-     * @param inclusive if true then delete the end key
+     * @param start     lower bound of range deletion (inclusive)
+     * @param end       upper bound of range deletion (exclusive)
      */
     @Override
-    public void removeValues(K start, K end, boolean inclusive) {
-        doRemove(start, end, inclusive);
+    public void removeValues(K start, K end) {
+        doRemove(start, end);
     }
 
     private V putIntoPage(Page<K, V> page, K key, V value) {
@@ -1126,7 +1125,7 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
         return prev;
     }
 
-    void doRemove(K start, K end, boolean inclusive) {
+    void doRemove(K start, K end) {
         while (true) {
             if (mustEvictPage()) {
                 BackgroundEvictionTask task = getEvictionTask();
@@ -1146,8 +1145,6 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
 
                 if (endOffset < 0) {
                     endOffset = ~endOffset;
-                } else if (inclusive) {
-                    endOffset++;
                 }
 
 
