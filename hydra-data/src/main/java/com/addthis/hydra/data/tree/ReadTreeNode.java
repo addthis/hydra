@@ -175,10 +175,6 @@ public class ReadTreeNode extends AbstractTreeNode implements IReadWeighable {
         return !hasNodes() ? new Iter(null) : new Iter(tree.fetchNodeRange(nodedb, from, to));
     }
 
-    public ClosableIterator<DataTreeNode> getIterator(int sampleRate) {
-        return !hasNodes() ? new Iter(null) : new Iter(tree.fetchNodeRange(nodedb, sampleRate));
-    }
-
     @Override public byte[] bytesEncode(long version) {
         throw new UnsupportedOperationException("ReadTreeNode cannot be encoded");
     }

@@ -267,10 +267,6 @@ public final class ReadTree implements DataTree {
         return source.range(new DBKey(db), new DBKey(db + 1));
     }
 
-    IPageDB.Range<DBKey, ReadTreeNode> fetchNodeRange(long db, int sampleRate) {
-        return source.range(new DBKey(db), new DBKey(db + 1), sampleRate);
-    }
-
     IPageDB.Range<DBKey, ReadTreeNode> fetchNodeRange(long db, String from, String to) {
         if (to == null) {
             return source.range(new DBKey(db, Raw.get(from)), new DBKey(db + 1, (Raw) null));

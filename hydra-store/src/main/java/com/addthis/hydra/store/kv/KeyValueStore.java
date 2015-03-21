@@ -96,8 +96,7 @@ public interface KeyValueStore<K, V extends BytesCodable> {
      * lexicographically ordered iterator
      *
      * @param start     key or null for beginning
-     * @param inclusive whether or not to include starting key
      * @return
      */
-    public Iterator<Entry<K, V>> range(K start, boolean inclusive);
+    public Iterator<Entry<K, V>> range(K start);
 }

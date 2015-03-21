@@ -1719,12 +1719,12 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
         K nextKey;
         V nextValue;
 
-        SkipListCacheIterator(K from, boolean inclusive) {
+        SkipListCacheIterator(K from) {
             this.page = locatePage(from, LockMode.READMODE);
             this.prevKey = null;
             this.stamp = -1;
 
-            nextHelper(from, inclusive, false);
+            nextHelper(from, true, false);
 
         }
 
@@ -1871,8 +1871,8 @@ public class SkipListCache<K, V extends BytesCodable> implements PagedKeyValueSt
     }
 
     @Override
-    public Iterator<Map.Entry<K, V>> range(K start, boolean inclusive) {
-        return new SkipListCacheIterator(start, inclusive);
+    public Iterator<Map.Entry<K, V>> range(K start) {
+        return new SkipListCacheIterator(start);
     }
 
     @Override

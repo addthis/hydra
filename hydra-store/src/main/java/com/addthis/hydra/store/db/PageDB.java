@@ -242,7 +242,7 @@ public class PageDB<V extends BytesCodable> implements IPageDB<DBKey, V> {
 
         private DR(DBKey start, DBKey to) {
             log.debug("DR(" + start + "-" + to + ")");
-            this.iter = eps.range(start, true);
+            this.iter = eps.range(start);
             this.to = to;
             synchronized (openRanges) {
                 openRanges.add(this);

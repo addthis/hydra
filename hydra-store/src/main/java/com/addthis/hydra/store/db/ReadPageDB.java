@@ -108,11 +108,7 @@ public class ReadPageDB<V extends IReadWeighable & BytesCodable> implements IPag
     //Uses the DR object from below.
     @Override
     public IPageDB.Range<DBKey, V> range(DBKey from, DBKey to) {
-        return new DR(from, to, 1);
-    }
-
-    public IPageDB.Range<DBKey, V> range(DBKey from, DBKey to, int sampleRate) {
-        return new DR(from, to, sampleRate);
+        return new DR(from, to);
     }
 
     /**
@@ -144,9 +140,9 @@ public class ReadPageDB<V extends IReadWeighable & BytesCodable> implements IPag
 
         private Map.Entry<DBKey, V> next;
 
-        private DR(DBKey start, DBKey to, int sampleRate) {
+        private DR(DBKey start, DBKey to) {
             if (log.isDebugEnabled()) log.debug("DR(" + start + "-" + to + ")");
-            this.iter = eps.range(start, true, sampleRate);
+            this.iter = eps.range(start);
             this.to = to;
         }
 

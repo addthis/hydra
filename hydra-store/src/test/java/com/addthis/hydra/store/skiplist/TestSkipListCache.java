@@ -430,7 +430,7 @@ public class TestSkipListCache {
                 assertEquals(numElements / numThreads, threads[i].counter);
             }
 
-            Iterator<Map.Entry<Integer, DBIntValue>> iterator = cache.range(0, true);
+            Iterator<Map.Entry<Integer, DBIntValue>> iterator = cache.range(0);
 
             for (int i = 0; i < numElements; i++) {
                 assertTrue(iterator.hasNext());
@@ -442,23 +442,7 @@ public class TestSkipListCache {
             assertFalse(iterator.hasNext());
             assertNull(iterator.next());
 
-            iterator = cache.range(0, false);
-
-            for (int i = 1; i < numElements; i++) {
-                assertTrue(iterator.hasNext());
-                Map.Entry<Integer, DBIntValue> entry = iterator.next();
-                assertEquals(new Integer(i), entry.getKey());
-                assertEquals(new Integer(numElements - i), entry.getValue().getVal());
-            }
-
-            assertFalse(iterator.hasNext());
-            assertNull(iterator.next());
-
-            iterator = cache.range(numElements, true);
-            assertFalse(iterator.hasNext());
-            assertNull(iterator.next());
-
-            iterator = cache.range(numElements, false);
+            iterator = cache.range(numElements);
             assertFalse(iterator.hasNext());
             assertNull(iterator.next());
 

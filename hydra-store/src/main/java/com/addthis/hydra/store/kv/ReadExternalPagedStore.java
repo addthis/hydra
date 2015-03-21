@@ -390,8 +390,8 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         }
 
         @Override
-        public Iterator<Map.Entry<K, V>> range(K start, boolean inclusive) {
-            SortedMap<K, PageValue> tailMap = start != null ? map.tailMap(start, inclusive) : map;
+        public Iterator<Map.Entry<K, V>> range(K start) {
+            SortedMap<K, PageValue> tailMap = start != null ? map.tailMap(start) : map;
             if (log.isDebugEnabled()) {
                 log.debug("range start=" + start + " tailMap=" + tailMap + " map=" + map);
             }
@@ -488,90 +488,6 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         return new PageIterator(start);
     }
 
-    public Iterator<KeyValuePage<K, V>> getPageIterator(final K start,
-            final boolean inclusive,
-            final int sampleRate) {
-        if (sampleRate < 2) {
-            return new PageIterator(start);
-        } else {
-            return new SampledPageIterator(start, inclusive, sampleRate);
-        }
-    }
-
-    /**
-     * iterates over K-(pages of V) entry objects.
-     * essentially this iterates over k-page pairs.
-     * <p/>
-     * Handles decoding and interacting with the page cache.
-     * <p/>
-     * TODO: optionally(?) prebuffer the next page or delegate that to a sub-iterator
-     * TODO: keep pointer to page and next key instead of two pages
-     */
-    private final class SampledPageIterator implements Iterator<KeyValuePage<K, V>> {
-
-        private KeyValuePage<K, V> nextPage;
-        private KeyValuePage<K, V> page;
-        private Iterator<byte[]> keyIterator;
-        private final int sampleRate;
-        private final K start;
-        private final boolean inclusive;
-        private boolean prevEmpty;
-
-        public SampledPageIterator(K start, boolean inclusive, int sampleRate) {
-            this.start = start;
-            this.sampleRate = sampleRate;
-            this.inclusive = inclusive;
-            if (start == null) {
-                start = getFirstKey();
-            }
-            keyIterator = pages.keyIterator(keyCoder.keyEncode(start));
-
-            nextPage = getOrLoadPageForKey(start);
-        }
-
-        @Override
-        public String toString() {
-            return "PI:" + page;
-        }
-
-        @Override
-        public boolean hasNext() {
-            fillNext();
-            return (nextPage != null);
-        }
-
-        private void fillNext() {
-            int rate = prevEmpty ? 1 : sampleRate;
-
-            if (nextPage == null && keyIterator.hasNext()) {
-                byte[] encodedKey = null;
-                for (int i = 0; i < rate && keyIterator.hasNext(); i++) {
-                    encodedKey = keyIterator.next();
-                }
-                if (encodedKey != null) {
-                    nextPage = getOrLoadPageForKey(keyCoder.keyDecode(encodedKey));
-                }
-            }
-        }
-
-        @Override
-        public KeyValuePage<K, V> next() {
-            if (hasNext()) {
-                page = nextPage;
-                nextPage = null;
-                prevEmpty = !page.range(start, inclusive).hasNext();
-                return page;
-            } else {
-                throw new NoSuchElementException();
-            }
-        }
-
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
-    }
-
     /**
      * iterates over K-(pages of V) entry objects.
      * essentially this iterates over k-page pairs.
@@ -630,10 +546,11 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         }
     }
 
-    public Iterator<Map.Entry<K, V>> range(K start, boolean inclusive, int sampleRate) {
+    public Iterator<Map.Entry<K, V>> range(K start) {
         //create PageIterator (to get a stream of pages), then create a bounded iterator
-        return new BoundedIterator(getPageIterator(start, inclusive, sampleRate), start, inclusive);
+        return new BoundedIterator(getPageIterator(start), start);
     }
+
 
     /**
      * legacy comment: wrapper for page iterator
@@ -650,7 +567,6 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
     private class BoundedIterator implements ClosableIterator<Map.Entry<K, V>> {
 
         private K firstKey;
-        private boolean inclusive;
         //backing PageIterator (provides pages)
         private Iterator<KeyValuePage<K, V>> pageIterator;
         //backing ValueIterator (iterates over a page)
@@ -661,22 +577,21 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
         private Map.Entry<K, V> lastEntry;
         private Map.Entry<K, V> nextEntry;
 
-        BoundedIterator(Iterator<KeyValuePage<K, V>> iterator, K firstKey, boolean inclusive) {
+        BoundedIterator(Iterator<KeyValuePage<K, V>> iterator, K firstKey) {
             this.pageIterator = iterator;
             this.firstKey = firstKey;
-            this.inclusive = inclusive;
         }
 
         @Override
         public String toString() {
-            return "BI:" + firstKey + "," + inclusive + "," + pageIterator + "," + valueIterator + "," + nextPage + "," + lastEntry + "," + nextEntry;
+            return "BI:" + firstKey + "," + pageIterator + "," + valueIterator + "," + nextPage + "," + lastEntry + "," + nextEntry;
         }
 
         private void fillNext() {
             /* first make sure we have a viable page */
             while (valueIterator == null && pageIterator != null && pageIterator.hasNext()) {
                 nextPage = pageIterator.next();
-                valueIterator = nextPage.range(firstKey, inclusive);
+                valueIterator = nextPage.range(firstKey);
                 if (!valueIterator.hasNext()) {
                     valueIterator = null;
                 }

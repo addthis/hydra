@@ -52,7 +52,8 @@ public interface DataTreeNode extends Iterable<DataTreeNode> {
     /** Returns an iterator over the set of child nodes with the matching prefix. */
     public ClosableIterator<DataTreeNode> getIterator(String prefix);
 
-    /** Returns an iterator over child nodes whose names are in the range [from, to] (inclusive). */
+    /** Returns an iterator over child nodes whose names are in the range [from, to).
+     * The 'from' is inclusive and the 'to' is exclusive. */
     public ClosableIterator<DataTreeNode> getIterator(String from, String to);
 
     // Mutation Methods
