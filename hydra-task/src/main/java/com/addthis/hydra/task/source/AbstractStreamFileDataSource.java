@@ -330,7 +330,9 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
         }
         try {
             if (persistentStreamFileSource != null) {
-                persistentStreamFileSource.init(getMarkDirFile(), shards);
+                if (!persistentStreamFileSource.init(getMarkDirFile(), shards)) {
+                    throw new IllegalStateException("Failure to initialize input source");
+                }
             }
             if (filter != null) {
                 setSource(new StreamSourceFiltered(source, filter));

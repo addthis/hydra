@@ -153,7 +153,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
     private int meshPort;
 
     /**
-     * Default mesh node cache per stream in size of bytes or appened with standard human readable
+     * Default mesh node cache per stream in size of bytes or append with standard human readable
      * units like "56k".
      */
     @Bytes

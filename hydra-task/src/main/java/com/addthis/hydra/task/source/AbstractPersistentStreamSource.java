@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -24,6 +26,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
+
+import java.time.temporal.ChronoUnit;
 
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.Parameter;
@@ -79,6 +83,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
      * The format of startDate and endDate values using the
      * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html">DateTimeFormat</a>.
      * Default is either "source.mesh.date.format" configuration value or "YYMMdd".
+     * See {@code #dateIncrements} for bypassing file search by date.
      */
     @JsonProperty private String dateFormat = DEFAULT_DATE_FORMAT;
 
@@ -123,6 +128,10 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
 
     @JsonProperty private String startDateBaseDir;
 
+    /**
+     * Legal values are "HOURS", "DAYS", and "MONTHS".
+     * Use any other non-null value to bypass date increments.
+     */
     @JsonProperty private String dateIncrements;
 
     /* note: this is based on which files have been opened. If there is a large preOpen queue or many worker threads
@@ -135,6 +144,10 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
     private File stateDir;
     protected File autoResumeFile;
     private final AtomicBoolean running = new AtomicBoolean(true);
+
+    @Nullable
+    protected ChronoUnit intervalUnit;
+
 
     /**
      * perform any initialization steps specific to the implementing class
@@ -210,10 +223,59 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
             log.warn("End Date not provided, using current time: {} as end date for job", endDate);
         }
         DateTime end = parseDateTime(endDate);
+        intervalUnit = timeIncrement(dateIncrements, dateFormat);
+        if (!testFileDateExpansion()) {
+            return false;
+        }
         /* populate date list from start/end */
         fillDateList(start, end);
         log.info("[init] {} to {} = {} time units", start, end, dates.size());
         return doInit();
+    }
+
+    /**
+     * Return false if one or more file names are missing the expected date substitution
+     * expressions. Otherwise return true.
+     */
+    private boolean testFileDateExpansion() {
+        if (intervalUnit == null) {
+            return true;
+        }
+        for (String filename : files) {
+            switch (intervalUnit) {
+                case HOURS:
+                    if (!H_PATTERN.matcher(filename).find()) {
+                        log.error("Hourly interval is specified and {H} is missing from filename " + filename);
+                        return false;
+                    }
+                    break;
+                case DAYS:
+                    if (!D_PATTERN.matcher(filename).find()) {
+                        log.error("Daily interval is specified and {D} is missing from filename " + filename);
+                        return false;
+                    }
+                    if (H_PATTERN.matcher(filename).find()) {
+                        log.error("Daily interval is specified and {H} is present in filename " + filename);
+                        return false;
+                    }
+                    break;
+                case MONTHS:
+                    if (!M_PATTERN.matcher(filename).find()) {
+                        log.error("Monthly interval is specified and {M} is missing from filename " + filename);
+                        return false;
+                    }
+                    if (D_PATTERN.matcher(filename).find()) {
+                        log.error("Monthly interval is specified and {D} is present in filename " + filename);
+                        return false;
+                    }
+                    if (H_PATTERN.matcher(filename).find()) {
+                        log.error("Monthly interval is specified and {H} is present in filename " + filename);
+                        return false;
+                    }
+                    break;
+            }
+        }
+        return true;
     }
 
     protected Set<String> expandPaths(Set<String> paths) {
@@ -230,6 +292,22 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         doShutdown();
     }
 
+    private static ChronoUnit timeIncrement(String dateIncrements,  String dateFormat) {
+        if ("DAYS".equals(dateIncrements) || (dateFormat.length() == 6)) {
+            return ChronoUnit.DAYS;
+        } else if ("HOURS".equals(dateIncrements) || (dateFormat.length() == 8)) {
+            return ChronoUnit.HOURS;
+        } else if ("MONTHS".equals(dateIncrements)) {
+            return ChronoUnit.MONTHS;
+        } else if (dateIncrements == null) {
+            log.warn("Non-Standard dateFormat: {} defaulting to daily time increments\nThis can be modified to " +
+                     "hourly time increments by setting dateIncrements to 'HOURS'", dateFormat);
+            return ChronoUnit.DAYS;
+        } else {
+            return null;
+        }
+    }
+
     /** list of dates given the start/end range from the config */
     private void fillDateList(DateTime start, DateTime end) {
         DateTime mark = start;
@@ -239,16 +317,21 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
             } else {
                 dates.addLast(mark);
             }
-            if ("DAYS".equals(dateIncrements) || (dateFormat.length() == 6)) {
-                mark = mark.plusDays(1);
-            } else if ("HOURS".equals(dateIncrements) || (dateFormat.length() == 8)) {
-                mark = mark.plusHours(1);
-            } else if ("MONTHS".equals(dateIncrements)) {
-                mark = mark.plusMonths(1);
-            } else if (dateIncrements == null) {
-                log.warn("Non-Standard dateFormat: {} defaulting to daily time increments\nThis can be modified to " +
-                         "hourly time increments by setting dateIncrements to 'HOURS'", dateFormat);
-                mark = mark.plusDays(1);
+            if (intervalUnit == null) {
+                return;
+            }
+            switch (intervalUnit) {
+                case HOURS:
+                    mark = mark.plusHours(1);
+                    break;
+                case DAYS:
+                    mark = mark.plusDays(1);
+                    break;
+                case MONTHS:
+                    mark = mark.plusMonths(1);
+                    break;
+                default:
+                    throw new IllegalStateException("Unexpected duration unit " + intervalUnit);
             }
         }
     }
