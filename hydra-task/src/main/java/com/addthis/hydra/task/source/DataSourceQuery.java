@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.task.source;
 
+import javax.annotation.Nonnull;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -46,6 +48,7 @@ import com.addthis.hydra.task.source.bundleizer.ColumnBundleizer;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.escape.Escaper;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.UrlEscapers;
@@ -165,7 +168,7 @@ public class DataSourceQuery extends TaskDataSource {
 
     /**
      * Path to the mark file. Default is "markfile".
-     **/
+     */
     @JsonProperty private Path markFile;
 
     /** Ignore the mark file */
@@ -341,6 +344,11 @@ public class DataSourceQuery extends TaskDataSource {
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         }
+    }
+
+    @Override
+    public @Nonnull ImmutableList<Path> writableRootPaths() {
+        return ImmutableList.of(markFile);
     }
 
 }

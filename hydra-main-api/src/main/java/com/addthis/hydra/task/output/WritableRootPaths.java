@@ -24,7 +24,7 @@ public interface WritableRootPaths {
     /**
      * List of paths that will be written to.
      */
-    public default @Nonnull ImmutableList<Path> writableRootPaths() {
+    default @Nonnull ImmutableList<Path> writableRootPaths() {
         return ImmutableList.of();
     }
 }
