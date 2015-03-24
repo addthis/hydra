@@ -13,17 +13,17 @@
  */
 package com.addthis.hydra.data.util;
 
+import java.io.BufferedInputStream;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 
-import java.util.zip.GZIPInputStream;
-
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.Bundles;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.io.DataChannelReader;
+import com.addthis.hydra.store.compress.CompressedStream;
 
 /**
  * reads persisted bundle streams (streamserver files, etc) and prints them
@@ -51,12 +51,8 @@ public class BundleStreamExtractor {
             throw new RuntimeException("file missing");
         }
 
-        InputStream input = null;
-
-        input = new FileInputStream(new File(file));
-        if (file.endsWith(".gz")) {
-            input = new GZIPInputStream(input);
-        }
+        InputStream input = new BufferedInputStream(new FileInputStream(new File(file)));
+        input = CompressedStream.decompressInputStream(input, file);
 
         DataChannelReader reader = new DataChannelReader(new ListBundle(), input);
         while (true) {

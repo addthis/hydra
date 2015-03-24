@@ -39,7 +39,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import com.addthis.basis.io.IOWrap;
 import com.addthis.basis.util.LessFiles;
 import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.LessStrings;
@@ -64,27 +63,22 @@ import com.addthis.hydra.task.stream.StreamFile;
 import com.addthis.hydra.task.stream.StreamFileSource;
 import com.addthis.hydra.task.stream.StreamSourceFiltered;
 import com.addthis.hydra.task.stream.StreamSourceHashed;
+import com.addthis.hydra.store.compress.CompressedStream;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.ning.compress.lzf.LZFInputStream;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Timer;
 
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.FileUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xerial.snappy.SnappyInputStream;
-
-import lzma.sdk.lzma.Decoder;
-import lzma.streams.LzmaInputStream;
 
 import static com.google.common.base.Throwables.propagate;
 import static com.google.common.util.concurrent.Uninterruptibles.awaitUninterruptibly;
@@ -672,7 +666,7 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
 
         void maybeFinishInit() throws IOException {
             if (bundleizer == null) {
-                input = wrapCompressedStream(input, stream.name()); // blocks waiting for network (if compressed)
+                input = CompressedStream.decompressInputStream(input, stream.name()); // blocks waiting for network (if compressed)
                 opening.dec();
                 bundleizer = format.createBundleizer(input, AbstractStreamFileDataSource.this);
                 long read = mark.getIndex();
@@ -708,21 +702,6 @@ public abstract class AbstractStreamFileDataSource extends TaskDataSource implem
                 globalBundleSkip.inc(bundlesSkipped);
                 log.debug("mark.indx {} / {}", mark, stream);
             }
-        }
-
-        private InputStream wrapCompressedStream(InputStream in, String name) throws IOException {
-            if (name.endsWith(".gz")) {
-                in = IOWrap.gz(in, 4096);
-            } else if (name.endsWith(".lzf")) {
-                in = new LZFInputStream(in);
-            } else if (name.endsWith(".snappy")) {
-                in = new SnappyInputStream(in);
-            } else if (name.endsWith(".bz2")) {
-                in = new BZip2CompressorInputStream(in, true);
-            } else if (name.endsWith(".lzma")) {
-                in = new LzmaInputStream(in, new Decoder());
-            }
-            return in;
         }
 
         void close(boolean wasEnd) throws IOException {

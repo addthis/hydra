@@ -13,12 +13,11 @@
  */
 package com.addthis.hydra.task.util;
 
+import java.io.BufferedInputStream;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
-
-import java.util.zip.GZIPInputStream;
 
 import com.addthis.basis.util.LessStrings;
 
@@ -26,16 +25,13 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.Bundles;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.io.DataChannelReader;
+import com.addthis.hydra.store.compress.CompressedStream;
 import com.addthis.meshy.Meshy;
 import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
 import com.addthis.meshy.service.file.FileSource;
 import com.addthis.meshy.service.stream.StreamSource;
 
-/**
- * Date: 5/9/12
- * Time: 6:02 PM
- */
 public class BundleStreamPeeker {
 
     public static void main(String[] args) throws Exception {
@@ -83,12 +79,10 @@ public class BundleStreamPeeker {
                 }
                 input = new StreamSource(meshy, ref.getHostUUID(), ref.name, 0).getInputStream();
             } else {
-                input = new FileInputStream(new File(file));
+                input = new BufferedInputStream(new FileInputStream(new File(file)));
             }
 
-            if (file.endsWith(".gz")) {
-                input = new GZIPInputStream(input);
-            }
+            input = CompressedStream.decompressInputStream(input, file);
             DataChannelReader reader = new DataChannelReader(new ListBundle(), input);
             while (sample-- > 0) {
                 try {

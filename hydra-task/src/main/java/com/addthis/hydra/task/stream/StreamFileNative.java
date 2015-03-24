@@ -13,24 +13,15 @@
  */
 package com.addthis.hydra.task.stream;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import com.addthis.basis.io.IOWrap;
-
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.Codable;
-
-import com.ning.compress.lzf.util.LZFFileInputStream;
-
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
-
-import org.xerial.snappy.SnappyInputStream;
-
-import lzma.sdk.lzma.Decoder;
-import lzma.streams.LzmaInputStream;
+import com.addthis.hydra.store.compress.CompressedStream;
 
 
 public class StreamFileNative implements StreamFile, Codable {
@@ -110,18 +101,8 @@ public class StreamFileNative implements StreamFile, Codable {
      */
     @Override
     public InputStream getInputStream() throws IOException {
-        InputStream in;
-        if (name().endsWith(".lzf")) {
-            in = new LZFFileInputStream(new File(name));
-        } else if (name().endsWith(".snappy")) {
-            in = new SnappyInputStream(new FileInputStream(new File(name)));
-        } else if (name().endsWith(".bz2")) {
-            in = new BZip2CompressorInputStream(new FileInputStream(new File(name)));
-        } else if (name().endsWith(".lzma")) {
-            in = new LzmaInputStream(new FileInputStream(new File(name)), new Decoder());
-        } else {
-            in = IOWrap.fileIn(new File(name), 4096, name.endsWith(".gz"));
-        }
+        InputStream in = new BufferedInputStream(new FileInputStream(name));
+        in = CompressedStream.decompressInputStream(in, name);
         return in;
     }
 

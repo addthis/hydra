@@ -62,9 +62,9 @@
       <artifactId>snappy-java</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.github.jponge</groupId>
-      <artifactId>lzma-java</artifactId>
-      <version>${hydra.dep.compress.lzma-java.version}</version>
+      <groupId>org.tukaani</groupId>
+      <artifactId>xz</artifactId>
+      <version>${hydra.dep.compress.org.tukaani.xz.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>

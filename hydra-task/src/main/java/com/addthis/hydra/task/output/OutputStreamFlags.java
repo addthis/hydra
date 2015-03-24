@@ -48,7 +48,8 @@ public class OutputStreamFlags implements SuperCodable {
 
     /**
      * If compress is true then specify the compression type.
-     * 0 for gzip, 1 for lzf, 2 for snappy, 3 for bzip2, or 4 for lzma.
+     * 0 for gzip, 1 for lzf, 2 for snappy, 3 for bzip2, 4 is no longer supported (lzma),
+     * and 5 for xz.
      */
     @FieldConfig(codable = true)
     private int compressType;

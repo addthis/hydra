@@ -16,6 +16,7 @@ package com.addthis.hydra.task.output;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -25,10 +26,11 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import com.addthis.basis.io.IOWrap;
 import com.addthis.basis.util.LessBytes;
 import com.addthis.basis.util.LessStrings;
 
+import com.addthis.hydra.store.compress.CompressedStream;
+import com.addthis.hydra.store.compress.CompressionType;
 import com.addthis.muxy.MuxFileDirectory;
 import com.addthis.muxy.MuxFileDirectoryCache;
 
@@ -37,16 +39,11 @@ import com.google.common.collect.ImmutableList;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.ning.compress.lzf.LZFOutputStream;
-
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xerial.snappy.SnappyOutputStream;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import lzma.streams.LzmaOutputStream;
 
 /**
  * <p>Options for file layout within the file system when writing to an output sink.
@@ -71,8 +68,6 @@ import lzma.streams.LzmaOutputStream;
 public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultOutputWrapperFactory.class);
-
-    private static final int BUFFER_SIZE = 4096;
 
     /** Path to the root directory of the output files. */
     @JsonProperty private String dir;
@@ -103,21 +98,10 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
                                          OutputStream outputStream) throws IOException {
         OutputStream wrappedStream;
         if (outputFlags.isCompress()) {
-            if (outputFlags.getCompressType() == 0) {
-                wrappedStream = IOWrap.gz(outputStream, BUFFER_SIZE);
-            } else if (outputFlags.getCompressType() == 1) {
-                wrappedStream = new LZFOutputStream(outputStream);
-            } else if (outputFlags.getCompressType() == 2) {
-                wrappedStream = new SnappyOutputStream(outputStream);
-            } else if (outputFlags.getCompressType() == 3) {
-                wrappedStream = new BZip2CompressorOutputStream(outputStream);
-            } else if (outputFlags.getCompressType() == 4) {
-                wrappedStream = new LzmaOutputStream.Builder(outputStream).useMediumDictionarySize().build();
-            } else {
-                throw new IOException("Unknown compression type: " + outputFlags.getCompressType());
-            }
+            wrappedStream = CompressedStream.compressOutputStream(
+                    outputStream, CompressionType.fromOrdinal(outputFlags.getCompressType()));
         } else {
-            wrappedStream = IOWrap.buffer(outputStream, BUFFER_SIZE);
+            wrappedStream = new BufferedOutputStream(outputStream);
         }
         if (!exists && (outputFlags.getHeader() != null)) {
             wrappedStream.write(LessBytes.toBytes(outputFlags.getHeader()));
@@ -144,33 +128,15 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
                 result = target.concat("-").concat(part);
             }
             if (outputFlags.isCompress()) {
-                if (outputFlags.getCompressType() == 0) {
-                    result = result.concat(".gz");
-                } else if (outputFlags.getCompressType() == 1) {
-                    result = result.concat(".lzf");
-                } else if (outputFlags.getCompressType() == 2) {
-                    result = result.concat(".snappy");
-                } else if (outputFlags.getCompressType() == 3) {
-                    result = result.concat(".bz2");
-                } else if (outputFlags.getCompressType() == 4) {
-                    result = result.concat(".lzma");
-                } else {
-                    throw new RuntimeException("unexpected compressionType: " + outputFlags.getCompressType());
-                }
+                CompressionType type = CompressionType.fromOrdinal(outputFlags.getCompressType());
+                result = result.concat(type.suffix);
             }
         }
 
         if (outputFlags.isCompress()) {
-            if (outputFlags.getCompressType() == 0 && !result.endsWith(".gz")) {
-                result = result.concat(".gz");
-            } else if (outputFlags.getCompressType() == 1 && !result.endsWith(".lzf")) {
-                result = result.concat(".zlf");
-            } else if (outputFlags.getCompressType() == 2 && !result.endsWith(".snappy")) {
-                result = result.concat(".snappy");
-            } else if (outputFlags.getCompressType() == 3 && !result.endsWith(".bz2")) {
-                result = result.concat(".bz2");
-            } else if (outputFlags.getCompressType() == 4 && !result.endsWith(".lzma")) {
-                result = result.concat(".lzma");
+            CompressionType type = CompressionType.fromOrdinal(outputFlags.getCompressType());
+            if (!result.endsWith(type.suffix)) {
+                result = result.concat(type.suffix);
             }
         }
         log.debug("[file] compress={} compressType:{} na={} for {}",
