@@ -38,6 +38,7 @@ import com.addthis.hydra.data.tree.ReadTreeNode;
 import com.addthis.hydra.data.tree.TreeNodeData;
 import com.addthis.hydra.data.tree.prop.VirtualTreeNode;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 
@@ -205,7 +206,8 @@ public class QueryElementNode implements Codable {
      * the input token. Optionally "+[text|hits]" can be used to set
      * the number of hits on the default node.
      */
-    private String extractDefaultValue(String tok) {
+    @VisibleForTesting
+    String extractDefaultValue(String tok) {
         int startDefault = -1;
         if (tok.startsWith(DEFAULT_NODE)) {
             startDefault = DEFAULT_NODE.length();
@@ -221,6 +223,8 @@ public class QueryElementNode implements Codable {
             } else {
                 defaultValue = tok.substring(startDefault, endDefault);
             }
+            // tok must either start with "+[" or "+%[" to have
+            // reached this line
             if (tok.startsWith(DEFAULT_NODE)) {
                 tok = "+" + tok.substring(endDefault + 1);
             } else if (tok.startsWith(DEFAULT_ATTACHMENT)) {
