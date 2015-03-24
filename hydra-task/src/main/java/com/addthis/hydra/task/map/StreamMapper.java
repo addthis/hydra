@@ -123,6 +123,15 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
      **/
     private final boolean validateDirs;
 
+    /**
+     * Use MapFeederForkJoin if true; Otherwise use original MapFeeder.
+     *
+     * Default is false. This is a temporary flag that allows us to selectively test the
+     * performance of the new fork join map feeder. Once tested, the original map feeder can be
+     * replaced with the fork join version.
+     */
+    private final boolean useForkJoinMapFeeder;
+
     private final int threads;
     private final boolean enableJmx;
     private final boolean emitTaskState;
@@ -158,7 +167,8 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
             @JsonProperty("enableJmx") boolean enableJmx,
             @JsonProperty("emitTaskState") boolean emitTaskState,
             @JsonProperty("dateFormat") SimpleDateFormat dateFormat,
-            @JsonProperty("validateDirs") boolean validateDirs) {
+            @JsonProperty("validateDirs") boolean validateDirs,
+            @JsonProperty("useForkJoinMapFeeder") boolean useForkJoinMapFeeder) {
         this.source = source;
         this.map = map;
         this.output = output;
@@ -170,6 +180,7 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
         this.emitTaskState = emitTaskState;
         this.dateFormat = dateFormat;
         this.validateDirs = validateDirs;
+        this.useForkJoinMapFeeder = useForkJoinMapFeeder;
         validateWritableRootPaths();
     }
 
@@ -183,7 +194,11 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
         }
         maybeInitJmx();
         log.info("[init]");
-        feeder = new Thread(new MapFeeder(this, source, threads),"MapFeeder");
+        if (useForkJoinMapFeeder) {
+            feeder = new Thread(new MapFeederForkJoin(this, source, threads), "MapFeederForkJoin");
+        } else {
+            feeder = new Thread(new MapFeeder(this, source, threads), "MapFeeder");
+        }
         lastTick = System.nanoTime();
         feeder.start();
     }

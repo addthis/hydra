@@ -68,6 +68,7 @@ public final class MapFeeder implements Runnable {
 
     // metrics
     private final long start = System.currentTimeMillis();
+    private long totalBundles = 0;
 
     @Nullable private final Meter stealAttemptMeter;
     @Nullable private final Meter stealSuccessMeter;
@@ -112,14 +113,20 @@ public final class MapFeeder implements Runnable {
             closeSourceIfNeeded();
             joinProcessors();
             log.info("all ({}) task threads exited; sending taskComplete", feeders);
-
+            logBundleThroughput();
             // run in different threads to isolate them from interrupts. ie. "taskCompleteUninterruptibly"
             // join awaits completion, is uninterruptible, and will propogate any exception
             CompletableFuture.runAsync(task::taskComplete).join();
         } catch (Throwable t) {
+            logBundleThroughput();
             handleUncaughtThrowable(t);
         }
         log.debug("task feeder exited");
+    }
+
+    private void logBundleThroughput() {
+        long elapse = (System.currentTimeMillis() - start) / 1000;
+        log.info("{} bundles processed in {} seconds (avg rate={}/s)", totalBundles, elapse, totalBundles / elapse);
     }
 
     /**
@@ -141,6 +148,7 @@ public final class MapFeeder implements Runnable {
                 log.info("exiting on null bundle from {}", source);
                 return false;
             }
+            totalBundles++;
             int hash = p.hashCode();
             if (shardField != null) {
                 String val = ValueUtil.asNativeString(p.getValue(shardField));
