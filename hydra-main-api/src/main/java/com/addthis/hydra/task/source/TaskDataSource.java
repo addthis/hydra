@@ -14,7 +14,7 @@
 package com.addthis.hydra.task.source;
 
 import com.addthis.bundle.channel.DataChannelSource;
-import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.annotations.Pluggable;
 import com.addthis.codec.codables.Codable;
@@ -38,7 +38,7 @@ public abstract class TaskDataSource implements Codable, DataChannelSource, Clon
      * hash function to determine which input processing thread to use. Default is null.
      */
     @FieldConfig(codable = true)
-    private BundleField shardField;
+    private AutoField shardField;
 
     /** If false then disable this data source. Default is true. */
     @FieldConfig(codable = true)
@@ -46,7 +46,7 @@ public abstract class TaskDataSource implements Codable, DataChannelSource, Clon
 
     public abstract void init();
 
-    public final BundleField getShardField() {
+    public final AutoField getShardField() {
         return shardField;
     }
 

@@ -24,12 +24,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import java.text.DecimalFormat;
 
-import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.LessStrings;
+import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.kvp.KVBundle;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
 import com.addthis.hydra.task.source.TaskDataSource;
@@ -62,7 +62,7 @@ public final class MapFeeder implements Runnable {
 
     // mapper task controls
     private final int feeders;
-    private final BundleField shardField;
+    private final AutoField shardField;
     private final Thread[] threads;
     private final BlockingQueue<Bundle>[] queues;
 
@@ -151,7 +151,7 @@ public final class MapFeeder implements Runnable {
             totalBundles++;
             int hash = p.hashCode();
             if (shardField != null) {
-                String val = ValueUtil.asNativeString(p.getValue(shardField));
+                String val = ValueUtil.asNativeString(shardField.getValue(p));
                 if (!LessStrings.isEmpty(val)) {
                     hash = PluggableHashFunction.hash(val);
                 }

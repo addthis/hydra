@@ -17,8 +17,8 @@ package com.addthis.hydra.task.map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.addthis.basis.util.Parameter;
@@ -54,7 +54,10 @@ public final class MapFeederForkJoin implements Runnable {
         this.source = source;
         this.task = task;
         this.parallelism = parallelism;
-        this.mapperPool = new ForkJoinPool(parallelism);
+        this.mapperPool = new ForkJoinPool(parallelism,
+                                           ForkJoinPool.defaultForkJoinWorkerThreadFactory,
+                                           (Thread t, Throwable e) -> handleUncaughtThrowable(e),
+                                           true);
         this.enqueuePermits = new Semaphore(QUEUE_DEPTH);
     }
 
@@ -114,7 +117,8 @@ public final class MapFeederForkJoin implements Runnable {
                 log.info("exiting on null bundle from {}", source);
             } else {
                 totalBundles++;
-                mapperPool.submit(new MapperTask(p));
+                CompletableFuture<Void> future = CompletableFuture.runAsync(() -> task.process(p), mapperPool);
+                future.whenComplete((v, e) -> enqueuePermits.release());
                 status = true;
             }
         } catch (NoSuchElementException ignored) {
@@ -128,6 +132,14 @@ public final class MapFeederForkJoin implements Runnable {
 
     private void joinProcessors() {
         mapperPool.shutdown();
+        try {
+            if (!mapperPool.awaitTermination(60, TimeUnit.SECONDS)) {
+                throw new RuntimeException("Mapper pool did not terminate after 60 seconds.");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while waiting for mapper pool termination.");
+        }
     }
 
     private void closeSourceIfNeeded() {
@@ -139,22 +151,4 @@ public final class MapFeederForkJoin implements Runnable {
         }
     }
 
-    private class MapperTask extends RecursiveAction {
-
-        private final Bundle input;
-
-        public MapperTask(Bundle input) {
-            this.input = input;
-        }
-
-        @Override protected void compute() {
-            try {
-                task.process(input);
-            } catch (Throwable t) {
-                handleUncaughtThrowable(t);
-            } finally {
-                enqueuePermits.release();
-            }
-        }
-    }
 }
