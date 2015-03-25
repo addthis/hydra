@@ -24,12 +24,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import java.text.DecimalFormat;
 
-import com.addthis.basis.util.Parameter;
 import com.addthis.basis.util.LessStrings;
+import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
 import com.addthis.bundle.core.kvp.KVBundle;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.util.ValueUtil;
 import com.addthis.hydra.common.hash.PluggableHashFunction;
 import com.addthis.hydra.task.source.TaskDataSource;
@@ -62,12 +62,13 @@ public final class MapFeeder implements Runnable {
 
     // mapper task controls
     private final int feeders;
-    private final BundleField shardField;
+    private final AutoField shardField;
     private final Thread[] threads;
     private final BlockingQueue<Bundle>[] queues;
 
     // metrics
     private final long start = System.currentTimeMillis();
+    private long totalBundles = 0;
 
     @Nullable private final Meter stealAttemptMeter;
     @Nullable private final Meter stealSuccessMeter;
@@ -112,14 +113,20 @@ public final class MapFeeder implements Runnable {
             closeSourceIfNeeded();
             joinProcessors();
             log.info("all ({}) task threads exited; sending taskComplete", feeders);
-
+            logBundleThroughput();
             // run in different threads to isolate them from interrupts. ie. "taskCompleteUninterruptibly"
             // join awaits completion, is uninterruptible, and will propogate any exception
             CompletableFuture.runAsync(task::taskComplete).join();
         } catch (Throwable t) {
+            logBundleThroughput();
             handleUncaughtThrowable(t);
         }
         log.debug("task feeder exited");
+    }
+
+    private void logBundleThroughput() {
+        long elapse = (System.currentTimeMillis() - start) / 1000;
+        log.info("{} bundles processed in {} seconds (avg rate={}/s)", totalBundles, elapse, totalBundles / elapse);
     }
 
     /**
@@ -141,9 +148,10 @@ public final class MapFeeder implements Runnable {
                 log.info("exiting on null bundle from {}", source);
                 return false;
             }
+            totalBundles++;
             int hash = p.hashCode();
             if (shardField != null) {
-                String val = ValueUtil.asNativeString(p.getValue(shardField));
+                String val = ValueUtil.asNativeString(shardField.getValue(p));
                 if (!LessStrings.isEmpty(val)) {
                     hash = PluggableHashFunction.hash(val);
                 }
