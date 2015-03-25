@@ -83,7 +83,7 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
      * The format of startDate and endDate values using the
      * <a href="http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html">DateTimeFormat</a>.
      * Default is either "source.mesh.date.format" configuration value or "YYMMdd".
-     * See {@code #dateIncrements} for bypassing file search by date.
+     * Use the string literal "constant" to ignore the start date and the end date.
      */
     @JsonProperty private String dateFormat = DEFAULT_DATE_FORMAT;
 
@@ -130,7 +130,6 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
 
     /**
      * Legal values are "HOURS", "DAYS", and "MONTHS".
-     * Use any other non-null value to bypass date increments.
      */
     @JsonProperty private String dateIncrements;
 
@@ -197,7 +196,11 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
         files = new ArrayList<>(matches);
         log.trace("files.3 :: {}", files);
         /* calculate start/end dates if required */
-        formatter = DateTimeFormat.forPattern(dateFormat);
+        if ("constant".equalsIgnoreCase(dateFormat)) {
+            formatter = null;
+        } else {
+            formatter = DateTimeFormat.forPattern(dateFormat);
+        }
         if (autoResume && autoResumeFile.exists() && autoResumeFile.canRead() && autoResumeFile.length() > 0) {
             try {
                 JSONObject jo = new JSONObject(
@@ -212,13 +215,13 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
             }
         }
 
-        if (startDate == null) {
+        if ((formatter != null) && (startDate == null)) {
             log.warn("No startDate provided.");
             return false;
         }
 
         DateTime start = parseDateTime(startDate);
-        if (endDate == null) {
+        if ((formatter != null) && (endDate == null)) {
             endDate = NOW_PREFIX + NOW_POSTFIX;
             log.warn("End Date not provided, using current time: {} as end date for job", endDate);
         }
@@ -283,8 +286,10 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
     }
 
     public void setStartTime(long time) {
-        startDate = formatter.print(time);
-        log.warn("override start date with {}", startDate);
+        if (formatter != null) {
+            startDate = formatter.print(time);
+            log.warn("override start date with {}", startDate);
+        }
     }
 
     @Override public void shutdown() throws IOException {
@@ -293,6 +298,9 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
     }
 
     private static ChronoUnit timeIncrement(String dateIncrements,  String dateFormat) {
+        if ("constant".equalsIgnoreCase(dateFormat)) {
+            return null;
+        }
         if ("DAYS".equals(dateIncrements) || (dateFormat.length() == 6)) {
             return ChronoUnit.DAYS;
         } else if ("HOURS".equals(dateIncrements) || (dateFormat.length() == 8)) {
@@ -310,6 +318,10 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
 
     /** list of dates given the start/end range from the config */
     private void fillDateList(DateTime start, DateTime end) {
+        if ((start == null) || (end == null)) {
+            dates.add(DateTime.now());
+            return;
+        }
         DateTime mark = start;
         while (mark.isBefore(end) || mark.isEqual(end)) {
             if (reverse) {
@@ -338,7 +350,9 @@ public abstract class AbstractPersistentStreamSource implements PersistentStream
 
     private DateTime parseDateTime(String dateString) {
         DateTime time;
-        if (dateString.contains(NOW_PREFIX)) {
+        if (formatter == null) {
+            time = null;
+        } else if (dateString.contains(NOW_PREFIX)) {
             // TODO: be better to get this time from a service
             time = new DateTime();
             time = time.plusDays(findDaysOffset(dateString));

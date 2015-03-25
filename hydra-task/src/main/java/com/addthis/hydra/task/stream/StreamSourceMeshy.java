@@ -488,7 +488,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
         }
         long end = System.currentTimeMillis();
         log.info(toStringHelper("File reference cache fill")
-                .add("date", formatter.print(timeToLoad))
+                .add("date", (formatter == null) ? "constant" : formatter.print(timeToLoad))
                 .add("files-found", streamSources.size())
                 .add("after-filtering", cache.size())
                 .add("fills-left", dates.size())
@@ -539,7 +539,7 @@ public class StreamSourceMeshy extends AbstractPersistentStreamSource {
         } else {
             log.warn("Did not call meshLink.close() because meshLink is null.");
         }
-        if (lastDate != null) {
+        if ((lastDate != null) && (formatter != null)) {
             try {
                 DateTime autoResumeDate = lastDate.minusDays(1);
                 JSONObject jo = new JSONObject().put("lastDate", formatter.print(autoResumeDate)).put("moreData", moreData);
