@@ -124,6 +124,12 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
     private final boolean validateDirs;
 
     /**
+     * Duration to wait for outstanding processor tasks
+     * to finish on shutdown. Default is "60 seconds"
+     */
+    private final int taskFinishTimeout;
+
+    /**
      * Use MapFeederForkJoin if true; Otherwise use original MapFeeder.
      *
      * Default is false. This is a temporary flag that allows us to selectively test the
@@ -168,6 +174,7 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
             @JsonProperty("emitTaskState") boolean emitTaskState,
             @JsonProperty("dateFormat") SimpleDateFormat dateFormat,
             @JsonProperty("validateDirs") boolean validateDirs,
+            @JsonProperty("taskFinishTimeout") @Time(TimeUnit.SECONDS) int taskFinishTimeout,
             @JsonProperty("useForkJoinMapFeeder") boolean useForkJoinMapFeeder) {
         this.source = source;
         this.map = map;
@@ -180,6 +187,7 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
         this.emitTaskState = emitTaskState;
         this.dateFormat = dateFormat;
         this.validateDirs = validateDirs;
+        this.taskFinishTimeout = taskFinishTimeout;
         this.useForkJoinMapFeeder = useForkJoinMapFeeder;
         validateWritableRootPaths();
     }
@@ -471,4 +479,7 @@ public class StreamMapper implements StreamEmitter, TaskRunnable {
         }
     }
 
+    public int getTaskFinishTimeout() {
+        return taskFinishTimeout;
+    }
 }

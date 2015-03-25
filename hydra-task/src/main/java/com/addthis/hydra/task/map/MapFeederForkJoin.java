@@ -21,10 +21,13 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.addthis.basis.jvm.Shutdown;
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.task.source.TaskDataSource;
+
+import com.google.common.base.Throwables;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,11 +75,11 @@ public final class MapFeederForkJoin implements Runnable {
                 }
             }
             closeSourceIfNeeded();
-            joinProcessors();
-            log.info("all ({}) task threads exited; sending taskComplete", parallelism);
-            logBundleThroughput();
             // run in different threads to isolate them from interrupts. ie. "taskCompleteUninterruptibly"
             // join awaits completion, is uninterruptible, and will propagate any exception
+            CompletableFuture.runAsync(this::joinProcessors).join();
+            log.info("all ({}) task threads exited; sending taskComplete", parallelism);
+            logBundleThroughput();
             CompletableFuture.runAsync(task::taskComplete).join();
         } catch (Throwable t) {
             logBundleThroughput();
@@ -97,7 +100,7 @@ public final class MapFeederForkJoin implements Runnable {
     private void handleUncaughtThrowable(Throwable t) {
         if (errored.compareAndSet(false, true)) {
             log.error("unrecoverable error in task feeder or one of its mapper threads. immediately halting jvm", t);
-            Runtime.getRuntime().halt(1);
+            Shutdown.exit(1);
         }
     }
 
@@ -133,12 +136,13 @@ public final class MapFeederForkJoin implements Runnable {
     private void joinProcessors() {
         mapperPool.shutdown();
         try {
-            if (!mapperPool.awaitTermination(60, TimeUnit.SECONDS)) {
-                throw new RuntimeException("Mapper pool did not terminate after 60 seconds.");
+            if (!mapperPool.awaitTermination(task.getTaskFinishTimeout(), TimeUnit.SECONDS)) {
+                throw new RuntimeException("Mapper pool did not terminate after " +
+                                           task.getTaskFinishTimeout() + " seconds.");
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted while waiting for mapper pool termination.");
+        } catch (InterruptedException ex) {
+            log.error("Interrupted while waiting for mapper pool termination.");
+            Throwables.propagate(ex);
         }
     }
 
