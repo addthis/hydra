@@ -1,0 +1,65 @@
+FROM ubuntu:14.04.1
+MAINTAINER Matt Abrams <abramsm@gmail.com>
+RUN apt-get update && apt-get install -y git \
+    && apt-get install -y python-software-properties \
+    && apt-get install -y software-properties-common \
+    && add-apt-repository -y ppa:webupd8team/java \
+    && apt-get update \
+    && echo debconf shared/accepted-oracle-license-v1-1 select true | sudo debconf-set-selections \
+    && echo debconf shared/accepted-oracle-license-v1-1 seen true | sudo debconf-set-selections \
+    && apt-get install -y oracle-java8-installer
+
+RUN useradd hydra \
+    && echo "hydra:hydra" | chpasswd \
+    && mkdir -p /opt/hydra/etc \
+    && mkdir -p /opt/hydra \
+    && mkdir -p /opt/hydra/conf \
+    && mkdir -p /opt/hydra/bin \
+    && mkdir -p /opt/hydra/bin/yaml \
+    && mkdir -p /opt/hydra/bin/hydra-yaml \
+    && mkdir -p /var/log/hydra \
+    && chown hydra /var/log/hydra \
+    && mkdir -p /opt/hydra/pid \
+    && mkdir -p /opt/hydra/bin/yaml \
+    && mkdir -p /opt/hydra/bin/hydra-yaml
+
+ADD hydra-yaml/* /opt/hydra/bin/hydra-yaml/
+ADD yaml/* /opt/hydra/bin/yaml/
+ADD bin/* /opt/hydra/bin/
+
+ADD conf/hydra.yaml /opt/hydra/conf/hydra.yaml
+ADD bin/exec-mesh.sh /opt/hydra/bin/exec-mesh.sh
+ADD bin/exec-spawn.sh /opt/hydra/bin/exec-spawn.sh
+ADD bin/exec-mqmaster.sh /opt/hydra/bin/exec-mqmaster.sh
+ADD bin/start-hydra.sh /opt/hydra/bin/start-hydra.sh
+ADD bin/task.sh /opt/hydra/bin/task.sh
+ADD bin/exec-mqworker.sh /opt/hydra/bin/exec-mqworker.sh
+ADD bin/exec-minion.sh /opt/hydra/bin/exec-minion.sh
+RUN mkdir -p /opt/hydra/minion && mkdir -p /opt/hydra/streams && ln -s /opt/hydra/minion /opt/hydra/streams/job
+RUN chown -R hydra:hydra /opt/hydra
+
+USER hydra
+VOLUME ["/opt/hydra/etc", "/var/log/hydra", "/opt/hydra/minion", "/opt/hydra/jar", "/opt/hydra/web"]
+
+WORKDIR /opt/hydra
+
+ENTRYPOINT ["/opt/hydra/bin/start-hydra.sh"]
+
+ENV MESH_PORT ${MESH_PORT}
+ENV QUERY_MESH_PORT ${QUERY_MESH_PORT}
+ENV QUERY_MESH_PEER_PORT ${QUERY_MESH_PEER_PORT}
+ENV QUERY_WEB_PORT ${QUERY_WEB_PORT}
+ENV QUERY_API_PORT ${QUERY_API_PORT}
+ENV ZK_SERVERS ${ZK_SERVERS}
+ENV ZK_CHROOT ${ZK_CHROOT}
+ENV QUERY_HOST ${QUERY_HOST}
+ENV CLUSTER_NAME ${CLUSTER_NAME}
+ENV QUERY_HOST ${QUERY_HOST}
+ENV HOST ${HOST}
+ENV CLUSTER_NAME ${CLUSTER_NAME}
+ENV USE_MESOS false
+ENV RABBIT_MQ_ADDRESS ${RABBIT_MQ_ADDRESS}
+ENV HYDRA_ROOT ${HYDRA_ROOT}
+ENV MINION_HOST ${MINION_HOST}
+ENV MINION_WEB_PORT ${MINION_WEB_PORT}
+ENV PATH $PATH:/opt/hydra/bin

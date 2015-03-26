@@ -1,0 +1,17 @@
+#!/bin/bash
+
+function getProperty
+{
+    configFile=$1
+    property=$2
+    values=`egrep "^$property=" $configFile | sed "s/^$property=//g"`
+    lines=`egrep "^$property=" $configFile | wc -l`
+    if [ $lines -ne 1 ]
+    then
+        echo "error: unable to find $property in $configFile" 1>&2
+        return 1
+    fi
+    echo "$values"
+}
+
+getProperty $1 $2

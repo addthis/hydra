@@ -1,0 +1,43 @@
+#!/usr/bin/python
+
+import os
+import socket
+import sys
+hydra_bin = os.environ['HYDRA_BIN']
+sys.path.append(hydra_bin)
+sys.path.append(hydra_bin + "/hydra-yaml")
+
+import yaml
+import yamlext
+
+def redirectProcess(config_yaml, process):
+    if "redirect" in config_yaml:
+        if "hostname" in config_yaml["redirect"]:
+            # remove any domain information from the hostname
+            hostname = socket.gethostname().split('.',1)[0]
+            if hostname in config_yaml["redirect"]["hostname"]:
+                if process in config_yaml["redirect"]["hostname"][hostname]:
+                    process = config_yaml["redirect"]["hostname"][hostname][process]
+                    return process
+        if "modelname" in config_yaml["redirect"] and os.path.isfile("/proc/cpuinfo"):
+            output = os.popen("grep '^model name' /proc/cpuinfo").read()
+            if len(output) > 0:
+                modelname = output.split('\n')[0].split(':',1)[1].strip()
+            else:
+                modelname = None
+            if modelname is not None and modelname in config_yaml["redirect"]["modelname"]:
+                if process in config_yaml["redirect"]["modelname"][modelname]:
+                    process = config_yaml["redirect"]["modelname"][modelname][process]
+                    return process
+    return process
+
+config_file = "/opt/hydra/conf/hydra.yaml"
+process = sys.argv[1]
+
+config_yaml = yaml.load(yamlext.readFile(config_file))
+
+process = redirectProcess(config_yaml, process)
+
+raw = yamlext.dumpJavaDefines(config_yaml[process])
+print(raw)
+
