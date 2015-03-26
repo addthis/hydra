@@ -119,6 +119,7 @@ container_start() {
                     -v $WEB_DIR:/opt/hydra/web \
                     -p $SPAWN_WEB_PORT:$SPAWN_WEB_PORT \
                     -p $MINION_WEB_PORT:$MINION_WEB_PORT \
+                    -p $QUERY_WEB_PORT:$QUERY_WEB_PORT \
                     --name $NAME -d $USER/$NAME:$VERSION
             ;;
         minion)
