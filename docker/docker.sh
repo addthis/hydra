@@ -1,7 +1,9 @@
 #!/bin/bash
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-HOST=localhost
+HOST=$HOSTNAME
+LOG_ROOT=/opt/hydra
+
 if type boot2docker >/dev/null 2>&1; then
     HOST=192.168.59.103
     BOOT2DOCKER_STATUS=`boot2docker status`
@@ -87,6 +89,12 @@ container_start() {
     else
         VERSION=$2
     fi
+    if [ -z "$4" ];
+    then
+        DOCKER_REGISTRY=$USER
+    else
+        DOCKER_REGISTRY=$4
+    fi
     FULL_SCRIPTDIR=$(fullPath ./$1)
     if [ -z "$3" ];
     then
@@ -94,9 +102,6 @@ container_start() {
     else
         HYDRA_DIR=$3
     fi
-    RABBIT_DIR=$(fullPath $HYDRA_DIR/docker/rabbitmq)
-    JAR_DIR=$(fullPath $HYDRA_DIR/hydra-uber/target)
-    WEB_DIR=$(fullPath $HYDRA_DIR/hydra-main/web)
     NAME=$1
     case $NAME in
         zookeeper)
@@ -106,36 +111,30 @@ container_start() {
             docker run -v $FULL_SCRIPTDIR/data:/opt/zookeeper/data \
                     -p $ZK_PORT:$ZK_PORT \
                     --name $NAME \
-                    -d $USER/$NAME:$VERSION
+                    -d $DOCKER_REGISTRY/$NAME:$VERSION
             # create chroot for zookeeper
-            docker exec -it $NAME /bin/sh -c "echo create /$ZK_CHROOT \'\' |/opt/zookeeper/bin/zkCli.sh"
+            sleep 2
+            docker exec -it $NAME /bin/sh -c "echo create /$ZK_CHROOT \"hello\" |/opt/zookeeper/bin/zkCli.sh"
             ;;
         hydra)
             echo "starting spawn container $FULL_SCRIPTDIR"
-            docker run -v $FULL_SCRIPTDIR/etc:/opt/hydra/etc \
-                    -v $FULL_SCRIPTDIR/logs:/var/log/hydra \
-                    -v $FULL_SCRIPTDIR/data:/opt/hydra/minion \
-                    -v $JAR_DIR:/opt/hydra/jar \
-                    -v $WEB_DIR:/opt/hydra/web \
-                    -p $SPAWN_WEB_PORT:$SPAWN_WEB_PORT \
+            docker run -p $SPAWN_WEB_PORT:$SPAWN_WEB_PORT \
                     -p $MINION_WEB_PORT:$MINION_WEB_PORT \
                     -p $QUERY_WEB_PORT:$QUERY_WEB_PORT \
-                    --name $NAME -d $USER/$NAME:$VERSION
+                    --name $NAME -d $DOCKER_REGISTRY/$NAME:$VERSION
             ;;
         minion)
             echo "starting minion container $FULL_SCRIPTDIR"
             docker run -v $FULL_SCRIPTDIR/etc:/opt/hydra/etc \
-                    -v $FULL_SCRIPTDIR/logs:/var/log/hydra \
                     -v $FULL_SCRIPTDIR/data:/opt/hydra/minion \
-                    -v $JAR_DIR:/opt/hydra/jar \
                     -v $WEB_DIR:/opt/hydra/web \
-                    --name $NAME -d $USER/$NAME:$VERSION
+                    --name $NAME -d $DOCKER_REGISTRY/$NAME:$VERSION
             ;;
         rabbitmq)
             echo "starting rabbitmq container"
             docker run -p $RABBIT_MQ_PORT:$RABBIT_MQ_PORT \
                        -p $RABBIT_MQ_ADMIN_PORT:$RABBIT_MQ_ADMIN_PORT \
-                       --name $NAME -d $USER/$NAME:$VERSION
+                       --name $NAME -d $DOCKER_REGISTRY/$NAME:$VERSION
             ;;
         *)
             docker_run_help
@@ -198,9 +197,9 @@ case "$1" in
         ;;
     startall)
         echo "Starting Hydra, RabbitMQ and Zookeeper Containers"
-        container_start rabbitmq $2
-        container_start zookeeper $2
-        container_start hydra $2
+        container_start rabbitmq $2 $3
+        container_start zookeeper $2 $3
+        container_start hydra $2 $3
         ;;
     stopall)
         echo "Stopping Hydra, RabbitMQ and Zookeeper Containers"
@@ -210,7 +209,7 @@ case "$1" in
         ;;
     start)
         echo "Starting docker container"
-        container_start $2 $3 $4
+        container_start $2 $3 $4 $5
         ;;
     stop)
         echo "Stopping docker container"

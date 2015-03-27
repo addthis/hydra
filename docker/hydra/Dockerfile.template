@@ -17,11 +17,13 @@ RUN useradd hydra \
     && mkdir -p /opt/hydra/bin \
     && mkdir -p /opt/hydra/bin/yaml \
     && mkdir -p /opt/hydra/bin/hydra-yaml \
-    && mkdir -p /var/log/hydra \
-    && chown hydra /var/log/hydra \
     && mkdir -p /opt/hydra/pid \
     && mkdir -p /opt/hydra/bin/yaml \
-    && mkdir -p /opt/hydra/bin/hydra-yaml
+    && mkdir -p /opt/hydra/bin/hydra-yaml \
+    && mkdir -p /opt/hydra/logs \
+    && mkdir -p /opt/hydra/minion \
+    && chown -R hydra:hydra /opt/hydra/minion \
+    && chown -R hydra:hydra /opt/hydra/etc
 
 ADD hydra-yaml/* /opt/hydra/bin/hydra-yaml/
 ADD yaml/* /opt/hydra/bin/yaml/
@@ -35,11 +37,13 @@ ADD bin/start-hydra.sh /opt/hydra/bin/start-hydra.sh
 ADD bin/task.sh /opt/hydra/bin/task.sh
 ADD bin/exec-mqworker.sh /opt/hydra/bin/exec-mqworker.sh
 ADD bin/exec-minion.sh /opt/hydra/bin/exec-minion.sh
+ADD jar/hydra-uber-5.3.1-SNAPSHOT-exec.jar /opt/hydra/jar/hydra-uber-5.3.1-SNAPSHOT-exec.jar
+ADD web /opt/hydra/web
 RUN mkdir -p /opt/hydra/minion && mkdir -p /opt/hydra/streams && ln -s /opt/hydra/minion /opt/hydra/streams/job
 RUN chown -R hydra:hydra /opt/hydra
 
 USER hydra
-VOLUME ["/opt/hydra/etc", "/var/log/hydra", "/opt/hydra/minion", "/opt/hydra/jar", "/opt/hydra/web"]
+VOLUME ["/opt/hydra/etc", "/opt/hydra/minion", "/opt/hydra/jar", "/opt/hydra/web"]
 
 WORKDIR /opt/hydra
 

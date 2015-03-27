@@ -4,7 +4,7 @@ export HYDRA_ROOT=/opt/hydra
 export HYDRA_BIN="${HYDRA_ROOT}/bin"
 export HYDRA_CONF="${HYDRA_ROOT}/conf"
 export HYDRA_LIB="${HYDRA_ROOT}/lib"
-export HYDRA_LOG="/var/log/hydra"
+export HYDRA_LOG="${HYDRA_ROOT}/log"
 export HYDRA_PID="${HYDRA_ROOT}/pid"
 
 shopt -s expand_aliases
