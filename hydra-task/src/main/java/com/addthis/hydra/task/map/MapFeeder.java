@@ -126,7 +126,8 @@ public final class MapFeeder implements Runnable {
 
     private void logBundleThroughput() {
         long elapse = (System.currentTimeMillis() - start) / 1000;
-        log.info("{} bundles processed in {} seconds (avg rate={}/s)", totalBundles, elapse, totalBundles / elapse);
+        log.info("{} bundles processed in {} seconds (avg rate={}/s)", totalBundles, elapse,
+                 (elapse == 0) ? 0 : (totalBundles / elapse));
     }
 
     /**

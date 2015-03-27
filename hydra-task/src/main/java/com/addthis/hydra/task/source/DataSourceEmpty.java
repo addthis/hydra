@@ -21,6 +21,8 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.kvp.KVBundle;
 import com.addthis.codec.annotations.FieldConfig;
 
+import com.google.common.base.Preconditions;
+
 /**
  * This data source <span class="hydra-summary">creates an arbitrary number of empty bundles</span>.
  * <p/>
@@ -38,34 +40,39 @@ public class DataSourceEmpty extends TaskDataSource {
     @FieldConfig private long maxPackets = -1; // go forever
 
     private volatile boolean closed = false;
-    private final KVBundle peek = createBundle();
 
     private long packetsCreated = 0;
+
+    private Bundle next;
 
     private static KVBundle createBundle() {
         return new KVBundle();
     }
 
-    @Override public void init() {}
+    @Override public void init() {
+        generateNext();
+    }
+
+    private void generateNext() {
+        Preconditions.checkState(next == null);
+        if (!closed
+            && ((maxPackets < 0) || (packetsCreated < maxPackets))) {
+            next = createBundle();
+            packetsCreated++;
+        }
+    }
 
     @Nullable
     @Override
     public Bundle peek() {
-        if (!closed
-            && ((maxPackets < 0) || (packetsCreated < maxPackets))) {
-            return peek;
-        } else {
-            return null;
-        }
+        return next;
     }
 
     @Override public Bundle next() {
-        if (peek() != null) {
-            packetsCreated += 1;
-            return createBundle();
-        } else {
-            throw new NoSuchElementException();
-        }
+        Bundle result = next;
+        next = null;
+        generateNext();
+        return result;
     }
 
     @Override public void close() {
