@@ -168,7 +168,10 @@ public class HostFailWorker {
         Collection<HostState> hostStates = spawn.hostManager.listHostStatus(null);
         for (HostState hostState : hostStates) {
             if (!failedHostUuid.equals(hostState.getHostUuid()) && shouldBlockHostFailure(ImmutableSet.of(failedHostUuid), hostState)) {
-                log.warn("Unable to fail host: " + failedHostUuid + " because one of the minions (" + hostState.getHostUuid() + ") on " + hostState.getHost() + " is currently down.  Retry when all minions are available");
+                log.warn("Unable to fail host: " + failedHostUuid +
+                         " because one of the minions (" + hostState.getHostUuid() +
+                         ") on " + hostState.getHost() +
+                         " is currently down.  Retry when all minions are available");
                 return false;
             }
         }
@@ -309,7 +312,8 @@ public class HostFailWorker {
      * @return A JSONObject encapsulating the above information.
      * @throws JSONException
      */
-    private JSONObject constructInfoMessage(String hostsToFail, boolean deadFilesystem, double prefailCapacity, double postfailCapacity, List<String> hostsDown) throws JSONException {
+    private JSONObject constructInfoMessage(String hostsToFail, boolean deadFilesystem, double prefailCapacity,
+                                            double postfailCapacity, List<String> hostsDown) throws JSONException {
         JSONObject obj = new JSONObject();
         obj.put(infoHostsKey, hostsToFail);
         obj.put(infoDeadFsKey, deadFilesystem);

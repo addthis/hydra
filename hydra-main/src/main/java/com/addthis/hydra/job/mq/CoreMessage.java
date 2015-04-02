@@ -19,7 +19,7 @@ import com.addthis.codec.codables.Codable;
 
 public interface CoreMessage extends Codable, Serializable {
 
-    public enum TYPE {
+    enum TYPE {
         STATUS_HOST_INFO,
         STATUS_TASK_BEGIN,
         STATUS_TASK_PORT,
@@ -41,7 +41,7 @@ public interface CoreMessage extends Codable, Serializable {
         CMD_TASK_UPDATE_REPLICAS
     }
 
-    public abstract TYPE getMessageType();
+    TYPE getMessageType();
 
-    public abstract String getHostUuid();
+    String getHostUuid();
 }

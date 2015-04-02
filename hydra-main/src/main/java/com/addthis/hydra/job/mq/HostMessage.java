@@ -15,7 +15,7 @@ package com.addthis.hydra.job.mq;
 
 public interface HostMessage extends CoreMessage {
 
-    public String ALL_HOSTS = "all";
+    String ALL_HOSTS = "all";
 
-    @Override public String getHostUuid();
+    @Override String getHostUuid();
 }
