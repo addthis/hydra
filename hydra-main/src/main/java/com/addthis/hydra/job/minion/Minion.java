@@ -150,6 +150,8 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
 
     public static final String MINION_ZK_PATH = "/minion/";
     public static final String defaultMinionType = Parameter.value("minion.type", "default");
+    public static final String batchJobQueueSuffix = ".batchJob";
+    public static final String batchControlQueueSuffix = ".batchControl";
 
     public static void main(String[] args) throws Exception {
         Minion minion = Configs.newDefault(Minion.class);
@@ -383,13 +385,13 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
                                                                   batchBrokerPassword);
             channel = connection.createChannel();
             channel.exchangeDeclare("CSBatchJob", "direct");
-            AMQP.Queue.DeclareOk result = channel.queueDeclare(uuid + ".batchJob", true, false, false, null);
+            AMQP.Queue.DeclareOk result = channel.queueDeclare(uuid + batchJobQueueSuffix, true, false, false, null);
             String queueName = result.getQueue();
             channel.queueBind(queueName, "CSBatchJob", uuid);
             channel.queueBind(queueName, "CSBatchJob", HostMessage.ALL_HOSTS);
             batchJobConsumer = new RabbitQueueingConsumer(channel);
             channel.basicConsume(queueName, false, batchJobConsumer);
-            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", uuid + ".batchControl",
+            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", uuid + batchControlQueueSuffix,
                                                              Minion.this, routingKeys);
             return true;
         } catch (IOException e) {
@@ -405,19 +407,26 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     void disconnectFromMQ() {
         try {
             if (batchControlConsumer != null) {
+                batchControlConsumer.queueUnbind(HostMessage.ALL_HOSTS);
+            }
+        } catch (Exception ex) {
+            log.warn("Error trying to unbind batchControlConsumer from HostMessage.ALL_HOSTS: ", ex);
+        }
+        try {
+            if (batchControlConsumer != null) {
                 batchControlConsumer.close();
             }
         } catch (AlreadyClosedException ace) {
             // do nothing
         } catch (Exception ex) {
-            log.warn("", ex);
+            log.warn("Error trying to close batchControlConsumer: ", ex);
         }
         try {
             if (queryControlProducer != null) {
                 queryControlProducer.close();
             }
         } catch (Exception ex) {
-            log.warn("", ex);
+            log.warn("Error trying to close queryControlProducer: ", ex);
         }
         try {
             if (batchControlProducer != null) {
@@ -426,14 +435,14 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         } catch (AlreadyClosedException ace) {
             // do nothing
         } catch (Exception ex) {
-            log.warn("", ex);
+            log.warn("Error trying to close batchControlProducer: ", ex);
         }
         try {
             if (zkBatchControlProducer != null) {
                 zkBatchControlProducer.close();
             }
         } catch (Exception ex) {
-            log.warn("", ex);
+            log.warn("Error trying to close zkBatchControlProducer: ", ex);
         }
         try {
             if (channel != null) {
@@ -442,7 +451,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         } catch (AlreadyClosedException ace) {
             // do nothing
         } catch (Exception ex) {
-            log.warn("", ex);
+            log.warn("Error trying to close channel: ", ex);
         }
     }
 

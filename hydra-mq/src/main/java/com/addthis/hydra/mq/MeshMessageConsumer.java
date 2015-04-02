@@ -154,6 +154,10 @@ public class MeshMessageConsumer implements MessageConsumer {
         }
     }
 
+    @Override public void queueUnbind(String routingKey) throws IOException {
+        // do nothing
+    }
+
     @Override
     public void open() throws IOException {
         provider = new MessageFileProvider(mesh);

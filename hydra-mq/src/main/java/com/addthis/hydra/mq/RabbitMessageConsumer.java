@@ -52,6 +52,11 @@ public class RabbitMessageConsumer extends DefaultConsumer implements MessageCon
 
     }
 
+    @Override
+    public void queueUnbind(String routingKey) throws IOException {
+        getChannel().queueUnbind(queueName, exchange, routingKey);
+    }
+
     @Override public void open() throws IOException {
         getChannel().exchangeDeclare(exchange, "direct");
         getChannel().queueDeclare(queueName, true, false, false, null);

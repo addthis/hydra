@@ -114,6 +114,10 @@ public class ZkMessageConsumer<T extends Serializable> implements MessageConsume
         }
     }
 
+    @Override public void queueUnbind(String routingKey) throws IOException {
+        // do nothing
+    }
+
     @Override
     public void open() throws IOException {
         // Working client is the only setup required.

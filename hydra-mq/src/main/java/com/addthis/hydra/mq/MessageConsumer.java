@@ -17,6 +17,8 @@ import java.io.IOException;
 
 public interface MessageConsumer {
 
+    void queueUnbind(String routingKey) throws IOException;
+
     public void open() throws IOException;
 
     public void close() throws IOException;

@@ -21,6 +21,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.hydra.job.minion.Minion;
 import com.addthis.hydra.job.mq.CoreMessage;
 import com.addthis.hydra.job.mq.HostMessage;
 import com.addthis.hydra.job.mq.HostState;
@@ -72,8 +73,8 @@ public class SpawnMQImpl implements SpawnMQ {
             Connection connection = RabbitMQUtil.createConnection(batchBrokeAddresses, batchBrokerUsername,
                                                                   batchBrokerPassword);
             channel = connection.createChannel();
-            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", hostUUID + ".batchControl",
-                                                             this, "SPAWN");
+            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl",
+                                                             hostUUID + Minion.batchControlQueueSuffix, this, "SPAWN");
         } catch (IOException e) {
             log.error("Exception connecting to RabbitMQ at {} as {}/{}", batchBrokeAddresses, batchBrokerUsername,
                       batchBrokerPassword, e);
