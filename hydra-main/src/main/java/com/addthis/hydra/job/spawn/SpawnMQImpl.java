@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.Serializable;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.addthis.basis.util.Parameter;
 
@@ -53,7 +54,7 @@ public class SpawnMQImpl implements SpawnMQ {
     private Spawn spawn;
     private final CuratorFramework zkClient;
 
-    private final AtomicInteger inHandler = new AtomicInteger(0);
+    private final ReentrantLock lock = new ReentrantLock();
 
     public SpawnMQImpl(CuratorFramework zkClient, Spawn spawn) {
         this.spawn = spawn;
@@ -86,20 +87,14 @@ public class SpawnMQImpl implements SpawnMQ {
     public void onMessage(Serializable message) {
         if (message instanceof CoreMessage) {
             CoreMessage coreMessage = (CoreMessage) message;
+            lock.lock();
             try {
-                int conc = inHandler.incrementAndGet();
-                if (conc > 1) {
-                    log.debug("[mq.handle] concurrent={}", conc);
-                    synchronized (inHandler) {
-                        spawn.handleMessage(coreMessage);
-                    }
-                } else {
-                    spawn.handleMessage(coreMessage);
-                }
+                spawn.handleMessage(coreMessage);
             } catch (Exception ex)  {
-                log.warn("", ex);
+                log.warn("Error sending message {} to host {}: ", coreMessage.getMessageType(),
+                        coreMessage.getHostUuid(), ex);
             } finally {
-                inHandler.decrementAndGet();
+                lock.unlock();
             }
         } else {
             log.warn("[spawn.mq] received unknown message type:{}", message);
