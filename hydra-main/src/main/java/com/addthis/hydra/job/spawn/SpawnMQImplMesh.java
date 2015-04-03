@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.Serializable;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.addthis.hydra.job.mq.CoreMessage;
 import com.addthis.hydra.job.mq.HostMessage;
@@ -49,7 +50,8 @@ public class SpawnMQImplMesh implements SpawnMQ {
     private boolean connected;
     private final CuratorFramework zkClient;
 
-    private final AtomicInteger inHandler = new AtomicInteger(0);
+    private final ReentrantLock lock = new ReentrantLock();
+
     private Gauge<Integer> heartbeat = Metrics.newGauge(SpawnMQImplMesh.class, "heartbeat", new Gauge<Integer>() {
         @Override
         public Integer value() {
@@ -64,10 +66,10 @@ public class SpawnMQImplMesh implements SpawnMQ {
     }
 
     @Override
-    public void connectToMQ(String hostUUID) throws Exception {
+    public void connectToMQ(String hostUUID) throws IOException {
         MeshyClient mesh = spawn.getMeshyClient();
-        batchJobProducer = new MeshMessageProducer(mesh, "CSBatchJob");
-        batchControlProducer = new MeshMessageProducer(mesh, "CSBatchControl");
+        batchJobProducer = MeshMessageProducer.constructAndOpen(mesh, "CSBatchJob");
+        batchControlProducer = MeshMessageProducer.constructAndOpen(mesh, "CSBatchControl");
         batchControlConsumer = new MeshMessageConsumer(mesh, "CSBatchControl", "SPAWN");
         batchControlConsumer.addMessageListener(this);
         hostStatusConsumer = new ZkMessageConsumer<>(zkClient, "/minion", this, HostState.class);
@@ -81,20 +83,14 @@ public class SpawnMQImplMesh implements SpawnMQ {
     public void onMessage(Serializable message) {
         if (message instanceof CoreMessage) {
             CoreMessage coreMessage = (CoreMessage) message;
+            lock.lock();
             try {
-                int conc = inHandler.incrementAndGet();
-                if (conc > 1) {
-                    log.debug("[mq.handle] concurrent={}", conc);
-                    synchronized (inHandler) {
-                        spawn.handleMessage(coreMessage);
-                    }
-                } else {
-                    spawn.handleMessage(coreMessage);
-                }
+                spawn.handleMessage(coreMessage);
             } catch (Exception ex)  {
-                log.warn("", ex);
+                log.warn("Error sending message {} to host {}: ", coreMessage.getMessageType(),
+                         coreMessage.getHostUuid(), ex);
             } finally {
-                inHandler.decrementAndGet();
+                lock.unlock();
             }
         } else {
             log.warn("[spawn.mq] received unknown message type:{}", message);

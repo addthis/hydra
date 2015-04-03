@@ -83,6 +83,7 @@ import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.MeshyClientConnector;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -150,6 +151,8 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
 
     public static final String MINION_ZK_PATH = "/minion/";
     public static final String defaultMinionType = Parameter.value("minion.type", "default");
+    public static final String batchJobQueueSuffix = ".batchJob";
+    public static final String batchControlQueueSuffix = ".batchControl";
 
     public static void main(String[] args) throws Exception {
         Minion minion = Configs.newDefault(Minion.class);
@@ -319,7 +322,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         }
     }
 
-    private void connectToMQ(@Nullable String queueType) throws Exception {
+    private void connectToMQ(@Nullable String queueType) throws IOException, InterruptedException {
         zkBatchControlProducer = new ZKMessageProducer(getZkClient());
         if ("mesh".equals(queueType)) {
             log.info("[init] connecting to mesh message queue");
@@ -344,8 +347,8 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
                     mesh.wait(1000);
                 }
             }
-            batchControlProducer = new MeshMessageProducer(mesh.getClient(), "CSBatchControl");
-            queryControlProducer = new MeshMessageProducer(mesh.getClient(), "CSBatchQuery");
+            batchControlProducer = MeshMessageProducer.constructAndOpen(mesh.getClient(), "CSBatchControl");
+            queryControlProducer = MeshMessageProducer.constructAndOpen(mesh.getClient(), "CSBatchQuery");
             queuedHostMessages = new BlockingArrayQueue<>();
             MeshMessageConsumer jobConsumer = new MeshMessageConsumer(mesh.getClient(), "CSBatchJob", uuid);
             jobConsumer.addRoutingKey(HostMessage.ALL_HOSTS);
@@ -373,24 +376,27 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     }
 
     private synchronized boolean connectToRabbitMQ() {
-        String[] routingKeys = {uuid, HostMessage.ALL_HOSTS};
-        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerAddresses, batchBrokerUsername,
-                                                         batchBrokerPassword);
-        queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerAddresses, batchBrokerUsername,
-                                                         batchBrokerPassword);
+        ImmutableList<String> routingKeys = ImmutableList.of(uuid, HostMessage.ALL_HOSTS);
+        ImmutableList<String> closeUnbindKeys = ImmutableList.of(HostMessage.ALL_HOSTS);
         try {
+            batchControlProducer = RabbitMessageProducer.constructAndOpen("CSBatchControl", batchBrokerAddresses,
+                                                                          batchBrokerUsername,
+                                                                          batchBrokerPassword, null);
+            queryControlProducer = RabbitMessageProducer.constructAndOpen("CSBatchQuery", batchBrokerAddresses,
+                                                                          batchBrokerUsername,
+                                                                          batchBrokerPassword, null);
             Connection connection = RabbitMQUtil.createConnection(batchBrokerAddresses, batchBrokerUsername,
                                                                   batchBrokerPassword);
             channel = connection.createChannel();
             channel.exchangeDeclare("CSBatchJob", "direct");
-            AMQP.Queue.DeclareOk result = channel.queueDeclare(uuid + ".batchJob", true, false, false, null);
+            AMQP.Queue.DeclareOk result = channel.queueDeclare(uuid + batchJobQueueSuffix, true, false, false, null);
             String queueName = result.getQueue();
             channel.queueBind(queueName, "CSBatchJob", uuid);
             channel.queueBind(queueName, "CSBatchJob", HostMessage.ALL_HOSTS);
             batchJobConsumer = new RabbitQueueingConsumer(channel);
             channel.basicConsume(queueName, false, batchJobConsumer);
-            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", uuid + ".batchControl",
-                                                             Minion.this, routingKeys);
+            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", uuid + batchControlQueueSuffix,
+                                                             Minion.this, routingKeys, closeUnbindKeys);
             return true;
         } catch (IOException e) {
             log.error("Error connecting to rabbitmq at {}", batchBrokerAddresses, e);
@@ -408,41 +414,41 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
                 batchControlConsumer.close();
             }
         } catch (AlreadyClosedException ace) {
-            // do nothing
+            log.warn("Attempt was made to close batchControlConsumer more than once: ", ace);
         } catch (Exception ex) {
-            log.warn("", ex);
+            log.warn("Error trying to close batchControlConsumer: ", ex);
         }
         try {
             if (queryControlProducer != null) {
                 queryControlProducer.close();
             }
         } catch (Exception ex) {
-            log.warn("", ex);
+            log.warn("Error trying to close queryControlProducer: ", ex);
         }
         try {
             if (batchControlProducer != null) {
                 batchControlProducer.close();
             }
         } catch (AlreadyClosedException ace) {
-            // do nothing
+            log.warn("Attempt was made to close batchControlProducer more than once: ", ace);
         } catch (Exception ex) {
-            log.warn("", ex);
+            log.warn("Error trying to close batchControlProducer: ", ex);
         }
         try {
             if (zkBatchControlProducer != null) {
                 zkBatchControlProducer.close();
             }
         } catch (Exception ex) {
-            log.warn("", ex);
+            log.warn("Error trying to close zkBatchControlProducer: ", ex);
         }
         try {
             if (channel != null) {
                 channel.close();
             }
         } catch (AlreadyClosedException ace) {
-            // do nothing
+            log.warn("Attempt was made to close channel more than once: ", ace);
         } catch (Exception ex) {
-            log.warn("", ex);
+            log.warn("Error trying to close channel: ", ex);
         }
     }
 

@@ -2648,7 +2648,7 @@ public class Spawn implements Codable, AutoCloseable {
      * @param task          Task to kick
      * @param config        Config for the job
      * @param inQueue       Whether the task is already in the queue (in which case we shouldn't add it again)
-     * @param ignoreQuiesce Whether the task can kick regardless of Spawn's quiesce state
+     * @param priority      Priority of the kick request. Not the job priority.
      * @throws Exception If there is a problem scheduling the task
      */
     private void kickIncludingQueue(Job job, JobTask task, String config, boolean inQueue, int priority) throws Exception {

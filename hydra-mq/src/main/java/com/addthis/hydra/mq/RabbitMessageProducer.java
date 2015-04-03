@@ -14,10 +14,12 @@
 package com.addthis.hydra.mq;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
+import com.rabbitmq.client.BlockedListener;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 
@@ -28,29 +30,43 @@ public class RabbitMessageProducer implements MessageProducer {
 
     private static final Logger log = LoggerFactory.getLogger(RabbitMessageProducer.class);
 
-    private String exchangeName;
-    private String brokerAddresses;
-    private String brokerUsername;
-    private String brokerPassword;
-    private Channel channel;
+    private final String exchangeName;
+    private final String brokerAddresses;
+    private final String brokerUsername;
+    private final String brokerPassword;
+    private final BlockedListener blockedListener;
 
+    private Channel channel;
     private Connection connection;
 
-    public RabbitMessageProducer(String exchangeName, String brokerAddresses, String brokerUsername, String brokerPassword) {
+    private RabbitMessageProducer(String exchangeName, String brokerAddresses,
+                                  String brokerUsername, String brokerPassword,
+                                  BlockedListener blockedListener) {
         this.exchangeName = exchangeName;
         this.brokerAddresses = brokerAddresses;
         this.brokerUsername = brokerUsername;
         this.brokerPassword = brokerPassword;
-        try {
-            open();
-        } catch (IOException e) {
-            log.warn("[rabbit.producer] error connecting producer: " + e, e);
-        }
-
+        this.blockedListener = blockedListener;
     }
 
-    @Override public void open() throws IOException {
+    /**
+     * Returns an {@link Closeable} object that must be closed.
+     */
+    public static RabbitMessageProducer constructAndOpen(String exchangeName, String brokerAddresses,
+                                                         String brokerUsername, String brokerPassword,
+                                                         BlockedListener blockedListener) throws IOException {
+        RabbitMessageProducer producer = new RabbitMessageProducer(exchangeName, brokerAddresses,
+                                                                   brokerUsername, brokerPassword,
+                                                                   blockedListener);
+        producer.open();
+        return producer;
+    }
+
+    private void open() throws IOException {
         connection = RabbitMQUtil.createConnection(brokerAddresses, brokerUsername, brokerPassword);
+        if (blockedListener != null) {
+            connection.addBlockedListener(blockedListener);
+        }
         channel = connection.createChannel();
         channel.exchangeDeclare(exchangeName, "direct");
         log.info("[rabbit.producer] connection established.");

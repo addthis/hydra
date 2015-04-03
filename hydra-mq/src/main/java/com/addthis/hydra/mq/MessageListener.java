@@ -17,5 +17,5 @@ import java.io.Serializable;
 
 public interface MessageListener {
 
-    public void onMessage(Serializable message);
+    void onMessage(Serializable message);
 }

@@ -17,9 +17,11 @@ import java.io.IOException;
 import java.io.Serializable;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.addthis.basis.util.Parameter;
 
+import com.addthis.hydra.job.minion.Minion;
 import com.addthis.hydra.job.mq.CoreMessage;
 import com.addthis.hydra.job.mq.HostMessage;
 import com.addthis.hydra.job.mq.HostState;
@@ -30,6 +32,9 @@ import com.addthis.hydra.mq.RabbitMessageConsumer;
 import com.addthis.hydra.mq.RabbitMessageProducer;
 import com.addthis.hydra.mq.ZkMessageConsumer;
 
+import com.google.common.collect.ImmutableList;
+
+import com.rabbitmq.client.BlockedListener;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 
@@ -53,30 +58,51 @@ public class SpawnMQImpl implements SpawnMQ {
     private Spawn spawn;
     private final CuratorFramework zkClient;
 
-    private final AtomicInteger inHandler = new AtomicInteger(0);
+    private final ReentrantLock lock = new ReentrantLock();
 
     public SpawnMQImpl(CuratorFramework zkClient, Spawn spawn) {
         this.spawn = spawn;
         this.zkClient = zkClient;
     }
 
-    @Override
-    public void connectToMQ(String hostUUID) {
-        hostStatusConsumer = new ZkMessageConsumer<>(zkClient, "/minion", this, HostState.class);
-        batchJobProducer = new RabbitMessageProducer("CSBatchJob", batchBrokeAddresses, batchBrokerUsername,
-                                                     batchBrokerPassword);
-        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokeAddresses, batchBrokerUsername,
-                                                         batchBrokerPassword);
-        try {
-            Connection connection = RabbitMQUtil.createConnection(batchBrokeAddresses, batchBrokerUsername,
-                                                                  batchBrokerPassword);
-            channel = connection.createChannel();
-            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", hostUUID + ".batchControl",
-                                                             this, "SPAWN");
-        } catch (IOException e) {
-            log.error("Exception connecting to RabbitMQ at {} as {}/{}", batchBrokeAddresses, batchBrokerUsername,
-                      batchBrokerPassword, e);
+    private static class QuiesceOnRabbitMQBlockedListener implements BlockedListener {
+
+        private final Spawn spawn;
+
+        QuiesceOnRabbitMQBlockedListener(Spawn spawn) {
+            this.spawn = spawn;
         }
+
+        @Override public void handleBlocked(String reason) throws IOException {
+            if (!spawn.getSystemManager().isQuiesced()) {
+                log.error("Spawn is quiescing itself. A rabbitMQ producer was" +
+                          " blocked from producing a message due to {}", reason);
+                spawn.getSystemManager().quiesceCluster(true, "rabbitmq");
+            }
+        }
+
+        @Override public void handleUnblocked() throws IOException {
+
+        }
+    }
+
+    @Override
+    public void connectToMQ(String hostUUID) throws IOException {
+        QuiesceOnRabbitMQBlockedListener blockedListener = new QuiesceOnRabbitMQBlockedListener(spawn);
+        hostStatusConsumer = new ZkMessageConsumer<>(zkClient, "/minion", this, HostState.class);
+        batchJobProducer = RabbitMessageProducer.constructAndOpen("CSBatchJob", batchBrokeAddresses,
+                                                                  batchBrokerUsername, batchBrokerPassword,
+                                                                  blockedListener);
+        batchControlProducer = RabbitMessageProducer.constructAndOpen("CSBatchControl", batchBrokeAddresses,
+                                                                      batchBrokerUsername, batchBrokerPassword,
+                                                                      blockedListener);
+        Connection connection = RabbitMQUtil.createConnection(batchBrokeAddresses, batchBrokerUsername,
+                                                                  batchBrokerPassword);
+        channel = connection.createChannel();
+        batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl",
+                                                         hostUUID + Minion.batchControlQueueSuffix,
+                                                         this, ImmutableList.of("SPAWN"),
+                                                         ImmutableList.of());
     }
 
     /**
@@ -86,20 +112,14 @@ public class SpawnMQImpl implements SpawnMQ {
     public void onMessage(Serializable message) {
         if (message instanceof CoreMessage) {
             CoreMessage coreMessage = (CoreMessage) message;
+            lock.lock();
             try {
-                int conc = inHandler.incrementAndGet();
-                if (conc > 1) {
-                    log.debug("[mq.handle] concurrent={}", conc);
-                    synchronized (inHandler) {
-                        spawn.handleMessage(coreMessage);
-                    }
-                } else {
-                    spawn.handleMessage(coreMessage);
-                }
+                spawn.handleMessage(coreMessage);
             } catch (Exception ex)  {
-                log.warn("", ex);
+                log.warn("Error sending message {} to host {}: ", coreMessage.getMessageType(),
+                        coreMessage.getHostUuid(), ex);
             } finally {
-                inHandler.decrementAndGet();
+                lock.unlock();
             }
         } else {
             log.warn("[spawn.mq] received unknown message type:{}", message);

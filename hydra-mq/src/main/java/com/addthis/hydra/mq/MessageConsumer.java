@@ -17,11 +17,11 @@ import java.io.IOException;
 
 public interface MessageConsumer {
 
-    public void open() throws IOException;
+    void open() throws IOException;
 
-    public void close() throws IOException;
+    void close() throws IOException;
 
-    public boolean addMessageListener(MessageListener messageListener);
+    boolean addMessageListener(MessageListener messageListener);
 
-    public boolean removeMessageListener(MessageListener messageListener);
+    boolean removeMessageListener(MessageListener messageListener);
 }
