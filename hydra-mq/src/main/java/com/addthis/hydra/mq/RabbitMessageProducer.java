@@ -14,6 +14,7 @@
 package com.addthis.hydra.mq;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
@@ -48,6 +49,9 @@ public class RabbitMessageProducer implements MessageProducer {
         this.blockedListener = blockedListener;
     }
 
+    /**
+     * Returns an {@link Closeable} object that must be closed.
+     */
     public static RabbitMessageProducer constructAndOpen(String exchangeName, String brokerAddresses,
                                                          String brokerUsername, String brokerPassword,
                                                          BlockedListener blockedListener) throws IOException {

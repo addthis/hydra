@@ -15,6 +15,7 @@
 package com.addthis.hydra.mq;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectOutputStream;
@@ -60,6 +61,9 @@ public class MeshMessageProducer implements MessageProducer {
         }
     }
 
+    /**
+     * Returns an {@link Closeable} object that must be closed.
+     */
     public static MeshMessageProducer constructAndOpen(MeshyClient client, String topic) throws IOException {
         MeshMessageProducer producer = new MeshMessageProducer(client, topic);
         producer.open();
