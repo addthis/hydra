@@ -412,7 +412,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
                 batchControlConsumer.close();
             }
         } catch (AlreadyClosedException ace) {
-            // do nothing
+            log.warn("Attempt was made to close batchControlConsumer more than once: ", ace);
         } catch (Exception ex) {
             log.warn("Error trying to close batchControlConsumer: ", ex);
         }
@@ -428,7 +428,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
                 batchControlProducer.close();
             }
         } catch (AlreadyClosedException ace) {
-            // do nothing
+            log.warn("Attempt was made to close batchControlProducer more than once: ", ace);
         } catch (Exception ex) {
             log.warn("Error trying to close batchControlProducer: ", ex);
         }
@@ -444,7 +444,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
                 channel.close();
             }
         } catch (AlreadyClosedException ace) {
-            // do nothing
+            log.warn("Attempt was made to close channel more than once: ", ace);
         } catch (Exception ex) {
             log.warn("Error trying to close channel: ", ex);
         }
