@@ -34,6 +34,7 @@ import com.addthis.hydra.mq.ZkMessageConsumer;
 
 import com.google.common.collect.ImmutableList;
 
+import com.rabbitmq.client.BlockedListener;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 
@@ -64,25 +65,44 @@ public class SpawnMQImpl implements SpawnMQ {
         this.zkClient = zkClient;
     }
 
-    @Override
-    public void connectToMQ(String hostUUID) {
-        hostStatusConsumer = new ZkMessageConsumer<>(zkClient, "/minion", this, HostState.class);
-        batchJobProducer = new RabbitMessageProducer("CSBatchJob", batchBrokeAddresses, batchBrokerUsername,
-                                                     batchBrokerPassword);
-        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokeAddresses, batchBrokerUsername,
-                                                         batchBrokerPassword);
-        try {
-            Connection connection = RabbitMQUtil.createConnection(batchBrokeAddresses, batchBrokerUsername,
-                                                                  batchBrokerPassword);
-            channel = connection.createChannel();
-            batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl",
-                                                             hostUUID + Minion.batchControlQueueSuffix,
-                                                             this, ImmutableList.of("SPAWN"),
-                                                             ImmutableList.of());
-        } catch (IOException e) {
-            log.error("Exception connecting to RabbitMQ at {} as {}/{}", batchBrokeAddresses, batchBrokerUsername,
-                      batchBrokerPassword, e);
+    private static class QuiesceOnRabbitMQBlockedListener implements BlockedListener {
+
+        private final Spawn spawn;
+
+        QuiesceOnRabbitMQBlockedListener(Spawn spawn) {
+            this.spawn = spawn;
         }
+
+        @Override public void handleBlocked(String reason) throws IOException {
+            if (!spawn.getSystemManager().isQuiesced()) {
+                log.error("Spawn is quiescing itself. A rabbitMQ producer was" +
+                          " blocked from producing a message due to {}", reason);
+                spawn.getSystemManager().quiesceCluster(true, "rabbitmq");
+            }
+        }
+
+        @Override public void handleUnblocked() throws IOException {
+
+        }
+    }
+
+    @Override
+    public void connectToMQ(String hostUUID) throws IOException {
+        QuiesceOnRabbitMQBlockedListener blockedListener = new QuiesceOnRabbitMQBlockedListener(spawn);
+        hostStatusConsumer = new ZkMessageConsumer<>(zkClient, "/minion", this, HostState.class);
+        batchJobProducer = RabbitMessageProducer.constructAndOpen("CSBatchJob", batchBrokeAddresses,
+                                                                  batchBrokerUsername, batchBrokerPassword,
+                                                                  blockedListener);
+        batchControlProducer = RabbitMessageProducer.constructAndOpen("CSBatchControl", batchBrokeAddresses,
+                                                                      batchBrokerUsername, batchBrokerPassword,
+                                                                      blockedListener);
+        Connection connection = RabbitMQUtil.createConnection(batchBrokeAddresses, batchBrokerUsername,
+                                                                  batchBrokerPassword);
+        channel = connection.createChannel();
+        batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl",
+                                                         hostUUID + Minion.batchControlQueueSuffix,
+                                                         this, ImmutableList.of("SPAWN"),
+                                                         ImmutableList.of());
     }
 
     /**

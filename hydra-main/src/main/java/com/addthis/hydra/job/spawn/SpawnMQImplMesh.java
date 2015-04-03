@@ -66,10 +66,10 @@ public class SpawnMQImplMesh implements SpawnMQ {
     }
 
     @Override
-    public void connectToMQ(String hostUUID) throws Exception {
+    public void connectToMQ(String hostUUID) throws IOException {
         MeshyClient mesh = spawn.getMeshyClient();
-        batchJobProducer = new MeshMessageProducer(mesh, "CSBatchJob");
-        batchControlProducer = new MeshMessageProducer(mesh, "CSBatchControl");
+        batchJobProducer = MeshMessageProducer.constructAndOpen(mesh, "CSBatchJob");
+        batchControlProducer = MeshMessageProducer.constructAndOpen(mesh, "CSBatchControl");
         batchControlConsumer = new MeshMessageConsumer(mesh, "CSBatchControl", "SPAWN");
         batchControlConsumer.addMessageListener(this);
         hostStatusConsumer = new ZkMessageConsumer<>(zkClient, "/minion", this, HostState.class);

@@ -18,9 +18,7 @@ import java.io.Serializable;
 
 public interface MessageProducer {
 
-    public void open() throws IOException;
+    void close() throws IOException;
 
-    public void close() throws IOException;
-
-    public void sendMessage(Serializable message, String routingKey) throws IOException;
+    void sendMessage(Serializable message, String routingKey) throws IOException;
 }

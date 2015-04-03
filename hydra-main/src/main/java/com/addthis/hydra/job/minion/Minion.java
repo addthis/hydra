@@ -322,7 +322,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         }
     }
 
-    private void connectToMQ(@Nullable String queueType) throws Exception {
+    private void connectToMQ(@Nullable String queueType) throws IOException, InterruptedException {
         zkBatchControlProducer = new ZKMessageProducer(getZkClient());
         if ("mesh".equals(queueType)) {
             log.info("[init] connecting to mesh message queue");
@@ -347,8 +347,8 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
                     mesh.wait(1000);
                 }
             }
-            batchControlProducer = new MeshMessageProducer(mesh.getClient(), "CSBatchControl");
-            queryControlProducer = new MeshMessageProducer(mesh.getClient(), "CSBatchQuery");
+            batchControlProducer = MeshMessageProducer.constructAndOpen(mesh.getClient(), "CSBatchControl");
+            queryControlProducer = MeshMessageProducer.constructAndOpen(mesh.getClient(), "CSBatchQuery");
             queuedHostMessages = new BlockingArrayQueue<>();
             MeshMessageConsumer jobConsumer = new MeshMessageConsumer(mesh.getClient(), "CSBatchJob", uuid);
             jobConsumer.addRoutingKey(HostMessage.ALL_HOSTS);
@@ -378,11 +378,13 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     private synchronized boolean connectToRabbitMQ() {
         ImmutableList<String> routingKeys = ImmutableList.of(uuid, HostMessage.ALL_HOSTS);
         ImmutableList<String> closeUnbindKeys = ImmutableList.of(HostMessage.ALL_HOSTS);
-        batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerAddresses, batchBrokerUsername,
-                                                         batchBrokerPassword);
-        queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerAddresses, batchBrokerUsername,
-                                                         batchBrokerPassword);
         try {
+            batchControlProducer = RabbitMessageProducer.constructAndOpen("CSBatchControl", batchBrokerAddresses,
+                                                                          batchBrokerUsername,
+                                                                          batchBrokerPassword, null);
+            queryControlProducer = RabbitMessageProducer.constructAndOpen("CSBatchQuery", batchBrokerAddresses,
+                                                                          batchBrokerUsername,
+                                                                          batchBrokerPassword, null);
             Connection connection = RabbitMQUtil.createConnection(batchBrokerAddresses, batchBrokerUsername,
                                                                   batchBrokerPassword);
             channel = connection.createChannel();

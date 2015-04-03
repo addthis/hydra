@@ -50,7 +50,7 @@ public class MeshMessageProducer implements MessageProducer {
 
     private MessageFileProvider provider;
 
-    public MeshMessageProducer(final MeshyClient mesh, final String topic) {
+    private MeshMessageProducer(final MeshyClient mesh, final String topic) {
         this.mesh = mesh;
         this.topic = topic;
         try {
@@ -60,8 +60,13 @@ public class MeshMessageProducer implements MessageProducer {
         }
     }
 
-    @Override
-    public void open() throws IOException {
+    public static MeshMessageProducer constructAndOpen(MeshyClient client, String topic) throws IOException {
+        MeshMessageProducer producer = new MeshMessageProducer(client, topic);
+        producer.open();
+        return producer;
+    }
+
+    private void open() throws IOException {
         provider = new MessageFileProvider(mesh);
     }
 

@@ -28,22 +28,12 @@ public class ZKMessageProducer implements MessageProducer {
 
     private static final Logger log = LoggerFactory.getLogger(ZKMessageProducer.class);
 
-    private CuratorFramework zkClient;
-    private ObjectMapper mapper;
+    private final CuratorFramework zkClient;
+    private final ObjectMapper mapper;
 
     public ZKMessageProducer(CuratorFramework zkClient) {
         this.zkClient = zkClient;
-        mapper = new ObjectMapper();
-        try {
-            open();
-        } catch (IOException e) {
-            log.warn("[zk.producer] error opening client: ", e);
-        }
-    }
-
-    @Override
-    public void open() throws IOException {
-        // Working client is the only setup required.
+        this.mapper = new ObjectMapper();
     }
 
     @Override
