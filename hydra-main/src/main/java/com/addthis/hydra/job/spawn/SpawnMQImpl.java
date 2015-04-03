@@ -32,6 +32,8 @@ import com.addthis.hydra.mq.RabbitMessageConsumer;
 import com.addthis.hydra.mq.RabbitMessageProducer;
 import com.addthis.hydra.mq.ZkMessageConsumer;
 
+import com.google.common.collect.ImmutableList;
+
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 
@@ -74,7 +76,9 @@ public class SpawnMQImpl implements SpawnMQ {
                                                                   batchBrokerPassword);
             channel = connection.createChannel();
             batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl",
-                                                             hostUUID + Minion.batchControlQueueSuffix, this, "SPAWN");
+                                                             hostUUID + Minion.batchControlQueueSuffix,
+                                                             this, ImmutableList.of("SPAWN"),
+                                                             ImmutableList.of());
         } catch (IOException e) {
             log.error("Exception connecting to RabbitMQ at {} as {}/{}", batchBrokeAddresses, batchBrokerUsername,
                       batchBrokerPassword, e);

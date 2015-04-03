@@ -17,13 +17,11 @@ import java.io.IOException;
 
 public interface MessageConsumer {
 
-    void queueUnbind(String routingKey) throws IOException;
+    void open() throws IOException;
 
-    public void open() throws IOException;
+    void close() throws IOException;
 
-    public void close() throws IOException;
+    boolean addMessageListener(MessageListener messageListener);
 
-    public boolean addMessageListener(MessageListener messageListener);
-
-    public boolean removeMessageListener(MessageListener messageListener);
+    boolean removeMessageListener(MessageListener messageListener);
 }

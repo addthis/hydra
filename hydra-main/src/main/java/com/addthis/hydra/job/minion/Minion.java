@@ -83,6 +83,7 @@ import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.MeshyClientConnector;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -375,7 +376,8 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     }
 
     private synchronized boolean connectToRabbitMQ() {
-        String[] routingKeys = {uuid, HostMessage.ALL_HOSTS};
+        ImmutableList<String> routingKeys = ImmutableList.of(uuid, HostMessage.ALL_HOSTS);
+        ImmutableList<String> closeUnbindKeys = ImmutableList.of(HostMessage.ALL_HOSTS);
         batchControlProducer = new RabbitMessageProducer("CSBatchControl", batchBrokerAddresses, batchBrokerUsername,
                                                          batchBrokerPassword);
         queryControlProducer = new RabbitMessageProducer("CSBatchQuery", batchBrokerAddresses, batchBrokerUsername,
@@ -392,7 +394,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
             batchJobConsumer = new RabbitQueueingConsumer(channel);
             channel.basicConsume(queueName, false, batchJobConsumer);
             batchControlConsumer = new RabbitMessageConsumer(channel, "CSBatchControl", uuid + batchControlQueueSuffix,
-                                                             Minion.this, routingKeys);
+                                                             Minion.this, routingKeys, closeUnbindKeys);
             return true;
         } catch (IOException e) {
             log.error("Error connecting to rabbitmq at {}", batchBrokerAddresses, e);
@@ -405,13 +407,6 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
     }
 
     void disconnectFromMQ() {
-        try {
-            if (batchControlConsumer != null) {
-                batchControlConsumer.queueUnbind(HostMessage.ALL_HOSTS);
-            }
-        } catch (Exception ex) {
-            log.warn("Error trying to unbind batchControlConsumer from HostMessage.ALL_HOSTS: ", ex);
-        }
         try {
             if (batchControlConsumer != null) {
                 batchControlConsumer.close();

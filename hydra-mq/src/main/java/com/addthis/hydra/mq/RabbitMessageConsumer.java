@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.mq;
 
+import javax.annotation.Nonnull;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -20,6 +22,8 @@ import java.io.Serializable;
 
 import java.util.HashSet;
 import java.util.Set;
+
+import com.google.common.collect.ImmutableList;
 
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
@@ -33,16 +37,25 @@ public class RabbitMessageConsumer extends DefaultConsumer implements MessageCon
 
     private static final Logger log = LoggerFactory.getLogger(RabbitMessageConsumer.class);
 
-    private String exchange;
-    private String[] routingKeys;
-    private String queueName;
+    @Nonnull
+    private final String exchange;
+    @Nonnull
+    private final ImmutableList<String> routingKeys;
+    @Nonnull
+    private final ImmutableList<String> closeUnbindKeys;
+    @Nonnull
+    private final String queueName;
     private final Set<MessageListener> messageListeners = new HashSet<>();
 
-    public RabbitMessageConsumer(Channel channel, String exchange, String queueName, MessageListener messageListener, String... routingKey) {
+    public RabbitMessageConsumer(@Nonnull Channel channel, @Nonnull String exchange,
+                                 @Nonnull String queueName, @Nonnull MessageListener messageListener,
+                                 @Nonnull ImmutableList<String> routingKey,
+                                 @Nonnull ImmutableList<String> closeUnbindKeys) {
         super(channel);
         this.exchange = exchange;
         this.queueName = queueName;
         this.routingKeys = routingKey;
+        this.closeUnbindKeys = closeUnbindKeys;
         addMessageListener(messageListener);
         try {
             open();
@@ -50,11 +63,6 @@ public class RabbitMessageConsumer extends DefaultConsumer implements MessageCon
             log.warn("[rabit.consumer] error starting consumer" + e, e);
         }
 
-    }
-
-    @Override
-    public void queueUnbind(String routingKey) throws IOException {
-        getChannel().queueUnbind(queueName, exchange, routingKey);
     }
 
     @Override public void open() throws IOException {
@@ -68,7 +76,8 @@ public class RabbitMessageConsumer extends DefaultConsumer implements MessageCon
     }
 
     @Override
-    public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+    public void handleDelivery(String consumerTag, Envelope envelope,
+                               AMQP.BasicProperties properties, byte[] body) throws IOException {
         ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(body));
         try {
             Serializable message = (Serializable) ois.readObject();
@@ -91,9 +100,24 @@ public class RabbitMessageConsumer extends DefaultConsumer implements MessageCon
     }
 
     @Override public void close() throws IOException {
+        IOException firstError = null;
         Channel channel = getChannel();
         if (channel != null) {
-            channel.close();
+            for(String routingKey : closeUnbindKeys) {
+                try {
+                    channel.queueUnbind(queueName, exchange, routingKey);
+                } catch (IOException ex) {
+                    firstError = (firstError == null) ? ex : firstError;
+                }
+            }
+            try {
+                channel.close();
+            } catch (IOException ex) {
+                firstError = (firstError == null) ? ex : firstError;
+            }
+        }
+        if (firstError != null) {
+            throw firstError;
         }
     }
 }
