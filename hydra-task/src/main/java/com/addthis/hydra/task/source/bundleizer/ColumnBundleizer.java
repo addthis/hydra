@@ -18,7 +18,6 @@ import java.util.List;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
-import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
 import com.addthis.hydra.data.util.Tokenizer;
 
@@ -45,11 +44,6 @@ public class ColumnBundleizer extends NewlineBundleizer {
         this.columns = columns;
         this.tokens = tokens;
         this.tokenFilter =tokenFilter;
-    }
-
-    @Override
-    public void open() {
-        super.open();
     }
 
     @Override

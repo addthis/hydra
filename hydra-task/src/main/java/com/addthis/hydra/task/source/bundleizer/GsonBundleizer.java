@@ -41,9 +41,6 @@ import com.google.gson.stream.JsonReader;
 public class GsonBundleizer extends BundleizerFactory {
 
     @Override
-    public void open() { }
-
-    @Override
     public Bundleizer createBundleizer(final InputStream inputArg, final BundleFactory factoryArg) {
         return new Bundleizer() {
             private final BundleFactory factory = factoryArg;

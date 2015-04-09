@@ -35,10 +35,6 @@ public abstract class NewlineBundleizer extends BundleizerFactory {
     private ValueFilter lineFilter;
 
     @Override
-    public void open() {
-    }
-
-    @Override
     public Bundleizer createBundleizer(final InputStream inputArg, final BundleFactory factoryArg) {
         return new Bundleizer() {
             private final BufferedReader reader = new BufferedReader(new InputStreamReader(inputArg), 65535);

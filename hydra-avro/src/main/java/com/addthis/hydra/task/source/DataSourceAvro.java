@@ -80,9 +80,6 @@ public class DataSourceAvro extends BundleizerFactory {
         datumReader = new GenericDatumReader<>(inputSchema);
     }
 
-    @Override
-    public void open() { }
-
     public static ValueObject getValueObject(GenericRecord genericRecord,
                                                 Schema.Field field,
                                                 GenericData genericData) throws IOException {
