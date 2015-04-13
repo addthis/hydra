@@ -37,4 +37,11 @@ public class StreamChain extends StreamBuilder {
             builder.process(row, emitter);
         }
     }
+
+    @Override
+    public void streamComplete(StreamEmitter streamEmitter) {
+        for (StreamBuilder builder : builders) {
+            builder.streamComplete(streamEmitter);
+        }
+    }
 }
