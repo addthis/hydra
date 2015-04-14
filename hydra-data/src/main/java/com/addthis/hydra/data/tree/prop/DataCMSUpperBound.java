@@ -251,6 +251,7 @@ public class DataCMSUpperBound extends TreeNodeData<DataCMSUpperBound.Config> im
     @Override
     public void postDecode() {
         sketch = CountMinSketch.deserialize(raw);
+        raw = null;
     }
 
     @Override
