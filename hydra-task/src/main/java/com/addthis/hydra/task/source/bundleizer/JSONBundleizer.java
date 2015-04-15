@@ -13,76 +13,32 @@
  */
 package com.addthis.hydra.task.source.bundleizer;
 
-import com.addthis.bundle.channel.DataChannelError;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleException;
-import com.addthis.bundle.core.BundleFormat;
-import com.addthis.bundle.value.ValueArray;
-import com.addthis.bundle.value.ValueFactory;
-import com.addthis.bundle.value.ValueObject;
-import com.addthis.maljson.JSONArray;
-import com.addthis.maljson.JSONException;
-import com.addthis.maljson.JSONObject;
+import com.addthis.bundle.core.Bundles;
+import com.addthis.codec.jackson.Jackson;
+
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 public class JSONBundleizer extends NewlineBundleizer {
 
+    // Allows json to be parsed into bundles, not using the "type" field to imply the bundle implementation.  In
+    // particular, this is needed for parsing apache logs in json format.
+    public final Config overrides = ConfigFactory.parseString("plugins.bundle._field: _notypefield");
+
+    // Slightly inefficient, in that Bundles.decode doesn't support modifying a bundle in place, nor is it able to reuse
+    // bundle formats/fields.  Instead we need to merge the resulting bundle into the input bundle.
     @Override
     public Bundle bundleize(Bundle next, String line) {
-        BundleFormat format = next.getFormat();
         try {
-            JSONObject json = new JSONObject(line);
-            for (String key : json.keySet()) {
-                next.setValue(format.getField(key), getJSONValue(json, key));
-            }
-        } catch (JSONException | BundleException ex) {
-            throw new DataChannelError(ex);
-        }
-        return next;
-    }
-
-    //copied with slight changes from DataSourceJSON
-
-    private ValueObject getJSONValue(JSONObject json, String key) throws BundleException {
-        try {
-            Object raw = json.opt(key);
-            if (raw == null) {
-                return null;
-            }
-            Class<?> clazz = raw.getClass();
-
-                /* unwrap JSONObject to ValueMap */
-            if (clazz == JSONObject.class) {
-                // TODO
-                throw new UnsupportedOperationException("TODO");
-            } else if (clazz == JSONArray.class) {
-                // TODO: still only one dimension supported
-                JSONArray jarr = (JSONArray) raw;
-                ValueArray arr = ValueFactory.createArray(jarr.length());
-                for (int i = 0; i < jarr.length(); i++) {
-                    arr.add(i, createPrimitiveBundle(jarr.opt(i).getClass(), jarr.opt(i)));
-                }
-                return arr;
-            } else {
-                return createPrimitiveBundle(clazz, raw);
-            }
-        } catch (Exception ex) {
-            throw new BundleException(ex);
-        }
-    }
-
-    private ValueObject createPrimitiveBundle(Class<?> clazz, Object raw) {
-        // it would be cool to not do this twice, but I gave up fighting with generics
-        //Class<?> clazz = raw.getClass();
-        if (clazz == Integer.class) {
-            return ValueFactory.create(((Integer) raw).longValue());
-        } else if (clazz == Long.class) {
-            return ValueFactory.create(((Long) raw).longValue());
-        } else if (clazz == Float.class) {
-            return ValueFactory.create(((Float) raw).doubleValue());
-        } else if (clazz == Double.class) {
-            return ValueFactory.create(((Double) raw).doubleValue());
-        } else {
-            return ValueFactory.create(raw.toString());
+            Bundle bundle = Jackson.defaultCodec().withOverrides(overrides).decodeObject(Bundle.class, line);
+            Bundles.addAll(bundle, next, true);
+            return next;
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
         }
     }
 }
