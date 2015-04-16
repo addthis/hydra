@@ -27,7 +27,7 @@ public class JSONBundleizer extends NewlineBundleizer {
 
     // Allows json to be parsed into bundles, not using the "type" field to imply the bundle implementation.  In
     // particular, this is needed for parsing apache logs in json format.
-    private static final CodecJackson codec = Jackson.defaultCodec().withOverrides(ConfigFactory.parseString("plugins.bundle._field: _notypefield"));
+    private final CodecJackson codec = Jackson.defaultCodec().withOverrides(ConfigFactory.parseString("plugins.bundle._field: _notypefield"));
 
     // Slightly inefficient, in that Bundles.decode doesn't support modifying a bundle in place, nor is it able to reuse
     // bundle formats/fields.  Instead we need to merge the resulting bundle into the input bundle.
