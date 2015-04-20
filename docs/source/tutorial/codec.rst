@@ -157,7 +157,7 @@ use a bundle filter, if you're using "field", you don't have to specify the type
    {field {from:"FIELD", filter.set.value:"foo"}}
 
    # HOCON, implicit default type
-   {from:"FIELD, filter.set.value:"foo"}
+   {from:"FIELD", filter.set.value:"foo"}
 
 Leaving out "filter" from bundle filter field's value filters
 -------------------------------------------------------------
