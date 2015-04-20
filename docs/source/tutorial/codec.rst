@@ -45,8 +45,7 @@ identifiers and javascript-style comments, both illegal in JSON.
 
 JSON is actually a subset of HOCON, which means that any JSON hydra job is actually also a HOCON job. HOCON also
 supports the non-quoted identifiers and comments that our "JSON" job format supported. So if you were
-to ask "How do I convert a JSON job to HOCON" the answer is actually "Your job is already HOCON"! However, Hydra
-only enables the HOCON parser if a job does not have curly braces at the start and end.
+to ask "How do I convert a JSON job to HOCON" the answer is actually "Your job is already HOCON"!
 
 Some key differences:
 ---------------------
@@ -54,6 +53,7 @@ Some key differences:
 * Single quoted strings are not supported in HOCON, while they were in the JSON format. In HOCON, a single quoted
   string will result in the string including the single quote characters.
 * Comments in HOCON can be made using either "//" or "#". Our JSON format only allowed "//".
+* The JSON format allowed multi-line comments using "/* comment */" syntax. HOCON does not have multi-line comments.
 * There is only one additional reserved keyword in HOCON: "include". You must not use "include" anywhere in a job config
   except in quoted strings, unless using it for its file include function.
 * You must escape strings as in java. In the JSON format, you could do something like "\\" or '"', which would now need
