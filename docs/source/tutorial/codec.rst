@@ -54,10 +54,13 @@ Some key differences:
   string will result in the string including the single quote characters.
 * Comments in HOCON can be made using either "//" or "#". Our JSON format only allowed "//".
 * The JSON format allowed multi-line comments using "/* comment */" syntax. HOCON does not have multi-line comments.
-* There is only one additional reserved keyword in HOCON: "include". You must not use "include" anywhere in a job config
-  except in quoted strings, unless using it for its file include function.
+* There is only one additional reserved keyword in HOCON: "include". You should not use "include" unquoted
+  in a job config, unless using it for its file include function. However it will work in a quoted string.
+  If you happen to have a parameter called "include" you can avoid errors by using quotes:
+  `{my-plugin."include":"some_value"}`
 * You must escape strings as in java. In the JSON format, you could do something like "\\" or '"', which would now need
-  to be escaped like this: "\\\\" or "\\""
+  to be escaped like this: "\\\\" or "\\"". Character escaping might be a source of job validation errors if converting
+  an old job config.
 * In HOCON, you can specify "op" or "type" differently. The extra braces can sometimes feel like too much, but you don't
   end up using this syntax for many bundle filters, as often you can just simplify further. Example::
 
@@ -322,12 +325,8 @@ of this in practice, lifted from a real hydra job::
    output.tree.root: [
       {const:"ROOT"}
       {branch:[
-         [
-            {const:"mobile", filter.has:"MOBILE_FLAG", data:${_uidcount}}
-         ]
-         [
-            {const:"desktop", filter.has:"DESKTOP_FLAG", data:${_uidcount}}
-         ]
+         {const:"mobile", filter.has:"MOBILE_FLAG", data:${_uidcount}}
+         {const:"desktop", filter.has:"DESKTOP_FLAG", data:${_uidcount}}
       ]}
    ]
 
