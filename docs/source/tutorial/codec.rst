@@ -106,7 +106,7 @@ If there were multiple fields listed at some level, you can either list them all
 multiple line of config. Two examples of valid ways to do this::
 
    source.mesh2.mesh: {
-      files:["some_files]
+      files:["some_files"]
       dateFormat:"YYMMdd"
    }
 
