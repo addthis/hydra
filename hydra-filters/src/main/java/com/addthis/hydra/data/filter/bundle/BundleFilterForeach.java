@@ -20,6 +20,9 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * This {@link BundleFilter BundleFilter} <span class="hydra-summary">applies a bundle filter over an array</span>.
  * <p/>
@@ -34,36 +37,43 @@ import com.addthis.codec.annotations.FieldConfig;
 public class BundleFilterForeach implements BundleFilter {
 
     /**
-     * The filter to execute.
+     * The filter to execute. This field is required.
      */
-    @FieldConfig(codable = true, required = true)
-    private BundleFilter filter;
-
+    private final BundleFilter filter;
 
     /**
-     * The name of the field containing the array.
+     * The name of the field containing the array. This field is required.
      */
-    @FieldConfig(codable = true, required = true)
-    private AutoField source;
+    private final AutoField source;
 
     /**
      * Optionally the name of the field that will be populated with the current index.
      */
-    @FieldConfig(codable = true)
-    private AutoField index;
+    private final AutoField index;
 
     /**
      * Optionally the name of the field that will be populated with the current value.
      */
-    @FieldConfig(codable = true)
-    private AutoField value;
+    private final AutoField value;
 
     /**
      * If true then terminate when an iteration returns false.
      * Default value is true.
      */
-    @FieldConfig(codable = true)
-    private boolean exitOnFailure;
+    private final boolean exitOnFailure;
+
+    @JsonCreator
+    public BundleFilterForeach(@JsonProperty(value = "filter", required = true) BundleFilter filter,
+                               @JsonProperty(value = "source", required = true) AutoField source,
+                               @JsonProperty("index") AutoField index,
+                               @JsonProperty("value") AutoField value,
+                               @JsonProperty("exitOnFailure") boolean exitOnFailure) {
+        this.filter = filter;
+        this.source = source;
+        this.index = index;
+        this.value = value;
+        this.exitOnFailure = exitOnFailure;
+    }
 
     @Override public boolean filter(Bundle row) {
         boolean success = true;
