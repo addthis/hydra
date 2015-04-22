@@ -32,7 +32,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *    {op:"defaults", values:{"USER" : "defaultuser"}},
+ *     {defaults.values:{"USER":"defaultuser"}}
  * </pre>
  *
  * @user-reference

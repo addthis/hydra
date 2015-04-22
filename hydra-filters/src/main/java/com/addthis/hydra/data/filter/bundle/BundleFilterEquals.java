@@ -33,7 +33,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example2:</p>
  * <pre>
- *   {op:"equals", left:"FIELD_ONE", right:"FIELD_TWO", not:true},
+ *   {equals {left:"FIELD_ONE", right:"FIELD_TWO", not:true}}
  * </pre>
  *
  * @user-reference

@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
  * <p/>
  * <p>Example:</p>
  * <pre>
+ *     {time {dst:{field:"DATE", format:"yyMMdd-HHmmss-yyww", timeZone:"EST"}, src:{field:"TIME", format:"native"}}}
  * </pre>
  *
  * @user-reference

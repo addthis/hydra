@@ -32,7 +32,7 @@ import com.addthis.hydra.data.filter.value.ValueFilter;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {op:"clear", field:"UNNECESSARY"},
+ *   {clear.field:"UNNECESSARY"}
  * </pre>
  *
  * @user-reference

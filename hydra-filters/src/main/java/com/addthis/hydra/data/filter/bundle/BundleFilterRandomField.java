@@ -35,7 +35,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {op:"random-field", inFields: ["INPUT1", "INPUT2", "INPUT3"], out: "OUTPUT"},
+ *   {random-field {inFields: ["INPUT1", "INPUT2", "INPUT3"], out: "OUTPUT"}}
  * </pre>
  *
  * @user-reference

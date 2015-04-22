@@ -29,7 +29,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {op:"concat", in:["FOO", "BAR", "BAZ"], out: "OUTPUT", join: ":"},
+ *   {concat {in:["FOO", "BAR", "BAZ"], out: "OUTPUT", join: ":"}}
  * </pre>
  *
  * @user-reference

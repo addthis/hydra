@@ -25,9 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {op:"condition",
- *      ifCondition: {op:"contains", field:"SRC", value:["foo", "bar"]},
- *      ifDo: {op:"clear", field:"SRC"}},
+ *     {if:{contains {field:"SRC", value:["foo", "bar"]}}, then:{clear.field:"SRC"}}
  * </pre>
  *
  * @user-reference

@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {op:"not", field: "USERNAME"},
+ *   {not.field:"USERNAME"},
  * </pre>
  *
  * @user-reference

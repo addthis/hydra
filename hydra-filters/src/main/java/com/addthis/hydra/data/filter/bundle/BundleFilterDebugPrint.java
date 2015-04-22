@@ -33,12 +33,11 @@ import org.slf4j.LoggerFactory;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {op : "chain",
- *     filter : [
- *       {op : "debug"},
- *       // continue processing
+ *     map.filterOut:[
+ *         {debug {}}
+ *         // continue processing
  *     ]
- *   }</pre>
+ * </pre>
  *
  * @user-reference
  */

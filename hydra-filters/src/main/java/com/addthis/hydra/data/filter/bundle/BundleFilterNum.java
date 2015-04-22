@@ -310,8 +310,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * </table>
  * <p>Examples:</p>
  * <pre>
- *   {op: "num", columns : ["END_TIME", "START_TIME", "WALL_TIME"], define : "c0,c1,sub,v1000,ddiv,toint,v2,set"},
- *   {op: "num", columns : ["WALL_TIME", "TASKS", "CLUSTER_TIME"], define : "c0,c1,mult,v2,set"},
+ *   {num {columns:["END_TIME", "START_TIME", "WALL_TIME"], define:"c0,c1,sub,v1000,ddiv,toint,v2,set"}}
+ *   {num {columns:["WALL_TIME", "TASKS", "CLUSTER_TIME"], define:"c0,c1,mult,v2,set"}}
  * </pre>
  *
  * @user-reference

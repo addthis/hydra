@@ -25,7 +25,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *    {op:"limit", limit:10},
+ *    {limit.limit:10},
  * </pre>
  *
  * @user-reference

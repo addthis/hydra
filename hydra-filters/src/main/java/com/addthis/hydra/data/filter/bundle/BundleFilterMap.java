@@ -30,9 +30,9 @@ import com.addthis.codec.codables.SuperCodable;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {op:"map", fields:[
- *        {from: "DATE", to: "DATE_YMD", filter: {op: "slice", to: 6}},
- *        {from: "DATE", to: "DATE_HOUR", filter: {op: "slice", from: 7, to: 9}},
+ *   {map.fields:[
+ *        {from:"DATE", to:"DATE_YMD", slice.to:6}}
+ *        {from:"DATE", to:"DATE_HOUR", slice {from:7, to:9}}
  *   ]},
  * </pre>
  *

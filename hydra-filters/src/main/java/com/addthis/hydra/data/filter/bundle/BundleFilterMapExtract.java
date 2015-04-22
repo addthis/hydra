@@ -46,11 +46,11 @@ import org.slf4j.LoggerFactory;
  * <p>Example:</p>
  * <pre>
  *   // extract params
- *   {op:"map-extract", field:"QUERY_PARAMS", map:[
- *        {from:"key1"},
- *        {from:"key2", to:"KEY2"},
- *        {from:"key3", to:"KEY3"},
- *   ]}
+ *   {map-extract {field:"QUERY_PARAMS", map:[
+ *        {from:"key1"}
+ *        {from:"key2", to:"KEY2"}
+ *        {from:"key3", to:"KEY3"}
+ *   ]}}
  * </pre>
  *
  * @user-reference

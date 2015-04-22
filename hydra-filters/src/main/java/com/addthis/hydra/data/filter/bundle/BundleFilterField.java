@@ -31,7 +31,10 @@ import com.addthis.hydra.data.filter.value.ValueFilter;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {op:"field", from:"PAGE_DOMAIN", filter:{op:"case",lower:true}},
+ *   # in map.filterIn or map.filterOut:
+ *   {from:"PAGE_DOMAIN", case.lower:true}
+ *   # elsewhere:
+ *   {field {from:"PAGE_DOMAIN", case.lower:true}}
  * </pre>
  *
  * @user-reference

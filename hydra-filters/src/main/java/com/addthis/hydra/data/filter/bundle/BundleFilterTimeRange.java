@@ -33,11 +33,11 @@ import org.joda.time.format.DateTimeFormatter;
  * a ten character string is interpreted by default is "yyMMddHHmm". A string
  * of the form "-NNN" is interpreted as NNN days in the past.
  * </p>
- * <p/>
+  * <p/>
  * <p>Example:</p>
  * <pre>
  *    // Accept all date/time values in between December 1, 2012 and January 1, 2013.
- *    {op:"time-range", time: "TIME", after: "121201", before: "130101"},
+ *    {time-range {time: "TIME", after: "121201", before: "130101"}}
  * </pre>
  *
  * @user-reference

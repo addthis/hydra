@@ -60,12 +60,17 @@ import org.slf4j.LoggerFactory;
  * body into an array of a single element.</p>
  * <p/>
  * <p>Examples:</p>
- * <pre>{op : "eval-java",
- *       body : ["c = a + b;", "return true;"],
- *       fields : ["a", "b", "c"],
- *       types : ["STRING", "STRING", "STRING"],
- *       variables : ["a", "b", "c"]
- * }</pre>
+ * <pre>
+ *     {eval-java {
+ *         body: """
+ *             c = a + b;
+ *             return true;
+ *         """
+ *         fields: ["a", "b", "c"]
+ *         types:["STRING", "STRING", "STRING"]
+ *         variables: ["a", "b", "c"]
+ *     }}
+ * </pre>
  *
  * @user-reference
  */

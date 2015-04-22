@@ -19,13 +19,15 @@ import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.hydra.data.filter.value.ValueFilter;
+import com.addthis.hydra.data.filter.value.ValueFilterSet;
 
 /**
- * This {@link BundleFilter BundleFilter} <span class="hydra-summary">assigns a value to a specific bundle field</span>.
- * <p/>
+ * <p>This {@link BundleFilter BundleFilter} <span class="hydra-summary">assigns a value to a specific bundle field</span>.
+ * </p>
+ * <p>For similar functionality see: value filter {@link ValueFilterSet set}</p>
  * <p>Example:</p>
  * <pre>
- *    {op:"value", to: "USERNAME", value: "Bobby Tables"},
+ *    {value {to:"USERNAME", value:"Bobby Tables"}
  * </pre>
  *
  * @user-reference

@@ -35,8 +35,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *     {op:"contains", field:"SRC", value:["foo", "bar"]},
- *     {op:"contains", field:"SRC", from:"TEST"]},
+ *     {contains {field:"SRC", value:["foo", "bar"]}}
+ *     {contains {field:"SRC", from:"TEST"}}
  *  </pre>
  *
  * @user-reference

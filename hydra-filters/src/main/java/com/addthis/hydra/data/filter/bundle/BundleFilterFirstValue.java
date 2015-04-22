@@ -34,7 +34,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {op:"first", in:["USER1", "USER2", "USER3"]" out:"USER_VALUE"},
+ *   {first {in:["USER1", "USER2", "USER3"], out:"USER_VALUE"}}
  * </pre>
  *
  * @user-reference

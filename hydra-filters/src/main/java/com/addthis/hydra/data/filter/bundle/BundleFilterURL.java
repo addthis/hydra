@@ -46,7 +46,7 @@ import com.google.common.net.InternetDomainName;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *     {op:"url", field:"PAGE_URL", setHost:"PAGE_DOMAIN", clean:true}
+ *     {url {field:"PAGE_URL", setHost:"PAGE_DOMAIN", clean:true}}
  * </pre>
  *
  * @user-reference
