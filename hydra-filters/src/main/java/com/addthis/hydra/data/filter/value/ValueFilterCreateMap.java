@@ -40,12 +40,6 @@ import com.addthis.codec.annotations.FieldConfig;
 public class ValueFilterCreateMap extends AbstractValueFilter {
 
     /**
-     * This field is never used. Do with it what you want.
-     */
-    @FieldConfig(codable = true)
-    private String input;
-
-    /**
      * The deliminator between a key and a value. Default is "=" .
      */
     @FieldConfig(codable = true)
@@ -62,6 +56,12 @@ public class ValueFilterCreateMap extends AbstractValueFilter {
      */
     @FieldConfig(codable = true)
     private boolean includeNullValues = false;
+
+    /**
+     * If true then create an array when a key is duplicated. Default is false.
+     */
+    @FieldConfig(codable = true)
+    private boolean appendValues = false;
 
     @Override
     public ValueObject filterValue(ValueObject value) {
@@ -90,7 +90,16 @@ public class ValueFilterCreateMap extends AbstractValueFilter {
             if (!includeNullValues && keyValue.length != 2) {
                 continue;
             }
-            map.put(keyValue[0], keyValue.length > 1 ? ValueFactory.create(keyValue[1]) : null);
+            String key = keyValue[0];
+            ValueObject value = keyValue.length > 1 ? ValueFactory.create(keyValue[1]) : null;
+            ValueObject current = map.get(key);
+            if (!appendValues || (current == null)) {
+                map.put(key, value);
+            } else {
+                ValueArray array = current.asArray();
+                array.add(value);
+                map.put(key, array);
+            }
         }
     }
 }
