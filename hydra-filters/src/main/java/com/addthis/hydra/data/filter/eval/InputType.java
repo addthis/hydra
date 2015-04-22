@@ -34,9 +34,10 @@ public enum InputType {
     MAP_STRING_LONG("Map<String,Long>", "MapStringLong", Category.MAP),
     MAP_STRING_DOUBLE("Map<String,Double>", "MapStringDouble", Category.MAP),
     MAP_STRING_BYTES("Map<String,byte[]>", "MapStringBytes", Category.MAP),
+    MAP_STRING_LIST_STRING("Map<String,List<String>>", "MapStringListString", Category.MAP),
     BUNDLE_RAW(null, null, Category.BUNDLE_RAW);
 
-    public static enum Category {
+    public enum Category {
         PRIMITIVE, LIST, MAP, BUNDLE_RAW
     }
 
