@@ -27,7 +27,7 @@ import com.addthis.hydra.data.filter.value.ValueFilterSet;
  * <p>For similar functionality see: value filter {@link ValueFilterSet set}</p>
  * <p>Example:</p>
  * <pre>
- *    {value {to:"USERNAME", value:"Bobby Tables"}
+ *    {value {to:"USERNAME", value:"Bobby Tables"}}
  * </pre>
  *
  * @user-reference
