@@ -26,9 +26,11 @@ import com.addthis.codec.annotations.FieldConfig;
  * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">performs regular expression matching on the input string</span>.
  * <p/>
  * <p>The default behavior is to perform regular expression matching on the input string,
- * and return an array with all the substrings that match to the regular expression.
- * If the {@link #replace replace} field is used, then all substrings that match against
- * the pattern are replaced with the replacement string and the output is a string.
+ * and return an array with all the groups that match to the regular expression. You must
+ * specify one or more groups in your regular expression. Group zero, the implicit group
+ * that represents the entire match, is not returned. If the {@link #replace replace}
+ * field is used, then all substrings that match against the pattern are replaced with
+ * the replacement string and the output is a string.
  * <p/>
  * <p>The regex specification used by hydra (similar to perl 5) can be found <a href="http://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html">here</a>.
  * Once you design a regex to match the desired pattern, you must encode it in a JSON string.
