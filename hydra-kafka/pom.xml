@@ -16,43 +16,50 @@
   <parent>
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
-    <version>5.3.5-SNAPSHOT</version>
+    <version>5.2.5-SNAPSHOT</version>
   </parent>
 
-  <artifactId>hydra-mq</artifactId>
-  <name>Hydra MQ Module</name>
-  <description>Hydra message queue interfaces and implementations</description>
+  <artifactId>hydra-kafka</artifactId>
+  <name>Hydra Kafka Module</name>
+  <description>reading and writing for kafka 8 clusters</description>
 
   <dependencies>
-    <!-- addthis open source -->
+    <!-- addthis deps -->
     <dependency>
       <groupId>com.addthis</groupId>
-      <artifactId>codec</artifactId>
+      <artifactId>basis</artifactId>
     </dependency>
     <dependency>
       <groupId>com.addthis</groupId>
-      <artifactId>bark</artifactId>
+      <artifactId>bundle</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.addthis</groupId>
-      <artifactId>meshy</artifactId>
+      <groupId>com.addthis.hydra</groupId>
+      <artifactId>hydra-main-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.addthis.hydra</groupId>
+      <artifactId>hydra-task</artifactId>
     </dependency>
 
-    <!-- 3rd party -->
+
+      <!-- 3rd party -->
     <dependency>
-      <groupId>com.rabbitmq</groupId>
-      <artifactId>amqp-client</artifactId>
-      <version>3.4.1</version>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-clients</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka_2.10</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.yammer.metrics</groupId>
+      <artifactId>metrics-ganglia</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.curator</groupId>
-      <artifactId>curator-recipes</artifactId>
+      <artifactId>curator-framework</artifactId>
     </dependency>
-    <dependency>
-      <groupId>net.jodah</groupId>
-      <artifactId>lyra</artifactId>
-      <version>0.4.3</version>
-    </dependency>
-    <!-- end 3rd party -->
+
   </dependencies>
 </project>
