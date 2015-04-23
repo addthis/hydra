@@ -46,7 +46,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  * to a ValueArray.
  * <p>Example:</p>
  * <pre>
- *   {op:"append", to:"INPUT", values:{"a", "b", "c"}},
+ *   {append {to:"INPUT", values:{"a", "b", "c"}}
  * </pre>
  *
  * @user-reference
