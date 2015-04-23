@@ -33,10 +33,7 @@ import org.slf4j.LoggerFactory;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *     map.filterOut:[
- *         {debug {}}
- *         // continue processing
- *     ]
+ *    {debug.every: 10}
  * </pre>
  *
  * @user-reference
