@@ -72,9 +72,7 @@ public class DataTDigest extends TreeNodeData<DataTDigest.Config> implements Sup
      *
      * <p><b>Job Configuration Example</b>
      * <pre>
-     *     {type:"counts", value:"service", data:{
-     *         timeDigest:{type:"tdigest", key:"TIME", compression:100},
-     *     }}
+     *     {counts {value:"service", data.timeDigest.tdigest {key:"TIME", compression:100}}}
      * </pre>
      * </p>
      *

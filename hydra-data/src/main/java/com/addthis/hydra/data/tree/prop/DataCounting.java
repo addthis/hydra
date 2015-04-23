@@ -72,10 +72,9 @@ public class DataCounting extends TreeNodeData<DataCounting.Config> implements S
      * <p/>
      * <p>Job Configuration Example:</p>
      * <pre>
-     * {type : "const", value : "shard-counter"},
-     * {type : "value", key : "DATE_YMD", data : {
-     *   ips : {type : "count", ver : "hllp", key : "IP"},
-     * }},</pre>
+     * {const:"shard-counter"}
+     * {field:"DATE_YMD", data.ips.count {ver:"hllp", key:"IP"}}
+     * </pre>
      *
      * <p><b>Query Path Directives</b>
      *

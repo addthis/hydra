@@ -60,12 +60,8 @@ public class DataCMSUpperBound extends TreeNodeData<DataCMSUpperBound.Config> im
      * is assumed to have a count of 1.</p>
      * <p>Job Configuration Example:</p>
      * <pre>
-     * {type : "const", value : "service", data : {
-     *   idcount : {type : "limit.upper", key : "ID", width : 100000, limit: 5},
-     * }},
-     * {type : "const", value : "pixelator", data : {
-     *   idcount : {type : "limit.upper", key : "ID", count : "ID_COUNT", width : 100000, limit: 5},
-     * }},
+     * {const:"service", data.idcount.limit-upper {key:"ID", width:100000, limit:5}}
+     * {const:"pixelator", data.idcount.limit-upper {key:"ID", count:"ID_COUNT", width:10000, limit:5}}
      * </pre>
      * <p/>
      * <p><b>Query Path Directives</b>

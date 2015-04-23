@@ -40,9 +40,8 @@ public class DataSum extends TreeNodeData<DataSum.Config> {
      * <p/>
      * <p>Job Configuration Example:</p>
      * <pre>
-     * { type : "value", key : "UID", data : {
-     *   shares : {type :"sum", key : "IS_SHARE"},
-     * }},</pre>
+     * {field:"UID", data.shares.sum.key:"IS_SHARE"}
+     * </pre>
      *
      * <p><b>Query Path Directives</b>
      *

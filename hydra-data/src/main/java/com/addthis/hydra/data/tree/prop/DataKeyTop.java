@@ -47,10 +47,9 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
      * <p/>
      * <p>Job Configuration Example:</p>
      * <pre>
-     * {type : "const", value : "shard-counter"},
-     * {type : "value", key : "DATE_YMD", data : {
-     *   top_ips : {type : "key.top", size : 500, key : "IP"},
-     * }},</pre>
+     * {const:"shard-counter"}
+     * {field:"DATE_YMD", data.top_ips.key-top {size:500, key:"IP"}}
+     * </pre>
      *
      * <p><b>Query Path Directives</b>
      *

@@ -38,9 +38,8 @@ public class DataTime extends TreeNodeData<DataTime.Config> {
      * <p/>
      * <p>Job Configuration Example:</p>
      * <pre>
-     * { type : "value", key : "ID", data : {
-     *   time : { type : "time", key : "TIME"},
-     * }},</pre>
+     * {field:"ID", data.time.time.key:"TIME"}
+     * </pre>
      *
      * <p><b>Query Path Directives</b>
      *

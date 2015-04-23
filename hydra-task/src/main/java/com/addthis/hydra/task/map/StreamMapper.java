@@ -74,21 +74,12 @@ import static java.lang.String.join;
  * This hierarchical databases can then be explored through the distribute Hydra query system.</li>
  * </ul>
  * <p>Example:</p>
- * <pre>{
- *    type : "map",
- * <p/>
- *     source : {
- *         ...
- *     },
- * <p/>
- *     map : {
- *         ...
- *     },
- * <p/>
- *     output : {
- *         ...
- *     },
- * }</pre>
+ * <pre>
+ * map.source: {...}
+ * map.filterIn: {...}
+ * map.filterOut: {...}
+ * map.output: {...}
+ * </pre>
  *
  * @user-reference
  */

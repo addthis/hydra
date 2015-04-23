@@ -78,23 +78,15 @@ import org.slf4j.LoggerFactory;
  * element is excluded if it specifies a feature that is in the feature set of the tree.
  * <p/>
  * <p>Example:</p>
- * <pre>output : {
- *   type : "tree",
- *   live : true,
- *   timeField : {
- *     field : "TIME",
- *     format : "native",
- *   },
- *   root : { path : "ROOT" },
- * <p/>
- *   paths : {
- *     "ROOT" : [
- *       {type : "const", value : "date"},
- *       {type : "value", key : "DATE_YMD"},
- *       {type : "value", key : "DATE_HH"},
- *     ],
- *   },
- * },</pre>
+ * <pre>
+ *  output.tree {
+ *      root:[
+ *          {const:"date"}
+ *          {field:"DATE_YMD"}
+ *          {field:"DATE_HH"}
+ *      ]
+ *  }
+ * </pre>
  *
  * @user-reference
  */

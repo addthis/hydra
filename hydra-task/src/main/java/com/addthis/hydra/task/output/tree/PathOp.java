@@ -29,9 +29,8 @@ import com.addthis.hydra.data.tree.DataTreeNode;
  * It is assigned internally to a value of 'true' and must retain that value.
  * </p>
  * <p>Example:</p>
- * <pre>{type : "op", filter :
- *    {op : "field", from : "MATCH", filter : {op : "set", value : "good"}}
- * },
+ * <pre>
+ *  {op {filter.field {from:"MATCH", set:"good"}}
  * </pre>
  *
  * @user-reference

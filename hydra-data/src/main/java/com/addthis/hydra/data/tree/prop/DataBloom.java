@@ -51,9 +51,9 @@ public class DataBloom extends TreeNodeData<DataBloom.Config> implements SuperCo
      * As usual, a bloom filter may return false positives.
      * <p/>
      * <p>Job Configuration Example:</p>
-     * <pre>{type : "const", value : "service", data : {
-     *   hasid : {type : "bloom", key : "ID", max : 250000},
-     * }},</pre>
+     * <pre>
+     * {const:"service", data.hasid.bloom {key:"ID", max:250000}}
+     * </pre>
      * <p/>
      * <p><b>Query Path Directives</b>
      * <p/>

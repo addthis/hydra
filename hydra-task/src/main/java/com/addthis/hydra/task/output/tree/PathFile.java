@@ -38,7 +38,7 @@ import com.addthis.hydra.data.util.Tokenizer;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *     {name : "tpath", type : "file", key : "PATH", expand : true}
+ *     {file {name:"tpath", key:"PATH", expand:true}}
  * </pre>
  *
  * @user-reference

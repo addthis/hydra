@@ -56,14 +56,17 @@ public final class DataKeySieve2 extends TreeNodeData<DataKeySieve2.Config> impl
      * <p/>
      * <p>Job Configuration Example:</p>
      * <pre>
-     *   {type : "const", value : "0", data : {
-     *     sieve : {type : "key.sieve2", key : "TERMS", saturation : 25, tiers : [
-     *       {bits : 4000000, bitsper : 4, hash : 4},
-     *       {bits : 1000000, bitsper : 4, hash : 4},
-     *       {bits : 250000, bitsper : 4, hash : 4},
-     *       {bits : 125000, bitsper : 4, hash : 4},
-     *     ]},
-     *   }},</pre>
+     *  {const:"0", data.sieve.key-sieve2 {
+     *      key:"TERMS"
+     *      saturation:25
+     *      tiers: [
+     *          {bits : 4000000, bitsper : 4, hash : 4}
+     *          {bits : 1000000, bitsper : 4, hash : 4}
+     *          {bits : 250000, bitsper : 4, hash : 4}
+     *          {bits : 125000, bitsper : 4, hash : 4}
+     *      ]
+     *  }}
+     *  </pre>
      *
      * <p><b>Query Path Directives</b>
      *

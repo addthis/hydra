@@ -40,9 +40,8 @@ public class DataLimitTop extends TreeNodeData<DataLimitTop.Config> implements S
      * <p/>
      * <p>Job Configuration Example:</p>
      * <pre>
-     * {type : "const", value : "all-urls", data : {
-     *   limit : {type : "limit.top", size : 5000},
-     * }},</pre>
+     * {const:"all-urls", data.limit.limit-top.size:5000}
+     * </pre>
      *
      * @user-reference
      */

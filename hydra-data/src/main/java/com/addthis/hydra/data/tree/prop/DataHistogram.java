@@ -45,13 +45,11 @@ public class DataHistogram extends TreeNodeData<DataHistogram.Config> implements
      * <p/>
      * <p>Job Configuration Example:</p>
      * <pre>
-     *   {type : "const", value : "pageUrlLengths"},
-     *   {type : "const", value : "by_date"},
-     *   {type : "value", key : "DATE_YMD", data: {
-     *     // powers of 10 histogram
-     *     page_url_histo : {type : "histo", scale : 10},
-     *   }},
-     *   {type : "value", key : "PAGE_URL_LENGTH"}</pre>
+     *   {const:"pageUrlLengths"}
+     *   {const:"by_date"}
+     *   {field:"DATE_YMD", data.page_url_histo.histo.scale:10}
+     *   {field:"PAGE_URL_LENGTH"}
+     * </pre>
      *
      * <p><b>Query Path Directives</b>
      *

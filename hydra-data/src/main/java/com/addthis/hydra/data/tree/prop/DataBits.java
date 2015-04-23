@@ -35,9 +35,8 @@ public class DataBits extends TreeNodeData<DataBits.Config> {
      * <p>Job Configuration Example:</p>
      * <pre>
      *  // hexadecimal bit counter
-     *  {type : "const", value : "bitcounter", data : {
-     *      bits : {type : "bits", key : "UID", bits : 128, radix : 16}
-     *  }},</pre>
+     *  {const:"bitcounter", data.bits.bits {key:"UID", bits:128, radix:16}}
+     *  </pre>
      *
      * <p><b>Query Path Directives</b>
      *

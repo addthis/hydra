@@ -38,10 +38,8 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
      * <p/>
      * <p>Job Configuration Example:</p>
      * <pre>
-     * {type : "value", key : "ID", data : {
-     *   info : {type : "copy", key : {
-     *     foo : "FOO", bar : "BAR"
-     * }}}},</pre>
+     * {field:"ID", data.info.copy.key:{foo:"FOO", bar:"BAR"}}
+     * </pre>
      *
      * <p><b>Query Path Directives</b>
      *

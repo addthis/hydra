@@ -30,39 +30,14 @@ import com.google.common.collect.ImmutableList;
  * This data source <span class="hydra-summary">applies a filter to an input source</span>.
  * <p/>
  * <p>Example:</p>
- * <pre>source:{
- *     type : "filter"
- *     filter : {
- *       op : "concat",
- *       in : ["YMD", "HMS"],
- *       out : "TIME",
- *       join : " ",
- *     },
- *     stream : {
- *       type : "stream2",
- *       hash : true,
- *       source : {
- *         startDate : "{{now-2}}",
- *         endDate : "{{now}}",
- *         dateFormat : "YYMMddHH",
- *         hosts : [
- *           {host : "san1.local", port : 1337},
- *         ],
- *         files : [{
- *           dir : "logs/%[code:1234]%/{YY}/{M}/{D}/",
- *           match : [".*log_%[code]%.*{YY}{M}{D}{H}00-.*gz"],
- *         }],
- *       },
- *       factory : {
- *         type : "column",
- *         columns : [
- *           "YMD",
- *           "HMS",
- *           ...
- *         ]
- *       }
- *     }
- *   }</pre>
+ * <pre>
+ *  source.filter {
+ *      filter.concat {in:["YMD", "HMS"], out:"TIME", join:" "}
+ *      stream.mesh2 {
+ *          mesh {...}
+ *      }
+ *  }
+ *  </pre>
  *
  * @user-reference
  */

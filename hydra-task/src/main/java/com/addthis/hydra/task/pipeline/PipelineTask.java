@@ -55,11 +55,9 @@ import org.slf4j.LoggerFactory;
  * <p>All logging information is printed out using human (counting from 1)
  * numbering of the phases.</p>
  * <p>Example:</p>
- * <pre>{
- *    type : "pipeline",
- *    phases: [
- *    ]
- * }</pre>
+ * <pre>
+ *  {pipleine.phases:[]}
+ * </pre>
  *
  * @user-reference
  * @hydra-name pipeline

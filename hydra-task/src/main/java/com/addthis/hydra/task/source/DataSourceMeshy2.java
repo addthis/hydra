@@ -24,20 +24,18 @@ import org.slf4j.LoggerFactory;
  * This data source <span class="hydra-summary">fetches data from a meshy server</span>.
  * <p/>
  * <p>Example:</p>
- * <pre>{
- *     type : "mesh2",
- *     shardTotal : %[split-shard-total:32]%,
- *     markDir : "mark.db",
- *     mesh : {
- *         startDate : "%[start-date:{{now-2}}]%",
- *         endDate : "%[end-date:{{now}}]%",
- *         meshPort : "%[meshPort:5500]%",dateFormat:"YYMMddHH",
- *         files : ["/job/%[hoover-job]%/&#42;/gold/hoover.out/{Y}{M}{D}/{H}/{{mod}}-&#42;"],
- *     },
- *     format : {
- *         type : "channel",
- *     },
- * }</pre>
+ * <pre>
+ *  {mesh2 {
+ *      shardTotal:%[split-shard-total:32]%
+ *      markDir:"mark.db"
+ *      mesh {
+ *          startDate:"%[start-date:{{now-2}}]%"
+ *          endDate:"%[end-date:{{now}}]%"
+ *          dateFormat:"YYMMddHH"
+ *          files:["/job/%[source-job]%/&#42;/gold/hoover.out/{Y}{M}{D}/{H}/{{mod}}-&#42;"]
+ *      }
+ *  }}
+ * </pre>
  *
  * @user-reference
  */

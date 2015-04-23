@@ -74,8 +74,8 @@ import org.slf4j.LoggerFactory;
  * <li>the file was not already fetched in a previous run.
  * </ul>
  * <p>Example:</p>
- * <pre>{
- *   type : "hoover",
+ * <pre>
+ *  {hoover {
  *   user : "app",
  *   hosts : {
  *     "app1" : "web1.local",

@@ -60,24 +60,25 @@ import com.google.common.collect.ImmutableList;
  * </tr>
  * </table>
  * <p>Example:</p>
- * <pre>output:{
- *   type : "file",
- *   path : ["{{DATE_YMD}}", "/", "{{SHARD}}"],
- *   writer : {
- *     maxOpen : 1024,
- *     flags : {
- *       maxSize : "64M",
- *       compress : true,
- *     },
- *     factory : {
- *       dir : "split",
- *       multiplex : true,
- *     },
- *     format : {
- *       type : "channel",
- *     },
- *   },
- * }</pre>
+ * <pre>
+ *  output.file {
+ *      path:["{{DATE_YMD}}", "/", "{{SHARD}}"
+ *      writer:{
+ *          maxOpen:1024
+ *          flags:{
+ *            maxSize:"64M"
+ *            compress:true
+ *          }
+ *          factory:{
+ *            dir:"split"
+ *            multiplex:true
+ *          }
+ *          format:{
+ *            type:"channel"
+ *          }
+ *      }
+ *  }
+ * </pre>
  *
  * @user-reference
  */

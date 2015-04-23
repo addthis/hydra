@@ -29,11 +29,12 @@ package com.addthis.hydra.task.output.tree;
  * It is assigned internally to a value of 'true' and must retain that value.
  * <p/>
  * <p>Example:</p>
- * <pre>{type : "keyop", key : "UID", filter :
- *    {op : "chain", filter : [
- *        {op : "field", from : "UID", filter : {op : "require", value : [""]}},
- *        {op : "field", from : "MATCH", filter : {op : "set", value : "empty"}}
- *    ]}},</pre>
+ * <pre>
+ *  {keyop {key:"UID", filter:[
+ *      {from:"UID", require:""}
+ *      {from:"MATCH", set:"empty"}
+ *  ]}}
+ * </pre>
  *
  * @user-reference
  */

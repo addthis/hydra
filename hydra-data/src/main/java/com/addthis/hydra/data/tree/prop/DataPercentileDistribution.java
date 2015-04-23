@@ -45,11 +45,12 @@ public class DataPercentileDistribution extends TreeNodeData<DataPercentileDistr
      * <p/>
      * <p>Job Configuration Example:</p>
      * <pre>
-     * { type : "const", value : "api"},
-     * { type : "branch", list : [[
-     *   { type : "value", name : "ymd", key : "DATE_YMD", data : {
-     *     distribution : {type : "distribution", key : "LATENCY"},
-     * }},</pre>
+     * {const:"api"}
+     * {branch:[
+     *     {const:"ymd"}
+     *     {field:"DATE_YMD" data.distribution.distribution.key:"LATENCY"}
+     * ]}
+     * </pre>
      *
      * <p><b>Query Path Directives</b>
      *

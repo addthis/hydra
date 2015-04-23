@@ -46,32 +46,22 @@ import org.slf4j.LoggerFactory;
  * automatically.</p>
  * <p/>
  * <p>Example:</p>
- * <pre>source : {
- *   type :  "aggregate",
- *   sources : [
- *     {
- *       type : "stream2",
- *       hash : true,
- *       markDir : "markSource1",
- *       source: {
- *         ...
- *       },
- *       factory: {
- *         ...
- *       }
- *     },
- *     {
- *       type : "mesh2",
- *       markDir : "markSource2",
- *       mesh : {
- *         ...
- *       },
- *       factory : {
- *         ...
- *       },
- *     }
- *   ]
- * },</pre>
+ * <pre>
+ *  source: [
+ *      {mesh2 {
+ *          markDir:"markSource1"
+ *          mesh: {
+ *              files: "/path/to/files1"
+ *          }
+ *      }}
+ *      {mesh2 {
+ *          markDir:"markSource2"
+ *          mesh: {
+ *              files: "/path/to/files2"
+ *          }
+ *      }}
+ *  ]
+ *  </pre>
  *
  * @user-reference
  */

@@ -31,8 +31,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p/>
  * <p>Example:</p>
  * <pre>fields:[
- *    {from:"TIME", to:"TIME"},
- *    {from:"SOURCE", to:"SOURCE"},
+ *    "TIME"
+ *    "SOURCE"
+ *    {from:"INITIAL_NAME", to:"NEW_NAME"}
  * ]</pre>
  *
  * @user-reference

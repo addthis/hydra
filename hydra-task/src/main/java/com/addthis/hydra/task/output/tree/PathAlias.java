@@ -38,17 +38,16 @@ import com.addthis.hydra.data.tree.DataTreeUtil;
  * </p>
  * <p>Example:</p>
  * <pre>
- *   { type : "alias",
- *     key : "DATE_YMD",
- *     data : {
- *       uid : {type : "count", ver : "hll", rsd:0.05, key : "UID"},
- *     },
- *     relativeUp : 1,
- *     path : [
- *       {type:"const", value:"ymd"},
- *       {type:"value", key:"DATE_YMD"},
- *     ]
- *   }</pre>
+ *  {alias {
+ *      key:"DATE_YMD"
+ *      data.uid.count {ver:"hll", rsd:0.05, key:"UID"}
+ *      relativeUp:1
+ *      path:[
+ *          {const:"ymd"}
+ *          {field:"DATE_YMD"}
+ *      ]
+ *  }}
+ * </pre>
  *
  * @user-reference
  */

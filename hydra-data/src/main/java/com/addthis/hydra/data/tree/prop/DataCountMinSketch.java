@@ -55,12 +55,8 @@ public class DataCountMinSketch extends TreeNodeData<DataCountMinSketch.Config> 
      * <p/>
      * <p>Job Configuration Example:</p>
      * <pre>
-     * {type : "const", value : "service", data : {
-     *   idcount : {type : "count.min.sketch", key : "ID", width : 100000},
-     * }},
-     * {type : "const", value : "pixelator", data : {
-     *   idcount : {type : "count.min.sketch", key : "ID", count : "ID_COUNT", width : 100000},
-     * }},
+     * {const:"service", data.idcount.count-min-sketch {key:"ID", width:10000}}
+     * {const:"pixelator", data.idcount.count-min-sketch {key:"ID", count:"ID_COUNT", width: 100000}}
      * </pre>
      * <p/>
      * <p><b>Query Path Directives</b>

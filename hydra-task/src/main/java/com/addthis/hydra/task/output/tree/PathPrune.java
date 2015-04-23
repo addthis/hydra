@@ -45,9 +45,9 @@ import org.slf4j.LoggerFactory;
  * milliseconds are removed.</p>
  * <p/>
  * <p>Example:</p>
- * <pre>{type : "prune",
- *  ttl : 2592000000, // 30 days
- *  relativeDown : 1},</pre>
+ * <pre>
+ *  {prune {ttl:2592000000, relativeDown:1}}
+ * </pre>
  *
  * @user-reference
  */

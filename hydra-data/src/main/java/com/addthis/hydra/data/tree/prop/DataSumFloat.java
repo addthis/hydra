@@ -35,9 +35,8 @@ public class DataSumFloat extends TreeNodeData<DataSumFloat.Config> {
      * <p/>
      * <p>Job Configuration Example:</p>
      * <pre>
-     * { type : "value", key : "ID", data : {
-     *   shares : {type :"sumf", key : "IS_SHARE"},
-     * }},</pre>
+     * {field:"ID", data.shares.sumf.key"IS_SHARE"}
+     * </pre>
      *
      * <p><b>Query Path Directives</b>
      *

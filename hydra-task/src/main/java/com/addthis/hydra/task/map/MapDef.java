@@ -30,24 +30,22 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * a {@link com.addthis.hydra.data.filter.bundle.BundleFilterChain chain} bundle filter.</p>
  * <p/>
  * <p>Example:</p>
- * <pre>map:{
- *    filterIn: {op:"chain", filter:[
- *       {op:"field", from:"TIME", filter:{op:"chain", filter:[
- *          {op:"empty", not:true},
- *          {op:"require", match:["[0-9]{13}"]},
- *       ]}},
- *    ]},
- *    fields:[
- *       {from:"TIME", to:"TIME"},
- *       {from:"SOURCE", to:"SOURCE"},
- *       {from:"QUERY_PARAMS"},
- *    ],
- *    filterOut:{op:"chain", filter:[
- *       {op:"time", src:{field:"TIME", format:"native"},
- *             dst:{field:"DATE", format:"yyMMdd-HHmmss", timeZone:"America/New_York"}},
- *       {op:"field", from:"DATE", to:"DATE_YMD", filter:{op:"slice", to:6}},
- *    ]}
- * }</pre>
+ * <pre>
+ *  map.fields: [
+ *      "TIME"
+ *      "SOURCE"
+ *      "QUERY_PARAMS"
+ *      {from:"INITIAL_NAME", to:"NEW_NAME"}
+ *  ]
+ *  map.filterIn: [
+ *      {from:"TIME", filter:[{empty.not:true}, {require.match:"[0-9]{13}"}}
+ *  ]
+ *  map.filterOut: [
+ *      {time src:{field:"TIME", format:"native"},
+ *             dst:{field:"DATE", format:"yyMMdd-HHmmss", timeZone:"America/New_York"}}
+ *      {from:"DATE", to:"DATE_YMD", slice.to:6}
+ *  ]
+ *  </pre>
  *
  * @user-reference
  */

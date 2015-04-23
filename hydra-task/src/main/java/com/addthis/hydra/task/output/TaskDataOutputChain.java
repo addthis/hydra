@@ -38,22 +38,18 @@ import org.slf4j.LoggerFactory;
  * to appear in the remaining children sinks.
  * <p/>
  * <p>Example:</p>
- * <pre>output : {
- *   type : "chain",
- *   outputs : [
- *     {
- *       type : "file",
- *       path : [ "{{DATE_YMD}}", "/","{{PATH_TYPE}}", "/","{{SHARD}}"],
- *       ...
- *     },
- *     {
- *       type : "tree",
- *       stats : true,
- *       root : {path : "ROOT"},
- *       ...
- *     }
- *   ]
- * }</pre>
+ * <pre>
+ *  output: [
+ *      {file {
+ *          path:[ "{{DATE_YMD}}", "/","{{PATH_TYPE}}", "/","{{SHARD}}"]
+ *          ...
+ *      }}
+ *      {tree {
+ *          root:{const:"ROOT"}
+ *          ...
+ *      }}
+ *  ]
+ *  </pre>
  *
  * @user-reference
  */
