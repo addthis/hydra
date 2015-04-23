@@ -47,10 +47,11 @@ public final class ConsumerUtils {
     public static Map<String, TopicMetadata> getTopicsMetadataFromBroker(SimpleConsumer consumer, List<String> topics) {
         TopicMetadataRequest request = new TopicMetadataRequest(topics);
         TopicMetadataResponse response = consumer.send(request);
-        HashMap<String, TopicMetadata> topicsMetadata = new HashMap<>();
+        Map<String, TopicMetadata> topicsMetadata = new HashMap<>();
         for(TopicMetadata metadata : response.topicsMetadata()) {
             if(metadata.errorCode() != ErrorMapping.NoError()) {
-                String message = "failed to get metadata for topic: " + metadata.topic() + ", from broker: " + consumer.host() + ":" + consumer.port();
+                String message = "failed to get metadata for topic: " + metadata.topic() +
+                                 ", from broker: " + consumer.host() + ":" + consumer.port();
                 Throwable cause = ErrorMapping.exceptionFor(metadata.errorCode());
                 log.error(message, cause);
                 throw new RuntimeException(message, cause);
@@ -77,7 +78,7 @@ public final class ConsumerUtils {
         Map<String, TopicMetadata> metadata = null;
         RuntimeException exception = new RuntimeException();
         // try to get metadata while we havent yet succeeded and still have more brokers to try
-        while(metadata == null && brokers.hasNext()) {
+        while ((metadata == null) && brokers.hasNext()) {
             try {
                 Node broker = brokers.next();
                 metadata = getTopicsMetadataFromBroker(broker.host(), broker.port(), topics);
@@ -85,7 +86,7 @@ public final class ConsumerUtils {
                 exception.addSuppressed(e);
             }
         }
-        if(metadata != null) {
+        if (metadata != null) {
             return metadata;
         }
         throw exception;
@@ -127,7 +128,8 @@ public final class ConsumerUtils {
         kafka.javaapi.OffsetRequest request = new kafka.javaapi.OffsetRequest(requestInfo, kafka.api.OffsetRequest.CurrentVersion(), "get-offsets");
         OffsetResponse response = consumer.getOffsetsBefore(request);
         short errorCode = response.errorCode(topic, partition);
-        if(errorCode == ErrorMapping.UnknownTopicOrPartitionCode() || errorCode == ErrorMapping.NotLeaderForPartitionCode()) {
+        if((errorCode == ErrorMapping.UnknownTopicOrPartitionCode()) ||
+           (errorCode == ErrorMapping.NotLeaderForPartitionCode())) {
             throw new UnknownTopicOrPartitionException("offset query failed - assuming partition has moved and trying again");
         }
         else if (response.hasError()) {
@@ -137,11 +139,11 @@ public final class ConsumerUtils {
             throw new RuntimeException(exception);
         }
         long[] offsets = response.offsets(topic, partition);
-        if(offsets.length > 0) {
+        if (offsets.length > 0) {
             return offsets[0];
         }
         // if no offsets before time are available, return earliest
-        else if(whichTime != OffsetRequest.EarliestTime()) {
+        else if (whichTime != OffsetRequest.EarliestTime()) {
             return earliestOffsetAvailable(consumer, topic, partition);
         }
         // if request earliest offset returns nothing, then everything is completely borked

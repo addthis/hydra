@@ -19,6 +19,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Throwables;
+
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -31,10 +34,10 @@ import org.slf4j.LoggerFactory;
 
 public final class KafkaUtils {
 
-    public static final String brokersPath = "/brokers/ids";
+    public static final String BROKERS_PATH = "/brokers/ids";
 
     private static final Logger log = LoggerFactory.getLogger(KafkaUtils.class);
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private KafkaUtils() {
         // intellij made me do it (so people dont instantiate utils class)
@@ -54,20 +57,20 @@ public final class KafkaUtils {
 
     public static Node parseBrokerInfo(int id, byte[] brokerInfo) {
         try {
-            Map<String,Object> map = (Map)objectMapper.readValue(brokerInfo, Object.class);
-            return new Node(id, (String)map.get("host"), (Integer)map.get("port"));
+            Map<String,Object> map = OBJECT_MAPPER.readValue(
+                    brokerInfo, new TypeReference<Map<String, Object>>() { });
+            return new Node(id, (String) map.get("host"), (Integer) map.get("port"));
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     public static List<Integer> getKafkaBrokerIds(CuratorFramework zkClient) {
-        List<String> ids = null;
+        List<String> ids;
         try {
             ids = zkClient.getChildren().forPath("/brokers/ids");
         } catch (Exception e) {
-            // no reasonable way to handle, rethrow as runtime exception
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
         }
         List<Integer> intIds = new ArrayList<>();
         for (String id : ids) {
@@ -85,13 +88,13 @@ public final class KafkaUtils {
         Map<Integer, Node> brokers = new HashMap<>();
         List<Integer> ids = getKafkaBrokerIds(zkClient);
         Collections.shuffle(ids);
-        brokerCount = (brokerCount == -1 ? ids.size() : Math.min(brokerCount, ids.size()));
+        brokerCount = (brokerCount == -1) ? ids.size() : Math.min(brokerCount, ids.size());
         for (int id : ids.subList(0, brokerCount)) {
             try {
-                byte[] brokerInfo = zkClient.getData().forPath(brokersPath + '/' + id);
+                byte[] brokerInfo = zkClient.getData().forPath(BROKERS_PATH + '/' + id);
                 brokers.put(id, parseBrokerInfo(id, brokerInfo));
             } catch (Exception e) {
-                log.warn("failed to get/parse info for (ignored) broker: {}\n", id, e);
+                log.warn("failed to get/parse info for (ignored) broker: {}", id, e);
             }
         }
         return brokers;
