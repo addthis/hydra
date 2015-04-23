@@ -16,6 +16,7 @@ package com.addthis.hydra.data.util;
 import java.util.Iterator;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -44,6 +45,12 @@ public final class DateUtil {
             }
             DateTime time = new DateTime();
             int pos;
+            if ((pos = date.indexOf(":")) > 0) {
+                String timeZone = date.substring(pos + 1, date.length() - NOW_POSTFIX.length());
+                DateTimeZone zone = DateTimeZone.forID(timeZone);
+                time = time.withZone(zone);
+                date = date.substring(0, pos) + NOW_POSTFIX;
+            }
             if ((pos = date.indexOf("+")) > 0) {
                 int offset = Integer.parseInt(date.substring(pos + 1, date.length() - NOW_POSTFIX.length()));
                 time = hourly ? time.plusHours(offset) : time.plusDays(offset);

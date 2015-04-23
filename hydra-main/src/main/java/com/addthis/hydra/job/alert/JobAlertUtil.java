@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.addthis.basis.util.Parameter;
@@ -41,6 +42,7 @@ import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.service.file.FileReference;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
 import org.apache.commons.lang3.StringUtils;
@@ -69,6 +71,16 @@ public class JobAlertUtil {
                                                                                  .appendHourOfDay(2).toFormatter();
 
     private static final Pattern QUERY_TRIM_PATTERN = Pattern.compile("[\\[\\]]");
+
+    private static final Pattern DATE_MACRO_PATTERN = Pattern.compile(
+            // prefix literal
+            Pattern.quote("{{now") +
+            // optional increment or decrement adjustment
+            "(([+-]\\d+)(h)?)?" +
+            // optional timezone
+            "(:.+?)?" +
+            // suffix literal
+            Pattern.quote("}}"));
 
     /**
      * Convert a jobId and path into a mesh directory path.
@@ -256,26 +268,18 @@ public class JobAlertUtil {
      */
     @VisibleForTesting
     static String expandDateMacro(String path) {
-        String[] parts = StringUtils.splitByWholeSeparatorPreserveAllTokens(path, DateUtil.NOW_PREFIX);
-        StringBuilder sb = new StringBuilder(parts[0]);
-        for (int i = 1; i<parts.length; i++) {
-            String part = parts[i];
-            int end = part.indexOf(DateUtil.NOW_POSTFIX);
-            if (end > -1) {
-                String dateEnd = part.substring(0, end + 2);
-                String dateInput = DateUtil.NOW_PREFIX + dateEnd;
-                if (dateInput.endsWith("h" + DateUtil.NOW_POSTFIX)) {
-                    dateInput = dateInput.replace("h" + DateUtil.NOW_POSTFIX, DateUtil.NOW_POSTFIX);
-                    sb.append(DateUtil.getDateTime(ymdhFormatter, dateInput, true).toString(ymdhFormatter));
-                } else {
-                    sb.append(DateUtil.getDateTime(ymdFormatter, dateInput, false).toString(ymdFormatter));
-                }
-                sb.append(part.substring(end + 2));
+        StringBuffer sb = new StringBuffer();
+        Matcher matcher = DATE_MACRO_PATTERN.matcher(path);
+        while (matcher.find()) {
+            if (matcher.group(3) != null) {
+                String match = "{{now" + matcher.group(2) + Strings.nullToEmpty(matcher.group(4)) + "}}";
+                matcher.appendReplacement(sb, DateUtil.getDateTime(ymdhFormatter, match, true).toString(ymdhFormatter));
             } else {
-                sb.append(DateUtil.NOW_PREFIX);
-                sb.append(part);
+                String match = matcher.group();
+                matcher.appendReplacement(sb, DateUtil.getDateTime(ymdFormatter, match, false).toString(ymdFormatter));
             }
         }
+        matcher.appendTail(sb);
         return sb.toString();
     }
 }
