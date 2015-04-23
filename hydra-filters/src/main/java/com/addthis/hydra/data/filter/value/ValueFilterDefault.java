@@ -27,7 +27,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *      {op:"field", from:"PAGE_DOMAIN", filter:{op:"default",value:"malformed"}}
+ *      {from:"PAGE_DOMAIN", default:"malformed"}
  * </pre>
  *
  * @user-reference

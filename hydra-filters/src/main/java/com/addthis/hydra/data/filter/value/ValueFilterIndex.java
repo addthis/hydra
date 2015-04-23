@@ -32,8 +32,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *      {op:"field", from:"FOO_2_BAR", to:"FOO",
- *          filter: {op:"chain", filter:[{op:"split", split:"="}, {op:"index", index:0}]}}
+ *      {from:"FOO_2_BAR", to:"FOO", filter:[{split:"="}, {index:0}]}
  * </pre>
  *
  * @user-reference

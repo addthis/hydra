@@ -24,7 +24,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *     {op:"field", from:"DATE", to:"DATE_YMD", filter:{op:"slice", to:6}}
+ *     {from:"DATE", to:"DATE_YMD", slice.to:6}
  * </pre>
  *
  * @user-reference

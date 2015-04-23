@@ -42,9 +42,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p/>
  * <p>Examples:</p>
  * <pre>
- *   {op:"count", format:"0000000"} // emits the number of items observed thus far
- *   {op:"count", sample: 5} // emits the value of each 5th item
- *   {op:"count", sample: 5, format:"000000"} // emits the number of items for each 5th item
+ *   {count:"0000000"} // emits the number of items observed thus far
+ *   {count.sample: 5} // emits the value of each 5th item
+ *   {count {sample: 5, format:"000000"}} // emits the number of items for each 5th item
  * </pre>
  *
  * @user-reference

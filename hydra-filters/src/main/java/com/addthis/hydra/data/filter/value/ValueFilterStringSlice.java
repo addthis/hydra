@@ -33,7 +33,7 @@ import com.google.common.collect.Iterators;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *     {op:"field", from:"STR", to:”STR2”,  filter:{op:"string-slice", sep:"," , fromIndex:2}},
+ *     {from:"STR", to:”STR2”, string-slice {sep:"," , fromIndex:2}}
  * </pre>
  *
  * @user-reference

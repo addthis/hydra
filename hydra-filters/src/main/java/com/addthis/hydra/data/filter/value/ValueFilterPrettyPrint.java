@@ -27,7 +27,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
  * they are printed as one object.</p>
  * <p>Example:</p>
  * <pre>
- *     {op:"field", from:"FOO", to:”BAR”,  filter:{op:"pretty-print"}},
+ *     {from:"FOO", to:”BAR”, pretty-print {}}
  * </pre>
  *
  * @user-reference

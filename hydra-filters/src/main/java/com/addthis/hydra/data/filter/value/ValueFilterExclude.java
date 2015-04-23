@@ -33,7 +33,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *      {op:"field", from:"USER", filter:{op:"exclude", value:["0"]}},
+ *      {from:"USER", exclude:"0"}},
+ *      {from:"USER", exclude.contains:["0","1"]}
  * </pre>
  *
  * @user-reference

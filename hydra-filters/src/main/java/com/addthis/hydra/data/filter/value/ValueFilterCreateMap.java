@@ -32,7 +32,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {op: "field", from: "URL_PARAMS", filter: {op: "create-map", elementSeparator:"&", keySeparator:"="}},
+ *   {from: "URL_PARAMS", create-map {elementSeparator:"&", keySeparator:"="}}
  * </pre>
  *
  * @user-reference

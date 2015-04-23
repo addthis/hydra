@@ -49,13 +49,13 @@ import static com.google.common.base.Preconditions.checkArgument;
  * <p>Example:</p>
  * <pre>
  *    // return yesterday's date as a string
- *    {op: "time-range", offsetDays:-1, now:true, format:"YYMMdd"}
+ *    {time-range {offsetDays:-1, now:true, format:"YYMMdd"}}
  *
  *    // return an array of yesterday's, today's, and tomorrow's dates
- *    {op: "time-range", offsetDays:-1, rangeDays:3, now:true, format:"YYMMdd"}
+ *    {time-range {offsetDays:-1, rangeDays:3, now:true, format:"YYMMdd"}}
  *
  *    // return an array containing the input date and the next two days
- *    {op: "time-range", rangeDays:3, format:"YYMMdd"}
+ *    {time-range {rangeDays:3, format:"YYMMdd"}}
  * </pre>
  *
  * @user-reference

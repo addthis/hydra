@@ -22,7 +22,7 @@ import com.addthis.bundle.value.ValueObject;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *      {op:"field", from:"TEXT", filter:{op:"reverse"}},
+ *      {from:"TEXT", reverse {}},
  * </pre>
  *
  * @user-reference

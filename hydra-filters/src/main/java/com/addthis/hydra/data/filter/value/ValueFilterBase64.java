@@ -30,7 +30,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * will first encode the value and then decode the encoding, which is not recommended.
  * <p>Example:</p>
  * <pre>
- *   {from:"FOO", to:"BAR", filter:{op:"base64",decode:true}},
+ *   {from:"FOO", to:"BAR", base64.decode:true}
  * </pre>
  *
  * @user-reference

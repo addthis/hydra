@@ -27,7 +27,7 @@ import com.addthis.bundle.value.ValueObject;
  * <p>
  * <p>Example:</p>
  * <pre>
- *       {op: "field", from: "JSON", to: "VALUE", filter: {op:"json"}},
+ *       {from: "JSON", to: "VALUE", json {}}
  * </pre>
  *
  * @user-reference

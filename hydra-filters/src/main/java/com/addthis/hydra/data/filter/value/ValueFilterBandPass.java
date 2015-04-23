@@ -31,7 +31,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * to specify values that are never to be filtered.</p>
  * <p>Example:</p>
  * <pre>
- *   {op:"field", from:"IP", filter:{op:"band-pass", maxKeys:100000, minHits:10, maxHits:100}},
+ *   {from:"IP", band-pass {maxKeys:100000, minHits:10, maxHits:100}}
  * </pre>
  *
  * @user-reference

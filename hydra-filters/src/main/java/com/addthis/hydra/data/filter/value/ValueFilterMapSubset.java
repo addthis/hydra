@@ -38,19 +38,17 @@ import org.slf4j.LoggerFactory;
  * <pre>
  *     // assume PARAM="k1=v1,k2=v2,k3=v3"
  *
- *     {op:"field", from:"PARAM", filter:{op:"split", split:"=", keySplit:","}},
+ *     {from:"PARAM", split {split:"=", keySplit:","}}
  *
  *     // this will give you the subset of the map
  *     // returns MAP[k1 -> v1, k2 -> v2 ]
  *
- *     {op:"field", from:"PARAM", to:"MAP", filter:{op:"map-subset",
- *         whitelist:["k1,"k2"]}},
+ *     {from:"PARAM", to:"MAP", map-subset.whitelist:["k1,"k2"]}
  *
  *     // this will give you the subset of the map as a string
  *     // returns "k1=v1,k2=v2"
  *
- *     {op:"field", from:"PARAM", to:"MAP", filter:{op:"map-subset",
- *         whitelist:["k1","k2"], toString:true, keySep:"=", valueSep:","}},
+ *     {from:"PARAM", to:"MAP", map-subset {whitelist:["k1","k2"], toString:true, keySep:"=", valueSep:","}}
  * </pre>
  *
  * @user-reference

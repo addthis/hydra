@@ -27,7 +27,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *     {op:"field", from:"PAGE_URL", filter:{op:"replace",find:"ord=[0-9]*.[0-9]*",replace:"",regex:true}},
+ *     {from:"PAGE_URL", replace {find:"ord=[0-9]*.[0-9]*", replace:"", regex:true}}
  * </pre>
  *
  * @user-reference

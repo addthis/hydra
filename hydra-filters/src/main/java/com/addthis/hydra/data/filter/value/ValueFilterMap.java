@@ -46,7 +46,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p>Example:</p>
  * <pre>
  *   // english to french map
- *   {op:"map", map: {"hello" : "bonjour", "I" : "Je", "computer" : "ordinateur"}}
+ *   {map: {"hello":"bonjour", "I":"Je", "computer" "ordinateur"}}
  * </pre>
  *
  * @user-reference

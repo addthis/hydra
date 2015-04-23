@@ -25,7 +25,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * and then convert to uppercase format, which is not recommended.
  * <p>Example:</p>
  * <pre>
- *   {op:"field", from:"PAGE_DOMAIN", filter:{op:"case",lower:true}},
+ *   {from:"PAGE_DOMAIN", case.lower:true}
  * </pre>
  *
  * @user-reference

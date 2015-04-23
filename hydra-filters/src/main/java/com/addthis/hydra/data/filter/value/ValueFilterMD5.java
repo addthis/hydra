@@ -22,7 +22,7 @@ import com.addthis.hydra.common.hash.MD5HashFunction;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {op: "field", from: "URL", to: "HASH", filter: {op: "md5"}},
+ *   {from:"URL", to:"HASH", md5 {}},
  * </pre>
  *
  * @user-reference

@@ -44,7 +44,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * an {@link ValueFilterEmpty empty} filter.
  * <p>Example:</p>
  * <pre>
- *     {op:"field", from:"ID", filter:{op:"require", match:["[0-9A-Fa-f]+"]}},
+ *     {from:"ID", require.match:["[0-9A-Fa-f]+"]}
  * </pre>
  *
  * @user-reference

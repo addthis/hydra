@@ -22,7 +22,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {op:"cat", pre:"Greetings " post:" Happy Birthday!"}
+ *   {cat {pre:"Greetings " post:" Happy Birthday!"}}
  * </pre>
  *
  * @user-reference

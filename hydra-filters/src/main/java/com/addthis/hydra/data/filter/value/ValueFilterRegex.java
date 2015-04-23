@@ -51,7 +51,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * </p>
  * <p>Example:</p>
  * <pre>
- *   {from:"SOURCE", to:"SOURCE", filter:{op:"regex", pattern:"Log_([0-9]+)\\."}},
+ *   {from:"SOURCE", to:"SOURCE", regex:"Log_([0-9]+)\\."}
  * </pre>
  *
  * @user-reference

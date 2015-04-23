@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * <p>Example:</p>
  * <pre>
  *     // The use of the keySplit field specifies that a map is returned
- *     {op:"field", from:"PATH_PARAMS", filter:{op:"split", split:"&", keySplit:"="}},
+ *     {from:"PATH_PARAMS", split {split:"&", keySplit:"="}}
  * </pre>
  *
  * @user-reference

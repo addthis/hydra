@@ -27,8 +27,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *     {op:"field", from:"SHARD", filter:{op:"chain", filter:[{op:"hash"},
- *               {op:"mod", mod:%[shards:32]%}, {op:"pad", left:"000"}]}},
+ *      {from:"SHARD", filter:[{hash {}}, {mod:%[shards:32]%}, {pad.left:"000"}]}
  * </pre>
  *
  * @user-reference

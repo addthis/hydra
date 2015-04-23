@@ -28,7 +28,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *      {op:"field", from:"TL_C", filter:{op:"inequality", iop:"lteq", rh:10000}}
+ *      {from:"TL_C", inequality {iop:"lteq", rh:10000}}
  * </pre>
  *
  * @user-reference

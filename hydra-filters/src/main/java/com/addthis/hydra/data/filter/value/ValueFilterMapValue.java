@@ -23,7 +23,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p>A value of null is returned if the key is not present in the map.
  * <p>Example:</p>
  * <pre>
- *     {op: "field", from: "URL_PARAMS", to: "foo", filter: {op: "map-value", key: "foo"}},
+ *     {from:"URL_PARAMS", to:"foo", map-value.key:"foo"}
  * </pre>
  *
  * @user-reference

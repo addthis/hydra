@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *     {op:"field", from:"DATE_EAST_SIDE", to:"DATE_WEST_SIDE", filter:{op:"time-format", timeZoneIn:"EST", timeZoneOut:"PST"}}
+ *     {from:"DATE_EAST_SIDE", to:"DATE_WEST_SIDE", time-format {timeZoneIn:"EST", timeZoneOut:"PST"}}
  * </pre>
  *
  * @user-reference

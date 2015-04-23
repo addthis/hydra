@@ -22,7 +22,7 @@ import com.addthis.bundle.value.ValueObject;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *     {op:"field", from:"STR", to:”STR2”,  filter:{op:"pass"}},
+ *     {from:"STR", to:”STR2”, pass {}}
  * </pre>
  *
  * @user-reference

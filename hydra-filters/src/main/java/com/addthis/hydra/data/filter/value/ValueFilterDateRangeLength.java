@@ -40,7 +40,7 @@ import org.joda.time.format.DateTimeFormatter;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {op:"field", from:"NUM_DAYS", filter:{op:"data-range-length",dateFormat:"ddMMyy"}},
+ *   {from:"NUM_DAYS", data-range-length.dateFormat:"ddMMyy"}
  * </pre>
  *
  * @user-reference

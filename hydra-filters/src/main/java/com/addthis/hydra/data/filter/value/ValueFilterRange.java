@@ -20,7 +20,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *    {op: "field", from: "FOO", to: "BAR", filter: {op: "range", start: 2}},
+ *    {from: "FOO", to: "BAR", range.start: 2}
  * </pre>
  *
  * @user-reference

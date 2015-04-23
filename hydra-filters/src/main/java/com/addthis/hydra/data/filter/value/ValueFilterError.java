@@ -36,7 +36,7 @@ import static com.fasterxml.jackson.annotation.JsonTypeInfo.Id.MINIMAL_CLASS;
  * </p>
  * <p>Example:</p>
  * <pre>
- *   {op:"error", message:"Too many foos not enough bars"}
+ *   {error:"Too many foos not enough bars"}
  * </pre>
  *
  * @user-reference

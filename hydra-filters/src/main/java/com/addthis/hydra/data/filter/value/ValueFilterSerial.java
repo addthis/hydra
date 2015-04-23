@@ -29,7 +29,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *     {op:"serial", seed:13, base:10}
+ *     {serial {seed:13, base:10}}
  * </pre>
  *
  * @user-reference

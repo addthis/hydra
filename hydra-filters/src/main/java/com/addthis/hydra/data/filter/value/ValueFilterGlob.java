@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {from:"SOURCE", to:"SOURCE", filter:{op:"glob", pattern:"Log_[0-9]*.gz"}},
+ *   {from:"SOURCE", to:"SOURCE", glob:"Log_[0-9]*.gz"}
  * </pre>
  *
  * @user-reference

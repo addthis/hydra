@@ -47,7 +47,7 @@ import org.arabidopsis.ahocorasick.SearchResult;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {from:"EVT", to:"VALID", filter:{op:"contains", key:["90_typ","90_rsc","90_rsi"]}},
+ *   {from:"EVT", to:"VALID", contains.key:["90_typ","90_rsc","90_rsi"]}
  * </pre>
  *
  * @user-reference

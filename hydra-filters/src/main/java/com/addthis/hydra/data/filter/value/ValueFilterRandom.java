@@ -32,7 +32,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *     {op:"random", asLong:true, max:100}
+ *     {random {asLong:true, max:100}}
  * </pre>
  *
  * @user-reference

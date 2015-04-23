@@ -29,7 +29,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *   {from:"VAL", to:"BIT_ARR", filter:{op:"bit-split"}}
+ *   {from:"VAL", to:"BIT_ARR", bit-split {}}
  * </pre>
  *
  * @user-reference

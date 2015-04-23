@@ -30,7 +30,7 @@ import com.addthis.codec.annotations.FieldConfig;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *      {op:"field", from:"TEXT", filter:{op:"empty", not:true}},
+ *      {from:"TEXT", empty.not:true}
  * </pre>
  *
  * @user-reference

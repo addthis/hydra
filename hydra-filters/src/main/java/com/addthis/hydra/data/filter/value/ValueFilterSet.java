@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *      {op:"field", from:"TYPE", filter:{op:"set", value:"foo"}},
+ *      {from:"TYPE", set:"foo"}}
  * </pre>
  *
  * @user-reference

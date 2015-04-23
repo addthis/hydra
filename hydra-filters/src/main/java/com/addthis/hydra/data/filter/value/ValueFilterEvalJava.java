@@ -67,30 +67,40 @@ import org.slf4j.LoggerFactory;
  * <pre>
  *   // switch statements cannot operate on long types.
  *   // so convert the input to an integer type.
- *   { op : "eval-java", inputName: "longInput", inputType: "LONG",
- *     outputType: "STRING",
- *     body : [
- *       "int intInput = (int) longInput;" ,
- *       "switch(intInput)",
- *       "{",
- *       "case 1: return \"foo\";",
- *       "case 2: return \"bar\";",
- *       "default: return \"baz\";",
- *       "}"
- *     ]
- *   }
+ *   {eval-java {
+ *       inputName: "longInput"
+ *       inputTYpe: "LONG"
+ *       outputType: "STRING"
+ *       body: """
+ *          int intInput = (int) longInput;
+ *          switch (intInput) {
+ *              case 1: return "foo";
+ *              case 2: return "bar";
+ *              default: return "baz";
+ *          }
+ *       """
+ *   }}
  *
- *  { op : "eval-java", inputName: "input", inputType: "STRING",
- *    outputType: "STRING", body : ["return String.format(\"Hello %s\", input);"]
- *  }
+ *   {eval-java {
+ *       inputName: "input"
+ *       inputTYpe: "STRING"
+ *       outputType: "STRING"
+ *       body: """return String.format("Hello %s", input);"""
+ *   }}
  *
- *  { op : "eval-java", inputName: "input", inputType: "LIST_STRING",
- *    outputType: "STRING", once : true, body : [
- *      "if (input.size() < 3),
- *      "return null;"
- *      "else return input.get(2);"
- *    ]
- *  }</pre>
+ *   {eval-java {
+ *       inputName: "input"
+ *       inputTYpe: "LIST_STRING"
+ *       outputType: "STRING"
+ *       once: true
+ *       body: """
+ *          if (input.size() < 3) {
+ *              return null;
+ *          } else {
+ *              return input.get(2);
+ *          }
+ *       """
+ *   }}</pre>
  *
  * @user-reference
  */

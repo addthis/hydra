@@ -42,7 +42,7 @@ import org.apache.commons.codec.binary.Hex;
  * <p/>
  * <p>Example:</p>
  * <pre>
- *      {op:"field", from:"UID", filter:{op:"hash", type:2}}
+ *      {from:"UID", hash.type:2}
  * </pre>
  *
  * @user-reference

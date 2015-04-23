@@ -17,11 +17,12 @@ import com.addthis.basis.util.LessStrings;
 
 
 /**
- * This {@link AbstractValueFilter ValueFilter} <span class="hydra-summary">eliminates whitespace from the beginning and end of the input string</span>.
+ * This {@link AbstractValueFilter ValueFilter}
+ * <span class="hydra-summary">eliminates whitespace from the beginning and end of the input string</span>.
  * <p/>
  * <p>Example:</p>
  * <pre>
- *     {type:"value", key:"TEXT", filter:[{op:"replace",find:",",replace:" "}, {op:"trim"}]},
+ *     {from:"TEXT", {trim {}}}
  * </pre>
  *
  * @user-reference
