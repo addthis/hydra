@@ -33,10 +33,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * This {@link AbstractJobAlert JobAlert} <span class="hydra-summary">alerts on number of files generated</span>.
+ *
  * If a value for a single host is above or below the threshold from the
  * mean value then raise an alert. The treshold is calculated as the
  * maximum of {@code tolerance} and ({@code sigma} multiplied by the
  * standard deviation).
+ *
+ * @user-reference
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class FileCountJobAlert extends AbstractJobAlert {
@@ -48,16 +52,21 @@ public class FileCountJobAlert extends AbstractJobAlert {
      * to trigger. Default is 1.0.
      */
     @JsonProperty public final double sigma;
+
     /**
      * Absolute delta in number of files that are tolerated
      * before an alert triggers. Default is 0.0.
      */
     @JsonProperty public final int tolerance;
+
+    /**
+     * Path to the files that should be monitored.
+     * Use glob expansion (wildcards) to match against multiple files.
+     */
     @JsonProperty public final String canaryPath;
 
     public FileCountJobAlert(@Nullable @JsonProperty("alertId") String alertId,
                              @JsonProperty("description") String description,
-                             @Time(TimeUnit.MINUTES) @JsonProperty("timeout") long timeout,
                              @Time(TimeUnit.MINUTES) @JsonProperty("delay") long delay,
                              @JsonProperty("email") String email,
                              @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
@@ -68,7 +77,7 @@ public class FileCountJobAlert extends AbstractJobAlert {
                              @JsonProperty("sigma") double sigma,
                              @JsonProperty("tolerance") int tolerance,
                              @JsonProperty("canaryPath") String canaryPath) {
-        super(alertId, description, timeout, delay, email, jobIds, suppressChanges,
+        super(alertId, description, delay, email, jobIds, suppressChanges,
               lastAlertTime, activeJobs, activeTriggerTimes);
         this.sigma = sigma;
         this.tolerance = tolerance;

@@ -52,7 +52,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Bean to hold a job specific alert
+ * A job alert monitors for specific conditions in the state
+ * of one or more hydra jobs. When the condition is met the
+ * job alert sends an email to the specified recipients.
+ * Example conditions are: a job has errored, a job has kicked,
+ * the output of a job consists at least X files or bytes,
+ * the output of a job follows a specified format, etc.
+ *
+ * @user-reference
+ * @hydra-category Job Alerts
+ * @hydra-doc-position 10
  */
 @Pluggable("job alerts")
 @JsonIgnoreProperties({"alertStatus", "canaryOutputMessage"})
@@ -74,11 +83,29 @@ public abstract class AbstractJobAlert implements Codable {
     private static final int MAX_CONSECUTIVE_CANARY_EXCEPTION = 3;
 
     @Nonnull @JsonProperty public final String alertId;
+
+    /**
+     * Human-readable description of the alert.
+     */
     @JsonProperty public final String description;
-    @JsonProperty public final long timeout;
+
+    /**
+     * Optionally specify the number of minutes for the alert
+     * to be continuously firing before sending an email. Can
+     * be used to suppress intermittent alerts.
+     */
     @JsonProperty public final long delay;
+
+    /**
+     * List of email recipients.
+     */
     @JsonProperty public final String email;
+
+    /**
+     * List of job identifiers.
+     */
     @JsonProperty public final ImmutableList<String> jobIds;
+
     /**
      * If true then rebroadcast the previous error message when
      * an error is detected at the current iteration. Default is false.
@@ -110,7 +137,6 @@ public abstract class AbstractJobAlert implements Codable {
 
     public AbstractJobAlert(@Nullable String alertId,
                             String description,
-                            @Time(TimeUnit.MINUTES) long timeout,
                             @Time(TimeUnit.MINUTES) long delay,
                             String email,
                             List<String> jobIds,
@@ -126,7 +152,6 @@ public abstract class AbstractJobAlert implements Codable {
             this.alertId = alertId;
         }
         this.description = description;
-        this.timeout = timeout;
         this.delay = delay;
         this.email = email;
         this.jobIds = ImmutableList.copyOf(jobIds);

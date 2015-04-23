@@ -29,12 +29,16 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * This {@link AbstractJobAlert JobAlert} <span class="hydra-summary">alerts when the job is idle</span>.
+ *
+ * @user-reference
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class OnCompleteJobAlert extends AbstractJobAlert {
 
     public OnCompleteJobAlert(@Nullable @JsonProperty("alertId") String alertId,
                               @JsonProperty("description") String description,
-                              @Time(TimeUnit.MINUTES) @JsonProperty("timeout") long timeout,
                               @Time(TimeUnit.MINUTES) @JsonProperty("delay") long delay,
                               @JsonProperty("email") String email,
                               @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
@@ -42,7 +46,7 @@ public class OnCompleteJobAlert extends AbstractJobAlert {
                               @JsonProperty("lastAlertTime") long lastAlertTime,
                               @JsonProperty("activeJobs") Map<String, String> activeJobs,
                               @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes) {
-        super(alertId, description, timeout, delay, email, jobIds, suppressChanges,
+        super(alertId, description, delay, email, jobIds, suppressChanges,
               lastAlertTime, activeJobs, activeTriggerTimes);
     }
 

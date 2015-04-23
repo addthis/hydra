@@ -31,15 +31,28 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * This {@link AbstractJobAlert JobAlert} <span class="hydra-summary">alerts on simple threshold for tree jobs</span>.
+ *
+ * @user-reference
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MapCanaryJobAlert extends AbstractJobAlert {
 
+    /**
+     * Query path. For example, 'root/ymd/{{now-1}}:+count'.
+     * The query should have exactly one '+' (generally, +count)
+     * and return a single numeric quantity per task.
+     */
     @JsonProperty public final String canaryPath;
+
+    /**
+     * Alert if computed value is below the threshold.
+     */
     @JsonProperty public final int canaryConfigThreshold;
 
     public MapCanaryJobAlert(@Nullable @JsonProperty("alertId") String alertId,
                              @JsonProperty("description") String description,
-                             @Time(TimeUnit.MINUTES) @JsonProperty("timeout") long timeout,
                              @Time(TimeUnit.MINUTES) @JsonProperty("delay") long delay,
                              @JsonProperty("email") String email,
                              @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
@@ -49,7 +62,7 @@ public class MapCanaryJobAlert extends AbstractJobAlert {
                              @JsonProperty("lastAlertTime") long lastAlertTime,
                              @JsonProperty("activeJobs") Map<String, String> activeJobs,
                              @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes) {
-        super(alertId, description, timeout, delay, email, jobIds, suppressChanges,
+        super(alertId, description, delay, email, jobIds, suppressChanges,
               lastAlertTime, activeJobs, activeTriggerTimes);
         this.canaryPath = canaryPath;
         this.canaryConfigThreshold = canaryConfigThreshold;

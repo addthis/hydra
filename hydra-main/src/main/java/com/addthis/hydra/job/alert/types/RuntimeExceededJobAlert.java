@@ -30,8 +30,19 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * This {@link AbstractJobAlert JobAlert} <span class="hydra-summary">alerts when the job runtime is exceeded</span>.
+ *
+ * @user-reference
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RuntimeExceededJobAlert extends AbstractJobAlert {
+
+    /**
+     * Maximum number of minutes job can execute.
+     */
+    @JsonProperty public final long timeout;
+
 
     public RuntimeExceededJobAlert(@Nullable @JsonProperty("alertId") String alertId,
                                    @JsonProperty("description") String description,
@@ -43,8 +54,9 @@ public class RuntimeExceededJobAlert extends AbstractJobAlert {
                                    @JsonProperty("lastAlertTime") long lastAlertTime,
                                    @JsonProperty("activeJobs") Map<String, String> activeJobs,
                                    @JsonProperty("activeTriggerTimes") Map<String, Long> activeTriggerTimes) {
-        super(alertId, description, timeout, delay, email, jobIds, suppressChanges,
+        super(alertId, description, delay, email, jobIds, suppressChanges,
               lastAlertTime, activeJobs, activeTriggerTimes);
+        this.timeout = timeout;
     }
 
     @JsonIgnore
