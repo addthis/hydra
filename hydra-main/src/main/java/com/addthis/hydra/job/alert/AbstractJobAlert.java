@@ -62,6 +62,7 @@ import org.slf4j.LoggerFactory;
  * @user-reference
  * @hydra-category Job Alerts
  * @hydra-doc-position 10
+ * @exclude-fields activeJobs, activeTriggerTimes, lastAlertTime
  */
 @Pluggable("job alerts")
 @JsonIgnoreProperties({"alertStatus", "canaryOutputMessage"})
