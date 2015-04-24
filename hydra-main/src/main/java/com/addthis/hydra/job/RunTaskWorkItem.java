@@ -18,8 +18,8 @@ import java.io.File;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import com.addthis.hydra.job.minion.JobTask;
-import com.addthis.hydra.job.minion.MinionWorkItem;
+import com.addthis.hydra.minion.JobTask;
+import com.addthis.hydra.minion.MinionWorkItem;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Meter;

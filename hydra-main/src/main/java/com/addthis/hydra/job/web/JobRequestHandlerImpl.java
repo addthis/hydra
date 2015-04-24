@@ -27,7 +27,7 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobQueryConfig;
-import com.addthis.hydra.job.minion.Minion;
+import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.job.spawn.Spawn;
 
 import com.google.common.base.Splitter;

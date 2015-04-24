@@ -16,12 +16,11 @@ package com.addthis.hydra.job.spawn;
 import java.io.IOException;
 import java.io.Serializable;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.job.minion.Minion;
+import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.job.mq.CoreMessage;
 import com.addthis.hydra.job.mq.HostMessage;
 import com.addthis.hydra.job.mq.HostState;

@@ -34,7 +34,7 @@ import com.addthis.hydra.job.JobTaskMoveAssignment;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.JobTaskState;
 import com.addthis.hydra.job.entity.JobCommand;
-import com.addthis.hydra.job.minion.Minion;
+import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.job.mq.HostCapacity;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.mq.JobKey;
