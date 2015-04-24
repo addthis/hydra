@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.job;
 
-import com.addthis.hydra.job.minion.Minion;
+import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.job.spawn.Spawn;
 
 /**

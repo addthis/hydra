@@ -48,7 +48,7 @@ import com.addthis.hydra.job.alias.AliasManager;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.entity.JobEntityManager;
 import com.addthis.hydra.job.entity.JobMacro;
-import com.addthis.hydra.job.minion.Minion;
+import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.ClientEvent;
 import com.addthis.hydra.job.spawn.ClientEventListener;

@@ -87,7 +87,7 @@ import com.addthis.hydra.job.entity.JobCommandManager;
 import com.addthis.hydra.job.entity.JobEntityManager;
 import com.addthis.hydra.job.entity.JobMacro;
 import com.addthis.hydra.job.entity.JobMacroManager;
-import com.addthis.hydra.job.minion.Minion;
+import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.job.mq.CommandTaskDelete;
 import com.addthis.hydra.job.mq.CommandTaskKick;
 import com.addthis.hydra.job.mq.CommandTaskReplicate;

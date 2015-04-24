@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.job.minion;
+package com.addthis.hydra.minion;
 
 import com.addthis.hydra.job.mq.CommandTaskNew;
 import com.addthis.hydra.job.mq.CoreMessage;

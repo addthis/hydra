@@ -21,7 +21,7 @@ import java.util.List;
 
 import com.addthis.basis.util.Parameter;
 
-import com.addthis.hydra.job.minion.Minion;
+import com.addthis.hydra.minion.Minion;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
