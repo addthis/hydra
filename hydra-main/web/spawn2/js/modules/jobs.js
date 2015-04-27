@@ -98,6 +98,7 @@ function(
             data.submitTime = data.submitTime || "";
             data.endTime = data.endTime || "";
             data.creator = data.creator || "";
+            data.owner = data.owner || "";
             data.state = (_.has(data,'state')?data.state:4);
             if(data.disabled){
                 data.status = "disabled";
@@ -132,7 +133,7 @@ function(
         defaults:{
             description:"(no title)",
             state:4,
-            creator:"",
+            owner:"",
             submitTime:-1,
             endTime:-1,
             status:"",
@@ -931,9 +932,9 @@ function(
                     }
                 },
                 {
-                    "sTitle":"Creator",
-                    "sClass":"job-creator center",
-                    "mData": "creator",
+                    "sTitle":"Owner",
+                    "sClass":"job-owner center",
+                    "mData": "owner",
                     "sWidth":"7%",
                     "bSearchable":true
                 },
@@ -1130,9 +1131,9 @@ function(
                     }
                 },//0
                 {
-                    "sTitle":"Creator",
-                    "sClass":"job-creator center",
-                    "mData": "creator",
+                    "sTitle":"Owner",
+                    "sClass":"job-owner center",
+                    "mData": "owner",
                     "bSearchable":true,
                     "sWidth":"7%"
                 },//1

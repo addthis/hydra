@@ -48,7 +48,7 @@ function(
         defaults:{
             "description": "(no title)",
             "state": "",
-            "creator": "",
+            "owner": "",
             "submitTime": "",
             "startTime": "",
             "endTime": "",
@@ -119,9 +119,9 @@ function(
                     }
                 },
                 {
-                    "sTitle":"Creator",
-                    "sClass":"job-creator center",
-                    "mData": "creator",
+                    "sTitle":"Owner",
+                    "sClass":"job-owner center",
+                    "mData": "owner",
                     "sWidth":"7%",
                     "bSearchable":true
                 },
