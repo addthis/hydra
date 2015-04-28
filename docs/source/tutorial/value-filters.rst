@@ -18,7 +18,7 @@ Value Filters
 ##############
 
 
-In the previous module we explored Bundle Filters.  A companion to the Bundle Filter is the Value Filter.  A Value Filter, as its name implies, operates on a given value.  It does not have access to the fields of the bundle, it just receives an input value and returns a output value.  There are a large number of :user-reference:`Value Filters <com/addthis/data/filter/value/AbstractValueFilter.html>` available in Hydra.
+In the previous module we explored Bundle Filters.  A companion to the Bundle Filter is the Value Filter.  A Value Filter, as its name implies, operates on a given value.  It does not have access to the fields of the bundle, it just receives an input value and returns a output value.  There are a large number of :user-reference:`Value Filters <com/addthis/hydra/data/filter/value/AbstractValueFilter.html>` available in Hydra.
 
 Use Cases
 =========
