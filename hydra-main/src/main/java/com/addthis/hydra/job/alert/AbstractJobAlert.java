@@ -157,8 +157,7 @@ public abstract class AbstractJobAlert implements Codable {
         this.delay = delay;
         this.email = email;
         this.jobIds = ImmutableList.copyOf(jobIds);
-        // FIXME: assigning a default enum value in reference.conf does not work
-        this.suppressChanges = (suppressChanges != null) ? suppressChanges : SuppressChanges.FALSE;
+        this.suppressChanges = suppressChanges;
         this.activeJobs = immutableOrEmpty(activeJobs);
         this.activeTriggerTimes = immutableOrEmpty(activeTriggerTimes);
         this.lastAlertTime = lastAlertTime;

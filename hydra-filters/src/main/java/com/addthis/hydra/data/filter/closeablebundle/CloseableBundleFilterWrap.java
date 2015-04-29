@@ -34,9 +34,11 @@ public class CloseableBundleFilterWrap implements CloseableBundleFilter {
         }
     }
 
+    @Override
     public void close() {}
 
-    @Override public boolean filter(Bundle row) {
+    @Override
+    public boolean filter(Bundle row) {
         return filter.filter(row);
     }
 }
