@@ -23,6 +23,7 @@ import com.addthis.basis.util.LessFiles;
 import com.addthis.codec.config.Configs;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobConfigManager;
+import com.addthis.hydra.job.alert.SuppressChanges;
 import com.addthis.hydra.job.alert.types.OnErrorJobAlert;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.mq.HostState;
@@ -100,7 +101,8 @@ public class SpawnStateTest extends ZkCodecStartUtil {
             spawn.hostManager.updateHostState(host);
             Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a");
             OnErrorJobAlert input = new OnErrorJobAlert(null, "foobar", 0, "foobar@localhost",
-                                                        ImmutableList.of(job.getId()), false, 0, null, null);
+                                                        ImmutableList.of(job.getId()),
+                                                        SuppressChanges.FALSE, 0, null, null);
             spawn.getJobAlertManager().putAlert(input.alertId, input);
             String json = spawn.getJobAlertManager().getAlert(input.alertId);
             OnErrorJobAlert output = Configs.decodeObject(OnErrorJobAlert.class, json);
@@ -121,7 +123,8 @@ public class SpawnStateTest extends ZkCodecStartUtil {
             spawn.hostManager.updateHostState(host);
             Job job = spawn.createJob("fsm", 1, Arrays.asList("h"), null, "a");
             OnErrorJobAlert input = new OnErrorJobAlert(null, "foobar", 0, "foobar@localhost",
-                                                        ImmutableList.of(job.getId(), "foobar"), false, 0, null, null);
+                                                        ImmutableList.of(job.getId(), "foobar"),
+                                                        SuppressChanges.FALSE, 0, null, null);
             spawn.getJobAlertManager().putAlert(input.alertId, input);
             String json = spawn.getJobAlertManager().getAlert(input.alertId);
             OnErrorJobAlert output = Configs.decodeObject(OnErrorJobAlert.class, json);

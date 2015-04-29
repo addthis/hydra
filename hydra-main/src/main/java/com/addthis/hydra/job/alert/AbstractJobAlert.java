@@ -67,6 +67,7 @@ import org.slf4j.LoggerFactory;
 @Pluggable("job alerts")
 @JsonIgnoreProperties({"alertStatus", "canaryOutputMessage"})
 public abstract class AbstractJobAlert implements Codable {
+
     private static final Logger log = LoggerFactory.getLogger(AbstractJobAlert.class);
 
     /**
@@ -113,7 +114,7 @@ public abstract class AbstractJobAlert implements Codable {
      * This is a trade-off where the most recent message for an alert
      * is not emailed with the advantage of no continuous spam of emails.
      */
-    @JsonProperty public final boolean suppressChanges;
+    @JsonProperty @Nonnull public final SuppressChanges suppressChanges;
 
     /* Map storing {job id : error description} for all alerted jobs the last time this alert was checked */
     @JsonProperty protected volatile ImmutableMap<String, String> activeJobs;
@@ -141,7 +142,7 @@ public abstract class AbstractJobAlert implements Codable {
                             @Time(TimeUnit.MINUTES) long delay,
                             String email,
                             List<String> jobIds,
-                            boolean suppressChanges,
+                            SuppressChanges suppressChanges,
                             long lastAlertTime,
                             Map<String, String> activeJobs,
                             Map<String, Long> activeTriggerTimes) {
