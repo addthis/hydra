@@ -109,17 +109,6 @@
       <artifactId>jersey-json</artifactId>
       <version>${hydra.dep.jersey.version}</version>
     </dependency>
-    <dependency>
-      <groupId>com.yammer.dropwizard</groupId>
-      <artifactId>dropwizard-auth</artifactId>
-      <version>0.6.2</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.yammer.dropwizard</groupId>
-          <artifactId>dropwizard-core</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
      <dependency>
       <groupId>org.drizzle.jdbc</groupId>
       <artifactId>drizzle-jdbc</artifactId>

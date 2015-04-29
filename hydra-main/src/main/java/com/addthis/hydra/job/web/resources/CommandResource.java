@@ -27,10 +27,7 @@ import com.addthis.basis.util.LessStrings;
 
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.entity.JobEntityManager;
-import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.maljson.JSONArray;
-
-import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +70,9 @@ public class CommandResource {
     @POST
     @Path("/save")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response postCommando(@QueryParam("pairs") KVPairs kv, @Auth User user) {
+    public Response postCommando(@QueryParam("pairs") KVPairs kv,
+                                 @QueryParam("user")  String user,
+                                 @QueryParam("token") String token) {
         try {
             String label = kv.getValue("name");
             String command = kv.getValue("command", "").trim();
@@ -96,7 +95,9 @@ public class CommandResource {
     @POST
     @Path("/delete")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response deleteCommand(@QueryParam("pairs") KVPairs kv, @Auth User user) {
+    public Response deleteCommand(@QueryParam("pairs") KVPairs kv,
+                                  @QueryParam("user")  String user,
+                                  @QueryParam("token") String token) {
         try {
             String name = kv.getValue("name");
             if (name == null) {

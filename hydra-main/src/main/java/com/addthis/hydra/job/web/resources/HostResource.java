@@ -26,14 +26,12 @@ import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.RebalanceOutcome;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.mq.HostState;
-import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
-import com.yammer.dropwizard.auth.Auth;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 @Path("/host")
 public class HostResource {
 
@@ -48,12 +46,14 @@ public class HostResource {
     @GET
     @Path("/rebalance")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response rebalanceHost(@QueryParam("id") String hostUuid, @Auth User user) throws Exception {
+    public Response rebalanceHost(@QueryParam("id") String hostUuid,
+                                  @QueryParam("user") String user,
+                                  @QueryParam("token") String token) throws Exception {
         try {
             String[] hostUuids = LessStrings.splitArray(hostUuid, ",");
             JSONArray outcomes = new JSONArray();
             for (String uuid : hostUuids) {
-                emitLogLineForAction(user.getUsername(), "host rebalance on " + hostUuid);
+                emitLogLineForAction(user, "host rebalance on " + hostUuid);
                 RebalanceOutcome outcome = spawn.rebalanceHost(uuid);
                 JSONObject json = CodecJSON.encodeJSON(outcome);
                 outcomes.put(json);
@@ -69,9 +69,12 @@ public class HostResource {
     @GET
     @Path("/fail")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response failHost(@QueryParam("id") String hostUuids, @QueryParam("deadFs") boolean filesystemDead, @Auth User user) throws Exception {
+    public Response failHost(@QueryParam("id") String hostUuids,
+                             @QueryParam("deadFs") boolean filesystemDead,
+                             @QueryParam("user") String user,
+                             @QueryParam("token") String token) throws Exception {
         try {
-            emitLogLineForAction(user.getUsername(), "fail host on " + hostUuids);
+            emitLogLineForAction(user, "fail host on " + hostUuids);
             spawn.markHostsForFailure(hostUuids, filesystemDead);
             JSONObject json = new JSONObject();
             json.put("success", hostUuids.split(",").length);
@@ -85,7 +88,9 @@ public class HostResource {
     @GET
     @Path("/failcancel")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response cancelFailHost(@QueryParam("id") String hostUuids, @Auth User user) throws Exception {
+    public Response cancelFailHost(@QueryParam("id") String hostUuids,
+                                   @QueryParam("user") String user,
+                                   @QueryParam("token") String token) throws Exception {
         try {
             spawn.unmarkHostsForFailure(hostUuids);
             JSONObject json = new JSONObject();
@@ -100,7 +105,10 @@ public class HostResource {
     @GET
     @Path("/failinfo")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response hostFailInfo(@QueryParam("id") String hostUuids, @QueryParam("deadFs") int filesystemDead, @Auth User user) throws Exception {
+    public Response hostFailInfo(@QueryParam("id") String hostUuids,
+                                 @QueryParam("deadFs") int filesystemDead,
+                                 @QueryParam("user") String user,
+                                 @QueryParam("token") String token) throws Exception {
         try {
             return Response.ok(spawn.getHostFailWorker().getInfoForHostFailure(hostUuids, filesystemDead == 1).toString()).build();
         } catch (Exception ex)  {
@@ -113,12 +121,14 @@ public class HostResource {
     @GET
     @Path("/drop")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response dropHosts(@QueryParam("id") String hostUuid, @Auth User user) throws Exception {
+    public Response dropHosts(@QueryParam("id") String hostUuid,
+                              @QueryParam("user") String user,
+                              @QueryParam("token") String token) throws Exception {
         try {
             String[] hostUuids = LessStrings.splitArray(hostUuid, ",");
             JSONArray outcomes = new JSONArray();
             for (String uuid : hostUuids) {
-                emitLogLineForAction(user.getUsername(), "delete host on " + uuid);
+                emitLogLineForAction(user, "delete host on " + uuid);
                 spawn.deleteHost(uuid);
             }
             return Response.ok().build();
@@ -132,9 +142,12 @@ public class HostResource {
     @GET
     @Path("/toggle")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response enableHosts(@QueryParam("hosts") String hosts, @Auth User user, @QueryParam("disable") boolean disable) throws Exception {
+    public Response enableHosts(@QueryParam("hosts") String hosts,
+                                @QueryParam("user") String user,
+                                @QueryParam("token") String token,
+                                @QueryParam("disable") boolean disable) throws Exception {
         try {
-            emitLogLineForAction(user.getUsername(), "toggle hosts");
+            emitLogLineForAction(user, "toggle hosts");
             spawn.toggleHosts(hosts, disable);
             return Response.ok().build();
         } catch (Exception ex)  {

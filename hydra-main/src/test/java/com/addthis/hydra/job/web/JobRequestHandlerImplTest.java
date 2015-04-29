@@ -33,6 +33,7 @@ import com.addthis.basis.util.LessStrings;
 
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobParameter;
+import com.addthis.hydra.job.auth.PermissionsManager;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.entity.JobCommandManager;
 import com.addthis.hydra.job.spawn.Spawn;
@@ -48,6 +49,7 @@ public class JobRequestHandlerImplTest {
     private JobCommandManager jobCommandManager;
     private JobRequestHandlerImpl impl;
     private String username = "megatron";
+    private String token = "megatron";
     private KVPairs kv;
 
     @Before
@@ -56,6 +58,7 @@ public class JobRequestHandlerImplTest {
         spawn = mock(Spawn.class);
         jobCommandManager = mock(JobCommandManager.class);
         when(spawn.getJobCommandManager()).thenReturn(jobCommandManager);
+        when(spawn.getPermissionsManager()).thenReturn(PermissionsManager.createManagerAllowAll());
         when(jobCommandManager.getEntity("default-task")).thenReturn(new JobCommand());
 
         impl = new JobRequestHandlerImpl(spawn);
@@ -71,7 +74,7 @@ public class JobRequestHandlerImplTest {
 
         kv.add("config", "my job config");
         kv.add("command", "default-task");
-        assertSame("returned job", job, impl.createOrUpdateJob(kv, username));
+        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token));
 
         // verify spawn calls
         verify(spawn).updateJob(job);
@@ -119,7 +122,7 @@ public class JobRequestHandlerImplTest {
         kv.add("id", "existing_job_id");
         kv.add("config", "my job config");
         kv.add("command", "default-task");
-        assertSame("returned job", job, impl.createOrUpdateJob(kv, username));
+        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token));
         assertEquals("command is updated", "default-task", job.getCommand());
 
         verifyNoSpawnCreateJobCall();
@@ -149,7 +152,7 @@ public class JobRequestHandlerImplTest {
 
         kv.add("id", "existing_job_id");
         kv.add("config", "my job config");
-        assertSame("returned job", job, impl.createOrUpdateJob(kv, username));
+        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token));
         assertEquals("command is unchanged", "old-task", job.getCommand());
     }
 
@@ -180,7 +183,7 @@ public class JobRequestHandlerImplTest {
         when(spawn.getJobConfig("existing_job_id")).thenReturn("old job config");
 
         kv.add("id", "existing_job_id");
-        assertSame("returned job", job, impl.createOrUpdateJob(kv, username));
+        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token));
 
         verify(spawn, never()).setJobConfig(anyString(), anyString());
         verify(spawn, never()).submitConfigUpdate(anyString(), anyString());
@@ -207,7 +210,7 @@ public class JobRequestHandlerImplTest {
         kv.add("sp_end-date", "140908"); // should be removed
         kv.add("sp_foo", "foo");
         kv.add("sp_bar", "bar"); // should be ignored
-        assertSame("returned job", job, impl.createOrUpdateJob(kv, username));
+        assertSame("returned job", job, impl.createOrUpdateJob(kv, username, token));
         assertEquals("# of parameters", 2, job.getParameters().size());
         JobParameter foo = null;
         JobParameter startDate = null;
@@ -230,7 +233,7 @@ public class JobRequestHandlerImplTest {
 
     private void callAndVerifyBadRequest() throws Exception {
         try {
-            impl.createOrUpdateJob(kv, username);
+            impl.createOrUpdateJob(kv, username, token);
             fail("IllegalArgumentException expected but was not thrown");
         } catch (IllegalArgumentException e) {
             // GOOD!

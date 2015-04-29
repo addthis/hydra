@@ -44,7 +44,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     }
 
     @Override
-    public Job createOrUpdateJob(KVPairs kv, String username) throws Exception {
+    public Job createOrUpdateJob(KVPairs kv, String username, String token) throws Exception {
         String id = KVUtils.getValue(kv, "", "id", "job");
         String config = kv.getValue("config");
         String expandedConfig;
@@ -65,6 +65,9 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         } else {
             job = spawn.getJob(id);
             checkArgument(job != null, "Job %s does not exist", id);
+            if (!spawn.getPermissionsManager().isWritable(username, token, job)) {
+                throw new UnsupportedOperationException("insufficient privileges to access " + id);
+            }
             if (config == null) {
                 configMayHaveChanged = false;
                 config = spawn.getJobConfig(id);

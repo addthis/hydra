@@ -26,13 +26,10 @@ import com.addthis.basis.kv.KVPairs;
 import com.addthis.hydra.job.entity.JobEntityManager;
 import com.addthis.hydra.job.entity.JobMacro;
 import com.addthis.hydra.job.spawn.Spawn;
-import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Optional;
-
-import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,7 +105,9 @@ public class MacroResource {
     @POST
     @Path("/save")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response saveMacro(@QueryParam("pairs") KVPairs kv, @Auth User user) {
+    public Response saveMacro(@QueryParam("pairs") KVPairs kv,
+                              @QueryParam("user")  String user,
+                              @QueryParam("token") String token) {
         try {
             if (!kv.hasKey("label")) {
                 throw new Exception("missing field");
@@ -116,7 +115,7 @@ public class MacroResource {
             String label = kv.getValue("label");
             JobMacro oldMacro = jobMacroManager.getEntity(label);
             String description = kv.getValue("description", oldMacro != null ? oldMacro.getDescription() : null);
-            String owner = kv.getValue("owner", oldMacro != null ? oldMacro.getOwner() : user.getUsername());
+            String owner = kv.getValue("owner", oldMacro != null ? oldMacro.getOwner() : user);
             String group = kv.getValue("group", oldMacro != null ? oldMacro.getGroup() : null);
             String macro = kv.getValue("macro", oldMacro != null ? oldMacro.getMacro() : null);
             if (macro != null && macro.length() > Spawn.inputMaxNumberOfCharacters) {
@@ -135,7 +134,9 @@ public class MacroResource {
     @POST
     @Path("/delete")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response deleteMacro(@QueryParam("pairs") KVPairs kv, @Auth User user) {
+    public Response deleteMacro(@QueryParam("pairs") KVPairs kv,
+                                @QueryParam("user") String user,
+                                @QueryParam("token") String token) {
         try {
             String name = kv.getValue("name");
             if (name == null) {

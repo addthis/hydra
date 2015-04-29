@@ -17,12 +17,8 @@ import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.hydra.job.spawn.Spawn;
-import com.addthis.hydra.job.web.jersey.BasicAuthProvider;
-import com.addthis.hydra.job.web.jersey.DefaultAuthenticator;
 import com.addthis.hydra.job.web.jersey.KVPairsProvider;
 import com.addthis.hydra.job.web.jersey.OptionalQueryParamInjectableProvider;
-import com.addthis.hydra.job.web.jersey.SpawnAuthProvider;
-import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.hydra.job.web.resources.AlertResource;
 import com.addthis.hydra.job.web.resources.AliasResource;
 import com.addthis.hydra.job.web.resources.CommandResource;
@@ -38,7 +34,6 @@ import com.addthis.hydra.util.WebSocketManager;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
-import com.yammer.dropwizard.auth.Authenticator;
 import com.yammer.metrics.reporting.MetricsServlet;
 
 import org.eclipse.jetty.server.Handler;
@@ -49,6 +44,7 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 public class SpawnService {
 
     private static final Logger log = LoggerFactory.getLogger(SpawnService.class);
@@ -71,19 +67,15 @@ public class SpawnService {
         this.webSocketManager = spawn.getWebSocketManager();
 
         //instantiate resources
-        SystemResource systemResource = new SystemResource(spawn.getSystemManager(),
-                spawn.getSpawnBalancer(), spawn.getHostFailWorker());
+        SystemResource systemResource = new SystemResource(spawn);
         ListenResource listenResource = new ListenResource(spawn, systemResource, pollTimeout);
         JobsResource jobsResource = new JobsResource(spawn, new JobRequestHandlerImpl(spawn));
         MacroResource macroResource = new MacroResource(spawn.getJobMacroManager());
         CommandResource commandResource = new CommandResource(spawn.getJobCommandManager());
         TaskResource taskResource = new TaskResource(spawn);
-        AliasResource aliasResource = new AliasResource(spawn.getAliasManager());
+        AliasResource aliasResource = new AliasResource(spawn);
         HostResource hostResource = new HostResource(spawn);
         AlertResource alertResource = new AlertResource(spawn.getJobAlertManager());
-
-        //authenticator
-        Authenticator authenticator = new DefaultAuthenticator();
 
         //register resources
         config.addResource(systemResource);
@@ -99,11 +91,6 @@ public class SpawnService {
         //register providers
         config.addProvider(OptionalQueryParamInjectableProvider.class);
         config.addProvider(KVPairsProvider.class);
-        if (useBasicAuth) {
-            config.addProvider(new BasicAuthProvider<User>(authenticator, "spawn"));
-        } else {
-            config.addProvider(new SpawnAuthProvider<User>(authenticator, "spawn"));
-        }
         config.addProvider(new JacksonJsonProvider(Jackson.defaultMapper()));
 
         //Feature settings

@@ -81,6 +81,11 @@ import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.alert.JobAlertManagerImpl;
 import com.addthis.hydra.job.alias.AliasManager;
 import com.addthis.hydra.job.alias.AliasManagerImpl;
+import com.addthis.hydra.job.auth.AuthenticationManager;
+import com.addthis.hydra.job.auth.AuthenticationManagerAllowAll;
+import com.addthis.hydra.job.auth.AuthorizationManager;
+import com.addthis.hydra.job.auth.AuthorizationManagerAllowAll;
+import com.addthis.hydra.job.auth.PermissionsManager;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.entity.JobCommandManager;
@@ -205,6 +210,8 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull final ConcurrentMap<String, ClientEventListener> listeners;
     @Nonnull final SpawnFormattedLogger spawnFormattedLogger;
 
+    @Nonnull final PermissionsManager permissionsManager;
+
     @Nonnull private final File stateFile;
     @Nonnull private final ExecutorService expandKickExecutor;
     @Nonnull private final ScheduledExecutorService scheduledExecutor;
@@ -245,10 +252,13 @@ public class Spawn implements Codable, AutoCloseable {
                   @Nullable @JsonProperty("structuredLogDir") File structuredLogDir,
                   @Nullable @JsonProperty("jobStore") JobStore jobStore,
                   @Nullable @JsonProperty("queueType") String queueType,
-                  @Nullable @JacksonInject CuratorFramework providedZkClient
+                  @Nullable @JacksonInject CuratorFramework providedZkClient,
+                  @JsonProperty("permissionsManager") PermissionsManager permissionsManager
     ) throws Exception {
         LessFiles.initDirectory(dataDir);
         this.stateFile = stateFile;
+        this.permissionsManager = (permissionsManager != null) ?
+                                  permissionsManager : PermissionsManager.createManagerAllowAll();
         if (stateFile.exists() && stateFile.isFile()) {
             spawnState = Jackson.defaultMapper().readValue(stateFile, SpawnState.class);
         } else {
@@ -387,7 +397,9 @@ public class Spawn implements Codable, AutoCloseable {
     public SpawnBalancer getSpawnBalancer() {
         return balancer;
     }
-    
+
+    public PermissionsManager getPermissionsManager() { return permissionsManager; }
+
     @Nonnull
     public AliasManager getAliasManager() {
         return aliasManager;
@@ -1125,11 +1137,15 @@ public class Spawn implements Codable, AutoCloseable {
      * @return a RebalanceOutcome describing which steps were performed
      * @throws Exception If there is a failure when rebalancing replicas
      */
-    public RebalanceOutcome rebalanceJob(String jobUUID, int tasksToMove) throws Exception {
+    public RebalanceOutcome rebalanceJob(String jobUUID, int tasksToMove, String user, String token) throws Exception {
         Job job = getJob(jobUUID);
         if (jobUUID == null || job == null) {
             log.warn("[job.rebalance] job uuid " + jobUUID + " not found");
             return new RebalanceOutcome(jobUUID, "job not found", null, null);
+        }
+        if (permissionsManager.isWritable(user, token, job)) {
+            log.warn("[job.rebalance] insufficient priviledges to rebalance " + jobUUID);
+            return new RebalanceOutcome(jobUUID, "insufficient priviledges", null, null);
         }
         if (job.getState() != JobState.IDLE && job.getState() != JobState.DEGRADED) {
             log.warn("[job.rebalance] job must be IDLE or DEGRADED to rebalance " + jobUUID);

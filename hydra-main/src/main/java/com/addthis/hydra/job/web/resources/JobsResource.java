@@ -58,7 +58,6 @@ import com.addthis.hydra.job.spawn.DeleteStatus;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.web.JobRequestHandler;
 import com.addthis.hydra.job.web.KVUtils;
-import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.hydra.task.run.TaskRunnable;
 import com.addthis.hydra.task.run.TaskRunner;
 import com.addthis.hydra.util.DirectedGraph;
@@ -82,7 +81,6 @@ import com.typesafe.config.ConfigParseOptions;
 import com.typesafe.config.ConfigRenderOptions;
 import com.typesafe.config.ConfigResolveOptions;
 import com.typesafe.config.ConfigValue;
-import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -121,23 +119,27 @@ public class JobsResource {
     public Response enableJob(@QueryParam("jobs") String jobarg,
                               @QueryParam("enable") @DefaultValue("1") String enableParam,
                               @QueryParam("unsafe") @DefaultValue("false") boolean unsafe,
-                              @Auth User user) {
+                              @QueryParam("user") String user,
+                              @QueryParam("token") String token) {
         boolean enable = enableParam.equals("1");
         if (jobarg != null) {
             List<String> jobIds = Splitter.on(',').omitEmptyStrings().trimResults().splitToList(jobarg);
             String action = enable ? (unsafe ? "unsafely enable" : "enable") : "disable";
-            emitLogLineForAction(user.getUsername(), action + " jobs " + jobarg);
+            emitLogLineForAction(user, action + " jobs " + jobarg);
 
             List<String> changed = new ArrayList<>();
             List<String> unchanged = new ArrayList<>();
             List<String> notFound = new ArrayList<>();
             List<String> notAllowed = new ArrayList<>();
+            List<String> notPermitted = new ArrayList<>();
 
             try {
                 for (String jobId : jobIds) {
                     Job job = spawn.getJob(jobId);
                     if (job != null) {
-                        if (enable && !unsafe && job.getState() != JobState.IDLE) {
+                        if (!spawn.getPermissionsManager().isWritable(user, token, job)) {
+                            notPermitted.add(jobId);
+                        } else if (enable && !unsafe && job.getState() != JobState.IDLE) {
                             // request to enable safely, so do not allow if job is not IDLE
                             notAllowed.add(jobId);
                         } else if (job.setEnabled(enable)) {
@@ -150,8 +152,8 @@ public class JobsResource {
                         notFound.add(jobId);
                     }
                 }
-                log.info("{} jobs: changed={}, unchanged={}, not found={}, cannot safely enable={}",
-                         action, changed, unchanged, notFound, notAllowed);
+                log.info("{} jobs: changed={}, unchanged={}, not found={}, not permitted={}, cannot safely enable={}",
+                         action, changed, unchanged, notFound, notPermitted, notAllowed);
             } catch (Exception e) {
                 return buildServerError(e);
             }
@@ -161,7 +163,8 @@ public class JobsResource {
                         "changed", changed,
                         "unchanged", unchanged,
                         "notFound", notFound,
-                        "notAllowed", notAllowed));
+                        "notAllowed", notAllowed,
+                        "notPermitted", notPermitted));
                 return Response.ok(json).build();
             } catch (JsonProcessingException e) {
                 return buildServerError(e);
@@ -175,11 +178,12 @@ public class JobsResource {
     @Path("/rebalance")
     @Produces(MediaType.TEXT_PLAIN)
     public Response rebalanceJob(@QueryParam("id") String id,
-                                 @Auth User user,
+                                 @QueryParam("user") String user,
+                                 @QueryParam("token") String token,
                                  @QueryParam("tasksToMove") @DefaultValue("-1") Integer tasksToMove) {
-        emitLogLineForAction(user.getUsername(), "job rebalance on " + id + " tasksToMove=" + tasksToMove);
+        emitLogLineForAction(user, "job rebalance on " + id + " tasksToMove=" + tasksToMove);
         try {
-            RebalanceOutcome ro = spawn.rebalanceJob(id, tasksToMove);
+            RebalanceOutcome ro = spawn.rebalanceJob(id, tasksToMove, user, token);
             String outcome = ro.toString();
             return Response.ok(outcome).build();
         } catch (Exception ex) {
@@ -300,8 +304,9 @@ public class JobsResource {
     @Path("/synchronize")
     @Produces(MediaType.APPLICATION_JSON)
     public Response synchronizeJob(@QueryParam("id") @DefaultValue("") String id,
-                                   @QueryParam("user") Optional<String> user) {
-        emitLogLineForAction(user.or(DEFAULT_USER), "job synchronize on " + id);
+                                   @QueryParam("user") String user,
+                                   @QueryParam("token") String token) {
+        emitLogLineForAction(user, "job synchronize on " + id);
         if (spawn.synchronizeJobState(id)) {
             return Response.ok("{id:'" + id + "',action:'synchronzied'}").build();
         } else {
@@ -317,13 +322,17 @@ public class JobsResource {
     @Path("/delete") //TODO: should this be a @delete?
     @Produces(MediaType.APPLICATION_JSON)
     public Response deleteJob(@QueryParam("id") @DefaultValue("") String id,
-                              @QueryParam("user") Optional<String> user) {
+                              @QueryParam("user") String user,
+                              @QueryParam("token") String token) {
         Job job = spawn.getJob(id);
-
-        if ((job != null) && (job.getCountActiveTasks() != 0)) {
+        if (job == null) {
+            return Response.serverError().entity("Job with id " + id + " cannot be found").build();
+        } else if (!spawn.getPermissionsManager().isWritable(user, token, job)) {
+            return Response.serverError().entity("Insufficient privileges to delete job " + id).build();
+        } else if (job.getCountActiveTasks() != 0) {
             return Response.serverError().entity("A job with active tasks cannot be deleted").build();
         } else {
-            emitLogLineForAction(user.or(DEFAULT_USER), "job delete on " + id);
+            emitLogLineForAction(user, "job delete on " + id);
             try {
                 DeleteStatus status = spawn.deleteJob(id);
                 switch (status) {
@@ -556,18 +565,19 @@ public class JobsResource {
     @Path("/save")
     @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_FORM_URLENCODED, MediaType.WILDCARD})
     @Produces(MediaType.APPLICATION_JSON)
-    public Response saveJob(@QueryParam("pairs") KVPairs kv, @Auth User user) {
+    public Response saveJob(@QueryParam("pairs") KVPairs kv,
+                            @QueryParam("user") String user,
+                            @QueryParam("token") String token) {
         String id = KVUtils.getValue(kv, "", "id", "job");
-        String username = user.getUsername();
         try {
-            Job job = requestHandler.createOrUpdateJob(kv, username);
-            log.info("[job/save][user={}][id={}] Job {}", username, job.getId(), jobUpdateAction(id));
+            Job job = requestHandler.createOrUpdateJob(kv, user, token);
+            log.info("[job/save][user={}][id={}] Job {}", user, job.getId(), jobUpdateAction(id));
             return Response.ok("{\"id\":\"" + job.getId() + "\",\"updated\":\"true\"}").build();
         } catch (IllegalArgumentException e) {
-            log.warn("[job/save][user={}][id={}] Bad parameter: {}", username, id, e.getMessage(), e);
+            log.warn("[job/save][user={}][id={}] Bad parameter: {}", user, id, e.getMessage(), e);
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         } catch (Exception e) {
-            log.error("[job/save][user={}][id={}] Internal error: {}", username, id, e.getMessage(), e);
+            log.error("[job/save][user={}][id={}] Internal error: {}", user, id, e.getMessage(), e);
             return buildServerError(e);
         }
     }
@@ -587,21 +597,25 @@ public class JobsResource {
     @POST
     @Path("/submit")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response submitJob(@QueryParam("pairs") KVPairs kv, @Auth User user) {
+    public Response submitJob(@QueryParam("pairs") KVPairs kv,
+                              @QueryParam("user") String user,
+                              @QueryParam("token") String token) {
         String id = KVUtils.getValue(kv, "", "id", "job");
-        String username = user.getUsername();
-        log.warn("[job/submit][user={}][id={}] This end point is deprecated", username, id);
+        log.warn("[job/submit][user={}][id={}] This end point is deprecated", user, id);
         try {
-            Job job = requestHandler.createOrUpdateJob(kv, username);
+            Job job = requestHandler.createOrUpdateJob(kv, user, token);
             // optionally kicks the job/task
             requestHandler.maybeKickJobOrTask(kv, job);
-            log.info("[job/submit][user={}][id={}] Job {}", username, job.getId(), jobUpdateAction(id));
+            log.info("[job/submit][user={}][id={}] Job {}", user, job.getId(), jobUpdateAction(id));
             return Response.ok("{\"id\":\"" + job.getId() + "\",\"updated\":\"true\"}").build();
         } catch (IllegalArgumentException e) {
-            log.warn("[job/submit][user={}][id={}] Bad parameter: {}", username, id, e.getMessage(), e);
+            log.warn("[job/submit][user={}][id={}] Bad parameter: {}", user, id, e.getMessage(), e);
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        } catch (UnsupportedOperationException e) {
+            log.warn("[job/submit][user={}][id={}] Priviledges error: {}", user, id, e.getMessage(), e);
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
         } catch (Exception e) {
-            log.error("[job/submit][user={}][id={}] Internal error: {}", username, id, e.getMessage(), e);
+            log.error("[job/submit][user={}][id={}] Internal error: {}", user, id, e.getMessage(), e);
             return buildServerError(e);
         }
     }
@@ -615,9 +629,10 @@ public class JobsResource {
                               @QueryParam("revision") @DefaultValue("-1") Integer revision,
                               @QueryParam("node") @DefaultValue("-1") Integer node,
                               @QueryParam("time") @DefaultValue("-1") Long time,
-                              @Auth User user) {
+                              @QueryParam("user") String user,
+                              @QueryParam("token") String token) {
         try {
-            emitLogLineForAction(user.getUsername(), "job revert on " + id + " of type " + type);
+            emitLogLineForAction(user, "job revert on " + id + " of type " + type);
             IJob job = spawn.getJob(id);
             spawn.revertJobOrTask(job.getId(), node, type, revision, time);
             return Response.ok("{\"id\":\"" + job.getId() + "\", \"action\":\"reverted\"}").build();
@@ -632,7 +647,8 @@ public class JobsResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getRevisions(@QueryParam("id") String id,
                                  @QueryParam("node") @DefaultValue("-1") int node,
-                                 @Auth User user) {
+                                 @QueryParam("user") String user,
+                                 @QueryParam("token") String token) {
         try {
             if (spawn.isSpawnMeshAvailable()) {
                 IJob job = spawn.getJob(id);
@@ -685,12 +701,6 @@ public class JobsResource {
         } catch (Exception ex) {
             return buildServerError(ex);
         }
-    }
-
-    @GET
-    @Path("/secret")
-    public Response getSecret(@Auth User user) {
-        return Response.ok(user.getUsername()).build();
     }
 
     private void startJobHelper(String jobId, int taskId, int priority) throws Exception {

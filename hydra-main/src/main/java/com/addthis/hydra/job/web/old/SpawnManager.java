@@ -416,9 +416,11 @@ public class SpawnManager {
             public void httpService(HTTPLink link) throws Exception {
                 KVPairs kv = link.getRequestValues();
                 String id = kv.getValue("id", "");
+                String user = kv.getValue("user", "");
+                String token = kv.getValue("token", "");
                 int tasksToMove = kv.getIntValue("tasksToMove", -1);
                 emitLogLineForAction(kv, "job rebalance on " + id + " tasksToMove=" + tasksToMove);
-                RebalanceOutcome outcome = spawn.rebalanceJob(id, tasksToMove);
+                RebalanceOutcome outcome = spawn.rebalanceJob(id, tasksToMove, user, token);
                 link.sendShortReply(200, "OK", outcome.toString());
             }
         });
@@ -731,7 +733,8 @@ public class SpawnManager {
                 try {
                     if (kv.count() > 0) {
                         String username = kv.getValue("user", "anonymous");
-                        Job job = jobRequestHandler.createOrUpdateJob(kv, username);
+                        String token = kv.getValue("token", "");
+                        Job job = jobRequestHandler.createOrUpdateJob(kv, username, token);
                         // optionally kicks the job/task
                         jobRequestHandler.maybeKickJobOrTask(kv, job);
                     }

@@ -1,0 +1,51 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.addthis.hydra.job.auth;
+
+/**
+ * Wrapper class around authentication and authorization. Provides convenience methods
+ * for authorization operations that must first be authenticated.
+ */
+public final class PermissionsManager {
+
+    private final AuthenticationManager authentication;
+
+    private final AuthorizationManager authorization;
+
+    public static PermissionsManager createManagerAllowAll() {
+        return new PermissionsManager(new AuthenticationManagerAllowAll(), new AuthorizationManagerAllowAll());
+    }
+
+    public PermissionsManager(AuthenticationManager authentication, AuthorizationManager authorization) {
+        this.authentication = authentication;
+        this.authorization = authorization;
+    }
+
+    public boolean isWritable(String username, String secret, WritableAsset asset) {
+        User user = authentication.authenticate(username, secret);
+        if (user == null) {
+            return false;
+        }
+        return authorization.isWritable(user, asset);
+    }
+
+    public boolean isAdmin(String username, String secret) {
+        User user = authentication.authenticate(username, secret);
+        if (user == null) {
+            return false;
+        }
+        return authorization.isAdmin(user);
+    }
+
+}

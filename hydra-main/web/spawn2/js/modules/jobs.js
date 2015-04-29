@@ -202,6 +202,8 @@ function(
                 Alertify.log.error("Job " + jobId + " is not found");
             } else if (data.notAllowed.length > 0) {
                 Alertify.log.error("Job " + jobId + " must be IDLE to be enabled safely");
+            } else if (data.notPermitted.length > 0) {
+                Alertify.log.error("User has insufficient privileges for Job " + jobId);
             } else {
                 Alertify.log.error("Unexpected response data. Check console log")
                 console.log("Unexpected response data from /job/enable call: " + data);
@@ -302,8 +304,7 @@ function(
         save:function(param){
             var self=this;
             var data = _.extend(_.omit(this.toJSON(),'parameters','alerts','config','DT_RowId','DT_RowClass'),param);
-            data= _.omit(data,'owner','creator','state');
-            data.owner=$.cookie("username").username;
+            data= _.omit(data,'state');
             data.command=$("#command").val();
             if(!_.isEmpty(this.commit)){
                 data.commit=this.commit;
@@ -622,6 +623,9 @@ function(
             }
             if (data.notAllowed.length > 0) {
                 Alertify.log.error(data.notAllowed.length + " job(s) cannot be enabled safely - they must be IDLE");
+            }
+            if (data.notPermitted.length > 0) {
+                Alertify.log.error(data.notPermitted.length + " job(s) insufficient priviledges");
             }
         },
         deleteSelected:function(jobIds){
