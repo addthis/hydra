@@ -30,9 +30,25 @@ public interface IJob extends Comparable<IJob> {
 
     public void setOwner(String owner);
 
+    public String getGroup();
+
+    public void setGroup(String group);
+
     public String getCreator();
 
     public long getCreateTime();
+
+    public boolean isOwnerWritable();
+
+    public void setOwnerWritable(boolean writable);
+
+    public boolean isGroupWritable();
+
+    public void setGroupWritable(boolean writable);
+
+    public boolean isWorldWritable();
+
+    public void setWorldWritable(boolean writable);
 
     public String getDescription();
 

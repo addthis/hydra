@@ -2292,7 +2292,7 @@ public class Spawn implements Codable, AutoCloseable {
         for (String host : jobHosts) {
             hostStrings.add("{host:\"" + host + "\", port:" + sPort + "}");
         }
-        return new JobMacro("spawn", "createJobHostMacro-" + job, Joiner.on(',').join(hostStrings));
+        return new JobMacro("spawn", "", "createJobHostMacro-" + job, Joiner.on(',').join(hostStrings));
     }
 
     // TODO: 1. Why is this not in SpawnMQ?  2.  Who actually listens to job config changes

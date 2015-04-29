@@ -270,11 +270,12 @@ public class SpawnManager {
                 JobMacro oldMacro = jobMacroManager.getEntity(label);
                 String description = kv.getValue("description", oldMacro != null ? oldMacro.getDescription() : null);
                 String owner = kv.getValue("owner", oldMacro != null ? oldMacro.getOwner() : null);
+                String group = kv.getValue("group", oldMacro != null ? oldMacro.getGroup() : null);
                 String macro = kv.getValue("macro", oldMacro != null ? oldMacro.getMacro() : null);
                 require(description != null, "missing description");
                 require(owner != null, "missing owner");
                 require(macro != null, "missing macro");
-                jobMacroManager.putEntity(label, new JobMacro(owner, description, macro), true);
+                jobMacroManager.putEntity(label, new JobMacro(owner, group, description, macro), true);
                 link.sendJSON(200, "OK", json("success",true));
             }
         });

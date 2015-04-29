@@ -117,13 +117,14 @@ public class MacroResource {
             JobMacro oldMacro = jobMacroManager.getEntity(label);
             String description = kv.getValue("description", oldMacro != null ? oldMacro.getDescription() : null);
             String owner = kv.getValue("owner", oldMacro != null ? oldMacro.getOwner() : user.getUsername());
+            String group = kv.getValue("group", oldMacro != null ? oldMacro.getGroup() : null);
             String macro = kv.getValue("macro", oldMacro != null ? oldMacro.getMacro() : null);
             if (macro != null && macro.length() > Spawn.inputMaxNumberOfCharacters) {
                 throw new IllegalArgumentException("Macro length of " + macro.length()
                                                    + " characters is greater than max length of "
                                                    + Spawn.inputMaxNumberOfCharacters);
             }
-            JobMacro jobMacro = new JobMacro(owner, description, macro);
+            JobMacro jobMacro = new JobMacro(owner, group, description, macro);
             jobMacroManager.putEntity(label, jobMacro, true);
             return Response.ok().entity(jobMacro.toJSON().put("macro", "").put("name", label).toString()).build();
         } catch (Exception ex) {
