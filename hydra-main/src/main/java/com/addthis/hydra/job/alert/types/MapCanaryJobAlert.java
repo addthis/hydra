@@ -25,6 +25,7 @@ import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.alert.AbstractJobAlert;
 import com.addthis.hydra.job.alert.JobAlertUtil;
+import com.addthis.hydra.job.alert.SuppressChanges;
 import com.addthis.meshy.MeshyClient;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -56,7 +57,7 @@ public class MapCanaryJobAlert extends AbstractJobAlert {
                              @Time(TimeUnit.MINUTES) @JsonProperty("delay") long delay,
                              @JsonProperty("email") String email,
                              @JsonProperty(value = "jobIds", required = true) List<String> jobIds,
-                             @JsonProperty("suppressChanges") boolean suppressChanges,
+                             @JsonProperty("suppressChanges") SuppressChanges suppressChanges,
                              @JsonProperty("canaryPath") String canaryPath,
                              @JsonProperty("canaryConfigThreshold") int canaryConfigThreshold,
                              @JsonProperty("lastAlertTime") long lastAlertTime,

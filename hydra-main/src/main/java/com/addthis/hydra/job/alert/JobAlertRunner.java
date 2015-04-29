@@ -19,6 +19,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -149,11 +150,16 @@ public class JobAlertRunner {
                         MapDifference<String, String> difference = Maps.difference(currentErrors, newErrors);
                         emailAlert(oldAlert, "[CLEAR] ", difference.entriesOnlyOnLeft());
                         emailAlert(alert, "[TRIGGER] ", difference.entriesOnlyOnRight());
-                        if (!alert.suppressChanges) {
-                            emailAlert(alert, "[ERROR CHANGED] ",
-                                       Maps.transformValues(difference.entriesDiffering(),
-                                                            MapDifference.ValueDifference::rightValue));
+                        Map<String, String> errorsChanged = new HashMap<>();
+                        for (Map.Entry<String, MapDifference.ValueDifference<String>> differing :
+                                difference.entriesDiffering().entrySet()) {
+                            String oldValue = differing.getValue().leftValue();
+                            String newValue = differing.getValue().rightValue();
+                            if (!alert.suppressChanges.suppress(oldValue, newValue)) {
+                                errorsChanged.put(differing.getKey(), newValue);
+                            }
                         }
+                        emailAlert(alert, "[ERROR CHANGED] ", errorsChanged);
                     }
                 }
                 lastAlertScanFailed = false;
