@@ -152,10 +152,13 @@ function(
         },
         rebalance:function(){
             var self=this;
+            var parameters = {}
+            parameters["id"] = self.id;
+            app.authQueryParameters(parameters);
             $.ajax({
                 url: "/job/rebalance",
                 type: "GET",
-                data:{id:this.id},
+                data: parameters,
                 statusCode: {
                     500: function(data) {
                         Alertify.log.error(e.responseText,5000);
@@ -167,11 +170,17 @@ function(
                 dataType: "json"
             });
         },
-        enable:function(unsafe){
-            var self=this;
+        enable : function(unsafe) {
+            var self = this;
+            var parameters = {}
+            parameters["jobs"] = self.id;
+            parameters["enable"] = 1;
+            parameters["unsafe"] = unsafe;
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/job/enable?jobs="+self.id+"&enable=1&unsafe="+unsafe,
+                url: "/job/enable",
                 type: "GET",
+                data: parameters,
                 dataType: "json"
             }).done(function(data){
                 self.showEnableStateChange(data, "enabled", unsafe);
@@ -179,11 +188,16 @@ function(
                 Alertify.log.error("Error enabling job "+self.id+"<br/>" + e.responseText);
             });
         },
-        disable:function(){
-            var self=this;
+        disable : function() {
+            var self = this;
+            var parameters = {}
+            parameters["jobs"] = self.id;
+            parameters["enable"] = 0;
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/job/enable?jobs="+self.id+"&enable=0",
+                url: "/job/enable",
                 type: "GET",
+                data: parameters,
                 dataType: "json"
             }).done(function(data){
                 self.showEnableStateChange(data, "disabled");
@@ -210,25 +224,28 @@ function(
             }
         },
         revert:function(params){
-            var self=this;
+            var self = this;
             var data = _.extend(params,{
                 id:self.get("id")
             });
+            app.authQueryParameters(data);
             return $.ajax({
                 url:"/job/revert",
+                type: "GET",
                 data:data
             });
         },
         fixDirs:function(node){
             var self=this;
             node = node || -1;
+            var parameters = {}
+            parameters["id"] = self.id;
+            parameters["node"] = node;
+            app.authQueryParameters(parameters);
             $.ajax({
                 url: "/job/fixJobDirs",
                 type: "GET",
-                data: {
-                    id:self.id,
-                    node:node
-                },
+                data: parameters,
                 dataType:"text"
             }).done(function(data){
                 Alertify.log.success(data);
@@ -236,15 +253,18 @@ function(
                 Alertify.log.error(xhr.responseText);
             });
         },
-        query:function(){
+        query : function(){
             window.open("http://"+app.queryHost+"/query/index.html?job="+this.id,"_blank");
         },
-        delete:function(dontShowSuccessAlert){
+        delete : function(dontShowSuccessAlert){
             var self=this;
+            var parameters = {}
+            parameters["id"] = self.id;
+            app.authQueryParameters(parameters);
             $.ajax({
                 url: "/job/delete",
                 type: "GET",
-                data: {id:self.id, user:app.user.get("username")},
+                data: parameters,
                 statusCode: {
                     304: function() {
                         Alertify.log.error("Job with id "+self.id+" has \"do not delete\" parameter enabled.");
@@ -265,23 +285,32 @@ function(
                 dataType: "text"
             });
         },
-        kick:function(){
-            var self=this;
+        kick : function(){
+            var self = this;
+            var parameters = {}
+            parameters["jobid"] = self.id;
+            parameters["priority"] = 1;
+            app.authQueryParameters(parameters);
             $.ajax({
-                 url: "/job/start?priority=1&jobid="+self.id,
-                 type: "GET",
-                 dataType: "json"
-            }).done(function(data){
-                 Alertify.log.info(self.id+" job kicked.",2000)
-             }).fail(function(e){
-                 Alertify.log.error("Error kicking: "+self.id+". <br/> "+e.responseText);
-             });
-        },
-        stop:function(){
-            var self=this;
-            $.ajax({
-                url: "/job/stop?jobid="+self.id,
+                url: "/job/start",
                 type: "GET",
+                data: parameters,
+                dataType: "json"
+            }).done(function(data){
+                Alertify.log.info(self.id+" job kicked.",2000)
+            }).fail(function(e){
+                Alertify.log.error("Error kicking: "+self.id+". <br/> "+e.responseText);
+            });
+        },
+        stop : function(){
+            var self=this;
+            var parameters = {}
+            parameters["id"] = self.id;
+            app.authQueryParameters(parameters);
+            $.ajax({
+                url: "/job/stop",
+                type: "GET",
+                data: parameters,
                 dataType: "json"
             }).done(function(data){
                 Alertify.log.info(self.id+" job stopped.",2000)
@@ -289,11 +318,16 @@ function(
                 Alertify.log.error("Error stopping: "+self.id+". <br/> "+e.responseText);
             });
         },
-        kill:function(){
+        kill : function(){
             var self=this;
+            var parameters = {}
+            parameters["id"] = self.id;
+            parameters["force"] = "true";
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/job/stop?jobid="+self.id+"&force=true",
+                url: "/job/stop",
                 type: "GET",
+                data: parameters,
                 dataType: "json"
             }).done(function(data){
                 Alertify.log.info(self.id+" job killed.",2000)
@@ -301,22 +335,21 @@ function(
                 Alertify.log.error("Error killing: "+self.id+". <br/> "+e.responseText);
             });
         },
-        save:function(param){
+        save : function(param){
             var self=this;
             var data = _.extend(_.omit(this.toJSON(),'parameters','alerts','config','DT_RowId','DT_RowClass'),param);
             data= _.omit(data,'state');
             data.command=$("#command").val();
-            if(!_.isEmpty(this.commit)){
+            if (!_.isEmpty(this.commit)) {
                 data.commit=this.commit;
             }
-            var url = "/job/save";
             var parameters = {}
-            if(!this.isNew()){
-                parameters['id'] = this.id;
+            if (!this.isNew()) {
+                parameters['id'] = self.id;
             }
-            parameters = app.authQueryParameters(parameters);
+            app.authQueryParameters(parameters);
             return $.ajax({
-                url: url + "?" + $.param(parameters),
+                url: "/job/save?" + $.param(parameters),
                 data:data,
                 type: "POST"
             });
