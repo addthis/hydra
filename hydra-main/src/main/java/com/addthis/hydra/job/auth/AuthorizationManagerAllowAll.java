@@ -15,10 +15,6 @@ package com.addthis.hydra.job.auth;
 
 public class AuthorizationManagerAllowAll implements AuthorizationManager {
 
-    @Override public boolean isAdmin(User user) {
-        return true;
-    }
-
     @Override public boolean isWritable(User user, WritableAsset asset) {
         return true;
     }

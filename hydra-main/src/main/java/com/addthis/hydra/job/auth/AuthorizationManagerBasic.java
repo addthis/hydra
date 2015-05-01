@@ -13,34 +13,9 @@
  */
 package com.addthis.hydra.job.auth;
 
-import java.util.List;
 import java.util.Objects;
 
 public class AuthorizationManagerBasic implements AuthorizationManager {
-
-    private final AuthenticationManager authentication;
-
-    public AuthorizationManagerBasic(AuthenticationManager authentication) {
-        this.authentication = authentication;
-    }
-
-    @Override public boolean isAdmin(User user) {
-        if (user == null) {
-            return false;
-        }
-        List<String> adminUsers = authentication.adminUsers();
-        List<String> adminGroups = authentication.adminGroups();
-        if (adminUsers.contains(user)) {
-            return true;
-        }
-        List<String> groups = user.groups();
-        for (String group : groups) {
-            if (adminGroups.contains(group)) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     @Override public boolean isWritable(User user, WritableAsset asset) {
         if ((user == null) || (asset == null)) {

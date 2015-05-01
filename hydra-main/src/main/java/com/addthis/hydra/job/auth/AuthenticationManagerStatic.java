@@ -22,61 +22,73 @@ import com.google.common.collect.ImmutableMap;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class AuthenticationManagerStatic implements AuthenticationManager {
+/**
+ * Static specification of users, administrator groups,
+ * and administrator users. If an inner AuthenticationManager
+ * is specified then the inner manager takes precedence for
+ * authentication purposes.
+ */
+public class AuthenticationManagerStatic extends AuthenticationManager {
 
-    private final ImmutableMap<String, User> users;
+    private final ImmutableMap<String, StaticUser> users;
 
     private final ImmutableList<String> adminGroups;
 
     private final ImmutableList<String> adminUsers;
 
-    @JsonCreator
-    public AuthenticationManagerStatic(@JsonProperty("users") List<DefaultUser> users,
-                                       @JsonProperty("adminGroups") List<String> adminGroups,
-                                       @JsonProperty("adminUsers") List<String> adminUsers) {
+    private final AuthenticationManager inner;
 
-        ImmutableMap.Builder<String, User> builder = ImmutableMap.<String, User> builder();
-        for (User user : users) {
-            builder.put(user.name(), user);
+    @JsonCreator
+    public AuthenticationManagerStatic(@JsonProperty("users") List<StaticUser> users,
+                                       @JsonProperty("adminGroups") List<String> adminGroups,
+                                       @JsonProperty("adminUsers") List<String> adminUsers,
+                                       @JsonProperty("inner")AuthenticationManager inner) {
+
+        ImmutableMap.Builder<String, StaticUser> builder = ImmutableMap.<String, StaticUser> builder();
+        if (users != null) {
+            for (StaticUser user : users) {
+                builder.put(user.name(), user);
+            }
         }
         this.users = builder.build();
-        this.adminGroups = ImmutableList.copyOf(adminGroups);
-        this.adminUsers = ImmutableList.copyOf(adminUsers);
+        this.adminGroups = (adminGroups == null) ? ImmutableList.of() : ImmutableList.copyOf(adminGroups);
+        this.adminUsers = (adminUsers == null) ? ImmutableList.of() : ImmutableList.copyOf(adminUsers);
+        this.inner = (inner == null) ? new AuthenticationManagerNoop() : inner;
     }
 
-    /**
-     * In static authentication the user password and the user secret are
-     * identical. Re-use the authentication method for login.
-     */
     @Override public String login(String username, String password) {
-        User match = authenticate(username, password);
-        if (match != null) {
-            return password;
-        } else {
-            return null;
+        String token = inner.login(username, password);
+        if ((token == null) && (users.containsKey(username))) {
+            token = users.get(username).secret();
         }
+        return token;
     }
 
     @Override public User authenticate(String username, String secret) {
         if ((username == null) || (secret == null)) {
             return null;
         }
-        User match = users.get(username);
-        if ((match != null) && (Objects.equals(match.secret(), secret))) {
-            return match;
+        User innerMatch = inner.authenticate(username, secret);
+        StaticUser outerMatch = users.get(username);
+        if ((innerMatch == null) && (!Objects.equals(outerMatch.secret(), secret))) {
+            return null;
+        } else {
+            return DefaultUser.join(innerMatch, outerMatch);
         }
-        return null;
     }
 
     @Override public void logout(User user) {
-        // do nothing
+        if (user != null) {
+            inner.logout(user);
+        }
     }
 
     @Override public ImmutableList<String> adminGroups() {
-        return adminGroups;
+        return ImmutableList.<String>builder().addAll(inner.adminGroups()).addAll(adminGroups).build();
     }
 
     @Override public ImmutableList<String> adminUsers() {
-        return adminUsers;
+        return ImmutableList.<String>builder().addAll(inner.adminUsers()).addAll(adminUsers).build();
     }
+
 }

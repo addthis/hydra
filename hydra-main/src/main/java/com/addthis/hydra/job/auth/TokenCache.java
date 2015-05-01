@@ -15,7 +15,7 @@ package com.addthis.hydra.job.auth;
 
 import javax.annotation.Nonnull;
 
-import java.util.UUID;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.codec.annotations.Time;
@@ -23,62 +23,55 @@ import com.addthis.codec.annotations.Time;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-public class UserCache {
+public class TokenCache {
 
     public enum ExpirationPolicy {
-        ExpireAfterWrite, ExpireAfterAccess
+        AfterWrite, AfterAccess
     }
 
     /**
-     * Expiration policy. Default is {@code ExpireAfterWrite}
+     * Expiration policy. Default is {@code AfterWrite}
      */
     @Nonnull
     public final ExpirationPolicy expirationPolicy;
 
     /**
-     * Expiration time in minutes. Default is 1440.
+     * Expiration time in minutes.
      */
+    @Time(TimeUnit.MINUTES)
     public final int expirationTimeout;
 
-    private final Cache<String, User> userCache;
+    private final Cache<String, String> cache;
 
-    @JsonCreator
-    public UserCache(@JsonProperty("expirationPolicy") ExpirationPolicy expirationPolicy,
-                     @JsonProperty("expirationTimeout") @Time(TimeUnit.MINUTES) int expirationTimeout) {
+    public TokenCache(ExpirationPolicy expirationPolicy,
+                      int expirationTimeout) {
         this.expirationPolicy = expirationPolicy;
         this.expirationTimeout = expirationTimeout;
         CacheBuilder cacheBuilder = CacheBuilder.newBuilder();
         switch (expirationPolicy) {
-            case ExpireAfterAccess:
+            case AfterAccess:
                 cacheBuilder = cacheBuilder.expireAfterAccess(expirationTimeout, TimeUnit.MINUTES);
                 break;
-            case ExpireAfterWrite:
+            case AfterWrite:
                 cacheBuilder = cacheBuilder.expireAfterWrite(expirationTimeout, TimeUnit.MINUTES);
                 break;
             default:
                 throw new IllegalStateException("Unknown expiration policy " + expirationPolicy);
         }
-        userCache = cacheBuilder.build();
+        cache = cacheBuilder.build();
     }
 
-    public User get(@Nonnull String name, @Nonnull UUID secret) {
-        User candidate = userCache.getIfPresent(name);
-        if ((candidate != null) && (candidate.secret().equals(secret))) {
-            return candidate;
-        } else {
-            return null;
-        }
+    public boolean get(@Nonnull String name, @Nonnull String secret) {
+        String candidate = cache.getIfPresent(name);
+        return ((candidate != null) && (Objects.equals(candidate, secret)));
     }
 
-    public void put(@Nonnull User user) {
-        userCache.put(user.name(), user);
+    public void put(@Nonnull String name, @Nonnull String secret) {
+        cache.put(name, secret);
     }
 
     public void remove(@Nonnull String name) {
-        userCache.invalidate(name);
+        cache.invalidate(name);
     }
 
 }

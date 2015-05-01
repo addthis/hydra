@@ -16,23 +16,21 @@ package com.addthis.hydra.job.auth;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableList;
+import java.util.List;
 
 public interface User {
 
     @Nonnull String name();
 
-    @Nonnull ImmutableList<String> groups();
+    @Nonnull List<String> groups();
 
     default @Nullable String defaultGroup() {
-        ImmutableList<String> groups = groups();
+        List<String> groups = groups();
         if (groups.size() > 0) {
             return groups.get(0);
         } else {
             return null;
         }
     }
-
-    @Nonnull String secret();
 
 }

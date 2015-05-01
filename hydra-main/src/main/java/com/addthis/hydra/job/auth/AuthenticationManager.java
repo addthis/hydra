@@ -1,8 +1,23 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.addthis.hydra.job.auth;
+
+import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 
-public interface AuthenticationManager {
+public abstract class AuthenticationManager {
 
     /**
      * Returns a non-null secret token if authentication
@@ -12,14 +27,45 @@ public interface AuthenticationManager {
      * @param password
      * @return non-null secret if authentication succeeded
      */
-    String login(String username, String password);
+    public abstract String login(String username, String password);
 
-    User authenticate(String username, String secret);
+    /**
+     * Return the user object if the username and secret token are valid.
+     *
+     * @param username
+     * @param secret
+     * @return
+     */
+    public abstract User authenticate(String username, String secret);
 
-    void logout(User user);
+    /**
+     * Logout the user from the authentication manager. The secret
+     * token for the user should be invalidated.
+     *
+     * @param user
+     */
+    public abstract void logout(User user);
 
-    ImmutableList<String> adminGroups();
+    public abstract ImmutableList<String> adminGroups();
 
-    ImmutableList<String> adminUsers();
+    public abstract ImmutableList<String> adminUsers();
+
+    public boolean isAdmin(User user) {
+        if (user == null) {
+            return false;
+        }
+        List<String> adminUsers = adminUsers();
+        List<String> adminGroups = adminGroups();
+        if (adminUsers.contains(user)) {
+            return true;
+        }
+        List<String> groups = user.groups();
+        for (String group : groups) {
+            if (adminGroups.contains(group)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
 }

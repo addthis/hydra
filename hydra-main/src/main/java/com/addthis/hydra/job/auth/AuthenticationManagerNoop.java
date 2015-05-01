@@ -15,26 +15,18 @@ package com.addthis.hydra.job.auth;
 
 import com.google.common.collect.ImmutableList;
 
-/**
- * This authentication manager will create a user for any username and password
- * that is provided. Secret tokens are ignored.
- */
-public class AuthenticationManagerAllowAll extends AuthenticationManager {
+public class AuthenticationManagerNoop extends AuthenticationManager {
+
 
     @Override public String login(String username, String password) {
-        return "unused";
-    }
-
-    @Override public boolean isAdmin(User user) {
-        return true;
+        return null;
     }
 
     @Override public User authenticate(String username, String secret) {
-        return new StaticUser(username, ImmutableList.of(), "unused", "unused");
+        return null;
     }
 
     @Override public void logout(User user) {
-        // do nothing
     }
 
     @Override public ImmutableList<String> adminGroups() {

@@ -23,8 +23,11 @@ public final class PermissionsManager {
 
     private final AuthorizationManager authorization;
 
+    private static PermissionsManager ALLOW_ALL = new PermissionsManager(
+            new AuthenticationManagerAllowAll(), new AuthorizationManagerAllowAll());
+
     public static PermissionsManager createManagerAllowAll() {
-        return new PermissionsManager(new AuthenticationManagerAllowAll(), new AuthorizationManagerAllowAll());
+        return ALLOW_ALL;
     }
 
     public PermissionsManager(AuthenticationManager authentication, AuthorizationManager authorization) {
@@ -45,7 +48,7 @@ public final class PermissionsManager {
         if (user == null) {
             return false;
         }
-        return authorization.isAdmin(user);
+        return authentication.isAdmin(user);
     }
 
 }
