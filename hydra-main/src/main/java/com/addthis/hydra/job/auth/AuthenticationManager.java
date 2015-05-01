@@ -17,6 +17,11 @@ import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 
+/**
+ * Clients outside this package should not communicate
+ * directly with AuthenticationManagers. They should use the
+ * {@link PermissionsManager} API for authentication.
+ */
 public abstract class AuthenticationManager {
 
     /**
@@ -27,7 +32,7 @@ public abstract class AuthenticationManager {
      * @param password
      * @return non-null secret if authentication succeeded
      */
-    public abstract String login(String username, String password);
+    abstract String login(String username, String password);
 
     /**
      * Return the user object if the username and secret token are valid.
@@ -36,7 +41,7 @@ public abstract class AuthenticationManager {
      * @param secret
      * @return
      */
-    public abstract User authenticate(String username, String secret);
+    abstract User authenticate(String username, String secret);
 
     /**
      * Logout the user from the authentication manager. The secret
@@ -44,19 +49,19 @@ public abstract class AuthenticationManager {
      *
      * @param user
      */
-    public abstract void logout(User user);
+    abstract void logout(User user);
 
-    public abstract ImmutableList<String> adminGroups();
+    abstract ImmutableList<String> adminGroups();
 
-    public abstract ImmutableList<String> adminUsers();
+    abstract ImmutableList<String> adminUsers();
 
-    public boolean isAdmin(User user) {
+    boolean isAdmin(User user) {
         if (user == null) {
             return false;
         }
         List<String> adminUsers = adminUsers();
         List<String> adminGroups = adminGroups();
-        if (adminUsers.contains(user)) {
+        if (adminUsers.contains(user.name())) {
             return true;
         }
         List<String> groups = user.groups();

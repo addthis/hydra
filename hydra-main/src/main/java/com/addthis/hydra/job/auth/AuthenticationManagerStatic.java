@@ -27,6 +27,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * and administrator users. If an inner AuthenticationManager
  * is specified then the inner manager takes precedence for
  * authentication purposes.
+ *
+ * TODO: create an AuthenticationManager that continuously re-reads a file.
+ * TODO: To allow for authentication changes without restarting cluster.
+ *
  */
 public class AuthenticationManagerStatic extends AuthenticationManager {
 
@@ -56,7 +60,7 @@ public class AuthenticationManagerStatic extends AuthenticationManager {
         this.inner = (inner == null) ? new AuthenticationManagerNoop() : inner;
     }
 
-    @Override public String login(String username, String password) {
+    @Override String login(String username, String password) {
         String token = inner.login(username, password);
         if ((token == null) && (users.containsKey(username))) {
             token = users.get(username).secret();
@@ -64,7 +68,7 @@ public class AuthenticationManagerStatic extends AuthenticationManager {
         return token;
     }
 
-    @Override public User authenticate(String username, String secret) {
+    @Override User authenticate(String username, String secret) {
         if ((username == null) || (secret == null)) {
             return null;
         }
@@ -77,17 +81,17 @@ public class AuthenticationManagerStatic extends AuthenticationManager {
         }
     }
 
-    @Override public void logout(User user) {
+    @Override void logout(User user) {
         if (user != null) {
             inner.logout(user);
         }
     }
 
-    @Override public ImmutableList<String> adminGroups() {
+    @Override ImmutableList<String> adminGroups() {
         return ImmutableList.<String>builder().addAll(inner.adminGroups()).addAll(adminGroups).build();
     }
 
-    @Override public ImmutableList<String> adminUsers() {
+    @Override ImmutableList<String> adminUsers() {
         return ImmutableList.<String>builder().addAll(inner.adminUsers()).addAll(adminUsers).build();
     }
 

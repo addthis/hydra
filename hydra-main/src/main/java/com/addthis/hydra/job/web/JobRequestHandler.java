@@ -28,14 +28,14 @@ public interface JobRequestHandler {
      * Creates or updates a job.
      * 
      * @param kv        request parameters
-     * @param username  the user who made the request
+     * @param user      the user who made the request
      * @return          the created/update job
      * @throws IllegalArgumentException If any parameter is invalid (400 response code)
      * @throws UnsupportedOperationException If insufficient privileges are available (401 response code)
      * @throws Exception                If any other error occurred, typically an internal one 
      *                                  (500 response code)
      */
-    Job createOrUpdateJob(KVPairs kv, String username, String token) throws IllegalArgumentException, Exception;
+    Job createOrUpdateJob(KVPairs kv, String user, String token, String sudo) throws IllegalArgumentException, Exception;
 
     /**
      * Kicks the specified job if the right parameters are set. (THIS IS A LEGACY METHOD!)

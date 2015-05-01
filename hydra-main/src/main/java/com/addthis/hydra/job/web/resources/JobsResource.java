@@ -44,6 +44,7 @@ import com.addthis.codec.jackson.CodecJackson;
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.codec.plugins.PluginRegistry;
+import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobExpand;
@@ -120,7 +121,8 @@ public class JobsResource {
                               @QueryParam("enable") @DefaultValue("1") String enableParam,
                               @QueryParam("unsafe") @DefaultValue("false") boolean unsafe,
                               @QueryParam("user") String user,
-                              @QueryParam("token") String token) {
+                              @QueryParam("token") String token,
+                              @QueryParam("sudo") String sudo) {
         boolean enable = enableParam.equals("1");
         if (jobarg != null) {
             List<String> jobIds = Splitter.on(',').omitEmptyStrings().trimResults().splitToList(jobarg);
@@ -137,7 +139,7 @@ public class JobsResource {
                 for (String jobId : jobIds) {
                     Job job = spawn.getJob(jobId);
                     if (job != null) {
-                        if (!spawn.getPermissionsManager().isWritable(user, token, job)) {
+                        if (!spawn.getPermissionsManager().isWritable(user, token, sudo, job)) {
                             notPermitted.add(jobId);
                         } else if (enable && !unsafe && job.getState() != JobState.IDLE) {
                             // request to enable safely, so do not allow if job is not IDLE
@@ -180,10 +182,11 @@ public class JobsResource {
     public Response rebalanceJob(@QueryParam("id") String id,
                                  @QueryParam("user") String user,
                                  @QueryParam("token") String token,
+                                 @QueryParam("sudo") String sudo,
                                  @QueryParam("tasksToMove") @DefaultValue("-1") Integer tasksToMove) {
         emitLogLineForAction(user, "job rebalance on " + id + " tasksToMove=" + tasksToMove);
         try {
-            RebalanceOutcome ro = spawn.rebalanceJob(id, tasksToMove, user, token);
+            RebalanceOutcome ro = spawn.rebalanceJob(id, tasksToMove, user, token, sudo);
             String outcome = ro.toString();
             return Response.ok(outcome).build();
         } catch (Exception ex) {
@@ -305,7 +308,8 @@ public class JobsResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response synchronizeJob(@QueryParam("id") @DefaultValue("") String id,
                                    @QueryParam("user") String user,
-                                   @QueryParam("token") String token) {
+                                   @QueryParam("token") String token,
+                                   @QueryParam("sudo") String sudo) {
         emitLogLineForAction(user, "job synchronize on " + id);
         if (spawn.synchronizeJobState(id)) {
             return Response.ok("{id:'" + id + "',action:'synchronzied'}").build();
@@ -323,11 +327,12 @@ public class JobsResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response deleteJob(@QueryParam("id") @DefaultValue("") String id,
                               @QueryParam("user") String user,
-                              @QueryParam("token") String token) {
+                              @QueryParam("token") String token,
+                              @QueryParam("sudo") String sudo) {
         Job job = spawn.getJob(id);
         if (job == null) {
             return Response.serverError().entity("Job with id " + id + " cannot be found").build();
-        } else if (!spawn.getPermissionsManager().isWritable(user, token, job)) {
+        } else if (!spawn.getPermissionsManager().isWritable(user, token, sudo, job)) {
             return Response.serverError().entity("Insufficient privileges to delete job " + id).build();
         } else if (job.getCountActiveTasks() != 0) {
             return Response.serverError().entity("A job with active tasks cannot be deleted").build();
@@ -567,10 +572,11 @@ public class JobsResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response saveJob(@QueryParam("pairs") KVPairs kv,
                             @QueryParam("user") String user,
-                            @QueryParam("token") String token) {
+                            @QueryParam("token") String token,
+                            @QueryParam("sudo") String sudo) {
         String id = KVUtils.getValue(kv, "", "id", "job");
         try {
-            Job job = requestHandler.createOrUpdateJob(kv, user, token);
+            Job job = requestHandler.createOrUpdateJob(kv, user, token, sudo);
             log.info("[job/save][user={}][id={}] Job {}", user, job.getId(), jobUpdateAction(id));
             return Response.ok("{\"id\":\"" + job.getId() + "\",\"updated\":\"true\"}").build();
         } catch (IllegalArgumentException e) {
@@ -599,11 +605,12 @@ public class JobsResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response submitJob(@QueryParam("pairs") KVPairs kv,
                               @QueryParam("user") String user,
-                              @QueryParam("token") String token) {
+                              @QueryParam("token") String token,
+                              @QueryParam("sudo") String sudo) {
         String id = KVUtils.getValue(kv, "", "id", "job");
         log.warn("[job/submit][user={}][id={}] This end point is deprecated", user, id);
         try {
-            Job job = requestHandler.createOrUpdateJob(kv, user, token);
+            Job job = requestHandler.createOrUpdateJob(kv, user, token, sudo);
             // optionally kicks the job/task
             requestHandler.maybeKickJobOrTask(kv, job);
             log.info("[job/submit][user={}][id={}] Job {}", user, job.getId(), jobUpdateAction(id));

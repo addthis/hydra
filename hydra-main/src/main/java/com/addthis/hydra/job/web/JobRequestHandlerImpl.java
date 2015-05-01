@@ -44,7 +44,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     }
 
     @Override
-    public Job createOrUpdateJob(KVPairs kv, String username, String token) throws Exception {
+    public Job createOrUpdateJob(KVPairs kv, String user, String token, String sudo) throws Exception {
         String id = KVUtils.getValue(kv, "", "id", "job");
         String config = kv.getValue("config");
         String expandedConfig;
@@ -57,7 +57,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
             checkArgument(config != null, "Parameter 'config' is missing");
             expandedConfig = tryExpandJobConfigParam(config);
             job = spawn.createJob(
-                    kv.getValue("owner", username),
+                    kv.getValue("owner", user),
                     kv.getIntValue("nodes", -1),
                     Splitter.on(',').omitEmptyStrings().trimResults().splitToList(kv.getValue("hosts", "")),
                     kv.getValue("minionType", Minion.defaultMinionType),
@@ -65,7 +65,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         } else {
             job = spawn.getJob(id);
             checkArgument(job != null, "Job %s does not exist", id);
-            if (!spawn.getPermissionsManager().isWritable(username, token, job)) {
+            if (!spawn.getPermissionsManager().isWritable(user, token, sudo, job)) {
                 throw new UnsupportedOperationException("insufficient privileges to access " + id);
             }
             if (config == null) {

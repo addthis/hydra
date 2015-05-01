@@ -35,12 +35,17 @@ public final class PermissionsManager {
         this.authorization = authorization;
     }
 
-    public boolean isWritable(String username, String secret, WritableAsset asset) {
+    public boolean isWritable(String username, String secret, String sudo, WritableAsset asset) {
         User user = authentication.authenticate(username, secret);
         if (user == null) {
             return false;
         }
-        return authorization.isWritable(user, asset);
+        return authorization.isWritable(user, sudo, asset);
+    }
+
+    public void logout(User user) {
+        authorization.logout(user);
+        authentication.logout(user);
     }
 
     public boolean isAdmin(String username, String secret) {

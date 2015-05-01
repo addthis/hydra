@@ -13,10 +13,17 @@
  */
 package com.addthis.hydra.job.auth;
 
-public class AuthorizationManagerAllowAll implements AuthorizationManager {
+public class AuthorizationManagerAllowAll extends AuthorizationManager {
 
-    @Override public boolean isWritable(User user, WritableAsset asset) {
+    @Override boolean isWritable(User user, String sudoToken, WritableAsset asset) {
         return true;
     }
 
+    @Override String sudo(User user) {
+        return "unused";
+    }
+
+    @Override void logout(User user) {
+        // do nothing
+    }
 }

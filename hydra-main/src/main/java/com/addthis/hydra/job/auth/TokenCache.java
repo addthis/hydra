@@ -14,8 +14,8 @@
 package com.addthis.hydra.job.auth;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import com.addthis.codec.annotations.Time;
@@ -61,9 +61,12 @@ public class TokenCache {
         cache = cacheBuilder.build();
     }
 
-    public boolean get(@Nonnull String name, @Nonnull String secret) {
+    public boolean get(@Nullable String name, @Nullable String secret) {
+        if ((name == null) || (secret == null)) {
+            return false;
+        }
         String candidate = cache.getIfPresent(name);
-        return ((candidate != null) && (Objects.equals(candidate, secret)));
+        return ((candidate != null) && (candidate.equals(secret)));
     }
 
     public void put(@Nonnull String name, @Nonnull String secret) {

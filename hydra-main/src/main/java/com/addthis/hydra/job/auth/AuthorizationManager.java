@@ -13,8 +13,21 @@
  */
 package com.addthis.hydra.job.auth;
 
-public interface AuthorizationManager {
+/**
+ * Clients outside this package should not communicate
+ * directly with AuthorizationManagers. They should use the
+ * {@link PermissionsManager} API for authentication.
+ */
+public abstract class AuthorizationManager {
 
-    boolean isWritable(User user, WritableAsset asset);
+    abstract boolean isWritable(User user, String sudoToken, WritableAsset asset);
+
+    abstract String sudo(User user);
+
+    /**
+     * Performs any logout activities such as clearing
+     * the sudo cache.
+     */
+    abstract void logout(User user);
 
 }

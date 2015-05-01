@@ -13,14 +13,35 @@
  */
 package com.addthis.hydra.job.auth;
 
+import javax.annotation.Nonnull;
+
 import java.util.Objects;
+import java.util.UUID;
 
-public class AuthorizationManagerBasic implements AuthorizationManager {
+public class AuthorizationManagerBasic extends AuthorizationManager {
 
-    @Override public boolean isWritable(User user, WritableAsset asset) {
+    @Nonnull
+    private final TokenCache sudoCache;
+
+    @Nonnull
+    private final AuthenticationManager authenticationManager;
+
+    public AuthorizationManagerBasic(AuthenticationManager authenticationManager, int sudoTimeout) {
+        this.authenticationManager = authenticationManager;
+        this.sudoCache = new TokenCache(TokenCache.ExpirationPolicy.AfterWrite, sudoTimeout);
+    }
+
+    @Override boolean isWritable(User user, String sudo, WritableAsset asset) {
         if ((user == null) || (asset == null)) {
             return false;
+        } else if (sudoCache.get(user.name(), sudo)) {
+            return true;
+        } else {
+            return isWritable(user, asset);
         }
+    }
+
+    private boolean isWritable(User user, WritableAsset asset) {
         if (Objects.equals(user.name(), asset.getOwner())) {
             return asset.isOwnerWritable();
         }
@@ -31,6 +52,21 @@ public class AuthorizationManagerBasic implements AuthorizationManager {
             }
         }
         return asset.isWorldWritable();
+    }
+
+    @Override String sudo(User user) {
+        if (authenticationManager.isAdmin(user)) {
+            UUID uuid = UUID.randomUUID();
+            String token = uuid.toString();
+            sudoCache.put(user.name(), token);
+            return token;
+        } else {
+            return null;
+        }
+    }
+
+    @Override void logout(User user) {
+        sudoCache.remove(user.name());
     }
 
 }

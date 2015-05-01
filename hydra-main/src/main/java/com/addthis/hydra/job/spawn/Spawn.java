@@ -1137,13 +1137,14 @@ public class Spawn implements Codable, AutoCloseable {
      * @return a RebalanceOutcome describing which steps were performed
      * @throws Exception If there is a failure when rebalancing replicas
      */
-    public RebalanceOutcome rebalanceJob(String jobUUID, int tasksToMove, String user, String token) throws Exception {
+    public RebalanceOutcome rebalanceJob(String jobUUID, int tasksToMove, String user,
+                                         String token, String sudo) throws Exception {
         Job job = getJob(jobUUID);
         if (jobUUID == null || job == null) {
             log.warn("[job.rebalance] job uuid " + jobUUID + " not found");
             return new RebalanceOutcome(jobUUID, "job not found", null, null);
         }
-        if (permissionsManager.isWritable(user, token, job)) {
+        if (permissionsManager.isWritable(user, token, sudo, job)) {
             log.warn("[job.rebalance] insufficient priviledges to rebalance " + jobUUID);
             return new RebalanceOutcome(jobUUID, "insufficient priviledges", null, null);
         }

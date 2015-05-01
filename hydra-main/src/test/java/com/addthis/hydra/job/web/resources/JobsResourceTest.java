@@ -55,24 +55,24 @@ public class JobsResourceTest {
     public void saveJob() throws Exception {
         // stub spawn calls
         Job job = new Job("new_job_id", "megatron");
-        when(requestHandler.createOrUpdateJob(kv, "megatron", "megatron")).thenReturn(job);
-        Response response = resource.saveJob(kv, "megatron", "megatron");
+        when(requestHandler.createOrUpdateJob(kv, "megatron", "megatron", null)).thenReturn(job);
+        Response response = resource.saveJob(kv, "megatron", "megatron", null);
         assertEquals(200, response.getStatus());
         verifyZeroInteractions(spawn);
     }
 
     @Test
     public void saveJob_BadParam() throws Exception {
-        when(requestHandler.createOrUpdateJob(kv, "megatron", "megatron")).thenThrow(new IllegalArgumentException("bad param"));
-        Response response = resource.saveJob(kv, "megatron", "megatron");
+        when(requestHandler.createOrUpdateJob(kv, "megatron", "megatron", null)).thenThrow(new IllegalArgumentException("bad param"));
+        Response response = resource.saveJob(kv, "megatron", "megatron", null);
         assertEquals(400, response.getStatus());
         verifyZeroInteractions(spawn);
     }
 
     @Test
     public void saveJob_InternalError() throws Exception {
-        when(requestHandler.createOrUpdateJob(kv, "megatron", "megatron")).thenThrow(new Exception("internal error"));
-        Response response = resource.saveJob(kv, "megatron", "megatron");
+        when(requestHandler.createOrUpdateJob(kv, "megatron", "megatron", null)).thenThrow(new Exception("internal error"));
+        Response response = resource.saveJob(kv, "megatron", "megatron", null);
         assertEquals(500, response.getStatus());
         verifyZeroInteractions(spawn);
     }
@@ -84,7 +84,7 @@ public class JobsResourceTest {
         when(spawn.getJob("job1")).thenReturn(job1);
         when(spawn.getJob("job2")).thenReturn(job2);
 
-        Response response = resource.enableJob("job1,job2", "1", false, "megatron", "megatron");
+        Response response = resource.enableJob("job1,job2", "1", false, "megatron", "megatron", null);
         assertTrue("job1 should be enabled", job1.isEnabled());
         assertFalse("job2 should be disabled", job2.isEnabled());
         assertEquals("response status", 200, response.getStatus());
@@ -97,7 +97,7 @@ public class JobsResourceTest {
         when(spawn.getJob("job1")).thenReturn(job1);
         when(spawn.getJob("job2")).thenReturn(job2);
 
-        Response response = resource.enableJob("job1,job2", "1", true, "megatron", "megatron");
+        Response response = resource.enableJob("job1,job2", "1", true, "megatron", "megatron", null);
         assertTrue("job1 should be enabled", job1.isEnabled());
         assertTrue("job2 should be enabled", job2.isEnabled());
         assertEquals("response status", 200, response.getStatus());

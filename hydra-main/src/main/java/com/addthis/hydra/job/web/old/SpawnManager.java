@@ -418,9 +418,10 @@ public class SpawnManager {
                 String id = kv.getValue("id", "");
                 String user = kv.getValue("user", "");
                 String token = kv.getValue("token", "");
+                String sudo = kv.getValue("sudo", "");
                 int tasksToMove = kv.getIntValue("tasksToMove", -1);
                 emitLogLineForAction(kv, "job rebalance on " + id + " tasksToMove=" + tasksToMove);
-                RebalanceOutcome outcome = spawn.rebalanceJob(id, tasksToMove, user, token);
+                RebalanceOutcome outcome = spawn.rebalanceJob(id, tasksToMove, user, token, sudo);
                 link.sendShortReply(200, "OK", outcome.toString());
             }
         });
@@ -734,7 +735,8 @@ public class SpawnManager {
                     if (kv.count() > 0) {
                         String username = kv.getValue("user", "anonymous");
                         String token = kv.getValue("token", "");
-                        Job job = jobRequestHandler.createOrUpdateJob(kv, username, token);
+                        String sudo = kv.getValue("sudo", "");
+                        Job job = jobRequestHandler.createOrUpdateJob(kv, username, token, sudo);
                         // optionally kicks the job/task
                         jobRequestHandler.maybeKickJobOrTask(kv, job);
                     }

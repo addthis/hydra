@@ -21,27 +21,27 @@ import com.google.common.collect.ImmutableList;
  */
 public class AuthenticationManagerAllowAll extends AuthenticationManager {
 
-    @Override public String login(String username, String password) {
+    @Override String login(String username, String password) {
         return "unused";
     }
 
-    @Override public boolean isAdmin(User user) {
+    @Override boolean isAdmin(User user) {
         return true;
     }
 
-    @Override public User authenticate(String username, String secret) {
+    @Override User authenticate(String username, String secret) {
         return new StaticUser(username, ImmutableList.of(), "unused", "unused");
     }
 
-    @Override public void logout(User user) {
+    @Override void logout(User user) {
         // do nothing
     }
 
-    @Override public ImmutableList<String> adminGroups() {
+    @Override ImmutableList<String> adminGroups() {
         return ImmutableList.of();
     }
 
-    @Override public ImmutableList<String> adminUsers() {
+    @Override ImmutableList<String> adminUsers() {
         return ImmutableList.of();
     }
 }
