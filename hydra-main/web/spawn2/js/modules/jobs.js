@@ -99,6 +99,7 @@ function(
             data.endTime = data.endTime || "";
             data.creator = data.creator || "";
             data.owner = data.owner || "";
+            data.group = data.group || "";
             data.state = (_.has(data,'state')?data.state:4);
             if(data.disabled){
                 data.status = "disabled";
@@ -133,7 +134,6 @@ function(
         defaults:{
             description:"(no title)",
             state:4,
-            owner:"",
             submitTime:-1,
             endTime:-1,
             status:"",
@@ -310,11 +310,13 @@ function(
                 data.commit=this.commit;
             }
             var url = "/job/save";
+            var parameters = {}
             if(!this.isNew()){
-                url+="?id="+this.id;
+                parameters['id'] = this.id;
             }
+            parameters = app.authQueryParameters(parameters);
             return $.ajax({
-                url: url,
+                url: url + "?" + $.param(parameters),
                 data:data,
                 type: "POST"
             });

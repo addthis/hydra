@@ -34,7 +34,7 @@ function(
         cookieExpires:7,
         currentView:null,
         mainSelector:"#main",
-        user: new Backbone.Model({username:""}),
+        user: new Backbone.Model({username:"",token:"",sudo:""}),
         server:server,
         activeModels:[],
         setCookie:function(name,value){
@@ -66,19 +66,36 @@ function(
                 self[modelName]=undefined;
             });
         },
-        authenticate:function(){
-            var username = $.cookie("username"), self=this;
-            if(_.isUndefined(username)){
+        authenticate:function() {
+            var username = $.cookie("username");
+            var token = $.cookie("token");
+            var self = this;
+            if (_.isUndefined(username) || _.isUndefined(token)) {
                 var alert = Alertify.dialog.prompt("Enter username:",function(str){
-                    var data = {username: $.trim(str)};
-                    $.cookie("username",data,{expires:365});
-                    self.user.set("username", $.trim(str));
+                    username = $.trim(str);
+                    token = username;
+                    $.cookie("username", username, {expires:1});
+                    $.cookie("token", token, {expires:1});
+                    self.user.set("username", username);
+                    self.user.set("token", token);
                 });
                 $(alert.el).find("#alertify-text").focus();
+            } else {
+                self.user.set("username", username);
+                self.user.set("token", token);
             }
-            else{
-                self.user.set("username",username.username);
+        },
+        authQueryParameters:function(parameters) {
+            var self = this;
+            var user = self.user.get("username");
+            var token = self.user.get("token");
+            var sudo = self.user.get("sudo");
+            parameters["user"] = user;
+            parameters["token"] = token;
+            if (sudo) {
+                parameters["sudo"] = sudo;
             }
+            return parameters;
         },
         makeHtmlTitle:function(title){
             var hostname = location.hostname;

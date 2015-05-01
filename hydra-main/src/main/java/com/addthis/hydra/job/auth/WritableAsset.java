@@ -17,23 +17,37 @@ public interface WritableAsset extends OwnableAsset {
 
     boolean isOwnerWritable();
 
+    boolean isGroupWritable();
+
+    boolean isWorldWritable();
+
+    String lastModifiedBy();
+
+    long lastModifiedAt();
+
     /**
      * @throws UnsupportedOperationException if asset view is read-only
      */
     void setOwnerWritable(boolean writable);
-
-    boolean isGroupWritable();
 
     /**
      * @throws UnsupportedOperationException if asset view is read-only
      */
     void setGroupWritable(boolean writable);
 
-    boolean isWorldWritable();
-
     /**
      * @throws UnsupportedOperationException if asset view is read-only
      */
     void setWorldWritable(boolean writable);
+
+    /**
+     * @throws UnsupportedOperationException if asset view is read-only
+     */
+    void setLastModifiedBy(String username);
+
+    /**
+     * @throws UnsupportedOperationException if asset view is read-only
+     */
+    void setLastModifiedAt(long time);
 
 }

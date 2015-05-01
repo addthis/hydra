@@ -22,7 +22,6 @@ require.config({
         ,"jquery.dataTable":"./vendor/jquery.dataTables.nightly"
         ,"dataTable.scroller":"./vendor/dataTables.scroller"
         ,"domReady":"./vendor/domReady"
-        //,"jquery.resize":"./vendor/jquery.ba-resize"
         ,"date":"./vendor/date"
         ,"setupData":"/update/setup"
         ,"d3":"./vendor/d3.v2"

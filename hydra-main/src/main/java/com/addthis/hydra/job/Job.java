@@ -67,6 +67,10 @@ public final class Job implements IJob {
     @FieldConfig private boolean groupWritable;
     /* can the world modify the job */
     @FieldConfig private boolean worldWritable;
+    /* user who last modified the job */
+    @FieldConfig private String lastModifiedBy;
+    /* last modification time */
+    @FieldConfig private long lastModifiedAt;
     /* purely ornamental description of this job */
     @FieldConfig private String description;
     /* key used for storing / retrieving this job */
@@ -153,6 +157,8 @@ public final class Job implements IJob {
         this.ownerWritable = job.isOwnerWritable();
         this.groupWritable = job.isGroupWritable();
         this.worldWritable = job.isWorldWritable();
+        this.lastModifiedBy = job.lastModifiedBy();
+        this.lastModifiedAt = job.lastModifiedAt();
         this.description = job.getDescription();
         this.priority = job.getPriority();
         this.createTime = job.getCreateTime();
@@ -246,6 +252,26 @@ public final class Job implements IJob {
     @Override
     public void setWorldWritable(boolean worldWritable) {
         this.worldWritable = worldWritable;
+    }
+
+    @Override
+    public String lastModifiedBy() {
+        return lastModifiedBy;
+    }
+
+    @Override
+    public void setLastModifiedBy(String user) {
+        this.lastModifiedBy = user;
+    }
+
+    @Override
+    public long lastModifiedAt() {
+        return lastModifiedAt;
+    }
+
+    @Override
+    public void setLastModifiedAt(long time) {
+        this.lastModifiedAt = time;
     }
 
     @Override

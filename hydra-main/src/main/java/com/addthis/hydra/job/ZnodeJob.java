@@ -54,6 +54,10 @@ public class ZnodeJob implements IJob {
         @FieldConfig private boolean groupWritable;
         /* can the world modify the job */
         @FieldConfig private boolean worldWritable;
+        /* user who last modified the job */
+        @FieldConfig private String lastModifiedBy;
+        /* last modification time */
+        @FieldConfig private long lastModifiedAt;
         /* purely ornamental description of this job */
         @FieldConfig private String description;
         /* key used for storing / retrieving this job */
@@ -108,6 +112,8 @@ public class ZnodeJob implements IJob {
                     .add("ownerWritable", ownerWritable)
                     .add("groupWritable", groupWritable)
                     .add("worldWritable", worldWritable)
+                    .add("lastModifiedBy", lastModifiedBy)
+                    .add("lastModifiedAt", lastModifiedAt)
                     .add("description", description)
                     .add("id", id)
                     .add("priority", priority)
@@ -186,6 +192,8 @@ public class ZnodeJob implements IJob {
         rznData.ownerWritable = job.isOwnerWritable();
         rznData.groupWritable = job.isGroupWritable();
         rznData.worldWritable = job.isWorldWritable();
+        rznData.lastModifiedAt = job.lastModifiedAt();
+        rznData.lastModifiedBy = job.lastModifiedBy();
         rznData.description = job.getDescription();
         rznData.id = job.getId();
         rznData.priority = job.getPriority();
@@ -282,6 +290,26 @@ public class ZnodeJob implements IJob {
     @Override
     public void setWorldWritable(boolean worldWritable) {
         this.rznData.worldWritable = worldWritable;
+    }
+
+    @Override
+    public String lastModifiedBy() {
+        return rznData.lastModifiedBy;
+    }
+
+    @Override
+    public void setLastModifiedBy(String user) {
+        this.rznData.lastModifiedBy = user;
+    }
+
+    @Override
+    public long lastModifiedAt() {
+        return rznData.lastModifiedAt;
+    }
+
+    @Override
+    public void setLastModifiedAt(long time) {
+        this.rznData.lastModifiedAt = time;
     }
 
     @Override public long getCreateTime() {

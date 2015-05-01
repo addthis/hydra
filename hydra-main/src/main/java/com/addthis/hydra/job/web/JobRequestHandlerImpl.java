@@ -57,7 +57,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
             checkArgument(config != null, "Parameter 'config' is missing");
             expandedConfig = tryExpandJobConfigParam(config);
             job = spawn.createJob(
-                    kv.getValue("owner", user),
+                    kv.getValue("creator", user),
                     kv.getIntValue("nodes", -1),
                     Splitter.on(',').omitEmptyStrings().trimResults().splitToList(kv.getValue("hosts", "")),
                     kv.getValue("minionType", Minion.defaultMinionType),
@@ -78,7 +78,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
                 job.setCommand(command);
             }
         }
-        updateBasicSettings(kv, job);
+        updateBasicSettings(kv, job, user);
         updateQueryConfig(kv, job);
         updateJobParameters(kv, job, expandedConfig);
         // persist update
@@ -106,8 +106,14 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         }
     }
 
-    private void updateBasicSettings(KVPairs kv, IJob job) {
+    private void updateBasicSettings(KVPairs kv, IJob job, String user) {
         job.setOwner(kv.getValue("owner", job.getOwner()));
+        job.setGroup(kv.getValue("group", job.getGroup()));
+        job.setOwnerWritable(KVUtils.getBooleanValue(kv, job.isOwnerWritable(), "ownerWritable"));
+        job.setGroupWritable(KVUtils.getBooleanValue(kv, job.isGroupWritable(), "groupWritable"));
+        job.setWorldWritable(KVUtils.getBooleanValue(kv, job.isWorldWritable(), "worldWritable"));
+        job.setLastModifiedBy(user);
+        job.setLastModifiedAt(System.currentTimeMillis());
         job.setPriority(kv.getIntValue("priority", job.getPriority()));
         job.setDescription(kv.getValue("description", job.getDescription()));
         job.setDescription(KVUtils.getValue(kv, job.getDescription(), "description", "desc"));
