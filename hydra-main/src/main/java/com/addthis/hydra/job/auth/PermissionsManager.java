@@ -44,8 +44,8 @@ public final class PermissionsManager {
     }
 
     public void logout(User user) {
-        authorization.logout(user);
         authentication.logout(user);
+        authorization.logout(user);
     }
 
     public boolean isAdmin(String username, String secret) {

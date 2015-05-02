@@ -32,6 +32,10 @@ public class AuthenticationManagerDenyAll extends AuthenticationManager {
     @Override void logout(User user) {
     }
 
+    @Override boolean isAdmin(User user) {
+        return false;
+    }
+
     @Override ImmutableList<String> adminGroups() {
         return ImmutableList.of();
     }
