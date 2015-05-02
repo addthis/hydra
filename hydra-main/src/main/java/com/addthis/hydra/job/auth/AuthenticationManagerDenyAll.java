@@ -15,14 +15,17 @@ package com.addthis.hydra.job.auth;
 
 import com.google.common.collect.ImmutableList;
 
-public class AuthenticationManagerNoop extends AuthenticationManager {
-
+public class AuthenticationManagerDenyAll extends AuthenticationManager {
 
     @Override String login(String username, String password) {
         return null;
     }
 
     @Override User authenticate(String username, String secret) {
+        return null;
+    }
+
+    @Override protected User getUser(String username) {
         return null;
     }
 

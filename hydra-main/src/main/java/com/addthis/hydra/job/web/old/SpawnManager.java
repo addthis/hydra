@@ -562,6 +562,9 @@ public class SpawnManager {
             public void httpService(HTTPLink link) throws Exception {
                 KVPairs kv = link.getRequestValues();
                 String id = kv.getValue("id", "");
+                String user = kv.getValue("user", "");
+                String token = kv.getValue("token", "");
+                String sudo = kv.getValue("sudo", "");
                 String type = kv.getValue("type", "gold"); // The type of backup to revert to -- defaults to gold.
                 int rev = kv.getIntValue("rev", 0); // The # of revisions to go back -- defaults to the last one.
                 long time = kv.getLongValue("time", -1); // The time of backup to go back to-- defaults to -1 which will not be used.
@@ -569,8 +572,12 @@ public class SpawnManager {
                 IJob job = spawn.getJob(id);
                 int nodeid = kv.getIntValue("node", -1);
                 // broadcast to all hosts if no node specified
-                spawn.revertJobOrTask(job.getId(), nodeid, type, rev, time);
-                link.sendJSON(200, "OK", json("id",job.getId()).put("action","reverted"));
+                boolean success = spawn.revertJobOrTask(job.getId(), user, token, sudo, nodeid, type, rev, time);
+                if (success) {
+                    link.sendJSON(200, "OK", json("id", job.getId()).put("action", "reverted"));
+                } else {
+                    link.sendJSON(401, "OK", json("id", job.getId()).put("action", "unauthorized"));
+                }
             }
         });
         server.mapService("/task.swap", new HTTPService() {

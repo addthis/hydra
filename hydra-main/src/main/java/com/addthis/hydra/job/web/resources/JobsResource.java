@@ -92,7 +92,6 @@ public class JobsResource {
 
     @SuppressWarnings("unused")
     private static final Pattern COMMENTS_REGEX = Pattern.compile("(?m)^\\s*//\\s*host(?:s)?\\s*:\\s*(.*?)$");
-    private static final String DEFAULT_USER = "UNKNOWN_USER";
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final Spawn spawn;
@@ -637,12 +636,18 @@ public class JobsResource {
                               @QueryParam("node") @DefaultValue("-1") Integer node,
                               @QueryParam("time") @DefaultValue("-1") Long time,
                               @QueryParam("user") String user,
-                              @QueryParam("token") String token) {
+                              @QueryParam("token") String token,
+                              @QueryParam("sudo") String sudo) {
         try {
             emitLogLineForAction(user, "job revert on " + id + " of type " + type);
             IJob job = spawn.getJob(id);
-            spawn.revertJobOrTask(job.getId(), node, type, revision, time);
-            return Response.ok("{\"id\":\"" + job.getId() + "\", \"action\":\"reverted\"}").build();
+            boolean success = spawn.revertJobOrTask(job.getId(), user, token, sudo, node, type, revision, time);
+            if (success) {
+                return Response.ok("{\"id\":\"" + job.getId() + "\", \"action\":\"reverted\"}").build();
+            } else {
+                return Response.status(Response.Status.UNAUTHORIZED).entity(
+                        "{\"id\":\"" + job.getId() + "\", \"action\":\"unauthorized\"}").build();
+            }
         } catch (Exception ex) {
             ex.printStackTrace();
             return Response.serverError().entity(ex).build();

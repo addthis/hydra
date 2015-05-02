@@ -33,6 +33,10 @@ public class AuthenticationManagerAllowAll extends AuthenticationManager {
         return new StaticUser(username, ImmutableList.of(), "unused", "unused");
     }
 
+    @Override protected User getUser(String username) {
+        return new StaticUser(username, ImmutableList.of(), "unused", "unused");
+    }
+
     @Override void logout(User user) {
         // do nothing
     }

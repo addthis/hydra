@@ -23,30 +23,20 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Static specification of users, administrator groups,
- * and administrator users. If an inner AuthenticationManager
- * is specified then the inner manager takes precedence for
- * authentication purposes.
- *
- * TODO: create an AuthenticationManager that continuously re-reads a file.
- * TODO: To allow for authentication changes without restarting cluster.
  *
  */
 public class AuthenticationManagerStatic extends AuthenticationManager {
 
-    private final ImmutableMap<String, StaticUser> users;
+    final ImmutableMap<String, StaticUser> users;
 
-    private final ImmutableList<String> adminGroups;
+    final ImmutableList<String> adminGroups;
 
-    private final ImmutableList<String> adminUsers;
-
-    private final AuthenticationManager inner;
+    final ImmutableList<String> adminUsers;
 
     @JsonCreator
     public AuthenticationManagerStatic(@JsonProperty("users") List<StaticUser> users,
                                        @JsonProperty("adminGroups") List<String> adminGroups,
-                                       @JsonProperty("adminUsers") List<String> adminUsers,
-                                       @JsonProperty("inner")AuthenticationManager inner) {
+                                       @JsonProperty("adminUsers") List<String> adminUsers) {
 
         ImmutableMap.Builder<String, StaticUser> builder = ImmutableMap.<String, StaticUser> builder();
         if (users != null) {
@@ -57,42 +47,46 @@ public class AuthenticationManagerStatic extends AuthenticationManager {
         this.users = builder.build();
         this.adminGroups = (adminGroups == null) ? ImmutableList.of() : ImmutableList.copyOf(adminGroups);
         this.adminUsers = (adminUsers == null) ? ImmutableList.of() : ImmutableList.copyOf(adminUsers);
-        this.inner = (inner == null) ? new AuthenticationManagerNoop() : inner;
     }
 
     @Override String login(String username, String password) {
-        String token = inner.login(username, password);
-        if ((token == null) && (users.containsKey(username))) {
-            token = users.get(username).secret();
+        User candidate = authenticate(username, password);
+        if (candidate != null) {
+            return password;
+        } else {
+            return null;
         }
-        return token;
     }
 
     @Override User authenticate(String username, String secret) {
         if ((username == null) || (secret == null)) {
             return null;
         }
-        User innerMatch = inner.authenticate(username, secret);
-        StaticUser outerMatch = users.get(username);
-        if ((innerMatch == null) && (!Objects.equals(outerMatch.secret(), secret))) {
-            return null;
+        StaticUser candidate = users.get(username);
+        if ((candidate != null) && (secret.equals(candidate.secret()))) {
+            return candidate;
         } else {
-            return DefaultUser.join(innerMatch, outerMatch);
+            return null;
         }
+    }
+
+    @Override protected User getUser(String username) {
+        if (username == null) {
+            return null;
+        }
+        return users.get(username);
     }
 
     @Override void logout(User user) {
-        if (user != null) {
-            inner.logout(user);
-        }
+        // do nothing
     }
 
     @Override ImmutableList<String> adminGroups() {
-        return ImmutableList.<String>builder().addAll(inner.adminGroups()).addAll(adminGroups).build();
+        return adminGroups;
     }
 
     @Override ImmutableList<String> adminUsers() {
-        return ImmutableList.<String>builder().addAll(inner.adminUsers()).addAll(adminUsers).build();
+        return adminUsers;
     }
 
 }

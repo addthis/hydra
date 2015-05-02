@@ -1924,10 +1924,23 @@ public class Spawn implements Codable, AutoCloseable {
         stopTask(jobUUID, taskID, true, false);
     }
 
-    public void revertJobOrTask(String jobUUID, int taskID, String backupType, int rev, long time) throws Exception {
+    public boolean revertJobOrTask(String jobUUID,
+                                String user,
+                                String token,
+                                String sudo,
+                                int taskID,
+                                String backupType,
+                                int rev,
+                                long time) throws Exception {
+        Job job = getJob(jobUUID);
+        if (job == null) {
+            return true;
+        }
+        if (!permissionsManager.isWritable(user, token, sudo, job)) {
+            return false;
+        }
         if (taskID == -1) {
             // Revert entire job
-            Job job = getJob(jobUUID);
             Job.logJobEvent(job, JobEvent.REVERT, eventLog);
             int numTasks = job.getTaskCount();
             for (int i = 0; i < numTasks; i++) {
@@ -1939,8 +1952,7 @@ public class Spawn implements Codable, AutoCloseable {
             log.warn("[task.revert] " + jobUUID + "/" + taskID);
             revert(jobUUID, backupType, rev, time, taskID);
         }
-
-
+        return true;
     }
 
     private void revert(String jobUUID, String backupType, int rev, long time, int taskID) throws Exception {

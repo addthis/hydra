@@ -43,6 +43,16 @@ public abstract class AuthenticationManager {
      */
     abstract User authenticate(String username, String secret);
 
+
+    /**
+     * Bypasses authentication. Protected visibility should only
+     * be used by internal methods.
+     *
+     * @param username
+     * @return
+     */
+    protected abstract User getUser(String username);
+
     /**
      * Logout the user from the authentication manager. The secret
      * token for the user should be invalidated.
