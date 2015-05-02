@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.auth;
 
+import javax.annotation.Nonnull;
+
 import java.util.List;
 import java.util.Objects;
 
@@ -27,10 +29,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class AuthenticationManagerStatic extends AuthenticationManager {
 
+    @Nonnull
     final ImmutableMap<String, StaticUser> users;
 
+    @Nonnull
     final ImmutableList<String> adminGroups;
 
+    @Nonnull
     final ImmutableList<String> adminUsers;
 
     @JsonCreator
@@ -45,8 +50,8 @@ public class AuthenticationManagerStatic extends AuthenticationManager {
             }
         }
         this.users = builder.build();
-        this.adminGroups = (adminGroups == null) ? ImmutableList.of() : ImmutableList.copyOf(adminGroups);
-        this.adminUsers = (adminUsers == null) ? ImmutableList.of() : ImmutableList.copyOf(adminUsers);
+        this.adminGroups = ImmutableList.copyOf(adminGroups);
+        this.adminUsers = ImmutableList.copyOf(adminUsers);
     }
 
     @Override String login(String username, String password) {

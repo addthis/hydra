@@ -13,7 +13,12 @@
  */
 package com.addthis.hydra.job.auth;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 public class AuthorizationManagerAllowAll extends AuthorizationManager {
+
+    @JsonCreator
+    public AuthorizationManagerAllowAll() {}
 
     @Override boolean isWritable(User user, String sudoToken, WritableAsset asset) {
         return true;

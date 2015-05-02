@@ -13,6 +13,7 @@
  */
 package com.addthis.hydra.job.auth;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Syntax;
 
 import java.io.IOException;
@@ -29,6 +30,9 @@ import com.addthis.codec.config.Configs;
 
 import com.google.common.collect.ImmutableList;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,18 +45,22 @@ public class AuthenticationManagerFileWatch extends AuthenticationManager {
 
     private static final Logger log = LoggerFactory.getLogger(AuthenticationManagerFileWatch.class);
 
+    @Nonnull
     private volatile AuthenticationManagerStatic manager;
 
+    @Nonnull
     private final WatchService watcher;
 
-    private final Path watchPath;
+    @Nonnull
+    private final Path path;
 
-    public AuthenticationManagerFileWatch(Path watchPath) throws IOException {
-        @Syntax("HOCON") String content = new String(Files.readAllBytes(watchPath));
+    @JsonCreator
+    public AuthenticationManagerFileWatch(@JsonProperty("path") Path path) throws IOException {
+        @Syntax("HOCON") String content = new String(Files.readAllBytes(path));
         this.watcher = FileSystems.getDefault().newWatchService();
         this.manager = Configs.decodeObject(AuthenticationManagerStatic.class, content);
-        this.watchPath = watchPath;
-        watchPath.getParent().register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
+        this.path = path;
+        path.getParent().register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
     }
 
     private void updateAuthenticationManager() {
@@ -67,14 +75,14 @@ public class AuthenticationManagerFileWatch extends AuthenticationManager {
                     break;
                 }
                 WatchEvent<Path> ev = (WatchEvent<Path>) event;
-                Path filename = ev.context();
-                if (filename.equals(watchPath)) {
+                Path filepath = ev.context();
+                if (path.equals(filepath)) {
                     update = true;
                     break;
                 }
             }
             if (update) {
-                @Syntax("HOCON") String content = new String(Files.readAllBytes(watchPath));
+                @Syntax("HOCON") String content = new String(Files.readAllBytes(path));
                 manager = Configs.decodeObject(AuthenticationManagerStatic.class, content);
             }
         } catch (IOException ex) {

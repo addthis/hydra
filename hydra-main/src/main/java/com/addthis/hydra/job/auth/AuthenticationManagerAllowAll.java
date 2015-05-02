@@ -15,11 +15,16 @@ package com.addthis.hydra.job.auth;
 
 import com.google.common.collect.ImmutableList;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * This authentication manager will create a user for any username and password
  * that is provided. Secret tokens are ignored.
  */
 public class AuthenticationManagerAllowAll extends AuthenticationManager {
+
+    @JsonCreator
+    public AuthenticationManagerAllowAll() {}
 
     @Override String login(String username, String password) {
         return "unused";

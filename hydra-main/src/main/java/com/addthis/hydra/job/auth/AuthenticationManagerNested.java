@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.job.auth;
 
+import javax.annotation.Nonnull;
+
 import com.google.common.collect.ImmutableList;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -33,8 +35,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class AuthenticationManagerNested extends AuthenticationManager {
 
+    @Nonnull
     final AuthenticationManager inner;
 
+    @Nonnull
     final AuthenticationManager outer;
 
     @JsonCreator

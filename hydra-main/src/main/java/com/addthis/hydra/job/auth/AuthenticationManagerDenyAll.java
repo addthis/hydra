@@ -15,7 +15,12 @@ package com.addthis.hydra.job.auth;
 
 import com.google.common.collect.ImmutableList;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 public class AuthenticationManagerDenyAll extends AuthenticationManager {
+
+    @JsonCreator
+    public AuthenticationManagerDenyAll() {}
 
     @Override String login(String username, String password) {
         return null;
