@@ -30,7 +30,7 @@ public class AuthenticationManagerStaticTest {
         StaticUser user1 = new StaticUser("user1", ImmutableList.of("group2"), null, null);
         StaticUser user2 = new StaticUser("user2", null, "password2", null);
         List<StaticUser> users1 = ImmutableList.of(user1, user2);
-        AuthenticationManagerStatic auth = new AuthenticationManagerStatic(users1, null, null);
+        AuthenticationManagerStatic auth = new AuthenticationManagerStatic(users1,  ImmutableList.of(),  ImmutableList.of());
         assertNull(auth.login("user1", "bar"));
         assertEquals("password2", auth.login("user2", "password2"));
         assertNull(auth.authenticate("user1", "bar"));

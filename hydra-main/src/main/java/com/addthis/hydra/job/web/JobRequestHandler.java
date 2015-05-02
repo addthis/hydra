@@ -16,6 +16,7 @@ package com.addthis.hydra.job.web;
 import com.addthis.basis.kv.KVPairs;
 
 import com.addthis.hydra.job.Job;
+import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
 
 /**
  * Handles some more complicated job API requests.
@@ -31,11 +32,11 @@ public interface JobRequestHandler {
      * @param user      the user who made the request
      * @return          the created/update job
      * @throws IllegalArgumentException If any parameter is invalid (400 response code)
-     * @throws UnsupportedOperationException If insufficient privileges are available (401 response code)
+     * @throws InsufficientPrivilegesException If insufficient privileges are available (401 response code)
      * @throws Exception                If any other error occurred, typically an internal one 
      *                                  (500 response code)
      */
-    Job createOrUpdateJob(KVPairs kv, String user, String token, String sudo) throws IllegalArgumentException, Exception;
+    Job createOrUpdateJob(KVPairs kv, String user, String token, String sudo) throws Exception;
 
     /**
      * Kicks the specified job if the right parameters are set. (THIS IS A LEGACY METHOD!)

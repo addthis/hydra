@@ -30,8 +30,8 @@ public class AuthenticationManagerNestedTest {
     private static List<StaticUser> innerUsers = ImmutableList.of(user3);
     private static List<StaticUser> outerUsers = ImmutableList.of(user1, user2);
 
-    private static AuthenticationManagerStatic inner = new AuthenticationManagerStatic(innerUsers, null, null);
-    private static AuthenticationManagerStatic outer = new AuthenticationManagerStatic(outerUsers, null, null);
+    private static AuthenticationManagerStatic inner = new AuthenticationManagerStatic(innerUsers, ImmutableList.of(),  ImmutableList.of());
+    private static AuthenticationManagerStatic outer = new AuthenticationManagerStatic(outerUsers, ImmutableList.of(),  ImmutableList.of());
 
     private static AuthenticationManagerNested auth = new AuthenticationManagerNested(inner, outer);
 

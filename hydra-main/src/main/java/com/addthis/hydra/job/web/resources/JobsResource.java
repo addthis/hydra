@@ -53,6 +53,7 @@ import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.RebalanceOutcome;
+import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.DeleteStatus;
@@ -581,6 +582,8 @@ public class JobsResource {
         } catch (IllegalArgumentException e) {
             log.warn("[job/save][user={}][id={}] Bad parameter: {}", user, id, e.getMessage(), e);
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        } catch (InsufficientPrivilegesException e) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
         } catch (Exception e) {
             log.error("[job/save][user={}][id={}] Internal error: {}", user, id, e.getMessage(), e);
             return buildServerError(e);
@@ -617,8 +620,8 @@ public class JobsResource {
         } catch (IllegalArgumentException e) {
             log.warn("[job/submit][user={}][id={}] Bad parameter: {}", user, id, e.getMessage(), e);
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
-        } catch (UnsupportedOperationException e) {
-            log.warn("[job/submit][user={}][id={}] Priviledges error: {}", user, id, e.getMessage(), e);
+        } catch (InsufficientPrivilegesException e) {
+            log.warn("[job/submit][user={}][id={}] Privileges error: {}", user, id, e.getMessage(), e);
             return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
         } catch (Exception e) {
             log.error("[job/submit][user={}][id={}] Internal error: {}", user, id, e.getMessage(), e);

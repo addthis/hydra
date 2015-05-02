@@ -27,6 +27,7 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobQueryConfig;
+import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
 import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.job.spawn.Spawn;
 
@@ -66,7 +67,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
             job = spawn.getJob(id);
             checkArgument(job != null, "Job %s does not exist", id);
             if (!spawn.getPermissionsManager().isWritable(user, token, sudo, job)) {
-                throw new UnsupportedOperationException("insufficient privileges to access " + id);
+                throw new InsufficientPrivilegesException(user, "insufficient privileges to modify job " + id);
             }
             if (config == null) {
                 configMayHaveChanged = false;
