@@ -28,6 +28,7 @@ import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobQueryConfig;
 import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
+import com.addthis.hydra.job.auth.User;
 import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.job.spawn.Spawn;
 
@@ -45,7 +46,11 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     }
 
     @Override
-    public Job createOrUpdateJob(KVPairs kv, String user, String token, String sudo) throws Exception {
+    public Job createOrUpdateJob(KVPairs kv, String username, String token, String sudo) throws Exception {
+        User user = spawn.getPermissionsManager().authenticate(username, token);
+        if (user == null) {
+            throw new InsufficientPrivilegesException(username, "invalid credentials provided");
+        }
         String id = KVUtils.getValue(kv, "", "id", "job");
         String config = kv.getValue("config");
         String expandedConfig;
@@ -58,16 +63,17 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
             checkArgument(config != null, "Parameter 'config' is missing");
             expandedConfig = tryExpandJobConfigParam(config);
             job = spawn.createJob(
-                    kv.getValue("creator", user),
+                    kv.getValue("creator", username),
                     kv.getIntValue("nodes", -1),
                     Splitter.on(',').omitEmptyStrings().trimResults().splitToList(kv.getValue("hosts", "")),
                     kv.getValue("minionType", Minion.defaultMinionType),
                     command);
+            updateOwnership(job, user);
         } else {
             job = spawn.getJob(id);
             checkArgument(job != null, "Job %s does not exist", id);
-            if (!spawn.getPermissionsManager().isWritable(user, token, sudo, job)) {
-                throw new InsufficientPrivilegesException(user, "insufficient privileges to modify job " + id);
+            if (!spawn.getPermissionsManager().isWritable(username, token, sudo, job)) {
+                throw new InsufficientPrivilegesException(username, "insufficient privileges to modify job " + id);
             }
             if (config == null) {
                 configMayHaveChanged = false;
@@ -79,7 +85,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
                 job.setCommand(command);
             }
         }
-        updateBasicSettings(kv, job, user);
+        updateBasicSettings(kv, job, username);
         updateQueryConfig(kv, job);
         updateJobParameters(kv, job, expandedConfig);
         // persist update
@@ -105,6 +111,11 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         } catch (Exception e) {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    private void updateOwnership(IJob job, User user) {
+        job.setOwner(user.name());
+        job.setGroup(user.defaultGroup());
     }
 
     private void updateBasicSettings(KVPairs kv, IJob job, String user) {

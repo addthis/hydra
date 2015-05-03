@@ -22,7 +22,7 @@ public abstract class AuthorizationManager {
 
     abstract boolean isWritable(User user, String sudoToken, WritableAsset asset);
 
-    abstract String sudo(User user);
+    abstract String sudo(User user, boolean admin);
 
     /**
      * Performs any logout activities such as clearing

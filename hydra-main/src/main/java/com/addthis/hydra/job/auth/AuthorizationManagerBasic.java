@@ -23,12 +23,8 @@ public class AuthorizationManagerBasic extends AuthorizationManager {
     @Nonnull
     private final TokenCache sudoCache;
 
-    @Nonnull
-    private final AuthenticationManager authenticationManager;
-
-    public AuthorizationManagerBasic(AuthenticationManager authenticationManager, int sudoTimeout) {
-        this.authenticationManager = authenticationManager;
-        this.sudoCache = new TokenCache(TokenCache.ExpirationPolicy.AfterWrite, sudoTimeout);
+    public AuthorizationManagerBasic(TokenCache sudoCache) {
+        this.sudoCache = sudoCache;
     }
 
     @Override boolean isWritable(User user, String sudo, WritableAsset asset) {
@@ -54,8 +50,8 @@ public class AuthorizationManagerBasic extends AuthorizationManager {
         return asset.isWorldWritable();
     }
 
-    @Override String sudo(User user) {
-        if (authenticationManager.isAdmin(user)) {
+    @Override String sudo(User user, boolean admin) {
+        if (admin) {
             UUID uuid = UUID.randomUUID();
             String token = uuid.toString();
             sudoCache.put(user.name(), token);

@@ -43,6 +43,23 @@ public final class PermissionsManager {
         return authorization.isWritable(user, sudo, asset);
     }
 
+    public User authenticate(String username, String secret) {
+        return authentication.authenticate(username, secret);
+    }
+
+    public String login(String username, String password) {
+        return authentication.login(username, password);
+    }
+
+    public String sudo(String username, String secret) {
+        User user = authentication.authenticate(username, secret);
+        if (user == null) {
+            return null;
+        } else {
+            return authorization.sudo(user, authentication.isAdmin(user));
+        }
+    }
+
     public void logout(User user) {
         authentication.logout(user);
         authorization.logout(user);
