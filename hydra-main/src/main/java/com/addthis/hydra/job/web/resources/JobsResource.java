@@ -45,10 +45,8 @@ import com.addthis.codec.jackson.CodecJackson;
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.codec.plugins.PluginRegistry;
-import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
-import com.addthis.hydra.job.JobDefaults;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobState;
@@ -567,26 +565,6 @@ public class JobsResource {
         } catch (Exception ex) {
             return buildServerError(ex);
         }
-    }
-
-    @GET
-    @Path("/defaults")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response fetchDefaults(@QueryParam("user") String username,
-                                  @QueryParam("token") String token,
-                                  @QueryParam("sudo") String sudo) {
-        User user = spawn.getPermissionsManager().authenticate(username, token);
-        Map<String,String> values = JobDefaults.getDefaults().getValues();
-        if (user != null) {
-            values = new HashMap<>(values);
-            if (user.name() != null) {
-                values.put("owner", user.name());
-            }
-            if (user.defaultGroup() != null) {
-                values.put("group", user.defaultGroup());
-            }
-        }
-        return Response.ok(values).build();
     }
 
     @POST

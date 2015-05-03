@@ -784,6 +784,7 @@ public class Spawn implements Codable, AutoCloseable {
         try {
             Job job = new Job(UUID.randomUUID().toString(), creator != null ? creator : "anonymous");
             job.setOwner(job.getCreator());
+            job.setOwnerWritable(true);
             job.setState(JobState.IDLE);
             job.setCommand(command);
             job.setDailyBackups(4);

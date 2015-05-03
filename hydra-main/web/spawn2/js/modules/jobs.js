@@ -131,11 +131,12 @@ function(
             data.queryConfig=undefined;
             return data;
         },
-        // Javascript garbage. Default values for some of these fields are required in the javascript.
-        // Actual default values are specified in com.addthis.hydra.job.JobDefaults
-        defaults:{
-            description:"",
+        defaults: function() {
+          return {
+            description:"(no title)",
             state:4,
+            creator: app.user.get("username"),
+            owner: app.user.get("username"),
             submitTime:-1,
             endTime:-1,
             status:"",
@@ -145,11 +146,16 @@ function(
             bytes:"",
             parameters:[],
             alerts:[],
-            command: "",
+            command:'default-task',
             nodes:1,
             stateText:"",
             stateLabel:"",
-            minionType: "",
+            minionType:"default",
+            autoRetry:false,
+            ownerWritable:true,
+            groupWritable:true,
+            worldWritable:true,
+            }
         },
         rebalance:function(){
             var self=this;
