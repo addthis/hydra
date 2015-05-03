@@ -24,6 +24,7 @@ import com.addthis.basis.kv.KVPairs;
 
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
+import com.addthis.hydra.job.JobDefaults;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobQueryConfig;
@@ -54,10 +55,11 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         String id = KVUtils.getValue(kv, "", "id", "job");
         String config = kv.getValue("config");
         String expandedConfig;
-        String command = kv.getValue("command");
         boolean configMayHaveChanged = true;
         Job job;
         if (Strings.isNullOrEmpty(id)) {
+            kv = kv.mergeNotEmpty(JobDefaults.getDefaults().getValues());
+            String command = kv.getValue("command");
             checkArgument(!Strings.isNullOrEmpty(command), "Parameter 'command' is missing");
             requireValidCommandParam(command);
             checkArgument(config != null, "Parameter 'config' is missing");
@@ -80,6 +82,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
                 config = spawn.getJobConfig(id);
             }
             expandedConfig = tryExpandJobConfigParam(config);
+            String command = kv.getValue("command");
             if (!Strings.isNullOrEmpty(command)) {
                 requireValidCommandParam(command);
                 job.setCommand(command);
