@@ -23,6 +23,9 @@ import com.addthis.codec.annotations.Time;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class TokenCache {
 
     public enum ExpirationPolicy {
@@ -33,30 +36,30 @@ public class TokenCache {
      * Expiration policy. Default is {@code AfterWrite}
      */
     @Nonnull
-    public final ExpirationPolicy expirationPolicy;
+    public final ExpirationPolicy policy;
 
     /**
-     * Expiration time in minutes.
+     * Expiration time in seconds.
      */
-    @Time(TimeUnit.MINUTES)
-    public final int expirationTimeout;
+    public final int timeout;
 
     private final Cache<String, String> cache;
 
-    public TokenCache(ExpirationPolicy expirationPolicy,
-                      int expirationTimeout) {
-        this.expirationPolicy = expirationPolicy;
-        this.expirationTimeout = expirationTimeout;
+    @JsonCreator
+    public TokenCache(@JsonProperty("policy") ExpirationPolicy policy,
+                      @JsonProperty("timeout") @Time(TimeUnit.SECONDS) int timeout) {
+        this.policy = policy;
+        this.timeout = timeout;
         CacheBuilder cacheBuilder = CacheBuilder.newBuilder();
-        switch (expirationPolicy) {
+        switch (policy) {
             case AfterAccess:
-                cacheBuilder = cacheBuilder.expireAfterAccess(expirationTimeout, TimeUnit.MINUTES);
+                cacheBuilder = cacheBuilder.expireAfterAccess(timeout, TimeUnit.SECONDS);
                 break;
             case AfterWrite:
-                cacheBuilder = cacheBuilder.expireAfterWrite(expirationTimeout, TimeUnit.MINUTES);
+                cacheBuilder = cacheBuilder.expireAfterWrite(timeout, TimeUnit.SECONDS);
                 break;
             default:
-                throw new IllegalStateException("Unknown expiration policy " + expirationPolicy);
+                throw new IllegalStateException("Unknown expiration policy " + policy);
         }
         cache = cacheBuilder.build();
     }

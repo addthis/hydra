@@ -257,8 +257,7 @@ public class Spawn implements Codable, AutoCloseable {
     ) throws Exception {
         LessFiles.initDirectory(dataDir);
         this.stateFile = stateFile;
-        this.permissionsManager = (permissionsManager != null) ?
-                                  permissionsManager : PermissionsManager.createManagerAllowAll();
+        this.permissionsManager = permissionsManager;
         if (stateFile.exists() && stateFile.isFile()) {
             spawnState = Jackson.defaultMapper().readValue(stateFile, SpawnState.class);
         } else {

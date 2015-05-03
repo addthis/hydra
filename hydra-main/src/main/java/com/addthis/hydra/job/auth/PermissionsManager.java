@@ -13,6 +13,9 @@
  */
 package com.addthis.hydra.job.auth;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * Wrapper class around authentication and authorization. Provides convenience methods
  * for authorization operations that must first be authenticated.
@@ -30,7 +33,9 @@ public final class PermissionsManager {
         return ALLOW_ALL;
     }
 
-    public PermissionsManager(AuthenticationManager authentication, AuthorizationManager authorization) {
+    @JsonCreator
+    public PermissionsManager(@JsonProperty("authentication") AuthenticationManager authentication,
+                              @JsonProperty("authorization") AuthorizationManager authorization) {
         this.authentication = authentication;
         this.authorization = authorization;
     }

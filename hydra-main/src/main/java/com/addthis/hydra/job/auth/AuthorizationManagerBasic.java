@@ -18,12 +18,16 @@ import javax.annotation.Nonnull;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class AuthorizationManagerBasic extends AuthorizationManager {
 
     @Nonnull
     private final TokenCache sudoCache;
 
-    public AuthorizationManagerBasic(TokenCache sudoCache) {
+    @JsonCreator
+    public AuthorizationManagerBasic(@JsonProperty("sudoCache") TokenCache sudoCache) {
         this.sudoCache = sudoCache;
     }
 
