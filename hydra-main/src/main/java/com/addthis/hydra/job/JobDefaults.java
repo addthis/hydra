@@ -17,9 +17,9 @@ import java.io.IOException;
 
 import java.util.Map;
 
-import com.addthis.basis.kv.KVPairs;
-
 import com.addthis.codec.config.Configs;
+
+import com.google.common.collect.ImmutableMap;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -44,17 +44,14 @@ public class JobDefaults {
         SINGLETON = defaults;
     }
 
-    private final KVPairs values;
+    private final ImmutableMap<String, String> values;
 
     @JsonCreator
-    private JobDefaults(@JsonProperty("values") Map<String, String> input) {
-        this.values = new KVPairs();
-        for(Map.Entry<String,String> entry : input.entrySet()) {
-            values.add(entry.getKey(), entry.getValue());
-        }
+    private JobDefaults(@JsonProperty("values") Map<String, String> values) {
+        this.values = ImmutableMap.copyOf(values);
     }
 
     public static JobDefaults getDefaults() { return SINGLETON; }
 
-    public KVPairs getValues() { return values; }
+    public ImmutableMap<String, String> getValues() { return values; }
 }

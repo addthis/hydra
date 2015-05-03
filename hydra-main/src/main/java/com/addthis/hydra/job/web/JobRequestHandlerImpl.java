@@ -21,6 +21,7 @@ import java.util.Map;
 
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
+import com.addthis.basis.util.LessStrings;
 
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
@@ -46,6 +47,14 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         this.spawn = spawn;
     }
 
+    private static void addDefaults(KVPairs pairs, Map<String, String> defaults) {
+        for(Map.Entry<String, String> entry : defaults.entrySet()) {
+            if (!LessStrings.isEmpty(entry.getValue()) && LessStrings.isEmpty(pairs.getValue(entry.getKey()))) {
+                pairs.add(entry.getKey(), entry.getValue());
+            }
+        }
+    }
+
     @Override
     public Job createOrUpdateJob(KVPairs kv, String username, String token, String sudo) throws Exception {
         User user = spawn.getPermissionsManager().authenticate(username, token);
@@ -58,7 +67,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         boolean configMayHaveChanged = true;
         Job job;
         if (Strings.isNullOrEmpty(id)) {
-            kv = kv.mergeNotEmpty(JobDefaults.getDefaults().getValues());
+            addDefaults(kv, JobDefaults.getDefaults().getValues());
             String command = kv.getValue("command");
             checkArgument(!Strings.isNullOrEmpty(command), "Parameter 'command' is missing");
             requireValidCommandParam(command);

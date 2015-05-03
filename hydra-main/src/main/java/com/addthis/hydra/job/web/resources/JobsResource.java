@@ -28,6 +28,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,6 +48,7 @@ import com.addthis.codec.plugins.PluginRegistry;
 import com.addthis.hydra.data.query.Query;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
+import com.addthis.hydra.job.JobDefaults;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobState;
@@ -54,6 +56,7 @@ import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.RebalanceOutcome;
 import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
+import com.addthis.hydra.job.auth.User;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.DeleteStatus;
@@ -564,6 +567,26 @@ public class JobsResource {
         } catch (Exception ex) {
             return buildServerError(ex);
         }
+    }
+
+    @GET
+    @Path("/defaults")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response fetchDefaults(@QueryParam("user") String username,
+                                  @QueryParam("token") String token,
+                                  @QueryParam("sudo") String sudo) {
+        User user = spawn.getPermissionsManager().authenticate(username, token);
+        Map<String,String> values = JobDefaults.getDefaults().getValues();
+        if (user != null) {
+            values = new HashMap<>(values);
+            if (user.name() != null) {
+                values.put("owner", user.name());
+            }
+            if (user.defaultGroup() != null) {
+                values.put("group", user.defaultGroup());
+            }
+        }
+        return Response.ok(values).build();
     }
 
     @POST

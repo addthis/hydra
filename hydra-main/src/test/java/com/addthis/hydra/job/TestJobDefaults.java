@@ -13,7 +13,7 @@
  */
 package com.addthis.hydra.job;
 
-import com.addthis.basis.kv.KVPairs;
+import java.util.Map;
 
 import org.junit.Test;
 
@@ -23,7 +23,7 @@ public class TestJobDefaults {
 
     @Test
     public void notempty() {
-        KVPairs pairs = JobDefaults.getDefaults().getValues();
-        assertTrue(pairs.elements().hasNext());
+        Map<String,String> pairs = JobDefaults.getDefaults().getValues();
+        assertTrue(pairs.size() > 0);
     }
 }
