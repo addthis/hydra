@@ -292,7 +292,7 @@ public final class BundleFilterURL implements BundleFilter {
                     } else if (toTopPrivateDomain) {
                         if (returnhost != null && InternetDomainName.isValid(returnhost)) {
                             InternetDomainName domain = InternetDomainName.from(returnhost);
-                            if (domain.hasPublicSuffix()) {
+                            if (domain.hasPublicSuffix() && domain.isUnderPublicSuffix()) {
                                 InternetDomainName topPrivateDomain = domain.topPrivateDomain();
                                 returnhost = topPrivateDomain.toString();
                             }
