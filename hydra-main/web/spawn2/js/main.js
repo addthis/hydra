@@ -132,6 +132,11 @@ function(
     _,
     $
 ){
+    alertify.defaults.glossary.title="";
+    alertify.defaults.transition = "slide";
+    alertify.defaults.theme.ok = "btn btn-primary";
+    alertify.defaults.theme.cancel = "btn btn-danger";
+    alertify.defaults.theme.input = "form-control";
     app.queryHost = setupData.queryHost;
     app.jobCollection = new Jobs.Collection(
         Jobs.Collection.prototype.parse(setupData.jobs)

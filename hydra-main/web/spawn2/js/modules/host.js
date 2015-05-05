@@ -143,7 +143,7 @@ function(
                 type: "GET",
                 dataType: "json"
             }).done(function(data){
-                alertify.message(count+" host(s) rebalanced.",2000)
+                alertify.message(count+" host(s) rebalanced.",2)
             }).fail(function(e){
                 alertify.error("Error rebalancing: "+count+" hosts. <br/> "+e.responseText);
             });
@@ -155,7 +155,7 @@ function(
                 type: "GET",
                 dataType: "json"
             }).done(function(data){
-                alertify.message(count+" host(s) failed.",2000)
+                alertify.message(count+" host(s) failed.",2)
             }).fail(function(e){
                 alertify.error("Error failing: "+count+" hosts. <br/> "+e.responseText);
             });
@@ -168,7 +168,7 @@ function(
                 dataType: "text"
             }).done(function(data){
                 self.collection.fetch();
-                alertify.message(count+" host(s) dropped.",2000);
+                alertify.message(count+" host(s) dropped.",2);
             }).fail(function(e){
                 alertify.error("Error dropping: "+count+" hosts. <br/> "+e.responseText);
             });
@@ -180,7 +180,7 @@ function(
                 type: "GET",
                 dataType: "text"
             }).done(function(data){
-                alertify.success(count+" host(s) "+(disable?"dis":"en")+"abled successfully",2000);
+                alertify.success(count+" host(s) "+(disable?"dis":"en")+"abled successfully",2);
             }).fail(function(e){
                 alertify.error("Error "+(disable?"dis":"en")+"abling: "+count+" hosts. <br/> "+e.responseText);
             });

@@ -15,6 +15,7 @@
 //app.js is your application-level namespace where you instantiate all your top-level application level function, etc.. no router logic should go here
 define([
     "router",
+    "alertify",
     "modules/server",
     "jscookie",
     "jquery",
@@ -24,6 +25,7 @@ define([
 ],
 function(
     Router,
+    alertify,
     server,
     Cookies
 ){
@@ -60,7 +62,7 @@ function(
             var username = Cookies.get("username");
             var token = Cookies.get("token");
             if (_.isUndefined(username) || _.isUndefined(token)) {
-                var alert = alertify.prompt("Enter username:","",function(str){
+                var alert = alertify.prompt("Enter username:","",function(evt, str){
                     username = $.trim(str);
                     token = username;
                     Cookies.set("username", username, {expires:1});
@@ -76,8 +78,8 @@ function(
         },
         logout:function() {
            var self = this;
-           Cookies.set(("username", "", {expires:0});
-           Cookies.set(("token", "", {expires:0});
+           Cookies.set("username", "", {expires:0});
+           Cookies.set("token", "", {expires:0});
            self.user.set("username", "");
            self.user.set("token", "");
         },

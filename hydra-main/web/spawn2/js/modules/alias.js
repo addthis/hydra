@@ -51,19 +51,6 @@ function(
                     data: postData,
                     dataType: "json"
                 });
-                /**
-                 *
-                 success: function(data){
-                        alertify.success("Alias saved successfully");
-                        Spawn.aliasCollection.add(data);
-                        Spawn.router.navigate("#alias/"+data.name,{trigger:true});
-                    },
-                 error: function(){
-                        alertify.error("Error saving alias.");
-                    },
-                 *
-                 *
-                 */
             },
             delete:function(){
                 var name = this.get("name");
