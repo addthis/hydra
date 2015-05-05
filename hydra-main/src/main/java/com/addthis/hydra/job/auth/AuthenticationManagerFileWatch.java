@@ -90,9 +90,9 @@ public class AuthenticationManagerFileWatch extends AuthenticationManager {
         }
     }
 
-    @Override String login(String username, String password) {
+    @Override String login(String username, String password, boolean ssl) {
         updateAuthenticationManager();
-        return manager.login(username, password);
+        return manager.login(username, password, ssl);
     }
 
     @Override User authenticate(String username, String secret) {

@@ -48,13 +48,13 @@ public class AuthenticationManagerNested extends AuthenticationManager {
         this.outer = outer;
     }
 
-    @Override String login(String username, String password) {
+    @Override String login(String username, String password, boolean ssl) {
         if ((username == null) || (password == null)) {
             return null;
         }
-        String token = inner.login(username, password);
+        String token = inner.login(username, password, ssl);
         if (token == null) {
-            token = outer.login(username, password);
+            token = outer.login(username, password, ssl);
         }
         return token;
     }

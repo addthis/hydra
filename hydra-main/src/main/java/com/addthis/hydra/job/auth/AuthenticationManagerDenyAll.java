@@ -22,7 +22,7 @@ public class AuthenticationManagerDenyAll extends AuthenticationManager {
     @JsonCreator
     public AuthenticationManagerDenyAll() {}
 
-    @Override String login(String username, String password) {
+    @Override String login(String username, String password, boolean ssl) {
         return null;
     }
 

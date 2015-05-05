@@ -38,23 +38,29 @@ public class AuthenticationManagerStatic extends AuthenticationManager {
     @Nonnull
     final ImmutableList<String> adminUsers;
 
+    @Nonnull
+    final boolean requireSSL;
+
     @JsonCreator
-    public AuthenticationManagerStatic(@JsonProperty("users") List<StaticUser> users,
-                                       @JsonProperty("adminGroups") List<String> adminGroups,
-                                       @JsonProperty("adminUsers") List<String> adminUsers) {
+    public AuthenticationManagerStatic(@Nonnull @JsonProperty("users") List<StaticUser> users,
+                                       @Nonnull @JsonProperty("adminGroups") List<String> adminGroups,
+                                       @Nonnull @JsonProperty("adminUsers") List<String> adminUsers,
+                                       @JsonProperty(value = "requireSSL", required = true) boolean requireSSL) {
 
         ImmutableMap.Builder<String, StaticUser> builder = ImmutableMap.<String, StaticUser> builder();
-        if (users != null) {
-            for (StaticUser user : users) {
-                builder.put(user.name(), user);
-            }
+        for (StaticUser user : users) {
+            builder.put(user.name(), user);
         }
         this.users = builder.build();
         this.adminGroups = ImmutableList.copyOf(adminGroups);
         this.adminUsers = ImmutableList.copyOf(adminUsers);
+        this.requireSSL = requireSSL;
     }
 
-    @Override String login(String username, String password) {
+    @Override String login(String username, String password, boolean ssl) {
+        if (requireSSL && !ssl) {
+            return null;
+        }
         User candidate = authenticate(username, password);
         if (candidate != null) {
             return password;

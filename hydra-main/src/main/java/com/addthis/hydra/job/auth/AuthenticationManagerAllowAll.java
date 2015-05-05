@@ -26,7 +26,7 @@ public class AuthenticationManagerAllowAll extends AuthenticationManager {
     @JsonCreator
     public AuthenticationManagerAllowAll() {}
 
-    @Override String login(String username, String password) {
+    @Override String login(String username, String password, boolean ssl) {
         return "unused";
     }
 

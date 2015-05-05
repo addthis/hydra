@@ -49,12 +49,12 @@ public class AuthenticationResource {
                           @Context UriInfo uriInfo) {
         try {
             URI uri = uriInfo.getRequestUri();
-            if ((uri.getPort() == SpawnService.webPort) &&
-                (spawn.getSpawnState().getSslEnabled())) {
+            boolean usingSSL = (uri.getPort() == SpawnService.webPortSSL);
+            if (!usingSSL && spawn.getSpawnState().getSslEnabled()) {
                 return Response.temporaryRedirect(
                         uriInfo.getRequestUriBuilder().port(SpawnService.webPortSSL).build()).build();
             } else {
-                String token = spawn.getPermissionsManager().login(username, password);
+                String token = spawn.getPermissionsManager().login(username, password, usingSSL);
                 return Response.ok(token).build();
             }
         } catch (Exception ex)  {

@@ -27,12 +27,17 @@ public abstract class AuthenticationManager {
     /**
      * Returns a non-null secret token if authentication
      * was successful. Or null if authentication failed.
+     * An authentication manager can choose to deny requests
+     * that are not transmitted over ssl. At this point the password
+     * has already been transmitted but denying the request may
+     * be preferable to encouraging this behavior.
      *
      * @param username
      * @param password
+     * @param ssl
      * @return non-null secret if authentication succeeded
      */
-    abstract String login(String username, String password);
+    abstract String login(String username, String password, boolean ssl);
 
     /**
      * Return the user object if the username and secret token are valid.

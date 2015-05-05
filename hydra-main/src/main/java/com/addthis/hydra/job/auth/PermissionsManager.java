@@ -52,8 +52,8 @@ public final class PermissionsManager {
         return authentication.authenticate(username, secret);
     }
 
-    public String login(String username, String password) {
-        return authentication.login(username, password);
+    public String login(String username, String password, boolean ssl) {
+        return authentication.login(username, password, ssl);
     }
 
     public String sudo(String username, String secret) {

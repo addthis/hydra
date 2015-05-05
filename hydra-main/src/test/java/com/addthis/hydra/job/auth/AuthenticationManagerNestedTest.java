@@ -30,15 +30,17 @@ public class AuthenticationManagerNestedTest {
     private static List<StaticUser> innerUsers = ImmutableList.of(user3);
     private static List<StaticUser> outerUsers = ImmutableList.of(user1, user2);
 
-    private static AuthenticationManagerStatic inner = new AuthenticationManagerStatic(innerUsers, ImmutableList.of(),  ImmutableList.of());
-    private static AuthenticationManagerStatic outer = new AuthenticationManagerStatic(outerUsers, ImmutableList.of(),  ImmutableList.of());
+    private static AuthenticationManagerStatic inner = new AuthenticationManagerStatic(innerUsers, ImmutableList.of(),
+                                                                                       ImmutableList.of(), false);
+    private static AuthenticationManagerStatic outer = new AuthenticationManagerStatic(outerUsers, ImmutableList.of(),
+                                                                                       ImmutableList.of(), false);
 
     private static AuthenticationManagerNested auth = new AuthenticationManagerNested(inner, outer);
 
     @Test
     public void authentication() {
-        assertEquals("password1", auth.login("user1", "password1"));
+        assertEquals("password1", auth.login("user1", "password1", false));
         assertEquals(ImmutableList.of("group1", "group2"), auth.authenticate("user1", "password1").groups());
-        assertEquals("password2", auth.login("user2", "password2"));
+        assertEquals("password2", auth.login("user2", "password2", false));
     }
 }
