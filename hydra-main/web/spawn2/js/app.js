@@ -16,6 +16,7 @@
 define([
     "router",
     "modules/server",
+    "jscookie",
     "jquery",
     "underscore",
     "backbone",
@@ -23,7 +24,8 @@ define([
 ],
 function(
     Router,
-    server
+    server,
+    Cookies
 ){
     var app = {
         router: new Router(),
@@ -33,11 +35,6 @@ function(
         user: new Backbone.Model({username:"",token:"",sudo:""}),
         server:server,
         activeModels:[],
-        setCookie:function(name,value){
-        },
-        getCookie:function(name){
-            return undefined;
-        },
         showView:function(view,link,activeModels){
             var self=this;
             if(!_.isNull(this.currentView)){
@@ -61,14 +58,14 @@ function(
         },
         login:function() {
             var self = this;
-            var username = 'USERNAME';
-            var token = 'TOKEN';
+            var username = Cookies.get("username");
+            var token = Cookies.get("token");
             if (_.isUndefined(username) || _.isUndefined(token)) {
                 var alert = Alertify.dialog.prompt("Enter username:",function(str){
                     username = $.trim(str);
                     token = username;
-                    //$.cookie("username", username, {expires:1});
-                    //$.cookie("token", token, {expires:1});
+                    Cookies.set("username", username, {expires:1});
+                    Cookies.set("token", token, {expires:1});
                     self.user.set("username", username);
                     self.user.set("token", token);
                 });
@@ -80,8 +77,8 @@ function(
         },
         logout:function() {
            var self = this;
-           $.cookie("username", "", {expires:0});
-           $.cookie("token", "", {expires:0});
+           Cookies.set(("username", "", {expires:0});
+           Cookies.set(("token", "", {expires:0});
            self.user.set("username", "");
            self.user.set("token", "");
         },
@@ -151,6 +148,5 @@ function(
             }
         }
     };
-    _.bindAll(app,'setCookie','getCookie');
     return _.extend(Backbone.Events,app);
 });

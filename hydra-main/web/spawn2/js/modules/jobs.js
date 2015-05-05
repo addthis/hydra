@@ -13,6 +13,7 @@
  */
 define([
     "app",
+    "jscookie",
     "modules/datatable",
     "modules/util",
     "modules/editor",
@@ -40,6 +41,7 @@ define([
 ],
 function(
     app,
+    Cookies,
     DataTable,
     util,
     Editor,
@@ -2282,7 +2284,7 @@ function(
         initialize:function(){
         },
         render:function(){
-            var cookie = $.cookie("hideParam");
+            var cookie = Cookies.get("hideParam");
             var html = this.template({
                 hidden:_.isEqual(cookie,1),
                 parameters:this.collection.toJSON()
@@ -2293,7 +2295,7 @@ function(
         handleHideParamClick:function(event){
             var val = this.$el.find("a#hideParamLink").data("hide");
             var hideVal = (parseInt(val)+1)%2;
-            $.cookie("hideParam",hideVal);
+            Cookies.set("hideParam", hideVal);
         },
         handleInputKeyUp:function(event){
             var input = $(event.currentTarget);

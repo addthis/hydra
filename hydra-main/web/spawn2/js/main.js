@@ -17,6 +17,7 @@ require.config({
     paths: {
         "jquery": "./vendor/jquery-1.9.1"
         ,"backbone": "./vendor/backbone"
+        ,"jscookie": "./vendor/js.cookie"
         ,"underscore": "./vendor/underscore"
         ,"bootstrap":"./vendor/bootstrap"
         ,"jquery.dataTable":"./vendor/jquery.dataTables.nightly"
@@ -50,6 +51,9 @@ require.config({
         'bootstrap':{
             deps:['jquery']
         },
+        "jscookie":{
+            exports:['Cookies']
+        },
         "jquery":{
             exports:'jQuery'
         },
@@ -79,6 +83,7 @@ require.config({
 });
 require([
     "app",
+    "jscookie",
     "router",
     "modules/jobs",
     "modules/macro",
@@ -104,6 +109,7 @@ require([
 ],
 function(
     app,
+    Cookies,
     Router,
     Jobs,
     Macro,
@@ -652,7 +658,7 @@ function(
         $("#usernameBox").html(app.user.get("username"));
     });
     app.on('loadJobTable',function(){
-        var state = app.getCookie("spawn");
+        var state = Cookies.getJSON("spawn");
         if(!_.isUndefined(state) && state.jobCompact){
             app.trigger("loadJobCompactTable");
         }
@@ -662,9 +668,9 @@ function(
     });
     app.on('loadJobCompactTable',function(){
         if(_.isUndefined(app.jobTable) || !_.isEqual(app.jobTable.id,'compactJobTable')){
-            var state = app.getCookie("spawn") || {};
+            var state = Cookies.getJSON("spawn") || {};
             state.jobCompact=true;
-            app.setCookie("spawn",state);
+            Cookies.set("spawn", state);
             app.jobTable = new Jobs.CompactTable({
                 id:"compactJobTable",
                 collection:app.jobCollection
@@ -673,9 +679,9 @@ function(
     });
     app.on('loadJobComftTable',function(){
         if(_.isUndefined(app.jobTable) || !_.isEqual(app.jobTable.id,'comfyJobTable')){
-            var state = app.getCookie("spawn") || {};
+            var state = Cookies.getJSON("spawn") || {};
             state.jobCompact=false;
-            app.setCookie("spawn",state);
+            Cookies.set("spawn", state);
             app.jobTable= new Jobs.ComfyTableView({
                 id:"comfyJobTable",
                 collection:app.jobCollection

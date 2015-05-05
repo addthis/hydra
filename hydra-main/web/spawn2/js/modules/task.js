@@ -13,6 +13,7 @@
  */
 define([
     "app",
+    "jscookie",
     "modules/datatable",
     "modules/util",
     "text!../../templates/task.filter.html",
@@ -22,6 +23,7 @@ define([
 ],
 function(
     app,
+    Cookies,
     DataTable,
     util,
     taskFilterTemplate,
@@ -774,14 +776,14 @@ function(
             this.saveState();
         },
         saveState:function(){
-            var state = app.getCookie("spawn") || {};
+            var state = Cookies.getJSON("spawn") || {};
             state.log= {
                 lines:this.lines,
                 type:this.type,
                 stdout:this.stdout,
                 runsAgo:this.runsAgo
             };
-            app.setCookie("spawn", state);
+            Cookies.set("spawn", state);
         },
         isLogAtBottom:function(){
             var pre = this.$el.find("pre#logContainer");
