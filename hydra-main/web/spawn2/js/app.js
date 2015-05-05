@@ -16,19 +16,15 @@
 define([
     "router",
     "modules/server",
-    "jquery.cookie",
     "jquery",
     "underscore",
     "backbone",
-    "jquery.cookie",
     "alertify"
 ],
 function(
     Router,
-    server,
-    User
+    server
 ){
-    $.cookie.json=true;
     var app = {
         router: new Router(),
         cookieExpires:7,
@@ -38,12 +34,9 @@ function(
         server:server,
         activeModels:[],
         setCookie:function(name,value){
-            $.cookie(name,value,{
-                expired:this.cookieExpires
-            });
         },
         getCookie:function(name){
-            return $.cookie(name);
+            return undefined;
         },
         showView:function(view,link,activeModels){
             var self=this;
@@ -68,14 +61,14 @@ function(
         },
         login:function() {
             var self = this;
-            var username = $.cookie("username");
-            var token = $.cookie("token");
+            var username = 'USERNAME';
+            var token = 'TOKEN';
             if (_.isUndefined(username) || _.isUndefined(token)) {
                 var alert = Alertify.dialog.prompt("Enter username:",function(str){
                     username = $.trim(str);
                     token = username;
-                    $.cookie("username", username, {expires:1});
-                    $.cookie("token", token, {expires:1});
+                    //$.cookie("username", username, {expires:1});
+                    //$.cookie("token", token, {expires:1});
                     self.user.set("username", username);
                     self.user.set("token", token);
                 });

@@ -29,7 +29,6 @@ require.config({
         ,"json":"./vendor/json"
         ,"text":"./vendor/text"
         ,"localstorage":"./vendor/backbone.localStorage"
-        ,"jquery.cookie":"./vendor/jquery.cookie"
         ,"alertify":"./vendor/alertify"
         ,"ace":"./vendor/ace"
         ,"js-mode":"./vendor/mode-javascript"
