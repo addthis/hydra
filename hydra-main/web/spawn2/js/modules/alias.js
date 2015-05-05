@@ -13,6 +13,7 @@
  */
 define([
     "app",
+    "alertify",
     "modules/datatable",
     "modules/util",
     "text!../../templates/alias.filter.html",
@@ -22,6 +23,7 @@ define([
 ],
 function(
         app,
+        alertify,
         DataTable,
         util,
         aliasFilterTemplate,
@@ -52,12 +54,12 @@ function(
                 /**
                  *
                  success: function(data){
-                        Alertify.log.success("Alias saved successfully");
+                        alertify.success("Alias saved successfully");
                         Spawn.aliasCollection.add(data);
                         Spawn.router.navigate("#alias/"+data.name,{trigger:true});
                     },
                  error: function(){
-                        Alertify.log.error("Error saving alias.");
+                        alertify.error("Error saving alias.");
                     },
                  *
                  *
@@ -72,19 +74,6 @@ function(
                     data: {name:name},
                     dataType: "text"
                 });
-                /**
-                 *
-                 success: function(){
-                        if(!dontShowAlert){
-                            Alertify.log.success("Alias deleted successfully");
-                            Spawn.router.navigate("#aliases",{trigger:true});
-                        }
-                        self.trigger("destroy",self);
-                    },
-                 error: function(){
-                        Alertify.log.error("Error deleting alias.")
-                    },
-                 */
             },
             parse:function(data){
                 data.DT_RowId=data.name;
@@ -160,7 +149,6 @@ function(
                     filterTemplate:aliasFilterTemplate,
                     selectableTemplate:aliasSelectableTemplate,
                     heightBuffer:80,
-                    //columnFilterIndex:5,
                     id:this.id,
                     emptyMessage:" ",
                     idAttribute:"name"
@@ -179,11 +167,11 @@ function(
                         model.delete().done(function(){
                             app.aliasCollection.remove(model.id);
                         }).fail(function(xhr){
-                            Alertify.log.error("Error deleting alias: "+model.id);
+                            alertify.error("Error deleting alias: "+model.id);
                         });
                     }
                 });
-                Alertify.log.success(ids.length+" aliases deleted.");
+                alertify.success(ids.length+" aliases deleted.");
             }
         });
         var DetailView = Backbone.View.extend({
@@ -207,16 +195,16 @@ function(
             handleDeleteButtonClick:function(event){
                 var self=this;
                 this.model.delete().done(function(data){
-                    Alertify.log.success("Alias deleted successfully.");
+                    alertify.success("Alias deleted successfully.");
                     app.router.navigate("#alias",{trigger:true});
                 }).fail(function(xhr){
-                    Alertify.log.error("Error deleting alias.");
+                    alertify.error("Error deleting alias.");
                 });
             },
             handleSaveButtonClick:function(event){
                 var self=this,isNew=this.model.isNew();
                 this.model.save().done(function(data){
-                    Alertify.log.success("Alias saved successfully.");
+                    alertify.success("Alias saved successfully.");
                     if(!_.isUndefined(app.aliasCollection.get(data.name))){
                         self.model.set(Model.prototype.parse(data));
                         app.router.navigate("#alias/"+data.name,{trigger:true});
@@ -228,7 +216,7 @@ function(
                         });
                     }
                 }).fail(function(xhr){
-                    Alertify.log.error("Error saving alias: "+self.model.id);
+                    alertify.error("Error saving alias: "+self.model.id);
                 });
             },
             handleInputKeyUp:function(event){

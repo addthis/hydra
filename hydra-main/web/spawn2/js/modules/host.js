@@ -13,6 +13,7 @@
  */
 define([
     "app",
+    "alertify",
     "modules/datatable",
     "modules/task",
     "modules/util",
@@ -23,6 +24,7 @@ define([
 ],
 function(
     app,
+    alertify,
     DataTable,
     Task,
     util,
@@ -141,9 +143,9 @@ function(
                 type: "GET",
                 dataType: "json"
             }).done(function(data){
-                Alertify.log.info(count+" host(s) rebalanced.",2000)
+                alertify.message(count+" host(s) rebalanced.",2000)
             }).fail(function(e){
-                Alertify.log.error("Error rebalancing: "+count+" hosts. <br/> "+e.responseText);
+                alertify.error("Error rebalancing: "+count+" hosts. <br/> "+e.responseText);
             });
         },
         failSelected:function(hostIds, deadFs){
@@ -153,9 +155,9 @@ function(
                 type: "GET",
                 dataType: "json"
             }).done(function(data){
-                Alertify.log.info(count+" host(s) failed.",2000)
+                alertify.message(count+" host(s) failed.",2000)
             }).fail(function(e){
-                Alertify.log.error("Error failing: "+count+" hosts. <br/> "+e.responseText);
+                alertify.error("Error failing: "+count+" hosts. <br/> "+e.responseText);
             });
         },
         dropSelected:function(self, hostIds){
@@ -166,9 +168,9 @@ function(
                 dataType: "text"
             }).done(function(data){
                 self.collection.fetch();
-                Alertify.log.info(count+" host(s) dropped.",2000);
+                alertify.message(count+" host(s) dropped.",2000);
             }).fail(function(e){
-                Alertify.log.error("Error dropping: "+count+" hosts. <br/> "+e.responseText);
+                alertify.error("Error dropping: "+count+" hosts. <br/> "+e.responseText);
             });
         },
         toggleSelected:function(hostIds,disable){
@@ -178,9 +180,9 @@ function(
                 type: "GET",
                 dataType: "text"
             }).done(function(data){
-                Alertify.log.success(count+" host(s) "+(disable?"dis":"en")+"abled successfully",2000);
+                alertify.success(count+" host(s) "+(disable?"dis":"en")+"abled successfully",2000);
             }).fail(function(e){
-                Alertify.log.error("Error "+(disable?"dis":"en")+"abling: "+count+" hosts. <br/> "+e.responseText);
+                alertify.error("Error "+(disable?"dis":"en")+"abling: "+count+" hosts. <br/> "+e.responseText);
             });
         },
         getFailInfo:function(self, ids, deadFs){
@@ -191,7 +193,7 @@ function(
             }).done(function(data){
                 uuids = data.uuids;
 				if (data.fatal){
-					Alertify.log.error("Fatal warning for failing " + uuids + ": " + data.fatal + "; fail aborted");
+					alertify.error("Fatal warning for failing " + uuids + ": " + data.fatal + "; fail aborted");
 					return;
 				}
 				var msg = "Are you sure you want to fail " + uuids + "?\n";
@@ -199,13 +201,13 @@ function(
 				if (data.warning){
 					msg += "Warning: " + data.warning;
 				}
-				Alertify.dialog.confirm(msg,
+				alertify.confirm(msg,
                 	function(resp){
                     	self.collection.failSelected(ids, data.deadFs);
                 	}
             	);
             }).fail(function(e){
-                Alertify.log.error("Error trying to fail: "+ids+" hosts. <br/> "+e.responseText);
+                alertify.error("Error trying to fail: "+ids+" hosts. <br/> "+e.responseText);
             });
         },
         cancelFailSelected:function(self, ids){
@@ -214,9 +216,9 @@ function(
         		type: "GET",
         		dataType: "text"
         	}).done(function(data){
-        		Alertify.log.success(ids.length+" host(s) removed from failure queue");
+        		alertify.success(ids.length+" host(s) removed from failure queue");
         	}).fail(function(e){
-        		Alertify.log.error("Error trying to remove: "+ids+" from failure queue. <br/> "+e.responseText);
+        		alertify.error("Error trying to remove: "+ids+" from failure queue. <br/> "+e.responseText);
         	});
         }
     });
@@ -380,7 +382,7 @@ function(
         },
         handleDropButtonClick:function(event){
             var ids = this.getSelectedIds(),self=this;
-            Alertify.dialog.confirm("Are you sure you would like to DROP "+ids.length+" host(s): "+ids.join(",")+"?",
+            alertify.confirm("Are you sure you would like to DROP "+ids.length+" host(s): "+ids.join(",")+"?",
                 function(resp){
                     self.collection.dropSelected(self, ids);
                 }

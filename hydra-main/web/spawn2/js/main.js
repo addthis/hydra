@@ -69,7 +69,6 @@ require.config({
             exports:"nv"
         },
         "jquery.dataTable":['jquery'],
-        //"jquery.resize":['jquery'],
         'jquery.cookie':['jquery'],
         "dataTable.scroller":['jquery.dataTable']
     },
@@ -83,6 +82,7 @@ require.config({
 });
 require([
     "app",
+    "alertify",
     "jscookie",
     "router",
     "modules/jobs",
@@ -109,6 +109,7 @@ require([
 ],
 function(
     app,
+    alertify,
     Cookies,
     Router,
     Jobs,
@@ -433,7 +434,7 @@ function(
             commit.load().done(function(data){
                 commit.set("historyConfig",data);
             }).fail(function(xhr){
-                Alertify.dialog.error("Error loading commit: "+xhr.responseText);
+                alertify.error("Error loading commit: "+xhr.responseText);
             });
         }
     });
@@ -459,7 +460,7 @@ function(
             commit.diff().done(function(data){
                                                  commit.set("diff",data);
                                                  }).fail(function(xhr){
-                Alertify.dialog.error("Error loading diff: "+xhr.responseText);
+                alertify.error("Error loading diff: "+xhr.responseText);
             });
         }
     });
@@ -696,7 +697,7 @@ function(
         }).load().done(function(data){
             app.configModel.set("config",data);
         }).fail(function(data){
-            Alertify.dialog.error("Error loading commit "+commit);
+            alertify.error("Error loading commit "+commit);
         });
     });
     app.on("loadJob",function(jobId){
@@ -713,7 +714,7 @@ function(
             if(_.isUndefined(app.job) || !_.isEqual(app.job.id,jobId) || !_.isEmpty(app.cloneId)){
                 var job = app.jobCollection.get(jobId);
                 if(_.isUndefined(job)){
-                    Alertify.log.error("Job "+jobId+" not found.");
+                    alertify.error("Job "+jobId+" not found.");
                     app.router.navigate("#jobs",{trigger:true});
                     return;
                 }
@@ -810,10 +811,10 @@ function(
     app.server.on("cluster.quiesce",function(message){
         app.isQuiesced = Boolean(message.quiesced);
         if(app.isQuiesced){
-            Alertify.log.info("Cluster has been quiesced by "+message.username);
+            alertify.message("Cluster has been quiesced by "+message.username);
         }
         else{
-            Alertify.log.info("Cluster has been reactivatd by "+message.username);
+            alertify.message("Cluster has been reactivatd by "+message.username);
         }
         app.checkQuiesced();
     });

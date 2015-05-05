@@ -13,6 +13,7 @@
  */
 define([
     "app",
+    "alertify",
     "modules/datatable",
     "modules/util",
     "modules/editor",
@@ -24,6 +25,7 @@ define([
 ],
 function(
     app,
+    alertify,
     DataTable,
     util,
     Editor,
@@ -167,11 +169,11 @@ function(
                     model.delete().done(function(){
                         app.macroCollection.remove(model.id);
                     }).fail(function(xhr){
-                        Alertify.log.error("Error deleting '" + model.id + "': " + xhr.responseText);
+                        alertify.error("Error deleting '" + model.id + "': " + xhr.responseText);
                     });
                 }
             });
-            Alertify.log.info("Deleting " + ids.length + " macros...");
+            alertify.message("Deleting " + ids.length + " macros...");
         }
     });
     var DetailView = Backbone.View.extend({
@@ -212,23 +214,23 @@ function(
         handleDeleteButtonClick:function(event){
             var self=this;
             this.model.delete().done(function(data){
-                Alertify.log.success("Macro deleted successfully.");
+                alertify.success("Macro deleted successfully.");
                 app.router.navigate("#macros",{trigger:true});
             }).fail(function(xhr){
-                Alertify.log.error("Error deleting macro.");
+                alertify.error("Error deleting macro.");
             });
         },
         handleSaveButtonClick:function(event){
             var self=this,isNew=this.model.isNew();
             this.model.save().done(function(data){
-                Alertify.log.success("Macro saved successfully.");
+                alertify.success("Macro saved successfully.");
                 app.macroCollection.fetch({
                     success:function(){
                         app.router.navigate("#macros/"+data.name,{trigger:true});
                     }
                 });
             }).fail(function(xhr){
-                Alertify.log.error("Error saving macro: "+self.model.id);
+                alertify.error("Error saving macro: "+self.model.id);
             });
         },
         handleInputKeyUp:function(event){

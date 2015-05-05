@@ -12,10 +12,12 @@
  * limitations under the License.
  */
 define([
+    "alertify",
     "text!../../templates/settings.rebalance.html",
     "backbone"
 ],
 function(
+    alertify,
     settingsRebalanceTemplate
 ){
     var RebalanceModel = Backbone.Model.extend({
@@ -23,10 +25,8 @@ function(
         defaults:{
             autoBalanceLevel:"",
             bytesMovedFullRebalance:"",
-            //bytesMovedJobAutobalance:"",
             hostAutobalanceIntervalMillis:"",
             jobAutobalanceIntervalMillis:"",
-            //taskMovedJobAutobalance:"",
             tasksMovedFullRebalance:""
         },
         save:function(){
@@ -65,12 +65,11 @@ function(
         },
         handleSaveButton:function(event){
             var data = this.getFormValues();
-            //alert("save: "+JSON.stringify(data));
             this.model.set(data);
             this.model.save().done(function(data){
-                Alertify.log.info("Rebalance params saved successfully.");
+                alertify.message("Rebalance params saved successfully.");
             }).fail(function(xhr){
-                Alertify.log.error(xhr.responseText);
+                alertify.error(xhr.responseText);
             });
         },
         getFormValues:function(){

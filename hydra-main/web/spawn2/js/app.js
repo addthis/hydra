@@ -29,7 +29,6 @@ function(
 ){
     var app = {
         router: new Router(),
-        cookieExpires:7,
         currentView:null,
         mainSelector:"#main",
         user: new Backbone.Model({username:"",token:"",sudo:""}),
@@ -61,7 +60,7 @@ function(
             var username = Cookies.get("username");
             var token = Cookies.get("token");
             if (_.isUndefined(username) || _.isUndefined(token)) {
-                var alert = Alertify.dialog.prompt("Enter username:",function(str){
+                var alert = alertify.prompt("Enter username:","",function(str){
                     username = $.trim(str);
                     token = username;
                     Cookies.set("username", username, {expires:1});
@@ -108,26 +107,26 @@ function(
                 type: "GET"
             }).done(function(data){
                 if (data.everythingOK) {
-                    Alertify.log.info("Health check passed");
+                    alertify.message("Health check passed");
                 } else {
-                    Alertify.dialog.alert("Health check failed: " + JSON.stringify(data));
+                    alertify.alert("Health check failed: " + JSON.stringify(data));
                 }
             });
         },
         isQuiesced:false,
         quiesce:function(){
             var self=this;
-            Alertify.dialog.confirm( ((this.isQuiesced?"un":"")+"quiesce the cluster? (if you don't know what you're doing, hit cancel!)"), function (e) {
+            alertify.confirm( ((this.isQuiesced?"un":"")+"quiesce the cluster? (if you don't know what you're doing, hit cancel!)"), function (e) {
                 $.ajax({
                     url: "/system/quiesce",
                     type: "GET",
                     data: {quiesce:(self.isQuiesced?"0":"1")}
                 }).done(function(data){
-                    Alertify.log.info("Cluster "+(data.quiesced=="1"?"quiesced":"reactivated")+" successfully.");
+                    alertify.message("Cluster "+(data.quiesced=="1"?"quiesced":"reactivated")+" successfully.");
                     self.isQuiesced= !self.isQuiesced;
                     self.checkQuiesced();
                 }).fail(function(){
-                    Alertify.dialog.alert("You do not have sufficient privileges to quiesce cluster");
+                    alertify.alert("You do not have sufficient privileges to quiesce cluster");
                 });
             });
         },

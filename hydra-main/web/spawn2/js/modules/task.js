@@ -13,6 +13,7 @@
  */
 define([
     "app",
+    "alertify",
     "jscookie",
     "modules/datatable",
     "modules/util",
@@ -23,6 +24,7 @@ define([
 ],
 function(
     app,
+    alertify,
     Cookies,
     DataTable,
     util,
@@ -137,10 +139,10 @@ function(
                 dataType: "text"
             }).done(function(data){
                 if(notify){
-                    Alertify.log.info("Task "+self.id+" stopped.");
+                    alertify.message("Task "+self.id+" stopped.");
                 }
             }).fail(function(e){
-                Alertify.log.error("Error stopped task: "+self.id+" <br/>"+e.responseText);
+                alertify.error("Error stopped task: "+self.id+" <br/>"+e.responseText);
             });
         },
         kick:function(notify){
@@ -156,10 +158,10 @@ function(
                 dataType: "text"
             }).done(function(data){
                 if(notify){
-                    Alertify.log.info("Task "+self.id+" kicked.");
+                    alertify.message("Task "+self.id+" kicked.");
                 }
             }).fail(function(e){
-                Alertify.log.error("Error kicking task: "+self.id+" <br/>"+e.responseText);
+                alertify.error("Error kicking task: "+self.id+" <br/>"+e.responseText);
             });
         },
         kill:function(notify){
@@ -175,10 +177,10 @@ function(
                 dataType: "text"
             }).done(function(data){
                 if(notify){
-                    Alertify.log.info("Task "+self.id+" killed.");
+                    alertify.message("Task "+self.id+" killed.");
                 }
             }).fail(function(e){
-                Alertify.log.error("Error killing task: "+self.id+" <br/>"+e.responseText);
+                alertify.error("Error killing task: "+self.id+" <br/>"+e.responseText);
             });
         }
     });
@@ -427,21 +429,21 @@ function(
             _.each(ids,function(id){
                 self.collection.get(id).kick(false);
             });
-            Alertify.log.info("Kicked "+ids.length+" tasks.");
+            alertify.message("Kicked "+ids.length+" tasks.");
         },
         handleStopButtonClick:function(event){
             var ids = this.getSelectedIds(),self=this;
             _.each(ids,function(id){
                 self.collection.get(id).stop(false);
             });
-            Alertify.log.info("Stopped "+ids.length+" tasks.");
+            alertify.message("Stopped "+ids.length+" tasks.");
         },
         handleKillButtonClick:function(event){
             var ids = this.getSelectedIds(),self=this;
             _.each(ids,function(id){
                 self.collection.get(id).kill(false);
             });
-            Alertify.log.info("Killed "+ids.length+" tasks.");
+            alertify.message("Killed "+ids.length+" tasks.");
         }
     });
     var TinyTableView = DataTable.View.extend({
