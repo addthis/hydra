@@ -21,6 +21,7 @@ import com.addthis.hydra.job.web.jersey.KVPairsProvider;
 import com.addthis.hydra.job.web.jersey.OptionalQueryParamInjectableProvider;
 import com.addthis.hydra.job.web.resources.AlertResource;
 import com.addthis.hydra.job.web.resources.AliasResource;
+import com.addthis.hydra.job.web.resources.AuthenticationResource;
 import com.addthis.hydra.job.web.resources.CommandResource;
 import com.addthis.hydra.job.web.resources.HostResource;
 import com.addthis.hydra.job.web.resources.JobsResource;
@@ -36,24 +37,31 @@ import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 import com.yammer.metrics.reporting.MetricsServlet;
 
+import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
+import org.eclipse.jetty.server.nio.SelectChannelConnector;
+import org.eclipse.jetty.server.ssl.SslSelectChannelConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SpawnService {
 
     private static final Logger log = LoggerFactory.getLogger(SpawnService.class);
+    private static final String CLASSPATH_PROTOCOL = "classpath:";
     private static final int batchInterval = Integer.parseInt(System.getProperty("spawn.batchtime", "500"));
     private static final int pollTimeout = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
-    private static final String defaultUser = "UNKNOWN_USER";
-    private static final int webPort = Parameter.intValue("spawn.http.port", 5052);
+    public static final int webPort = Parameter.intValue("spawn.http.port", 5052);
+    public static final int webPortSSL = Parameter.intValue("spawn.https.port", 5053);
+    private static final String KEYSTORE_PATH = Parameter.value("spawn.https.keystore.path");
+    private static final String KEYSTORE_PASSWORD = Parameter.value("spawn.https.keystore.password");
+    private static final String KEYMANAGER_PASSWORD = Parameter.value("spawn.https.keymanager.password");
 
-    private static final boolean useBasicAuth = Parameter.boolValue("spawn.basic.auth", false);
     private static final String webDir = Parameter.value("spawn.web.dir", "web");
     private static final String indexFilename = Parameter.value("spawn.index.file", "index.html");
 
@@ -63,6 +71,31 @@ public class SpawnService {
 
     public SpawnService(final Spawn spawn) throws Exception {
         this.jetty = new Server(webPort);
+
+        SelectChannelConnector selectChannelConnector = new SelectChannelConnector();
+        selectChannelConnector.setPort(webPort);
+
+
+        if ((KEYSTORE_PASSWORD != null) && (KEYMANAGER_PASSWORD != null) && (KEYSTORE_PATH != null)) {
+            SslSelectChannelConnector sslSelectChannelConnector = new SslSelectChannelConnector();
+            sslSelectChannelConnector.setPort(webPortSSL);
+            SslContextFactory sslContextFactory = sslSelectChannelConnector.getSslContextFactory();
+            String path = KEYSTORE_PATH;
+            if (path.startsWith(CLASSPATH_PROTOCOL)) {
+                path = path.substring(CLASSPATH_PROTOCOL.length());
+                path = SpawnService.class.getResource(path).toExternalForm();
+            }
+            sslContextFactory.setKeyStorePath(path);
+            sslContextFactory.setKeyStorePassword(KEYSTORE_PASSWORD);
+            sslContextFactory.setKeyManagerPassword(KEYMANAGER_PASSWORD);
+            log.info("Registering ssl connector");
+            jetty.setConnectors(new Connector[]{selectChannelConnector, sslSelectChannelConnector});
+            spawn.getSpawnState().setSslEnabled(true);
+        } else {
+            log.info("Not registering ssl connector");
+            jetty.setConnectors(new Connector[]{selectChannelConnector});
+        }
+
         this.config = new SpawnConfig();
         this.webSocketManager = spawn.getWebSocketManager();
 
@@ -76,6 +109,7 @@ public class SpawnService {
         AliasResource aliasResource = new AliasResource(spawn);
         HostResource hostResource = new HostResource(spawn);
         AlertResource alertResource = new AlertResource(spawn.getJobAlertManager());
+        AuthenticationResource authenticationResource = new AuthenticationResource(spawn);
 
         //register resources
         config.addResource(systemResource);
@@ -87,6 +121,7 @@ public class SpawnService {
         config.addResource(aliasResource);
         config.addResource(hostResource);
         config.addResource(alertResource);
+        config.addResource(authenticationResource);
 
         //register providers
         config.addProvider(OptionalQueryParamInjectableProvider.class);

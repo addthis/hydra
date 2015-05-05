@@ -24,6 +24,7 @@ import com.addthis.codec.codables.Codable;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.util.DirectedGraph;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -34,13 +35,15 @@ import org.slf4j.LoggerFactory;
 public class SpawnState implements Codable {
     private static final Logger log = LoggerFactory.getLogger(SpawnState.class);
 
-    @JsonProperty public final String uuid;
-    @JsonProperty final AtomicBoolean quiesce;
-    @JsonProperty final CopyOnWriteArraySet<String> disabledHosts;
+    public final String uuid;
+    final AtomicBoolean quiesce;
+    final CopyOnWriteArraySet<String> disabledHosts;
+    final AtomicBoolean sslEnabled = new AtomicBoolean(false);
 
     final transient ConcurrentMap<String, Job> jobs = new ConcurrentHashMap<>();
     final transient DirectedGraph<String> jobDependencies = new DirectedGraph<>();
 
+    @JsonCreator
     SpawnState(@JsonProperty("uuid") String uuid,
                @JsonProperty("quiesce") AtomicBoolean quiesce,
                @JsonProperty("disabledHosts") CopyOnWriteArraySet<String> disabledHosts) {
@@ -52,6 +55,14 @@ public class SpawnState implements Codable {
         }
         this.quiesce = quiesce;
         this.disabledHosts = disabledHosts;
+    }
+
+    public void setSslEnabled(boolean enabled) {
+        sslEnabled.set(enabled);
+    }
+
+    public boolean getSslEnabled() {
+        return sslEnabled.get();
     }
 
     public Iterator<Job> jobsIterator() {

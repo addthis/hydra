@@ -66,10 +66,10 @@ function(
                 self[modelName]=undefined;
             });
         },
-        authenticate:function() {
+        login:function() {
+            var self = this;
             var username = $.cookie("username");
             var token = $.cookie("token");
-            var self = this;
             if (_.isUndefined(username) || _.isUndefined(token)) {
                 var alert = Alertify.dialog.prompt("Enter username:",function(str){
                     username = $.trim(str);
@@ -84,6 +84,13 @@ function(
                 self.user.set("username", username);
                 self.user.set("token", token);
             }
+        },
+        logout:function() {
+           var self = this;
+           $.cookie("username", "", {expires:0});
+           $.cookie("token", "", {expires:0});
+           self.user.set("username", "");
+           self.user.set("token", "");
         },
         authQueryParameters:function(parameters) {
             var self = this;

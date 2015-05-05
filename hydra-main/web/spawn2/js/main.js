@@ -651,12 +651,6 @@ function(
     });    
     app.user.on("change:username",function(){
         $("#usernameBox").html(app.user.get("username"));
-        $.ajaxSetup({
-            global:true,
-            headers:{
-                "Username":app.user.get("username")
-            }
-        });
     });
     app.on('loadJobTable',function(){
         var state = app.getCookie("spawn");
@@ -787,7 +781,7 @@ function(
         }
         app.makeHtmlTitle("Clone::"+jobId);
     });
-    app.authenticate();
+    app.login();
     domReady(function(){
         Backbone.history.start();
         $("#healthCheckLink").click(function(event){
