@@ -43,7 +43,6 @@ public class DataLimitTop extends TreeNodeData<DataLimitTop.Config> implements S
      * {const:"all-urls", data.limit.limit-top.size:5000}
      * </pre>
      *
-     * @user-reference
      */
     public static final class Config extends TreeDataParameters<DataLimitTop> {
 
