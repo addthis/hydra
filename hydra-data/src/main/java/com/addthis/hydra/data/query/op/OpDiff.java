@@ -38,7 +38,6 @@ import io.netty.channel.ChannelProgressivePromise;
  * <li>D = negative difference column
  * </ul>
  *
- * @user-reference
  * @hydra-name diff
  */
 public class OpDiff extends AbstractTableOp {
