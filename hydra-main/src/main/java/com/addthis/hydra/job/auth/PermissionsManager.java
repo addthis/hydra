@@ -34,8 +34,8 @@ public final class PermissionsManager {
     }
 
     @JsonCreator
-    public PermissionsManager(@JsonProperty("authentication") AuthenticationManager authentication,
-                              @JsonProperty("authorization") AuthorizationManager authorization) {
+    public PermissionsManager(@JsonProperty(value = "authentication", required = true) AuthenticationManager authentication,
+                              @JsonProperty(value = "authorization", required = true) AuthorizationManager authorization) {
         this.authentication = authentication;
         this.authorization = authorization;
     }

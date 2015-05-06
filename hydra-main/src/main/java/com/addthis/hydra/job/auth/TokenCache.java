@@ -29,11 +29,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class TokenCache {
 
     public enum ExpirationPolicy {
-        AfterWrite, AfterAccess
+        WRITE, ACCESS
     }
 
     /**
-     * Expiration policy. Default is {@code AfterWrite}
+     * Expiration policy. Default is {@code WRITE}
      */
     @Nonnull
     public final ExpirationPolicy policy;
@@ -46,16 +46,16 @@ public class TokenCache {
     private final Cache<String, String> cache;
 
     @JsonCreator
-    public TokenCache(@JsonProperty("policy") ExpirationPolicy policy,
-                      @JsonProperty("timeout") @Time(TimeUnit.SECONDS) int timeout) {
+    public TokenCache(@JsonProperty(value = "policy", required = true) ExpirationPolicy policy,
+                      @JsonProperty(value = "timeout", required = true) @Time(TimeUnit.SECONDS) int timeout) {
         this.policy = policy;
         this.timeout = timeout;
         CacheBuilder cacheBuilder = CacheBuilder.newBuilder();
         switch (policy) {
-            case AfterAccess:
+            case ACCESS:
                 cacheBuilder = cacheBuilder.expireAfterAccess(timeout, TimeUnit.SECONDS);
                 break;
-            case AfterWrite:
+            case WRITE:
                 cacheBuilder = cacheBuilder.expireAfterWrite(timeout, TimeUnit.SECONDS);
                 break;
             default:

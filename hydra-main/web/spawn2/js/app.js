@@ -79,14 +79,24 @@ function(
             var usernameInput = $("#loginUsername")[0];
             var passwordInput =  $("#loginPassword")[0];
             var tokenName = $("#loginToken")[0].value;
-            var expireMinutes = parseInt($("#loginTokenExpire")[0].value);
+            var expireMinutes, urlPath;
+            if (tokenName == "token") {
+                expireMinutes = 1440;
+                urlPath = "/authentication/login";
+            } else if (tokenName == "sudo") {
+                expireMinutes = 15;
+              urlPath = "/authentication/sudo";
+            } else {
+                alertify.error("Unknown token name " + tokenName);
+                return;
+            }
             var username = $.trim(usernameInput.value);
             var password = passwordInput.value;
             usernameInput.value = "";
             passwordInput.value = "";
             Cookies.set("username", username, {expires:1});
             app.user.set("username", username);
-            var loginUrl = app.authprefix() + "/authentication/login";
+            var loginUrl = app.authprefix() + urlPath;
             $.ajax({
                 type: 'POST',
                 url: loginUrl,
@@ -110,7 +120,6 @@ function(
             var token = Cookies.get("token");
             if (!username || !token) {
                 $("#loginToken")[0].value = "token";
-                $("#loginTokenExpire")[0].value = 1440;
                 alertify.minimalDialog($('#loginForm')[0]);
             } else {
                 app.user.set("username", username);
@@ -124,7 +133,6 @@ function(
                 alertify.error("Please login first");
             } else {
                 $("#loginToken")[0].value = "sudo";
-                $("#loginTokenExpire")[0].value = 15;
                 $("#loginUsername")[0].value = username;
                 alertify.minimalDialog($('#loginForm')[0]);
             }
