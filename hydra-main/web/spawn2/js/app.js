@@ -125,17 +125,20 @@ function(
             });
         },
         login:function() {
+            document.activeElement.blur();
             var username = Cookies.get("username");
             var token = Cookies.get("token");
             if (!username || !token) {
                 $("#loginToken")[0].value = "token";
                 app.loginDialog = alertify.minimalDialog($('#loginForm')[0]);
             } else {
+                alertify.message("Please logout first");
                 app.user.set("username", username);
                 app.user.set("token", token);
             }
         },
         sudo:function() {
+            document.activeElement.blur();
             var username = Cookies.get("username");
             var token = Cookies.get("token");
             if (!username || !token) {
@@ -147,6 +150,7 @@ function(
             }
         },
         logout:function() {
+            document.activeElement.blur();
             var username = Cookies.get("username");
             var token = Cookies.get("token");
             if (username) {
