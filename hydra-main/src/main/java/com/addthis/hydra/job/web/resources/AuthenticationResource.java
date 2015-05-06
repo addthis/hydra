@@ -14,6 +14,7 @@
 package com.addthis.hydra.job.web.resources;
 
 import javax.ws.rs.FormParam;
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -23,6 +24,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
 import java.net.URI;
+
+import com.addthis.basis.util.Parameter;
 
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.web.SpawnService;
@@ -35,75 +38,71 @@ public class AuthenticationResource {
 
     private static final Logger log = LoggerFactory.getLogger(AuthenticationResource.class);
 
+    private static final boolean sslLoginDefault = Parameter.boolValue("spawn.https.login.default", true);
+
     private final Spawn spawn;
 
     public AuthenticationResource(Spawn spawn) {
         this.spawn = spawn;
     }
 
+    @GET
+    @Path("/default-ssl")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response defaultSsl() {
+        return Response.ok(Boolean.toString(sslLoginDefault)).build();
+    }
+
     @POST
     @Path("/login")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_PLAIN)
     public Response login(@FormParam("user") String username,
                           @FormParam("password") String password,
                           @Context UriInfo uriInfo) {
+        URI uri = uriInfo.getRequestUri();
+        boolean usingSSL = (uri.getPort() == SpawnService.webPortSSL);
         try {
-            URI uri = uriInfo.getRequestUri();
-            boolean usingSSL = (uri.getPort() == SpawnService.webPortSSL);
-            if (!usingSSL && spawn.getSpawnState().getSslEnabled()) {
-                return Response.temporaryRedirect(
-                        uriInfo.getRequestUriBuilder().port(SpawnService.webPortSSL).build()).build();
-            } else {
-                String token = spawn.getPermissionsManager().login(username, password, usingSSL);
-                return Response.ok(token).build();
-            }
+            String token = spawn.getPermissionsManager().login(username, password, usingSSL);
+            Response.ResponseBuilder builder = Response.ok(token);
+            builder.header("Access-Control-Allow-Origin",
+                           "http://" + uriInfo.getAbsolutePath().getHost() +
+                           ":" + SpawnService.webPort);
+            builder.header("Access-Control-Allow-Methods", "POST");
+            return builder.build();
         } catch (Exception ex)  {
-            log.warn("Internal error in authentication attempt for user {}", username, ex);
+            log.warn("Internal error in authentication attempt for user {} with ssl {}", username, usingSSL, ex);
             return Response.serverError().entity("internal error").build();
         }
     }
 
     @POST
     @Path("/sudo")
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.TEXT_PLAIN)
     public Response sudo(@FormParam("user") String username,
                          @FormParam("token") String token,
                          @Context UriInfo uriInfo) {
+        URI uri = uriInfo.getRequestUri();
+        boolean usingSSL = (uri.getPort() == SpawnService.webPortSSL);
         try {
-            URI uri = uriInfo.getRequestUri();
-            if ((uri.getPort() == SpawnService.webPort) &&
-                (spawn.getSpawnState().getSslEnabled())) {
-                return Response.temporaryRedirect(
-                        uriInfo.getRequestUriBuilder().port(SpawnService.webPortSSL).build()).build();
-            } else {
-                String sudoToken = spawn.getPermissionsManager().sudo(username, token);
-                return Response.ok(sudoToken).build();
-            }
+            String sudoToken = spawn.getPermissionsManager().sudo(username, token);
+            return Response.ok(sudoToken).build();
         } catch (Exception ex)  {
-            log.warn("Internal error in authentication attempt for user {}", username, ex);
+            log.warn("Internal error in sudo attempt for user {} with ssl {}", username, usingSSL, ex);
             return Response.serverError().entity(ex.toString()).build();
         }
     }
 
     @POST
     @Path("/logout")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response logout(@FormParam("user") String username,
-                           @FormParam("token") String token,
-                           @Context UriInfo uriInfo) {
+    public void logout(@FormParam("user") String username,
+                       @FormParam("token") String token,
+                       @Context UriInfo uriInfo) {
+        URI uri = uriInfo.getRequestUri();
+        boolean usingSSL = (uri.getPort() == SpawnService.webPortSSL);
         try {
-            URI uri = uriInfo.getRequestUri();
-            if ((uri.getPort() == SpawnService.webPort) &&
-                (spawn.getSpawnState().getSslEnabled())) {
-                return Response.temporaryRedirect(
-                        uriInfo.getRequestUriBuilder().port(SpawnService.webPortSSL).build()).build();
-            } else {
-                spawn.getPermissionsManager().logout(username, token);
-                return Response.ok().build();
-            }
+            spawn.getPermissionsManager().logout(username, token);
         } catch (Exception ex)  {
-            log.warn("Internal error in authentication attempt for user {}", username, ex);
-            return Response.serverError().entity(ex.toString()).build();
+            log.warn("Internal error in logout attempt for user {} with ssl {}", username, usingSSL, ex);
         }
     }
 

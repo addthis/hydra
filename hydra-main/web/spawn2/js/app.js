@@ -35,6 +35,7 @@ function(
         mainSelector:"#main",
         user: new Backbone.Model({username:"",token:"",sudo:""}),
         server:server,
+        loginSSLDefault:true,
         activeModels:[],
         showView:function(view,link,activeModels){
             var self=this;
@@ -57,6 +58,20 @@ function(
                 self[modelName]=undefined;
             });
         },
+        initialize:function() {
+            var self = this;
+            $.ajax({
+                url: '/authentication/default-ssl',
+                dataType: 'text',
+                success: function(response) {
+                    self.loginSSLDefault = (response == "true");
+                    self.login();
+                },
+                error: function(error) {
+                    alertify.error("Failure on /authentication/default-ssl", 0);
+                }
+            });
+        },
         login:function() {
             var self = this;
             var username = Cookies.get("username");
@@ -64,11 +79,25 @@ function(
             if (_.isUndefined(username) || _.isUndefined(token)) {
                 var alert = alertify.prompt("Enter username:","",function(evt, str){
                     username = $.trim(str);
-                    token = username;
                     Cookies.set("username", username, {expires:1});
-                    Cookies.set("token", token, {expires:1});
                     self.user.set("username", username);
-                    self.user.set("token", token);
+                    var loginUrl = (self.loginSSLDefault ? "https://" : "http://") +
+                        window.location.hostname + ":" +
+                        (self.loginSSLDefault ? "5053" : "5052") + "/authentication/login";
+                    $.ajax({
+                        type: 'POST',
+                        url: loginUrl,
+                        data: null,
+                        dataType: 'text',
+                        success: function(response) {
+                            token = response;
+                            Cookies.set("token", token, {expires:1});
+                            self.user.set("token", token);
+                        },
+                        error: function(error) {
+                            alertify.error("Failure on " + loginUrl, 0);
+                        }
+                    });
                 });
                 $(alert.el).find("#alertify-text").focus();
             } else {

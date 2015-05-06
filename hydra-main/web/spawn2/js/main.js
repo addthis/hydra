@@ -792,7 +792,7 @@ function(
         }
         app.makeHtmlTitle("Clone::"+jobId);
     });
-    app.login();
+    app.initialize();
     domReady(function(){
         Backbone.history.start();
         $("#healthCheckLink").click(function(event){

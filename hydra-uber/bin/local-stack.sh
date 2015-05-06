@@ -135,7 +135,7 @@ export SPAWN_OPT="-Xmx512M ${LOG4J_PROPERTIES} -Dspawn.localhost=localhost -Dspa
 -Dspawn.chore.interval=3000 -Dhttp.post.max=327680  -Dspawn.polltime=10000 -Dspawnbalance.min.disk.percent.avail.replicas=0.01 \
 -Dspawn.auth.ldap=false -Dmesh.port=5000 -Djob.store.remote=false -Dspawn.queue.new.task.last.slot.delay=0 -Dspawn.defaultReplicaCount=0 \
 -Dbatch.brokerAddresses=localhost -Dspawn.https.keystore.password=hydrahydra -Dspawn.https.keymanager.password=hydrahydra \
--Dspawn.https.keystore.path=$HYDRA_LOCAL_DIR/cert/keystore.jks"
+-Dspawn.https.keystore.path=$HYDRA_LOCAL_DIR/cert/keystore.jks -Dspawn.https.login.default=0"
 
 export MESHY_OPT="-Xmx128M -Xms128M ${LOG4J_PROPERTIES} -Dmeshy.autoMesh=false -Dmeshy.throttleLog=true \
 -Dmeshy.buffers.enable=true -Dmeshy.stream.maxopen=10000"
