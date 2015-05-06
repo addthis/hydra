@@ -58,9 +58,10 @@ public class SystemResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response quiesceCluster(@QueryParam("quiesce") String quiesce,
                                    @QueryParam("user") String user,
-                                   @QueryParam("token") String token) {
+                                   @QueryParam("token") String token,
+                                   @QueryParam("sudo") String sudo) {
         try {
-            if (permissionsManager.isAdmin(user, token)) {
+            if (permissionsManager.adminAction(user, token, sudo)) {
                 boolean quiesced = systemManager.quiesceCluster(quiesce.equals("1"), user);
                 String json = Jackson.defaultMapper().createObjectNode()
                         .put("quiesced", (quiesced ? "1" : "0")).toString();

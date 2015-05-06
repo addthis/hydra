@@ -24,6 +24,10 @@ public class AuthorizationManagerAllowAll extends AuthorizationManager {
         return true;
     }
 
+    @Override boolean adminAction(User user, String sudoToken) {
+        return true;
+    }
+
     @Override String sudo(User user, boolean admin) {
         return "unused";
     }

@@ -41,6 +41,14 @@ public class AuthorizationManagerBasic extends AuthorizationManager {
         }
     }
 
+    @Override boolean adminAction(User user, String sudoToken) {
+        if ((user == null) || (sudoToken == null)) {
+            return false;
+        } else {
+            return sudoCache.get(user.name(), sudoToken);
+        }
+    }
+
     private boolean isWritable(User user, WritableAsset asset) {
         if (Objects.equals(user.name(), asset.getOwner())) {
             return asset.isOwnerWritable();

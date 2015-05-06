@@ -22,6 +22,8 @@ public abstract class AuthorizationManager {
 
     abstract boolean isWritable(User user, String sudoToken, WritableAsset asset);
 
+    abstract boolean adminAction(User user, String sudoToken);
+
     abstract String sudo(User user, boolean admin);
 
     /**

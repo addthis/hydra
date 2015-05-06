@@ -48,6 +48,14 @@ public final class PermissionsManager {
         return authorization.isWritable(user, sudo, asset);
     }
 
+    public boolean adminAction(String username, String secret, String sudo) {
+        User user = authentication.authenticate(username, secret);
+        if (user == null) {
+            return false;
+        }
+        return authorization.adminAction(user, sudo);
+    }
+
     public User authenticate(String username, String secret) {
         return authentication.authenticate(username, secret);
     }
@@ -72,14 +80,6 @@ public final class PermissionsManager {
             authentication.logout(user);
             authorization.logout(user);
         }
-    }
-
-    public boolean isAdmin(String username, String secret) {
-        User user = authentication.authenticate(username, secret);
-        if (user == null) {
-            return false;
-        }
-        return authentication.isAdmin(user);
     }
 
 }

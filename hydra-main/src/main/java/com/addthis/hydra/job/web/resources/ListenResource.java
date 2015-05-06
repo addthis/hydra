@@ -174,15 +174,16 @@ public class ListenResource {
         }
     }
 
-    /** @deprecated Use {@link SystemResource#quiesceCluster(String, String, String)} */
+    /** @deprecated Use {@link SystemResource#quiesceCluster(String, String, String, String)} */
     @GET
     @Path("/quiesce")
     @Produces(MediaType.APPLICATION_JSON)
     @Deprecated
     public Response quiesceCluster(@QueryParam("quiesce") String quiesce,
                                    @QueryParam("user")  String user,
-                                   @QueryParam("token") String token) {
-        return systemResource.quiesceCluster(quiesce, user, token);
+                                   @QueryParam("token") String token,
+                                   @QueryParam("sudo") String sudo) {
+        return systemResource.quiesceCluster(quiesce, user, token, sudo);
     }
 
     /** @deprecated Use {@link SystemResource#getBalanceParams()} */
