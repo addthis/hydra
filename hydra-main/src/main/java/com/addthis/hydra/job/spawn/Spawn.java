@@ -702,6 +702,13 @@ public class Spawn implements Codable, AutoCloseable {
         return lastQueueSize;
     }
 
+    public Job getStaleJob(String jobUUID) {
+        if (jobUUID == null) {
+            return null;
+        }
+        return spawnState.jobs.get(jobUUID);
+    }
+
     public Job getJob(String jobUUID) {
         if (jobUUID == null) {
             return null;
@@ -1630,7 +1637,6 @@ public class Spawn implements Codable, AutoCloseable {
             }
             spawnState.jobs.remove(jobUUID);
             spawnState.jobDependencies.removeNode(jobUUID);
-            jobAlertManager.removeAlertsForJob(jobUUID);
             log.warn("[job.delete] {}", job.getId());
             if (spawnMQ != null) {
                 spawnMQ.sendControlMessage(
@@ -1642,10 +1648,11 @@ public class Spawn implements Codable, AutoCloseable {
                 jobStore.delete(jobUUID);
             }
             Job.logJobEvent(job, JobEvent.DELETE, eventLog);
-            return DeleteStatus.SUCCESS;
         } finally {
             jobLock.unlock();
         }
+        jobAlertManager.removeAlertsForJob(jobUUID);
+        return DeleteStatus.SUCCESS;
     }
 
     public void sendControlMessage(HostMessage hostMessage) {
