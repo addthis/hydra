@@ -702,6 +702,19 @@ public class Spawn implements Codable, AutoCloseable {
         return lastQueueSize;
     }
 
+    /**
+     * This method does not acquire the job lock and therefore the
+     * job object it returns can be out of date with respect
+     * to any concurrent writers. Calling this method should
+     * be safe if a stale copy of the job is OK to use.
+     */
+    public Job unsafeGetJob(String jobUUID) {
+        if (jobUUID == null) {
+            return null;
+        }
+        return spawnState.jobs.get(jobUUID);
+    }
+
     public Job getJob(String jobUUID) {
         if (jobUUID == null) {
             return null;
