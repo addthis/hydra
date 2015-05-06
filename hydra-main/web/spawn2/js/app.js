@@ -36,6 +36,7 @@ function(
         user: new Backbone.Model({username:"",token:"",sudo:""}),
         server:server,
         loginSSLDefault:true,
+        loginDialog:null,
         activeModels:[],
         showView:function(view,link,activeModels){
             var self=this;
@@ -75,7 +76,8 @@ function(
                 }
             });
         },
-        authenticate:function() {
+        authenticate:function(evt) {
+            evt.preventDefault();
             var usernameInput = $("#loginUsername")[0];
             var passwordInput =  $("#loginPassword")[0];
             var tokenName = $("#loginToken")[0].value;
@@ -94,8 +96,6 @@ function(
             var password = passwordInput.value;
             usernameInput.value = "";
             passwordInput.value = "";
-            Cookies.set("username", username, {expires:1});
-            app.user.set("username", username);
             var loginUrl = app.authprefix() + urlPath;
             $.ajax({
                 type: 'POST',
@@ -106,9 +106,18 @@ function(
                 },
                 dataType: 'text',
                 success: function(response) {
+                    if (app.loginDialog) {
+                        app.loginDialog.close();
+                    }
                     var token = response;
-                    Cookies.set(tokenName, token, {expires:new Date(new Date().getTime() + expireMinutes * 60000)});
-                    app.user.set(tokenName, token);
+                    if (!token) {
+                        alertify.error("Authentication error");
+                    } else {
+                        Cookies.set("username", username, {expires:1});
+                        app.user.set("username", username);
+                        Cookies.set(tokenName, token, {expires:new Date(new Date().getTime() + expireMinutes * 60000)});
+                        app.user.set(tokenName, token);
+                    }
                 },
                 error: function(error) {
                     alertify.error("Failure on " + loginUrl, 0);
@@ -120,7 +129,7 @@ function(
             var token = Cookies.get("token");
             if (!username || !token) {
                 $("#loginToken")[0].value = "token";
-                alertify.minimalDialog($('#loginForm')[0]);
+                app.loginDialog = alertify.minimalDialog($('#loginForm')[0]);
             } else {
                 app.user.set("username", username);
                 app.user.set("token", token);
@@ -134,7 +143,7 @@ function(
             } else {
                 $("#loginToken")[0].value = "sudo";
                 $("#loginUsername")[0].value = username;
-                alertify.minimalDialog($('#loginForm')[0]);
+                app.loginDialog = alertify.minimalDialog($('#loginForm')[0]);
             }
         },
         logout:function() {
