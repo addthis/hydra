@@ -58,6 +58,10 @@ public class TestBundleFilterURL {
         bundle = MapBundle.createBundle(new String[]{"input", "http://", "host", ""});
         assertTrue(filterURL.filter(bundle));
         assertEquals("", bundle.get("host"));
+        // This domain will throw an IllegalStateException if isUnderPublicSuffix() is not checked
+        bundle = MapBundle.createBundle(new String[]{"input", "http://s3.amazonaws.com", "host", ""});
+        assertTrue(filterURL.filter(bundle));
+        assertEquals("s3.amazonaws.com", bundle.get("host"));
     }
 
     @Test

@@ -179,49 +179,52 @@ public class JobAlertRunner {
         int done = 0;
         int numNodes = 0;
 
-        List<JobTask> jobNodes = job.getCopyOfTasks();
+        StringBuffer sb = new StringBuffer();
 
-        if (jobNodes != null) {
-            numNodes = jobNodes.size();
-            for (JobTask task : jobNodes) {
-                files += task.getFileCount();
-                bytes += task.getByteCount();
+        if (job != null) {
 
-                if (!task.getState().equals(JobTaskState.IDLE)) {
-                    running++;
-                }
-                switch (task.getState()) {
-                    case IDLE:
-                        done++;
-                        break;
-                    case ERROR:
-                        done++;
-                        errored++;
-                        break;
-                    default:
-                        break;
+            List<JobTask> jobNodes = job.getCopyOfTasks();
+
+            if (jobNodes != null) {
+                numNodes = jobNodes.size();
+                for (JobTask task : jobNodes) {
+                    files += task.getFileCount();
+                    bytes += task.getByteCount();
+
+                    if (!task.getState().equals(JobTaskState.IDLE)) {
+                        running++;
+                    }
+                    switch (task.getState()) {
+                        case IDLE:
+                            done++;
+                            break;
+                        case ERROR:
+                            done++;
+                            errored++;
+                            break;
+                        default:
+                            break;
+                    }
                 }
             }
+            sb.append("Cluster : " + clusterHead + "\n");
+            sb.append("Job : " + job.getId() + "\n");
+            sb.append("Job Link : http://" + clusterHead + ":5052/spawn2/index.html#jobs/" + job.getId() + "/tasks\n");
+            sb.append("Description : " + job.getDescription() + "\n");
+            sb.append("------------------------------ \n");
+            sb.append("Task Summary \n");
+            sb.append("------------------------------ \n");
+            sb.append("Job State : " + job.getState() + "\n");
+            sb.append("Start Time : " + format(job.getStartTime()) + "\n");
+            sb.append("End Time : " + format(job.getEndTime()) + "\n");
+            sb.append("Num Nodes : " + numNodes + "\n");
+            sb.append("Running Nodes : " + running + "\n");
+            sb.append("Errored Nodes : " + errored + "\n");
+            sb.append("Done Nodes : " + done + "\n");
+            sb.append("Task files : " + files + "\n");
+            sb.append("Task Bytes : " + format(bytes) + " GB\n");
+            sb.append("------------------------------ \n");
         }
-
-        StringBuffer sb = new StringBuffer();
-        sb.append("Cluster : " + clusterHead + "\n");
-        sb.append("Job : " + job.getId() + "\n");
-        sb.append("Job Link : http://" + clusterHead + ":5052/spawn2/index.html#jobs/" + job.getId() + "/tasks\n");
-        sb.append("Description : " + job.getDescription() + "\n");
-        sb.append("------------------------------ \n");
-        sb.append("Task Summary \n");
-        sb.append("------------------------------ \n");
-        sb.append("Job State : " + job.getState() + "\n");
-        sb.append("Start Time : " + format(job.getStartTime()) + "\n");
-        sb.append("End Time : " + format(job.getEndTime()) + "\n");
-        sb.append("Num Nodes : " + numNodes + "\n");
-        sb.append("Running Nodes : " + running + "\n");
-        sb.append("Errored Nodes : " + errored + "\n");
-        sb.append("Done Nodes : " + done + "\n");
-        sb.append("Task files : " + files + "\n");
-        sb.append("Task Bytes : " + format(bytes) + " GB\n");
-        sb.append("------------------------------ \n");
         return sb.toString();
     }
 

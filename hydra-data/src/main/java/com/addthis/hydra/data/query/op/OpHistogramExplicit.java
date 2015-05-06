@@ -37,11 +37,12 @@ import io.netty.channel.ChannelProgressivePromise;
  */
 public class OpHistogramExplicit extends AbstractRowOp {
 
-    private static enum Mode {
+    private enum Mode {
         FLOAT, INTEGER
     }
 
     private final int column;
+    private final int frequency;
     private final Mode mode;
     private final Number[] keys;
     private final long[] counts;
@@ -50,7 +51,9 @@ public class OpHistogramExplicit extends AbstractRowOp {
      * usage: column,val1,val2,val3,etc
      * <p/>
      * column defines the column source for the bucket value.
-     * values define the bonudaries of the histogram.
+     * values define the boundaries of the histogram. Optionally
+     * you can specify column1:column2 which will accept sources from
+     * column1 and the frequency of each item from column2.
      *
      * @param args
      */
@@ -60,7 +63,15 @@ public class OpHistogramExplicit extends AbstractRowOp {
         if (columns == -1) {
             throw new RuntimeException("syntax error two components not detected");
         }
-        column = Integer.parseInt(args.substring(0, columns));
+        String columnsDefinition = args.substring(0, columns);
+        int colonPos = columnsDefinition.indexOf(':');
+        if (colonPos > -1) {
+            frequency = Integer.parseInt(columnsDefinition.substring(colonPos + 1));
+            columnsDefinition = columnsDefinition.substring(0, colonPos);
+        } else {
+            frequency = -1;
+        }
+        column = Integer.parseInt(columnsDefinition);
         String positions = args.substring(columns + 1);
         int fposition = positions.indexOf('.');
         if (fposition == -1) {
@@ -102,16 +113,23 @@ public class OpHistogramExplicit extends AbstractRowOp {
             rowFactory = row.createBundle();
         }
         Numeric value = ValueUtil.asNumberOrParse(binder.getColumn(row, column));
+        long increment;
+        if (frequency >= 0) {
+            Numeric incNumeric = ValueUtil.asNumberOrParseLong(binder.getColumn(row, frequency), 10);
+            increment = (incNumeric != null) ? incNumeric.asLong().asNative() : 1;
+        } else {
+            increment = 1;
+        }
         if (mode == Mode.FLOAT) {
             float target = (float) value.asDouble().getDouble();
             int position = Arrays.binarySearch(keys, target);
             if (position < 0) position = ~position - 1;
-            counts[position]++;
+            counts[position] += increment;
         } else {
             int target = (int) value.asLong().getLong();
             int position = Arrays.binarySearch(keys, target);
             if (position < 0) position = ~position - 1;
-            counts[position]++;
+            counts[position] += increment;
         }
         return null;
     }
