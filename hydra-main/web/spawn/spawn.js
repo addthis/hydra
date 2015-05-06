@@ -1889,7 +1889,7 @@ function renderJobsCall() {
 			"rK","mT",
 			"pr","bk","rp","rorp","files","bytes"] : [
 			"query","kick","stop","d'load",
-			"job id","description","owner",
+			"job id","description","creator",
 			"N","R","D","E",
 			"status","submit",
 			"start","end","reK","maxT",
@@ -1986,7 +1986,7 @@ function renderJobsCall() {
             '<a href="http://'+setup.spawnHost+'/job.expand?id='+job.id+'" title="expand">D</a>',
 			'<a href="#" title="inspect" onclick="Spawn.showJobNodes(\''+job.id+'\',true,true); return false;">'+pithy+'</a>',
 			'<a href="#" title="edit" onclick="Spawn.editJob(\''+job.id+'\'); return false;">'+job.description+'</a>',
-			job.owner ? '<a href="#" title="owner:'+job.owner+'">'+job.owner+'</a>' : '',
+			job.creator ? '<a href="#" title="owner:'+job.owner+'">'+job.creator+'</a>' : '',
 		        job.nodes,run,done,err,
    		        (job.state == 5 ? '<a href="#" title="'+state+'">ERROR</a>' : state) + (job.disabled ? ' (D)' : ''),
 			job.submitTime ? [fdate(job.submitTime),job.submitTime] : ['-',0],

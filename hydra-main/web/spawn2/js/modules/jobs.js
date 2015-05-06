@@ -982,9 +982,9 @@ function(
                     }
                 },
                 {
-                    "sTitle":"Owner",
-                    "sClass":"job-owner center",
-                    "mData": "owner",
+                    "sTitle":"Creator",
+                    "sClass":"job-creator center",
+                    "mData": "creator",
                     "sWidth":"7%",
                     "bSearchable":true
                 },
@@ -1181,9 +1181,9 @@ function(
                     }
                 },//0
                 {
-                    "sTitle":"Owner",
-                    "sClass":"job-owner center",
-                    "mData": "owner",
+                    "sTitle":"Creator",
+                    "sClass":"job-creator center",
+                    "mData": "creator",
                     "bSearchable":true,
                     "sWidth":"7%"
                 },//1
