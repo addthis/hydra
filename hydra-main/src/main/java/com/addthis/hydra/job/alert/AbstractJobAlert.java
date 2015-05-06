@@ -271,12 +271,12 @@ public abstract class AbstractJobAlert implements Codable {
         Set<Job> rv = new HashSet<>();
         Map<String, List<String>> aliases = spawn.getAliasManager().getAliases();
         for (String lookupId : jobIds) {
-            Job job = spawn.getStaleJob(lookupId);
+            Job job = spawn.getJob(lookupId);
             if (job != null) {
                 rv.add(job);
             } else if (aliases.containsKey(lookupId)) {
                 for (String jobId : aliases.get(lookupId)) {
-                    job = spawn.getStaleJob(jobId);
+                    job = spawn.getJob(jobId);
                     if (job != null) {
                         rv.add(job);
                     }
@@ -300,7 +300,7 @@ public abstract class AbstractJobAlert implements Codable {
             }
         }
         for (String lookupId : activeJobs.keySet()) {
-            Job job = spawn.getStaleJob(lookupId);
+            Job job = spawn.getJob(lookupId);
             if (job != null) {
                 rv.add(job);
             }
