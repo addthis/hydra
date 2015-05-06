@@ -30,6 +30,10 @@ public class AuthenticationManagerAllowAll extends AuthenticationManager {
         return "unused";
     }
 
+    @Override public boolean verify(String username, String password, boolean ssl) {
+        return true;
+    }
+
     @Override boolean isAdmin(User user) {
         return true;
     }

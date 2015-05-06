@@ -69,6 +69,14 @@ public class AuthenticationManagerStatic extends AuthenticationManager {
         }
     }
 
+    @Override public boolean verify(String username, String password, boolean ssl) {
+        if (requireSSL && !ssl) {
+            return false;
+        }
+        User candidate = authenticate(username, password);
+        return (candidate != null);
+    }
+
     @Override User authenticate(String username, String secret) {
         if ((username == null) || (secret == null)) {
             return null;

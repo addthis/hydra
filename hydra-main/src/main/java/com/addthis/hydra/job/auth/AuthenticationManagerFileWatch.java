@@ -95,6 +95,11 @@ public class AuthenticationManagerFileWatch extends AuthenticationManager {
         return manager.login(username, password, ssl);
     }
 
+    @Override public boolean verify(String username, String password, boolean ssl) {
+        updateAuthenticationManager();
+        return manager.verify(username, password, ssl);
+    }
+
     @Override User authenticate(String username, String secret) {
         updateAuthenticationManager();
         return manager.authenticate(username, secret);

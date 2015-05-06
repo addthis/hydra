@@ -26,6 +26,10 @@ public class AuthenticationManagerDenyAll extends AuthenticationManager {
         return null;
     }
 
+    @Override public boolean verify(String username, String password, boolean ssl) {
+        return false;
+    }
+
     @Override User authenticate(String username, String secret) {
         return null;
     }

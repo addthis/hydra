@@ -79,12 +79,12 @@ public class AuthenticationResource {
     @Path("/sudo")
     @Produces(MediaType.TEXT_PLAIN)
     public Response sudo(@FormParam("user") String username,
-                         @FormParam("token") String token,
+                         @FormParam("password") String password,
                          @Context UriInfo uriInfo) {
         URI uri = uriInfo.getRequestUri();
         boolean usingSSL = (uri.getPort() == SpawnService.webPortSSL);
         try {
-            String sudoToken = spawn.getPermissionsManager().sudo(username, token);
+            String sudoToken = spawn.getPermissionsManager().sudo(username, password, usingSSL);
             return Response.ok(sudoToken).build();
         } catch (Exception ex)  {
             log.warn("Internal error in sudo attempt for user {} with ssl {}", username, usingSSL, ex);

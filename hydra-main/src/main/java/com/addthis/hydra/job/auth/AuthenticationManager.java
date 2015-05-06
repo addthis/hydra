@@ -40,6 +40,11 @@ public abstract class AuthenticationManager {
     abstract String login(String username, String password, boolean ssl);
 
     /**
+     * Verifies the username and password are correct.
+     */
+    public abstract boolean verify(String username, String password, boolean ssl);
+
+    /**
      * Return the user object if the username and secret token are valid.
      *
      * @param username

@@ -59,6 +59,13 @@ public class AuthenticationManagerNested extends AuthenticationManager {
         return token;
     }
 
+    @Override public boolean verify(String username, String password, boolean ssl) {
+        if ((username == null) || (password == null)) {
+            return false;
+        }
+        return inner.verify(username, password, ssl) || outer.verify(username, password, ssl);
+    }
+
     @Override User authenticate(String username, String secret) {
         if ((username == null) || (secret == null)) {
             return null;

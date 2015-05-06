@@ -75,15 +75,17 @@
         <div id="main"></div>
         <div style="display:none">
             <form id="loginForm">
-                <fieldset>
-                    <label> Username </label>
-                    <input type="text" value=""/>
-
-                    <label> Password </label>
-                    <input type="password" value=""/>
-
-                    <input type="submit" value="Login"/>
-                </fieldset>
+                <table>
+                    <tr>
+                        <td style="vertical-align:bottom"><label for="loginUsername">Username: </label>
+                        <input type="text" id="loginUsername" value=""/>
+                        <td style="vertical-align:bottom"><label for="loginPassword">Password: </label>
+                        <input type="password" id="loginPassword" value=""/>
+                        <td style="vertical-align:bottom"><input class="btn btn-default" type="submit" value="Authenticate"/>
+                        <input type="hidden" id="loginToken" value=""/>
+                        <input type="hidden" id="loginTokenExpire" value=""/>
+                    </tr>
+                </table>
             </form>
         </div>
     </body>
