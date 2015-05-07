@@ -37,6 +37,7 @@ define([
     "text!../../templates/job.taskdetail.html",
     "text!../../templates/job.task.breadcrumbs.html",
     "text!../../templates/job.revert.modal.html",
+    "text!../../templates/job.permissions.modal.html",
     "text!../../templates/job.table.info.html",
     "text!../../templates/job.checkdirs.html"
 ],
@@ -66,6 +67,7 @@ function(
     jobTaskDetailTemplate,
     jobTaskBreadcrumbTemplate,
     jobRevertModalTemplate,
+    jobPermissionsModalTemplate,
     jobTableInfoTemplate,
     jobCheckDirsTemplate
 ){
@@ -361,7 +363,7 @@ function(
             app.authQueryParameters(parameters);
             return $.ajax({
                 url: "/job/save?" + $.param(parameters),
-                data:data,
+                data: data,
                 type: "POST"
             });
         },
@@ -855,6 +857,7 @@ function(
                 'handleDisableButtonClick',
                 'handleDeleteButtonClick',
                 'handleCreateAlertButtonClick',
+                'handleChangePermissionsButtonClick',
                 'handleFindDeletedJobButtonClick'
             );
             this.hasRendered=false;
@@ -871,6 +874,7 @@ function(
                 this.views.selectable.find("#disableButton").on("click",this.handleDisableButtonClick);
                 this.views.selectable.find("#deleteButton").on("click",this.handleDeleteButtonClick);
                 this.views.selectable.find("#createAlertButton").on("click", this.handleCreateAlertButtonClick);
+                this.views.selectable.find("#changePermissionsButton").on("click", this.handleChangePermissionsButtonClick);
                 this.hasRendered=true;
             }
             // Find deleted job
@@ -922,7 +926,11 @@ function(
         handleCreateAlertButtonClick:function(event){
             var ids = this.getSelectedIds();
             app.router.navigate("alerts/create/" + ids.join(), {trigger:true});
-        },        
+        },
+        handleChangePermissionsButtonClick:function(event){
+            var ids = this.getSelectedIds();
+            app.router.trigger("route:showChangePermissions", ids);
+        },
         handleFindDeletedJobButtonClick:function(event){
             alertify.prompt("Enter the deleted job ID:","",function(evt, str){
                 window.open("/job/config.deleted?id="+str,"_blank");
@@ -1402,6 +1410,61 @@ function(
             }
         }
     });
+    var ChangePermissionsModalView = Backbone.View.extend({
+        className:"modal fade",
+        template: _.template(jobPermissionsModalTemplate),
+        events:{
+            "click button#jobPermissionsModalSubmit":"handleSubmitButtonClick",
+            "hidden.bs.modal":"close",
+        },
+        initialize: function(options){
+            _.bindAll(this, 'handleSubmitButtonClick', 'close');
+            this.jobIds = options.jobIds;
+        },
+        render: function(){
+            var html = this.template();
+            this.$el.html(html);
+            this.$el.modal("show");
+            return this;
+        },
+        handleSubmitButtonClick: function() {
+            var parameters = {}
+            parameters["jobs"] = this.jobIds.join();
+            parameters["owner"] = $('input[name="chownModal"]').val();
+            parameters["group"] = $('input[name="chgrpModal"]').val();
+            parameters["ownerWritable"] = $('input[name="ownerWritable"]:checked').val();
+            parameters["groupWritable"] = $('input[name="groupWritable"]:checked').val();
+            parameters["worldWritable"] = $('input[name="worldWritable"]:checked').val();
+            app.authQueryParameters(parameters);
+            $.ajax({
+                url: "/job/permissions",
+                type: "GET",
+                data: parameters,
+                dataType: "json"
+            }).done(function(data) {
+               if (data.changed.length > 0) {
+                    alertify.success(data.changed.length + " job(s) have been updated");
+                }
+                if (data.unchanged.length > 0) {
+                    alertify.message(data.unchanged.length + " job(s) already had these changes");
+                }
+                if (data.notFound.length > 0) {
+                    alertify.error(data.notFound.length + " job(s) are not found");
+                }
+                if (data.notPermitted.length > 0) {
+                    alertify.error(data.notPermitted.length + " job(s) insufficient priviledges");
+                }
+            }).fail(function(e){
+                alertify.error("Error changing permissions" + e.responseText);
+            });
+        },
+        showEnableStateChange:function(data){
+        },
+        close: function() {
+            this.remove();
+            this.unbind();
+        }
+    });
     var BackupModalView = Backbone.View.extend({
         className:"modal fade",
         template: _.template(jobRevertModalTemplate),
@@ -1476,8 +1539,8 @@ function(
             var node = this.backupModel.get("node");
             var value = this.$el.find(selectElem).val();
             var params = {
-                type:backupType, 
-                node:node, 
+                type:backupType,
+                node:node,
                 time:value
             };
             this.handleButtonClickRaw(node, params);
@@ -1485,8 +1548,8 @@ function(
         handleButtonClickForRevisionRevert:function(rev){
             var node = this.backupModel.get("node");
             var params = {
-                type:"gold", 
-                node:node, 
+                type:"gold",
+                node:node,
                 revision:rev
             };
             this.handleButtonClickRaw(node, params);
@@ -2355,6 +2418,7 @@ function(
     return {
         AlertDetailView:AlertDetailView,
         BackupModalView:BackupModalView,
+        ChangePermissionsModalView:ChangePermissionsModalView,
         BackupModel: BackupModel,
         CheckDirsCollection:CheckDirsCollection,
         CheckDirsModal:CheckDirsModal,

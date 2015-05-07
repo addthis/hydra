@@ -16,6 +16,7 @@ package com.addthis.hydra.job.web.resources;
 import javax.annotation.Nonnull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
+import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -28,7 +29,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,7 +54,6 @@ import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.RebalanceOutcome;
 import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
-import com.addthis.hydra.job.auth.User;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.DeleteStatus;
@@ -71,6 +70,7 @@ import com.addthis.maljson.JSONObject;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -94,6 +94,8 @@ public class JobsResource {
 
     @SuppressWarnings("unused")
     private static final Pattern COMMENTS_REGEX = Pattern.compile("(?m)^\\s*//\\s*host(?:s)?\\s*:\\s*(.*?)$");
+    private static final ImmutableSet<String> PERMISSIONS = ImmutableSet.of("no change", "true", "false");
+    private static final ImmutableSet<String> MODIFYING_PERMISSIONS = ImmutableSet.of("true", "false");
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final Spawn spawn;
@@ -116,6 +118,96 @@ public class JobsResource {
     }
 
     @GET
+    @Path("/permissions")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response changePermissions(@QueryParam("jobs") String jobarg,
+                                      @QueryParam("owner") String owner,
+                                      @QueryParam("group") String group,
+                                      @QueryParam("ownerWritable") String ownerWritable,
+                                      @QueryParam("groupWritable") String groupWritable,
+                                      @QueryParam("worldWritable") String worldWritable,
+                                      @QueryParam("user") String user,
+                                      @QueryParam("token") String token,
+                                      @QueryParam("sudo") String sudo) {
+        if (jobarg == null) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Missing 'jobs' parameter").build();
+        } else if ((ownerWritable != null) && !PERMISSIONS.contains(ownerWritable)) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity("ownerWritable must be one of: " + PERMISSIONS).build();
+        } else if ((groupWritable != null) && !PERMISSIONS.contains(groupWritable)) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity("groupWritable must be one of: " + PERMISSIONS).build();
+        } else if ((worldWritable != null) && !PERMISSIONS.contains(worldWritable)) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity("worldWritable must be one of: " + PERMISSIONS).build();
+        }
+        List<String> jobIds = Splitter.on(',').omitEmptyStrings().trimResults().splitToList(jobarg);
+        List<String> changed = new ArrayList<>();
+        List<String> unchanged = new ArrayList<>();
+        List<String> notFound = new ArrayList<>();
+        List<String> notPermitted = new ArrayList<>();
+        try {
+            for (String jobId : jobIds) {
+                Job job = spawn.getJob(jobId);
+                if (job == null) {
+                    notFound.add(jobId);
+                } else if (!spawn.getPermissionsManager().isWritable(user, token, sudo, job)) {
+                    notPermitted.add(jobId);
+                } else {
+                    boolean modified = false;
+                    if (LessStrings.isNotEmpty(owner) && !owner.equals(job.getOwner())) {
+                        job.setOwner(owner);
+                        modified = true;
+                    }
+                    if (LessStrings.isNotEmpty(group) && !group.equals(job.getGroup())) {
+                        job.setGroup(group);
+                        modified = true;
+                    }
+                    if (MODIFYING_PERMISSIONS.contains(ownerWritable)) {
+                        boolean newValue = Boolean.valueOf(ownerWritable);
+                        if (job.isOwnerWritable() != newValue) {
+                            job.setOwnerWritable(newValue);
+                            modified = true;
+                        }
+                    }
+                    if (MODIFYING_PERMISSIONS.contains(groupWritable)) {
+                        boolean newValue = Boolean.valueOf(groupWritable);
+                        if (job.isGroupWritable() != newValue) {
+                            job.setGroupWritable(newValue);
+                            modified = true;
+                        }
+                    }
+                    if (MODIFYING_PERMISSIONS.contains(worldWritable)) {
+                        boolean newValue = Boolean.valueOf(worldWritable);
+                        if (job.isWorldWritable() != newValue) {
+                            job.setWorldWritable(newValue);
+                            modified = true;
+                        }
+                    }
+                    if (modified) {
+                        spawn.updateJob(job);
+                        changed.add(jobId);
+                    } else {
+                        unchanged.add(jobId);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            return buildServerError(e);
+        }
+        try {
+            String json = CodecJSON.encodeString(ImmutableMap.of(
+                    "changed", changed,
+                    "unchanged", unchanged,
+                    "notFound", notFound,
+                    "notPermitted", notPermitted));
+            return Response.ok(json).build();
+        } catch (JsonProcessingException e) {
+            return buildServerError(e);
+        }
+    }
+
+    @GET
     @Path("/enable")
     @Produces(MediaType.APPLICATION_JSON)
     public Response enableJob(@QueryParam("jobs") String jobarg,
@@ -125,55 +217,52 @@ public class JobsResource {
                               @QueryParam("token") String token,
                               @QueryParam("sudo") String sudo) {
         boolean enable = enableParam.equals("1");
-        if (jobarg != null) {
-            List<String> jobIds = Splitter.on(',').omitEmptyStrings().trimResults().splitToList(jobarg);
-            String action = enable ? (unsafe ? "unsafely enable" : "enable") : "disable";
-            emitLogLineForAction(user, action + " jobs " + jobarg);
-
-            List<String> changed = new ArrayList<>();
-            List<String> unchanged = new ArrayList<>();
-            List<String> notFound = new ArrayList<>();
-            List<String> notAllowed = new ArrayList<>();
-            List<String> notPermitted = new ArrayList<>();
-
-            try {
-                for (String jobId : jobIds) {
-                    Job job = spawn.getJob(jobId);
-                    if (job != null) {
-                        if (!spawn.getPermissionsManager().isWritable(user, token, sudo, job)) {
-                            notPermitted.add(jobId);
-                        } else if (enable && !unsafe && job.getState() != JobState.IDLE) {
-                            // request to enable safely, so do not allow if job is not IDLE
-                            notAllowed.add(jobId);
-                        } else if (job.setEnabled(enable)) {
-                            spawn.updateJob(job);
-                            changed.add(jobId);
-                        } else {
-                            unchanged.add(jobId);
-                        }
-                    } else {
-                        notFound.add(jobId);
-                    }
-                }
-                log.info("{} jobs: changed={}, unchanged={}, not found={}, not permitted={}, cannot safely enable={}",
-                         action, changed, unchanged, notFound, notPermitted, notAllowed);
-            } catch (Exception e) {
-                return buildServerError(e);
-            }
-
-            try {
-                String json = CodecJSON.encodeString(ImmutableMap.of(
-                        "changed", changed,
-                        "unchanged", unchanged,
-                        "notFound", notFound,
-                        "notAllowed", notAllowed,
-                        "notPermitted", notPermitted));
-                return Response.ok(json).build();
-            } catch (JsonProcessingException e) {
-                return buildServerError(e);
-            }
-        } else {
+        if (jobarg == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity("Missing 'jobs' parameter").build();
+        }
+        List<String> jobIds = Splitter.on(',').omitEmptyStrings().trimResults().splitToList(jobarg);
+        String action = enable ? (unsafe ? "unsafely enable" : "enable") : "disable";
+        emitLogLineForAction(user, action + " jobs " + jobarg);
+
+        List<String> changed = new ArrayList<>();
+        List<String> unchanged = new ArrayList<>();
+        List<String> notFound = new ArrayList<>();
+        List<String> notAllowed = new ArrayList<>();
+        List<String> notPermitted = new ArrayList<>();
+
+        try {
+            for (String jobId : jobIds) {
+                Job job = spawn.getJob(jobId);
+                if (job == null) {
+                    notFound.add(jobId);
+                } else if (!spawn.getPermissionsManager().isWritable(user, token, sudo, job)) {
+                    notPermitted.add(jobId);
+                } else if (enable && !unsafe && job.getState() != JobState.IDLE) {
+                    // request to enable safely, so do not allow if job is not IDLE
+                    notAllowed.add(jobId);
+                } else if (job.setEnabled(enable)) {
+                    spawn.updateJob(job);
+                    changed.add(jobId);
+                } else {
+                    unchanged.add(jobId);
+                }
+            }
+            log.info("{} jobs: changed={}, unchanged={}, not found={}, not permitted={}, cannot safely enable={}",
+                     action, changed, unchanged, notFound, notPermitted, notAllowed);
+        } catch (Exception e) {
+            return buildServerError(e);
+        }
+
+        try {
+            String json = CodecJSON.encodeString(ImmutableMap.of(
+                    "changed", changed,
+                    "unchanged", unchanged,
+                    "notFound", notFound,
+                    "notAllowed", notAllowed,
+                    "notPermitted", notPermitted));
+            return Response.ok(json).build();
+        } catch (JsonProcessingException e) {
+            return buildServerError(e);
         }
     }
 

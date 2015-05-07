@@ -555,6 +555,9 @@ function(
         }).render();
         backupModel.fetch();
     });
+    app.router.on("route:showChangePermissions",function(jobIds){
+        new Jobs.ChangePermissionsModalView({jobIds:jobIds}).render();
+    });
     app.router.on("route:showJobTaskTable",function(jobId){
         app.trigger("loadJob",jobId);
         var taskCollection = new Task.Collection();
