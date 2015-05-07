@@ -20,6 +20,8 @@ import java.io.OutputStream;
 
 import java.util.Objects;
 
+import com.addthis.hydra.store.compress.CompressionType;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -42,7 +44,7 @@ public class HDFSOutputWrapper extends AbstractOutputWrapper {
     public HDFSOutputWrapper(OutputStream out,
                              OutputStreamEmitter lineout,
                              boolean compress,
-                             int compressType,
+                             CompressionType compressType,
                              String rawTarget,
                              @Nonnull Path targetPath,
                              @Nonnull Path tempTargetPath,

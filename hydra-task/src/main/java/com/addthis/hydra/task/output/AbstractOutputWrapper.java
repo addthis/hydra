@@ -1,16 +1,19 @@
 package com.addthis.hydra.task.output;
 
-import com.addthis.bundle.core.Bundle;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.zip.GZIPOutputStream;
+
+import com.addthis.bundle.core.Bundle;
+import com.addthis.hydra.store.compress.CompressionType;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class AbstractOutputWrapper implements OutputWrapper{
 
@@ -19,14 +22,14 @@ public abstract class AbstractOutputWrapper implements OutputWrapper{
     private OutputStream rawout;
     private OutputStreamEmitter lineout;
     private boolean compress;
-    private int compressType;
+    private CompressionType compressType;
     private final AtomicLong lineCount = new AtomicLong();
     private long lastAccessTime;
     private String rawTarget;
     private final Lock wrapperLock = new ReentrantLock();
     private boolean closed = false;
 
-    public AbstractOutputWrapper(OutputStream out, OutputStreamEmitter lineout, boolean compress, int compressType, String rawTarget) {
+    public AbstractOutputWrapper(OutputStream out, OutputStreamEmitter lineout, boolean compress, CompressionType compressType, String rawTarget) {
         this.rawout = out;
         this.lineout = lineout;
         this.compress = compress;
@@ -78,19 +81,19 @@ public abstract class AbstractOutputWrapper implements OutputWrapper{
                 }
             }
             if (rawout != null) {
-                if (compress && compressType == 0) {
+                if (compress && compressType == CompressionType.GZIP) {
                     try {
                         ((GZIPOutputStream) rawout).finish();
                     } catch (Exception ex)  {
                         log.warn("", ex);
                     }
-                } else if (compress && compressType == 2) {
+                } else if (compress && compressType == CompressionType.SNAPPY) {
                     try {
                         rawout.flush();
                     } catch (IOException e)  {
                         log.warn("", e);
                     }
-                } else if (compress && compressType == 3) {
+                } else if (compress && compressType == CompressionType.BZIP2) {
                     try {
                         rawout.flush();
                     } catch (IOException e)  {

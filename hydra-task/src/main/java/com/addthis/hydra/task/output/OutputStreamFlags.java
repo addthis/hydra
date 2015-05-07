@@ -17,6 +17,7 @@ import com.addthis.basis.util.LessNumbers;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.codables.SuperCodable;
+import com.addthis.hydra.store.compress.CompressionType;
 
 /**
  * Specifies configuration flags for writing output to files.
@@ -52,7 +53,7 @@ public class OutputStreamFlags implements SuperCodable {
      * and 5 for xz.
      */
     @FieldConfig(codable = true)
-    private int compressType;
+    private CompressionType compressType;
 
     /**
      * If true then do not append output to existing files. Default is false.
@@ -112,7 +113,7 @@ public class OutputStreamFlags implements SuperCodable {
         return compress;
     }
 
-    public int getCompressType() {
+    public CompressionType getCompressType() {
         return compressType;
     }
 

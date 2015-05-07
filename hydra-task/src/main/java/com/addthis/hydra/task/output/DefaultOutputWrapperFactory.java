@@ -99,7 +99,7 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
         OutputStream wrappedStream;
         if (outputFlags.isCompress()) {
             wrappedStream = CompressedStream.compressOutputStream(
-                    outputStream, CompressionType.fromOrdinal(outputFlags.getCompressType()));
+                    outputStream, outputFlags.getCompressType());
         } else {
             wrappedStream = new BufferedOutputStream(outputStream);
         }
@@ -128,13 +128,13 @@ public class DefaultOutputWrapperFactory implements OutputWrapperFactory {
                 result = target.concat("-").concat(part);
             }
             if (outputFlags.isCompress()) {
-                CompressionType type = CompressionType.fromOrdinal(outputFlags.getCompressType());
+                CompressionType type = outputFlags.getCompressType();
                 result = result.concat(type.suffix);
             }
         }
 
         if (outputFlags.isCompress()) {
-            CompressionType type = CompressionType.fromOrdinal(outputFlags.getCompressType());
+            CompressionType type = outputFlags.getCompressType();
             if (!result.endsWith(type.suffix)) {
                 result = result.concat(type.suffix);
             }

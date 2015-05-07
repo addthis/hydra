@@ -21,8 +21,4 @@ public enum CompressionType {
     CompressionType(String suffix) {
         this.suffix = suffix;
     }
-
-    public static CompressionType fromOrdinal(int ordinal) {
-        return values()[ordinal];
-    }
 }

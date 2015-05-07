@@ -13,11 +13,13 @@
  */
 package com.addthis.hydra.task.output;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.OutputStream;
+
+import com.addthis.hydra.store.compress.CompressionType;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DefaultOutputWrapper extends AbstractOutputWrapper {
 
@@ -28,7 +30,13 @@ public class DefaultOutputWrapper extends AbstractOutputWrapper {
     private File targetFile;
 
 
-    public DefaultOutputWrapper(OutputStream out, OutputStreamEmitter lineout, File targetFile, File tempTargetFile, boolean compress, int compressType, String rawTarget) {
+    public DefaultOutputWrapper(OutputStream out,
+                                OutputStreamEmitter lineout,
+                                File targetFile,
+                                File tempTargetFile,
+                                boolean compress,
+                                CompressionType compressType,
+                                String rawTarget) {
         super(out, lineout, compress, compressType, rawTarget);
         this.tempTargetFile = tempTargetFile;
         this.targetFile = targetFile;
