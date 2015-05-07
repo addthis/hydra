@@ -13,55 +13,88 @@
  */
 package com.addthis.hydra.job.auth;
 
+import java.util.Objects;
+import java.util.UUID;
+
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Creates a static authentication manager of two users. One user with the
+ * Creates an authentication manager of two users. One user with the
  * username of this process that has the same username and password. And one
  * administrative user with username and password "admin". This authentication
- * manager is intended for local testing.
+ * manager is intended for local testing. Actual UUID tokens are created to simulate
+ * a real authentication manager.
  */
 public class AuthenticationManagerLocalUser extends AuthenticationManager {
 
     private static final String USERNAME = System.getProperty("user.name");
+    private static final ImmutableSet<String> USERS = ImmutableSet.of(USERNAME, "admin");
 
-    private final AuthenticationManagerStatic manager;
+    private final TokenCache tokenCache;
+    private final User basicUser;
+    private final User adminUser;
+    private final ImmutableMap<String, User> users;
+
 
     @JsonCreator
-    public AuthenticationManagerLocalUser() {
-        StaticUser user = new StaticUser(USERNAME, ImmutableList.of(), USERNAME, USERNAME + "_sudotoken");
-        StaticUser admin = new StaticUser("admin", ImmutableList.of(), "admin", "admin_sudotoken");
-        manager = new AuthenticationManagerStatic(ImmutableList.of(user, admin), ImmutableList.of(),
-                                                  ImmutableList.of("admin"), false);
+    public AuthenticationManagerLocalUser(@JsonProperty(value = "tokenCache", required = true) TokenCache tokenCache) {
+        this.tokenCache = tokenCache;
+        this.basicUser = new DefaultUser(USERNAME, ImmutableList.of());
+        this.adminUser = new DefaultUser("admin", ImmutableList.of());
+        this.users = ImmutableMap.of(USERNAME, basicUser, "admin", adminUser);
     }
 
     @Override String login(String username, String password, boolean ssl) {
-        return manager.login(username, password, ssl);
+        if ((username == null) || (password == null)) {
+            return null;
+        }
+        if (Objects.equals(username, password) && USERS.contains(username)) {
+            UUID uuid = UUID.randomUUID();
+            String token = uuid.toString();
+            tokenCache.put(username, token);
+            return token;
+        } else {
+            return null;
+        }
+
     }
 
     @Override public boolean verify(String username, String password, boolean ssl) {
-        return manager.verify(username, password, ssl);
+        if ((username == null) || (password == null)) {
+            return false;
+        }
+        return Objects.equals(username, password) && USERS.contains(username);
     }
 
     @Override User authenticate(String username, String secret) {
-        return manager.authenticate(username, secret);
+        if ((username == null) || (secret == null)) {
+            return null;
+        }
+        if (tokenCache.get(username, secret)) {
+            return users.get(username);
+        } else {
+            return null;
+        }
     }
 
     @Override protected User getUser(String username) {
-        return manager.getUser(username);
+        return users.get(username);
     }
 
     @Override void logout(User user) {
-        manager.logout(user);
+        tokenCache.remove(user.name());
     }
 
     @Override ImmutableList<String> adminGroups() {
-        return manager.adminGroups();
+        return ImmutableList.of();
     }
 
     @Override ImmutableList<String> adminUsers() {
-        return manager.adminUsers();
+        return ImmutableList.of("admin");
     }
 }

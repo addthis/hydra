@@ -69,7 +69,14 @@ function(
                 dataType: 'text',
                 success: function(response) {
                     app.loginSSLDefault = (response == "true");
-                    app.login();
+                    var username = Cookies.get("username");
+                    var token = Cookies.get("token");
+                    if (!username || !token) {
+                        app.login();
+                    } else {
+                        app.user.set("username", username);
+                        app.user.set("token", token);
+                    }
                 },
                 error: function(error) {
                     alertify.error("Failure on /authentication/default-ssl", 0);

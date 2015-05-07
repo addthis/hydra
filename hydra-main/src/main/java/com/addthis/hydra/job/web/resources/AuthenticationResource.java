@@ -46,11 +46,20 @@ public class AuthenticationResource {
         this.spawn = spawn;
     }
 
+    /**
+     * In order for the user interface to default to login over SSL,
+     * both the HTTPS service must be enabled and the {@code sslLoginDefault}
+     * parameter must specify that we use HTTPS by default. This two-step
+     * schema allows HTTPS to be tested in the localhost environment despite
+     * the Chrome browser making it impossible to accept the self-signed
+     * certificate for localhost.
+     */
     @GET
     @Path("/default-ssl")
     @Produces(MediaType.TEXT_PLAIN)
     public Response defaultSsl() {
-        return Response.ok(Boolean.toString(sslLoginDefault)).build();
+        boolean response = spawn.getSpawnState().getSslEnabled() && sslLoginDefault;
+        return Response.ok(Boolean.toString(response)).build();
     }
 
     @POST

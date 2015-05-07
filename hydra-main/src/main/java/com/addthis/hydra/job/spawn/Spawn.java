@@ -66,6 +66,7 @@ import com.addthis.hydra.job.HostFailWorker;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobConfigManager;
+import com.addthis.hydra.job.JobDefaults;
 import com.addthis.hydra.job.JobEvent;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
@@ -207,6 +208,7 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull final SpawnFormattedLogger spawnFormattedLogger;
 
     @Nonnull final PermissionsManager permissionsManager;
+    @Nonnull final JobDefaults jobDefaults;
 
     @Nonnull private final File stateFile;
     @Nonnull private final ExecutorService expandKickExecutor;
@@ -249,11 +251,13 @@ public class Spawn implements Codable, AutoCloseable {
                   @Nullable @JsonProperty("jobStore") JobStore jobStore,
                   @Nullable @JsonProperty("queueType") String queueType,
                   @Nullable @JacksonInject CuratorFramework providedZkClient,
-                  @JsonProperty("permissionsManager") PermissionsManager permissionsManager
+                  @JsonProperty(value = "permissionsManager", required = true) PermissionsManager permissionsManager,
+                  @JsonProperty(value = "jobDefaults", required = true) JobDefaults jobDefaults
     ) throws Exception {
         LessFiles.initDirectory(dataDir);
         this.stateFile = stateFile;
         this.permissionsManager = permissionsManager;
+        this.jobDefaults = jobDefaults;
         if (stateFile.exists() && stateFile.isFile()) {
             spawnState = Jackson.defaultMapper().readValue(stateFile, SpawnState.class);
         } else {
@@ -779,16 +783,17 @@ public class Spawn implements Codable, AutoCloseable {
         jobLock.lock();
         try {
             Job job = new Job(UUID.randomUUID().toString(), creator != null ? creator : "anonymous");
-            job.setOwner(job.getCreator());
-            job.setOwnerWritable(true);
-            job.setState(JobState.IDLE);
-            job.setCommand(command);
-            job.setDailyBackups(4);
-            job.setWeeklyBackups(1);
-            job.setMonthlyBackups(0);
-            job.setHourlyBackups(0);
-            job.setReplicas(DEFAULT_REPLICA_COUNT);
             job.setMinionType(minionType);
+            job.setCommand(command);
+            job.setState(JobState.IDLE);
+            job.setOwnerWritable(jobDefaults.ownerWritable);
+            job.setGroupWritable(jobDefaults.groupWritable);
+            job.setWorldWritable(jobDefaults.worldWritable);
+            job.setDailyBackups(jobDefaults.dailyBackups);
+            job.setWeeklyBackups(jobDefaults.weeklyBackups);
+            job.setMonthlyBackups(jobDefaults.monthlyBackups);
+            job.setHourlyBackups(jobDefaults.hourlyBackups);
+            job.setReplicas(jobDefaults.replicas);
             List<HostState> hostStates = getOrCreateHostStateList(minionType, taskHosts);
             List<JobTask> tasksAssignedToHosts = balancer.generateAssignedTasksForNewJob(job.getId(), taskCount, hostStates);
             job.setTasks(tasksAssignedToHosts);
