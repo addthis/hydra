@@ -67,7 +67,7 @@ function(
             var data = this.getFormValues();
             this.model.set(data);
             this.model.save().done(function(data){
-                alertify.message("Rebalance params saved successfully.");
+                alertify.success("Rebalance params saved successfully.");
             }).fail(function(xhr){
                 alertify.error(xhr.responseText);
             });

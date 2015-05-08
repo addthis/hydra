@@ -15,12 +15,27 @@ package com.addthis.hydra.job.auth;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 class AuthorizationManagerAllowAll extends AuthorizationManager {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthorizationManagerAllowAll.class);
+
     @JsonCreator
-    public AuthorizationManagerAllowAll() {}
+    public AuthorizationManagerAllowAll() {
+        log.info("Registering allow all authorization");
+    }
 
     @Override boolean isWritable(User user, String sudoToken, WritableAsset asset) {
+        return true;
+    }
+
+    @Override boolean isExecutable(User user, String sudoToken, ExecutableAsset asset) {
+        return true;
+    }
+
+    @Override boolean canModifyPermissions(User user, String sudoToken, WritableAsset asset) {
         return true;
     }
 

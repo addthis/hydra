@@ -64,6 +64,16 @@ abstract class AuthenticationManager {
     protected abstract User getUser(String username);
 
     /**
+     * Optionally provides a sudo token for the user
+     * or return null to delegate sudo token generation to the
+     * authorization manager.
+     *
+     * @param username
+     * @return
+     */
+    abstract String sudoToken(String username);
+
+    /**
      * Logout the user from the authentication manager. The secret
      * token for the user should be invalidated.
      *

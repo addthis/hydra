@@ -67,6 +67,12 @@ public final class Job implements IJob {
     @FieldConfig private boolean groupWritable;
     /* can the world modify the job */
     @FieldConfig private boolean worldWritable;
+    /* can the owner start/stop the job */
+    @FieldConfig private boolean ownerExecutable;
+    /* can the group start/stop the job */
+    @FieldConfig private boolean groupExecutable;
+    /* can the world start/stop the job */
+    @FieldConfig private boolean worldExecutable;
     /* user who last modified the job */
     @FieldConfig private String lastModifiedBy;
     /* last modification time */
@@ -157,6 +163,9 @@ public final class Job implements IJob {
         this.ownerWritable = job.isOwnerWritable();
         this.groupWritable = job.isGroupWritable();
         this.worldWritable = job.isWorldWritable();
+        this.ownerExecutable = job.isOwnerExecutable();
+        this.groupExecutable = job.isGroupExecutable();
+        this.worldExecutable = job.isWorldExecutable();
         this.lastModifiedBy = job.lastModifiedBy();
         this.lastModifiedAt = job.lastModifiedAt();
         this.description = job.getDescription();
@@ -252,6 +261,36 @@ public final class Job implements IJob {
     @Override
     public void setWorldWritable(boolean worldWritable) {
         this.worldWritable = worldWritable;
+    }
+
+    @Override
+    public boolean isOwnerExecutable() {
+        return ownerExecutable;
+    }
+
+    @Override
+    public void setOwnerExecutable(boolean ownerExecutable) {
+        this.ownerExecutable = ownerExecutable;
+    }
+
+    @Override
+    public boolean isGroupExecutable() {
+        return groupExecutable;
+    }
+
+    @Override
+    public void setGroupExecutable(boolean groupExecutable) {
+        this.groupExecutable = groupExecutable;
+    }
+
+    @Override
+    public boolean isWorldExecutable() {
+        return worldExecutable;
+    }
+
+    @Override
+    public void setWorldExecutable(boolean worldExecutable) {
+        this.worldExecutable = worldExecutable;
     }
 
     @Override

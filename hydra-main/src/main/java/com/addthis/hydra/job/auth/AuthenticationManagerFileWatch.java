@@ -18,6 +18,8 @@ import javax.annotation.Syntax;
 
 import java.io.IOException;
 
+import java.util.Objects;
+
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -56,16 +58,25 @@ class AuthenticationManagerFileWatch extends AuthenticationManager {
 
     @JsonCreator
     public AuthenticationManagerFileWatch(@JsonProperty("path") Path path) throws IOException {
-        @Syntax("HOCON") String content = new String(Files.readAllBytes(path));
-        this.watcher = FileSystems.getDefault().newWatchService();
-        this.manager = Configs.decodeObject(AuthenticationManagerStatic.class, content);
         this.path = path;
-        path.getParent().register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
+        if (path != null) {
+            @Syntax("HOCON") String content = new String(Files.readAllBytes(path));
+            this.watcher = FileSystems.getDefault().newWatchService();
+            this.manager = Configs.decodeObject(AuthenticationManagerStatic.class, content);
+            path.getParent().register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
+            log.info("Registering file watch authentication");
+        } else {
+            watcher = null;
+        }
     }
 
     private void updateAuthenticationManager() {
+        WatchKey watchKey = null;
         try {
-            WatchKey watchKey = watcher.poll();
+            watchKey = watcher.poll();
+            if (watchKey == null) {
+                return;
+            }
             boolean update = false;
             for (WatchEvent<?> event : watchKey.pollEvents()) {
                 WatchEvent.Kind<?> kind = event.kind();
@@ -74,19 +85,25 @@ class AuthenticationManagerFileWatch extends AuthenticationManager {
                     update = true;
                     break;
                 }
-                WatchEvent<Path> ev = (WatchEvent<Path>) event;
-                Path filepath = ev.context();
-                if (path.equals(filepath)) {
+                Path filepath = ((WatchEvent<Path>) event).context();
+                if (Objects.equals(path.getFileName(), filepath.getFileName())) {
                     update = true;
                     break;
                 }
             }
             if (update) {
+                log.info("Loading most recent version of {}", path);
                 @Syntax("HOCON") String content = new String(Files.readAllBytes(path));
                 manager = Configs.decodeObject(AuthenticationManagerStatic.class, content);
             }
         } catch (IOException ex) {
             log.warn("IOException during file watch authentication manger: ", ex);
+        } finally {
+            if (watchKey != null) {
+                if(!watchKey.reset()) {
+                    log.error("Could not reset watch key for {}", path);
+                }
+            }
         }
     }
 
@@ -108,6 +125,11 @@ class AuthenticationManagerFileWatch extends AuthenticationManager {
     @Override protected User getUser(String username) {
         updateAuthenticationManager();
         return manager.getUser(username);
+    }
+
+    @Override String sudoToken(String username) {
+        updateAuthenticationManager();
+        return manager.sudoToken(username);
     }
 
     @Override void logout(User user) {

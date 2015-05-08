@@ -16,6 +16,7 @@ package com.addthis.hydra.job;
 import java.util.Collection;
 import java.util.List;
 
+import com.addthis.hydra.job.auth.ExecutableAsset;
 import com.addthis.hydra.job.auth.WritableAsset;
 import com.addthis.maljson.JSONObject;
 
@@ -23,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties({"stomp", "killSignal", "readOnlyReplicas", "strictReplicas", "hadMoreData",
                        "replicationFactor", "alerts", "properties", "backups", "submitCommand", "retries"})
-public interface IJob extends Comparable<IJob>, WritableAsset {
+public interface IJob extends Comparable<IJob>, WritableAsset, ExecutableAsset {
 
     public String getId();
 

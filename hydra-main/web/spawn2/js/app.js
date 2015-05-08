@@ -39,6 +39,8 @@ function(
         loginExpirationSeconds:86400,
         sudoExpirationSeconds:900,
         loginDialog:null,
+        loginTimeoutId:null,
+        sudoTimeoutId:null,
         activeModels:[],
         showView:function(view,link,activeModels){
             var self=this;
@@ -62,10 +64,13 @@ function(
             });
         },
         authprefix:function() {
-            return (app.loginSSLDefault ? "https://" : "http://") + window.location.hostname + ":" +
-                (app.loginSSLDefault ? "5053" : "5052");
+            var useSSL = app.loginSSLDefault || (window.location.href.lastIndexOf("https", 0) == 0);
+            return (useSSL ? "https://" : "http://") + window.location.hostname + ":" +
+                (useSSL ? "5053" : "5052");
         },
         initialize:function() {
+            // delete legacy cookie
+            Cookies.set("username", "", {expires:0, path:"/spawn2"});
             $.ajax({
                 url: '/update/settings',
                 dataType: 'json',
@@ -75,11 +80,38 @@ function(
                     app.sudoExpirationSeconds = response.sudoTimeout;
                     var username = Cookies.get("username");
                     var token = Cookies.get("token");
-                    if (!username || !token) {
-                        app.login();
-                    } else {
-                        app.user.set("username", username);
-                        app.user.set("token", token);
+                    var tokenExpires = Cookies.get("tokenExpires");
+                    if (username && token && tokenExpires) {
+                        var delta = new Date(tokenExpires).getTime() - new Date().getTime();
+                        if (delta > 0) {
+                            app.loginTimeoutId = setTimeout(app.loginTimeout, delta);
+                        }
+                    }
+                    if (window.location.href.search("login.html") == -1) {
+                        if (!username || !token) {
+                            window.location=app.authprefix() + "/spawn2/login.html";
+                        } else {
+                            $.ajax({
+                                type: 'POST',
+                                url: '/authentication/validate',
+                                data: {
+                                    user: username,
+                                    token: token
+                                },
+                                dataType: 'text',
+                                success: function(response) {
+                                    if (response === "true") {
+                                        app.user.set("username", username);
+                                        app.user.set("token", token);
+                                    } else {
+                                        window.location=app.authprefix() + "/spawn2/login.html";
+                                    }
+                                },
+                                error: function(error) {
+                                    alertify.error("Failure on /authentication/validate", 0);
+                                }
+                            });
+                        }
                     }
                 },
                 error: function(error) {
@@ -92,12 +124,10 @@ function(
             var usernameInput = $("#loginUsername")[0];
             var passwordInput =  $("#loginPassword")[0];
             var tokenName = $("#loginToken")[0].value;
-            var expireSeconds, urlPath;
+            var urlPath;
             if (tokenName == "token") {
-                expireSeconds = app.loginExpirationSeconds;
                 urlPath = "/authentication/login";
             } else if (tokenName == "sudo") {
-                expireSeconds = app.sudoExpirationSeconds;
               urlPath = "/authentication/sudo";
             } else {
                 alertify.error("Unknown token name " + tokenName);
@@ -123,41 +153,74 @@ function(
                     var token = response;
                     if (!token) {
                         alertify.error("Authentication error");
+                        if (tokenName == "sudo") {
+                            $("#sudoCheckbox").prop("checked", false);
+                        }
                     } else {
-                        Cookies.set("username", username, {expires:1});
-                        app.user.set("username", username);
-                        Cookies.set(tokenName, token, {expires:new Date(new Date().getTime() + expireSeconds * 1000)});
-                        app.user.set(tokenName, token);
+                        if (tokenName == "token") {
+                            var loginTimeout = new Date(new Date().getTime() + app.loginExpirationSeconds * 1000);
+                            Cookies.set("username", username, {expires: loginTimeout});
+                            Cookies.set("token", token, {expires: loginTimeout});
+                            Cookies.set("tokenExpires", loginTimeout, {expires: loginTimeout});
+                            if (app.loginTimeoutId) {
+                                clearTimeout(app.loginTimeoutId);
+                            }
+                            app.loginTimeoutId = setTimeout(app.loginTimeout, app.loginExpirationSeconds * 1000);
+                            app.user.set("username", username);
+                            app.user.set("token", token);
+                        } else {
+                            var sudoTimeout = new Date(new Date().getTime() + app.sudoExpirationSeconds * 1000);
+                            Cookies.set("sudo", token, {expires: sudoTimeout});
+                            app.user.set("sudo", token);
+                            if (app.sudoTimeoutId) {
+                                clearTimeout(app.sudoTimeoutId);
+                            }
+                            app.sudoTimeoutId = setTimeout(app.sudoTimeout, app.sudoExpirationSeconds * 1000);
+                        }
+                        if (window.location.href.search("login.html") > -1) {
+                            window.location="http://" + window.location.hostname + ":5052/spawn2/index.html#jobs";
+                        }
                     }
                 },
                 error: function(error) {
-                    alertify.error("Failure on " + loginUrl, 0);
+                    if (app.loginDialog) {
+                        app.loginDialog.close();
+                    }
+                    alertify.error("Accept our <a target=\"_blank\" href=\"" + app.authprefix() + "\">https certificate</a>", 0);
                 }
             });
         },
+        loginTimeout:function() {
+            app.user.set("username", "");
+            app.user.set("token", "");
+            alertify.alert("Your session has expired. Press the login button in the top-right corner.");
+        },
+        sudoTimeout:function() {
+            app.user.set("sudo", "");
+            $("#sudoCheckbox").prop("checked", false);
+        },
         login:function() {
             document.activeElement.blur();
-            var username = Cookies.get("username");
-            var token = Cookies.get("token");
-            if (!username || !token) {
-                $("#loginToken")[0].value = "token";
-                app.loginDialog = alertify.minimalDialog($('#loginForm')[0]);
-            } else {
-                alertify.message("Please logout first");
-                app.user.set("username", username);
-                app.user.set("token", token);
-            }
+            $("#loginToken")[0].value = "token";
+            app.loginDialog = alertify.minimalDialog($('#loginForm')[0]);
         },
         sudo:function() {
-            document.activeElement.blur();
-            var username = Cookies.get("username");
-            var token = Cookies.get("token");
-            if (!username || !token) {
-                alertify.error("Please login first");
+            var checked =  $("#sudoCheckbox").is(':checked');
+            if (checked) {
+                var username = Cookies.get("username");
+                var token = Cookies.get("token");
+                var sudoToken = Cookies.get("sudo");
+                if (!username || !token) {
+                    alertify.error("Please login first");
+                } else if (sudoToken) {
+                    app.user.set("sudo", sudoToken);
+                } else {
+                    $("#loginToken")[0].value = "sudo";
+                    $("#loginUsername")[0].value = username;
+                    app.loginDialog = alertify.minimalDialog($('#loginForm')[0]);
+                }
             } else {
-                $("#loginToken")[0].value = "sudo";
-                $("#loginUsername")[0].value = username;
-                app.loginDialog = alertify.minimalDialog($('#loginForm')[0]);
+                app.user.set("sudo", "");
             }
         },
         logout:function() {
@@ -165,7 +228,7 @@ function(
             var username = Cookies.get("username");
             var token = Cookies.get("token");
             if (username) {
-                var logoutUrl = app.authprefix() + "/authentication/logout";
+                var logoutUrl = "/authentication/logout";
                 $.ajax({
                     type: 'POST',
                     url: logoutUrl,
@@ -179,10 +242,15 @@ function(
             // delete legacy cookie
             Cookies.set("username", "", {expires:0, path:"/spawn2"});
             Cookies.set("token", "", {expires:0});
+            Cookies.set("tokenExpires", "", {expires:0});
             Cookies.set("sudo", "", {expires:0});
             app.user.set("username", "");
             app.user.set("token", "");
             app.user.set("sudo", "");
+            clearTimeout(app.loginTimeoutId);
+            clearTimeout(app.sudoTimeoutId);
+            app.loginTimeoutId = null;
+            app.sudoTimeoutId = null;
         },
         authQueryParameters:function(parameters) {
             var user = app.user.get("username");

@@ -71,6 +71,17 @@ function(
     jobTableInfoTemplate,
     jobCheckDirsTemplate
 ){
+    var showStartStopStateChange = function(data, state){
+        if (data.success.length > 0) {
+            alertify.success(data.success.length + " job(s) have been " + state, 5);
+        }
+        if (data.error.length > 0) {
+            alertify.error(data.error.length + " job(s) have not been " + state, 5);
+        }
+        if (data.unauthorized.length > 0) {
+            alertify.error(data.unauthorized.length + " job(s) insufficient privileges");
+        }
+    };
     var States = [
         "IDLE",
         "SCHEDULED",
@@ -306,7 +317,7 @@ function(
                 data: parameters,
                 dataType: "json"
             }).done(function(data){
-                alertify.message(self.id+" job kicked.",2)
+                showStartStopStateChange(data, "started");
             }).fail(function(e){
                 alertify.error("Error kicking: "+self.id+". <br/> "+e.responseText);
             });
@@ -322,7 +333,7 @@ function(
                 data: parameters,
                 dataType: "json"
             }).done(function(data){
-                alertify.message(self.id+" job stopped.",2)
+                showStartStopStateChange(data, "stopped");
             }).fail(function(e){
                 alertify.error("Error stopping: "+self.id+". <br/> "+e.responseText);
             });
@@ -530,19 +541,11 @@ function(
         sync: function(method, model, options){
             if(_.isEqual(method,'read')){
                 var self=this;
-                /*var data = {
-                    id:self.id
-                };*/
                 var data = this.toJSON();
-                /*var type="GET";
-                if(!_.isUndefined(this.get("config"))){
-                    data.config=this.get("config");
-                    type="POST";
-                }*/
                 var ajax = $.ajax({
                     url:"/job/expand",
                     data:data,
-                    type:"POST"//type
+                    type:"POST"
                 }).done(function(data){
                     self.set("expanded",data);
                 }).fail(function(xhr){
@@ -571,7 +574,6 @@ function(
         },
         model:Model,
         handleJobUpdate:function(data){
-            //console.log("Detected job change:"+data.id);
             var job = this.get(data.id);
             if(!_.isUndefined(job)){
                 job.set(
@@ -586,44 +588,59 @@ function(
             }
         },
         handleJobDelete:function(data){
-            //console.log("Job has been deleted "+data.id);
             var job = this.get(data.id);
             if(!_.isUndefined(job)){
                 this.remove([job]);
             }
         },
         kickSelected:function(jobIds){
+            var self = this;
             var count = jobIds.length;
+            var parameters = {}
+            parameters["jobid"] = jobIds.join();
+            parameters["priority"] = 1;
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/job/start?priority=1&jobid="+jobIds,
+                url: "/job/start",
                 type: "GET",
+                data: parameters,
                 dataType: "json"
             }).done(function(data){
-                alertify.message(count+" job(s) kicked.",2)
+                showStartStopStateChange(data, "started");
             }).fail(function(e){
                 alertify.error("Error kicking: "+count+" jobs. <br/> "+e.responseText);
             });
         },
         stopSelected:function(jobIds){
+            var self = this;
             var count = jobIds.length;
+            var parameters = {}
+            parameters["jobid"] = jobIds.join();
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/job/stop?jobid="+jobIds,
+                url: "/job/stop",
                 type: "GET",
+                data: parameters,
                 dataType: "json"
             }).done(function(data){
-                alertify.message(count+" job(s) stopped.",2)
+                showStartStopStateChange(data, "stopped");
             }).fail(function(e){
                 alertify.error("Error stopping: "+count+" jobs. <br/> "+e.responseText);
             });
         },
         killSelected:function(jobIds){
             var count = jobIds.length;
+            var parameters = {}
+            parameters["jobid"] = jobIds.join();
+            parameters["force"] = "true";
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/job/stop?jobid="+jobIds+"&force=true",
+                url: "/job/stop",
                 type: "GET",
-                dataType: "text"
+                data: parameters,
+                dataType: "json"
             }).done(function(data){
-                alertify.message(count+" job(s) killed.",2)
+                showStartStopStateChange(data, "killed");
             }).fail(function(e){
                 alertify.error("Error killing: "+count+" jobs. <br/> "+e.responseText);
             });
@@ -631,9 +648,15 @@ function(
         enableBatch:function(jobIds, unsafe){
             var self=this;
             var count = jobIds.length;
+            var parameters = {}
+            parameters["jobs"] = jobIds.join();
+            parameters["enable"] = 1;
+            parameters["unsafe"] = unsafe;
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/job/enable?jobs="+jobIds+"&enable=1&unsafe="+unsafe,
+                url: "/job/enable",
                 type: "GET",
+                data: parameters,
                 dataType: "json"
             }).done(function(data){
                 self.showEnableStateChange(data, "enabled", unsafe);
@@ -644,9 +667,14 @@ function(
         disableBatch:function(jobIds){
             var self=this;
             var count = jobIds.length;
+            var parameters = {}
+            parameters["jobs"] = jobIds.join();
+            parameters["enable"] = 0;
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/job/enable?jobs="+jobIds+"&enable=0",
+                url: "/job/enable",
                 type: "GET",
+                data: parameters,
                 dataType: "json"
             }).done(function(data){
                 self.showEnableStateChange(data, "disabled");
@@ -669,7 +697,7 @@ function(
                 alertify.error(data.notAllowed.length + " job(s) cannot be enabled safely - they must be IDLE");
             }
             if (data.notPermitted.length > 0) {
-                alertify.error(data.notPermitted.length + " job(s) insufficient priviledges");
+                alertify.error(data.notPermitted.length + " job(s) insufficient privileges");
             }
         },
         deleteSelected:function(jobIds){
@@ -1431,10 +1459,13 @@ function(
             parameters["ownerWritable"] = $('input[name="ownerWritable"]:checked').val();
             parameters["groupWritable"] = $('input[name="groupWritable"]:checked').val();
             parameters["worldWritable"] = $('input[name="worldWritable"]:checked').val();
+            parameters["ownerExecutable"] = $('input[name="ownerExecutable"]:checked').val();
+            parameters["groupExecutable"] = $('input[name="groupExecutable"]:checked').val();
+            parameters["worldExecutable"] = $('input[name="worldExecutable"]:checked').val();
             app.authQueryParameters(parameters);
             $.ajax({
                 url: "/job/permissions",
-                type: "GET",
+                type: "POST",
                 data: parameters,
                 dataType: "json"
             }).done(function(data) {
@@ -1448,13 +1479,11 @@ function(
                     alertify.error(data.notFound.length + " job(s) are not found");
                 }
                 if (data.notPermitted.length > 0) {
-                    alertify.error(data.notPermitted.length + " job(s) insufficient priviledges");
+                    alertify.error(data.notPermitted.length + " job(s) insufficient privileges");
                 }
             }).fail(function(e){
                 alertify.error("Error changing permissions" + e.responseText);
             });
-        },
-        showEnableStateChange:function(data){
         },
         close: function() {
             this.remove();
@@ -1595,6 +1624,7 @@ function(
             "click #commitJobButton":"handleCommitJobButton",
             "click #revertJobButton":"handleRevertJobButtonClick",
             "click #saveJobButton":"handleSaveJobButtonClick",
+            "click #settingsChangePermission":"handleSettingsChangePermissionClick",
             "click #validateLink":"handleValidateClick",
             "click li.disabled > a":"handleDisabledTabClick",
             "click #cloneJobButton":"handleCloneClick"
@@ -1779,6 +1809,40 @@ function(
             event.preventDefault();
             app.router.trigger("route:showJobBackups",this.model.id);
         },
+        handleSettingsChangePermissionClick:function(event){
+            var parameters = {}
+            parameters["jobs"] = this.model.id;
+            parameters["owner"] = $('#jobOwner').val();
+            parameters["group"] = $('#jobGroup').val();
+            parameters["ownerWritable"] = $('#ownerWritable').is(':checked');
+            parameters["groupWritable"] = $('#groupWritable').is(':checked');
+            parameters["worldWritable"] = $('#worldWritable').is(':checked');
+            parameters["ownerExecutable"] = $('#ownerExecutable').is(':checked');
+            parameters["groupExecutable"] = $('#groupExecutable').is(':checked');
+            parameters["worldExecutable"] = $('#worldExecutable').is(':checked');
+            app.authQueryParameters(parameters);
+            $.ajax({
+                url: "/job/permissions",
+                type: "POST",
+                data: parameters,
+                dataType: "json"
+            }).done(function(data) {
+               if (data.changed.length > 0) {
+                    alertify.success("job permissions have been updated");
+                }
+                if (data.unchanged.length > 0) {
+                    alertify.message("job permissions already had these changes");
+                }
+                if (data.notFound.length > 0) {
+                    alertify.error("job not found");
+                }
+                if (data.notPermitted.length > 0) {
+                    alertify.error("insufficient privileges");
+                }
+            }).fail(function(e){
+                alertify.error("Error changing permissions" + e.responseText);
+            });
+        },
         handleSaveJobButtonClick:function(event){
             this.$el.find("#saveJobButton").addClass("disabled");
             var self = this;
@@ -1799,7 +1863,7 @@ function(
                 alertify.error("Error requesting job validation.");
             });
             this.model.save(formData).done(function(resp){
-                alertify.message(resp.id+"col. saved successfully.",2)
+                alertify.success(resp.id + " saved successfully.",2)
                 self.configModel.set("savedConfig", config);
                 self.model.trigger("save.done");
                 self.model.commit="";

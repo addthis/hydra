@@ -34,6 +34,31 @@ abstract class AuthorizationManager {
     abstract boolean isWritable(User user, String sudoToken, WritableAsset asset);
 
     /**
+     * Returns true if the user is able to start or stop the asset.
+     * The user is either authorized to update the asset through
+     * the permissions model of this authorization manager,
+     * or optionally the sudo token can be tested to grant sudo
+     * access to update the asset.
+     * @param user
+     * @param sudoToken
+     * @param asset
+     * @return true if write permission is granted
+     */
+    abstract boolean isExecutable(User user, String sudoToken, ExecutableAsset asset);
+
+    /**
+     * Returns true if the user is able to modify permissions on the asset.
+     * The authorization manager is allowed to be more permissive than the POSIX specification
+     * which only allows the user or typically root to modify permissions.
+     *
+     * @param user
+     * @param sudoToken
+     * @param asset
+     * @return true if write permission is granted
+     */
+    abstract boolean canModifyPermissions(User user, String sudoToken, WritableAsset asset);
+
+    /**
      * Tests the provided sudo token and returns true
      * if the user is allowed to perform an administrative action,
      * such as quiescing the cluster.

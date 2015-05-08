@@ -54,6 +54,12 @@ public class ZnodeJob implements IJob {
         @FieldConfig private boolean groupWritable;
         /* can the world modify the job */
         @FieldConfig private boolean worldWritable;
+        /* can the owner start/stop the job */
+        @FieldConfig private boolean ownerExecutable;
+        /* can the group start/stop the job */
+        @FieldConfig private boolean groupExecutable;
+        /* can the world start/stop the job */
+        @FieldConfig private boolean worldExecutable;
         /* user who last modified the job */
         @FieldConfig private String lastModifiedBy;
         /* last modification time */
@@ -112,6 +118,9 @@ public class ZnodeJob implements IJob {
                     .add("ownerWritable", ownerWritable)
                     .add("groupWritable", groupWritable)
                     .add("worldWritable", worldWritable)
+                    .add("ownerExecutable", ownerExecutable)
+                    .add("groupExecutable", groupExecutable)
+                    .add("worldExecutable", worldExecutable)
                     .add("lastModifiedBy", lastModifiedBy)
                     .add("lastModifiedAt", lastModifiedAt)
                     .add("description", description)
@@ -192,6 +201,9 @@ public class ZnodeJob implements IJob {
         rznData.ownerWritable = job.isOwnerWritable();
         rznData.groupWritable = job.isGroupWritable();
         rznData.worldWritable = job.isWorldWritable();
+        rznData.ownerExecutable = job.isOwnerExecutable();
+        rznData.groupExecutable = job.isGroupExecutable();
+        rznData.worldExecutable = job.isWorldExecutable();
         rznData.lastModifiedAt = job.lastModifiedAt();
         rznData.lastModifiedBy = job.lastModifiedBy();
         rznData.description = job.getDescription();
@@ -290,6 +302,36 @@ public class ZnodeJob implements IJob {
     @Override
     public void setWorldWritable(boolean worldWritable) {
         this.rznData.worldWritable = worldWritable;
+    }
+
+    @Override
+    public boolean isOwnerExecutable() {
+        return rznData.ownerExecutable;
+    }
+
+    @Override
+    public void setOwnerExecutable(boolean ownerExecutable) {
+        this.rznData.ownerExecutable = ownerExecutable;
+    }
+
+    @Override
+    public boolean isGroupExecutable() {
+        return rznData.groupExecutable;
+    }
+
+    @Override
+    public void setGroupExecutable(boolean groupExecutable) {
+        this.rznData.groupExecutable = groupExecutable;
+    }
+
+    @Override
+    public boolean isWorldExecutable() {
+        return rznData.worldExecutable;
+    }
+
+    @Override
+    public void setWorldExecutable(boolean worldExecutable) {
+        this.rznData.worldExecutable = worldExecutable;
     }
 
     @Override

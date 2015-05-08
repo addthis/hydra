@@ -146,7 +146,7 @@ function(
     });
     $('#loginForm').on('submit', app.authenticate);
     $('#loginButton').on('click', app.login);
-    $('#sudoButton').on('click', app.sudo);
+    $('#sudoCheckbox').on('click', app.sudo);
     $('#logoutButton').on('click', app.logout);
     app.queryHost = setupData.queryHost;
     app.jobCollection = new Jobs.Collection(

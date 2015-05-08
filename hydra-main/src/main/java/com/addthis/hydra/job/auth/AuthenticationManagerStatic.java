@@ -24,10 +24,15 @@ import com.google.common.collect.ImmutableMap;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  *
  */
 class AuthenticationManagerStatic extends AuthenticationManager {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthenticationManagerStatic.class);
 
     @Nonnull
     final ImmutableMap<String, StaticUser> users;
@@ -55,6 +60,7 @@ class AuthenticationManagerStatic extends AuthenticationManager {
         this.adminGroups = ImmutableList.copyOf(adminGroups);
         this.adminUsers = ImmutableList.copyOf(adminUsers);
         this.requireSSL = requireSSL;
+        log.info("Registering static authentication");
     }
 
     @Override String login(String username, String password, boolean ssl) {
@@ -95,6 +101,16 @@ class AuthenticationManagerStatic extends AuthenticationManager {
         }
         return users.get(username);
     }
+
+    @Override String sudoToken(String username) {
+        StaticUser user = users.get(username);
+        if (user != null) {
+            return user.sudo();
+        } else {
+            return null;
+        }
+    }
+
 
     @Override void logout(User user) {
         // do nothing

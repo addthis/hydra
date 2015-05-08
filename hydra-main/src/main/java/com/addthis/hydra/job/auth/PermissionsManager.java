@@ -16,11 +16,16 @@ package com.addthis.hydra.job.auth;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Wrapper class around authentication and authorization. Provides convenience methods
  * for authorization operations that must first be authenticated.
  */
 public final class PermissionsManager {
+
+    private static final Logger log = LoggerFactory.getLogger(PermissionsManager.class);
 
     private final AuthenticationManager authentication;
 
@@ -40,19 +45,50 @@ public final class PermissionsManager {
         this.authorization = authorization;
     }
 
+    /**
+     * Authorization checks that are common to all endpoints.
+     * If the user is null then authorization fails. If the user's
+     * sudo token matches the static sudo token returned by the
+     * authentication manager then authorization succeeds.
+     *
+     * @param user
+     * @param sudo
+     * @return outcome of authorization or null to continue processing
+     */
+    private Boolean authorizationCommon(User user, String sudo) {
+        if (user == null) {
+            return Boolean.FALSE;
+        } else if ((sudo != null) && sudo.equals(authentication.sudoToken(user.name()))) {
+            return Boolean.TRUE;
+        }
+        return null;
+    }
+
     public boolean isWritable(String username, String secret, String sudo, WritableAsset asset) {
         User user = authentication.authenticate(username, secret);
-        if (user == null) {
-            return false;
-        }
+        Boolean result = authorizationCommon(user, sudo);
+        if (result != null) return result;
         return authorization.isWritable(user, sudo, asset);
+    }
+
+    public boolean isExecutable(String username, String secret, String sudo, ExecutableAsset asset) {
+        User user = authentication.authenticate(username, secret);
+        Boolean result = authorizationCommon(user, sudo);
+        if (result != null) return result;
+        return authorization.isExecutable(user, sudo, asset);
+    }
+
+    public boolean canModifyPermissions(String username, String secret, String sudo, WritableAsset asset) {
+        User user = authentication.authenticate(username, secret);
+        Boolean result = authorizationCommon(user, sudo);
+        if (result != null) return result;
+        return authorization.canModifyPermissions(user, sudo, asset);
     }
 
     public boolean adminAction(String username, String secret, String sudo) {
         User user = authentication.authenticate(username, secret);
-        if (user == null) {
-            return false;
-        }
+        Boolean result = authorizationCommon(user, sudo);
+        if (result != null) return result;
         return authorization.adminAction(user, sudo);
     }
 
@@ -70,7 +106,12 @@ public final class PermissionsManager {
         if (user == null) {
             return null;
         } else {
-            return authorization.sudo(user, authentication.isAdmin(user));
+            String staticToken = authentication.sudoToken(username);
+            if (staticToken != null) {
+                return staticToken;
+            } else {
+                return authorization.sudo(user, authentication.isAdmin(user));
+            }
         }
     }
 

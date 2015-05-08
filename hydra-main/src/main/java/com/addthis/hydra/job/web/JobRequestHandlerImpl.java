@@ -124,6 +124,9 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         job.setOwnerWritable(KVUtils.getBooleanValue(kv, job.isOwnerWritable(), "ownerWritable"));
         job.setGroupWritable(KVUtils.getBooleanValue(kv, job.isGroupWritable(), "groupWritable"));
         job.setWorldWritable(KVUtils.getBooleanValue(kv, job.isWorldWritable(), "worldWritable"));
+        job.setOwnerExecutable(KVUtils.getBooleanValue(kv, job.isOwnerExecutable(), "ownerExecutable"));
+        job.setGroupExecutable(KVUtils.getBooleanValue(kv, job.isGroupExecutable(), "groupExecutable"));
+        job.setWorldExecutable(KVUtils.getBooleanValue(kv, job.isWorldExecutable(), "worldExecutable"));
         job.setLastModifiedBy(user);
         job.setLastModifiedAt(System.currentTimeMillis());
         job.setPriority(kv.getIntValue("priority", job.getPriority()));

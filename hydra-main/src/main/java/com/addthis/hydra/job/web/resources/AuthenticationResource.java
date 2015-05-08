@@ -24,6 +24,7 @@ import javax.ws.rs.core.UriInfo;
 
 import java.net.URI;
 
+import com.addthis.hydra.job.auth.User;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.web.SpawnService;
 
@@ -64,6 +65,28 @@ public class AuthenticationResource {
     }
 
     @POST
+    @Path("/validate")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response validate(@FormParam("user") String username,
+                             @FormParam("token") String token,
+                             @Context UriInfo uriInfo) {
+        URI uri = uriInfo.getRequestUri();
+        boolean usingSSL = (uri.getPort() == spawn.getWebPortSSL());
+        try {
+            User user = spawn.getPermissionsManager().authenticate(username, token);
+            Response.ResponseBuilder builder = Response.ok(Boolean.toString(user != null));
+            builder.header("Access-Control-Allow-Origin",
+                           "http://" + uriInfo.getAbsolutePath().getHost() +
+                           ":" + spawn.getWebPort());
+            builder.header("Access-Control-Allow-Methods", "POST");
+            return builder.build();
+        } catch (Exception ex)  {
+            log.warn("Internal error in validation attempt for user {} with ssl {}", username, usingSSL, ex);
+            return Response.serverError().entity("internal error").build();
+        }
+    }
+
+    @POST
     @Path("/sudo")
     @Produces(MediaType.TEXT_PLAIN)
     public Response sudo(@FormParam("user") String username,
@@ -73,7 +96,12 @@ public class AuthenticationResource {
         boolean usingSSL = (uri.getPort() == spawn.getWebPortSSL());
         try {
             String sudoToken = spawn.getPermissionsManager().sudo(username, password, usingSSL);
-            return Response.ok(sudoToken).build();
+            Response.ResponseBuilder builder = Response.ok(sudoToken);
+            builder.header("Access-Control-Allow-Origin",
+                           "http://" + uriInfo.getAbsolutePath().getHost() +
+                           ":" + spawn.getWebPort());
+            builder.header("Access-Control-Allow-Methods", "POST");
+            return builder.build();
         } catch (Exception ex)  {
             log.warn("Internal error in sudo attempt for user {} with ssl {}", username, usingSSL, ex);
             return Response.serverError().entity(ex.toString()).build();

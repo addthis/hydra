@@ -13,6 +13,9 @@
  */
 package com.addthis.hydra.job.web;
 
+import java.io.File;
+import java.io.IOException;
+
 import com.addthis.basis.util.Parameter;
 
 import com.addthis.codec.jackson.Jackson;
@@ -31,6 +34,9 @@ import com.addthis.hydra.job.web.resources.SpawnConfig;
 import com.addthis.hydra.job.web.resources.SystemResource;
 import com.addthis.hydra.job.web.resources.TaskResource;
 import com.addthis.hydra.util.WebSocketManager;
+
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.sun.jersey.api.json.JSONConfiguration;
@@ -53,7 +59,6 @@ import org.slf4j.LoggerFactory;
 public class SpawnService {
 
     private static final Logger log = LoggerFactory.getLogger(SpawnService.class);
-    private static final String CLASSPATH_PROTOCOL = "classpath:";
     private static final int batchInterval = Integer.parseInt(System.getProperty("spawn.batchtime", "500"));
     private static final int pollTimeout = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
     private static final String KEYSTORE_PATH = Parameter.value("spawn.https.keystore.path");
@@ -69,6 +74,10 @@ public class SpawnService {
     private final SpawnConfig config;
     private final WebSocketManager webSocketManager;
 
+    private static String readFile(String path) throws IOException {
+        return Files.toString(new File(path), Charsets.UTF_8).trim();
+    }
+
     public SpawnService(final Spawn spawn) throws Exception {
         this.jetty = new Server();
         this.webPort = spawn.getWebPort();
@@ -82,19 +91,20 @@ public class SpawnService {
             SslSelectChannelConnector sslSelectChannelConnector = new SslSelectChannelConnector();
             sslSelectChannelConnector.setPort(webPortSSL);
             SslContextFactory sslContextFactory = sslSelectChannelConnector.getSslContextFactory();
-            String path = KEYSTORE_PATH;
-            if (path.startsWith(CLASSPATH_PROTOCOL)) {
-                path = path.substring(CLASSPATH_PROTOCOL.length());
-                path = SpawnService.class.getResource(path).toExternalForm();
-            }
-            sslContextFactory.setKeyStorePath(path);
-            sslContextFactory.setKeyStorePassword(KEYSTORE_PASSWORD);
-            sslContextFactory.setKeyManagerPassword(KEYMANAGER_PASSWORD);
+            sslContextFactory.setKeyStorePath(KEYSTORE_PATH);
+            sslContextFactory.setKeyStorePassword(readFile(KEYSTORE_PASSWORD));
+            sslContextFactory.setKeyManagerPassword(readFile(KEYMANAGER_PASSWORD));
             log.info("Registering ssl connector");
             jetty.setConnectors(new Connector[]{selectChannelConnector, sslSelectChannelConnector});
             spawn.getSystemManager().updateSslEnabled(true);
+        } else if (spawn.getRequireSSL()) {
+            String message = "Missing one or more of \"spawn.https.keystore.path\", " +
+                             "\"spawn.https.keystore.password\", and \"spawn.https.keymanager.password\". " +
+                             "Set \"spawn.https.require\" to false to disable SSL.";
+            throw new IllegalStateException(message);
         } else {
             log.info("Not registering ssl connector");
+            spawn.getSystemManager().updateSslEnabled(false);
             jetty.setConnectors(new Connector[]{selectChannelConnector});
         }
 

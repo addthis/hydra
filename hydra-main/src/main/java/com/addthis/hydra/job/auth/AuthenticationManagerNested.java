@@ -20,6 +20,9 @@ import com.google.common.collect.ImmutableList;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 /**
  * In the nested authentication manager the inner manager
@@ -35,6 +38,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 class AuthenticationManagerNested extends AuthenticationManager {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthenticationManagerNested.class);
+
     @Nonnull
     final AuthenticationManager inner;
 
@@ -46,6 +51,7 @@ class AuthenticationManagerNested extends AuthenticationManager {
                                        @JsonProperty("outer") AuthenticationManager outer) {
         this.inner = inner;
         this.outer = outer;
+        log.info("Registering nested authentication");
     }
 
     @Override String login(String username, String password, boolean ssl) {
@@ -87,6 +93,18 @@ class AuthenticationManagerNested extends AuthenticationManager {
         User innerUser = inner.getUser(username);
         User outerUser = outer.getUser(username);
         return DefaultUser.join(innerUser, outerUser);
+    }
+
+    @Override String sudoToken(String username) {
+        if (username == null) {
+            return null;
+        }
+        String innerToken = inner.sudoToken(username);
+        if (innerToken != null) {
+            return innerToken;
+        } else {
+            return outer.sudoToken(username);
+        }
     }
 
     @Override void logout(User user) {

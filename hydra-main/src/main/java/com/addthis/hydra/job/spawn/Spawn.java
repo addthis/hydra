@@ -15,6 +15,7 @@ package com.addthis.hydra.job.spawn;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.ws.rs.core.Response;
 
 import java.io.File;
 import java.io.IOException;
@@ -137,7 +138,6 @@ import com.yammer.metrics.Metrics;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
 
-import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -227,6 +227,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     private final int webPort;
     private final int webPortSSL;
+    private final boolean requireSSL;
 
     @Nullable private final JobStore jobStore;
 
@@ -236,6 +237,7 @@ public class Spawn implements Codable, AutoCloseable {
                   @JsonProperty("queryHttpHost") String queryHttpHost,
                   @JsonProperty(value = "webPort", required = true) int webPort,
                   @JsonProperty(value = "webPortSSL", required = true) int webPortSSL,
+                  @JsonProperty(value = "requireSSL", required = true) boolean requireSSL,
                   @JsonProperty("httpHost") String httpHost,
                   @JsonProperty("dataDir") File dataDir,
                   @JsonProperty("stateFile") File stateFile,
@@ -263,6 +265,7 @@ public class Spawn implements Codable, AutoCloseable {
         this.jobDefaults = jobDefaults;
         this.webPort = webPort;
         this.webPortSSL = webPortSSL;
+        this.requireSSL = requireSSL;
         if (stateFile.exists() && stateFile.isFile()) {
             spawnState = Jackson.defaultMapper().readValue(stateFile, SpawnState.class);
         } else {
@@ -786,6 +789,9 @@ public class Spawn implements Codable, AutoCloseable {
             job.setOwnerWritable(jobDefaults.ownerWritable);
             job.setGroupWritable(jobDefaults.groupWritable);
             job.setWorldWritable(jobDefaults.worldWritable);
+            job.setOwnerExecutable(jobDefaults.ownerExecutable);
+            job.setGroupExecutable(jobDefaults.groupExecutable);
+            job.setWorldExecutable(jobDefaults.worldExecutable);
             job.setDailyBackups(jobDefaults.dailyBackups);
             job.setWeeklyBackups(jobDefaults.weeklyBackups);
             job.setMonthlyBackups(jobDefaults.monthlyBackups);
@@ -810,29 +816,37 @@ public class Spawn implements Codable, AutoCloseable {
         }
     }
 
-    public boolean synchronizeJobState(String jobUUID) {
+    public Response synchronizeJobState(String jobUUID, String user,
+                                       String token, String sudo) {
         if (jobUUID == null) {
-            throw new NullPointerException("missing job uuid");
+            return Response.status(Response.Status.BAD_REQUEST).entity("{error:\"missing id parameter\"}").build();
         }
         if (jobUUID.equals("ALL")) {
+            if (!getPermissionsManager().adminAction(user, token, sudo)) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                               .entity("{error:\"insufficient priviledges\"}").build();
+            }
             Collection<Job> jobList = listJobs();
             for (Job job : jobList) {
-                if (!synchronizeSingleJob(job.getId())) {
+                Response status = synchronizeSingleJob(job.getId(), user, token, sudo);
+                if (status.getStatus() != 200) {
                     log.warn("Stopping synchronize all jobs to to failure synchronizing job: " + job.getId());
-                    return false;
+                    return status;
                 }
             }
-            return true;
+            return Response.ok("{id:'" + jobUUID + "',action:'synchronzied'}").build();
         } else {
-            return synchronizeSingleJob(jobUUID);
+            return synchronizeSingleJob(jobUUID, user, token, sudo);
         }
     }
 
-    private boolean synchronizeSingleJob(String jobUUID) {
+    private Response synchronizeSingleJob(String jobUUID, String user, String token, String sudo) {
         Job job = getJob(jobUUID);
         if (job == null) {
             log.warn("[job.synchronize] job uuid {} not found", jobUUID);
-            return false;
+            return Response.status(Response.Status.NOT_FOUND).entity("job " + jobUUID + " not found").build();
+        } else if (!permissionsManager.isExecutable(user, token, sudo, job)) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity("{error:\"insufficient priviledges\"}").build();
         }
         ObjectMapper mapper = new ObjectMapper();
         for (JobTask task : job.getCopyOfTasks()) {
@@ -854,7 +868,7 @@ public class Spawn implements Codable, AutoCloseable {
                 hostState = mapper.readValue(hostStateString, HostState.class);
             } catch (IOException e) {
                 log.warn("Unable to deserialize host state for host: " + hostStateString + " serialized string was\n" + hostStateString);
-                return false;
+                return Response.serverError().entity("Serialization error").build();
             }
             boolean matched = matchJobNodeAndId(jobUUID, task, hostState.getRunning(), hostState.getStopped(), hostState.getQueued());
             if (!matched) {
@@ -873,7 +887,7 @@ public class Spawn implements Codable, AutoCloseable {
                 log.warn("Spawn and minion agree, job/node: " + jobUUID + "/" + task.getTaskID() + " is on host: " + hostState.getHost());
             }
         }
-        return true;
+        return Response.ok().entity("success").build();
     }
 
     private static boolean matchJobNodeAndId(String jobUUID, JobTask task, JobKey[]... jobKeys) {
@@ -1142,7 +1156,7 @@ public class Spawn implements Codable, AutoCloseable {
             log.warn("[job.rebalance] job uuid " + jobUUID + " not found");
             return new RebalanceOutcome(jobUUID, "job not found", null, null);
         }
-        if (permissionsManager.isWritable(user, token, sudo, job)) {
+        if (permissionsManager.isExecutable(user, token, sudo, job)) {
             log.warn("[job.rebalance] insufficient priviledges to rebalance " + jobUUID);
             return new RebalanceOutcome(jobUUID, "insufficient priviledges", null, null);
         }
@@ -1934,7 +1948,7 @@ public class Spawn implements Codable, AutoCloseable {
         if (job == null) {
             return true;
         }
-        if (!permissionsManager.isWritable(user, token, sudo, job)) {
+        if (!permissionsManager.isExecutable(user, token, sudo, job)) {
             return false;
         }
         if (taskID == -1) {
@@ -3207,5 +3221,9 @@ public class Spawn implements Codable, AutoCloseable {
 
     public int getWebPortSSL() {
         return webPortSSL;
+    }
+
+    public boolean getRequireSSL() {
+        return requireSSL;
     }
 }

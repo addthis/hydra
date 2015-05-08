@@ -30,6 +30,12 @@ public class JobDefaults {
 
     public final boolean worldWritable;
 
+    public final boolean ownerExecutable;
+
+    public final boolean groupExecutable;
+
+    public final boolean worldExecutable;
+
     public final int hourlyBackups;
 
     public final int dailyBackups;
@@ -44,6 +50,9 @@ public class JobDefaults {
     JobDefaults(@JsonProperty(value = "ownerWritable", required = true) boolean ownerWritable,
                 @JsonProperty(value = "groupWritable", required = true) boolean groupWritable,
                 @JsonProperty(value = "worldWritable", required = true) boolean worldWritable,
+                @JsonProperty(value = "ownerExecutable", required = true) boolean ownerExecutable,
+                @JsonProperty(value = "groupExecutable", required = true) boolean groupExecutable,
+                @JsonProperty(value = "worldExecutable", required = true) boolean worldExecutable,
                 @JsonProperty(value = "hourlyBackups", required = true) int hourlyBackups,
                 @JsonProperty(value = "dailyBackups", required = true) int dailyBackups,
                 @JsonProperty(value = "weeklyBackups", required = true) int weeklyBackups,
@@ -52,6 +61,9 @@ public class JobDefaults {
         this.ownerWritable = ownerWritable;
         this.groupWritable = groupWritable;
         this.worldWritable = worldWritable;
+        this.ownerExecutable = ownerExecutable;
+        this.groupExecutable = groupExecutable;
+        this.worldExecutable = worldExecutable;
         this.hourlyBackups = hourlyBackups;
         this.dailyBackups = dailyBackups;
         this.weeklyBackups = weeklyBackups;

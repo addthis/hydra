@@ -23,6 +23,9 @@ import com.google.common.collect.ImmutableSet;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Creates an authentication manager of two users. One user with the
  * username of this process that has the same username and password. And one
@@ -31,6 +34,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * a real authentication manager.
  */
 class AuthenticationManagerLocalUser extends AuthenticationManager {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthenticationManagerLocalUser.class);
 
     private static final String USERNAME = System.getProperty("user.name");
     private static final ImmutableSet<String> USERS = ImmutableSet.of(USERNAME, "admin");
@@ -47,6 +52,7 @@ class AuthenticationManagerLocalUser extends AuthenticationManager {
         this.basicUser = new DefaultUser(USERNAME, ImmutableList.of());
         this.adminUser = new DefaultUser("admin", ImmutableList.of());
         this.users = ImmutableMap.of(USERNAME, basicUser, "admin", adminUser);
+        log.info("Registering local user authentication");
     }
 
     @Override String login(String username, String password, boolean ssl) {
@@ -84,6 +90,10 @@ class AuthenticationManagerLocalUser extends AuthenticationManager {
 
     @Override protected User getUser(String username) {
         return users.get(username);
+    }
+
+    @Override String sudoToken(String username) {
+        return null;
     }
 
     @Override void logout(User user) {

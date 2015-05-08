@@ -17,10 +17,17 @@ import com.google.common.collect.ImmutableList;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 class AuthenticationManagerDenyAll extends AuthenticationManager {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthenticationManagerDenyAll.class);
+
     @JsonCreator
-    public AuthenticationManagerDenyAll() {}
+    public AuthenticationManagerDenyAll() {
+        log.info("Registering deny all authentication");
+    }
 
     @Override String login(String username, String password, boolean ssl) {
         return null;
@@ -39,6 +46,10 @@ class AuthenticationManagerDenyAll extends AuthenticationManager {
     }
 
     @Override void logout(User user) {
+    }
+
+    @Override String sudoToken(String username) {
+        return null;
     }
 
     @Override boolean isAdmin(User user) {
