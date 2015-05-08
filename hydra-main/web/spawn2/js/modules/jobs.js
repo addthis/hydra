@@ -37,6 +37,7 @@ define([
     "text!../../templates/job.taskdetail.html",
     "text!../../templates/job.task.breadcrumbs.html",
     "text!../../templates/job.revert.modal.html",
+    "text!../../templates/job.permissions.modal.html",
     "text!../../templates/job.table.info.html",
     "text!../../templates/job.checkdirs.html"
 ],
@@ -66,6 +67,7 @@ function(
     jobTaskDetailTemplate,
     jobTaskBreadcrumbTemplate,
     jobRevertModalTemplate,
+    jobPermissionsModalTemplate,
     jobTableInfoTemplate,
     jobCheckDirsTemplate
 ){
@@ -102,6 +104,8 @@ function(
             data.submitTime = data.submitTime || "";
             data.endTime = data.endTime || "";
             data.creator = data.creator || "";
+            data.owner = data.owner || "";
+            data.group = data.group || "";
             data.state = (_.has(data,'state')?data.state:4);
             if(data.disabled){
                 data.status = "disabled";
@@ -133,32 +137,37 @@ function(
             data.queryConfig=undefined;
             return data;
         },
-        defaults:{
-            description:"(no title)",
-            state:4,
-            creator:"",
-            submitTime:-1,
-            endTime:-1,
-            status:"",
-            maxRunTime:"",
-            rekickTimeout:"",
-            nodes:"",
-            bytes:"",
-            parameters:[],
-            alerts:[],
-            command:'default-task',
-            nodes:1,
-            stateText:"",
-            stateLabel:"",
-            minionType:"default",
-            autoRetry:false
+        defaults: function() {
+            return {
+                description:"(no title)",
+                state:4,
+                creator: app.user.get("username"),
+                owner: app.user.get("username"),
+                submitTime:-1,
+                endTime:-1,
+                status:"",
+                maxRunTime:"",
+                rekickTimeout:"",
+                nodes:"",
+                bytes:"",
+                parameters:[],
+                alerts:[],
+                command:'default-task',
+                nodes:1,
+                stateText:"",
+                stateLabel:"",
+                minionType:"default"
+            }
         },
         rebalance:function(){
             var self=this;
+            var parameters = {}
+            parameters["id"] = self.id;
+            app.authQueryParameters(parameters);
             $.ajax({
                 url: "/job/rebalance",
                 type: "GET",
-                data:{id:this.id},
+                data: parameters,
                 statusCode: {
                     500: function(data) {
                         alertify.error(e.responseText,5);
@@ -170,11 +179,17 @@ function(
                 dataType: "json"
             });
         },
-        enable:function(unsafe){
-            var self=this;
+        enable : function(unsafe) {
+            var self = this;
+            var parameters = {}
+            parameters["jobs"] = self.id;
+            parameters["enable"] = 1;
+            parameters["unsafe"] = unsafe;
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/job/enable?jobs="+self.id+"&enable=1&unsafe="+unsafe,
+                url: "/job/enable",
                 type: "GET",
+                data: parameters,
                 dataType: "json"
             }).done(function(data){
                 self.showEnableStateChange(data, "enabled", unsafe);
@@ -182,11 +197,16 @@ function(
                 alertify.error("Error enabling job "+self.id+"<br/>" + e.responseText);
             });
         },
-        disable:function(){
-            var self=this;
+        disable : function() {
+            var self = this;
+            var parameters = {}
+            parameters["jobs"] = self.id;
+            parameters["enable"] = 0;
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/job/enable?jobs="+self.id+"&enable=0",
+                url: "/job/enable",
                 type: "GET",
+                data: parameters,
                 dataType: "json"
             }).done(function(data){
                 self.showEnableStateChange(data, "disabled");
@@ -213,25 +233,28 @@ function(
             }
         },
         revert:function(params){
-            var self=this;
+            var self = this;
             var data = _.extend(params,{
                 id:self.get("id")
             });
+            app.authQueryParameters(data);
             return $.ajax({
                 url:"/job/revert",
+                type: "GET",
                 data:data
             });
         },
         fixDirs:function(node){
             var self=this;
             node = node || -1;
+            var parameters = {}
+            parameters["id"] = self.id;
+            parameters["node"] = node;
+            app.authQueryParameters(parameters);
             $.ajax({
                 url: "/job/fixJobDirs",
                 type: "GET",
-                data: {
-                    id:self.id,
-                    node:node
-                },
+                data: parameters,
                 dataType:"text"
             }).done(function(data){
                 alertify.success(data);
@@ -239,15 +262,18 @@ function(
                 alertify.error(xhr.responseText);
             });
         },
-        query:function(){
+        query : function(){
             window.open("http://"+app.queryHost+"/query/index.html?job="+this.id,"_blank");
         },
-        delete:function(dontShowSuccessAlert){
+        delete : function(dontShowSuccessAlert){
             var self=this;
+            var parameters = {}
+            parameters["id"] = self.id;
+            app.authQueryParameters(parameters);
             $.ajax({
                 url: "/job/delete",
                 type: "GET",
-                data: {id:self.id, user:app.user.get("username")},
+                data: parameters,
                 statusCode: {
                     304: function() {
                         alertify.error("Job with id "+self.id+" has \"do not delete\" parameter enabled.");
@@ -268,23 +294,32 @@ function(
                 dataType: "text"
             });
         },
-        kick:function(){
-            var self=this;
+        kick : function(){
+            var self = this;
+            var parameters = {}
+            parameters["jobid"] = self.id;
+            parameters["priority"] = 1;
+            app.authQueryParameters(parameters);
             $.ajax({
-                 url: "/job/start?priority=1&jobid="+self.id,
-                 type: "GET",
-                 dataType: "json"
+                url: "/job/start",
+                type: "GET",
+                data: parameters,
+                dataType: "json"
             }).done(function(data){
                 alertify.message(self.id+" job kicked.",2)
             }).fail(function(e){
                 alertify.error("Error kicking: "+self.id+". <br/> "+e.responseText);
             });
         },
-        stop:function(){
+        stop : function(){
             var self=this;
+            var parameters = {}
+            parameters["id"] = self.id;
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/job/stop?jobid="+self.id,
+                url: "/job/stop",
                 type: "GET",
+                data: parameters,
                 dataType: "json"
             }).done(function(data){
                 alertify.message(self.id+" job stopped.",2)
@@ -292,11 +327,16 @@ function(
                 alertify.error("Error stopping: "+self.id+". <br/> "+e.responseText);
             });
         },
-        kill:function(){
+        kill : function(){
             var self=this;
+            var parameters = {}
+            parameters["id"] = self.id;
+            parameters["force"] = "true";
+            app.authQueryParameters(parameters);
             $.ajax({
-                url: "/job/stop?jobid="+self.id+"&force=true",
+                url: "/job/stop",
                 type: "GET",
+                data: parameters,
                 dataType: "json"
             }).done(function(data){
                 alertify.message(self.id+" job killed.",2)
@@ -304,22 +344,22 @@ function(
                 alertify.error("Error killing: "+self.id+". <br/> "+e.responseText);
             });
         },
-        save:function(param){
+        save : function(param){
             var self=this;
             var data = _.extend(_.omit(this.toJSON(),'parameters','alerts','config','DT_RowId','DT_RowClass'),param);
-            data= _.omit(data,'owner','creator','state');
-            data.owner=$.cookie("username").username;
+            data= _.omit(data,'state');
             data.command=$("#command").val();
-            if(!_.isEmpty(this.commit)){
+            if (!_.isEmpty(this.commit)) {
                 data.commit=this.commit;
             }
-            var url = "/job/save";
-            if(!this.isNew()){
-                url+="?id="+this.id;
+            var parameters = {}
+            if (!this.isNew()) {
+                parameters['id'] = self.id;
             }
+            app.authQueryParameters(parameters);
             return $.ajax({
-                url: url,
-                data:data,
+                url: "/job/save?" + $.param(parameters),
+                data: data,
                 type: "POST"
             });
         },
@@ -813,6 +853,7 @@ function(
                 'handleDisableButtonClick',
                 'handleDeleteButtonClick',
                 'handleCreateAlertButtonClick',
+                'handleChangePermissionsButtonClick',
                 'handleFindDeletedJobButtonClick'
             );
             this.hasRendered=false;
@@ -829,6 +870,7 @@ function(
                 this.views.selectable.find("#disableButton").on("click",this.handleDisableButtonClick);
                 this.views.selectable.find("#deleteButton").on("click",this.handleDeleteButtonClick);
                 this.views.selectable.find("#createAlertButton").on("click", this.handleCreateAlertButtonClick);
+                this.views.selectable.find("#changePermissionsButton").on("click", this.handleChangePermissionsButtonClick);
                 this.hasRendered=true;
             }
             // Find deleted job
@@ -880,7 +922,11 @@ function(
         handleCreateAlertButtonClick:function(event){
             var ids = this.getSelectedIds();
             app.router.navigate("alerts/create/" + ids.join(), {trigger:true});
-        },        
+        },
+        handleChangePermissionsButtonClick:function(event){
+            var ids = this.getSelectedIds();
+            app.router.trigger("route:showChangePermissions", ids);
+        },
         handleFindDeletedJobButtonClick:function(event){
             alertify.prompt("Enter the deleted job ID:","",function(evt, str){
                 window.open("/job/config.deleted?id="+str,"_blank");
@@ -1360,6 +1406,61 @@ function(
             }
         }
     });
+    var ChangePermissionsModalView = Backbone.View.extend({
+        className:"modal fade",
+        template: _.template(jobPermissionsModalTemplate),
+        events:{
+            "click button#jobPermissionsModalSubmit":"handleSubmitButtonClick",
+            "hidden.bs.modal":"close",
+        },
+        initialize: function(options){
+            _.bindAll(this, 'handleSubmitButtonClick', 'close');
+            this.jobIds = options.jobIds;
+        },
+        render: function(){
+            var html = this.template();
+            this.$el.html(html);
+            this.$el.modal("show");
+            return this;
+        },
+        handleSubmitButtonClick: function() {
+            var parameters = {}
+            parameters["jobs"] = this.jobIds.join();
+            parameters["owner"] = $('input[name="chownModal"]').val();
+            parameters["group"] = $('input[name="chgrpModal"]').val();
+            parameters["ownerWritable"] = $('input[name="ownerWritable"]:checked').val();
+            parameters["groupWritable"] = $('input[name="groupWritable"]:checked').val();
+            parameters["worldWritable"] = $('input[name="worldWritable"]:checked').val();
+            app.authQueryParameters(parameters);
+            $.ajax({
+                url: "/job/permissions",
+                type: "GET",
+                data: parameters,
+                dataType: "json"
+            }).done(function(data) {
+               if (data.changed.length > 0) {
+                    alertify.success(data.changed.length + " job(s) have been updated");
+                }
+                if (data.unchanged.length > 0) {
+                    alertify.message(data.unchanged.length + " job(s) already had these changes");
+                }
+                if (data.notFound.length > 0) {
+                    alertify.error(data.notFound.length + " job(s) are not found");
+                }
+                if (data.notPermitted.length > 0) {
+                    alertify.error(data.notPermitted.length + " job(s) insufficient priviledges");
+                }
+            }).fail(function(e){
+                alertify.error("Error changing permissions" + e.responseText);
+            });
+        },
+        showEnableStateChange:function(data){
+        },
+        close: function() {
+            this.remove();
+            this.unbind();
+        }
+    });
     var BackupModalView = Backbone.View.extend({
         className:"modal fade",
         template: _.template(jobRevertModalTemplate),
@@ -1434,8 +1535,8 @@ function(
             var node = this.backupModel.get("node");
             var value = this.$el.find(selectElem).val();
             var params = {
-                type:backupType, 
-                node:node, 
+                type:backupType,
+                node:node,
                 time:value
             };
             this.handleButtonClickRaw(node, params);
@@ -1443,8 +1544,8 @@ function(
         handleButtonClickForRevisionRevert:function(rev){
             var node = this.backupModel.get("node");
             var params = {
-                type:"gold", 
-                node:node, 
+                type:"gold",
+                node:node,
                 revision:rev
             };
             this.handleButtonClickRaw(node, params);
@@ -2313,6 +2414,7 @@ function(
     return {
         AlertDetailView:AlertDetailView,
         BackupModalView:BackupModalView,
+        ChangePermissionsModalView:ChangePermissionsModalView,
         BackupModel: BackupModel,
         CheckDirsCollection:CheckDirsCollection,
         CheckDirsModal:CheckDirsModal,

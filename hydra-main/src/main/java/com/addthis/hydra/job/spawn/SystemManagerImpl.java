@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 
+import com.addthis.basis.util.Parameter;
+
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.store.DataStoreUtil;
@@ -39,26 +41,36 @@ public class SystemManagerImpl implements SystemManager {
 
     private static final Logger log = LoggerFactory.getLogger(SystemManagerImpl.class);
     private static final String GIT_PROPS = "/hydra-git.properties";
+    private static final boolean sslLoginDefault = Parameter.boolValue("spawn.https.login.default", true);
 
     private final Spawn spawn;
+    private final int authenticationTokenTimeout;
+    private final int authenticationSudoTimeout;
 
     private String debug;
     private String queryHost;
     private String spawnHost;
+    private boolean sslEnabled;
 
     private volatile Properties gitProperties;
 
-    public SystemManagerImpl(Spawn spawn, String debug, String queryHost, String spawnHost) {
+    public SystemManagerImpl(Spawn spawn, String debug, String queryHost, String spawnHost,
+                             int authenticationTokenTimeout, int authenticationSudoTimeout) {
         this.spawn = spawn;
         this.debug = debug;
         this.queryHost = queryHost;
         this.spawnHost = spawnHost;
+        this.authenticationTokenTimeout = authenticationTokenTimeout;
+        this.authenticationSudoTimeout = authenticationSudoTimeout;
     }
 
     @Override
     public boolean debug(String match) {
         return debug != null && (debug.contains(match) || debug.contains("-all-"));
     }
+
+    @Override
+    public void updateSslEnabled(boolean enabled) { sslEnabled = enabled; }
 
     @Override
     public void updateDebug(Optional<String> opt) {
@@ -96,8 +108,16 @@ public class SystemManagerImpl implements SystemManager {
     @Override
     public Settings getSettings() {
         String disabled = Joiner.on(',').skipNulls().join(spawn.spawnState.disabledHosts);
-        return new Settings(debug, isQuiesced(), queryHost, spawnHost, disabled,
-                Spawn.DEFAULT_REPLICA_COUNT);
+        return new Settings.Builder().setDebug(debug)
+                                     .setQuiesce(isQuiesced())
+                                     .setQueryHost(queryHost)
+                                     .setSpawnHost(spawnHost)
+                                     .setDisabled(disabled)
+                                     .setDefaultReplicaCount(Spawn.DEFAULT_REPLICA_COUNT)
+                                     .setSslDefault(sslEnabled && sslLoginDefault)
+                                     .setAuthTimeout(authenticationTokenTimeout)
+                                     .setSudoTimeout(authenticationSudoTimeout)
+                                     .build();
     }
 
     private Properties loadRawGitProperties(String loc) {
@@ -210,5 +230,4 @@ public class SystemManagerImpl implements SystemManager {
         DataStoreUtil.cutoverBetweenDataStore(DataStoreUtil.makeSpawnDataStore(sourceType),
                 DataStoreUtil.makeSpawnDataStore(targetType), checkAllWrites);
     }
-
 }

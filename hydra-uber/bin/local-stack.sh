@@ -70,10 +70,11 @@ done
 
 # fetch required jars
 (
-    for dir in exec zoo log etc streams pid bin; do
+    for dir in exec zoo log etc streams pid bin cert; do
         [ ! -d $dir ] && mkdir $dir
     done
     [ ! -f bin/job-task.sh ] && cp ../hydra-uber/local/bin/job-task.sh bin/
+    [ ! -f cert/keystore.jks ] && cp ../hydra-uber/local/cert/keystore.jks cert/
     [ ! -h web ] && ln -s ../hydra-main/web web
     (
         cd streams
@@ -110,15 +111,37 @@ EOF
 )
 
 export HYDRA_CONF=$(pwd)/../hydra-uber
+
+export HYDRA_LOCAL_DIR=$(pwd)/../hydra-local
+
 export HYDRA_EXEC=`ls -t ${HYDRA_CONF}/target/hydra-uber-*exec*jar | head -n 1`
-export LOG4J_PROPERTIES="-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager -Dlog4j.configurationFactory=com.addthis.hydra.uber.HoconConfigurationFactory -Dlogging.stderr=off"
-export MQ_MASTER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Deps.mem.debug=10000 -Dcs.je.cacheSize=256M -Dcs.je.cacheShared=1 -Dcs.je.deferredWrite=1 -Dzk.servers=localhost:2181 -Dstreamserver.read.timeout=60000 -Djava.net.preferIPv4Stack=true -Dganglia.enable=false -Dqmaster.mesh.peers=localhost -Dmeshy.senders=1 -Dmeshy.stream.prefetch=true -Dqmaster.mesh.peer.port=5101"
-export MQ_WORKER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Dmesh.local.handlers=com.addthis.hydra.data.query.source.MeshQuerySource -Dmeshy.stream.prefetch=true -Dmeshy.senders=1"
-export MINION_OPT="${LOG4J_PROPERTIES} -Xmx512M -Dminion.mem=512 -Dminion.localhost=localhost -Dminion.group=local -Dminion.web.port=0 -Dspawn.localhost=localhost -Dhttp.post.max=327680 -Dminion.sparse.updates=1 -Dreplicate.cmd.delay.seconds=1 -Dbackup.cmd.delay.seconds=0 -Dbatch.brokerAddresses=localhost"
-export SPAWN_OPT="-Xmx512M ${LOG4J_PROPERTIES} -Dspawn.localhost=localhost -Dspawn.queryhost=localhost -Dspawn.status.interval=6000 -Dspawn.chore.interval=3000 -Dhttp.post.max=327680  -Dspawn.polltime=10000 -Dspawnbalance.min.disk.percent.avail.replicas=0.01 -Dspawn.auth.ldap=false -Dmesh.port=5000 -Djob.store.remote=false -Dspawn.queue.new.task.last.slot.delay=0 -Dspawn.defaultReplicaCount=0 -Dbatch.brokerAddresses=localhost"
-export MESHY_OPT="-Xmx128M -Xms128M ${LOG4J_PROPERTIES} -Dmeshy.autoMesh=false -Dmeshy.throttleLog=true -Dmeshy.buffers.enable=true -Dmeshy.stream.maxopen=10000"
-export JAVA_CMD="java -server ${JAVA_OPTS} -Djava.net.preferIPv4Stack=true -Djava.library.path=${ZMQ_LIBDIR} -Dhydra.tree.cache.maxSize=250 -Dhydra.tree.page.maxSize=50 -Dcs.je.cacheSize=200M -Deps.mem.debug=3000"
-export HYDRA_LOCAL_DIR="$(pwd)/../hydra-local"
+
+export LOG4J_PROPERTIES="-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager \
+-Dlog4j.configurationFactory=com.addthis.hydra.uber.HoconConfigurationFactory -Dlogging.stderr=off"
+
+export MQ_MASTER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Deps.mem.debug=10000 -Dcs.je.cacheSize=256M \
+-Dcs.je.cacheShared=1 -Dcs.je.deferredWrite=1 -Dzk.servers=localhost:2181 -Dstreamserver.read.timeout=60000 \
+-Djava.net.preferIPv4Stack=true -Dganglia.enable=false -Dqmaster.mesh.peers=localhost -Dmeshy.senders=1 \
+-Dmeshy.stream.prefetch=true -Dqmaster.mesh.peer.port=5101"
+
+export MQ_WORKER_OPT="${LOG4J_PROPERTIES} -Xmx1284M -Dmesh.local.handlers=com.addthis.hydra.data.query.source.MeshQuerySource \
+-Dmeshy.stream.prefetch=true -Dmeshy.senders=1"
+
+export MINION_OPT="${LOG4J_PROPERTIES} -Xmx512M -Dminion.mem=512 -Dminion.localhost=localhost -Dminion.group=local \
+-Dminion.web.port=0 -Dspawn.localhost=localhost -Dhttp.post.max=327680 -Dminion.sparse.updates=1 \
+-Dreplicate.cmd.delay.seconds=1 -Dbackup.cmd.delay.seconds=0 -Dbatch.brokerAddresses=localhost"
+
+export SPAWN_OPT="-Xmx512M ${LOG4J_PROPERTIES} -Dspawn.localhost=localhost -Dspawn.queryhost=localhost -Dspawn.status.interval=6000 \
+-Dspawn.chore.interval=3000 -Dhttp.post.max=327680  -Dspawn.polltime=10000 -Dspawnbalance.min.disk.percent.avail.replicas=0.01 \
+-Dspawn.auth.ldap=false -Dmesh.port=5000 -Djob.store.remote=false -Dspawn.queue.new.task.last.slot.delay=0 -Dspawn.defaultReplicaCount=0 \
+-Dbatch.brokerAddresses=localhost -Dspawn.https.keystore.password=hydrahydra -Dspawn.https.keymanager.password=hydrahydra \
+-Dspawn.https.keystore.path=$HYDRA_LOCAL_DIR/cert/keystore.jks -Dspawn.https.login.default=0"
+
+export MESHY_OPT="-Xmx128M -Xms128M ${LOG4J_PROPERTIES} -Dmeshy.autoMesh=false -Dmeshy.throttleLog=true \
+-Dmeshy.buffers.enable=true -Dmeshy.stream.maxopen=10000"
+
+export JAVA_CMD="java -server ${JAVA_OPTS} -Djava.net.preferIPv4Stack=true -Djava.library.path=${ZMQ_LIBDIR} \
+-Dhydra.tree.cache.maxSize=250 -Dhydra.tree.page.maxSize=50 -Dcs.je.cacheSize=200M -Deps.mem.debug=3000"
 
 # flcow support for linux
 if [ -n "${FLCOW_SO+1}" ]; then

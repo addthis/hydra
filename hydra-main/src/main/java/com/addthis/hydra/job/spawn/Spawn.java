@@ -66,6 +66,7 @@ import com.addthis.hydra.job.HostFailWorker;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobConfigManager;
+import com.addthis.hydra.job.JobDefaults;
 import com.addthis.hydra.job.JobEvent;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
@@ -81,6 +82,7 @@ import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.alert.JobAlertManagerImpl;
 import com.addthis.hydra.job.alias.AliasManager;
 import com.addthis.hydra.job.alias.AliasManagerImpl;
+import com.addthis.hydra.job.auth.PermissionsManager;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.entity.JobCommandManager;
@@ -145,6 +147,7 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * manages minions running on remote notes. runs master http server to
@@ -205,6 +208,9 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull final ConcurrentMap<String, ClientEventListener> listeners;
     @Nonnull final SpawnFormattedLogger spawnFormattedLogger;
 
+    @Nonnull final PermissionsManager permissionsManager;
+    @Nonnull final JobDefaults jobDefaults;
+
     @Nonnull private final File stateFile;
     @Nonnull private final ExecutorService expandKickExecutor;
     @Nonnull private final ScheduledExecutorService scheduledExecutor;
@@ -245,10 +251,15 @@ public class Spawn implements Codable, AutoCloseable {
                   @Nullable @JsonProperty("structuredLogDir") File structuredLogDir,
                   @Nullable @JsonProperty("jobStore") JobStore jobStore,
                   @Nullable @JsonProperty("queueType") String queueType,
-                  @Nullable @JacksonInject CuratorFramework providedZkClient
-    ) throws Exception {
+                  @Nullable @JacksonInject CuratorFramework providedZkClient,
+                  @JsonProperty(value = "permissionsManager", required = true) PermissionsManager permissionsManager,
+                  @JsonProperty(value = "jobDefaults", required = true) JobDefaults jobDefaults,
+                  @Time(SECONDS) @JsonProperty(value = "authTimeout", required = true) int authenticationTimeout,
+                  @Time(SECONDS) @JsonProperty(value = "sudoTimeout", required = true) int sudoTimeout) throws Exception {
         LessFiles.initDirectory(dataDir);
         this.stateFile = stateFile;
+        this.permissionsManager = permissionsManager;
+        this.jobDefaults = jobDefaults;
         if (stateFile.exists() && stateFile.isFile()) {
             spawnState = Jackson.defaultMapper().readValue(stateFile, SpawnState.class);
         } else {
@@ -272,7 +283,7 @@ public class Spawn implements Codable, AutoCloseable {
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
         
         this.systemManager = new SystemManagerImpl(this, debug, queryHttpHost + ":" + queryPort, 
-                httpHost + ":" + webPort);
+                httpHost + ":" + webPort, authenticationTimeout, sudoTimeout);
         this.jobConfigManager = new JobConfigManager(spawnDataStore);
         // look for local object to import
         log.info("[init] beginning to load stats from data store");
@@ -387,7 +398,9 @@ public class Spawn implements Codable, AutoCloseable {
     public SpawnBalancer getSpawnBalancer() {
         return balancer;
     }
-    
+
+    public PermissionsManager getPermissionsManager() { return permissionsManager; }
+
     @Nonnull
     public AliasManager getAliasManager() {
         return aliasManager;
@@ -772,15 +785,17 @@ public class Spawn implements Codable, AutoCloseable {
         jobLock.lock();
         try {
             Job job = new Job(UUID.randomUUID().toString(), creator != null ? creator : "anonymous");
-            job.setOwner(job.getCreator());
-            job.setState(JobState.IDLE);
-            job.setCommand(command);
-            job.setDailyBackups(4);
-            job.setWeeklyBackups(1);
-            job.setMonthlyBackups(0);
-            job.setHourlyBackups(0);
-            job.setReplicas(DEFAULT_REPLICA_COUNT);
             job.setMinionType(minionType);
+            job.setCommand(command);
+            job.setState(JobState.IDLE);
+            job.setOwnerWritable(jobDefaults.ownerWritable);
+            job.setGroupWritable(jobDefaults.groupWritable);
+            job.setWorldWritable(jobDefaults.worldWritable);
+            job.setDailyBackups(jobDefaults.dailyBackups);
+            job.setWeeklyBackups(jobDefaults.weeklyBackups);
+            job.setMonthlyBackups(jobDefaults.monthlyBackups);
+            job.setHourlyBackups(jobDefaults.hourlyBackups);
+            job.setReplicas(jobDefaults.replicas);
             List<HostState> hostStates = getOrCreateHostStateList(minionType, taskHosts);
             List<JobTask> tasksAssignedToHosts = balancer.generateAssignedTasksForNewJob(job.getId(), taskCount, hostStates);
             job.setTasks(tasksAssignedToHosts);
@@ -1125,11 +1140,16 @@ public class Spawn implements Codable, AutoCloseable {
      * @return a RebalanceOutcome describing which steps were performed
      * @throws Exception If there is a failure when rebalancing replicas
      */
-    public RebalanceOutcome rebalanceJob(String jobUUID, int tasksToMove) throws Exception {
+    public RebalanceOutcome rebalanceJob(String jobUUID, int tasksToMove, String user,
+                                         String token, String sudo) throws Exception {
         Job job = getJob(jobUUID);
         if (jobUUID == null || job == null) {
             log.warn("[job.rebalance] job uuid " + jobUUID + " not found");
             return new RebalanceOutcome(jobUUID, "job not found", null, null);
+        }
+        if (permissionsManager.isWritable(user, token, sudo, job)) {
+            log.warn("[job.rebalance] insufficient priviledges to rebalance " + jobUUID);
+            return new RebalanceOutcome(jobUUID, "insufficient priviledges", null, null);
         }
         if (job.getState() != JobState.IDLE && job.getState() != JobState.DEGRADED) {
             log.warn("[job.rebalance] job must be IDLE or DEGRADED to rebalance " + jobUUID);
@@ -1907,10 +1927,23 @@ public class Spawn implements Codable, AutoCloseable {
         stopTask(jobUUID, taskID, true, false);
     }
 
-    public void revertJobOrTask(String jobUUID, int taskID, String backupType, int rev, long time) throws Exception {
+    public boolean revertJobOrTask(String jobUUID,
+                                String user,
+                                String token,
+                                String sudo,
+                                int taskID,
+                                String backupType,
+                                int rev,
+                                long time) throws Exception {
+        Job job = getJob(jobUUID);
+        if (job == null) {
+            return true;
+        }
+        if (!permissionsManager.isWritable(user, token, sudo, job)) {
+            return false;
+        }
         if (taskID == -1) {
             // Revert entire job
-            Job job = getJob(jobUUID);
             Job.logJobEvent(job, JobEvent.REVERT, eventLog);
             int numTasks = job.getTaskCount();
             for (int i = 0; i < numTasks; i++) {
@@ -1922,8 +1955,7 @@ public class Spawn implements Codable, AutoCloseable {
             log.warn("[task.revert] " + jobUUID + "/" + taskID);
             revert(jobUUID, backupType, rev, time, taskID);
         }
-
-
+        return true;
     }
 
     private void revert(String jobUUID, String backupType, int rev, long time, int taskID) throws Exception {
@@ -2292,7 +2324,7 @@ public class Spawn implements Codable, AutoCloseable {
         for (String host : jobHosts) {
             hostStrings.add("{host:\"" + host + "\", port:" + sPort + "}");
         }
-        return new JobMacro("spawn", "createJobHostMacro-" + job, Joiner.on(',').join(hostStrings));
+        return new JobMacro("spawn", "", "createJobHostMacro-" + job, Joiner.on(',').join(hostStrings));
     }
 
     // TODO: 1. Why is this not in SpawnMQ?  2.  Who actually listens to job config changes

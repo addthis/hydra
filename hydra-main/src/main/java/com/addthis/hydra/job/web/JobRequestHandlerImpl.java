@@ -27,6 +27,8 @@ import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
 import com.addthis.hydra.job.JobQueryConfig;
+import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
+import com.addthis.hydra.job.auth.User;
 import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.job.spawn.Spawn;
 
@@ -44,7 +46,11 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
     }
 
     @Override
-    public Job createOrUpdateJob(KVPairs kv, String username) throws Exception {
+    public Job createOrUpdateJob(KVPairs kv, String username, String token, String sudo) throws Exception {
+        User user = spawn.getPermissionsManager().authenticate(username, token);
+        if (user == null) {
+            throw new InsufficientPrivilegesException(username, "invalid credentials provided");
+        }
         String id = KVUtils.getValue(kv, "", "id", "job");
         String config = kv.getValue("config");
         String expandedConfig;
@@ -57,14 +63,18 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
             checkArgument(config != null, "Parameter 'config' is missing");
             expandedConfig = tryExpandJobConfigParam(config);
             job = spawn.createJob(
-                    kv.getValue("owner", username),
+                    kv.getValue("creator", username),
                     kv.getIntValue("nodes", -1),
                     Splitter.on(',').omitEmptyStrings().trimResults().splitToList(kv.getValue("hosts", "")),
                     kv.getValue("minionType", Minion.defaultMinionType),
                     command);
+            updateOwnership(job, user);
         } else {
             job = spawn.getJob(id);
             checkArgument(job != null, "Job %s does not exist", id);
+            if (!spawn.getPermissionsManager().isWritable(username, token, sudo, job)) {
+                throw new InsufficientPrivilegesException(username, "insufficient privileges to modify job " + id);
+            }
             if (config == null) {
                 configMayHaveChanged = false;
                 config = spawn.getJobConfig(id);
@@ -75,7 +85,7 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
                 job.setCommand(command);
             }
         }
-        updateBasicSettings(kv, job);
+        updateBasicSettings(kv, job, username);
         updateQueryConfig(kv, job);
         updateJobParameters(kv, job, expandedConfig);
         // persist update
@@ -103,8 +113,19 @@ public class JobRequestHandlerImpl implements JobRequestHandler {
         }
     }
 
-    private void updateBasicSettings(KVPairs kv, IJob job) {
+    private void updateOwnership(IJob job, User user) {
+        job.setOwner(user.name());
+        job.setGroup(user.primaryGroup());
+    }
+
+    private void updateBasicSettings(KVPairs kv, IJob job, String user) {
         job.setOwner(kv.getValue("owner", job.getOwner()));
+        job.setGroup(kv.getValue("group", job.getGroup()));
+        job.setOwnerWritable(KVUtils.getBooleanValue(kv, job.isOwnerWritable(), "ownerWritable"));
+        job.setGroupWritable(KVUtils.getBooleanValue(kv, job.isGroupWritable(), "groupWritable"));
+        job.setWorldWritable(KVUtils.getBooleanValue(kv, job.isWorldWritable(), "worldWritable"));
+        job.setLastModifiedBy(user);
+        job.setLastModifiedAt(System.currentTimeMillis());
         job.setPriority(kv.getIntValue("priority", job.getPriority()));
         job.setDescription(kv.getValue("description", job.getDescription()));
         job.setDescription(KVUtils.getValue(kv, job.getDescription(), "description", "desc"));

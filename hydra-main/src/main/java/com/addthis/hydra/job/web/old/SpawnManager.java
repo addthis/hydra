@@ -75,7 +75,6 @@ import org.slf4j.LoggerFactory;
 
 import static com.addthis.hydra.job.web.KVUtils.getValueOpt;
 
-
 public class SpawnManager {
 
     private static final Logger log = LoggerFactory.getLogger(SpawnManager.class);
@@ -270,11 +269,12 @@ public class SpawnManager {
                 JobMacro oldMacro = jobMacroManager.getEntity(label);
                 String description = kv.getValue("description", oldMacro != null ? oldMacro.getDescription() : null);
                 String owner = kv.getValue("owner", oldMacro != null ? oldMacro.getOwner() : null);
+                String group = kv.getValue("group", oldMacro != null ? oldMacro.getGroup() : null);
                 String macro = kv.getValue("macro", oldMacro != null ? oldMacro.getMacro() : null);
                 require(description != null, "missing description");
                 require(owner != null, "missing owner");
                 require(macro != null, "missing macro");
-                jobMacroManager.putEntity(label, new JobMacro(owner, description, macro), true);
+                jobMacroManager.putEntity(label, new JobMacro(owner, group, description, macro), true);
                 link.sendJSON(200, "OK", json("success",true));
             }
         });
@@ -415,9 +415,12 @@ public class SpawnManager {
             public void httpService(HTTPLink link) throws Exception {
                 KVPairs kv = link.getRequestValues();
                 String id = kv.getValue("id", "");
+                String user = kv.getValue("user", "");
+                String token = kv.getValue("token", "");
+                String sudo = kv.getValue("sudo", "");
                 int tasksToMove = kv.getIntValue("tasksToMove", -1);
                 emitLogLineForAction(kv, "job rebalance on " + id + " tasksToMove=" + tasksToMove);
-                RebalanceOutcome outcome = spawn.rebalanceJob(id, tasksToMove);
+                RebalanceOutcome outcome = spawn.rebalanceJob(id, tasksToMove, user, token, sudo);
                 link.sendShortReply(200, "OK", outcome.toString());
             }
         });
@@ -558,6 +561,9 @@ public class SpawnManager {
             public void httpService(HTTPLink link) throws Exception {
                 KVPairs kv = link.getRequestValues();
                 String id = kv.getValue("id", "");
+                String user = kv.getValue("user", "");
+                String token = kv.getValue("token", "");
+                String sudo = kv.getValue("sudo", "");
                 String type = kv.getValue("type", "gold"); // The type of backup to revert to -- defaults to gold.
                 int rev = kv.getIntValue("rev", 0); // The # of revisions to go back -- defaults to the last one.
                 long time = kv.getLongValue("time", -1); // The time of backup to go back to-- defaults to -1 which will not be used.
@@ -565,8 +571,12 @@ public class SpawnManager {
                 IJob job = spawn.getJob(id);
                 int nodeid = kv.getIntValue("node", -1);
                 // broadcast to all hosts if no node specified
-                spawn.revertJobOrTask(job.getId(), nodeid, type, rev, time);
-                link.sendJSON(200, "OK", json("id",job.getId()).put("action","reverted"));
+                boolean success = spawn.revertJobOrTask(job.getId(), user, token, sudo, nodeid, type, rev, time);
+                if (success) {
+                    link.sendJSON(200, "OK", json("id", job.getId()).put("action", "reverted"));
+                } else {
+                    link.sendJSON(401, "OK", json("id", job.getId()).put("action", "unauthorized"));
+                }
             }
         });
         server.mapService("/task.swap", new HTTPService() {
@@ -730,7 +740,9 @@ public class SpawnManager {
                 try {
                     if (kv.count() > 0) {
                         String username = kv.getValue("user", "anonymous");
-                        Job job = jobRequestHandler.createOrUpdateJob(kv, username);
+                        String token = kv.getValue("token", "");
+                        String sudo = kv.getValue("sudo", "");
+                        Job job = jobRequestHandler.createOrUpdateJob(kv, username, token, sudo);
                         // optionally kicks the job/task
                         jobRequestHandler.maybeKickJobOrTask(kv, job);
                     }

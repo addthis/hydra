@@ -1941,10 +1941,6 @@ function renderJobsCall() {
 		}
 		if (jobFilter.length > 0)
 		{
-			// restrict list to those containing a filter match
-			// if ((job.description+job.owner+job.creator+job.id).toLowerCase().indexOf(jobFilter.toLowerCase()) < 0 && ["ERR","RUN","DONE"].indexOf(jobFilter) < 0) {
-			// 	continue;
-			// }
 			if(!filter.match(job) && ["ERR","RUN","DONE"].indexOf(jobFilter) < 0 ){
 				continue;
 			}

@@ -137,6 +137,17 @@ function(
     alertify.defaults.theme.ok = "btn btn-primary";
     alertify.defaults.theme.cancel = "btn btn-danger";
     alertify.defaults.theme.input = "form-control";
+    alertify.minimalDialog || alertify.dialog('minimalDialog',function(){
+        return {
+            main:function(content){
+                this.setContent(content);
+            }
+        };
+    });
+    $('#loginForm').on('submit', app.authenticate);
+    $('#loginButton').on('click', app.login);
+    $('#sudoButton').on('click', app.sudo);
+    $('#logoutButton').on('click', app.logout);
     app.queryHost = setupData.queryHost;
     app.jobCollection = new Jobs.Collection(
         Jobs.Collection.prototype.parse(setupData.jobs)
@@ -544,6 +555,9 @@ function(
         }).render();
         backupModel.fetch();
     });
+    app.router.on("route:showChangePermissions",function(jobIds){
+        new Jobs.ChangePermissionsModalView({jobIds:jobIds}).render();
+    });
     app.router.on("route:showJobTaskTable",function(jobId){
         app.trigger("loadJob",jobId);
         var taskCollection = new Task.Collection();
@@ -662,12 +676,6 @@ function(
     });    
     app.user.on("change:username",function(){
         $("#usernameBox").html(app.user.get("username"));
-        $.ajaxSetup({
-            global:true,
-            headers:{
-                "Username":app.user.get("username")
-            }
-        });
     });
     app.on('loadJobTable',function(){
         var state = Cookies.getJSON("spawn");
@@ -798,7 +806,7 @@ function(
         }
         app.makeHtmlTitle("Clone::"+jobId);
     });
-    app.authenticate();
+    app.initialize();
     domReady(function(){
         Backbone.history.start();
         $("#healthCheckLink").click(function(event){

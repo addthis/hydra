@@ -28,14 +28,13 @@ import java.util.Map;
 import com.addthis.basis.kv.KVPairs;
 
 import com.addthis.hydra.job.alias.AliasManager;
-import com.addthis.hydra.job.web.jersey.User;
+import com.addthis.hydra.job.auth.PermissionsManager;
+import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
-
-import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,8 +47,11 @@ public class AliasResource {
 
     private final AliasManager aliasManager;
 
-    public AliasResource(AliasManager aliasManager) {
-        this.aliasManager = aliasManager;
+    private final PermissionsManager permissionsManager;
+
+    public AliasResource(Spawn spawn) {
+        this.aliasManager = spawn.getAliasManager();
+        this.permissionsManager = spawn.getPermissionsManager();
     }
 
     @GET
@@ -111,7 +113,9 @@ public class AliasResource {
     @POST
     @Path("/save")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response postAlias(@QueryParam("pairs") KVPairs kv, @Auth User user) {
+    public Response postAlias(@QueryParam("pairs") KVPairs kv,
+                              @QueryParam("user")  String user,
+                              @QueryParam("token") String token) {
         if (!kv.hasKey("name") || !kv.hasKey("jobs")) {
             return Response.serverError().entity("must supply alias name and jobs").build();
         }
@@ -129,7 +133,9 @@ public class AliasResource {
     @POST
     @Path("/delete")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response deleteAlias(@QueryParam("pairs") KVPairs kv, @Auth User user) {
+    public Response deleteAlias(@QueryParam("pairs") KVPairs kv,
+                                @QueryParam("user")  String user,
+                                @QueryParam("token") String token) {
         if (!kv.hasKey("name")) {
             return Response.serverError().entity("must supply alias name and jobs").build();
         }

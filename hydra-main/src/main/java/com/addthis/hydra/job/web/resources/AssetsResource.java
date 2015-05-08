@@ -31,10 +31,6 @@ import java.io.OutputStream;
 
 import java.net.URI;
 
-import com.addthis.hydra.job.web.jersey.User;
-
-import com.yammer.dropwizard.auth.Auth;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /**
@@ -51,8 +47,6 @@ public class AssetsResource {
     HttpServletResponse response;
     @Context
     UriInfo uriInfo;
-    @Auth
-    User user;
 
     private final String webDir;
     private static final String INDEX_PATH = "/spawn2/index.html";
