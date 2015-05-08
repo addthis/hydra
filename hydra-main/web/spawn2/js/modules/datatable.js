@@ -14,8 +14,7 @@
 define([
     "jquery",
     "backbone",
-    "jquery.dataTable",
-    "jquery.cookie"
+    "jquery.dataTable"
 ],
 function(){
     $.fn.dataTableExt.sErrMode = 'throw';

@@ -13,6 +13,8 @@
  */
 define([
     "app",
+    "alertify",
+    "jscookie",
     "modules/datatable",
     "modules/util",
     "modules/editor",
@@ -40,6 +42,8 @@ define([
 ],
 function(
     app,
+    alertify,
+    Cookies,
     DataTable,
     util,
     Editor,
@@ -157,10 +161,10 @@ function(
                 data:{id:this.id},
                 statusCode: {
                     500: function(data) {
-                        Alertify.log.error(e.responseText,5000);
+                        alertify.error(e.responseText,5);
                     },
                     200: function(data){
-                        Alertify.log.success(data.responseText,2000);
+                        alertify.success(data.responseText,2);
                     }
                 },
                 dataType: "json"
@@ -175,7 +179,7 @@ function(
             }).done(function(data){
                 self.showEnableStateChange(data, "enabled", unsafe);
             }).fail(function(e){
-                Alertify.log.error("Error enabling job "+self.id+"<br/>" + e.responseText);
+                alertify.error("Error enabling job "+self.id+"<br/>" + e.responseText);
             });
         },
         disable:function(){
@@ -187,22 +191,24 @@ function(
             }).done(function(data){
                 self.showEnableStateChange(data, "disabled");
             }).fail(function(e){
-                Alertify.log.error("Error disabling job "+self.id+"<br/>" + e.responseText);
+                alertify.error("Error disabling job "+self.id+"<br/>" + e.responseText);
             });
         },
         showEnableStateChange:function(data, state, unsafe){
             var jobId = this.id;
             if (data.changed.length > 0) {
                 var v = (unsafe ? "unsafely " : "") + state;
-                Alertify.log.success("Job " + jobId + " has been " + v, 2000);
+                alertify.success("Job " + jobId + " has been " + v, 2);
             } else if (data.unchanged.length > 0) {
-                Alertify.log.info("Job " + jobId + " is already " + state, 2000);
+                alertify.message("Job " + jobId + " is already " + state, 2);
             } else if (data.notFound.length > 0) {
-                Alertify.log.error("Job " + jobId + " is not found");
+                alertify.error("Job " + jobId + " is not found");
             } else if (data.notAllowed.length > 0) {
-                Alertify.log.error("Job " + jobId + " must be IDLE to be enabled safely");
+                alertify.error("Job " + jobId + " must be IDLE to be enabled safely");
+            } else if (data.notPermitted.length > 0) {
+                alertify.error("User has insufficient privileges for Job " + jobId);
             } else {
-                Alertify.log.error("Unexpected response data. Check console log")
+                alertify.error("Unexpected response data. Check console log")
                 console.log("Unexpected response data from /job/enable call: " + data);
             }
         },
@@ -228,9 +234,9 @@ function(
                 },
                 dataType:"text"
             }).done(function(data){
-                Alertify.log.success(data);
+                alertify.success(data);
             }).fail(function(xhr){
-                Alertify.log.error(xhr.responseText);
+                alertify.error(xhr.responseText);
             });
         },
         query:function(){
@@ -244,18 +250,18 @@ function(
                 data: {id:self.id, user:app.user.get("username")},
                 statusCode: {
                     304: function() {
-                        Alertify.log.error("Job with id "+self.id+" has \"do not delete\" parameter enabled.");
+                        alertify.error("Job with id "+self.id+" has \"do not delete\" parameter enabled.");
                     },
                     404: function() {
-                        Alertify.log.error("Job with id "+self.id+" was not found.");
+                        alertify.error("Job with id "+self.id+" was not found.");
                     },
                     500: function(res){
-                        Alertify.log.error("Error deleting job "+self.id+":\n"+res.responseText);
+                        alertify.error("Error deleting job "+self.id+":\n"+res.responseText);
                     },
                     200: function(){
                         if(!dontShowSuccessAlert){
                             app.router.navigate("#jobs",{trigger:true});
-                            Alertify.log.success("Job deleted successfully.");
+                            alertify.success("Job deleted successfully.");
                         }
                     }
                 },
@@ -269,10 +275,10 @@ function(
                  type: "GET",
                  dataType: "json"
             }).done(function(data){
-                 Alertify.log.info(self.id+" job kicked.",2000)
-             }).fail(function(e){
-                 Alertify.log.error("Error kicking: "+self.id+". <br/> "+e.responseText);
-             });
+                alertify.message(self.id+" job kicked.",2)
+            }).fail(function(e){
+                alertify.error("Error kicking: "+self.id+". <br/> "+e.responseText);
+            });
         },
         stop:function(){
             var self=this;
@@ -281,9 +287,9 @@ function(
                 type: "GET",
                 dataType: "json"
             }).done(function(data){
-                Alertify.log.info(self.id+" job stopped.",2000)
+                alertify.message(self.id+" job stopped.",2)
             }).fail(function(e){
-                Alertify.log.error("Error stopping: "+self.id+". <br/> "+e.responseText);
+                alertify.error("Error stopping: "+self.id+". <br/> "+e.responseText);
             });
         },
         kill:function(){
@@ -293,9 +299,9 @@ function(
                 type: "GET",
                 dataType: "json"
             }).done(function(data){
-                Alertify.log.info(self.id+" job killed.",2000)
+                alertify.message(self.id+" job killed.",2)
             }).fail(function(e){
-                Alertify.log.error("Error killing: "+self.id+". <br/> "+e.responseText);
+                alertify.error("Error killing: "+self.id+". <br/> "+e.responseText);
             });
         },
         save:function(param){
@@ -400,7 +406,7 @@ function(
                     self.set("config",data);
                     self.set("savedConfig",data);
                 }).fail(function(xhr){
-                    Alertify.log.error("Error loading config: "+xhr.responseText);
+                    alertify.error("Error loading config: "+xhr.responseText);
                 });
                 return ajax;
             }
@@ -500,7 +506,7 @@ function(
                 }).done(function(data){
                     self.set("expanded",data);
                 }).fail(function(xhr){
-                    Alertify.log.error("Error expanding config: "+xhr.responseText);
+                    alertify.error("Error expanding config: "+xhr.responseText);
                 });
                 return ajax;
             }
@@ -553,9 +559,9 @@ function(
                 type: "GET",
                 dataType: "json"
             }).done(function(data){
-                Alertify.log.info(count+" job(s) kicked.",2000)
+                alertify.message(count+" job(s) kicked.",2)
             }).fail(function(e){
-                Alertify.log.error("Error kicking: "+count+" jobs. <br/> "+e.responseText);
+                alertify.error("Error kicking: "+count+" jobs. <br/> "+e.responseText);
             });
         },
         stopSelected:function(jobIds){
@@ -565,9 +571,9 @@ function(
                 type: "GET",
                 dataType: "json"
             }).done(function(data){
-                Alertify.log.info(count+" job(s) stopped.",2000)
+                alertify.message(count+" job(s) stopped.",2)
             }).fail(function(e){
-                Alertify.log.error("Error stopping: "+count+" jobs. <br/> "+e.responseText);
+                alertify.error("Error stopping: "+count+" jobs. <br/> "+e.responseText);
             });
         },
         killSelected:function(jobIds){
@@ -577,9 +583,9 @@ function(
                 type: "GET",
                 dataType: "text"
             }).done(function(data){
-                Alertify.log.info(count+" job(s) killed.",2000)
+                alertify.message(count+" job(s) killed.",2)
             }).fail(function(e){
-                Alertify.log.error("Error killing: "+count+" jobs. <br/> "+e.responseText);
+                alertify.error("Error killing: "+count+" jobs. <br/> "+e.responseText);
             });
         },
         enableBatch:function(jobIds, unsafe){
@@ -592,7 +598,7 @@ function(
             }).done(function(data){
                 self.showEnableStateChange(data, "enabled", unsafe);
             }).fail(function(e){
-                Alertify.log.error("Error enabling: "+count+" jobs. <br/> "+e.responseText);
+                alertify.error("Error enabling: "+count+" jobs. <br/> "+e.responseText);
             });
         },
         disableBatch:function(jobIds){
@@ -605,28 +611,31 @@ function(
             }).done(function(data){
                 self.showEnableStateChange(data, "disabled");
             }).fail(function(e){
-                Alertify.log.error("Error disabling: "+count+" jobs. <br/> "+e.responseText);
+                alertify.error("Error disabling: "+count+" jobs. <br/> "+e.responseText);
             });
         },
         showEnableStateChange:function(data, state, unsafe){
             if (data.changed.length > 0) {
                 var v = (unsafe ? "unsafely " : "") + state;
-                Alertify.log.success(data.changed.length + " job(s) have been " + v, 5000);
+                alertify.success(data.changed.length + " job(s) have been " + v, 5);
             }
             if (data.unchanged.length > 0) {
-                Alertify.log.info(data.unchanged.length + " job(s) are already " + state, 5000);
+                alertify.message(data.unchanged.length + " job(s) are already " + state, 5);
             }
             if (data.notFound.length > 0) {
-                Alertify.log.error(data.notFound.length + " job(s) are not found");
+                alertify.error(data.notFound.length + " job(s) are not found");
             }
             if (data.notAllowed.length > 0) {
-                Alertify.log.error(data.notAllowed.length + " job(s) cannot be enabled safely - they must be IDLE");
+                alertify.error(data.notAllowed.length + " job(s) cannot be enabled safely - they must be IDLE");
+            }
+            if (data.notPermitted.length > 0) {
+                alertify.error(data.notPermitted.length + " job(s) insufficient priviledges");
             }
         },
         deleteSelected:function(jobIds){
             var count = jobIds.length;
             var self=this;
-            Alertify.dialog.confirm("Are you sure you would like to DELETE " + count + " " + (count > 1 ? " jobs" : " job") + "?", function (resp) {
+            alertify.confirm("Are you sure you would like to DELETE " + count + " " + (count > 1 ? " jobs" : " job") + "?", function (resp) {
 
                 _.each(jobIds,function(jobId){
                     var job = self.get(jobId);
@@ -840,7 +849,7 @@ function(
         handleKickButtonClick:function(event){
             var ids = this.getSelectedIds(),self=this;
             if(app.isQuiesced){
-                Alertify.dialog.confirm("Cluster is quiesced, are you sure you want to kick "+ids.length+" job(s)?", function (e) {
+                alertify.confirm("Cluster is quiesced, are you sure you want to kick "+ids.length+" job(s)?", function (e) {
                     self.collection.kickSelected(ids);
                 });
             }else{
@@ -873,7 +882,7 @@ function(
             app.router.navigate("alerts/create/" + ids.join(), {trigger:true});
         },        
         handleFindDeletedJobButtonClick:function(event){
-            Alertify.dialog.prompt("Enter the deleted job ID:",function(str){
+            alertify.prompt("Enter the deleted job ID:","",function(evt, str){
                 window.open("/job/config.deleted?id="+str,"_blank");
             });
         },
@@ -1444,12 +1453,12 @@ function(
             var name = node > -1 ? "Task " + node : "Job";
             this.model.revert(params).done(function(data,result,xhr){
                 if (params.hasOwnProperty("revision")) {
-                    Alertify.log.info("Attempted to revert to a previous run (which may not exist)");
+                    alertify.message("Attempted to revert to a previous run (which may not exist)");
                 } else {
-                    Alertify.log.success(name + " reverted successfully.");
+                    alertify.success(name + " reverted successfully.");
                 }
             }).fail(function(xhr){
-                Alertify.log.error("Error reverting " + name + ":<br/>" + xhr.responseText);
+                alertify.error("Error reverting " + name + ":<br/>" + xhr.responseText);
             });
         },
         handleRunButtonClick:function(event){
@@ -1517,7 +1526,7 @@ function(
         handleCloneClick:function(event){
             event.preventDefault();
             if (this.model.attributes.dontCloneMe) {
-                Alertify.dialog.alert("Job with id "+this.model.id+" has \"do not clone\" parameter enabled.");
+                alertify.alert("Job with id "+this.model.id+" has \"do not clone\" parameter enabled.");
             } else {
                 app.router.navigate("#jobs/"+this.model.id+"/conf/clone",{trigger:true});
             }
@@ -1525,7 +1534,7 @@ function(
         handleCommitJobButton:function(event){
             event.preventDefault();
             var self=this;
-            Alertify.dialog.prompt("Enter commit message:",function(str){
+            alertify.prompt("Enter commit message:","",function(evt, str){
                 self.model.commit=str;
                 self.handleSaveJobButtonClick(event);
             });
@@ -1546,10 +1555,10 @@ function(
             this.model.validate(config,params).done(function(data){
                 var log,model=self.model;
                 if(data.result=="preExpansionError"){
-                    log=Alertify.log.error(data.message, 60000);
+                    log=alertify.error(data.message, 60);
                 }
                 else if(data.result=="postExpansionError"){
-                    log=Alertify.log.error(data.message, 60000);
+                    log=alertify.error(data.message, 60);
                     if (!_.isEmpty(model.cloneId)){
                         app.router.navigate("#jobs/"+model.cloneId+"/clone/expanded",{trigger:true});
                     }
@@ -1561,11 +1570,11 @@ function(
                     }
                 }
                 else{
-                    log=Alertify.log.success("Job is valid.");
+                    log=alertify.success("Job is valid.");
                 }
                 //Spawn.updateSingleCategoryAlerts('validation', log)
             }).fail(function(xhr){
-                Alertify.log.error("Error requesting job validation.");
+                alertify.error("Error requesting job validation.");
             });
         },
         handleStateChange:function(model){
@@ -1596,7 +1605,7 @@ function(
                 var tempConfig = this.configModel.get("config");
                 var config = this.configModel.get("savedConfig");
                 if (tempConfig !== config) {
-                        Alertify.log.create("warn", "Warning: kicking job that may have unsaved changes!", 12000);
+                        alertify.warning("Warning: kicking job that may have unsaved changes!", 12);
                 }
             }
             var params = this.parameterCollection.toJSON();
@@ -1604,20 +1613,20 @@ function(
                 var validatePromise = self.model.validate(config,params);
                 validatePromise.done(function(data){
                     if (data.result=="preExpansionError" || data.result=="postExpansionError") {
-                        Alertify.dialog.confirm("Job failed validation, are you sure you want to kick?", function (e) {
+                        alertify.confirm("Job failed validation, are you sure you want to kick?", function (e) {
                             self.model.kick();
                         });
                     } else {
                         self.model.kick();
                     }
                 }).fail(function(data){
-                    Alertify.dialog.confirm("Something went wrong with checking validation, do you still want to kick?", function (e) {
+                    alertify.confirm("Something went wrong with checking validation, do you still want to kick?", function (e) {
                         self.model.kick();
                     });
                 });
             };
             if(app.isQuiesced){
-                Alertify.dialog.confirm("Cluster is quiesced, are you sure you want to kick job '"+this.model.get("description")+"'?", function (e) {
+                alertify.confirm("Cluster is quiesced, are you sure you want to kick job '"+this.model.get("description")+"'?", function (e) {
                     confirmIfInvalid();
                 });
             }else{
@@ -1649,7 +1658,7 @@ function(
             event.preventDefault();
             event.stopImmediatePropagation();
             var self=this;
-            Alertify.dialog.confirm("Are you sure you would like to delete job '"+this.model.get("description")+"'?", function (e) {
+            alertify.confirm("Are you sure you would like to delete job '"+this.model.get("description")+"'?", function (e) {
                 self.model.delete();
             });
         },
@@ -1683,13 +1692,13 @@ function(
             var validatePromise = this.model.validate(config,params);
             validatePromise.done(function(data){
                 if(data.result=="preExpansionError" || data.result=="postExpansionError"){
-                    Alertify.log.create("warn", "Warning: saving job that failed validation!<br>" + data.message, 12000);
+                    alertify.warning("Warning: saving job that failed validation!<br>" + data.message, 12);
                 }
             }).fail(function(data){
-                Alertify.log.error("Error requesting job validation.");
+                alertify.error("Error requesting job validation.");
             });
             this.model.save(formData).done(function(resp){
-                Alertify.log.info(resp.id+"col. saved successfully.",2000)
+                alertify.message(resp.id+"col. saved successfully.",2)
                 self.configModel.set("savedConfig", config);
                 self.model.trigger("save.done");
                 self.model.commit="";
@@ -1709,7 +1718,7 @@ function(
                             app.router.navigate(location,{trigger:true});
                         },
                         error:function(xhr){
-                            Alertify.log.error("Error loading job data for: "+resp.id);
+                            alertify.error("Error loading job data for: "+resp.id);
                         }
                     });
                 }
@@ -1718,7 +1727,7 @@ function(
                 }
 
             }).fail(function(xhr){
-                Alertify.log.error("Error saving job: "+ xhr.responseText);
+                alertify.error("Error saving job: "+ xhr.responseText);
                 self.model.trigger("save.error");
                 self.$el.find("#saveJobButton").removeClass("disabled");
             });
@@ -2191,10 +2200,10 @@ function(
             var commitModel = this.historyCollection.get(commit);
             commitModel.load().done(function(data){
                 self.configModel.set("config",data);
-                Alertify.log.success("Loaded config from "+commit+". Save the job to finalize the change.");
+                alertify.success("Loaded config from "+commit+". Save the job to finalize the change.");
                 app.router.navigate("#jobs/"+jobId+"/conf",{trigger:true});
             }).fail(function(xhr){
-                Alertify.log.error("Error loading config for commit: "+commit);
+                alertify.error("Error loading config for commit: "+commit);
             });
             //this.configModel.set("config",c)
         }
@@ -2235,7 +2244,7 @@ function(
         initialize:function(){
         },
         render:function(){
-            var cookie = $.cookie("hideParam");
+            var cookie = Cookies.get("hideParam");
             var html = this.template({
                 hidden:_.isEqual(cookie,1),
                 parameters:this.collection.toJSON()
@@ -2246,7 +2255,7 @@ function(
         handleHideParamClick:function(event){
             var val = this.$el.find("a#hideParamLink").data("hide");
             var hideVal = (parseInt(val)+1)%2;
-            $.cookie("hideParam",hideVal);
+            Cookies.set("hideParam", hideVal);
         },
         handleInputKeyUp:function(event){
             var input = $(event.currentTarget);

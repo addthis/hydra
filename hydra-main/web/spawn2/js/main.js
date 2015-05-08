@@ -17,12 +17,12 @@ require.config({
     paths: {
         "jquery": "./vendor/jquery-1.9.1"
         ,"backbone": "./vendor/backbone"
+        ,"jscookie": "./vendor/js.cookie"
         ,"underscore": "./vendor/underscore"
         ,"bootstrap":"./vendor/bootstrap"
         ,"jquery.dataTable":"./vendor/jquery.dataTables.nightly"
         ,"dataTable.scroller":"./vendor/dataTables.scroller"
         ,"domReady":"./vendor/domReady"
-        //,"jquery.resize":"./vendor/jquery.ba-resize"
         ,"date":"./vendor/date"
         ,"setupData":"/update/setup"
         ,"d3":"./vendor/d3.v2"
@@ -30,7 +30,6 @@ require.config({
         ,"json":"./vendor/json"
         ,"text":"./vendor/text"
         ,"localstorage":"./vendor/backbone.localStorage"
-        ,"jquery.cookie":"./vendor/jquery.cookie"
         ,"alertify":"./vendor/alertify"
         ,"ace":"./vendor/ace"
         ,"js-mode":"./vendor/mode-javascript"
@@ -52,6 +51,9 @@ require.config({
         'bootstrap':{
             deps:['jquery']
         },
+        "jscookie":{
+            exports:['Cookies']
+        },
         "jquery":{
             exports:'jQuery'
         },
@@ -67,7 +69,6 @@ require.config({
             exports:"nv"
         },
         "jquery.dataTable":['jquery'],
-        //"jquery.resize":['jquery'],
         'jquery.cookie':['jquery'],
         "dataTable.scroller":['jquery.dataTable']
     },
@@ -81,6 +82,8 @@ require.config({
 });
 require([
     "app",
+    "alertify",
+    "jscookie",
     "router",
     "modules/jobs",
     "modules/macro",
@@ -106,6 +109,8 @@ require([
 ],
 function(
     app,
+    alertify,
+    Cookies,
     Router,
     Jobs,
     Macro,
@@ -127,6 +132,11 @@ function(
     _,
     $
 ){
+    alertify.defaults.glossary.title="";
+    alertify.defaults.transition = "slide";
+    alertify.defaults.theme.ok = "btn btn-primary";
+    alertify.defaults.theme.cancel = "btn btn-danger";
+    alertify.defaults.theme.input = "form-control";
     app.queryHost = setupData.queryHost;
     app.jobCollection = new Jobs.Collection(
         Jobs.Collection.prototype.parse(setupData.jobs)
@@ -429,7 +439,7 @@ function(
             commit.load().done(function(data){
                 commit.set("historyConfig",data);
             }).fail(function(xhr){
-                Alertify.dialog.error("Error loading commit: "+xhr.responseText);
+                alertify.error("Error loading commit: "+xhr.responseText);
             });
         }
     });
@@ -455,7 +465,7 @@ function(
             commit.diff().done(function(data){
                                                  commit.set("diff",data);
                                                  }).fail(function(xhr){
-                Alertify.dialog.error("Error loading diff: "+xhr.responseText);
+                alertify.error("Error loading diff: "+xhr.responseText);
             });
         }
     });
@@ -660,7 +670,7 @@ function(
         });
     });
     app.on('loadJobTable',function(){
-        var state = app.getCookie("spawn");
+        var state = Cookies.getJSON("spawn");
         if(!_.isUndefined(state) && state.jobCompact){
             app.trigger("loadJobCompactTable");
         }
@@ -670,9 +680,9 @@ function(
     });
     app.on('loadJobCompactTable',function(){
         if(_.isUndefined(app.jobTable) || !_.isEqual(app.jobTable.id,'compactJobTable')){
-            var state = app.getCookie("spawn") || {};
+            var state = Cookies.getJSON("spawn") || {};
             state.jobCompact=true;
-            app.setCookie("spawn",state);
+            Cookies.set("spawn", state);
             app.jobTable = new Jobs.CompactTable({
                 id:"compactJobTable",
                 collection:app.jobCollection
@@ -681,9 +691,9 @@ function(
     });
     app.on('loadJobComftTable',function(){
         if(_.isUndefined(app.jobTable) || !_.isEqual(app.jobTable.id,'comfyJobTable')){
-            var state = app.getCookie("spawn") || {};
+            var state = Cookies.getJSON("spawn") || {};
             state.jobCompact=false;
-            app.setCookie("spawn",state);
+            Cookies.set("spawn", state);
             app.jobTable= new Jobs.ComfyTableView({
                 id:"comfyJobTable",
                 collection:app.jobCollection
@@ -698,7 +708,7 @@ function(
         }).load().done(function(data){
             app.configModel.set("config",data);
         }).fail(function(data){
-            Alertify.dialog.error("Error loading commit "+commit);
+            alertify.error("Error loading commit "+commit);
         });
     });
     app.on("loadJob",function(jobId){
@@ -715,7 +725,7 @@ function(
             if(_.isUndefined(app.job) || !_.isEqual(app.job.id,jobId) || !_.isEmpty(app.cloneId)){
                 var job = app.jobCollection.get(jobId);
                 if(_.isUndefined(job)){
-                    Alertify.log.error("Job "+jobId+" not found.");
+                    alertify.error("Job "+jobId+" not found.");
                     app.router.navigate("#jobs",{trigger:true});
                     return;
                 }
@@ -812,10 +822,10 @@ function(
     app.server.on("cluster.quiesce",function(message){
         app.isQuiesced = Boolean(message.quiesced);
         if(app.isQuiesced){
-            Alertify.log.info("Cluster has been quiesced by "+message.username);
+            alertify.message("Cluster has been quiesced by "+message.username);
         }
         else{
-            Alertify.log.info("Cluster has been reactivatd by "+message.username);
+            alertify.message("Cluster has been reactivatd by "+message.username);
         }
         app.checkQuiesced();
     });

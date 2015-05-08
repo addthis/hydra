@@ -15,36 +15,27 @@
 //app.js is your application-level namespace where you instantiate all your top-level application level function, etc.. no router logic should go here
 define([
     "router",
+    "alertify",
     "modules/server",
-    "jquery.cookie",
+    "jscookie",
     "jquery",
     "underscore",
     "backbone",
-    "jquery.cookie",
     "alertify"
 ],
 function(
     Router,
+    alertify,
     server,
-    User
+    Cookies
 ){
-    $.cookie.json=true;
     var app = {
         router: new Router(),
-        cookieExpires:7,
         currentView:null,
         mainSelector:"#main",
         user: new Backbone.Model({username:""}),
         server:server,
         activeModels:[],
-        setCookie:function(name,value){
-            $.cookie(name,value,{
-                expired:this.cookieExpires
-            });
-        },
-        getCookie:function(name){
-            return $.cookie(name);
-        },
         showView:function(view,link,activeModels){
             var self=this;
             if(!_.isNull(this.currentView)){
@@ -95,9 +86,9 @@ function(
                 type: "GET"
             }).done(function(data){
                 if (data.everythingOK) {
-                    Alertify.log.info("Health check passed");
+                    alertify.message("Health check passed");
                 } else {
-                    Alertify.dialog.alert("Health check failed: " + JSON.stringify(data));
+                    alertify.alert("Health check failed: " + JSON.stringify(data));
                 }
             });
         },
@@ -110,11 +101,11 @@ function(
                     type: "GET",
                     data: {quiesce:(self.isQuiesced?"0":"1")}
                 }).done(function(data){
-                    Alertify.log.info("Cluster "+(data.quiesced=="1"?"quiesced":"reactivated")+" successfully.");
-                    self.isQuiesced= !self.isQuiesced;
-                    self.checkQuiesced();
+                    alertify.message("Cluster "+(data.quiesced=="1"?"quiesced":"reactivated")+" successfully.");
+                    app.isQuiesced= !app.isQuiesced;
+                    app.checkQuiesced();
                 }).fail(function(){
-                    Alertify.dialog.alert("You do not have sufficient privileges to quiesce cluster");
+                    alertify.alert("You do not have sufficient privileges to quiesce cluster");
                 });
             });
         },
@@ -123,7 +114,7 @@ function(
             console.log(date.toString("hh:mm:ss")+" - "+text);
         },
         checkQuiesced:function(){
-            if(this.isQuiesced){
+            if(app.isQuiesced){
                 $("#quiesceLink").text("Reactivate");
                 $("span#quiescedLabel").show();
                 $("#topNavbar").addClass("navbar-inverse");
@@ -135,6 +126,5 @@ function(
             }
         }
     };
-    _.bindAll(app,'setCookie','getCookie');
     return _.extend(Backbone.Events,app);
 });
