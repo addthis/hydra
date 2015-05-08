@@ -114,8 +114,6 @@ import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.job.store.SpawnDataStoreKeys;
 import com.addthis.hydra.job.web.SpawnService;
-import com.addthis.hydra.job.web.old.SpawnHttp;
-import com.addthis.hydra.job.web.old.SpawnManager;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.util.DirectedGraph;
@@ -161,8 +159,6 @@ public class Spawn implements Codable, AutoCloseable {
 
     // misc spawn configs
 
-    private static final boolean enableSpawn2  = Parameter.boolValue("spawn.v2.enable", true);
-
     static final int DEFAULT_REPLICA_COUNT = Parameter.intValue("spawn.defaultReplicaCount", 1);
     static final boolean ENABLE_JOB_FIXDIRS_ONCOMPLETE = Parameter.boolValue("job.fixdirs.oncomplete", true);
 
@@ -184,7 +180,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     public static void main(String[] args) throws Exception {
         Spawn spawn = Configs.newDefault(Spawn.class);
-        if (enableSpawn2) new SpawnService(spawn).start();
+        spawn.startWebInterface();
         // register jvm shutdown hook to clean up resources
         Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(spawn), "Spawn Shutdown Hook"));
     }
@@ -192,7 +188,8 @@ public class Spawn implements Codable, AutoCloseable {
     SpawnQueuesByPriority taskQueuesByPriority = new SpawnQueuesByPriority();
 
     private SpawnMQ spawnMQ;
-    private Server jetty;
+    private SpawnService spawnService;
+
     private volatile int lastQueueSize = 0;
 
     final Lock jobLock = new ReentrantLock();
@@ -228,6 +225,9 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull private final SystemManager systemManager;
     @Nonnull private final RollingLog eventLog;
 
+    private final int webPort;
+    private final int webPortSSL;
+
     @Nullable private final JobStore jobStore;
 
     @JsonCreator
@@ -235,6 +235,7 @@ public class Spawn implements Codable, AutoCloseable {
                   @JsonProperty(value = "queryPort", required = true) int queryPort,
                   @JsonProperty("queryHttpHost") String queryHttpHost,
                   @JsonProperty(value = "webPort", required = true) int webPort,
+                  @JsonProperty(value = "webPortSSL", required = true) int webPortSSL,
                   @JsonProperty("httpHost") String httpHost,
                   @JsonProperty("dataDir") File dataDir,
                   @JsonProperty("stateFile") File stateFile,
@@ -260,6 +261,8 @@ public class Spawn implements Codable, AutoCloseable {
         this.stateFile = stateFile;
         this.permissionsManager = permissionsManager;
         this.jobDefaults = jobDefaults;
+        this.webPort = webPort;
+        this.webPortSSL = webPortSSL;
         if (stateFile.exists() && stateFile.isFile()) {
             spawnState = Jackson.defaultMapper().readValue(stateFile, SpawnState.class);
         } else {
@@ -282,7 +285,7 @@ public class Spawn implements Codable, AutoCloseable {
         this.hostManager = new HostManager(zkClient);
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
         
-        this.systemManager = new SystemManagerImpl(this, debug, queryHttpHost + ":" + queryPort, 
+        this.systemManager = new SystemManagerImpl(this, debug, queryHttpHost + ":" + queryPort,
                 httpHost + ":" + webPort, authenticationTimeout, sudoTimeout);
         this.jobConfigManager = new JobConfigManager(spawnDataStore);
         // look for local object to import
@@ -358,8 +361,6 @@ public class Spawn implements Codable, AutoCloseable {
                 writeSpawnQueue();
             }
         }, queueKickInterval, queueKickInterval, MILLISECONDS);
-        // start http commands listener(s)
-        startSpawnWeb(webDir, webPort);
         balancer.startAutobalanceTask();
         balancer.startTaskSizePolling();
         this.jobStore = jobStore;
@@ -367,6 +368,11 @@ public class Spawn implements Codable, AutoCloseable {
                                        eventLogCompress, logMaxSize, logMaxAge);
         Metrics.newGauge(Spawn.class, "minionsDown", new DownMinionGauge(hostManager));
         writeState();
+    }
+
+    public void startWebInterface() throws Exception {
+        spawnService = new SpawnService(this);
+        spawnService.start();
     }
 
     void writeState() {
@@ -432,17 +438,6 @@ public class Spawn implements Codable, AutoCloseable {
 
     public void releaseJobLock() {
         jobLock.unlock();
-    }
-
-    private void startSpawnWeb(File webDir, int webPort) throws Exception {
-        log.info("[init] starting http server");
-        SpawnHttp http = new SpawnHttp(this, webDir);
-        new SpawnManager().register(http);
-        jetty = new Server(webPort);
-        jetty.getConnectors()[0].setRequestBufferSize(65535);
-        jetty.getConnectors()[0].setRequestHeaderSize(requestHeaderBufferSize);
-        jetty.setHandler(http);
-        jetty.start();
     }
 
     public String getUuid() {
@@ -2596,14 +2591,6 @@ public class Spawn implements Codable, AutoCloseable {
     /** Called by Thread registered to Runtime triggered by sig-term. */
     @Override public void close() {
         shuttingDown.set(true);
-        if (jetty != null) {
-            try {
-                jetty.stop();
-            } catch (Exception e) {
-                log.warn("", e);
-            }
-        }
-
         try {
             expandKickExecutor.shutdown();
             scheduledExecutor.shutdown();
@@ -3214,4 +3201,11 @@ public class Spawn implements Codable, AutoCloseable {
         return spawnDataStore;
     }
 
+    public int getWebPort() {
+        return webPort;
+    }
+
+    public int getWebPortSSL() {
+        return webPortSSL;
+    }
 }

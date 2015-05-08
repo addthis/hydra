@@ -56,8 +56,6 @@ public class SpawnService {
     private static final String CLASSPATH_PROTOCOL = "classpath:";
     private static final int batchInterval = Integer.parseInt(System.getProperty("spawn.batchtime", "500"));
     private static final int pollTimeout = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
-    public static final int webPort = Parameter.intValue("spawn.http.port", 5052);
-    public static final int webPortSSL = Parameter.intValue("spawn.https.port", 5053);
     private static final String KEYSTORE_PATH = Parameter.value("spawn.https.keystore.path");
     private static final String KEYSTORE_PASSWORD = Parameter.value("spawn.https.keystore.password");
     private static final String KEYMANAGER_PASSWORD = Parameter.value("spawn.https.keymanager.password");
@@ -65,12 +63,16 @@ public class SpawnService {
     private static final String webDir = Parameter.value("spawn.web.dir", "web");
     private static final String indexFilename = Parameter.value("spawn.index.file", "index.html");
 
+    private final int webPort;
+    private final int webPortSSL;
     private final Server jetty;
     private final SpawnConfig config;
     private final WebSocketManager webSocketManager;
 
     public SpawnService(final Spawn spawn) throws Exception {
-        this.jetty = new Server(webPort);
+        this.jetty = new Server();
+        this.webPort = spawn.getWebPort();
+        this.webPortSSL = spawn.getWebPortSSL();
 
         SelectChannelConnector selectChannelConnector = new SelectChannelConnector();
         selectChannelConnector.setPort(webPort);
