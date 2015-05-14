@@ -38,7 +38,9 @@ public class ZnodeJob implements IJob {
 
     // Codable bundle of basic state
     @JsonIgnoreProperties({"stomp", "killSignal", "readOnlyReplicas", "strictReplicas", "hadMoreData",
-                           "replicationFactor", "alerts", "properties", "backups", "submitCommand", "retries"})
+                           "replicationFactor", "alerts", "properties", "backups", "submitCommand", "retries",
+                           "group", "ownerWritable", "groupWritable", "worldWritable",
+                           "ownerExecutable", "groupExecutable", "worldExecutable", "lastModifiedBy", "lastModifiedAt"})
     public static class RootZnodeData {
 
         @FieldConfig private JobState state;
