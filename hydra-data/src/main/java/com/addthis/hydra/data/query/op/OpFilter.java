@@ -27,6 +27,22 @@ import io.netty.channel.ChannelProgressivePromise;
 
 import static com.addthis.codec.config.Configs.decodeObject;
 
+/**
+ * <p>This query operation <span class="hydra-summary">runs arbitrary bundle filters.</span>.
+ * <p/>
+ * <p>Example:</p>
+ * <pre>
+ * hello 72
+ * hi 12
+ *
+ * filter={from.index:0, require:hello}
+ *
+ * hello 72
+ * </pre>
+ *
+ * @user-reference
+ * @hydra-name filter
+ */
 public class OpFilter extends AbstractRowOp {
 
     private final BundleFilter filter;
