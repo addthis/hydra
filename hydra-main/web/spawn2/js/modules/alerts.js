@@ -13,6 +13,7 @@
  */
 define([
 		"app",
+		"alertify",
 		"modules/datatable",
 	    "modules/util",		
        	"text!../../templates/alerts.filter.html",
@@ -22,6 +23,7 @@ define([
 ],
 function(
 		 app,
+		 alertify,
 		 DataTable,
 		 util,		 
 		 alertFilterTemplate, 
@@ -200,11 +202,11 @@ function(
                 		model.delete().done(function(){
                     		app.alertCollection.remove(model.id);
                 		}).fail(function(xhr){
-                    		Alertify.log.error("Error deleting alert: "+model.id);
+                    		alertify.error("Error deleting alert: "+model.id);
                     	});
                 	}
             	});
-            	Alertify.log.success(ids.length+" alerts deleted.");
+            	alertify.success(ids.length+" alerts deleted.");
             	app.router.navigate("#alerts",{trigger:true});
         	},
     	});
@@ -233,23 +235,23 @@ function(
         	handleDeleteButtonClick:function(event){
           		var self=this;
           		this.model.delete().done(function(data){
-            		Alertify.log.success("Alert deleted successfully.");
+            		alertify.success("Alert deleted successfully.");
                		app.router.navigate("#alerts",{trigger:true});
         		}).fail(function(xhr){
-            		Alertify.log.error("Error deleting alert.");
+            		alertify.error("Error deleting alert.");
         		});
         	},
         	handleSaveButtonClick:function(event){
             	var self=this,isNew=this.model.isNew();
             	if (!this.verifyConfig()) {
-            		Alertify.log.error("Failed to save alert -- config failed verification.")
+            		alertify.error("Failed to save alert -- config failed verification.")
             		return;
             	}
             	this.model.save().done(function(data){
 					if (data.message) {
-						Alertify.log.error("Error saving alert: " + data.message);
+						alertify.error("Error saving alert: " + data.message);
 					} else {
-						Alertify.log.success("Alert saved successfully.");
+						alertify.success("Alert saved successfully.");
 						if (!self.model.get("alertId")) {
 							self.model.set("alertId", data.alertId);
 							self.model.fetch({
@@ -261,13 +263,13 @@ function(
 									app.router.navigate(location,{trigger:true});
 								},
 								error:function(xhr) {
-									Alertify.log.error("Error loading alert for: " + data.alertId);
+									alertify.error("Error loading alert for: " + data.alertId);
 								}
 							});
 						}
 					}
 				}).fail(function(xhr){
-                    Alertify.log.error("Error saving alert.");
+                    alertify.error("Error saving alert.");
             	});
         	},
         	handleInputKeyUp:function(event){
@@ -310,28 +312,28 @@ function(
         		var email = this.model.get("email");
         		var jobIds = this.model.get("jobIds");
         		if (!email || !jobIds) {
-        			Alertify.log.error("Please enter an email and at least one jobId for this alert.");
+        			alertify.error("Please enter an email and at least one jobId for this alert.");
         			return false;
         		}
         		if (email.indexOf("@") == -1) {
-        			Alertify.log.error("Alert email field appears invalid -- please include an '@' character.");
+        			alertify.error("Alert email field appears invalid -- please include an '@' character.");
         			return false;
         		}
         		if (type == 4 || type == 5 || type == 8) {
         			var canaryPath = this.model.get("canaryPath");
         			if (!canaryPath) {
-        				Alertify.log.error("Please fill out canary path field.");
+        				alertify.error("Please fill out canary path field.");
         				return false;
         			}
         			if (type == 5 && (canaryPath.match(/\+/g)||[]).length != 1) {
- 						Alertify.log.error("Please include exactly one '+' corresponding to a numeric field (generally, +count) in your canary path field.");
+ 						alertify.error("Please include exactly one '+' corresponding to a numeric field (generally, +count) in your canary path field.");
  						return false;
         			}
         		}
         		if (type == 4 || type == 5) {
         			var canaryConfigThreshold = this.model.get("canaryConfigThreshold");
         			if (!canaryConfigThreshold) {
-        				Alertify.log.error("Please fill out all canary configuration fields.");
+        				alertify.error("Please fill out all canary configuration fields.");
         				return false;
         			}
         		}

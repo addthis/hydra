@@ -100,6 +100,66 @@
         <td width="70%"><input name="dontAutoBalanceMe" class="trackable" type="checkbox" <%-(job.dontAutoBalanceMe?"checked='true'":"")%>></td>
     </tr>
     <tr class="row">
+        <th colspan="2">Permissions Settings</th>
+    </tr>
+    <tr class="row">
+        <td width="30%">Creator</td>
+        <td width="70%">
+            <input name="creator" class="form-control trackable" readonly style="margin:0px;" type="text" value="<%-job.creator%>"></input>
+        </td>
+    </tr>
+    <tr class="row">
+        <td width="30%">Owner</td>
+        <td width="70%">
+            <input id="jobOwner" name="owner" class="form-control trackable" style="margin:0px;" type="text" value="<%-job.owner%>"></input>
+        </td>
+    </tr>
+    <tr class="row">
+        <td width="30%">Group</td>
+        <td width="70%">
+            <input id="jobGroup" name="group" class="form-control trackable" style="margin:0px;" type="text" value="<%-job.group%>"></input>
+        </td>
+    </tr>
+    <tr class="row">
+        <td width="30%">Writable</td>
+        <td>
+            <input id="ownerWritable" name="ownerWritable" class="trackable" style="margin:0px;" type="checkbox" <%-(job.ownerWritable?"checked='true'":"")%>></input>
+            <label for="ownerWritable">owner</label>
+            <input id="groupWritable" name="groupWritable" class="trackable" style="margin-left:10px;" type="checkbox" <%-(job.groupWritable?"checked='true'":"")%>></input>
+            <label for="groupWritable">group</label>
+            <input id="worldWritable" name="worldWritable" class="trackable" style="margin-left:10px;" type="checkbox" <%-(job.worldWritable?"checked='true'":"")%>></input>
+            <label for="worldWritable">world</label>
+        </td>
+    </tr>
+    <tr class="row">
+        <td width="30%">Executable</td>
+        <td>
+            <input id="ownerExecutable" name="ownerExecutable" class="trackable" style="margin:0px;" type="checkbox" <%-(job.ownerExecutable?"checked='true'":"")%>></input>
+            <label for="ownerExecutable">owner</label>
+            <input id="groupExecutable" name="groupExecutable" class="trackable" style="margin-left:10px;" type="checkbox" <%-(job.groupExecutable?"checked='true'":"")%>></input>
+            <label for="groupExecutable">group</label>
+            <input id="worldExecutable" name="worldExecutable" class="trackable" style="margin-left:10px;" type="checkbox" <%-(job.worldExecutable?"checked='true'":"")%>></input>
+            <label for="worldExecutable">world</label>
+        </td>
+    </tr>
+    <tr class="row">
+        <td width="30%">Last Modified By</td>
+        <td width="70%">
+            <input name="lastModifiedBy" class="form-control trackable" readonly style="margin:0px;" type="text" value="<%-job.lastModifiedBy%>"></input>
+        </td>
+    </tr>
+    <tr class="row">
+        <td width="30%">Last Modified At</td>
+        <td width="70%">
+            <input name="lastModifiedAt" class="form-control trackable" readonly style="margin:0px;" type="text" value="<%-new Date(job.lastModifiedAt).toString('MM/dd/yy HH:mm')%>"></input>
+        </td>
+    </tr>
+    <tr class="row">
+        <td width="30%">&nbsp;</td>
+        <td wdith="70%"><button type="button" id="settingsChangePermission" class="btn btn-default" >Change Permissions</button>
+            <span style="vertical-align:middle" >Owner and group can change permissions when writable status is disabled.</span></td>
+    </tr>
+    <tr class="row">
         <th colspan="2">Query Settings</th>
     </tr>
     <tr class="row">

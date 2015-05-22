@@ -13,6 +13,7 @@
  */
 define([
     "app",
+    "alertify",
     "modules/datatable",
     "modules/util",
     "text!../../templates/command.filter.html",
@@ -22,6 +23,7 @@ define([
 ],
 function(
     app,
+    alertify,
     DataTable,
     util,
     commandFilterTemplate,
@@ -50,18 +52,6 @@ function(
                 data: data,
                 dataType: "json"
             });
-            /*
-
-             success: function(data){
-             Alertify.log.success("Command saved successfully.")
-             self.set(data);
-             Spawn.commandCollection.add(data);
-             Spawn.router.navigate("#commands/"+data.name,{trigger:true});
-             },
-             error: function(){
-             Alertify.log.error("Error saving command.");
-             },
-            * */
         },
         delete:function(){
             var name = this.get("name");
@@ -72,18 +62,6 @@ function(
                 data: {name:name},
                 dataType:"text"
             });
-            /**,
-             success: function(){
-                    if(!dontShowAlert){
-                        Alertify.log.success("Command "+name+" deleted successfully.");
-                        Spawn.router.navigate("#commands",{trigger:true});
-                    }
-                    self.trigger("destroy",self);
-                },
-             error: function(){
-                    Alertify.log.error("Error deleting command: "+name);
-                },
-             dataType: "json"*/
         },
         parse:function(data){
             data.DT_RowId=data.name;
@@ -178,11 +156,11 @@ function(
                     model.delete().done(function(){
                         app.commandCollection.remove(model.id);
                     }).fail(function(xhr){
-                        Alertify.log.error("Error deleting '" + model.id + "': " + xhr.responseText);
+                        alertify.error("Error deleting '" + model.id + "': " + xhr.responseText);
                     });
                 }
             });
-            Alertify.log.info("Deleting " + ids.length + " commands...");
+            alertify.message("Deleting " + ids.length + " commands...");
         }
     });
     var DetailView = Backbone.View.extend({
@@ -206,16 +184,16 @@ function(
         handleDeleteButtonClick:function(event){
             var self=this;
             this.model.delete().done(function(data){
-                Alertify.log.success("Command deleted successfully.");
+                alertify.success("Command deleted successfully.");
                 app.router.navigate("#commands",{trigger:true});
             }).fail(function(xhr){
-                Alertify.log.error("Error deleting command.");
+                alertify.error("Error deleting command.");
             });
         },
         handleSaveButtonClick:function(event){
             var self=this,isNew=this.model.isNew();
             this.model.save().done(function(data){
-                Alertify.log.success("Command saved successfully.");
+                alertify.success("Command saved successfully.");
                 if(!_.isUndefined(app.commandCollection.get(data.name))){
                     self.model.set(Model.prototype.parse(data));
                     app.router.navigate("#commands/"+data.name,{trigger:true});
@@ -227,7 +205,7 @@ function(
                     });
                 }
             }).fail(function(xhr){
-                Alertify.log.error("Error saving command: "+self.model.id);
+                alertify.error("Error saving command: "+self.model.id);
             });
         },
         handleInputKeyUp:function(event){

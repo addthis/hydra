@@ -1,0 +1,125 @@
+<!--
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<div class="modal-dialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title">Change Permissions</h4>
+        </div>
+        <div class="modal-body">
+            <table class="table table-condensed" style="margin-bottom: 0px; margin-top:10px;">
+                <tbody>
+                    <tr>
+                        <td style="padding-top:10px;">
+                            Owner:
+                        </td>
+                        <td style="">
+                            <input type="text" name="chownModal" value=""/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-top:10px;">
+                            Group:
+                        </td>
+                        <td style="">
+                            <input type="text" name="chgrpModal" value=""/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-top:10px;">
+                            Owner writable:
+                        </td>
+                        <td style="">
+                            <input type="radio" name="ownerWritable" value="true" id="owtrue">
+                            <label for="owtrue">true</label>
+                            <input type="radio" name="ownerWritable" value="false" id="owfalse">
+                            <label for="owfalse">false</label>
+                            <input type="radio" name="ownerWritable" value="no change" id="ownc" checked>
+                            <label for="ownc">no change</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-top:10px;">
+                            Group writable:
+                        </td>
+                        <td style="">
+                            <input type="radio" name="groupWritable" value="true" id="gwtrue">
+                            <label for="gwtrue">true</label>
+                            <input type="radio" name="groupWritable" value="false" id="gwfalse">
+                            <label for="gwfalse">false</label>
+                            <input type="radio" name="groupWritable" value="no change" id="gwnc" checked>
+                            <label for="gwnc">no change</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-top:10px;">
+                            World writable:
+                        </td>
+                        <td style="">
+                            <input type="radio" name="worldWritable" value="true" id="wdtrue">
+                            <label for="wdtrue">true</label>
+                            <input type="radio" name="worldWritable" value="false" id="wdfalse">
+                            <label for="wdfalse">false</label>
+                            <input type="radio" name="worldWritable" value="no change" id="wdnc" checked>
+                            <label for="wdnc">no change</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-top:10px;">
+                            Owner executable:
+                        </td>
+                        <td style="">
+                            <input type="radio" name="ownerExecutable" value="true" id="oetrue">
+                            <label for="oetrue">true</label>
+                            <input type="radio" name="ownerExecutable" value="false" id="oefalse">
+                            <label for="oefalse">false</label>
+                            <input type="radio" name="ownerExecutable" value="no change" id="oenc" checked>
+                            <label for="oenc">no change</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-top:10px;">
+                            Group executable:
+                        </td>
+                        <td style="">
+                            <input type="radio" name="groupExecutable" value="true" id="getrue">
+                            <label for="getrue">true</label>
+                            <input type="radio" name="groupExecutable" value="false" id="gefalse">
+                            <label for="gefalse">false</label>
+                            <input type="radio" name="groupExecutable" value="no change" id="genc" checked>
+                            <label for="genc">no change</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-top:10px;">
+                            World executable:
+                        </td>
+                        <td style="">
+                            <input type="radio" name="worldExecutable" value="true" id="wetrue">
+                            <label for="wetrue">true</label>
+                            <input type="radio" name="worldExecutable" value="false" id="wefalse">
+                            <label for="wefalse">false</label>
+                            <input type="radio" name="worldExecutable" value="no change" id="wenc" checked>
+                            <label for="wenc">no change</label>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="modal-footer" style="border-top:none">
+            <button type="button" class="btn btn-primary" data-dismiss="modal" id="jobPermissionsModalSubmit">Submit</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+    </div><!-- /.modal-content -->
+</div><!-- /.modal-dialog -->

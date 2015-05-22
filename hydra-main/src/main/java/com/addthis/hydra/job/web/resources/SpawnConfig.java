@@ -37,13 +37,6 @@ public class SpawnConfig extends ScanningResourceConfig {
         getSingletons().add(checkNotNull(resource));
     }
 
-//  public void addServlet(HttpServlet servlet)
-//  {
-//      //get
-//      //this.servlets.add(servlet);
-//      super.g
-//  }
-
     public void addProvider(Object provider) {
         this.getSingletons().add(checkNotNull(provider));
     }

@@ -44,9 +44,28 @@ public class ZnodeJob implements IJob {
     public static class RootZnodeData {
 
         @FieldConfig private JobState state;
+        /* creator of the job */
         @FieldConfig private String creator;
-        /* who last modified this job */
+        /* owner of the job */
         @FieldConfig private String owner;
+        /* group of the job */
+        @FieldConfig private String group;
+        /* can the owner modify the job */
+        @FieldConfig private boolean ownerWritable;
+        /* can the group modify the job */
+        @FieldConfig private boolean groupWritable;
+        /* can the world modify the job */
+        @FieldConfig private boolean worldWritable;
+        /* can the owner start/stop the job */
+        @FieldConfig private boolean ownerExecutable;
+        /* can the group start/stop the job */
+        @FieldConfig private boolean groupExecutable;
+        /* can the world start/stop the job */
+        @FieldConfig private boolean worldExecutable;
+        /* user who last modified the job */
+        @FieldConfig private String lastModifiedBy;
+        /* last modification time */
+        @FieldConfig private long lastModifiedAt;
         /* purely ornamental description of this job */
         @FieldConfig private String description;
         /* key used for storing / retrieving this job */
@@ -97,6 +116,15 @@ public class ZnodeJob implements IJob {
                     .add("state", state)
                     .add("creator", creator)
                     .add("owner", owner)
+                    .add("group", group)
+                    .add("ownerWritable", ownerWritable)
+                    .add("groupWritable", groupWritable)
+                    .add("worldWritable", worldWritable)
+                    .add("ownerExecutable", ownerExecutable)
+                    .add("groupExecutable", groupExecutable)
+                    .add("worldExecutable", worldExecutable)
+                    .add("lastModifiedBy", lastModifiedBy)
+                    .add("lastModifiedAt", lastModifiedAt)
                     .add("description", description)
                     .add("id", id)
                     .add("priority", priority)
@@ -171,6 +199,15 @@ public class ZnodeJob implements IJob {
         rznData.state = job.getState();
         rznData.creator = job.getCreator();
         rznData.owner = job.getOwner();
+        rznData.group = job.getGroup();
+        rznData.ownerWritable = job.isOwnerWritable();
+        rznData.groupWritable = job.isGroupWritable();
+        rznData.worldWritable = job.isWorldWritable();
+        rznData.ownerExecutable = job.isOwnerExecutable();
+        rznData.groupExecutable = job.isGroupExecutable();
+        rznData.worldExecutable = job.isWorldExecutable();
+        rznData.lastModifiedAt = job.lastModifiedAt();
+        rznData.lastModifiedBy = job.lastModifiedBy();
         rznData.description = job.getDescription();
         rznData.id = job.getId();
         rznData.priority = job.getPriority();
@@ -219,6 +256,10 @@ public class ZnodeJob implements IJob {
         return rznData.id;
     }
 
+    @Override public String getCreator() {
+        return rznData.creator;
+    }
+
     @Override public String getOwner() {
         return rznData.owner;
     }
@@ -227,8 +268,92 @@ public class ZnodeJob implements IJob {
         this.rznData.owner = owner;
     }
 
-    @Override public String getCreator() {
-        return rznData.creator;
+    @Override public String getGroup() {
+        return rznData.group;
+    }
+
+    @Override public void setGroup(String group) {
+        this.rznData.group = group;
+    }
+
+    @Override
+    public boolean isOwnerWritable() {
+        return rznData.ownerWritable;
+    }
+
+    @Override
+    public void setOwnerWritable(boolean ownerWritable) {
+        this.rznData.ownerWritable = ownerWritable;
+    }
+
+    @Override
+    public boolean isGroupWritable() {
+        return rznData.groupWritable;
+    }
+
+    @Override
+    public void setGroupWritable(boolean groupWritable) {
+        this.rznData.groupWritable = groupWritable;
+    }
+
+    @Override
+    public boolean isWorldWritable() {
+        return rznData.worldWritable;
+    }
+
+    @Override
+    public void setWorldWritable(boolean worldWritable) {
+        this.rznData.worldWritable = worldWritable;
+    }
+
+    @Override
+    public boolean isOwnerExecutable() {
+        return rznData.ownerExecutable;
+    }
+
+    @Override
+    public void setOwnerExecutable(boolean ownerExecutable) {
+        this.rznData.ownerExecutable = ownerExecutable;
+    }
+
+    @Override
+    public boolean isGroupExecutable() {
+        return rznData.groupExecutable;
+    }
+
+    @Override
+    public void setGroupExecutable(boolean groupExecutable) {
+        this.rznData.groupExecutable = groupExecutable;
+    }
+
+    @Override
+    public boolean isWorldExecutable() {
+        return rznData.worldExecutable;
+    }
+
+    @Override
+    public void setWorldExecutable(boolean worldExecutable) {
+        this.rznData.worldExecutable = worldExecutable;
+    }
+
+    @Override
+    public String lastModifiedBy() {
+        return rznData.lastModifiedBy;
+    }
+
+    @Override
+    public void setLastModifiedBy(String user) {
+        this.rznData.lastModifiedBy = user;
+    }
+
+    @Override
+    public long lastModifiedAt() {
+        return rznData.lastModifiedAt;
+    }
+
+    @Override
+    public void setLastModifiedAt(long time) {
+        this.rznData.lastModifiedAt = time;
     }
 
     @Override public long getCreateTime() {

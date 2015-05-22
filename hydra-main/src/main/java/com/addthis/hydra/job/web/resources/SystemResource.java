@@ -24,14 +24,13 @@ import javax.ws.rs.core.Response;
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.codec.json.CodecJSON;
 import com.addthis.hydra.job.HostFailWorker;
+import com.addthis.hydra.job.auth.PermissionsManager;
 import com.addthis.hydra.job.spawn.HealthCheckResult;
+import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.spawn.SpawnBalancer;
 import com.addthis.hydra.job.spawn.SpawnBalancerConfig;
 import com.addthis.hydra.job.spawn.SystemManager;
 import com.addthis.hydra.job.store.DataStoreUtil.DataStoreType;
-import com.addthis.hydra.job.web.jersey.User;
-
-import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,24 +43,26 @@ public class SystemResource {
     @Nonnull private final SystemManager systemManager;
     @Nonnull private final SpawnBalancer spawnBalancer;
     @Nonnull private final HostFailWorker hostFailWorker;
+    @Nonnull private final PermissionsManager permissionsManager;
 
 
-    public SystemResource(
-            SystemManager systemManager,
-            SpawnBalancer spawnBalancer,
-            HostFailWorker hostFailWorker) {
-        this.systemManager = systemManager;
-        this.spawnBalancer = spawnBalancer;
-        this.hostFailWorker = hostFailWorker;
+    public SystemResource(Spawn spawn) {
+        this.systemManager = spawn.getSystemManager();
+        this.spawnBalancer = spawn.getSpawnBalancer();
+        this.hostFailWorker = spawn.getHostFailWorker();
+        this.permissionsManager = spawn.getPermissionsManager();
     }
 
     @GET
     @Path("/quiesce")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response quiesceCluster(@QueryParam("quiesce") String quiesce, @Auth User user) {
+    public Response quiesceCluster(@QueryParam("quiesce") String quiesce,
+                                   @QueryParam("user") String user,
+                                   @QueryParam("token") String token,
+                                   @QueryParam("sudo") String sudo) {
         try {
-            if (user.getAdmin()) {
-                boolean quiesced = systemManager.quiesceCluster(quiesce.equals("1"), user.getUsername());
+            if (permissionsManager.adminAction(user, token, sudo)) {
+                boolean quiesced = systemManager.quiesceCluster(quiesce.equals("1"), user);
                 String json = Jackson.defaultMapper().createObjectNode()
                         .put("quiesced", (quiesced ? "1" : "0")).toString();
                 return Response.ok(json).build();

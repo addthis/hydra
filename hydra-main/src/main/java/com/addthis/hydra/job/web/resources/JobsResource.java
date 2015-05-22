@@ -16,6 +16,7 @@ package com.addthis.hydra.job.web.resources;
 import javax.annotation.Nonnull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
+import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -52,13 +53,13 @@ import com.addthis.hydra.job.JobState;
 import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.RebalanceOutcome;
+import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.DeleteStatus;
 import com.addthis.hydra.job.spawn.Spawn;
 import com.addthis.hydra.job.web.JobRequestHandler;
 import com.addthis.hydra.job.web.KVUtils;
-import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.hydra.task.run.TaskRunnable;
 import com.addthis.hydra.task.run.TaskRunner;
 import com.addthis.hydra.util.DirectedGraph;
@@ -69,6 +70,7 @@ import com.addthis.maljson.JSONObject;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -82,7 +84,6 @@ import com.typesafe.config.ConfigParseOptions;
 import com.typesafe.config.ConfigRenderOptions;
 import com.typesafe.config.ConfigResolveOptions;
 import com.typesafe.config.ConfigValue;
-import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,7 +94,8 @@ public class JobsResource {
 
     @SuppressWarnings("unused")
     private static final Pattern COMMENTS_REGEX = Pattern.compile("(?m)^\\s*//\\s*host(?:s)?\\s*:\\s*(.*?)$");
-    private static final String DEFAULT_USER = "UNKNOWN_USER";
+    private static final ImmutableSet<String> PERMISSIONS = ImmutableSet.of("no change", "true", "false");
+    private static final ImmutableSet<String> MODIFYING_PERMISSIONS = ImmutableSet.of("true", "false");
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final Spawn spawn;
@@ -115,59 +117,201 @@ public class JobsResource {
         }
     }
 
+    @POST
+    @Path("/permissions")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response changePermissions(@FormParam("jobs") String jobarg,
+                                      @FormParam("owner") String owner,
+                                      @FormParam("group") String group,
+                                      @FormParam("ownerWritable") String ownerWritable,
+                                      @FormParam("groupWritable") String groupWritable,
+                                      @FormParam("worldWritable") String worldWritable,
+                                      @FormParam("ownerExecutable") String ownerExecutable,
+                                      @FormParam("groupExecutable") String groupExecutable,
+                                      @FormParam("worldExecutable") String worldExecutable,
+                                      @FormParam("user") String user,
+                                      @FormParam("token") String token,
+                                      @FormParam("sudo") String sudo) {
+        if (jobarg == null) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Missing 'jobs' parameter").build();
+        }
+        Response response = validateChangePermissions("ownerWritable", ownerWritable);
+        if (response != null) {
+            return response;
+        }
+        response = validateChangePermissions("groupWritable", groupWritable);
+        if (response != null) {
+            return response;
+        }
+        response = validateChangePermissions("worldWritable", worldWritable);
+        if (response != null) {
+            return response;
+        }
+        response = validateChangePermissions("ownerExecutable", ownerExecutable);
+        if (response != null) {
+            return response;
+        }
+        response = validateChangePermissions("groupExecutable", groupExecutable);
+        if (response != null) {
+            return response;
+        }
+        response = validateChangePermissions("worldExecutable", worldExecutable);
+        if (response != null) {
+            return response;
+        }
+        List<String> jobIds = Splitter.on(',').omitEmptyStrings().trimResults().splitToList(jobarg);
+        List<String> changed = new ArrayList<>();
+        List<String> unchanged = new ArrayList<>();
+        List<String> notFound = new ArrayList<>();
+        List<String> notPermitted = new ArrayList<>();
+        try {
+            for (String jobId : jobIds) {
+                Job job = spawn.getJob(jobId);
+                if (job == null) {
+                    notFound.add(jobId);
+                } else if (!spawn.getPermissionsManager().canModifyPermissions(user, token, sudo, job)) {
+                    notPermitted.add(jobId);
+                } else {
+                    boolean modified = false;
+                    if (LessStrings.isNotEmpty(owner) && !owner.equals(job.getOwner())) {
+                        job.setOwner(owner);
+                        modified = true;
+                    }
+                    if (LessStrings.isNotEmpty(group) && !group.equals(job.getGroup())) {
+                        job.setGroup(group);
+                        modified = true;
+                    }
+                    if (MODIFYING_PERMISSIONS.contains(ownerWritable)) {
+                        boolean newValue = Boolean.valueOf(ownerWritable);
+                        if (job.isOwnerWritable() != newValue) {
+                            job.setOwnerWritable(newValue);
+                            modified = true;
+                        }
+                    }
+                    if (MODIFYING_PERMISSIONS.contains(groupWritable)) {
+                        boolean newValue = Boolean.valueOf(groupWritable);
+                        if (job.isGroupWritable() != newValue) {
+                            job.setGroupWritable(newValue);
+                            modified = true;
+                        }
+                    }
+                    if (MODIFYING_PERMISSIONS.contains(worldWritable)) {
+                        boolean newValue = Boolean.valueOf(worldWritable);
+                        if (job.isWorldWritable() != newValue) {
+                            job.setWorldWritable(newValue);
+                            modified = true;
+                        }
+                    }
+                    if (MODIFYING_PERMISSIONS.contains(ownerExecutable)) {
+                        boolean newValue = Boolean.valueOf(ownerExecutable);
+                        if (job.isOwnerExecutable() != newValue) {
+                            job.setOwnerExecutable(newValue);
+                            modified = true;
+                        }
+                    }
+                    if (MODIFYING_PERMISSIONS.contains(groupExecutable)) {
+                        boolean newValue = Boolean.valueOf(groupExecutable);
+                        if (job.isGroupExecutable() != newValue) {
+                            job.setGroupExecutable(newValue);
+                            modified = true;
+                        }
+                    }
+                    if (MODIFYING_PERMISSIONS.contains(worldExecutable)) {
+                        boolean newValue = Boolean.valueOf(worldExecutable);
+                        if (job.isWorldExecutable() != newValue) {
+                            job.setWorldExecutable(newValue);
+                            modified = true;
+                        }
+                    }
+                    if (modified) {
+                        spawn.updateJob(job);
+                        changed.add(jobId);
+                    } else {
+                        unchanged.add(jobId);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            return buildServerError(e);
+        }
+        try {
+            String json = CodecJSON.encodeString(ImmutableMap.of(
+                    "changed", changed,
+                    "unchanged", unchanged,
+                    "notFound", notFound,
+                    "notPermitted", notPermitted));
+            return Response.ok(json).build();
+        } catch (JsonProcessingException e) {
+            return buildServerError(e);
+        }
+    }
+
+    private Response validateChangePermissions(String parameterName, String parameterValue) {
+        if ((parameterValue != null) && !PERMISSIONS.contains(parameterValue)) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity(parameterName + " must be one of: " + PERMISSIONS)
+                           .build();
+        } else {
+            return null;
+        }
+    }
+
     @GET
     @Path("/enable")
     @Produces(MediaType.APPLICATION_JSON)
     public Response enableJob(@QueryParam("jobs") String jobarg,
                               @QueryParam("enable") @DefaultValue("1") String enableParam,
                               @QueryParam("unsafe") @DefaultValue("false") boolean unsafe,
-                              @Auth User user) {
+                              @QueryParam("user") String user,
+                              @QueryParam("token") String token,
+                              @QueryParam("sudo") String sudo) {
         boolean enable = enableParam.equals("1");
-        if (jobarg != null) {
-            List<String> jobIds = Splitter.on(',').omitEmptyStrings().trimResults().splitToList(jobarg);
-            String action = enable ? (unsafe ? "unsafely enable" : "enable") : "disable";
-            emitLogLineForAction(user.getUsername(), action + " jobs " + jobarg);
-
-            List<String> changed = new ArrayList<>();
-            List<String> unchanged = new ArrayList<>();
-            List<String> notFound = new ArrayList<>();
-            List<String> notAllowed = new ArrayList<>();
-
-            try {
-                for (String jobId : jobIds) {
-                    Job job = spawn.getJob(jobId);
-                    if (job != null) {
-                        if (enable && !unsafe && job.getState() != JobState.IDLE) {
-                            // request to enable safely, so do not allow if job is not IDLE
-                            notAllowed.add(jobId);
-                        } else if (job.setEnabled(enable)) {
-                            spawn.updateJob(job);
-                            changed.add(jobId);
-                        } else {
-                            unchanged.add(jobId);
-                        }
-                    } else {
-                        notFound.add(jobId);
-                    }
-                }
-                log.info("{} jobs: changed={}, unchanged={}, not found={}, cannot safely enable={}",
-                         action, changed, unchanged, notFound, notAllowed);
-            } catch (Exception e) {
-                return buildServerError(e);
-            }
-
-            try {
-                String json = CodecJSON.encodeString(ImmutableMap.of(
-                        "changed", changed,
-                        "unchanged", unchanged,
-                        "notFound", notFound,
-                        "notAllowed", notAllowed));
-                return Response.ok(json).build();
-            } catch (JsonProcessingException e) {
-                return buildServerError(e);
-            }
-        } else {
+        if (jobarg == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity("Missing 'jobs' parameter").build();
+        }
+        List<String> jobIds = Splitter.on(',').omitEmptyStrings().trimResults().splitToList(jobarg);
+        String action = enable ? (unsafe ? "unsafely enable" : "enable") : "disable";
+        emitLogLineForAction(user, action + " jobs " + jobarg);
+
+        List<String> changed = new ArrayList<>();
+        List<String> unchanged = new ArrayList<>();
+        List<String> notFound = new ArrayList<>();
+        List<String> notAllowed = new ArrayList<>();
+        List<String> notPermitted = new ArrayList<>();
+
+        try {
+            for (String jobId : jobIds) {
+                Job job = spawn.getJob(jobId);
+                if (job == null) {
+                    notFound.add(jobId);
+                } else if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, job)) {
+                    notPermitted.add(jobId);
+                } else if (enable && !unsafe && job.getState() != JobState.IDLE) {
+                    // request to enable safely, so do not allow if job is not IDLE
+                    notAllowed.add(jobId);
+                } else if (job.setEnabled(enable)) {
+                    spawn.updateJob(job);
+                    changed.add(jobId);
+                } else {
+                    unchanged.add(jobId);
+                }
+            }
+            log.info("{} jobs: changed={}, unchanged={}, not found={}, not permitted={}, cannot safely enable={}",
+                     action, changed, unchanged, notFound, notPermitted, notAllowed);
+        } catch (Exception e) {
+            return buildServerError(e);
+        }
+
+        try {
+            String json = CodecJSON.encodeString(ImmutableMap.of(
+                    "changed", changed,
+                    "unchanged", unchanged,
+                    "notFound", notFound,
+                    "notAllowed", notAllowed,
+                    "notPermitted", notPermitted));
+            return Response.ok(json).build();
+        } catch (JsonProcessingException e) {
+            return buildServerError(e);
         }
     }
 
@@ -175,11 +319,13 @@ public class JobsResource {
     @Path("/rebalance")
     @Produces(MediaType.TEXT_PLAIN)
     public Response rebalanceJob(@QueryParam("id") String id,
-                                 @Auth User user,
+                                 @QueryParam("user") String user,
+                                 @QueryParam("token") String token,
+                                 @QueryParam("sudo") String sudo,
                                  @QueryParam("tasksToMove") @DefaultValue("-1") Integer tasksToMove) {
-        emitLogLineForAction(user.getUsername(), "job rebalance on " + id + " tasksToMove=" + tasksToMove);
+        emitLogLineForAction(user, "job rebalance on " + id + " tasksToMove=" + tasksToMove);
         try {
-            RebalanceOutcome ro = spawn.rebalanceJob(id, tasksToMove);
+            RebalanceOutcome ro = spawn.rebalanceJob(id, tasksToMove, user, token, sudo);
             String outcome = ro.toString();
             return Response.ok(outcome).build();
         } catch (Exception ex) {
@@ -300,30 +446,29 @@ public class JobsResource {
     @Path("/synchronize")
     @Produces(MediaType.APPLICATION_JSON)
     public Response synchronizeJob(@QueryParam("id") @DefaultValue("") String id,
-                                   @QueryParam("user") Optional<String> user) {
-        emitLogLineForAction(user.or(DEFAULT_USER), "job synchronize on " + id);
-        if (spawn.synchronizeJobState(id)) {
-            return Response.ok("{id:'" + id + "',action:'synchronzied'}").build();
-        } else {
-            log.warn("[job.synchronize] {} unable to synchronize job", id);
-            return Response.status(Response.Status.NOT_FOUND)
-                           .header("topic", "Synchronize Error")
-                           .entity("{error:'unable to synchronize job, check spawn log file for more details'}")
-                           .build();
-        }
+                                   @QueryParam("user") String user,
+                                   @QueryParam("token") String token,
+                                   @QueryParam("sudo") String sudo) {
+        emitLogLineForAction(user, "job synchronize on " + id);
+        return spawn.synchronizeJobState(id, user, token, sudo);
     }
 
     @GET
     @Path("/delete") //TODO: should this be a @delete?
     @Produces(MediaType.APPLICATION_JSON)
     public Response deleteJob(@QueryParam("id") @DefaultValue("") String id,
-                              @QueryParam("user") Optional<String> user) {
+                              @QueryParam("user") String user,
+                              @QueryParam("token") String token,
+                              @QueryParam("sudo") String sudo) {
         Job job = spawn.getJob(id);
-
-        if ((job != null) && (job.getCountActiveTasks() != 0)) {
+        if (job == null) {
+            return Response.serverError().entity("Job with id " + id + " cannot be found").build();
+        } else if (!spawn.getPermissionsManager().isWritable(user, token, sudo, job)) {
+            return Response.serverError().entity("Insufficient privileges to delete job " + id).build();
+        } else if (job.getCountActiveTasks() != 0) {
             return Response.serverError().entity("A job with active tasks cannot be deleted").build();
         } else {
-            emitLogLineForAction(user.or(DEFAULT_USER), "job delete on " + id);
+            emitLogLineForAction(user, "job delete on " + id);
             try {
                 DeleteStatus status = spawn.deleteJob(id);
                 switch (status) {
@@ -510,9 +655,14 @@ public class JobsResource {
     @GET
     @Path("/alerts.toggle")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response toggleJobAlerts(@QueryParam("enable") @DefaultValue("true") Boolean enable) {
+    public Response toggleJobAlerts(@QueryParam("enable") @DefaultValue("true") Boolean enable,
+                                    @QueryParam("user") String user,
+                                    @QueryParam("token") String token,
+                                    @QueryParam("sudo") String sudo) {
         try {
-            if (enable) {
+            if (!spawn.getPermissionsManager().adminAction(user, token, sudo)) {
+                return Response.ok("false").build();
+            } else if (enable) {
                 spawn.getJobAlertManager().enableAlerts();
             } else {
                 spawn.getJobAlertManager().disableAlerts();
@@ -521,7 +671,6 @@ public class JobsResource {
             log.warn("Failed to toggle alerts", e);
             return Response.ok("false").build();
         }
-
         return Response.ok("true").build();
     }
 
@@ -556,18 +705,22 @@ public class JobsResource {
     @Path("/save")
     @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_FORM_URLENCODED, MediaType.WILDCARD})
     @Produces(MediaType.APPLICATION_JSON)
-    public Response saveJob(@QueryParam("pairs") KVPairs kv, @Auth User user) {
+    public Response saveJob(@QueryParam("pairs") KVPairs kv,
+                            @QueryParam("user") String user,
+                            @QueryParam("token") String token,
+                            @QueryParam("sudo") String sudo) {
         String id = KVUtils.getValue(kv, "", "id", "job");
-        String username = user.getUsername();
         try {
-            Job job = requestHandler.createOrUpdateJob(kv, username);
-            log.info("[job/save][user={}][id={}] Job {}", username, job.getId(), jobUpdateAction(id));
+            Job job = requestHandler.createOrUpdateJob(kv, user, token, sudo);
+            log.info("[job/save][user={}][id={}] Job {}", user, job.getId(), jobUpdateAction(id));
             return Response.ok("{\"id\":\"" + job.getId() + "\",\"updated\":\"true\"}").build();
         } catch (IllegalArgumentException e) {
-            log.warn("[job/save][user={}][id={}] Bad parameter: {}", username, id, e.getMessage(), e);
+            log.warn("[job/save][user={}][id={}] Bad parameter: {}", user, id, e.getMessage(), e);
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        } catch (InsufficientPrivilegesException e) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
         } catch (Exception e) {
-            log.error("[job/save][user={}][id={}] Internal error: {}", username, id, e.getMessage(), e);
+            log.error("[job/save][user={}][id={}] Internal error: {}", user, id, e.getMessage(), e);
             return buildServerError(e);
         }
     }
@@ -587,21 +740,26 @@ public class JobsResource {
     @POST
     @Path("/submit")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response submitJob(@QueryParam("pairs") KVPairs kv, @Auth User user) {
+    public Response submitJob(@QueryParam("pairs") KVPairs kv,
+                              @QueryParam("user") String user,
+                              @QueryParam("token") String token,
+                              @QueryParam("sudo") String sudo) {
         String id = KVUtils.getValue(kv, "", "id", "job");
-        String username = user.getUsername();
-        log.warn("[job/submit][user={}][id={}] This end point is deprecated", username, id);
+        log.warn("[job/submit][user={}][id={}] This end point is deprecated", user, id);
         try {
-            Job job = requestHandler.createOrUpdateJob(kv, username);
+            Job job = requestHandler.createOrUpdateJob(kv, user, token, sudo);
             // optionally kicks the job/task
             requestHandler.maybeKickJobOrTask(kv, job);
-            log.info("[job/submit][user={}][id={}] Job {}", username, job.getId(), jobUpdateAction(id));
+            log.info("[job/submit][user={}][id={}] Job {}", user, job.getId(), jobUpdateAction(id));
             return Response.ok("{\"id\":\"" + job.getId() + "\",\"updated\":\"true\"}").build();
         } catch (IllegalArgumentException e) {
-            log.warn("[job/submit][user={}][id={}] Bad parameter: {}", username, id, e.getMessage(), e);
+            log.warn("[job/submit][user={}][id={}] Bad parameter: {}", user, id, e.getMessage(), e);
             return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        } catch (InsufficientPrivilegesException e) {
+            log.warn("[job/submit][user={}][id={}] Privileges error: {}", user, id, e.getMessage(), e);
+            return Response.status(Response.Status.UNAUTHORIZED).entity(e.getMessage()).build();
         } catch (Exception e) {
-            log.error("[job/submit][user={}][id={}] Internal error: {}", username, id, e.getMessage(), e);
+            log.error("[job/submit][user={}][id={}] Internal error: {}", user, id, e.getMessage(), e);
             return buildServerError(e);
         }
     }
@@ -615,12 +773,19 @@ public class JobsResource {
                               @QueryParam("revision") @DefaultValue("-1") Integer revision,
                               @QueryParam("node") @DefaultValue("-1") Integer node,
                               @QueryParam("time") @DefaultValue("-1") Long time,
-                              @Auth User user) {
+                              @QueryParam("user") String user,
+                              @QueryParam("token") String token,
+                              @QueryParam("sudo") String sudo) {
         try {
-            emitLogLineForAction(user.getUsername(), "job revert on " + id + " of type " + type);
+            emitLogLineForAction(user, "job revert on " + id + " of type " + type);
             IJob job = spawn.getJob(id);
-            spawn.revertJobOrTask(job.getId(), node, type, revision, time);
-            return Response.ok("{\"id\":\"" + job.getId() + "\", \"action\":\"reverted\"}").build();
+            boolean success = spawn.revertJobOrTask(job.getId(), user, token, sudo, node, type, revision, time);
+            if (success) {
+                return Response.ok("{\"id\":\"" + job.getId() + "\", \"action\":\"reverted\"}").build();
+            } else {
+                return Response.status(Response.Status.UNAUTHORIZED).entity(
+                        "{\"id\":\"" + job.getId() + "\", \"action\":\"unauthorized\"}").build();
+            }
         } catch (Exception ex) {
             ex.printStackTrace();
             return Response.serverError().entity(ex).build();
@@ -632,7 +797,8 @@ public class JobsResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getRevisions(@QueryParam("id") String id,
                                  @QueryParam("node") @DefaultValue("-1") int node,
-                                 @Auth User user) {
+                                 @QueryParam("user") String user,
+                                 @QueryParam("token") String token) {
         try {
             if (spawn.isSpawnMeshAvailable()) {
                 IJob job = spawn.getJob(id);
@@ -687,12 +853,6 @@ public class JobsResource {
         }
     }
 
-    @GET
-    @Path("/secret")
-    public Response getSecret(@Auth User user) {
-        return Response.ok(user.getUsername()).build();
-    }
-
     private void startJobHelper(String jobId, int taskId, int priority) throws Exception {
         if (taskId < 0) {
             spawn.startJob(jobId, priority);
@@ -712,21 +872,47 @@ public class JobsResource {
                               @QueryParam("select") @DefaultValue("-1") int select,
                               @QueryParam("id") Optional<String> id,
                               @QueryParam("task") @DefaultValue("-1") int task,
-                              @QueryParam("priority") @DefaultValue("0") int priority) {
+                              @QueryParam("priority") @DefaultValue("0") int priority,
+                              @QueryParam("user") String user,
+                              @QueryParam("token") String token,
+                              @QueryParam("sudo") String sudo) {
+
+        List<String> success = new ArrayList<>();
+        List<String> error = new ArrayList<>();
+        List<String> unauthorized = new ArrayList<>();
         try {
             if (jobIds.isPresent()) {
                 String[] joblist = LessStrings.splitArray(jobIds.get(), ",");
                 for (String aJob : joblist) {
-                    startJobHelper(aJob, select, priority);
+                    IJob job = spawn.getJob(aJob);
+                    if (job == null) {
+                        error.add(aJob);
+                    } else if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, job)) {
+                        unauthorized.add(aJob);
+                    } else {
+                        startJobHelper(aJob, select, priority);
+                        success.add(aJob);
+                    }
                 }
-                return Response.ok("{\"id\":\"" + jobIds.get() + "\",  \"updated\": \"true\"}").build();
             } else if (id.isPresent()) {
-                startJobHelper(id.get(), task, priority);
-                return Response.ok("{\"id\":\"" + id.get() + "\",  \"updated\": \"true\"}").build();
+                String jobId = id.get();
+                IJob job = spawn.getJob(jobId);
+                if (job == null) {
+                    error.add(jobId);
+                } else if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, job)) {
+                    unauthorized.add(jobId);
+                } else {
+                    startJobHelper(jobId, select, priority);
+                    success.add(jobId);
+                }
             } else {
                 return Response.status(Response.Status.BAD_REQUEST).entity("job id not specified").build();
             }
-
+            String json = CodecJSON.encodeString(ImmutableMap.of(
+                    "success", success,
+                    "error", error,
+                    "unauthorized", unauthorized));
+            return Response.ok(json).build();
         } catch (Exception ex) {
             return buildServerError(ex);
         }
@@ -753,11 +939,18 @@ public class JobsResource {
     @GET
     @Path("/fixJobDirs")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response fixJobDirs(@QueryParam("id") String id, @QueryParam("node") @DefaultValue("-1") int node) {
+    public Response fixJobDirs(@QueryParam("id") String id, @QueryParam("node") @DefaultValue("-1") int node,
+                               @QueryParam("user") String user,  @QueryParam("token") String token,
+                               @QueryParam("sudo") String sudo) {
         try {
             IJob job = spawn.getJob(id);
             if (job != null) {
-                return Response.ok(spawn.fixTaskDir(id, node, false, false).toString()).build();
+                if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, job)) {
+                    return Response.status(Response.Status.UNAUTHORIZED).entity(
+                            "Insufficient privileges to fix directories for job " + id).build();
+                } else {
+                    return Response.ok(spawn.fixTaskDir(id, node, false, false).toString()).build();
+                }
             } else {
                 return Response.status(Response.Status.NOT_FOUND).header("topic", "No Job").build();
             }
@@ -930,13 +1123,10 @@ public class JobsResource {
         }
     }
 
-    boolean stopJobHelper(String id, Optional<Boolean> cancelParam,
+    void stopJobHelper(IJob job, Optional<Boolean> cancelParam,
                           Optional<Boolean> forceParam,
                           int nodeId) throws Exception {
-        IJob job = spawn.getJob(id);
-        if (job == null) {
-            return false;
-        }
+        String id = job.getId();
         boolean cancelRekick = cancelParam.or(false);
         boolean force = forceParam.or(false);
         // cancel re-spawning
@@ -958,7 +1148,6 @@ public class JobsResource {
                 spawn.stopTask(id, nodeId);
             }
         }
-        return true;
     }
 
     /**
@@ -973,48 +1162,65 @@ public class JobsResource {
                             @QueryParam("force") Optional<Boolean> forceParam,
                             @QueryParam("node") @DefaultValue("-1") int nodeParam,
                             @QueryParam("id") Optional<String> id,
-                            @QueryParam("task") @DefaultValue("-1") int task) {
+                            @QueryParam("task") @DefaultValue("-1") int task,
+                            @QueryParam("user") String user,
+                            @QueryParam("token") String token,
+                            @QueryParam("sudo") String sudo) {
+        List<String> success = new ArrayList<>();
+        List<String> error = new ArrayList<>();
+        List<String> unauthorized = new ArrayList<>();
         try {
             if (jobIds.isPresent()) {
                 String ids = jobIds.get();
                 String[] joblist = LessStrings.splitArray(ids, ",");
                 for (String jobName : joblist) {
-                    boolean status = stopJobHelper(jobName, cancelParam, forceParam, nodeParam);
-                    if (!status) {
-                        return Response.status(Response.Status.NOT_FOUND)
-                                       .header("topic", "Invalid ID")
-                                       .entity("{error:'no such job'}")
-                                       .build();
+                    IJob job = spawn.getJob(jobName);
+                    if (job == null) {
+                        error.add(jobName);
+                    } else if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, job)) {
+                        unauthorized.add(jobName);
+                    } else {
+                        stopJobHelper(job, cancelParam, forceParam, nodeParam);
+                        success.add(jobName);
                     }
                 }
-                return Response.ok("{\"id\":\"" + ids + "\",\"action\":\"stopped\"}").build();
             } else if (id.isPresent()) {
-                boolean status = stopJobHelper(id.get(), cancelParam, forceParam, task);
-                if (!status) {
-                    return Response.status(Response.Status.NOT_FOUND)
-                                   .header("topic", "Invalid ID")
-                                   .entity("{error:'no such job'}")
-                                   .build();
+                String jobId = id.get();
+                IJob job = spawn.getJob(jobId);
+                if (job == null) {
+                    error.add(jobId);
+                } else if (!spawn.getPermissionsManager().isExecutable(user, token, sudo, job)) {
+                    unauthorized.add(jobId);
                 } else {
-                    return Response.ok("{\"id\":\"" + id.get() + "\",\"action\":\"stopped\"}").build();
+                    stopJobHelper(job, cancelParam, forceParam, nodeParam);
+                    success.add(jobId);
                 }
             } else {
                 return Response.status(Response.Status.BAD_REQUEST).entity("job id not specified").build();
             }
+            String json = CodecJSON.encodeString(ImmutableMap.of(
+                    "success", success,
+                    "error", error,
+                    "unauthorized", unauthorized));
+            return Response.ok(json).build();
         } catch (Exception ex) {
             return buildServerError(ex);
         }
-
     }
 
     @GET
     @Path("/saveAllJobs")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response saveAllJobs() {
+    public Response saveAllJobs(@QueryParam("user") String user,  @QueryParam("token") String token,
+                                @QueryParam("sudo") String sudo) {
         // Primarily for use in emergencies where updates have not been sent to the data store for a while
         try {
-            spawn.saveAllJobs();
-            return Response.ok(("{\"operation\":\"sucess\"")).build();
+            if (!spawn.getPermissionsManager().adminAction(user, token, sudo)) {
+                return Response.ok("{\"operation\":\"failed: insufficient priviledges\"").build();
+            } else {
+                spawn.saveAllJobs();
+                return Response.ok(("{\"operation\":\"sucess\"")).build();
+            }
         } catch (Exception ex) {
             log.trace("Save all jobs exception", ex);
             return Response.ok("{\"operation\":\"failed: " + ex.toString() + "\"").build();

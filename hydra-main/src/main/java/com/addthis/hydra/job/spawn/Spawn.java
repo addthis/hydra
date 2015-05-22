@@ -15,6 +15,7 @@ package com.addthis.hydra.job.spawn;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.ws.rs.core.Response;
 
 import java.io.File;
 import java.io.IOException;
@@ -66,6 +67,7 @@ import com.addthis.hydra.job.HostFailWorker;
 import com.addthis.hydra.job.IJob;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.JobConfigManager;
+import com.addthis.hydra.job.JobDefaults;
 import com.addthis.hydra.job.JobEvent;
 import com.addthis.hydra.job.JobExpand;
 import com.addthis.hydra.job.JobParameter;
@@ -81,13 +83,14 @@ import com.addthis.hydra.job.alert.JobAlertManager;
 import com.addthis.hydra.job.alert.JobAlertManagerImpl;
 import com.addthis.hydra.job.alias.AliasManager;
 import com.addthis.hydra.job.alias.AliasManagerImpl;
+import com.addthis.hydra.job.auth.PermissionsManager;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 import com.addthis.hydra.job.entity.JobCommand;
 import com.addthis.hydra.job.entity.JobCommandManager;
 import com.addthis.hydra.job.entity.JobEntityManager;
 import com.addthis.hydra.job.entity.JobMacro;
 import com.addthis.hydra.job.entity.JobMacroManager;
-import com.addthis.hydra.job.minion.Minion;
+import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.job.mq.CommandTaskDelete;
 import com.addthis.hydra.job.mq.CommandTaskKick;
 import com.addthis.hydra.job.mq.CommandTaskReplicate;
@@ -112,8 +115,6 @@ import com.addthis.hydra.job.store.JobStore;
 import com.addthis.hydra.job.store.SpawnDataStore;
 import com.addthis.hydra.job.store.SpawnDataStoreKeys;
 import com.addthis.hydra.job.web.SpawnService;
-import com.addthis.hydra.job.web.old.SpawnHttp;
-import com.addthis.hydra.job.web.old.SpawnManager;
 import com.addthis.hydra.task.run.TaskExitState;
 import com.addthis.hydra.common.util.CloseTask;
 import com.addthis.hydra.util.DirectedGraph;
@@ -137,7 +138,6 @@ import com.yammer.metrics.Metrics;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
 
-import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -145,6 +145,7 @@ import static com.addthis.hydra.job.store.SpawnDataStoreKeys.MINION_DEAD_PATH;
 import static com.addthis.hydra.job.store.SpawnDataStoreKeys.SPAWN_QUEUE_PATH;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * manages minions running on remote notes. runs master http server to
@@ -157,8 +158,6 @@ public class Spawn implements Codable, AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Spawn.class);
 
     // misc spawn configs
-
-    private static final boolean enableSpawn2  = Parameter.boolValue("spawn.v2.enable", true);
 
     static final int DEFAULT_REPLICA_COUNT = Parameter.intValue("spawn.defaultReplicaCount", 1);
     static final boolean ENABLE_JOB_FIXDIRS_ONCOMPLETE = Parameter.boolValue("job.fixdirs.oncomplete", true);
@@ -181,7 +180,7 @@ public class Spawn implements Codable, AutoCloseable {
 
     public static void main(String[] args) throws Exception {
         Spawn spawn = Configs.newDefault(Spawn.class);
-        if (enableSpawn2) new SpawnService(spawn).start();
+        spawn.startWebInterface();
         // register jvm shutdown hook to clean up resources
         Runtime.getRuntime().addShutdownHook(new Thread(new CloseTask(spawn), "Spawn Shutdown Hook"));
     }
@@ -189,7 +188,8 @@ public class Spawn implements Codable, AutoCloseable {
     SpawnQueuesByPriority taskQueuesByPriority = new SpawnQueuesByPriority();
 
     private SpawnMQ spawnMQ;
-    private Server jetty;
+    private SpawnService spawnService;
+
     private volatile int lastQueueSize = 0;
 
     final Lock jobLock = new ReentrantLock();
@@ -204,6 +204,9 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull final SpawnState spawnState;
     @Nonnull final ConcurrentMap<String, ClientEventListener> listeners;
     @Nonnull final SpawnFormattedLogger spawnFormattedLogger;
+
+    @Nonnull final PermissionsManager permissionsManager;
+    @Nonnull final JobDefaults jobDefaults;
 
     @Nonnull private final File stateFile;
     @Nonnull private final ExecutorService expandKickExecutor;
@@ -222,6 +225,10 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull private final SystemManager systemManager;
     @Nonnull private final RollingLog eventLog;
 
+    private final int webPort;
+    private final int webPortSSL;
+    private final boolean requireSSL;
+
     @Nullable private final JobStore jobStore;
 
     @JsonCreator
@@ -229,6 +236,8 @@ public class Spawn implements Codable, AutoCloseable {
                   @JsonProperty(value = "queryPort", required = true) int queryPort,
                   @JsonProperty("queryHttpHost") String queryHttpHost,
                   @JsonProperty(value = "webPort", required = true) int webPort,
+                  @JsonProperty(value = "webPortSSL", required = true) int webPortSSL,
+                  @JsonProperty(value = "requireSSL", required = true) boolean requireSSL,
                   @JsonProperty("httpHost") String httpHost,
                   @JsonProperty("dataDir") File dataDir,
                   @JsonProperty("stateFile") File stateFile,
@@ -245,10 +254,18 @@ public class Spawn implements Codable, AutoCloseable {
                   @Nullable @JsonProperty("structuredLogDir") File structuredLogDir,
                   @Nullable @JsonProperty("jobStore") JobStore jobStore,
                   @Nullable @JsonProperty("queueType") String queueType,
-                  @Nullable @JacksonInject CuratorFramework providedZkClient
-    ) throws Exception {
+                  @Nullable @JacksonInject CuratorFramework providedZkClient,
+                  @JsonProperty(value = "permissionsManager", required = true) PermissionsManager permissionsManager,
+                  @JsonProperty(value = "jobDefaults", required = true) JobDefaults jobDefaults,
+                  @Time(SECONDS) @JsonProperty(value = "authTimeout", required = true) int authenticationTimeout,
+                  @Time(SECONDS) @JsonProperty(value = "sudoTimeout", required = true) int sudoTimeout) throws Exception {
         LessFiles.initDirectory(dataDir);
         this.stateFile = stateFile;
+        this.permissionsManager = permissionsManager;
+        this.jobDefaults = jobDefaults;
+        this.webPort = webPort;
+        this.webPortSSL = webPortSSL;
+        this.requireSSL = requireSSL;
         if (stateFile.exists() && stateFile.isFile()) {
             spawnState = Jackson.defaultMapper().readValue(stateFile, SpawnState.class);
         } else {
@@ -271,8 +288,8 @@ public class Spawn implements Codable, AutoCloseable {
         this.hostManager = new HostManager(zkClient);
         this.spawnDataStore = DataStoreUtil.makeCanonicalSpawnDataStore(true);
         
-        this.systemManager = new SystemManagerImpl(this, debug, queryHttpHost + ":" + queryPort, 
-                httpHost + ":" + webPort);
+        this.systemManager = new SystemManagerImpl(this, debug, queryHttpHost + ":" + queryPort,
+                httpHost + ":" + webPort, authenticationTimeout, sudoTimeout);
         this.jobConfigManager = new JobConfigManager(spawnDataStore);
         // look for local object to import
         log.info("[init] beginning to load stats from data store");
@@ -347,8 +364,6 @@ public class Spawn implements Codable, AutoCloseable {
                 writeSpawnQueue();
             }
         }, queueKickInterval, queueKickInterval, MILLISECONDS);
-        // start http commands listener(s)
-        startSpawnWeb(webDir, webPort);
         balancer.startAutobalanceTask();
         balancer.startTaskSizePolling();
         this.jobStore = jobStore;
@@ -356,6 +371,11 @@ public class Spawn implements Codable, AutoCloseable {
                                        eventLogCompress, logMaxSize, logMaxAge);
         Metrics.newGauge(Spawn.class, "minionsDown", new DownMinionGauge(hostManager));
         writeState();
+    }
+
+    public void startWebInterface() throws Exception {
+        spawnService = new SpawnService(this);
+        spawnService.start();
     }
 
     void writeState() {
@@ -387,7 +407,9 @@ public class Spawn implements Codable, AutoCloseable {
     public SpawnBalancer getSpawnBalancer() {
         return balancer;
     }
-    
+
+    public PermissionsManager getPermissionsManager() { return permissionsManager; }
+
     @Nonnull
     public AliasManager getAliasManager() {
         return aliasManager;
@@ -419,17 +441,6 @@ public class Spawn implements Codable, AutoCloseable {
 
     public void releaseJobLock() {
         jobLock.unlock();
-    }
-
-    private void startSpawnWeb(File webDir, int webPort) throws Exception {
-        log.info("[init] starting http server");
-        SpawnHttp http = new SpawnHttp(this, webDir);
-        new SpawnManager().register(http);
-        jetty = new Server(webPort);
-        jetty.getConnectors()[0].setRequestBufferSize(65535);
-        jetty.getConnectors()[0].setRequestHeaderSize(requestHeaderBufferSize);
-        jetty.setHandler(http);
-        jetty.start();
     }
 
     public String getUuid() {
@@ -772,15 +783,20 @@ public class Spawn implements Codable, AutoCloseable {
         jobLock.lock();
         try {
             Job job = new Job(UUID.randomUUID().toString(), creator != null ? creator : "anonymous");
-            job.setOwner(job.getCreator());
-            job.setState(JobState.IDLE);
-            job.setCommand(command);
-            job.setDailyBackups(4);
-            job.setWeeklyBackups(1);
-            job.setMonthlyBackups(0);
-            job.setHourlyBackups(0);
-            job.setReplicas(DEFAULT_REPLICA_COUNT);
             job.setMinionType(minionType);
+            job.setCommand(command);
+            job.setState(JobState.IDLE);
+            job.setOwnerWritable(jobDefaults.ownerWritable);
+            job.setGroupWritable(jobDefaults.groupWritable);
+            job.setWorldWritable(jobDefaults.worldWritable);
+            job.setOwnerExecutable(jobDefaults.ownerExecutable);
+            job.setGroupExecutable(jobDefaults.groupExecutable);
+            job.setWorldExecutable(jobDefaults.worldExecutable);
+            job.setDailyBackups(jobDefaults.dailyBackups);
+            job.setWeeklyBackups(jobDefaults.weeklyBackups);
+            job.setMonthlyBackups(jobDefaults.monthlyBackups);
+            job.setHourlyBackups(jobDefaults.hourlyBackups);
+            job.setReplicas(jobDefaults.replicas);
             List<HostState> hostStates = getOrCreateHostStateList(minionType, taskHosts);
             List<JobTask> tasksAssignedToHosts = balancer.generateAssignedTasksForNewJob(job.getId(), taskCount, hostStates);
             job.setTasks(tasksAssignedToHosts);
@@ -800,29 +816,37 @@ public class Spawn implements Codable, AutoCloseable {
         }
     }
 
-    public boolean synchronizeJobState(String jobUUID) {
+    public Response synchronizeJobState(String jobUUID, String user,
+                                       String token, String sudo) {
         if (jobUUID == null) {
-            throw new NullPointerException("missing job uuid");
+            return Response.status(Response.Status.BAD_REQUEST).entity("{error:\"missing id parameter\"}").build();
         }
         if (jobUUID.equals("ALL")) {
+            if (!getPermissionsManager().adminAction(user, token, sudo)) {
+                return Response.status(Response.Status.UNAUTHORIZED)
+                               .entity("{error:\"insufficient priviledges\"}").build();
+            }
             Collection<Job> jobList = listJobs();
             for (Job job : jobList) {
-                if (!synchronizeSingleJob(job.getId())) {
+                Response status = synchronizeSingleJob(job.getId(), user, token, sudo);
+                if (status.getStatus() != 200) {
                     log.warn("Stopping synchronize all jobs to to failure synchronizing job: " + job.getId());
-                    return false;
+                    return status;
                 }
             }
-            return true;
+            return Response.ok("{id:'" + jobUUID + "',action:'synchronzied'}").build();
         } else {
-            return synchronizeSingleJob(jobUUID);
+            return synchronizeSingleJob(jobUUID, user, token, sudo);
         }
     }
 
-    private boolean synchronizeSingleJob(String jobUUID) {
+    private Response synchronizeSingleJob(String jobUUID, String user, String token, String sudo) {
         Job job = getJob(jobUUID);
         if (job == null) {
             log.warn("[job.synchronize] job uuid {} not found", jobUUID);
-            return false;
+            return Response.status(Response.Status.NOT_FOUND).entity("job " + jobUUID + " not found").build();
+        } else if (!permissionsManager.isExecutable(user, token, sudo, job)) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity("{error:\"insufficient priviledges\"}").build();
         }
         ObjectMapper mapper = new ObjectMapper();
         for (JobTask task : job.getCopyOfTasks()) {
@@ -844,7 +868,7 @@ public class Spawn implements Codable, AutoCloseable {
                 hostState = mapper.readValue(hostStateString, HostState.class);
             } catch (IOException e) {
                 log.warn("Unable to deserialize host state for host: " + hostStateString + " serialized string was\n" + hostStateString);
-                return false;
+                return Response.serverError().entity("Serialization error").build();
             }
             boolean matched = matchJobNodeAndId(jobUUID, task, hostState.getRunning(), hostState.getStopped(), hostState.getQueued());
             if (!matched) {
@@ -863,7 +887,7 @@ public class Spawn implements Codable, AutoCloseable {
                 log.warn("Spawn and minion agree, job/node: " + jobUUID + "/" + task.getTaskID() + " is on host: " + hostState.getHost());
             }
         }
-        return true;
+        return Response.ok().entity("success").build();
     }
 
     private static boolean matchJobNodeAndId(String jobUUID, JobTask task, JobKey[]... jobKeys) {
@@ -1125,11 +1149,16 @@ public class Spawn implements Codable, AutoCloseable {
      * @return a RebalanceOutcome describing which steps were performed
      * @throws Exception If there is a failure when rebalancing replicas
      */
-    public RebalanceOutcome rebalanceJob(String jobUUID, int tasksToMove) throws Exception {
+    public RebalanceOutcome rebalanceJob(String jobUUID, int tasksToMove, String user,
+                                         String token, String sudo) throws Exception {
         Job job = getJob(jobUUID);
         if (jobUUID == null || job == null) {
             log.warn("[job.rebalance] job uuid " + jobUUID + " not found");
             return new RebalanceOutcome(jobUUID, "job not found", null, null);
+        }
+        if (permissionsManager.isExecutable(user, token, sudo, job)) {
+            log.warn("[job.rebalance] insufficient priviledges to rebalance " + jobUUID);
+            return new RebalanceOutcome(jobUUID, "insufficient priviledges", null, null);
         }
         if (job.getState() != JobState.IDLE && job.getState() != JobState.DEGRADED) {
             log.warn("[job.rebalance] job must be IDLE or DEGRADED to rebalance " + jobUUID);
@@ -1907,10 +1936,23 @@ public class Spawn implements Codable, AutoCloseable {
         stopTask(jobUUID, taskID, true, false);
     }
 
-    public void revertJobOrTask(String jobUUID, int taskID, String backupType, int rev, long time) throws Exception {
+    public boolean revertJobOrTask(String jobUUID,
+                                String user,
+                                String token,
+                                String sudo,
+                                int taskID,
+                                String backupType,
+                                int rev,
+                                long time) throws Exception {
+        Job job = getJob(jobUUID);
+        if (job == null) {
+            return true;
+        }
+        if (!permissionsManager.isExecutable(user, token, sudo, job)) {
+            return false;
+        }
         if (taskID == -1) {
             // Revert entire job
-            Job job = getJob(jobUUID);
             Job.logJobEvent(job, JobEvent.REVERT, eventLog);
             int numTasks = job.getTaskCount();
             for (int i = 0; i < numTasks; i++) {
@@ -1922,8 +1964,7 @@ public class Spawn implements Codable, AutoCloseable {
             log.warn("[task.revert] " + jobUUID + "/" + taskID);
             revert(jobUUID, backupType, rev, time, taskID);
         }
-
-
+        return true;
     }
 
     private void revert(String jobUUID, String backupType, int rev, long time, int taskID) throws Exception {
@@ -2292,7 +2333,7 @@ public class Spawn implements Codable, AutoCloseable {
         for (String host : jobHosts) {
             hostStrings.add("{host:\"" + host + "\", port:" + sPort + "}");
         }
-        return new JobMacro("spawn", "createJobHostMacro-" + job, Joiner.on(',').join(hostStrings));
+        return new JobMacro("spawn", "", "createJobHostMacro-" + job, Joiner.on(',').join(hostStrings));
     }
 
     // TODO: 1. Why is this not in SpawnMQ?  2.  Who actually listens to job config changes
@@ -2564,14 +2605,6 @@ public class Spawn implements Codable, AutoCloseable {
     /** Called by Thread registered to Runtime triggered by sig-term. */
     @Override public void close() {
         shuttingDown.set(true);
-        if (jetty != null) {
-            try {
-                jetty.stop();
-            } catch (Exception e) {
-                log.warn("", e);
-            }
-        }
-
         try {
             expandKickExecutor.shutdown();
             scheduledExecutor.shutdown();
@@ -3182,4 +3215,15 @@ public class Spawn implements Codable, AutoCloseable {
         return spawnDataStore;
     }
 
+    public int getWebPort() {
+        return webPort;
+    }
+
+    public int getWebPortSSL() {
+        return webPortSSL;
+    }
+
+    public boolean getRequireSSL() {
+        return requireSSL;
+    }
 }

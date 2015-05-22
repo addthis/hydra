@@ -35,14 +35,12 @@ import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.ClientEvent;
 import com.addthis.hydra.job.spawn.ClientEventListener;
 import com.addthis.hydra.job.spawn.Spawn;
-import com.addthis.hydra.job.web.jersey.User;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Optional;
 
 import com.sun.jersey.api.core.HttpContext;
-import com.yammer.dropwizard.auth.Auth;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -126,6 +124,19 @@ public class ListenResource {
     }
 
     @GET
+    @Path("/settings")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getSettings() {
+        try {
+            JSONObject settings = CodecJSON.encodeJSON(spawn.getSystemManager().getSettings());
+            return Response.ok(settings.toString()).build();
+        } catch (Exception ex) {
+            log.error("Error during construction of \"/settings\" response: " ,ex);
+            return Response.serverError().entity(ex.getMessage()).build();
+        }
+    }
+
+    @GET
     @Path("/setup")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getSetup() {
@@ -176,13 +187,16 @@ public class ListenResource {
         }
     }
 
-    /** @deprecated Use {@link SystemResource#quiesceCluster(String, User)} */
+    /** @deprecated Use {@link SystemResource#quiesceCluster(String, String, String, String)} */
     @GET
     @Path("/quiesce")
     @Produces(MediaType.APPLICATION_JSON)
     @Deprecated
-    public Response quiesceCluster(@QueryParam("quiesce") String quiesce, @Auth User user) {
-        return systemResource.quiesceCluster(quiesce, user);
+    public Response quiesceCluster(@QueryParam("quiesce") String quiesce,
+                                   @QueryParam("user")  String user,
+                                   @QueryParam("token") String token,
+                                   @QueryParam("sudo") String sudo) {
+        return systemResource.quiesceCluster(quiesce, user, token, sudo);
     }
 
     /** @deprecated Use {@link SystemResource#getBalanceParams()} */

@@ -39,12 +39,15 @@ public final class JobMacro implements Codable, Cloneable {
     private long modified;
     @FieldConfig
     private String owner;
+    @FieldConfig
+    private String group;
 
     public JobMacro() {
     }
 
-    public JobMacro(String owner, String description, String macro) {
+    public JobMacro(String owner, String group, String description, String macro) {
         this.owner = owner;
+        this.group = group;
         this.description = description;
         this.macro = macro;
         this.modified = JitterClock.globalTime();
@@ -53,6 +56,10 @@ public final class JobMacro implements Codable, Cloneable {
 
     public String getOwner() {
         return owner;
+    }
+
+    public String getGroup() {
+        return group;
     }
 
     public String getDescription() {

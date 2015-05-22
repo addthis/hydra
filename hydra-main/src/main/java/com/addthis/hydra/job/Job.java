@@ -26,7 +26,7 @@ import com.addthis.basis.util.RollingLog;
 
 import com.addthis.codec.annotations.FieldConfig;
 import com.addthis.codec.json.CodecJSON;
-import com.addthis.hydra.job.minion.Minion;
+import com.addthis.hydra.minion.Minion;
 import com.addthis.hydra.util.LogUtil;
 import com.addthis.hydra.util.StringMapHelper;
 import com.addthis.maljson.JSONObject;
@@ -55,9 +55,28 @@ public final class Job implements IJob {
 
     @FieldConfig private int state;
     @FieldConfig private int countActiveTasks;
+    /* creator of the job */
     @FieldConfig private String creator;
-    /* who last modified this job */
+    /* owner of the job */
     @FieldConfig private String owner;
+    /* group of the job */
+    @FieldConfig private String group;
+    /* can the owner modify the job */
+    @FieldConfig private boolean ownerWritable;
+    /* can the group modify the job */
+    @FieldConfig private boolean groupWritable;
+    /* can the world modify the job */
+    @FieldConfig private boolean worldWritable;
+    /* can the owner start/stop the job */
+    @FieldConfig private boolean ownerExecutable;
+    /* can the group start/stop the job */
+    @FieldConfig private boolean groupExecutable;
+    /* can the world start/stop the job */
+    @FieldConfig private boolean worldExecutable;
+    /* user who last modified the job */
+    @FieldConfig private String lastModifiedBy;
+    /* last modification time */
+    @FieldConfig private long lastModifiedAt;
     /* purely ornamental description of this job */
     @FieldConfig private String description;
     /* key used for storing / retrieving this job */
@@ -140,6 +159,15 @@ public final class Job implements IJob {
         this.setState(job.getState());
         this.creator = job.getCreator();
         this.owner = job.getOwner();
+        this.group = job.getGroup();
+        this.ownerWritable = job.isOwnerWritable();
+        this.groupWritable = job.isGroupWritable();
+        this.worldWritable = job.isWorldWritable();
+        this.ownerExecutable = job.isOwnerExecutable();
+        this.groupExecutable = job.isGroupExecutable();
+        this.worldExecutable = job.isWorldExecutable();
+        this.lastModifiedBy = job.lastModifiedBy();
+        this.lastModifiedAt = job.lastModifiedAt();
         this.description = job.getDescription();
         this.priority = job.getPriority();
         this.createTime = job.getCreateTime();
@@ -181,6 +209,11 @@ public final class Job implements IJob {
     }
 
     @Override
+    public String getCreator() {
+        return creator;
+    }
+
+    @Override
     public String getOwner() {
         return owner;
     }
@@ -191,8 +224,93 @@ public final class Job implements IJob {
     }
 
     @Override
-    public String getCreator() {
-        return creator;
+    public String getGroup() {
+        return group;
+    }
+
+    @Override
+    public void setGroup(String group) {
+        this.group = group;
+    }
+
+    @Override
+    public boolean isOwnerWritable() {
+        return ownerWritable;
+    }
+
+    @Override
+    public void setOwnerWritable(boolean ownerWritable) {
+        this.ownerWritable = ownerWritable;
+    }
+
+    @Override
+    public boolean isGroupWritable() {
+        return groupWritable;
+    }
+
+    @Override
+    public void setGroupWritable(boolean groupWritable) {
+        this.groupWritable = groupWritable;
+    }
+
+    @Override
+    public boolean isWorldWritable() {
+        return worldWritable;
+    }
+
+    @Override
+    public void setWorldWritable(boolean worldWritable) {
+        this.worldWritable = worldWritable;
+    }
+
+    @Override
+    public boolean isOwnerExecutable() {
+        return ownerExecutable;
+    }
+
+    @Override
+    public void setOwnerExecutable(boolean ownerExecutable) {
+        this.ownerExecutable = ownerExecutable;
+    }
+
+    @Override
+    public boolean isGroupExecutable() {
+        return groupExecutable;
+    }
+
+    @Override
+    public void setGroupExecutable(boolean groupExecutable) {
+        this.groupExecutable = groupExecutable;
+    }
+
+    @Override
+    public boolean isWorldExecutable() {
+        return worldExecutable;
+    }
+
+    @Override
+    public void setWorldExecutable(boolean worldExecutable) {
+        this.worldExecutable = worldExecutable;
+    }
+
+    @Override
+    public String lastModifiedBy() {
+        return lastModifiedBy;
+    }
+
+    @Override
+    public void setLastModifiedBy(String user) {
+        this.lastModifiedBy = user;
+    }
+
+    @Override
+    public long lastModifiedAt() {
+        return lastModifiedAt;
+    }
+
+    @Override
+    public void setLastModifiedAt(long time) {
+        this.lastModifiedAt = time;
     }
 
     @Override

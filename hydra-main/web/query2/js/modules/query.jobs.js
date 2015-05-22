@@ -49,6 +49,7 @@ function(
             "description": "(no title)",
             "state": "",
             "creator": "",
+            "owner": "",
             "submitTime": "",
             "startTime": "",
             "endTime": "",

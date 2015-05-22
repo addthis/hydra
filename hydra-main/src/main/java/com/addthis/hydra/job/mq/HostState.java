@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import com.addthis.codec.annotations.FieldConfig;
-import com.addthis.hydra.job.minion.Minion;
+import com.addthis.hydra.minion.Minion;
 
 import com.google.common.base.Objects;
 

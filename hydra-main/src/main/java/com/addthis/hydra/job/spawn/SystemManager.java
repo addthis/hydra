@@ -29,7 +29,9 @@ public interface SystemManager {
     public void updateSpawnHost(Optional<String> spawnHost);
 
     public void updateDisabled(Optional<String> disabled);
-    
+
+    public void updateSslEnabled(boolean enabled);
+
     public Settings getSettings();
 
     /** Returns git properties */

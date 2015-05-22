@@ -19,45 +19,73 @@
     </head>
     <body>
         <div id="topNavbar" class="navbar" role="navigation">
-            <a class="navbar-brand" href="#">Spawn</a>
-            <ul class="nav navbar-nav">
-                <li>
-                    <a href="#jobs">Jobs</a>
-                </li>
-                <li>
-                    <a href="#macros">Macros</a>
-                </li>
-                <li>
-                    <a href="#commands">Commands</a>
-                </li>
-                <li>
-                    <a href="#alias">Alias</a>
-                </li>
-                <li>
-                    <a href="#hosts">Hosts</a>
-                </li>
-                <li>
-                    <a href="#alerts">Alerts</a>
-                </li>                
-                <li class="dropdown-toggle">
-                    <a href="#settings" id="settingsDropDown" class="dropdown-toggle" data-toggle="dropdown">
-                        System
-                        <span class="caret"></span>
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a href="#git">Git</a></li>
-                        <li><a href="#rebalanceParams">Rebalance Parameters</a></li>
-                        <li class="divider"></li>
-                        <li><a id="healthCheckLink" href="#">Health Check</a></li>
-                        <li><a id="quiesceLink" href="#">Quiesce</a></li>
-                    </ul>
-                </li>
-            </ul>
-            <span id='quiescedLabel' style='margin-left:100px;display:none;' class='label label-warning'>CLUSTER QUIESCED</span>
-            <span id="usernameBox" class="pull-right"></span>
-            <div id="infoMetricBox" class="pull-right"></div>
+            <div>
+                <a class="navbar-brand" href="#">Spawn</a>
+                <ul class="nav navbar-nav">
+                    <li>
+                        <a href="#jobs">Jobs</a>
+                    </li>
+                    <li>
+                        <a href="#macros">Macros</a>
+                    </li>
+                    <li>
+                        <a href="#commands">Commands</a>
+                    </li>
+                    <li>
+                        <a href="#alias">Alias</a>
+                    </li>
+                    <li>
+                        <a href="#hosts">Hosts</a>
+                    </li>
+                    <li>
+                        <a href="#alerts">Alerts</a>
+                    </li>
+                    <li class="dropdown-toggle">
+                        <a href="#settings" id="settingsDropDown" class="dropdown-toggle" data-toggle="dropdown">
+                            System
+                            <span class="caret"></span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#git">Git</a></li>
+                            <li><a href="#rebalanceParams">Rebalance Parameters</a></li>
+                            <li class="divider"></li>
+                            <li><a id="healthCheckLink" href="#">Health Check</a></li>
+                            <li><a id="quiesceLink" href="#">Quiesce</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div>
+                <span id='quiescedLabel' style='margin-left:100px;display:none;' class='label label-warning'>CLUSTER QUIESCED</span>
+                <div class="btn-group btn-group-sm pull-right"  style="margin:0px 0px 0px 14px;">
+                   <button id="loginButton" class='btn btn-default btn-small bottomaligned'>
+                        login
+                    </button>
+                    <button id="logoutButton" class='btn btn-default btn-small bottomaligned'>
+                        logout
+                    </button>
+                    <label>
+                        <input id="sudoCheckbox" type="checkbox" style="margin-left:10px;margin-right:5px">sudo
+                    </label>
+                </div>
+                <span id="usernameBox" class="pull-right"></span>
+                <div id="infoMetricBox" class="pull-right"></div>
+            </div>
         </div>
-        <div id="main">
+        <div id="main"></div>
+        <div style="display:none">
+            <form id="loginForm">
+                <table>
+                    <tr>
+                        <td style="vertical-align:bottom"><label for="loginUsername">Username: </label>
+                        <input type="text" id="loginUsername" value=""/>
+                        <td style="vertical-align:bottom"><label for="loginPassword">Password: </label>
+                        <input type="password" id="loginPassword" value=""/>
+                        <td style="vertical-align:bottom"><input class="btn btn-default" type="submit" value="Authenticate"/>
+                        <input type="hidden" id="loginToken" value=""/>
+                    </tr>
+                </table>
+            </form>
         </div>
     </body>
 </html>
