@@ -36,8 +36,8 @@ public class SpawnState implements Codable {
     private static final Logger log = LoggerFactory.getLogger(SpawnState.class);
 
     public final String uuid;
-    final AtomicBoolean quiesce;
-    final CopyOnWriteArraySet<String> disabledHosts;
+    @JsonProperty final AtomicBoolean quiesce;
+    @JsonProperty final CopyOnWriteArraySet<String> disabledHosts;
 
     final transient ConcurrentMap<String, Job> jobs = new ConcurrentHashMap<>();
     final transient DirectedGraph<String> jobDependencies = new DirectedGraph<>();

@@ -319,5 +319,5 @@ function(
             }
         }
     };
-    return _.extend(Backbone.Events,app);
+    return _.extend(app, Backbone.Events);
 });
