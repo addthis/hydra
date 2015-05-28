@@ -81,9 +81,9 @@ abstract class AuthenticationManager {
      */
     abstract void logout(User user);
 
-    abstract ImmutableList<String> adminGroups();
+    protected abstract ImmutableList<String> adminGroups();
 
-    abstract ImmutableList<String> adminUsers();
+    protected abstract ImmutableList<String> adminUsers();
 
     boolean isAdmin(User user) {
         if (user == null) {

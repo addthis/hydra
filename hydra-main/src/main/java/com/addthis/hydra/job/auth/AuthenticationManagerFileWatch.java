@@ -137,12 +137,12 @@ class AuthenticationManagerFileWatch extends AuthenticationManager {
         manager.logout(user);
     }
 
-    @Override ImmutableList<String> adminGroups() {
+    @Override protected ImmutableList<String> adminGroups() {
         updateAuthenticationManager();
         return manager.adminGroups();
     }
 
-    @Override ImmutableList<String> adminUsers() {
+    @Override protected ImmutableList<String> adminUsers() {
         updateAuthenticationManager();
         return manager.adminUsers();
     }

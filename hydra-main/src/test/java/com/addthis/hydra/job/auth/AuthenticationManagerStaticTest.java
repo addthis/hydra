@@ -20,8 +20,10 @@ import com.google.common.collect.ImmutableList;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class AuthenticationManagerStaticTest {
 
@@ -33,10 +35,27 @@ public class AuthenticationManagerStaticTest {
         AuthenticationManagerStatic auth = new AuthenticationManagerStatic(users1,
                                                                            ImmutableList.of(),
                                                                            ImmutableList.of(),
+                                                                           ImmutableList.of(),
                                                                            false);
         assertNull(auth.login("user1", "bar", false));
         assertEquals("password2", auth.login("user2", "password2", false));
         assertNull(auth.authenticate("user1", "bar"));
         assertNotNull(auth.authenticate("user2", "password2"));
+    }
+
+    @Test
+    public void isAdmin() {
+        StaticUser user1 = new StaticUser("user1", ImmutableList.of("group2"), null, null);
+        StaticUser user2 = new StaticUser("user2", null, "password2", null);
+        StaticUser user3 = new StaticUser("user3", ImmutableList.of("group2"), "password3", null);
+        List<StaticUser> users = ImmutableList.of(user1, user2, user3);
+        AuthenticationManagerStatic auth = new AuthenticationManagerStatic(users,
+                                                                           ImmutableList.of("group2"),
+                                                                           ImmutableList.of("user2"),
+                                                                           ImmutableList.of("user3"),
+                                                                           false);
+        assertTrue(auth.isAdmin(user1));
+        assertTrue(auth.isAdmin(user2));
+        assertFalse(auth.isAdmin(user3));
     }
 }

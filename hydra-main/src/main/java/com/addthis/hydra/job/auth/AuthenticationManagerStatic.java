@@ -44,12 +44,16 @@ class AuthenticationManagerStatic extends AuthenticationManager {
     final ImmutableList<String> adminUsers;
 
     @Nonnull
+    final ImmutableList<String> noAdminUsers;
+
+    @Nonnull
     final boolean requireSSL;
 
     @JsonCreator
     public AuthenticationManagerStatic(@Nonnull @JsonProperty("users") List<StaticUser> users,
                                        @Nonnull @JsonProperty("adminGroups") List<String> adminGroups,
                                        @Nonnull @JsonProperty("adminUsers") List<String> adminUsers,
+                                       @Nonnull @JsonProperty("noAdminUsers") List<String> noAdminUsers,
                                        @JsonProperty(value = "requireSSL", required = true) boolean requireSSL) {
 
         ImmutableMap.Builder<String, StaticUser> builder = ImmutableMap.<String, StaticUser> builder();
@@ -59,6 +63,7 @@ class AuthenticationManagerStatic extends AuthenticationManager {
         this.users = builder.build();
         this.adminGroups = ImmutableList.copyOf(adminGroups);
         this.adminUsers = ImmutableList.copyOf(adminUsers);
+        this.noAdminUsers = ImmutableList.copyOf(noAdminUsers);
         this.requireSSL = requireSSL;
         log.info("Registering static authentication");
     }
@@ -111,16 +116,35 @@ class AuthenticationManagerStatic extends AuthenticationManager {
         }
     }
 
+    @Override boolean isAdmin(User user) {
+        if (user == null) {
+            return false;
+        }
+        if (noAdminUsers.contains(user.name())) {
+            return false;
+        }
+        if (adminUsers.contains(user.name())) {
+            return true;
+        }
+        List<String> groups = user.groups();
+        for (String group : groups) {
+            if (adminGroups.contains(group)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     @Override void logout(User user) {
         // do nothing
     }
 
-    @Override ImmutableList<String> adminGroups() {
+    @Override protected ImmutableList<String> adminGroups() {
         return adminGroups;
     }
 
-    @Override ImmutableList<String> adminUsers() {
+    @Override protected ImmutableList<String> adminUsers() {
         return adminUsers;
     }
 
