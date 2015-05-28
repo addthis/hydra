@@ -61,9 +61,6 @@ public class SpawnService {
     private static final Logger log = LoggerFactory.getLogger(SpawnService.class);
     private static final int batchInterval = Integer.parseInt(System.getProperty("spawn.batchtime", "500"));
     private static final int pollTimeout = Integer.parseInt(System.getProperty("spawn.polltime", "1000"));
-    private static final String KEYSTORE_PATH = Parameter.value("spawn.https.keystore.path");
-    private static final String KEYSTORE_PASSWORD = Parameter.value("spawn.https.keystore.password");
-    private static final String KEYMANAGER_PASSWORD = Parameter.value("spawn.https.keymanager.password");
 
     private static final String webDir = Parameter.value("spawn.web.dir", "web");
     private static final String indexFilename = Parameter.value("spawn.index.file", "index.html");
@@ -80,32 +77,36 @@ public class SpawnService {
 
     public SpawnService(final Spawn spawn) throws Exception {
         this.jetty = new Server();
-        this.webPort = spawn.getWebPort();
-        this.webPortSSL = spawn.getWebPortSSL();
+        this.webPort = spawn.webPort;
 
         SelectChannelConnector selectChannelConnector = new SelectChannelConnector();
         selectChannelConnector.setPort(webPort);
+        String keyStorePath = spawn.keyStorePath;
+        String keyStorePassword = spawn.keyStorePassword;
+        String keyManagerPassword = spawn.keyManagerPassword;
 
-
-        if ((KEYSTORE_PASSWORD != null) && (KEYMANAGER_PASSWORD != null) && (KEYSTORE_PATH != null)) {
+        if ((keyStorePassword != null) && (keyManagerPassword != null) && (keyStorePath != null)) {
             SslSelectChannelConnector sslSelectChannelConnector = new SslSelectChannelConnector();
-            sslSelectChannelConnector.setPort(webPortSSL);
+            sslSelectChannelConnector.setPort(spawn.webPortSSL);
             SslContextFactory sslContextFactory = sslSelectChannelConnector.getSslContextFactory();
-            sslContextFactory.setKeyStorePath(KEYSTORE_PATH);
-            sslContextFactory.setKeyStorePassword(readFile(KEYSTORE_PASSWORD));
-            sslContextFactory.setKeyManagerPassword(readFile(KEYMANAGER_PASSWORD));
+            sslContextFactory.setKeyStorePath(keyStorePath);
+            sslContextFactory.setKeyStorePassword(readFile(keyStorePassword));
+            sslContextFactory.setKeyManagerPassword(readFile(keyManagerPassword));
             log.info("Registering ssl connector");
             jetty.setConnectors(new Connector[]{selectChannelConnector, sslSelectChannelConnector});
             spawn.getSystemManager().updateSslEnabled(true);
-        } else if (spawn.getRequireSSL()) {
-            String message = "Missing one or more of \"spawn.https.keystore.path\", " +
-                             "\"spawn.https.keystore.password\", and \"spawn.https.keymanager.password\". " +
-                             "Set \"spawn.https.require\" to false to disable SSL.";
+            this.webPortSSL = spawn.webPortSSL;
+        } else if (spawn.requireSSL) {
+            String message = "Missing one or more of \"com.addthis.hydra.job.spawn.Spawn.keyStorePath\", " +
+                             "\"com.addthis.hydra.job.spawn.Spawn.keyStorePassword\", " +
+                             "and \"com.addthis.hydra.job.spawn.Spawn.keyManagerPassword\". " +
+                             "Set \"com.addthis.hydra.job.spawn.Spawn.requireSSL\" to false to disable SSL.";
             throw new IllegalStateException(message);
         } else {
             log.info("Not registering ssl connector");
             spawn.getSystemManager().updateSslEnabled(false);
             jetty.setConnectors(new Connector[]{selectChannelConnector});
+            this.webPortSSL = 0;
         }
 
         this.config = new SpawnConfig();
@@ -145,7 +146,8 @@ public class SpawnService {
     }
 
     public void start() throws Exception {
-        log.warn("[init] running spawn2 on port " + webPort);
+        log.info("[init] running spawn2 on port " + webPort +
+                 ((webPortSSL > 0) ? (" and port " + webPortSSL) : ""));
 
         ResourceHandler resourceHandler = new ResourceHandler();
         resourceHandler.setDirectoriesListed(true);

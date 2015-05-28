@@ -224,10 +224,14 @@ public class Spawn implements Codable, AutoCloseable {
     @Nonnull private final HostFailWorker hostFailWorker;
     @Nonnull private final SystemManager systemManager;
     @Nonnull private final RollingLog eventLog;
+    @Nullable public final String keyStorePath;
+    @Nullable public final String keyStorePassword;
+    @Nullable public final String keyManagerPassword;
 
-    private final int webPort;
-    private final int webPortSSL;
-    private final boolean requireSSL;
+    public final int webPort;
+    public final int webPortSSL;
+    public final boolean requireSSL;
+    public final boolean defaultSSL;
 
     @Nullable private final JobStore jobStore;
 
@@ -238,6 +242,10 @@ public class Spawn implements Codable, AutoCloseable {
                   @JsonProperty(value = "webPort", required = true) int webPort,
                   @JsonProperty(value = "webPortSSL", required = true) int webPortSSL,
                   @JsonProperty(value = "requireSSL", required = true) boolean requireSSL,
+                  @JsonProperty(value = "defaultSSL", required = true) boolean defaultSSL,
+                  @JsonProperty(value = "keyStorePath") String keyStorePath,
+                  @JsonProperty(value = "keyStorePassword") String keyStorePassword,
+                  @JsonProperty(value = "keyManagerPassword") String keyManagerPassword,
                   @JsonProperty("httpHost") String httpHost,
                   @JsonProperty("dataDir") File dataDir,
                   @JsonProperty("stateFile") File stateFile,
@@ -266,6 +274,10 @@ public class Spawn implements Codable, AutoCloseable {
         this.webPort = webPort;
         this.webPortSSL = webPortSSL;
         this.requireSSL = requireSSL;
+        this.defaultSSL = defaultSSL;
+        this.keyStorePath = keyStorePath;
+        this.keyStorePassword = keyStorePassword;
+        this.keyManagerPassword = keyManagerPassword;
         if (stateFile.exists() && stateFile.isFile()) {
             spawnState = Jackson.defaultMapper().readValue(stateFile, SpawnState.class);
         } else {
@@ -3215,15 +3227,4 @@ public class Spawn implements Codable, AutoCloseable {
         return spawnDataStore;
     }
 
-    public int getWebPort() {
-        return webPort;
-    }
-
-    public int getWebPortSSL() {
-        return webPortSSL;
-    }
-
-    public boolean getRequireSSL() {
-        return requireSSL;
-    }
 }

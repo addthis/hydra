@@ -17,8 +17,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 
-import com.addthis.basis.util.Parameter;
-
 import com.addthis.codec.jackson.Jackson;
 import com.addthis.hydra.job.Job;
 import com.addthis.hydra.job.store.DataStoreUtil;
@@ -41,7 +39,6 @@ public class SystemManagerImpl implements SystemManager {
 
     private static final Logger log = LoggerFactory.getLogger(SystemManagerImpl.class);
     private static final String GIT_PROPS = "/hydra-git.properties";
-    private static final boolean sslLoginDefault = Parameter.boolValue("spawn.https.login.default", true);
 
     private final Spawn spawn;
     private final int authenticationTokenTimeout;
@@ -114,7 +111,7 @@ public class SystemManagerImpl implements SystemManager {
                                      .setSpawnHost(spawnHost)
                                      .setDisabled(disabled)
                                      .setDefaultReplicaCount(Spawn.DEFAULT_REPLICA_COUNT)
-                                     .setSslDefault(sslEnabled && sslLoginDefault)
+                                     .setSslDefault(sslEnabled && spawn.defaultSSL)
                                      .setAuthTimeout(authenticationTokenTimeout)
                                      .setSudoTimeout(authenticationSudoTimeout)
                                      .build();
