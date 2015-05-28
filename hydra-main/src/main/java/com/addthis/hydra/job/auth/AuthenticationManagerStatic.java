@@ -100,7 +100,7 @@ class AuthenticationManagerStatic extends AuthenticationManager {
         }
     }
 
-    @Override protected User getUser(String username) {
+    @Override User getUser(String username) {
         if (username == null) {
             return null;
         }
@@ -140,11 +140,11 @@ class AuthenticationManagerStatic extends AuthenticationManager {
         // do nothing
     }
 
-    @Override protected ImmutableList<String> adminGroups() {
+    @Override ImmutableList<String> adminGroups() {
         return adminGroups;
     }
 
-    @Override protected ImmutableList<String> adminUsers() {
+    @Override ImmutableList<String> adminUsers() {
         return adminUsers;
     }
 

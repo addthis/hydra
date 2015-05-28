@@ -49,7 +49,7 @@ class AuthenticationManagerAllowAll extends AuthenticationManager {
         return new StaticUser(username, ImmutableList.of(), "unused", "unused");
     }
 
-    @Override protected User getUser(String username) {
+    @Override User getUser(String username) {
         return new StaticUser(username, ImmutableList.of(), "unused", "unused");
     }
 
@@ -61,11 +61,11 @@ class AuthenticationManagerAllowAll extends AuthenticationManager {
         // do nothing
     }
 
-    @Override protected ImmutableList<String> adminGroups() {
+    @Override ImmutableList<String> adminGroups() {
         return ImmutableList.of();
     }
 
-    @Override protected ImmutableList<String> adminUsers() {
+    @Override ImmutableList<String> adminUsers() {
         return ImmutableList.of();
     }
 }

@@ -88,7 +88,7 @@ class AuthenticationManagerLocalUser extends AuthenticationManager {
         }
     }
 
-    @Override protected User getUser(String username) {
+    @Override User getUser(String username) {
         return users.get(username);
     }
 
@@ -100,11 +100,11 @@ class AuthenticationManagerLocalUser extends AuthenticationManager {
         tokenCache.remove(user.name());
     }
 
-    @Override protected ImmutableList<String> adminGroups() {
+    @Override ImmutableList<String> adminGroups() {
         return ImmutableList.of();
     }
 
-    @Override protected ImmutableList<String> adminUsers() {
+    @Override ImmutableList<String> adminUsers() {
         return ImmutableList.of("admin");
     }
 }

@@ -86,7 +86,7 @@ class AuthenticationManagerNested extends AuthenticationManager {
         return DefaultUser.join(innerMatch, outerMatch);
     }
 
-    @Override protected User getUser(String username) {
+    @Override User getUser(String username) {
         if (username == null) {
             return null;
         }
@@ -114,11 +114,11 @@ class AuthenticationManagerNested extends AuthenticationManager {
         }
     }
 
-    @Override protected ImmutableList<String> adminGroups() {
+    @Override ImmutableList<String> adminGroups() {
         return ImmutableList.<String>builder().addAll(inner.adminGroups()).addAll(outer.adminGroups()).build();
     }
 
-    @Override protected ImmutableList<String> adminUsers() {
+    @Override ImmutableList<String> adminUsers() {
         return ImmutableList.<String>builder().addAll(inner.adminUsers()).addAll(outer.adminGroups()).build();
     }
 

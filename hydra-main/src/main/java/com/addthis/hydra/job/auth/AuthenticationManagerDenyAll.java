@@ -41,7 +41,7 @@ class AuthenticationManagerDenyAll extends AuthenticationManager {
         return null;
     }
 
-    @Override protected User getUser(String username) {
+    @Override User getUser(String username) {
         return null;
     }
 
@@ -56,11 +56,11 @@ class AuthenticationManagerDenyAll extends AuthenticationManager {
         return false;
     }
 
-    @Override protected ImmutableList<String> adminGroups() {
+    @Override ImmutableList<String> adminGroups() {
         return ImmutableList.of();
     }
 
-    @Override protected ImmutableList<String> adminUsers() {
+    @Override ImmutableList<String> adminUsers() {
         return ImmutableList.of();
     }
 }

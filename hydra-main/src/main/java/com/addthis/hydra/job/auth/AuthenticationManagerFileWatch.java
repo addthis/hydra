@@ -122,7 +122,7 @@ class AuthenticationManagerFileWatch extends AuthenticationManager {
         return manager.authenticate(username, secret);
     }
 
-    @Override protected User getUser(String username) {
+    @Override User getUser(String username) {
         updateAuthenticationManager();
         return manager.getUser(username);
     }
@@ -137,12 +137,12 @@ class AuthenticationManagerFileWatch extends AuthenticationManager {
         manager.logout(user);
     }
 
-    @Override protected ImmutableList<String> adminGroups() {
+    @Override ImmutableList<String> adminGroups() {
         updateAuthenticationManager();
         return manager.adminGroups();
     }
 
-    @Override protected ImmutableList<String> adminUsers() {
+    @Override ImmutableList<String> adminUsers() {
         updateAuthenticationManager();
         return manager.adminUsers();
     }

@@ -61,7 +61,7 @@ abstract class AuthenticationManager {
      * @param username
      * @return
      */
-    protected abstract User getUser(String username);
+    abstract User getUser(String username);
 
     /**
      * Optionally provides a sudo token for the user
@@ -81,9 +81,9 @@ abstract class AuthenticationManager {
      */
     abstract void logout(User user);
 
-    protected abstract ImmutableList<String> adminGroups();
+    abstract ImmutableList<String> adminGroups();
 
-    protected abstract ImmutableList<String> adminUsers();
+    abstract ImmutableList<String> adminUsers();
 
     boolean isAdmin(User user) {
         if (user == null) {
