@@ -61,11 +61,11 @@ class AuthenticationManagerAllowAll extends AuthenticationManager {
         // do nothing
     }
 
-    @Override ImmutableList<String> adminGroups() {
+    @Override protected ImmutableList<String> adminGroups() {
         return ImmutableList.of();
     }
 
-    @Override ImmutableList<String> adminUsers() {
+    @Override protected ImmutableList<String> adminUsers() {
         return ImmutableList.of();
     }
 }

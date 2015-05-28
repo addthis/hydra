@@ -61,6 +61,7 @@ public class PermissionsManagerIntegrationTest {
                                          "    groups: [onesyllable]\n" +
                                          "},\n" +
                                          "]\n" +
+                                         "noAdminUsers: []\n" +
                                          "adminUsers: [dan]\n" +
                                          "adminGroups: [admin]\n" +
                                          "requireSSL: false\n";

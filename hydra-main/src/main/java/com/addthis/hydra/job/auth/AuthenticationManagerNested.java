@@ -114,11 +114,11 @@ class AuthenticationManagerNested extends AuthenticationManager {
         }
     }
 
-    @Override ImmutableList<String> adminGroups() {
+    @Override protected ImmutableList<String> adminGroups() {
         return ImmutableList.<String>builder().addAll(inner.adminGroups()).addAll(outer.adminGroups()).build();
     }
 
-    @Override ImmutableList<String> adminUsers() {
+    @Override protected ImmutableList<String> adminUsers() {
         return ImmutableList.<String>builder().addAll(inner.adminUsers()).addAll(outer.adminGroups()).build();
     }
 
