@@ -1907,6 +1907,9 @@ function(
         }, DetailView.prototype.events),
         initialize:function(options){
             if (options.isClone) {
+                delete options.model.attributes.creator;
+                delete options.model.attributes.owner;
+                delete options.model.attributes.group;
                 options.model.attributes.dontDeleteMe = false;
                 options.model.attributes.onComplete = "";
                 options.model.attributes.onCompleteTimeout = 0;
