@@ -41,6 +41,6 @@ public class MinionTest extends ZkCodecStartUtil {
 
     @Test
     public void decodeDefault() throws Exception {
-        Minion minion = Configs.newDefault(Minion.class);
+        Minion minion = Configs.decodeObject(Minion.class, "{queueType = \"\"}");
     }
 }

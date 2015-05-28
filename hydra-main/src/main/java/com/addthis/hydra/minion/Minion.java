@@ -83,6 +83,7 @@ import com.addthis.meshy.MeshyClient;
 import com.addthis.meshy.MeshyClientConnector;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -282,7 +283,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
                 log.warn("cutover to live-everywhere tasks");
             }
             writeState();
-            if (queueType != null) {
+            if (!Strings.isNullOrEmpty(queueType)) {
                 runner = new TaskRunner(this, "mesh".equals(queueType));
                 runner.start();
             }
@@ -367,7 +368,7 @@ public class Minion implements MessageListener, Codable, AutoCloseable {
         } else if ("rabbit".equals(queueType)) {
             log.info("[init] connecting to rabbit message queue");
             connectToRabbitMQ();
-        } else if (queueType == null) {
+        } else if (Strings.isNullOrEmpty(queueType)) {
             log.info("[init] skipping message queue");
         } else {
             throw new IllegalArgumentException("queueType (" + queueType +
