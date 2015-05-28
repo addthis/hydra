@@ -193,6 +193,8 @@ function(
         loginTimeout:function() {
             app.user.set("username", "");
             app.user.set("token", "");
+            app.user.set("sudo", "");
+            $("#sudoCheckbox").prop("checked", false);
             alertify.alert("Your session has expired. Press the login button in the top-right corner.");
         },
         sudoTimeout:function() {
@@ -239,14 +241,14 @@ function(
                 });
             }
             Cookies.set("username", "", {expires:0});
-            // delete legacy cookie
-            Cookies.set("username", "", {expires:0, path:"/spawn2"});
+            Cookies.set("username", "", {expires:0, path:"/spawn2"}); // delete legacy cookie
             Cookies.set("token", "", {expires:0});
             Cookies.set("tokenExpires", "", {expires:0});
             Cookies.set("sudo", "", {expires:0});
             app.user.set("username", "");
             app.user.set("token", "");
             app.user.set("sudo", "");
+            $("#sudoCheckbox").prop("checked", false);
             clearTimeout(app.loginTimeoutId);
             clearTimeout(app.sudoTimeoutId);
             app.loginTimeoutId = null;
