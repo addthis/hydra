@@ -47,15 +47,17 @@ function(){
             this.fnClearAllColumnFilters();
         }
         //Let's find the X that is next to the search input and show it if the input has something, and hide it if it's empty
-        var anControl = $('input', this.fnSettings().aanFeatures.f);
-        if(!_.isEmpty(kvStr)){
-            anControl.next().show();
+        if (this.fnSettings().aanFeatures.f) {
+            var anControl = $('input', this.fnSettings().aanFeatures.f);
+            if(!_.isEmpty(kvStr)){
+                anControl.next().show();
+            }
+            else{
+                anControl.next().hide();
+            }
+            //Let's make sure that the input field has the stringified version of the filter criteria
+            anControl.val(DataTable.stringifyFilter(filterCriteria));
         }
-        else{
-            anControl.next().hide();
-        }
-        //Let's make sure that the input field has the stringified version of the filter criteria
-        anControl.val(DataTable.stringifyFilter(filterCriteria));
     };
     $.fn.dataTableExt.oApi.fnClearAllColumnFilters = function(oSettings){
         //Data tables keeps the per column search state in the oSettings object. If there are no attribute-based filtering (basicaly if the
@@ -116,21 +118,23 @@ function(){
         this.each(function (i) {
             $.fn.dataTableExt.iApiIndex = i;
             var $this = this;
-            var anControl = $('input', _that.fnSettings().aanFeatures.f);
-            anControl.unbind('keyup').bind('keypress', function (e) {
-                if (e.which == 13) {
+            if (_that.fnSettings().aanFeatures.f) {
+                var anControl = $('input', _that.fnSettings().aanFeatures.f);
+                anControl.unbind('keyup').bind('keypress', function (e) {
+                    if (e.which == 13) {
+                        $.fn.dataTableExt.iApiIndex = i;
+                        //Extract the filter query string from the input field
+                        var val = anControl.val();
+                        _that.fnFilterKVString(val);
+                    }
+                });
+                anControl.unbind('blur').bind('blur',function(e){
                     $.fn.dataTableExt.iApiIndex = i;
                     //Extract the filter query string from the input field
                     var val = anControl.val();
                     _that.fnFilterKVString(val);
-                }
-            });
-            anControl.unbind('blur').bind('blur',function(e){
-                $.fn.dataTableExt.iApiIndex = i;
-                //Extract the filter query string from the input field
-                var val = anControl.val();
-                _that.fnFilterKVString(val);
-            });
+                });
+            }
             return this;
         });
         return this;
@@ -476,20 +480,21 @@ function(){
                 sPreviousSearch = null,
                 anControl = $( 'input', _that.fnSettings().aanFeatures.f );
 
-            anControl.unbind( 'keyup' ).bind( 'keyup', function() {
-                var $$this = $this;
+            if (_that.fnSettings().aanFeatures.f) {
+                anControl.unbind( 'keyup' ).bind( 'keyup', function() {
+                    var $$this = $this;
 
-                if (sPreviousSearch === null || sPreviousSearch != anControl.val()) {
-                    window.clearTimeout(oTimerId);
-                    sPreviousSearch = anControl.val();
-                    oTimerId = window.setTimeout(function() {
-                        $.fn.dataTableExt.iApiIndex = i;
-                        _that.fnFilter( anControl.val() );
-                        _that.trigger("filtered",[]);
-                    }, iDelay);
-                }
-            });
-
+                    if (sPreviousSearch === null || sPreviousSearch != anControl.val()) {
+                        window.clearTimeout(oTimerId);
+                        sPreviousSearch = anControl.val();
+                        oTimerId = window.setTimeout(function() {
+                            $.fn.dataTableExt.iApiIndex = i;
+                            _that.fnFilter( anControl.val() );
+                            _that.trigger("filtered",[]);
+                        }, iDelay);
+                    }
+                });
+            }
             return this;
         } );
         return this;
@@ -883,21 +888,23 @@ function(){
         handleFilter:function(event){
             var link = $(event.target);
             var oSettings = this.views.table.fnSettings();
-            var anControl = $( 'input', oSettings.aanFeatures.f );
-            var search = anControl.val();
-            var index = parseInt(link.data("index"),10);
-            var value = link.data("value");
-            var col = this.columns[index];
-            if(!_.isNull(col) && !_.isUndefined(col)){
-                var key = this.columns[index].mData;
-                if(!_.isNumber(key) && !_.isEmpty(key)){
-                    search+=" "+key+":"+value;
+            if (oSettings.aanFeatures.f) {
+                var anControl = $( 'input', oSettings.aanFeatures.f );
+                var search = anControl.val();
+                var index = parseInt(link.data("index"),10);
+                var value = link.data("value");
+                var col = this.columns[index];
+                if(!_.isNull(col) && !_.isUndefined(col)){
+                    var key = this.columns[index].mData;
+                    if(!_.isNumber(key) && !_.isEmpty(key)){
+                        search+=" "+key+":"+value;
+                    }
                 }
+                anControl.val($.trim(search));
+                anControl.trigger("blur");
+                event.preventDefault();
+                event.stopImmediatePropagation();
             }
-            anControl.val($.trim(search));
-            anControl.trigger("blur");
-            event.preventDefault();
-            event.stopImmediatePropagation();
         },
         remove:function(){
             this.$el.detach();
