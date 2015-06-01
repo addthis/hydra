@@ -258,6 +258,10 @@ public class ZnodeJob implements IJob {
         return rznData.creator;
     }
 
+    @Override public void setCreator(String creator) {
+        this.rznData.creator = creator;
+    }
+
     @Override public String getOwner() {
         return rznData.owner;
     }

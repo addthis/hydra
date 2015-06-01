@@ -37,7 +37,6 @@ import java.util.regex.Pattern;
 
 import com.addthis.basis.kv.KVPair;
 import com.addthis.basis.kv.KVPairs;
-import com.addthis.basis.util.LessStrings;
 import com.addthis.basis.util.TokenReplacerOverflowException;
 
 import com.addthis.codec.config.Configs;
@@ -54,6 +53,7 @@ import com.addthis.hydra.job.JobTask;
 import com.addthis.hydra.job.JobTaskReplica;
 import com.addthis.hydra.job.RebalanceOutcome;
 import com.addthis.hydra.job.auth.InsufficientPrivilegesException;
+import com.addthis.hydra.job.auth.PermissionsManager;
 import com.addthis.hydra.job.backup.ScheduledBackupType;
 import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.DeleteStatus;
@@ -69,6 +69,7 @@ import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -97,6 +98,7 @@ public class JobsResource {
     private static final ImmutableSet<String> PERMISSIONS = ImmutableSet.of("no change", "true", "false");
     private static final ImmutableSet<String> MODIFYING_PERMISSIONS = ImmutableSet.of("true", "false");
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final Splitter COMMA_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
 
     private final Spawn spawn;
     private final JobRequestHandler requestHandler;
@@ -121,6 +123,7 @@ public class JobsResource {
     @Path("/permissions")
     @Produces(MediaType.APPLICATION_JSON)
     public Response changePermissions(@FormParam("jobs") String jobarg,
+                                      @FormParam("creator") String creator,
                                       @FormParam("owner") String owner,
                                       @FormParam("group") String group,
                                       @FormParam("ownerWritable") String ownerWritable,
@@ -159,26 +162,34 @@ public class JobsResource {
         if (response != null) {
             return response;
         }
-        List<String> jobIds = Splitter.on(',').omitEmptyStrings().trimResults().splitToList(jobarg);
+        List<String> jobIds = COMMA_SPLITTER.splitToList(jobarg);
         List<String> changed = new ArrayList<>();
         List<String> unchanged = new ArrayList<>();
         List<String> notFound = new ArrayList<>();
         List<String> notPermitted = new ArrayList<>();
+        PermissionsManager permissionsManager = spawn.getPermissionsManager();
         try {
             for (String jobId : jobIds) {
                 Job job = spawn.getJob(jobId);
                 if (job == null) {
                     notFound.add(jobId);
-                } else if (!spawn.getPermissionsManager().canModifyPermissions(user, token, sudo, job)) {
+                } else if (!permissionsManager.canModifyPermissions(user, token, sudo, job)) {
+                    notPermitted.add(jobId);
+                } else if (!Strings.isNullOrEmpty(creator) &&
+                           !permissionsManager.adminAction(user, token, sudo)) {
                     notPermitted.add(jobId);
                 } else {
                     boolean modified = false;
-                    if (LessStrings.isNotEmpty(owner) && !owner.equals(job.getOwner())) {
+                    if (!Strings.isNullOrEmpty(owner) && !owner.equals(job.getOwner())) {
                         job.setOwner(owner);
                         modified = true;
                     }
-                    if (LessStrings.isNotEmpty(group) && !group.equals(job.getGroup())) {
+                    if (!Strings.isNullOrEmpty(group) && !group.equals(job.getGroup())) {
                         job.setGroup(group);
+                        modified = true;
+                    }
+                    if (!Strings.isNullOrEmpty(creator) && !creator.equals(job.getCreator())) {
+                        job.setCreator(creator);
                         modified = true;
                     }
                     if (MODIFYING_PERMISSIONS.contains(ownerWritable)) {
@@ -726,7 +737,7 @@ public class JobsResource {
     }
     
     private String jobUpdateAction(String id) {
-        return LessStrings.isEmpty(id) ? "created" : "updated";
+        return Strings.isNullOrEmpty(id) ? "created" : "updated";
     }
 
     /**
@@ -882,7 +893,7 @@ public class JobsResource {
         List<String> unauthorized = new ArrayList<>();
         try {
             if (jobIds.isPresent()) {
-                String[] joblist = LessStrings.splitArray(jobIds.get(), ",");
+                Iterable<String> joblist = COMMA_SPLITTER.split(jobIds.get());
                 for (String aJob : joblist) {
                     IJob job = spawn.getJob(aJob);
                     if (job == null) {
@@ -1172,7 +1183,7 @@ public class JobsResource {
         try {
             if (jobIds.isPresent()) {
                 String ids = jobIds.get();
-                String[] joblist = LessStrings.splitArray(ids, ",");
+                Iterable<String> joblist = COMMA_SPLITTER.split(ids);
                 for (String jobName : joblist) {
                     IJob job = spawn.getJob(jobName);
                     if (job == null) {

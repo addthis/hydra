@@ -1454,6 +1454,7 @@ function(
         handleSubmitButtonClick: function() {
             var parameters = {}
             parameters["jobs"] = this.jobIds.join();
+            parameters["creator"] = $('input[name="creatorModal"]').val();
             parameters["owner"] = $('input[name="chownModal"]').val();
             parameters["group"] = $('input[name="chgrpModal"]').val();
             parameters["ownerWritable"] = $('input[name="ownerWritable"]:checked').val();

@@ -38,6 +38,8 @@ public interface IJob extends Comparable<IJob>, WritableAsset, ExecutableAsset {
 
     public String getCreator();
 
+    public void setCreator(String creator);
+
     public long getCreateTime();
 
     public boolean isOwnerWritable();

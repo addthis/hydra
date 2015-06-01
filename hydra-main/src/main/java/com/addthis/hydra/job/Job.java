@@ -214,6 +214,11 @@ public final class Job implements IJob {
     }
 
     @Override
+    public void setCreator(String creator) {
+        this.creator = creator;
+    }
+
+    @Override
     public String getOwner() {
         return owner;
     }
@@ -907,4 +912,5 @@ public final class Job implements IJob {
                         .put("submitTime", job.getSubmitTime())
                         .put("command", job.getCommand()));
     }
+
 }
