@@ -21,6 +21,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -35,15 +36,18 @@ import com.addthis.hydra.job.mq.HostState;
 import com.addthis.hydra.job.spawn.ClientEvent;
 import com.addthis.hydra.job.spawn.ClientEventListener;
 import com.addthis.hydra.job.spawn.Spawn;
+import com.addthis.hydra.job.spawn.SpawnMetrics;
 import com.addthis.maljson.JSONArray;
 import com.addthis.maljson.JSONObject;
 
 import com.google.common.base.Optional;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.sun.jersey.api.core.HttpContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 @Path("/update")
 public class ListenResource {
 
@@ -107,8 +111,7 @@ public class ListenResource {
     }
 
     private JSONObject encodeJson(ClientEvent event) throws Exception {
-        JSONObject json = event.toJSON();
-        return json;
+        return event.toJSON();
     }
 
     @GET
@@ -124,11 +127,33 @@ public class ListenResource {
     }
 
     @GET
+    @Path("/metrics")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getMetrics() {
+        Map<String, String> result = new HashMap<>();
+        result.put("runningTasks", SpawnMetrics.runningTaskCount.value().toString());
+        result.put("queuedTasks", SpawnMetrics.queuedTaskCount.value().toString());
+        result.put("queuedTasksNoSlot", SpawnMetrics.queuedTaskNoSlotCount.value().toString());
+        result.put("failedTasks", SpawnMetrics.failTaskCount.value().toString());
+        result.put("runningJobs", SpawnMetrics.runningJobCount.value().toString());
+        result.put("queuedJobs", SpawnMetrics.queuedJobCount.value().toString());
+        result.put("failedJobs", SpawnMetrics.failJobCount.value().toString());
+        result.put("hungJobs", SpawnMetrics.hungJobCount.value().toString());
+        try {
+            JsonNode metrics = CodecJSON.encodeJsonNode(result);
+            return Response.ok(metrics.toString()).build();
+        } catch (Exception ex) {
+            log.error("Error during construction of \"/metrics\" response: " ,ex);
+            return Response.serverError().entity(ex.getMessage()).build();
+        }
+    }
+
+        @GET
     @Path("/settings")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getSettings() {
         try {
-            JSONObject settings = CodecJSON.encodeJSON(spawn.getSystemManager().getSettings());
+            JsonNode settings = CodecJSON.encodeJsonNode(spawn.getSystemManager().getSettings());
             return Response.ok(settings.toString()).build();
         } catch (Exception ex) {
             log.error("Error during construction of \"/settings\" response: " ,ex);
