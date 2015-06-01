@@ -24,14 +24,14 @@ import com.yammer.metrics.core.Meter;
 import static com.addthis.hydra.util.SettableGauge.newSettableGauge;
 
 public final class SpawnMetrics {
-    public static final SettableGauge<Integer> runningTaskCount = newSettableGauge(Spawn.class, "runningTasks", 0);
-    public static final SettableGauge<Integer> queuedTaskCount = newSettableGauge(Spawn.class, "queuedTasks", 0);
-    public static final SettableGauge<Integer> queuedTaskNoSlotCount = newSettableGauge(Spawn.class, "queuedTasksNoSlot", 0);
-    public static final SettableGauge<Integer> failTaskCount = newSettableGauge(Spawn.class, "failedTasks", 0);
-    public static final SettableGauge<Integer> runningJobCount = newSettableGauge(Spawn.class, "runningJobs", 0);
-    public static final SettableGauge<Integer> queuedJobCount = newSettableGauge(Spawn.class, "queuedJobs", 0);
-    public static final SettableGauge<Integer> failJobCount = newSettableGauge(Spawn.class, "failedJobs", 0);
-    public static final SettableGauge<Integer> hungJobCount = newSettableGauge(Spawn.class, "hungJobs", 0);
+    static final SettableGauge<Integer> runningTaskCount = newSettableGauge(Spawn.class, "runningTasks", 0);
+    static final SettableGauge<Integer> queuedTaskCount = newSettableGauge(Spawn.class, "queuedTasks", 0);
+    static final SettableGauge<Integer> queuedTaskNoSlotCount = newSettableGauge(Spawn.class, "queuedTasksNoSlot", 0);
+    static final SettableGauge<Integer> failTaskCount = newSettableGauge(Spawn.class, "failedTasks", 0);
+    static final SettableGauge<Integer> runningJobCount = newSettableGauge(Spawn.class, "runningJobs", 0);
+    static final SettableGauge<Integer> queuedJobCount = newSettableGauge(Spawn.class, "queuedJobs", 0);
+    static final SettableGauge<Integer> failJobCount = newSettableGauge(Spawn.class, "failedJobs", 0);
+    static final SettableGauge<Integer> hungJobCount = newSettableGauge(Spawn.class, "hungJobs", 0);
 
     static final Meter tasksStartedPerHour =
             Metrics.newMeter(Spawn.class, "tasksStartedPerHour", "tasksStartedPerHour", TimeUnit.HOURS);
