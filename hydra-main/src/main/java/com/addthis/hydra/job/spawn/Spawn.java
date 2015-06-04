@@ -2622,14 +2622,20 @@ public class Spawn implements Codable, AutoCloseable {
             scheduledExecutor.shutdown();
             expandKickExecutor.awaitTermination(120, TimeUnit.SECONDS);
             scheduledExecutor.awaitTermination(120, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            log.warn("", e);
+        } catch (Exception ex) {
+            log.warn("Exception shutting down background processes", ex);
+        }
+
+        try {
+            permissionsManager.close();
+        } catch (Exception ex) {
+            log.warn("Exception closing permissions manager", ex);
         }
 
         try {
             drainJobTaskUpdateQueue();
         } catch (Exception ex) {
-            log.warn("", ex);
+            log.warn("Exception draining job task update queue", ex);
         }
 
         try {
@@ -2641,14 +2647,14 @@ public class Spawn implements Codable, AutoCloseable {
         try {
             hostManager.minionMembers.shutdown();
             hostManager.deadMinionMembers.shutdown();
-        } catch (IOException e) {
-            log.warn("unable to cleanly shutdown membership listeners", e);
+        } catch (IOException ex) {
+            log.warn("Unable to cleanly shutdown membership listeners", ex);
         }
 
         try {
             closeZkClients();
         } catch (Exception ex) {
-            log.warn("", ex);
+            log.warn("Exception closing zk clients", ex);
         }
     }
 

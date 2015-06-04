@@ -13,12 +13,15 @@
  */
 package com.addthis.hydra.job.auth;
 
+import java.io.Closeable;
+import java.io.IOException;
+
 /**
  * Clients outside this package should not communicate
  * directly with AuthorizationManagers. They should use the
  * {@link PermissionsManager} API for authentication.
  */
-abstract class AuthorizationManager {
+abstract class AuthorizationManager implements Closeable {
 
     /**
      * Returns true if the user is able to update the asset.
@@ -85,5 +88,8 @@ abstract class AuthorizationManager {
      * the sudo cache.
      */
     abstract void logout(User user);
+
+    @Override
+    public void close() throws IOException {}
 
 }

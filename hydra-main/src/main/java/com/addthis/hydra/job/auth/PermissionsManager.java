@@ -13,6 +13,13 @@
  */
 package com.addthis.hydra.job.auth;
 
+import java.io.Closeable;
+import java.io.IOException;
+
+import com.addthis.hydra.job.alert.types.RuntimeExceededJobAlert;
+
+import com.google.common.base.Throwables;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -23,7 +30,7 @@ import org.slf4j.LoggerFactory;
  * Wrapper class around authentication and authorization. Provides convenience methods
  * for authorization operations that must first be authenticated.
  */
-public final class PermissionsManager {
+public final class PermissionsManager implements Closeable {
 
     private static final Logger log = LoggerFactory.getLogger(PermissionsManager.class);
 
@@ -120,6 +127,28 @@ public final class PermissionsManager {
         if (user != null) {
             authentication.logout(user);
             authorization.logout(user);
+        }
+    }
+
+    private static Exception closeAndPropagate(Closeable target, Exception exception) {
+        try {
+            target.close();
+        } catch (RuntimeException|IOException ex) {
+            if (exception == null) {
+                exception = ex;
+            } else {
+                exception.addSuppressed(ex);
+            }
+        }
+        return exception;
+    }
+
+    @Override
+    public void close() throws IOException {
+        Exception exception = closeAndPropagate(authentication, null);
+        exception = closeAndPropagate(authorization, exception);
+        if (exception != null) {
+            Throwables.propagate(exception);
         }
     }
 

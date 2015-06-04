@@ -13,6 +13,9 @@
  */
 package com.addthis.hydra.job.auth;
 
+import java.io.Closeable;
+import java.io.IOException;
+
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
@@ -22,7 +25,7 @@ import com.google.common.collect.ImmutableList;
  * directly with AuthenticationManagers. They should use the
  * {@link PermissionsManager} API for authentication.
  */
-abstract class AuthenticationManager {
+abstract class AuthenticationManager implements Closeable {
 
     /**
      * Returns a non-null secret token if authentication
@@ -102,5 +105,8 @@ abstract class AuthenticationManager {
         }
         return false;
     }
+
+    @Override
+    public void close() throws IOException {}
 
 }
