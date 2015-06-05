@@ -20,6 +20,8 @@ import java.io.UncheckedIOException;
 
 import java.util.regex.Pattern;
 
+import java.nio.charset.Charset;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -38,7 +40,7 @@ public class ValueFilterHexDump extends StringFilter {
      * Character set for encoding to byte array.
      * This field is required. Default value is "UTF-8"
      */
-    private final String charset;
+    private final Charset charset;
 
     /**
      * If true then convert byte representation into a string.
@@ -48,7 +50,7 @@ public class ValueFilterHexDump extends StringFilter {
     private static final Pattern SPACE_SEP = Pattern.compile(" ");
 
     @JsonCreator
-    public ValueFilterHexDump(@JsonProperty(value = "charset", required = true) String charset,
+    public ValueFilterHexDump(@JsonProperty(value = "charset", required = true) Charset charset,
                               @JsonProperty(value = "reverse", required = true) boolean reverse) {
         this.charset = charset;
         this.reverse = reverse;
@@ -56,24 +58,20 @@ public class ValueFilterHexDump extends StringFilter {
 
     @Override
     public String filter(String value) {
-        try {
-            if (reverse) {
-                value = SPACE_SEP.matcher(value).replaceAll("");
-                byte[] bytes = DatatypeConverter.parseHexBinary(value);
-                return new String(bytes, charset);
-            } else {
-                StringBuilder sb = new StringBuilder();
-                byte[] bytes = value.getBytes(charset);
-                for (int i = 0; i < bytes.length; i++) {
-                    if (i > 0) {
-                        sb.append(' ');
-                    }
-                    sb.append(String.format("%02x", bytes[i]));
+        if (reverse) {
+            value = SPACE_SEP.matcher(value).replaceAll("");
+            byte[] bytes = DatatypeConverter.parseHexBinary(value);
+            return new String(bytes, charset);
+        } else {
+            StringBuilder sb = new StringBuilder();
+            byte[] bytes = value.getBytes(charset);
+            for (int i = 0; i < bytes.length; i++) {
+                if (i > 0) {
+                    sb.append(' ');
                 }
-                return sb.toString();
+                sb.append(String.format("%02x", bytes[i]));
             }
-        } catch (IOException ex) {
-            throw new UncheckedIOException(ex);
+            return sb.toString();
         }
     }
 
