@@ -200,7 +200,7 @@ function renderNavQuery(rpc) {
         var r = rpcDecode(rpc);
         var t = '<table id="table_nav"><tr><th>node</th><th>count</th><th>nodes</th><th>mem</th><th>merge</th></tr>';
         for (var i=0; i<r.length; i++) {
-            var d = UTF8.decode(r[i][0]);
+            var d = r[i][0];
             var s = d.replace(/</g,'&lt;').replace(/>/g,'&gt;');
             var oc = 'QM.treeNavTo(\''+esc(d)+'\','+r[i][2]+');'
             var os = 'QM.navToQuery(true,true);return false;'
@@ -600,7 +600,7 @@ function renderQueryValue(v) {
         if (v.match(/^[1-9][0-9]*$/) != null) {
             v = parseInt(v);
         } else {
-            var str = UTF8.decode(v).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            var str = v.replace(/</g,'&lt;').replace(/>/g,'&gt;');
             if (v.match(/{.*}/)) {
                 str = prettyPrintOne(str,"js");
             }
