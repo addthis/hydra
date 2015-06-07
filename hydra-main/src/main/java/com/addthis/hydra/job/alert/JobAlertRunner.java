@@ -261,7 +261,7 @@ public class JobAlertRunner {
             sb.append("Alert Description : " + description + "\n");
         }
         for (Map.Entry<String, String> entry : errors.entrySet()) {
-            sb.append(summary(spawn.getJob(entry.getKey())) + "\n");
+            sb.append(summary(spawn.unsafeGetJob(entry.getKey())) + "\n");
             sb.append("Error Message\n");
             sb.append(entry.getValue());
             sb.append("\n------------------------------\n");
