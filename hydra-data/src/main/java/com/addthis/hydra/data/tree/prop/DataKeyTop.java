@@ -126,6 +126,17 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
         private AutoField key;
 
         /**
+         * Optionally specify a bundle field name for
+         * which to weight the insertions into the
+         * data attachment. If weight is specified
+         * then the weight field must have a valid
+         * integer whenever the key field is non-null
+         * or the job will error. Default is null.
+         */
+        @FieldConfig(codable = true)
+        private AutoField weight;
+
+        /**
          * Maximum capacity of the key topper.
          * This field is required.
          */
@@ -170,11 +181,13 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
 
     private ValueFilter filter;
     private AutoField keyAccess;
+    private AutoField weightAccess;
 
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode childNode, DataKeyTop.Config conf) {
         if (keyAccess == null) {
             keyAccess = conf.key;
+            weightAccess = conf.weight;
             filter = conf.filter;
         }
         ValueObject val = keyAccess.getValue(state.getBundle());
@@ -185,18 +198,22 @@ public class DataKeyTop extends TreeNodeData<DataKeyTop.Config> implements Codab
                     return false;
                 }
             }
+            int weight = 1;
+            if (weightAccess != null) {
+                weight = weightAccess.getValue(state.getBundle()).asLong().asNative().intValue();
+            }
             if (conf.splitRegex != null) {
                 String[] split = val.toString().split(conf.splitRegex);
                 for (int i = 0; i < split.length; i++) {
-                    top.increment(split[i], size);
+                    top.increment(split[i], weight, size);
                 }
             } else {
                 if (val.getObjectType() == ValueObject.TYPE.ARRAY) {
                     for (ValueObject obj : val.asArray()) {
-                        top.increment(obj.toString(), size);
+                        top.increment(obj.toString(), weight, size);
                     }
                 } else {
-                    top.increment(val.toString(), size);
+                    top.increment(val.toString(), weight, size);
                 }
             }
             return true;
