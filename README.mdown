@@ -145,5 +145,4 @@ hydra is released under the Apache License Version 2.0.  See
 [Apache](http://www.apache.org/licenses/LICENSE-2.0) or the LICENSE
 file in this distribution for details.
 
-
-
+![Hydra Logo](https://raw.githubusercontent.com/addthis/hydra/master/hydra-main/web/spawn2/images/hydra.png)
