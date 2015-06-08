@@ -77,8 +77,11 @@ public class CommandResource {
             String label = kv.getValue("name");
             String command = kv.getValue("command", "").trim();
             String owner = kv.getValue("owner", "unknown").trim();
-            if ((label == null) || command.isEmpty()) {
-                throw new Exception("missing required field");
+            if ((label == null)) {
+                throw new Exception("missing required field 'name'");
+            }
+            if (command.isEmpty()) {
+                throw new Exception("missing required field 'command'");
             }
             String[] cmdtok = LessStrings.splitArray(command, ",");
             for (int i = 0; i < cmdtok.length; i++) {
@@ -88,6 +91,7 @@ public class CommandResource {
             jobCommandManager.putEntity(label, jobCommand, true);
             return Response.ok().entity(jobCommand.toJSON().put("name", label).toString()).build();
         } catch (Exception ex) {
+            log.info("Error while saving command: ", ex);
             return Response.serverError().entity(ex.toString()).build();
         }
     }
@@ -109,6 +113,7 @@ public class CommandResource {
                 return Response.serverError().entity("command may be used by a job").build();
             }
         } catch (Exception ex) {
+            log.info("Error while deleting command: ", ex);
             return Response.serverError().entity(ex.getMessage()).build();
         }
     }

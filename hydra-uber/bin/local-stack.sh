@@ -286,7 +286,7 @@ case $1 in
         stopAll
         ;;
     seed)
-        wget -q -O /dev/null 'http://localhost:5050/command.put?label=default-task&owner=install&cpu=1&mem=512&io=1&command=${BIN}/job-task.sh job.conf {{nodes}} {{node}} {{jobid}}'
+        wget -q -O /dev/null --post-data 'name=default-task&owner=install&cpu=1&mem=512&io=1&command=$%7BBIN%7D/job-task.sh%20job.conf%20%7B%7Bnodes%7D%7D%20%7B%7Bnode%7D%7D%20%7B%7Bjobid%7D%7D' 'http://localhost:5052/command/save'
         ;;
     *)
         echo "commands: start [# minions, default 3] | stop [# minions, default 3] | seed"
