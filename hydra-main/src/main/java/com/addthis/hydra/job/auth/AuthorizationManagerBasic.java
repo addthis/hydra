@@ -18,6 +18,8 @@ import javax.annotation.Nonnull;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.google.common.base.Splitter;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -27,6 +29,8 @@ import org.slf4j.LoggerFactory;
 class AuthorizationManagerBasic extends AuthorizationManager {
 
     private static final Logger log = LoggerFactory.getLogger(AuthorizationManagerBasic.class);
+
+    private static final Splitter COMMA_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
 
     @Nonnull
     private final TokenCache sudoCache;
@@ -98,8 +102,10 @@ class AuthorizationManagerBasic extends AuthorizationManager {
         }
         String assetGroup = asset.getGroup();
         if (assetGroup != null) {
-            if (user.groups().contains(assetGroup)) {
-                return group;
+            for (String component : COMMA_SPLITTER.split(assetGroup)) {
+                if (user.groups().contains(component)) {
+                    return group;
+                }
             }
         }
         return world;

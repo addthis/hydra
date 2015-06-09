@@ -138,6 +138,15 @@ public class PermissionsManagerIntegrationTest {
         assertFalse(permissions.isWritable("bob", "bobsecret", null, testJob));
         assertTrue(permissions.isWritable("bob", "bobsecret", "bobsudo", testJob));
         assertFalse(permissions.isWritable("carol", "carolsecret", null, testJob));
+        testJob = new Job();
+        testJob.setOwner("alice");
+        testJob.setGroup("onesyllable,twosyllables");
+        testJob.setOwnerWritable(true);
+        testJob.setGroupWritable(true);
+        assertTrue(permissions.isWritable("alice", "alicesecret", null, testJob));
+        assertTrue(permissions.isWritable("bob", "bobsecret", null, testJob));
+        assertTrue(permissions.isWritable("bob", "bobsecret", "bobsudo", testJob));
+        assertTrue(permissions.isWritable("carol", "carolsecret", null, testJob));
     }
 
     @Test
