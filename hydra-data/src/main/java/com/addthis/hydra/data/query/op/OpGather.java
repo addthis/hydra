@@ -55,6 +55,7 @@ import io.netty.channel.ChannelProgressivePromise;
  * column parameters is a sequence of one or more of the following letters:
  * <ul>
  * <li>k - this column is a key column.</li>
+ * <li>c - generates a cardinality estimation of this column.</li>
  * <li>i - this column is ignored and dropped from the output.</li>
  * <li>t - this column is a key topper.</li>
  * <li>a - generate average values for this column</li>
