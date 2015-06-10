@@ -228,25 +228,26 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
             if (collectMetrics) {
                 metrics.updatePageSize(entries);
             }
-            K firstKey = keyCoder.keyDecode(pageEncodeType.readBytes(in, dis));
+            byte[] firstKeyBytes = pageEncodeType.readBytes(in, dis);
+            K firstKey = keyCoder.keyDecode(firstKeyBytes);
             byte[] nextFirstKeyBytes = pageEncodeType.nextFirstKey(in, dis);
             K nextFirstKey = keyCoder.keyDecode(nextFirstKeyBytes);
             decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
+            decode.originalByteSize = 4 + firstKeyBytes.length + nextFirstKeyBytes.length;
 
             for (int i = 0; i < entries; i++) {
                 byte[] kb = pageEncodeType.readBytes(in, dis);
+                decode.originalByteSize += kb.length;
                 byte[] vb = pageEncodeType.readBytes(in, dis);
+                decode.originalByteSize += vb.length;
                 K key = keyCoder.keyDecode(kb, firstKey, pageEncodeType);
                 decode.map.put(key, new PageValue(vb, pageEncodeType));
             }
 
             //ignoring memory data
             in.close();
-            if (log.isDebugEnabled()) {
-                log.debug("decoded " + decode);
-            }
+            log.debug("decoded {}", decode);
 
-            decode.originalByteSize = page.length;
             return decode;
         } catch (RuntimeException ex) {
             throw ex;
