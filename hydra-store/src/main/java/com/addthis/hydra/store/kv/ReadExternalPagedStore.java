@@ -233,7 +233,10 @@ public class ReadExternalPagedStore<K extends Comparable<K>, V extends IReadWeig
             byte[] nextFirstKeyBytes = pageEncodeType.nextFirstKey(in, dis);
             K nextFirstKey = keyCoder.keyDecode(nextFirstKeyBytes);
             decode = new TreePage(firstKey).setNextFirstKey(nextFirstKey);
-            decode.originalByteSize = 4 + firstKeyBytes.length + nextFirstKeyBytes.length;
+            decode.originalByteSize = 4 + firstKeyBytes.length;
+            if (nextFirstKeyBytes != null) {
+                decode.originalByteSize += nextFirstKeyBytes.length;
+            }
 
             for (int i = 0; i < entries; i++) {
                 byte[] kb = pageEncodeType.readBytes(in, dis);
