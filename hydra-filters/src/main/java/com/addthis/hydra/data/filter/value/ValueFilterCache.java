@@ -30,7 +30,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *
  * @user-reference
  */
-public class ValueFilterCache implements ValueFilter {
+public class ValueFilterCache extends AbstractValueFilter {
 
     private final ValueFilter filter;
 
@@ -53,7 +53,7 @@ public class ValueFilterCache implements ValueFilter {
     }
 
     @Nullable @Override
-    public ValueObject filter(@Nullable ValueObject value) {
+    public ValueObject filterValue(@Nullable ValueObject value) {
         if (result == UNINITIALIZED) {
             result = filter.filter(value);
         }
