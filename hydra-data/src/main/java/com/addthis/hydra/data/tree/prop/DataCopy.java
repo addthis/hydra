@@ -18,7 +18,7 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 
 import com.addthis.bundle.core.Bundle;
-import com.addthis.bundle.core.BundleField;
+import com.addthis.bundle.util.AutoField;
 import com.addthis.bundle.value.ValueFactory;
 import com.addthis.bundle.value.ValueObject;
 import com.addthis.codec.annotations.FieldConfig;
@@ -60,7 +60,7 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
          * is required.
          */
         @FieldConfig(codable = true, required = true)
-        private HashMap<String, String> key;
+        private HashMap<String, AutoField> key;
 
         /**
          * A mapping from labels to value filters. Before a value is stored under a label
@@ -81,20 +81,12 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
     @FieldConfig(codable = true, required = true)
     private HashMap<String, String> dat;
 
-    private HashMap<String, BundleField> keyAccess;
-
     @Override
     public boolean updateChildData(DataTreeNodeUpdater state, DataTreeNode tn, DataCopy.Config conf) {
         Bundle p = state.getBundle();
-        if (keyAccess == null) {
-            keyAccess = new HashMap<>();
-            for (Entry<String, String> s : conf.key.entrySet()) {
-                keyAccess.put(s.getKey(), p.getFormat().getField(s.getValue()));
-            }
-        }
         // copy values from pipeline
-        for (Entry<String, BundleField> s : keyAccess.entrySet()) {
-            ValueObject v = p.getValue(s.getValue());
+        for (Entry<String, AutoField> s : conf.key.entrySet()) {
+            ValueObject v = s.getValue().getValue(p);
             if (v != null) {
                 if (conf.op != null) {
                     ValueFilter fo = conf.op.get(s.getKey());
@@ -120,17 +112,21 @@ public final class DataCopy extends TreeNodeData<DataCopy.Config> {
     public ValueObject getValue(String key) {
         String dv = null;
         if (dat != null) {
-            int ci = key.indexOf(";");
+            int ci = key.indexOf(';');
             int eci = key.indexOf("\\;");
-            if (ci > 0 && eci - ci != 1) {
+            if ((ci > 0) && ((eci - ci) != 1)) {
                 dv = key.substring(ci + 1);
                 key = key.substring(0, ci);
             }
             String v = dat.get(key);
-            if (v != null && v.length() > 0) {
+            if ((v != null) && !v.isEmpty()) {
                 return ValueFactory.create(v);
             }
         }
-        return dv != null ? ValueFactory.create(dv) : null;
+        if (dv != null) {
+            return ValueFactory.create(dv);
+        } else {
+            return null;
+        }
     }
 }
